@@ -173,6 +173,12 @@ def test_public_course_page_keeps_mac_price_demo_and_purchase_intent(shop):
     assert "MAC APS · 14 h" in response.text and "Tarif unique pour tous les organismes" in response.text
     assert "reconnaissance réglementaire en 2026 n’est pas vérifiée" in response.text
     assert BASE in response.text and BASE + "?view=suivi" in response.text
+    showcase_video = re.search(r'<video\b[^>]*class="cs-demo-video"[^>]*>.*?</video>',
+                               response.text, flags=re.DOTALL)
+    assert showcase_video, 'The MAC APS showcase must expose its actual video excerpt'
+    assert BASE + '/media/video' in showcase_video.group(0)
+    assert '<track' not in showcase_video.group(0), 'The native track must not cover the baked captions'
+    assert f'href="{BASE}/cours"' in response.text and 'transcription' in response.text
     assert 'href="/admin/organisme/e-learning/nouveau?course=mac-aps"' in response.text
     assert all(f"{hours} h 00 min" in response.text for hours in (3, 4, 7))
     assert "noindex" in response.headers["X-Robots-Tag"]

@@ -18,6 +18,9 @@ ROOT = Path(__file__).parent / "mac_aps"
 LEGACY_VERSION = "20261012-macaps-v1"
 VERSION = "20261012-macaps-v2"
 SUPPORTED_VERSIONS = (LEGACY_VERSION, VERSION)
+MEDIA_REVISION = "20261012-mac-aps-v2"
+_MEDIA_FIELDS = ("src", "poster", "captions", "render_revision", "burned_captions",
+                 "video_sha256", "caption_cues")
 PRINCIPAL_MODULE_NUMBERS = ("02", "03", "05")
 PRINCIPAL_MINUTES = {"02": 180, "03": 240, "05": 420}
 TOTAL_MINUTES = 840
@@ -71,9 +74,73 @@ def _media():
     return json.loads((ROOT / "media_manifest.json").read_text(encoding="utf-8"))
 
 
+@lru_cache(maxsize=5)
+def _original_media(number):
+    return json.loads((ROOT / "assets" / "media" / "mac-aps" / "v1" /
+                       ("module-" + number + ".json")).read_text(encoding="utf-8"))
+
+
+def _original_video(number):
+    """Keep teaching text, identifiers and the recorded timeline in the snapshot."""
+    course = _legacy()["courses"].get("academy-macaps-" + number, {})
+    for section in course.get("sections", []):
+        for activity in section.get("activities", []):
+            for block in activity.get("blocks", []):
+                video = block.get("video")
+                if video and video.get("id") == "macaps-" + number + "-video":
+                    return video
+    raise ValueError("Original MAC APS video is missing: " + number)
+
+
+def _reviewed_media(number):
+    manifest = _media()
+    if manifest.get("revision") != MEDIA_REVISION:
+        return None
+    entry = manifest.get("videos", {}).get(number)
+    prefix = "media/mac-aps/v2/module-" + number
+    if (not isinstance(entry, dict) or entry.get("render_revision") != MEDIA_REVISION
+            or any(entry.get(key) != prefix + extension
+                   for key, extension in (("src", ".mp4"), ("poster", ".jpg"), ("captions", ".vtt")))):
+        raise ValueError("Reviewed MAC APS media is invalid: " + number)
+    return entry
+
+
 def _video(number, version=None):
+    if entry := _reviewed_media(number):
+        video = copy.deepcopy(_original_media(number))
+        video.update({key: copy.deepcopy(entry[key]) for key in _MEDIA_FIELDS if key in entry})
+        return video
     video = _media().get("videos", {}).get(number)
     return copy.deepcopy(video) if video else None
+
+
+def _with_reviewed_media(course):
+    """Overlay only visual media on detached courses; old signed URLs still work."""
+    if not course or _media().get("revision") != MEDIA_REVISION:
+        return course
+    assets = course.setdefault("assets", [])
+    for section in course.get("sections", []):
+        for activity in section.get("activities", []):
+            pending = list(activity.get("blocks", []))
+            while pending:
+                block = pending.pop()
+                pending.extend(block.get("children") or [])
+                video = block.get("video")
+                if not isinstance(video, dict):
+                    continue
+                match = re.fullmatch(r"macaps-(0[1-5])-video", str(video.get("id") or ""))
+                if not match:
+                    continue
+                number = match.group(1)
+                entry = _reviewed_media(number)
+                video.update({key: copy.deepcopy(entry[key]) for key in _MEDIA_FIELDS if key in entry})
+                original = _original_video(number)
+                for row in (original, entry):
+                    for key in ("src", "poster", "captions"):
+                        if row[key] not in assets:
+                            assets.append(row[key])
+    course.setdefault("counts", {})["assets"] = len(assets)
+    return course
 
 
 def curriculum_ids(version=None):
@@ -311,16 +378,16 @@ def _complement(course_id):
 
 def load_bundled_course(course_id, version=None):
     if version == LEGACY_VERSION:
-        return copy.deepcopy(_legacy()["courses"].get(course_id))
+        return _with_reviewed_media(copy.deepcopy(_legacy()["courses"].get(course_id)))
     if version not in (None, VERSION):
         return None
     if course_id in curriculum_ids():
-        return copy.deepcopy(_course(course_id[-2:]))
+        return _with_reviewed_media(copy.deepcopy(_course(course_id[-2:])))
     if course_id in {row["id"] for row in _plan()["complements"]}:
-        return copy.deepcopy(_complement(course_id))
+        return _with_reviewed_media(copy.deepcopy(_complement(course_id)))
     # Calls without a version to old-only IDs retain their original meaning.
     if version is None and course_id in curriculum_ids(LEGACY_VERSION):
-        return copy.deepcopy(_legacy()["courses"][course_id])
+        return _with_reviewed_media(copy.deepcopy(_legacy()["courses"][course_id]))
     return None
 
 

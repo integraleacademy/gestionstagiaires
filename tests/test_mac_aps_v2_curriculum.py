@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import copy
 import json
 import unittest
 from collections import Counter
@@ -14,6 +15,24 @@ def canonical_sha256(value):
                                      separators=(",", ":")).encode()).hexdigest()
 
 
+def teaching_graph(course):
+    """A visual repair may only replace media references and integrity metadata."""
+    result = copy.deepcopy(course)
+    result.pop('assets', None)
+    result['counts'].pop('assets', None)
+    for section in result['sections']:
+        for activity in section['activities']:
+            pending = list(activity.get('blocks', []))
+            while pending:
+                block = pending.pop()
+                pending.extend(block.get('children') or [])
+                if video := block.get('video'):
+                    for key in ('src', 'poster', 'captions', 'render_revision', 'burned_captions',
+                                'video_sha256', 'caption_cues'):
+                        video.pop(key, None)
+    return result
+
+
 class MacAPSV2CurriculumTests(unittest.TestCase):
     def test_historical_graphs_are_exactly_preserved(self):
         version = mac_aps.LEGACY_VERSION
@@ -24,8 +43,15 @@ class MacAPSV2CurriculumTests(unittest.TestCase):
                  for eid in [*("macaps-module-" + n for n in ("01", "02", "03", "04", "05")), "macaps-final"]}
         self.assertEqual(canonical_sha256(manifest),
                          "d63f4e231abaa18e43b7dac9894f06a71e543488f1383a56cdc466ca95c870a2")
-        self.assertEqual(canonical_sha256(courses),
+        # The source snapshot stays byte-for-byte equivalent; returned courses
+        # can select corrected media without changing the historical teaching graph.
+        originals = mac_aps._legacy()['courses']
+        self.assertEqual(canonical_sha256(originals),
                          "16b9274099d6fb4014546948ed757f38d26cd988fd7f84fcc6215c8356f672e1")
+        self.assertEqual({cid: teaching_graph(course) for cid, course in courses.items()},
+                         {cid: teaching_graph(course) for cid, course in originals.items()})
+        for cid, original in originals.items():
+            self.assertTrue(set(original['assets']).issubset(courses[cid]['assets']))
         self.assertEqual(canonical_sha256(exams),
                          "82c9614520babc51511a1757fb27d5bff13e766a842eecd764ef2f0eb610aba3")
         # Public loaders return detached data, including nested answer keys.

@@ -617,6 +617,7 @@ def create_native_elearning_blueprint(
                 "required": bool(video.get("required")),
                 "duration_seconds": video.get("duration_seconds") or 0,
                 "captions": asset_url(asset_token, course_id, str(video['captions'])) if video.get('captions') else '',
+                "burned_captions": video.get("burned_captions") is True,
                 "course_only": bool(video.get("course_only")),
                 "chapters": [],
                 "default_playback_rate": video.get("default_playback_rate", 1),

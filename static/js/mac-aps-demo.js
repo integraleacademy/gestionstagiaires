@@ -39,9 +39,18 @@
     });
   }
   document.querySelectorAll(".mac-demo-video").forEach(video => {
-    video.addEventListener("loadedmetadata", () => {
-      // French captions are already in the image; retain the accessible track.
-      [...video.textTracks].forEach(track => { track.mode = "hidden"; });
-    });
+    // The excerpt already contains French captions. Keep its timed text available
+    // without adding a second layer, even after a cached load or a native CC toggle.
+    const hideCaptionTracks = () => {
+      [...video.textTracks].forEach(track => {
+        if (["captions", "subtitles"].includes(track.kind) && track.mode !== "hidden") {
+          track.mode = "hidden";
+        }
+      });
+    };
+    video.addEventListener("loadedmetadata", hideCaptionTracks);
+    video.textTracks.addEventListener?.("addtrack", hideCaptionTracks);
+    video.textTracks.addEventListener?.("change", hideCaptionTracks);
+    hideCaptionTracks();
   });
 })();

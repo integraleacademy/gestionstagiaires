@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": "20261012-mac-aps-v1",
+  "revision": "20261012-mac-aps-v2",
   "voice": "fr-FR-HenriNeural",
   "rate": "-2%",
   "usage": "Support de révision et de préparation ; ne vaut ni attestation MAC, ni validation de gestes pratiques, ni relevé de présence réglementaire.",
@@ -10,9 +10,9 @@
       "id": "mac-aps-module-01-video",
       "module": "01",
       "title": "Synthèse vidéo · Organiser les premiers secours",
-      "src": "media/mac-aps/v1/module-01.mp4",
-      "poster": "media/mac-aps/v1/module-01.jpg",
-      "captions": "media/mac-aps/v1/module-01.vtt",
+      "src": "media/mac-aps/v2/module-01.mp4",
+      "poster": "media/mac-aps/v2/module-01.jpg",
+      "captions": "media/mac-aps/v2/module-01.vtt",
       "duration_seconds": 398.186,
       "narration_seconds": 395.376,
       "voice": "fr-FR-HenriNeural",
@@ -68,18 +68,348 @@
           "end_seconds": 398.112
         }
       ],
-      "caption_cues": 107,
-      "render_revision": "20261012-mac-aps-v1",
-      "source_sha256": "d4120f81bdf3e4e624ee2e32f6a19cf2d958a8833936b17e2af0bd80808d2cf6",
-      "video_sha256": "2de70608d0e33d18c27fcc58cef6f168469ebf3dc3dfc86f3cac07377fee99c5"
+      "caption_cues": 103,
+      "render_revision": "20261012-mac-aps-v2",
+      "source_sha256": "63bd6c2f1640e8e66da74aa39c0c775d0ec28001ed8acb879479154a7d177dfa",
+      "video_sha256": "48190ed900ebb12191ff8387459d4d4b17a497d4d731fdc82a67c87df76d3dbc",
+      "source_video_sha256": "2de70608d0e33d18c27fcc58cef6f168469ebf3dc3dfc86f3cac07377fee99c5",
+      "audio_preserved": true,
+      "audio_packet_sha256": "ca66418c4692aedf9c1577fa4493b6bc35fab69d6d06081eb4cdd54d31a41531",
+      "playback_duration_seconds": 398.2,
+      "subtitle_font_pixels": 44,
+      "subtitle_bottom_margin_pixels": 64,
+      "frame_rate": 25,
+      "visual_sync": [
+        {
+          "scene_index": 0,
+          "events": [
+            {
+              "start_seconds": 10.37,
+              "active": [],
+              "anchor": "L’objectif est de reconnaître une situation préoccupante"
+            },
+            {
+              "start_seconds": 15.6,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "de transmettre une alerte exploitable et d’accueillir les secours"
+            },
+            {
+              "start_seconds": 19.477,
+              "active": [],
+              "anchor": "Cette vidéo accompagne les cours et les exercices"
+            },
+            {
+              "start_seconds": 37.24,
+              "active": [
+                2
+              ],
+              "anchor": "ce que vous devez transmettre au professionnel qui prend le relais"
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "events": [
+            {
+              "start_seconds": 45.84,
+              "active": [
+                0
+              ],
+              "anchor": "consultez les consignes de secours"
+            },
+            {
+              "start_seconds": 47.724,
+              "active": [
+                1
+              ],
+              "anchor": "vérifiez les moyens d’alerte et repérez le matériel disponible"
+            },
+            {
+              "start_seconds": 57.482,
+              "active": [
+                2
+              ],
+              "anchor": "Identifiez l’adresse exacte du site"
+            },
+            {
+              "start_seconds": 68.86,
+              "active": [],
+              "anchor": "Demandez aussi comment joindre les sauveteurs secouristes du travail présents"
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "events": [
+            {
+              "start_seconds": 84.219,
+              "active": [
+                0
+              ],
+              "anchor": "Face à un événement, commencez par observer l’environnement"
+            },
+            {
+              "start_seconds": 96.579,
+              "active": [
+                1
+              ],
+              "anchor": "Vous ne devez pas vous engager dans une zone dangereuse"
+            },
+            {
+              "start_seconds": 101.26,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Empêchez d’autres personnes de s’exposer"
+            },
+            {
+              "start_seconds": 122.114,
+              "active": [],
+              "anchor": "Les décisions particulières se travaillent dans la formation pratique"
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "events": [
+            {
+              "start_seconds": 134.178,
+              "active": [
+                1
+              ],
+              "anchor": "Une personne vous répond-elle ? Que vous dit-elle ?"
+            },
+            {
+              "start_seconds": 138.107,
+              "active": [
+                0
+              ],
+              "anchor": "Quel événement venez-vous de constater ?"
+            },
+            {
+              "start_seconds": 140.709,
+              "active": [
+                0,
+                2
+              ],
+              "anchor": "Décrivez simplement les signes observés et leur évolution."
+            },
+            {
+              "start_seconds": 149.688,
+              "active": [],
+              "anchor": "Affirmer qu’elle fait une maladie précise sans compétence médicale"
+            },
+            {
+              "start_seconds": 164.701,
+              "active": [
+                2
+              ],
+              "anchor": "Si son état change, signalez-le immédiatement"
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "events": [
+            {
+              "start_seconds": 174.291,
+              "active": [
+                0
+              ],
+              "anchor": "Lorsque vous appelez les secours, donnez d’abord une localisation précise"
+            },
+            {
+              "start_seconds": 185.477,
+              "active": [
+                1
+              ],
+              "anchor": "Présentez ensuite la situation observée, le nombre de personnes concernées"
+            },
+            {
+              "start_seconds": 189.801,
+              "active": [
+                2
+              ],
+              "anchor": "les dangers encore présents et les premières mesures prises"
+            },
+            {
+              "start_seconds": 193.143,
+              "active": [],
+              "anchor": "Parlez clairement et laissez l’opérateur poser ses questions"
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "events": [
+            {
+              "start_seconds": 223.127,
+              "active": [
+                0
+              ],
+              "anchor": "Une personne reste auprès de la victime"
+            },
+            {
+              "start_seconds": 226.481,
+              "active": [
+                1
+              ],
+              "anchor": "une autre transmet l’alerte"
+            },
+            {
+              "start_seconds": 227.94,
+              "active": [
+                2
+              ],
+              "anchor": "une troisième va accueillir les secours"
+            },
+            {
+              "start_seconds": 231.048,
+              "active": [
+                1
+              ],
+              "anchor": "Adressez-vous à une personne identifiée"
+            },
+            {
+              "start_seconds": 240.295,
+              "active": [
+                2
+              ],
+              "anchor": "Le guidage doit conduire les intervenants jusqu’au bon lieu"
+            },
+            {
+              "start_seconds": 251.443,
+              "active": [
+                1
+              ],
+              "anchor": "Vérifiez que les informations essentielles circulent entre les rôles"
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "events": [
+            {
+              "start_seconds": 260.955,
+              "active": [
+                0,
+                1
+              ],
+              "anchor": "Les gestes doivent correspondre à votre formation actualisée"
+            },
+            {
+              "start_seconds": 267.384,
+              "active": [
+                0
+              ],
+              "anchor": "N’improvisez pas un traitement"
+            },
+            {
+              "start_seconds": 282.256,
+              "active": [
+                2
+              ],
+              "anchor": "Pendant l’attente, restez attentif aux changements"
+            },
+            {
+              "start_seconds": 293.659,
+              "active": [],
+              "anchor": "Préservez la confidentialité et annoncez calmement ce que vous faites"
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "events": [
+            {
+              "start_seconds": 312.796,
+              "active": [
+                0
+              ],
+              "anchor": "Il est conscient, répond à vos questions et demande à s’asseoir"
+            },
+            {
+              "start_seconds": 320.079,
+              "active": [
+                1
+              ],
+              "anchor": "Vous sollicitez un collègue, restez auprès du visiteur"
+            },
+            {
+              "start_seconds": 330.947,
+              "active": [
+                2
+              ],
+              "anchor": "Votre collègue prépare l’accès"
+            },
+            {
+              "start_seconds": 338.549,
+              "active": [
+                1
+              ],
+              "anchor": "Vous ne substituez pas cette initiative à l’avis des secours"
+            },
+            {
+              "start_seconds": 345.717,
+              "active": [
+                2
+              ],
+              "anchor": "Vous surveillez la situation et signalez tout changement à l’opérateur"
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "events": [
+            {
+              "start_seconds": 350.263,
+              "active": [
+                1
+              ],
+              "anchor": "À l’arrivée des intervenants, fournissez une transmission courte"
+            },
+            {
+              "start_seconds": 353.74,
+              "active": [
+                0,
+                1
+              ],
+              "anchor": "l’événement constaté, les horaires utiles"
+            },
+            {
+              "start_seconds": 366.283,
+              "active": [
+                0
+              ],
+              "anchor": "Après l’événement, rédigez le compte rendu prévu"
+            },
+            {
+              "start_seconds": 372.891,
+              "active": [
+                2
+              ],
+              "anchor": "Le retour d’expérience peut révéler"
+            },
+            {
+              "start_seconds": 383.426,
+              "active": [],
+              "anchor": "Pour vérifier vos acquis, expliquez maintenant"
+            }
+          ]
+        }
+      ]
     },
     "02": {
       "id": "mac-aps-module-02-video",
       "module": "02",
       "title": "Synthèse vidéo · Appliquer les principes de la République",
-      "src": "media/mac-aps/v1/module-02.mp4",
-      "poster": "media/mac-aps/v1/module-02.jpg",
-      "captions": "media/mac-aps/v1/module-02.vtt",
+      "src": "media/mac-aps/v2/module-02.mp4",
+      "poster": "media/mac-aps/v2/module-02.jpg",
+      "captions": "media/mac-aps/v2/module-02.vtt",
       "duration_seconds": 394.793,
       "narration_seconds": 391.944,
       "voice": "fr-FR-HenriNeural",
@@ -135,18 +465,323 @@
           "end_seconds": 394.772
         }
       ],
-      "caption_cues": 105,
-      "render_revision": "20261012-mac-aps-v1",
-      "source_sha256": "b81f5d46eca1a2fbef997cc40fdb6d8491f785191cb4cdc7888dc204d7c0da56",
-      "video_sha256": "148f2ed5ea9334475c49ff35c99ae5ebf13ef86075b2f54c5ff2f0cf4fd8a900"
+      "caption_cues": 101,
+      "render_revision": "20261012-mac-aps-v2",
+      "source_sha256": "1f74c74a12073c6a16e812c77da1942925931b931e1c0b777274b45b62da04e1",
+      "video_sha256": "e039081cae1cd5de6ebe69993191cc439a1ebe472546d98d269241c189624945",
+      "source_video_sha256": "148f2ed5ea9334475c49ff35c99ae5ebf13ef86075b2f54c5ff2f0cf4fd8a900",
+      "audio_preserved": true,
+      "audio_packet_sha256": "d347e8d56f2cad644e26312f6da690a8d47ee67104010efdadb51059ede836c8",
+      "playback_duration_seconds": 394.8,
+      "subtitle_font_pixels": 44,
+      "subtitle_bottom_margin_pixels": 64,
+      "frame_rate": 25,
+      "visual_sync": [
+        {
+          "scene_index": 0,
+          "events": [
+            {
+              "start_seconds": 0.051,
+              "active": [],
+              "anchor": "Dans cette synthèse, nous allons relier les principes de la République"
+            },
+            {
+              "start_seconds": 29.796,
+              "active": [],
+              "anchor": "Pour chaque situation, posez-vous trois questions"
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "events": [
+            {
+              "start_seconds": 41.751,
+              "active": [
+                0
+              ],
+              "anchor": "La liberté implique le respect des droits d’autrui"
+            },
+            {
+              "start_seconds": 51.445,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Il applique les règles nécessaires à sa mission, dans les limites de ses pouvoirs"
+            },
+            {
+              "start_seconds": 56.139,
+              "active": [
+                0,
+                1
+              ],
+              "anchor": "Si un visiteur critique l’établissement"
+            },
+            {
+              "start_seconds": 74.965,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Avant d’intervenir, vérifiez aussi que la consigne reçue est comprise"
+            },
+            {
+              "start_seconds": 80.705,
+              "active": [
+                0
+              ],
+              "anchor": "Un désaccord d’opinion ne doit pas devenir un conflit artificiel"
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "events": [
+            {
+              "start_seconds": 86.651,
+              "active": [
+                0
+              ],
+              "anchor": "L’égalité demande des critères objectifs"
+            },
+            {
+              "start_seconds": 91.995,
+              "active": [
+                1
+              ],
+              "anchor": "Si l’accès exige un titre valable"
+            },
+            {
+              "start_seconds": 106.09,
+              "active": [
+                2
+              ],
+              "anchor": "expliquer plus lentement à une personne qui comprend mal le français"
+            },
+            {
+              "start_seconds": 124.33,
+              "active": [
+                0
+              ],
+              "anchor": "Si l’explication repose seulement sur une impression, revenez aux faits"
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "events": [
+            {
+              "start_seconds": 133.554,
+              "active": [
+                0
+              ],
+              "anchor": "Dans votre mission, cela signifie écouter une demande"
+            },
+            {
+              "start_seconds": 138.12,
+              "active": [
+                2
+              ],
+              "anchor": "et orienter vers l’interlocuteur compétent"
+            },
+            {
+              "start_seconds": 141.003,
+              "active": [
+                1
+              ],
+              "anchor": "Vous pouvez rester ferme sur une règle tout en choisissant des mots respectueux"
+            },
+            {
+              "start_seconds": 156.895,
+              "active": [
+                0,
+                2
+              ],
+              "anchor": "Proposez votre aide sans l’imposer"
+            },
+            {
+              "start_seconds": 165.339,
+              "active": [
+                1
+              ],
+              "anchor": "Une posture professionnelle n’exige ni froideur systématique ni familiarité"
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "events": [
+            {
+              "start_seconds": 174.751,
+              "active": [
+                0
+              ],
+              "anchor": "La laïcité garantit la liberté de conscience"
+            },
+            {
+              "start_seconds": 177.92,
+              "active": [
+                1
+              ],
+              "anchor": "la neutralité de l’État"
+            },
+            {
+              "start_seconds": 179.981,
+              "active": [],
+              "anchor": "Elle ne donne pas à un agent privé un pouvoir général"
+            },
+            {
+              "start_seconds": 185.708,
+              "active": [
+                2
+              ],
+              "anchor": "Les règles varient selon le cadre"
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "events": [
+            {
+              "start_seconds": 216.883,
+              "active": [
+                0,
+                1
+              ],
+              "anchor": "Une discrimination peut résulter d’une différence de traitement"
+            },
+            {
+              "start_seconds": 223.758,
+              "active": [
+                1
+              ],
+              "anchor": "Dans l’accueil et l’accès à un service"
+            },
+            {
+              "start_seconds": 236.985,
+              "active": [
+                2
+              ],
+              "anchor": "Si un responsable vous demande de filtrer un public sur la base d’un stéréotype"
+            },
+            {
+              "start_seconds": 254.332,
+              "active": [],
+              "anchor": "Une trace factuelle des instructions et des faits"
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "events": [
+            {
+              "start_seconds": 266.881,
+              "active": [
+                0
+              ],
+              "anchor": "Adressez-vous directement à elle"
+            },
+            {
+              "start_seconds": 270.758,
+              "active": [
+                1
+              ],
+              "anchor": "et demandez comment vous pouvez faciliter le passage"
+            },
+            {
+              "start_seconds": 278.386,
+              "active": [
+                2
+              ],
+              "anchor": "Une consigne doit rester intelligible"
+            },
+            {
+              "start_seconds": 293.59,
+              "active": [],
+              "anchor": "Préservez la confidentialité de ce qu’elle vous explique"
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "events": [
+            {
+              "start_seconds": 307.44,
+              "active": [
+                0
+              ],
+              "anchor": "un collègue vous conseille de contrôler systématiquement plus longtemps les personnes ayant un certain accent"
+            },
+            {
+              "start_seconds": 318.279,
+              "active": [
+                1
+              ],
+              "anchor": "Vous appliquez les critères d’accès prévus à tous les visiteurs concernés"
+            },
+            {
+              "start_seconds": 321.46,
+              "active": [
+                2
+              ],
+              "anchor": "et vous demandez au responsable de clarifier l’instruction problématique"
+            },
+            {
+              "start_seconds": 337.718,
+              "active": [],
+              "anchor": "Mettez la vidéo en pause et formulez une réponse professionnelle au collègue"
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "events": [
+            {
+              "start_seconds": 351.2,
+              "active": [
+                0
+              ],
+              "anchor": "constatez les faits"
+            },
+            {
+              "start_seconds": 352.345,
+              "active": [
+                1
+              ],
+              "anchor": "identifiez la règle applicable"
+            },
+            {
+              "start_seconds": 354.22,
+              "active": [
+                2
+              ],
+              "anchor": "choisissez une réponse adaptée et préparez le relais"
+            },
+            {
+              "start_seconds": 362.69,
+              "active": [],
+              "anchor": "Évitez les étiquettes comme personne bizarre ou public à problème"
+            },
+            {
+              "start_seconds": 371.172,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Lorsque vous doutez de la légalité d’une instruction"
+            }
+          ]
+        }
+      ]
     },
     "03": {
       "id": "mac-aps-module-03-video",
       "module": "03",
       "title": "Synthèse vidéo · Décider dans le cadre juridique",
-      "src": "media/mac-aps/v1/module-03.mp4",
-      "poster": "media/mac-aps/v1/module-03.jpg",
-      "captions": "media/mac-aps/v1/module-03.vtt",
+      "src": "media/mac-aps/v2/module-03.mp4",
+      "poster": "media/mac-aps/v2/module-03.jpg",
+      "captions": "media/mac-aps/v2/module-03.vtt",
       "duration_seconds": 385.537,
       "narration_seconds": 382.704,
       "voice": "fr-FR-HenriNeural",
@@ -202,18 +837,353 @@
           "end_seconds": 385.56
         }
       ],
-      "caption_cues": 109,
-      "render_revision": "20261012-mac-aps-v1",
-      "source_sha256": "25fefeadcdf665f7da6f0cfc86b4defcca5fc648be05a4c64b6dba61cbb9acdc",
-      "video_sha256": "fbddde45ec2d904e42b6aa949ac7c99e7605cb1cc406c84817585cb16400bbb2"
+      "caption_cues": 103,
+      "render_revision": "20261012-mac-aps-v2",
+      "source_sha256": "c8d00b2376c5795602ec2eb57a3e543a0deb6368234bea93b8064e047540246b",
+      "video_sha256": "ad073ef7ff8d0bfeccbb3ad799333ecd10c7a896d96044b58a273269fecb6e88",
+      "source_video_sha256": "fbddde45ec2d904e42b6aa949ac7c99e7605cb1cc406c84817585cb16400bbb2",
+      "audio_preserved": true,
+      "audio_packet_sha256": "a58fc1026baac8a18509dc247b4e42639dce418638eabfa9819a2145e7c81807",
+      "playback_duration_seconds": 385.56,
+      "subtitle_font_pixels": 44,
+      "subtitle_bottom_margin_pixels": 64,
+      "frame_rate": 25,
+      "visual_sync": [
+        {
+          "scene_index": 0,
+          "events": [
+            {
+              "start_seconds": 12.895,
+              "active": [
+                0
+              ],
+              "anchor": "Votre mission est définie"
+            },
+            {
+              "start_seconds": 14.6,
+              "active": [
+                1
+              ],
+              "anchor": "vos pouvoirs sont limités"
+            },
+            {
+              "start_seconds": 15.68,
+              "active": [
+                2
+              ],
+              "anchor": "et vos actes peuvent engager votre responsabilité"
+            },
+            {
+              "start_seconds": 18.967,
+              "active": [
+                1
+              ],
+              "anchor": "Le port d’une tenue ou d’une carte professionnelle ne vous transforme pas en policier"
+            },
+            {
+              "start_seconds": 27.883,
+              "active": [],
+              "anchor": "Nous allons examiner les conditions d’exercice"
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "events": [
+            {
+              "start_seconds": 41.251,
+              "active": [
+                0
+              ],
+              "anchor": "Avant d’exercer, assurez-vous que votre situation professionnelle"
+            },
+            {
+              "start_seconds": 59.771,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Sur le poste, vérifiez le périmètre de la mission"
+            },
+            {
+              "start_seconds": 66.94,
+              "active": [
+                1
+              ],
+              "anchor": "Si une tâche nouvelle vous est demandée"
+            },
+            {
+              "start_seconds": 78.037,
+              "active": [
+                2
+              ],
+              "anchor": "Lorsqu’une instruction est ambiguë, demandez une clarification"
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "events": [
+            {
+              "start_seconds": 85.051,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Une consigne sert à organiser la mission"
+            },
+            {
+              "start_seconds": 87.32,
+              "active": [
+                0
+              ],
+              "anchor": "mais elle reste soumise au droit"
+            },
+            {
+              "start_seconds": 89.745,
+              "active": [
+                2
+              ],
+              "anchor": "Elle précise par exemple un circuit de ronde"
+            },
+            {
+              "start_seconds": 95.446,
+              "active": [
+                0,
+                2
+              ],
+              "anchor": "Elle ne peut pas autoriser une violence injustifiée"
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "events": [
+            {
+              "start_seconds": 127.855,
+              "active": [
+                0
+              ],
+              "anchor": "Dans certains accès, la procédure peut prévoir de présenter un justificatif"
+            },
+            {
+              "start_seconds": 145.878,
+              "active": [
+                1
+              ],
+              "anchor": "Le refus d’une formalité d’accès se traite selon la procédure"
+            },
+            {
+              "start_seconds": 158.888,
+              "active": [
+                2
+              ],
+              "anchor": "Si une situation dépasse votre mission"
+            },
+            {
+              "start_seconds": 165.368,
+              "active": [
+                0
+              ],
+              "anchor": "Précisez toujours ce que vous avez réellement vérifié"
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "events": [
+            {
+              "start_seconds": 178.692,
+              "active": [
+                0
+              ],
+              "anchor": "Il faut notamment apprécier la réalité et l’actualité de l’atteinte injustifiée"
+            },
+            {
+              "start_seconds": 182.697,
+              "active": [
+                1
+              ],
+              "anchor": "la nécessité de la réponse"
+            },
+            {
+              "start_seconds": 183.9,
+              "active": [
+                2
+              ],
+              "anchor": "et sa proportion"
+            },
+            {
+              "start_seconds": 185.759,
+              "active": [
+                0
+              ],
+              "anchor": "Une réaction de vengeance après les faits n’est pas une défense"
+            },
+            {
+              "start_seconds": 189.598,
+              "active": [],
+              "anchor": "La protection des biens obéit également à des règles particulières"
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "events": [
+            {
+              "start_seconds": 214.09,
+              "active": [
+                0
+              ],
+              "anchor": "dans certaines situations de crime flagrant ou de délit flagrant puni d’emprisonnement"
+            },
+            {
+              "start_seconds": 220.58,
+              "active": [
+                1
+              ],
+              "anchor": "et de le conduire devant l’officier de police judiciaire le plus proche"
+            },
+            {
+              "start_seconds": 229.957,
+              "active": [
+                0
+              ],
+              "anchor": "Une simple suspicion ne suffit pas"
+            },
+            {
+              "start_seconds": 239.511,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Sollicitez les forces de l’ordre et respectez la dignité ainsi que la sécurité des personnes"
+            },
+            {
+              "start_seconds": 250.429,
+              "active": [],
+              "anchor": "La procédure exacte se travaille lors de la formation encadrée"
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "events": [
+            {
+              "start_seconds": 254.763,
+              "active": [
+                0
+              ],
+              "anchor": "La déontologie se voit dans la tenue, les paroles, la maîtrise de soi"
+            },
+            {
+              "start_seconds": 260.732,
+              "active": [
+                1
+              ],
+              "anchor": "Elle implique aussi de protéger les informations obtenues pendant la mission"
+            },
+            {
+              "start_seconds": 272.301,
+              "active": [
+                2
+              ],
+              "anchor": "Utilisez les outils autorisés et limitez la transmission aux destinataires qui en ont besoin"
+            },
+            {
+              "start_seconds": 281.817,
+              "active": [
+                1
+              ],
+              "anchor": "Dans un compte rendu, séparez les faits constatés des informations rapportées"
+            },
+            {
+              "start_seconds": 287.773,
+              "active": [
+                0
+              ],
+              "anchor": "Ne modifiez pas une chronologie pour protéger une mauvaise décision"
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "events": [
+            {
+              "start_seconds": 300.578,
+              "active": [
+                0
+              ],
+              "anchor": "Un salarié vous affirme qu’un visiteur a probablement pris un objet"
+            },
+            {
+              "start_seconds": 315.182,
+              "active": [
+                1
+              ],
+              "anchor": "Vous cherchez les éléments objectifs accessibles dans votre mission"
+            },
+            {
+              "start_seconds": 318.04,
+              "active": [
+                2
+              ],
+              "anchor": "et informez le responsable selon la procédure"
+            },
+            {
+              "start_seconds": 332.198,
+              "active": [],
+              "anchor": "Mettez la vidéo en pause et formulez votre premier message radio"
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "events": [
+            {
+              "start_seconds": 345.078,
+              "active": [
+                0
+              ],
+              "anchor": "Indiquez les horaires utiles, le lieu précis"
+            },
+            {
+              "start_seconds": 347.8,
+              "active": [
+                1
+              ],
+              "anchor": "les faits constatés"
+            },
+            {
+              "start_seconds": 349.083,
+              "active": [
+                2
+              ],
+              "anchor": "les actions réalisées et les personnes ou services alertés"
+            },
+            {
+              "start_seconds": 352.552,
+              "active": [
+                1
+              ],
+              "anchor": "Évitez les jugements personnels et les formulations vagues"
+            },
+            {
+              "start_seconds": 369.376,
+              "active": [],
+              "anchor": "Pour poursuivre cette synthèse, choisissez une situation de votre poste"
+            }
+          ]
+        }
+      ]
     },
     "04": {
       "id": "mac-aps-module-04-video",
       "module": "04",
       "title": "Synthèse vidéo · Prévenir les conflits et sécuriser l’accès",
-      "src": "media/mac-aps/v1/module-04.mp4",
-      "poster": "media/mac-aps/v1/module-04.jpg",
-      "captions": "media/mac-aps/v1/module-04.vtt",
+      "src": "media/mac-aps/v2/module-04.mp4",
+      "poster": "media/mac-aps/v2/module-04.jpg",
+      "captions": "media/mac-aps/v2/module-04.vtt",
       "duration_seconds": 394.817,
       "narration_seconds": 391.944,
       "voice": "fr-FR-HenriNeural",
@@ -269,18 +1239,338 @@
           "end_seconds": 394.796
         }
       ],
-      "caption_cues": 113,
-      "render_revision": "20261012-mac-aps-v1",
-      "source_sha256": "6d0cc803c5f18ee161c2782f7f1b4495d05355c1ef09f596e21494b80c9d7f53",
-      "video_sha256": "36b72a92b0ad071a755800846004619d3c58d5fdcd2af310e55e7378ff3e5e94"
+      "caption_cues": 106,
+      "render_revision": "20261012-mac-aps-v2",
+      "source_sha256": "f4e13c99e3adb86d50aac2d9841bd5e76c6b4ae19c029fe5a176a06934bad570",
+      "video_sha256": "a1be807a669465c48ef73e7807daa16f944885ceb1836a677d101ac21dabbf8c",
+      "source_video_sha256": "36b72a92b0ad071a755800846004619d3c58d5fdcd2af310e55e7378ff3e5e94",
+      "audio_preserved": true,
+      "audio_packet_sha256": "56b8bdff7adb117b20154bc6c66a9321601a14506421426783d0b96eb36a48e2",
+      "playback_duration_seconds": 394.84,
+      "subtitle_font_pixels": 44,
+      "subtitle_bottom_margin_pixels": 64,
+      "frame_rate": 25,
+      "visual_sync": [
+        {
+          "scene_index": 0,
+          "events": [
+            {
+              "start_seconds": 5.23,
+              "active": [
+                1
+              ],
+              "anchor": "Une règle d’accès peut être justifiée et pourtant mal comprise"
+            },
+            {
+              "start_seconds": 23.724,
+              "active": [
+                0
+              ],
+              "anchor": "Nous allons revoir l’observation de la tension"
+            },
+            {
+              "start_seconds": 26.06,
+              "active": [
+                1
+              ],
+              "anchor": "l’écoute, l’explication d’un refus"
+            },
+            {
+              "start_seconds": 29.62,
+              "active": [
+                2
+              ],
+              "anchor": "et la demande de renfort"
+            },
+            {
+              "start_seconds": 31.645,
+              "active": [],
+              "anchor": "Les techniques d’intervention physique nécessitent un entraînement encadré"
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "events": [
+            {
+              "start_seconds": 42.999,
+              "active": [
+                0
+              ],
+              "anchor": "La tension peut venir d’une attente"
+            },
+            {
+              "start_seconds": 50.091,
+              "active": [
+                1
+              ],
+              "anchor": "Observez les signes concrets"
+            },
+            {
+              "start_seconds": 65.308,
+              "active": [
+                2
+              ],
+              "anchor": "Examinez aussi votre propre posture"
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "events": [
+            {
+              "start_seconds": 87.499,
+              "active": [
+                0
+              ],
+              "anchor": "Commencez par écouter la demande"
+            },
+            {
+              "start_seconds": 91.275,
+              "active": [
+                1
+              ],
+              "anchor": "Une reformulation courte montre que vous avez compris"
+            },
+            {
+              "start_seconds": 113.711,
+              "active": [
+                2
+              ],
+              "anchor": "Si la personne parle difficilement français"
+            },
+            {
+              "start_seconds": 119.451,
+              "active": [
+                1
+              ],
+              "anchor": "La reformulation sert aussi à corriger un malentendu"
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "events": [
+            {
+              "start_seconds": 137.34,
+              "active": [
+                0
+              ],
+              "anchor": "ce passage est réservé aux personnes inscrites"
+            },
+            {
+              "start_seconds": 139.566,
+              "active": [
+                1
+              ],
+              "anchor": "votre nom n’apparaît pas sur la liste disponible"
+            },
+            {
+              "start_seconds": 141.939,
+              "active": [
+                2
+              ],
+              "anchor": "je peux joindre l’accueil pour vérifier votre invitation"
+            },
+            {
+              "start_seconds": 148.814,
+              "active": [
+                0
+              ],
+              "anchor": "Évitez les phrases personnelles comme je vous interdis d’entrer"
+            },
+            {
+              "start_seconds": 153.393,
+              "active": [
+                2
+              ],
+              "anchor": "Si aucune alternative immédiate n’est possible"
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "events": [
+            {
+              "start_seconds": 175.783,
+              "active": [
+                0
+              ],
+              "anchor": "Vérifier un titre d’accès"
+            },
+            {
+              "start_seconds": 177.58,
+              "active": [
+                1
+              ],
+              "anchor": "regarder visuellement l’intérieur d’un bagage présenté"
+            },
+            {
+              "start_seconds": 179.94,
+              "active": [
+                2
+              ],
+              "anchor": "et procéder à sa fouille"
+            },
+            {
+              "start_seconds": 183.462,
+              "active": [
+                1
+              ],
+              "anchor": "Dans le cadre prévu pour les agents concernés, l’inspection visuelle"
+            },
+            {
+              "start_seconds": 188.436,
+              "active": [
+                2
+              ],
+              "anchor": "leur fouille exige le consentement du propriétaire"
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "events": [
+            {
+              "start_seconds": 214.811,
+              "active": [
+                0
+              ],
+              "anchor": "La palpation de sécurité obéit à des conditions spécifiques"
+            },
+            {
+              "start_seconds": 230.729,
+              "active": [
+                1
+              ],
+              "anchor": "Le consentement exprès de la personne est nécessaire"
+            },
+            {
+              "start_seconds": 233.472,
+              "active": [
+                2
+              ],
+              "anchor": "et la palpation est réalisée par une personne du même sexe"
+            },
+            {
+              "start_seconds": 237.196,
+              "active": [
+                0
+              ],
+              "anchor": "Ne confondez pas ce cadre avec une fouille corporelle"
+            },
+            {
+              "start_seconds": 249.786,
+              "active": [],
+              "anchor": "Les gestes, la posture et la coordination doivent être appris en situation encadrée"
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "events": [
+            {
+              "start_seconds": 259.911,
+              "active": [
+                2
+              ],
+              "anchor": "Un renfort demandé suffisamment tôt"
+            },
+            {
+              "start_seconds": 282.819,
+              "active": [
+                0
+              ],
+              "anchor": "L’accumulation d’agents autour d’une personne peut accroître la tension"
+            },
+            {
+              "start_seconds": 289.235,
+              "active": [
+                2
+              ],
+              "anchor": "Si une menace grave apparaît"
+            },
+            {
+              "start_seconds": 300.574,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Le choix de se retirer et de faire intervenir un relais"
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "events": [
+            {
+              "start_seconds": 310.54,
+              "active": [
+                0
+              ],
+              "anchor": "une personne refuse la vérification demandée pour son bagage et élève la voix"
+            },
+            {
+              "start_seconds": 317.036,
+              "active": [
+                1
+              ],
+              "anchor": "expliquez précisément la règle applicable"
+            },
+            {
+              "start_seconds": 321.845,
+              "active": [
+                2
+              ],
+              "anchor": "Vous ne touchez pas son sac par surprise"
+            },
+            {
+              "start_seconds": 337.687,
+              "active": [],
+              "anchor": "Mettez la vidéo en pause et préparez trois phrases"
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "events": [
+            {
+              "start_seconds": 350.247,
+              "active": [
+                0
+              ],
+              "anchor": "Quand la situation est revenue au calme, vérifiez que l’accès et les personnes sont en sécurité"
+            },
+            {
+              "start_seconds": 355.808,
+              "active": [
+                1
+              ],
+              "anchor": "Transmettez les informations utiles au responsable"
+            },
+            {
+              "start_seconds": 368.13,
+              "active": [
+                2
+              ],
+              "anchor": "Analysez ensuite ce qui aurait pu éviter la tension"
+            },
+            {
+              "start_seconds": 382.441,
+              "active": [],
+              "anchor": "Pour poursuivre, entraînez-vous avec un collègue"
+            }
+          ]
+        }
+      ]
     },
     "05": {
       "id": "mac-aps-module-05-video",
       "module": "05",
       "title": "Synthèse vidéo · Prévenir le risque terroriste",
-      "src": "media/mac-aps/v1/module-05.mp4",
-      "poster": "media/mac-aps/v1/module-05.jpg",
-      "captions": "media/mac-aps/v1/module-05.vtt",
+      "src": "media/mac-aps/v2/module-05.mp4",
+      "poster": "media/mac-aps/v2/module-05.jpg",
+      "captions": "media/mac-aps/v2/module-05.vtt",
       "duration_seconds": 397.269,
       "narration_seconds": 394.44,
       "voice": "fr-FR-HenriNeural",
@@ -336,10 +1626,313 @@
           "end_seconds": 397.208
         }
       ],
-      "caption_cues": 110,
-      "render_revision": "20261012-mac-aps-v1",
-      "source_sha256": "35ef07a250e9ec2e9707e0000a58749fcdc6e78ea874e80e697627145dc8c617",
-      "video_sha256": "325ac82418ec670cb4d5e56f3ba50a8d20b0ea3926724f26ae3b45e5b8d0f319"
+      "caption_cues": 103,
+      "render_revision": "20261012-mac-aps-v2",
+      "source_sha256": "a6bccc965493a90551fde228e1b64bdcb9e4805d32f91ca6cafa7c3e552e16ea",
+      "video_sha256": "f412ee12700d6516714e5f96e2779185efdbb5300bd4bf18f9ccce7c02a3e6a4",
+      "source_video_sha256": "325ac82418ec670cb4d5e56f3ba50a8d20b0ea3926724f26ae3b45e5b8d0f319",
+      "audio_preserved": true,
+      "audio_packet_sha256": "c1ce569ee29c22bcf3bfec442ada13ee4c4478bc3b3ca2e4e1e0e3a5bc11a968",
+      "playback_duration_seconds": 397.28,
+      "subtitle_font_pixels": 44,
+      "subtitle_bottom_margin_pixels": 64,
+      "frame_rate": 25,
+      "visual_sync": [
+        {
+          "scene_index": 0,
+          "events": [
+            {
+              "start_seconds": 6.237,
+              "active": [
+                0,
+                1,
+                2
+              ],
+              "anchor": "Elle porte sur la vigilance, la protection du public et l’alerte"
+            },
+            {
+              "start_seconds": 10.74,
+              "active": [],
+              "anchor": "Elle ne prépare pas une confrontation armée"
+            },
+            {
+              "start_seconds": 13.775,
+              "active": [
+                0,
+                1,
+                2
+              ],
+              "anchor": "Votre rôle consiste à repérer des faits préoccupants"
+            },
+            {
+              "start_seconds": 23.661,
+              "active": [
+                0
+              ],
+              "anchor": "La vigilance ne consiste pas à suspecter un public"
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "events": [
+            {
+              "start_seconds": 43.751,
+              "active": [
+                0
+              ],
+              "anchor": "La préparation commence par les consignes de sûreté actualisées du site"
+            },
+            {
+              "start_seconds": 53.585,
+              "active": [
+                1
+              ],
+              "anchor": "Repérez les accès, les cheminements et les espaces prévus"
+            },
+            {
+              "start_seconds": 76.034,
+              "active": [
+                2
+              ],
+              "anchor": "Les exercices encadrés permettent de vérifier la compréhension des rôles"
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "events": [
+            {
+              "start_seconds": 89.451,
+              "active": [
+                0
+              ],
+              "anchor": "Une anomalie peut concerner un accès inhabituellement ouvert"
+            },
+            {
+              "start_seconds": 103.354,
+              "active": [
+                2
+              ],
+              "anchor": "Ne cherchez pas à deviner une intention à partir d’un seul détail"
+            },
+            {
+              "start_seconds": 111.237,
+              "active": [
+                1
+              ],
+              "anchor": "Recoupez les informations disponibles dans le cadre de votre mission"
+            },
+            {
+              "start_seconds": 122.474,
+              "active": [
+                0,
+                2
+              ],
+              "anchor": "Dans votre message, distinguez ce que vous avez vu de ce qu’un tiers vous a rapporté"
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "events": [
+            {
+              "start_seconds": 131.551,
+              "active": [
+                0
+              ],
+              "anchor": "Si un objet présente un caractère suspect au regard du contexte"
+            },
+            {
+              "start_seconds": 134.96,
+              "active": [
+                1
+              ],
+              "anchor": "ne l’ouvrez pas, ne le déplacez pas"
+            },
+            {
+              "start_seconds": 139.944,
+              "active": [
+                2
+              ],
+              "anchor": "Prévenez les personnes de ne pas s’en approcher"
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "events": [
+            {
+              "start_seconds": 183.26,
+              "active": [
+                0,
+                1
+              ],
+              "anchor": "s’échapper lorsque cela est possible sans se mettre davantage en danger"
+            },
+            {
+              "start_seconds": 186.84,
+              "active": [
+                2
+              ],
+              "anchor": "ou de se cacher lorsque la fuite n’est pas possible"
+            },
+            {
+              "start_seconds": 189.91,
+              "active": [
+                0
+              ],
+              "anchor": "Le choix dépend de ce qui est réellement observé"
+            },
+            {
+              "start_seconds": 199.501,
+              "active": [],
+              "anchor": "Donnez des indications courtes et compréhensibles"
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "events": [
+            {
+              "start_seconds": 222.157,
+              "active": [
+                0
+              ],
+              "anchor": "Donnez la localisation exacte"
+            },
+            {
+              "start_seconds": 224.16,
+              "active": [
+                1
+              ],
+              "anchor": "les faits constatés, les dangers visibles"
+            },
+            {
+              "start_seconds": 233.687,
+              "active": [
+                2
+              ],
+              "anchor": "Indiquez également les mesures de protection déjà engagées"
+            },
+            {
+              "start_seconds": 238.764,
+              "active": [],
+              "anchor": "Laissez l’opérateur vous guider"
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "events": [
+            {
+              "start_seconds": 266.564,
+              "active": [
+                0,
+                1,
+                2
+              ],
+              "anchor": "Suivez leurs consignes, gardez les mains visibles et évitez les gestes brusques"
+            },
+            {
+              "start_seconds": 271.424,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "N’avancez pas vers elles avec un objet à la main"
+            },
+            {
+              "start_seconds": 276.436,
+              "active": [],
+              "anchor": "Votre tenue professionnelle ne leur permet pas de connaître immédiatement votre rôle"
+            },
+            {
+              "start_seconds": 281.666,
+              "active": [
+                0
+              ],
+              "anchor": "Quand elles vous le demandent, transmettez les informations utiles"
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "events": [
+            {
+              "start_seconds": 308.455,
+              "active": [
+                0
+              ],
+              "anchor": "Un visiteur rejoint le poste d’accueil et signale un danger grave"
+            },
+            {
+              "start_seconds": 316.911,
+              "active": [
+                1
+              ],
+              "anchor": "Vous recueillez les faits essentiels sans prolonger un interrogatoire"
+            },
+            {
+              "start_seconds": 320.279,
+              "active": [
+                2
+              ],
+              "anchor": "prévenez immédiatement le responsable et faites déclencher l’alerte adaptée"
+            },
+            {
+              "start_seconds": 324.526,
+              "active": [
+                1
+              ],
+              "anchor": "Vous ne vous rendez pas dans la zone pour vérifier personnellement le récit"
+            },
+            {
+              "start_seconds": 328.544,
+              "active": [
+                2
+              ],
+              "anchor": "Vous protégez les personnes présentes"
+            },
+            {
+              "start_seconds": 335.585,
+              "active": [],
+              "anchor": "Mettez la vidéo en pause et préparez votre message"
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "events": [
+            {
+              "start_seconds": 355.434,
+              "active": [
+                0
+              ],
+              "anchor": "Suivez les décisions des autorités et des responsables"
+            },
+            {
+              "start_seconds": 358.98,
+              "active": [
+                1
+              ],
+              "anchor": "Préservez les éléments utiles sans les manipuler inutilement"
+            },
+            {
+              "start_seconds": 374.465,
+              "active": [
+                2
+              ],
+              "anchor": "L’équipe peut ensuite analyser les difficultés de communication"
+            },
+            {
+              "start_seconds": 386.149,
+              "active": [],
+              "anchor": "Pour poursuivre votre travail, expliquez les trois priorités de cette synthèse"
+            }
+          ]
+        }
+      ]
     }
   }
 }

@@ -32,7 +32,7 @@
           {% endif %}
           <video class="native-course-video" controls preload="metadata" playsinline aria-label="{{ block.video.title }}"{% if block.video.required and not preview_mode %} data-required-video="{{ block.video.id }}" data-video-duration="{{ block.video.duration_seconds }}" controlslist="nodownload noplaybackrate{% if readable_video %} nofullscreen{% endif %}" disablepictureinpicture{% elif readable_video %} controlslist="nofullscreen"{% endif %}{% if block.video.poster %} poster="{{ block.video.poster }}"{% endif %}>
             <source src="{{ block.video.src }}">
-            {% if block.video.captions %}<track kind="captions" src="{{ block.video.captions }}" srclang="fr" label="Français">{% endif %}
+            {% if block.video.captions and not (course.training_label == 'MAC APS' and block.video.burned_captions) %}<track kind="captions" src="{{ block.video.captions }}" srclang="fr" label="Français">{% endif %}
             Votre navigateur ne permet pas de lire cette vidéo.
           </video>
           {% if readable_video %}

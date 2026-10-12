@@ -5,6 +5,9 @@ Only fictional educational narration is sent to Microsoft's speech service.
 It never turns video duration into regulatory training attendance.
 
 Build dependencies: Python 3.12, edge-tts==7.2.8, Pillow, ffmpeg and ffprobe.
+For a picture/caption-only correction retaining the published audio and learner
+timeline, use scripts/resync_mac_aps.py. This authoring entry point re-synthesizes
+narration and is reserved for a deliberate new recording.
 Usage: python scripts/render_mac_aps.py --module 01
        python scripts/render_mac_aps.py --prepare-only
        python scripts/render_mac_aps.py --merge --verify
@@ -28,14 +31,14 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "elearning_native/mac_aps"
 ILLUSTRATIONS = RES / "assets/illustrations"
-ASSETS = RES / "assets/media/mac-aps/v1"
+ASSETS = RES / "assets/media/mac-aps/v2"
 WORK = Path(os.environ.get("MAC_APS_MEDIA_WORK", "/tmp/mac-aps-media"))
 FONT = ROOT / "scripts/academy_videos/assets/Manrope-600.ttf"
 BOLD = ROOT / "scripts/academy_videos/assets/Manrope-800.ttf"
 VOICE = "fr-FR-HenriNeural"
 RATE = "-2%"
-REVISION = "20261012-mac-aps-v1"
-W, H, FPS = 1280, 720, 10
+REVISION = "20261012-mac-aps-v2"
+W, H, FPS = 1280, 720, 25
 NAVY, BLUE, GOLD = "#172b4d", "#235dd1", "#e9b647"
 BG, MUTED, LIGHT = "#f5f8fd", "#536682", "#e4edfb"
 
@@ -63,7 +66,7 @@ MODULES = {
               "Quand plusieurs agents ou témoins sont présents, donnez des missions précises. Une personne reste auprès de la victime si les conditions le permettent ; une autre transmet l’alerte ; une troisième va accueillir les secours au point convenu. Adressez-vous à une personne identifiée et demandez-lui de confirmer qu’elle a compris. Une consigne générale lancée à la foule risque de n’être suivie par personne. Le guidage doit conduire les intervenants jusqu’au bon lieu, avec les moyens d’accès nécessaires. Les autres agents maintiennent une circulation adaptée et éloignent les curieux sans entraver les secours. Vérifiez que les informations essentielles circulent entre les rôles. Si vous êtes seul, indiquez-le à l’opérateur : il vous aide à hiérarchiser les actions.", "Une mission, une personne, une confirmation."),
             S("Agir dans ses compétences", "layers", ["Gestes appris et actualisés", "Consignes de l’opérateur", "Surveillance et réévaluation"],
               "Les gestes doivent correspondre à votre formation actualisée, à l’état de la personne et aux instructions des secours. N’improvisez pas un traitement et ne proposez pas un médicament personnel. L’utilisation d’un défibrillateur s’accompagne des indications données par l’appareil et des gestes appris lors de la formation. Cette synthèse ne remplace pas leur démonstration ni leur entraînement. Pendant l’attente, restez attentif aux changements et transmettez-les. Une personne initialement capable de parler peut se dégrader ; l’alerte doit alors être mise à jour sans attendre l’arrivée des intervenants. Préservez la confidentialité et annoncez calmement ce que vous faites. La présence, l’écoute et une coordination stable sont utiles, même lorsqu’aucun geste technique ne relève immédiatement de votre rôle.", "L’entraînement pratique reste indispensable."),
-            S("Cas : malaise dans le hall", "decision", ["Personne consciente et pâle", "Alerte médicale et protection", "Accès dégagé et surveillance"],
+            S("Cas : malaise dans le hall", "decision", ["Personne consciente, se sent mal", "Alerte médicale et protection", "Accès dégagé et surveillance"],
               "Prenons une situation fictive. Dans le hall, un visiteur vous indique qu’il se sent très mal. Il est conscient, répond à vos questions et demande à s’asseoir. L’environnement ne présente pas de danger immédiat. Vous sollicitez un collègue, restez auprès du visiteur et faites contacter les secours selon la situation. Vous transmettez l’adresse exacte, ce que dit la personne et ce que vous observez. Votre collègue prépare l’accès. Une autre personne propose de conduire elle-même le visiteur à l’hôpital pour gagner du temps. Vous ne substituez pas cette initiative à l’avis des secours : vous expliquez qu’une évaluation et des consignes adaptées sont en cours. Vous surveillez la situation et signalez tout changement à l’opérateur.", "Mettre la vidéo en pause : quelles informations transmettre ?"),
             S("Passer le relais et tirer les enseignements", "steps", ["Chronologie factuelle", "Transmission aux secours", "Retour sur l’organisation"],
               "À l’arrivée des intervenants, fournissez une transmission courte : l’événement constaté, les horaires utiles, les signes observés, les changements et les actions réalisées. Ne multipliez pas les interprétations. Suivez leurs demandes et facilitez leur intervention. Après l’événement, rédigez le compte rendu prévu, avec seulement les données nécessaires et dans les outils autorisés. Le retour d’expérience peut révéler une adresse imprécise, un portail difficile à ouvrir ou une répartition des rôles mal comprise. Ces éléments servent à améliorer l’organisation. Pour vérifier vos acquis, expliquez maintenant comment vous donneriez l’alerte depuis votre propre poste, qui guiderait les secours et quels risques pourraient gêner leur accès. Reprenez les exercices avec le formateur pour transformer ces repères en comportements maîtrisés.", "Un compte rendu utile prépare la prochaine intervention."),
@@ -87,7 +90,7 @@ MODULES = {
               "Une discrimination peut résulter d’une différence de traitement fondée sur un critère interdit dans une situation visée par le droit. Dans l’accueil et l’accès à un service, soyez notamment attentif aux décisions liées à l’origine, au sexe, à la religion, au handicap ou à l’état de santé. Ces exemples ne constituent pas la liste complète des critères protégés. Si un responsable vous demande de filtrer un public sur la base d’un stéréotype, ne transformez pas cette instruction en pratique habituelle. Demandez la règle précise et signalez le problème selon le circuit approprié. L’ancienneté d’une habitude ou la demande d’un client ne suffisent pas à la rendre légitime. Une trace factuelle des instructions et des faits facilite le traitement de la difficulté.", "Une habitude ne rend pas un critère légitime."),
             S("Handicap : demander avant d’aider", "steps", ["S’adresser à la personne", "Demander le besoin", "Adapter le parcours"],
               "Le handicap peut être visible ou invisible. Ne déduisez pas les capacités d’une personne de son apparence. Adressez-vous directement à elle, même lorsqu’un accompagnant est présent, et demandez comment vous pouvez faciliter le passage. Ne saisissez pas un fauteuil ou un équipement d’assistance sans accord. Une consigne doit rester intelligible : formulez une phrase à la fois, indiquez clairement le chemin et vérifiez la compréhension si nécessaire. Si un accès est indisponible, cherchez avec le responsable une solution adaptée au lieu de renvoyer automatiquement la personne. Préservez la confidentialité de ce qu’elle vous explique. Vous n’avez pas besoin d’un diagnostic médical détaillé pour reconnaître un besoin concret d’aide ou d’orientation.", "L’aide se propose et se coordonne avec la personne."),
-            S("Cas : une instruction de filtrage injustifiée", "decision", ["Consigne fondée sur l’apparence", "Demander un critère licite", "Alerter le responsable"],
+            S("Cas : une instruction de filtrage injustifiée", "decision", ["Consigne fondée sur l’accent", "Demander un critère licite", "Alerter le responsable"],
               "Voici un cas fictif. À l’entrée d’un événement, un collègue vous conseille de contrôler systématiquement plus longtemps les personnes ayant un certain accent. Il affirme que cela a toujours été fait. Vous ne reprenez pas cette habitude. Vous appliquez les critères d’accès prévus à tous les visiteurs concernés et vous demandez au responsable de clarifier l’instruction problématique. Si un comportement précis pose difficulté, vous le décrivez indépendamment de l’origine supposée. Votre compte rendu mentionne les faits utiles et les paroles pertinentes, sans qualifier inutilement les personnes. Mettez la vidéo en pause et formulez une réponse professionnelle au collègue. Elle doit rappeler la règle objective, maintenir une coopération calme et permettre le signalement de l’écart.", "La décision doit rester indépendante des stéréotypes."),
             S("Justifier et rendre compte", "steps", ["Fait observé", "Règle appliquée", "Réponse et relais"],
               "Pour terminer, retenez une méthode simple : constatez les faits, identifiez la règle applicable, choisissez une réponse adaptée et préparez le relais. Un compte rendu indique ce qui s’est produit, les explications données et la suite apportée. Évitez les étiquettes comme personne bizarre ou public à problème. Elles n’aident pas à comprendre une situation et peuvent entretenir des préjugés. Lorsque vous doutez de la légalité d’une instruction, demandez une vérification au bon niveau. Votre professionnalisme se mesure aussi à cette capacité de recul. Pour poursuivre, prenez une règle de votre poste et expliquez comment vous l’appliqueriez à trois visiteurs ayant des besoins différents. La sécurité, la dignité et la cohérence des décisions doivent rester visibles dans chacune de vos réponses.", "Une décision professionnelle se comprend et se vérifie."),
@@ -193,8 +196,8 @@ def normalize(value):
     return "".join(c for c in unicodedata.normalize("NFD", value.lower()) if c.isalnum())
 
 
-def caption_cues(source, boundaries):
-    """Preserve every authored character while using real speech word timings."""
+def narration_words(source, boundaries):
+    """Attach authored character positions to actual TTS word boundaries."""
     positions, normalized = [], ""
     for i, char in enumerate(source):
         part = normalize(char)
@@ -211,8 +214,15 @@ def caption_cues(source, boundaries):
     for i, word in enumerate(boundaries):
         left = 0 if i == 0 else starts[i]
         right = starts[i + 1] if i + 1 < len(starts) else len(source)
-        words.append({"text": source[left:right].strip(), "start": word["offset"] / 1e7,
+        words.append({"text": source[left:right].strip(), "char_start": left, "char_end": right,
+                      "start": word["offset"] / 1e7,
                       "end": (word["offset"] + word["duration"]) / 1e7})
+    return words
+
+
+def caption_cues(source, boundaries):
+    """Preserve every authored character while using real speech word timings."""
+    words = narration_words(source, boundaries)
     cues, i = [], 0
     while i < len(words):
         choices = []
@@ -238,6 +248,24 @@ def caption_cues(source, boundaries):
         i = end
     assert re.sub(r"\s+", "", " ".join(c["text"] for c in cues)) == re.sub(r"\s+", "", source)
     return cues
+
+
+def visual_events(module, scene_index, words):
+    """Resolve semantic changes against measured word positions, never thirds."""
+    plan = json.loads(Path(__file__).with_name("mac_aps_visual_sync.json").read_text())
+    scene = MODULES[module]["scenes"][scene_index]
+    authored = plan["modules"][module][scene_index]
+    assert authored["title"] == scene["title"]
+    events = [{"start": 0.0, "active": []}]
+    previous_char = -1
+    for event in authored["events"]:
+        assert scene["text"].count(event["anchor"]) == 1
+        position = scene["text"].index(event["anchor"])
+        assert position > previous_char
+        previous_char = position
+        word = next(w for w in words if w["char_start"] <= position < w["char_end"])
+        events.append({**event, "start": word["start"]})
+    return events
 
 
 def wrap_caption(text):
@@ -302,62 +330,68 @@ def box(draw, bounds, label, number, active=False, small=False):
     write_text(draw, label, x1 + 19, y1 + (64 if small else 74), x2 - x1 - 38, 25 if small else 28, 3, fill=fill, bold=True)
 
 
-def frame(module, scene_index, active=0):
+def frame(module, scene_index, active=()):
+    # A sentence can concern several ideas, or none of the three labels.
+    # Never imply a left-to-right sequence unless the narration says so.
+    active = {active} if isinstance(active, int) else set(active)
     module_data = MODULES[module]
     scene = module_data["scenes"][scene_index]
     im = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(im)
     d.rectangle((0, 0, W, 8), fill=BLUE)
     write_text(d, "INTÉGRALE ACADEMY  /  MAC APS", 46, 27, 860, 19, 1, bold=True)
-    write_text(d, f"MODULE {module}  ·  {scene_index + 1:02} / {len(module_data['scenes']):02}", 985, 29, 250, 16, 1, fill=MUTED)
+    write_text(d, f"SÉQUENCE {scene_index + 1:02} / {len(module_data['scenes']):02}", 985, 29, 250, 16, 1, fill=MUTED)
     write_text(d, module_data["title"].upper(), 46, 80, 1188, 18, 1, fill=BLUE, bold=True)
     write_text(d, scene["title"], 46, 117, 1188, 38, 2, bold=True)
     d.rounded_rectangle((46, 219, 117, 224), radius=2, fill=GOLD)
     nodes, kind = scene["nodes"], scene["kind"]
     if kind == "illustration":
-        pic = ImageOps.contain(Image.open(ILLUSTRATIONS / f"module-{module}.webp").convert("RGB"), (570, 340))
-        im.paste(pic, (46 + (570 - pic.width) // 2, 242 + (340 - pic.height) // 2))
+        pic = ImageOps.contain(Image.open(ILLUSTRATIONS / f"module-{module}.webp").convert("RGB"), (570, 280))
+        im.paste(pic, (46 + (570 - pic.width) // 2, 242 + (280 - pic.height) // 2))
         d = ImageDraw.Draw(im)
         write_text(d, module_data["subtitle"], 654, 246, 570, 27, 3, bold=True)
         for j, label in enumerate(nodes):
-            top = 378 + 60 * j
-            d.rounded_rectangle((650, top, 1234, top + 46), radius=12, fill=BLUE if j == active else LIGHT)
-            write_text(d, f"{j + 1:02}  {label}", 668, top + 8, 546, 21, 1, fill="#ffffff" if j == active else NAVY, bold=True)
+            top = 355 + 48 * j
+            d.rounded_rectangle((650, top, 1234, top + 42), radius=12, fill=BLUE if j in active else LIGHT)
+            write_text(d, f"{j + 1:02}  {label}", 668, top + 7, 546, 21, 1, fill="#ffffff" if j in active else NAVY, bold=True)
     elif kind in {"steps", "columns"}:
         for j, node in enumerate(nodes):
             left = 46 + j * 408
-            box(d, (left, 279, left + 372, 484), node, j + 1, j == active)
+            box(d, (left, 244, left + 372, 434), node, j + 1, j in active)
             if j < len(nodes) - 1 and kind == "steps":
-                arrow(d, (left + 378, 379), (left + 403, 379))
-        write_text(d, scene["note"], 50, 526, 1180, 25, 2, fill=MUTED, centered=True)
+                arrow(d, (left + 378, 339), (left + 403, 339))
+        write_text(d, scene["note"], 50, 478, 1180, 24, 2, fill=MUTED, centered=True)
     elif kind == "decision":
-        d.rounded_rectangle((366, 254, 914, 326), radius=18, fill=BLUE if active == 0 else LIGHT, outline=BLUE, width=2)
-        write_text(d, nodes[0], 384, 272, 512, 27, 1, fill="#ffffff" if active == 0 else NAVY, bold=True, centered=True)
-        arrow(d, (510, 330), (319, 378), BLUE)
-        arrow(d, (770, 330), (962, 378), BLUE)
-        box(d, (47, 385, 600, 527), nodes[1], 2, active == 1, small=True)
-        box(d, (680, 385, 1233, 527), nodes[2], 3, active == 2, small=True)
-        write_text(d, scene["note"], 50, 551, 1180, 21, 1, fill=MUTED, centered=True)
+        d.rounded_rectangle((366, 240, 914, 306), radius=18, fill=BLUE if 0 in active else LIGHT, outline=BLUE, width=2)
+        write_text(d, nodes[0], 384, 258, 512, 27, 1, fill="#ffffff" if 0 in active else NAVY, bold=True, centered=True)
+        arrow(d, (510, 310), (319, 348), BLUE)
+        arrow(d, (770, 310), (962, 348), BLUE)
+        box(d, (47, 352, 600, 487), nodes[1], 2, 1 in active, small=True)
+        box(d, (680, 352, 1233, 487), nodes[2], 3, 2 in active, small=True)
+        write_text(d, scene["note"], 50, 514, 1180, 20, 1, fill=MUTED, centered=True)
     elif kind == "layers":
         for j, node in enumerate(nodes):
-            left, right, top = 250 - j * 70, 1030 + j * 70, 262 + j * 88
-            d.rounded_rectangle((left, top, right, top + 65), radius=15, fill=BLUE if active == j else "#ffffff", outline=BLUE if active == j else "#ccdaef", width=2)
-            write_text(d, f"{j + 1:02}  {node}", left + 21, top + 16, right - left - 42, 25, 1, fill="#ffffff" if active == j else NAVY, bold=True, centered=True)
-        write_text(d, scene["note"], 50, 548, 1180, 23, 1, fill=MUTED, centered=True)
+            left, right, top = 250 - j * 70, 1030 + j * 70, 244 + j * 74
+            d.rounded_rectangle((left, top, right, top + 65), radius=15, fill=BLUE if j in active else "#ffffff", outline=BLUE if j in active else "#ccdaef", width=2)
+            write_text(d, f"{j + 1:02}  {node}", left + 21, top + 16, right - left - 42, 25, 1, fill="#ffffff" if j in active else NAVY, bold=True, centered=True)
+        write_text(d, scene["note"], 50, 496, 1180, 23, 1, fill=MUTED, centered=True)
     else:
         raise ValueError(kind)
     # Captions occupy their own area; diagrams and illustration never cover them.
-    d.rectangle((0, 606, W, H), fill="#0f1b2c")
+    d.rectangle((0, 550, W, H), fill="#0f1b2c")
     for i in range(len(module_data["scenes"])):
         step = 1188 / len(module_data["scenes"])
         x = 46 + i * step
-        d.rounded_rectangle((x, 596, x + step - 10, 600), radius=2, fill=BLUE if i <= scene_index else "#d3dded")
+        d.rounded_rectangle((x, 546, x + step - 10, 550), radius=2, fill=BLUE if i <= scene_index else "#d3dded")
     return im
 
 
 def source_signature(module):
     payload = json.dumps(MODULES[module], ensure_ascii=False, sort_keys=True).encode()
-    return hashlib.sha256(payload + (ILLUSTRATIONS / f"module-{module}.webp").read_bytes() + FONT.read_bytes() + BOLD.read_bytes() + Path(__file__).read_bytes()).hexdigest()
+    dependencies = ("mac_aps_visual_sync.json", "mac_aps_caption_sync.py", "resync_mac_aps.py", "mac_aps_visual_timing.json")
+    build_sources = b"".join(Path(__file__).with_name(name).read_bytes() for name in dependencies if Path(__file__).with_name(name).is_file())
+    return hashlib.sha256(payload + (ILLUSTRATIONS / f"module-{module}.webp").read_bytes() + FONT.read_bytes() + BOLD.read_bytes()
+                          + Path(__file__).read_bytes() + build_sources).hexdigest()
 
 
 async def speech(text, folder, scene_index, slots):
@@ -378,8 +412,8 @@ async def speech(text, folder, scene_index, slots):
     timing = audio.with_suffix(".json")
     if audio.is_file() and timing.is_file():
         saved = json.loads(timing.read_text())
-        if saved.get("signature") == signature and duration(audio) >= saved["last_word_end"] - .08:
-            return audio, saved["cues"]
+        if saved.get("signature") == signature and saved.get("words") and duration(audio) >= saved["last_word_end"] - .08:
+            return audio, saved["cues"], saved["words"]
     async with slots:
         for attempt in range(4):
             try:
@@ -399,8 +433,9 @@ async def speech(text, folder, scene_index, slots):
                 last = (boundaries[-1]["offset"] + boundaries[-1]["duration"]) / 1e7
                 assert duration(audio) >= last - .08, "Audio truncated before the last spoken word"
                 run(["ffmpeg", "-nostdin", "-v", "error", "-xerror", "-i", str(audio), "-f", "null", "-"])
-                timing.write_text(json.dumps({"signature": signature, "last_word_end": last, "cues": cues}, ensure_ascii=False))
-                return audio, cues
+                words = narration_words(text, boundaries)
+                timing.write_text(json.dumps({"signature": signature, "last_word_end": last, "cues": cues, "words": words}, ensure_ascii=False))
+                return audio, cues, words
             except Exception as error:
                 if attempt == 3:
                     # Avoid including service URL parameters in build output.
@@ -418,7 +453,7 @@ WrapStyle: 2
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Manrope,31,&H00FFFFFF,&H00FFFFFF,&H000F1B2C,&H000F1B2C,0,0,0,0,100,100,0,0,1,0,0,2,55,55,21,1
+Style: Default,AcademyManrope600,44,&H00FFFFFF,&H00FFFFFF,&H000F1B2C,&H000F1B2C,0,0,0,0,100,100,0,0,1,0,0,2,55,55,64,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -432,22 +467,27 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
 def encode(module, voices, folder):
     ASSETS.mkdir(parents=True, exist_ok=True)
-    narration_seconds = sum(duration(audio) for audio, _ in voices)
+    from mac_aps_caption_sync import reflow_captions
+    narration_seconds = sum(duration(audio) for audio, _, _ in voices)
     assert narration_seconds >= 300, f"Module {module}: {narration_seconds:.1f}s spoken; add real explanatory content, never silence"
     captions, chapters, parts, offset = [], [], [], 0.0
-    for index, (scene, (audio, cues)) in enumerate(zip(MODULES[module]["scenes"], voices)):
+    for index, (scene, (audio, cues, words)) in enumerate(zip(MODULES[module]["scenes"], voices)):
+        cues = reflow_captions(cues, FONT)
         actual_audio = duration(audio)
         target = max(actual_audio + .30, cues[-1]["end"] + .10)
         frames = []
-        for active in range(3):
-            picture = frame(module, index, active)
-            png = folder / f"scene-{index:02}-{active}.png"
+        events = visual_events(module, index, words)
+        for event_index, event in enumerate(events):
+            picture = frame(module, index, event["active"])
+            png = folder / f"scene-{index:02}-{event_index}.png"
             picture.save(png)
-            frames.append(png)
-            if index == 0 and active == 0:
+            next_start = events[event_index + 1]["start"] if event_index + 1 < len(events) else target
+            if next_start > event["start"]:
+                frames.append((png, next_start - event["start"]))
+            if index == 0 and event_index == 0:
                 picture.save(ASSETS / f"module-{module}.jpg", quality=89)
         slideshow = folder / f"scene-{index:02}-frames.txt"
-        slideshow.write_text("".join(f"file '{png}'\nduration {target / 3:.6f}\n" for png in frames) + f"file '{frames[-1]}'\n")
+        slideshow.write_text("".join(f"file '{png}'\nduration {seconds:.6f}\n" for png, seconds in frames) + f"file '{frames[-1][0]}'\n")
         ass = folder / f"scene-{index:02}.ass"
         ass_file(ass, cues)
         part = folder / f"scene-{index:02}.mp4"
@@ -476,7 +516,7 @@ def encode(module, voices, folder):
     (ASSETS / f"module-{module}.vtt").write_text("WEBVTT\n\n" + "".join(f"{stamp(c['start'])} --> {stamp(c['end'])}\n{c['text']}\n\n" for c in captions).rstrip() + "\n", encoding="utf-8")
     transcript = "\n\n".join(scene["text"] for scene in MODULES[module]["scenes"])
     entry = {"id": f"mac-aps-module-{module}-video", "module": module, "title": "Synthèse vidéo · " + MODULES[module]["title"],
-             "src": f"media/mac-aps/v1/module-{module}.mp4", "poster": f"media/mac-aps/v1/module-{module}.jpg", "captions": f"media/mac-aps/v1/module-{module}.vtt",
+             "src": f"media/mac-aps/v2/module-{module}.mp4", "poster": f"media/mac-aps/v2/module-{module}.jpg", "captions": f"media/mac-aps/v2/module-{module}.vtt",
              "duration_seconds": round(actual, 3), "narration_seconds": round(narration_seconds, 3), "voice": VOICE, "rate": RATE,
              "burned_captions": True, "required": False, "transcript": transcript, "words": len(transcript.split()), "chapters": chapters,
              "caption_cues": len(captions), "render_revision": REVISION, "source_sha256": source_signature(module), "video_sha256": hashlib.sha256(out.read_bytes()).hexdigest()}
@@ -496,7 +536,7 @@ def verify_entry(module, full_decode=False):
     transcript = "\n\n".join(s["text"] for s in MODULES[module]["scenes"])
     assert entry["transcript"] == transcript and entry["words"] == len(transcript.split())
     for field, extension in [("src", "mp4"), ("poster", "jpg"), ("captions", "vtt")]:
-        assert entry[field] == f"media/mac-aps/v1/module-{module}.{extension}"
+        assert entry[field] == f"media/mac-aps/v2/module-{module}.{extension}"
         file = RES / "assets" / entry[field]
         assert file.is_file() and not file.is_symlink() and file.stat().st_size > 500
     movie = ASSETS / f"module-{module}.mp4"

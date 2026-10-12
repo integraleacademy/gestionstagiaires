@@ -56,6 +56,45 @@ def video_state(response):
     return response.get_json()["progress"]["video_progress"]["content-1"]["required-video"]
 
 
+@pytest.mark.parametrize('training,burned,native_captions', [
+    ('MAC APS', True, False),
+    ('MAC APS', False, True),
+    ('MAC APS', None, True),
+    ('APS', True, True),
+    ('VTC', True, True),
+])
+def test_burned_mac_captions_have_one_visible_layer_without_relaxing_viewing(
+    lesson, training, burned, native_captions,
+):
+    c = lesson
+    c.course['training_label'] = training
+    video = c.course['sections'][0]['activities'][0]['blocks'][0]['video']
+    video.update(captions='media/test.vtt', lesson_explainer=True,
+                 transcript='Transcription complète et consultable de cette vidéo.')
+    if burned is not None:
+        video['burned_captions'] = burned
+    course_file = c.persist_dir / 'native_elearning/courses' / c.course['id'] / c.course['version'] / 'course.json'
+    course_file.write_text(json.dumps(c.course))
+
+    page = c.client.get(c.player_url)
+    assert page.status_code == 200
+    body = page.get_data(as_text=True)
+    assert ('<track kind="captions"' in body) is native_captions
+    assert video['transcript'] in body
+    config = c._player_config(page)
+    assert config['requiredVideos'] == {'required-video': 8}
+    assert 'data-required-video="required-video"' in body
+    assert c._api_post(config['completeUrl'], config).status_code == 409
+
+    c._admin_login()
+    preview = c.client.get(f"/admin/elearning/courses/{c.course['id']}/preview",
+                           query_string={'activity': 'content-1', 'version': c.course['version']})
+    assert preview.status_code == 200
+    assert ('<track kind="captions"' in preview.text) is native_captions
+    assert video['transcript'] in preview.text
+    assert 'nativeElearningConfig' not in preview.text
+
+
 def test_no_skip_by_button_direct_url_api_or_fake_ended(lesson):
     c = lesson
     assert c.config["requiredVideos"] == {"required-video": 8}
