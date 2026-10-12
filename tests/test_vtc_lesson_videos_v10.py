@@ -11,6 +11,7 @@ import pytest
 import elearning_orders
 from elearning_native import vtc, vtc_training_web
 from elearning_native import vtc_lesson_videos as lessons
+from elearning_native import vtc_productions
 from elearning_native.paths import project_progress
 from elearning_native.videos import activity_playback_policy, course_videos
 from tests import test_native_elearning_web as web_tests
@@ -24,7 +25,7 @@ def activities(course):
 def test_complete_collection_is_additive_for_existing_and_required_for_new(letter):
     cid = 'academy-vtc-' + letter
     old = vtc.load_bundled_course(cid, lessons.COURSE_VERSION)
-    new = vtc.load_bundled_course(cid)
+    new = vtc.load_bundled_course(cid, lessons.REQUIRED_VERSION)
     frozen = json.loads((vtc.ROOT/'courses'/cid/(lessons.COURSE_VERSION+'.json')).read_text())
     assert new['version'] == lessons.REQUIRED_VERSION
     assert len(course_videos(new)) == 13
@@ -61,7 +62,7 @@ def test_complete_collection_is_additive_for_existing_and_required_for_new(lette
 def test_new_registration_curriculum_and_associated_resources_use_complete_edition():
     assigned = elearning_orders.curriculum('vtc')
     assert len(assigned) == 8
-    assert {m['course_version'] for m in assigned} == {lessons.REQUIRED_VERSION}
+    assert {m['course_version'] for m in assigned} == {vtc_productions.VERSION}
     manifest = vtc.curriculum_manifest()
     assert manifest['video_count'] == 104 and manifest['lesson_video_count'] == 96
     for module in manifest['modules']:

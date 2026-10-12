@@ -4,6 +4,7 @@ from functools import lru_cache
 import copy, hashlib, json, math
 from .vtc_lesson_videos import enrich_lessons, REQUIRED_VERSION
 from .vtc_video_quality import repair_course as repair_video_quality
+from . import vtc_productions
 ROOT=Path(__file__).parent/'vtc'
 
 # This is a pronunciation repair, not a new learner assignment. The replacement
@@ -205,6 +206,10 @@ def load_bundled_course(course_id,version=None):
     if not module:return None
     version=version or module['version']
     if version not in [module['version'],*module.get('previous_versions',[])]:return None
+    if version == vtc_productions.VERSION:
+        # Compose after all historical media repairs. Old activity/video IDs and
+        # V11 timelines remain identical, so progress can be carried forward.
+        return vtc_productions.compose_course(load_bundled_course(course_id, vtc_productions.BASE_VERSION))
     return repair_video_quality(enrich_lessons(_repair_video_pacing(_repair_english_listening(_repair_english_narration(copy.deepcopy(_course(course_id,version)))))))
 
 def bundled_asset(course_id,version,name):
@@ -218,6 +223,13 @@ def _exam(exam_id,version):
     if version not in _manifest()['exam_versions']:return None
     allowed={m['mock_exam_id'] for m in _manifest()['modules']}|{_manifest()['final_exam_id']}
     if exam_id not in allowed:return None
+    if version == vtc_productions.VERSION:
+        # These are the existing pedagogical checkpoints. The separate CMA
+        # simulation has its own timing, scoring, and written answers.
+        exam = copy.deepcopy(_exam(exam_id, vtc_productions.BASE_VERSION))
+        if exam is not None:
+            exam['version'] = version
+        return exam
     return json.loads((ROOT/'exams'/version/(exam_id+'.json')).read_text())
 
 def load_exam(exam_id,version):

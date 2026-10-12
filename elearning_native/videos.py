@@ -92,7 +92,7 @@ def course_videos(course: Mapping[str, Any]) -> dict[str, dict[str, float]]:
 
 def vtc_pacing_enabled(course_id: str, version: str) -> bool:
     return course_id in {f"academy-vtc-{letter}" for letter in "abcdefgh"} and version in {
-        "20261010-vtc-v10-lecons-video",
+        "20261010-vtc-v10-lecons-video", "20261012-vtc-v12-cma-105h",
         "20261007-vtc-v4-visuals", "20261007-vtc-v5-annales", "20261010-vtc-v6-pedagogie",
     }
 

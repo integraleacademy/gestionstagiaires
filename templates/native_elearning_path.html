@@ -32,6 +32,8 @@
       <div><span>Temps actif cumulé</span><strong>{{ active_time_label }}</strong></div>
       <div><span>Activités terminées</span><strong>{{ completed_activities }} / {{ total_activities }}</strong></div>
     </section>
+    {% if training_label == 'VTC' %}<p class="np-hint">Durée de votre parcours : <strong>{{ programme_time_label }}</strong>. Le temps actif réellement effectué apparaît dans votre suivi.</p>{% endif %}
+    {% if cma_url %}<section class="np-panel"><h2>Simulation de l’examen CMA</h2><p>Les sept matières théoriques, les QCM et les réponses courtes, avec le chronométrage et les coefficients de l’examen. Retrouvez votre résultat par matière et les points à réviser.</p><a class="np-button np-button--primary" href="{{ cma_url }}">Ouvrir la simulation CMA →</a></section>{% endif %}
     {% if annales_url %}<section class="np-panel"><h2>Les annales VTC</h2><p>Entraînez-vous avec les sujets fournis, puis retrouvez les corrections expliquées et les leçons à réviser. Les questions anciennes qui ne peuvent plus être évaluées sont signalées.</p><a class="np-button np-button--primary" href="{{ annales_url }}">Ouvrir les annales →</a></section>{% endif %}
     <div class="np-section-heading"><div><span class="np-eyebrow">Votre programme</span><h2>Les étapes de votre parcours</h2></div><span class="np-module-count">{{ modules|length }} modules</span></div>
     {% if free_module_navigation %}<p class="np-hint">Tous vos modules VTC sont accessibles. Vous pouvez les consulter dans l’ordre de votre choix et passer de l’un à l’autre sans terminer le précédent. Votre progression est conservée dans chaque module.</p>{% endif %}

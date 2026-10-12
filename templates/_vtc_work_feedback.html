@@ -1,0 +1,14 @@
+{% if ai_feedback %}
+<section class="vtc-work-feedback" style="border:1px solid #d9c8e9;background:#faf7fe;border-radius:12px;padding:18px;margin:16px 0">
+  <h3>{{ 'Retour du formateur' if ai_feedback.trainer_review else 'Correction pédagogique par IA' }}{% if ai_feedback.score is defined %} · {{ ai_feedback.score }} / {{ ai_feedback.max_score }}{% endif %}</h3>
+  {% if ai_feedback.needs_human_review %}<p><strong>Une relecture du formateur est nécessaire.</strong></p>{% endif %}
+  {% if ai_feedback.summary %}<p>{{ ai_feedback.summary }}</p>{% endif %}
+  {% if ai_feedback.strengths %}<h4>Points forts</h4><ul>{% for item in ai_feedback.strengths %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+  {% for criterion in ai_feedback.criteria|default([]) %}<article style="border-top:1px solid #e1d5ed;padding:10px 0"><h4>{{ criterion.label }} · {{ criterion.points }} / {{ criterion.max_points }}</h4><p>{{ criterion.feedback }}</p>{% if criterion.evidence %}<p style="white-space:pre-wrap;color:#63566e">{{ criterion.evidence }}</p>{% endif %}{% if criterion.improvement %}<p>{{ criterion.improvement }}</p>{% endif %}</article>{% endfor %}
+  {% for error in ai_feedback.errors|default([]) %}<p>{% if error.excerpt %}<strong>« {{ error.excerpt }} » :</strong> {% endif %}{{ error.explanation }}{% if error.correction %}<br>{{ error.correction }}{% endif %}</p>{% endfor %}
+  {% if ai_feedback.model_response %}<details><summary>Réponses de référence</summary>{% for field_id, answer in ai_feedback.model_response.items() %}<p style="white-space:pre-wrap">{{ answer }}</p>{% endfor %}</details>{% endif %}
+  {% if ai_feedback.next_steps %}<h4>Conseils pour progresser</h4><ul>{% for item in ai_feedback.next_steps %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+  {% if ai_feedback.trainer_review %}<p style="white-space:pre-wrap"><strong>Relecture pédagogique :</strong> {{ ai_feedback.trainer_review.comment }}</p><p>{{ ai_feedback.trainer_review.reviewed_at }}</p>{% endif %}
+  <p class="muted">{{ ai_feedback.notice|default('Retour pédagogique sur cet exercice. Ce résultat est distinct de l’examen officiel.') }}</p>
+</section>
+{% endif %}

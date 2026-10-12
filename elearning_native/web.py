@@ -48,6 +48,12 @@ from .production_ai import ProductionAIService, ProductionAIError, build_course_
 from .assessment import describe_history
 from .vtc_adaptive import select_activity as select_vtc_activity
 from .vtc_enrolments import effective_learner_session
+from .vtc_productions import public_production as public_vtc_production
+from .vtc_production_work import VtcWrittenWork, WrittenWorkError, is_vtc_production
+from . import vtc_ai
+from .vtc_cma import learner_attempt_summaries
+from .vtc_105_migration import (resolve_session as resolve_vtc_105_session,
+    read_transition_session, current_progress_rows)
 
 from .importer import (
     DEFAULT_MAX_ARCHIVE_BYTES,
@@ -363,7 +369,9 @@ def create_native_elearning_blueprint(
             response.headers['Referrer-Policy'] = 'no-referrer'
             response.headers['Cache-Control'] = 'private, no-store'
         if request.endpoint in {'native_elearning.admin_exam', 'native_elearning.admin_exam_submit',
-                                'native_elearning.learner_exam', 'native_elearning.learner_exam_submit'}:
+                                'native_elearning.learner_exam', 'native_elearning.learner_exam_submit',
+                                'native_elearning.admin_written_work', 'native_elearning.admin_written_work_export',
+                                'native_elearning.activity_production', 'native_elearning.vtc_production_review'}:
             response.headers['Cache-Control'] = 'private, no-store'
         return response
 
@@ -485,6 +493,8 @@ def create_native_elearning_blueprint(
                 abort(403)
         try:
             session_obj = effective_learner_session(session_obj, trainee)
+            if allows_free_module_navigation(session_obj):
+                session_obj = resolve_vtc_105_session(session_obj, trainee, root() / 'tracking.sqlite3')
         except CourseImportError as exc:
             abort(403, str(exc))
         return session_obj, trainee
@@ -657,7 +667,8 @@ def create_native_elearning_blueprint(
                 if isinstance(value, str) and value.startswith('media/aps62/'):
                     return asset_url(asset_token, course_id, value)
                 return value
-            public['production'] = prepare_production_media(public_production(
+            production_serializer = public_vtc_production if activity.get('vtc', {}).get('kind') == 'production' else public_production
+            public['production'] = prepare_production_media(production_serializer(
                 activity['production'], reveal=production_revealed))
         if isinstance(activity.get('easy_glossary'), list):
             public['easy_glossary'] = [
@@ -1102,7 +1113,7 @@ def create_native_elearning_blueprint(
                                      activity_id=requested_id, version=course["version"]),
             },
             preview_can_answer=session.get("admin_role") != "viewer",
-            production_ai_config=production_ai_config(course, requested_id, preview=True) if raw_activity.get('production') else None,
+            production_ai_config=production_ai_config(course, requested_id, preview=True) if raw_activity.get('production') and not is_vtc_production(course, raw_activity) else None,
             exam_url=url_for('native_elearning.admin_exam',exam_id=course['mock_exam_id'],version=course['version']) if course.get('mock_exam_id') else '',
         )
 
@@ -1112,6 +1123,24 @@ def create_native_elearning_blueprint(
         _require_csrf()
         course = preview_course(course_id)
         activity = next((item for _, item in _activity_pairs(course) if item.get("id") == activity_id), None)
+        if activity and is_vtc_production(course, activity):
+            if session.get('admin_role') == 'viewer':
+                abort(403)
+            if request.content_length and request.content_length > 100_000:
+                abort(413)
+            payload = request.get_json(silent=True)
+            if not isinstance(payload, dict):
+                return jsonify(ok=False, error='Réponse invalide.'), 400
+            try:
+                answers = vtc_ai.normalize_answers(activity['production'], payload.get('production_answers'))
+                result = vtc_ai.grade_written_work(activity['production'], answers)
+            except ValueError as exc:
+                return jsonify(ok=False, error=str(exc)), 400
+            except vtc_ai.VtcAIError as exc:
+                return jsonify(ok=False, error=exc.message, code=exc.code), 503
+            response = jsonify(ok=True, feedback=result, preview=True, history=[])
+            response.headers['Cache-Control'] = 'private, no-store'
+            return response
         if activity and activity.get('production'):
             payload = request.get_json(silent=True) or {}
             try:
@@ -1421,6 +1450,7 @@ def create_native_elearning_blueprint(
         rows = store().live_progress(course_id)
         identities: Dict[Tuple[str, str], Dict[str, str]] = {}
         session_paths: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        cma_by_owner = {}
         data = load_data()
         reporting_sessions = list(data.get("sessions", []) or [])
         # Purchases use the same tracking store under virtual session IDs. Build
@@ -1432,6 +1462,7 @@ def create_native_elearning_blueprint(
                 "id": "el-" + str(order["id"]),
                 "name": order.get("group_name") or order.get("reference") or "Parcours " + str(order.get("course_code") or "").upper(),
                 "training_type": str(order.get("course_code") or "").upper(),
+                "aps_native_path_title": "Mon parcours " + str(order.get("course_code") or "").upper(),
                 "aps_native_modules": order.get("modules") or [],
                 "trainees": order.get("learners") or [],
             })
@@ -1446,10 +1477,24 @@ def create_native_elearning_blueprint(
                 if assigned_here:
                     try:
                         effective = effective_learner_session(session_obj, trainee)
+                        effective = read_transition_session(effective, trainee, root() / 'tracking.sqlite3')
+                        rows = current_progress_rows(effective, rows)
                     except CourseImportError as exc:
                         abort(409, str(exc))
                     module = next(item for item in assigned_modules(effective) if item.get("course_id") == course_id)
                     session_paths[(str(session_obj.get("id")), trainee_id)] = module
+                    if include_work and course_id.startswith('academy-vtc-'):
+                        owner = (str(session_obj.get('id')), trainee_id)
+                        cma_by_owner[owner] = learner_attempt_summaries(root() / 'tracking.sqlite3', *owner)
+                        if cma_by_owner[owner] and not any((r['session_id'], r['trainee_id']) == owner for r in rows):
+                            # A CMA-only learner is visible in the report without
+                            # inventing any course progress or tracking record.
+                            rows.append({'session_id': owner[0], 'trainee_id': owner[1],
+                                'course_id': course_id, 'course_version': module.get('course_version') or course['version'],
+                                'answers': {}, 'completed_activity_ids': [], 'video_progress': {},
+                                'active_seconds': 0, 'status': 'not_started', 'current_activity_id': '',
+                                'started_at': None, 'updated_at': None, 'completed_at': None,
+                                'live': False, 'last_seen_seconds_ago': None})
                 identities[(str(session_obj.get("id") or ""), trainee_id)] = {
                     "trainee_name": f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
                     "session_name": str(session_obj.get("name") or session_obj.get("id") or ""),
@@ -1492,6 +1537,8 @@ def create_native_elearning_blueprint(
                 row['assessment_attempts'] = describe_history(row_course, [attempt for attempt in
                     store().assessment_history(row) if attempt['activity_id'] in row_course.get('activity_order', [])])
             if include_work:
+                owner = (row['session_id'], row['trainee_id'])
+                row['cma_attempts'] = (cma_by_owner[owner] if owner in cma_by_owner else learner_attempt_summaries(root() / 'tracking.sqlite3', *owner)) if course_id.startswith('academy-vtc-') else []
                 row['written_work'] = [
                     {'activity_id': item['id'], 'title': item.get('title', ''),
                      'dossier': section.get('title', ''),
@@ -1519,7 +1566,10 @@ def create_native_elearning_blueprint(
                         'self_review': [{'label': criterion['label'], 'needs_help': saved.get('production_self_review', {}).get(criterion['id']) == 'needs_help'}
                                        for criterion in production['rubric'] if saved.get('production_self_review', {}).get(criterion['id']) in ('checked', 'needs_help')],
                         'submitted_at': saved.get('submitted_at', saved.get('production_first_submitted_at', '')),
-                        'ai': read_analyses(root() / 'production_ai.sqlite3', row, item['id']),
+                        'ai': read_analyses(root() / 'production_ai.sqlite3', row, item['id']) if not is_vtc_production(row_course, item) else {},
+                        'ai_feedback': saved.get('production_ai_feedback'),
+                        'ai_attempt_id': saved.get('production_ai_attempt'),
+                        'ai_history': VtcWrittenWork(store()).history(row, item['id']) if is_vtc_production(row_course, item) else [],
                     })
             row.pop("answers", None)
         return {
@@ -1577,7 +1627,41 @@ def create_native_elearning_blueprint(
     def admin_written_work(course_id: str) -> Any:
         payload = live_payload(course_id, include_work=True)
         return render_template('admin_native_elearning_work.html', initial=payload,
+                               csrf_token=_csrf_token(),
+                               is_vtc=course_id.startswith('academy-vtc-'),
+                               cma_count=sum(bool(row.get('cma_attempts')) for row in payload['learners']),
                                work_count=sum(len(row['written_work']) for row in payload['learners']))
+
+    @blueprint.post('/api/admin/elearning/vtc/productions/<attempt_id>/review')
+    @admin_required
+    @admin_write_required
+    def vtc_production_review(attempt_id):
+        _require_csrf()
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or len(attempt_id) != 32:
+            return jsonify(ok=False, error='Demande invalide.'), 400
+        data = load_data()
+        allowed_owners = set()
+        for scoped_session in data.get('sessions', []) or []:
+            if not isinstance(scoped_session, dict):
+                continue
+            for person in session_trainees(scoped_session):
+                allowed_owners.add((str(scoped_session.get('id') or ''), str(person.get('id') or person.get('trainee_id') or '')))
+        for order in data.get('manual_orders', []) or []:
+            if not isinstance(order, dict) or order.get('order_type') != 'elearning':
+                continue
+            for person in order.get('learners', []) or []:
+                if isinstance(person, dict):
+                    allowed_owners.add(('el-' + str(order.get('id') or ''), str(person.get('id') or '')))
+        try:
+            feedback = VtcWrittenWork(store()).trainer_review(attempt_id,
+                comment=payload.get('comment'), outcome=payload.get('outcome'),
+                reviewer=session.get('admin_username') or 'Équipe pédagogique', allowed_owners=allowed_owners)
+        except WrittenWorkError as exc:
+            return jsonify(ok=False, error=str(exc)), exc.status
+        response = jsonify(ok=True, feedback=feedback)
+        response.headers['Cache-Control'] = 'private, no-store'
+        return response
 
     @blueprint.get('/admin/elearning/courses/<course_id>/work.csv')
     @admin_required
@@ -1731,6 +1815,8 @@ def create_native_elearning_blueprint(
             total_activities=total, completed_activities=completed, completed_modules=finished,
             progress_percent=round(completed / total * 100) if total else 0,
             active_time_label=_format_seconds(seconds), resume_url=resume_url,
+            programme_time_label=_format_seconds(sum(m['course'].get('required_minutes', 0) * 60 for m in modules if m.get('course'))),
+            cma_url=url_for('native_elearning.cma_learner_home', token=token) if {f'academy-vtc-{letter}' for letter in 'abcdefg'}.issubset({m['course']['id'] for m in modules if m.get('course')}) else '',
             portal_url=url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_space", token=token),
             final_exam_url=url_for('native_elearning.learner_exam',token=token,exam_id=matched_manifest.get('final_exam_id','final')) if final_available else '',
             final_exam_unlocked=final_ready,
@@ -1853,6 +1939,7 @@ def create_native_elearning_blueprint(
             learner_name=f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
             section_title=str(section.get("title") or ""),
             activity=activity,
+            vtc_production_history=VtcWrittenWork(store()).history(access, requested_id) if is_vtc_production(course, raw_activity) else [],
             a3p_resources_url=url_for('native_elearning.a3p_resources', token=token, course_id=course_id) if course.get('training_label') == 'A3P' else '',
             training_url=url_for('native_elearning.training_learner_catalog', token=token, course_id=course_id) if course_id.startswith('academy-vtc-') else '',
             introduction=introduction,
@@ -1875,7 +1962,7 @@ def create_native_elearning_blueprint(
             remaining_time_label=_format_seconds(progress["remaining_seconds"]),
             csrf_token=csrf,
             access_token=access_token,
-            production_ai_config=production_ai_config(course, requested_id, access_token=access_token) if raw_activity.get('production') else None,
+            production_ai_config=production_ai_config(course, requested_id, access_token=access_token) if raw_activity.get('production') and not is_vtc_production(course, raw_activity) else None,
             heartbeat_seconds=CLIENT_HEARTBEAT_SECONDS,
             idle_seconds=CLIENT_IDLE_SECONDS,
             is_last_activity=index + 1 == len(order),
@@ -2018,7 +2105,7 @@ def create_native_elearning_blueprint(
     def production_analysis_context(activity_id):
         access, course, _order, _scored_ids = api_context()
         activity = next((item for _, item in _activity_pairs(course) if item.get('id') == activity_id), None)
-        if not activity or not activity.get('production'):
+        if not activity or not activity.get('production') or is_vtc_production(course, activity):
             abort(404)
         if not can_complete(course, current_progress(access, course), activity_id):
             abort(409, 'Terminez d’abord l’activité précédente.')
@@ -2036,7 +2123,7 @@ def create_native_elearning_blueprint(
         _require_csrf()
         course = preview_course(course_id)
         activity = next((item for _, item in _activity_pairs(course) if item.get('id') == activity_id), None)
-        if not activity or not activity.get('production'):
+        if not activity or not activity.get('production') or is_vtc_production(course, activity):
             abort(404)
         nonce = str(session.get('native_elearning_nonce') or '')
         if not nonce:
@@ -2064,6 +2151,21 @@ def create_native_elearning_blueprint(
             return jsonify(ok=False, error='Dossier de production introuvable.'), 404
         if not can_complete(course, current_progress(access, course), activity_id):
             return jsonify(ok=False, error='Terminez d’abord l’activité précédente.'), 409
+        if is_vtc_production(course, activity):
+            if request.content_length and request.content_length > 100_000:
+                abort(413)
+            payload = request.get_json(silent=True)
+            if not isinstance(payload, dict):
+                return jsonify(ok=False, error='Réponse invalide.'), 400
+            try:
+                result = VtcWrittenWork(store()).submit(access, course, activity, payload, current_progress(access, course))
+            except WrittenWorkError as exc:
+                return jsonify(ok=False, error=str(exc)), exc.status
+            except vtc_ai.VtcAIError as exc:
+                return jsonify(ok=False, error=exc.message, code=exc.code), 503
+            response = jsonify(result)
+            response.headers['Cache-Control'] = 'private, no-store'
+            return response
         payload = request.get_json(silent=True) or {}
         stage = payload.get('stage')
         if stage not in ('draft', 'compare'):
@@ -2093,7 +2195,12 @@ def create_native_elearning_blueprint(
         if not can_complete(course, current, activity_id):
             return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente."}), 409
         answer = None
-        if activity.get('production'):
+        if is_vtc_production(course, activity):
+            try:
+                answer = VtcWrittenWork(store()).completion_answer(access, activity, request.get_json(silent=True) or {}, current)
+            except WrittenWorkError as exc:
+                return jsonify(ok=False, error=str(exc)), exc.status
+        elif activity.get('production'):
             existing = current.get('answers', {}).get(activity_id, {})
             if activity_id in current.get('completed_activity_ids', []):
                 answer = existing
@@ -2224,6 +2331,10 @@ def create_native_elearning_blueprint(
     register_annales(blueprint, admin_required=admin_required, learner_session=learner_session,
                      learner_context=learner_context, root=root, csrf_token=_csrf_token,
                      require_csrf=_require_csrf)
+
+    from .vtc_cma_web import register as register_cma
+    register_cma(blueprint, admin_required=admin_required, learner_context=learner_context,
+                 root=root, csrf_token=_csrf_token, require_csrf=_require_csrf)
 
     def training_asset_token(course, token=None, session_obj=None, trainee=None):
         if token:

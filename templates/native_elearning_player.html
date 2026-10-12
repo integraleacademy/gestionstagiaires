@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261007-visuals') }}">
 {% if course.training_label == 'VTC' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-journey.css', v='20261006-105-1') }}">{% endif %}
-{% if activity.production %}<link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-production.css', v='20261010-v10') }}">{% endif %}
+{% if activity.production %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-production.css' if course.training_label == 'VTC' else 'css/aps62-production.css', v='20261012-v12') }}">{% endif %}
 </head>
 <body class="native-elearning-body{{ ' macaps-course' if course.training_label == 'MAC APS' else ' a3p-course' if course.training_label == 'A3P' else ' vtc-course' if course.training_label == 'VTC' else '' }}" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
@@ -204,7 +204,7 @@
           {% if activity.type == 'content' %}
             <div class="native-content-flow">
               {% for block in activity.blocks %}{{ render_block(block) }}{% endfor %}
-              {% if activity.academy or activity.production %}{% include '_aps62_activity.html' %}{% endif %}
+              {% if activity.production and course.training_label == 'VTC' %}{% include '_vtc_production.html' %}{% elif activity.academy or activity.production %}{% include '_aps62_activity.html' %}{% endif %}
               {% if activity.vtc %}{% include '_vtc_activity.html' %}{% endif %}
               {% if activity.a3p %}{% include '_a3p_lesson.html' %}{% endif %}
               {% if activity.macaps %}{% include '_macaps_lesson.html' %}{% endif %}
@@ -333,7 +333,7 @@
 {% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261012-assessments') }}" defer></script>{% endif %}
 {% if activity.practice and activity.practice.mode == 'journey' %}<script src="{{ url_for('static', filename='js/vtc-journey.js', v='20261010-v6') }}" defer></script>{% endif %}
 {% if activity.a3p and activity.a3p.kind == 'case' %}<script src="{{ url_for('static', filename='js/a3p-elearning.js', v='20261010-2') }}" defer></script>{% endif %}
-{% if activity.production %}<script src="{{ url_for('static', filename='js/aps62-production.js', v='20261010-v10') }}" defer></script>{% endif %}
+{% if activity.production %}<script src="{{ url_for('static', filename='js/vtc-production.js' if course.training_label == 'VTC' else 'js/aps62-production.js', v='20261012-v12') }}" defer></script>{% endif %}
 </body>
 </html>
 

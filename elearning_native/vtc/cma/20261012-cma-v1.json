@@ -1,0 +1,4187 @@
+{
+  "id": "vtc-cma-complete",
+  "version": "20261012-cma-v1",
+  "title": "Simulation complète de l’admissibilité VTC",
+  "reviewed_at": "2026-10-12",
+  "minutes": 230,
+  "question_count": 107,
+  "qcm_count": 91,
+  "qrc_count": 16,
+  "coefficient_total": 17,
+  "subjects": [
+    {
+      "id": "A",
+      "title": "Réglementation T3P, discriminations et violences sexistes et sexuelles",
+      "minutes": 45,
+      "coefficient": 3,
+      "minimum": 6,
+      "qcm_count": 10,
+      "qrc_count": 5,
+      "qcm_points": 1,
+      "qrc_points": 2,
+      "questions": [
+        {
+          "prompt": "Quelle est la périodicité du contrôle technique ou de l'attestation d'entretien des véhicules du T3P?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Uniquement lors de la revente du véhicule."
+            },
+            {
+              "id": "choice2",
+              "text": "Tous les ans pour le contrôle technique d’une voiture VTC."
+            },
+            {
+              "id": "choice3",
+              "text": "Tous les deux ans, comme une voiture particulière à usage privé."
+            }
+          ],
+          "explanation": "Pour une voiture VTC, le contrôle technique est annuel, avec les échéances propres à sa mise en service et à son affectation. Il ne faut pas appliquer la périodicité ordinaire de deux ans des voitures particulières utilisées à titre privé. Le sujet emploie aussi l’attestation d’entretien pour d’autres catégories du T3P.",
+          "sources": [
+            {
+              "title": "Contrôle technique des transports de personnes · Service Public",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F22299"
+            }
+          ],
+          "lesson_refs": [
+            "A.04",
+            "G.11"
+          ],
+          "id": "A-qcm-01",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-a-02",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le stage de formation continue dispensé aux conducteurs de transport public routier particulier de personnes permet d'obtenir une attestation valable :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "10 ans"
+            },
+            {
+              "id": "choice2",
+              "text": "2 ans"
+            },
+            {
+              "id": "choice3",
+              "text": "1 an"
+            },
+            {
+              "id": "choice4",
+              "text": "5 ans"
+            }
+          ],
+          "explanation": "La formation continue du conducteur doit être renouvelée tous les cinq ans et donne lieu à une attestation. Sa date doit être suivie séparément des autres échéances : permis, aptitude médicale, assurances et contrôle du véhicule.",
+          "sources": [
+            {
+              "title": "Devenir chauffeur VTC · Service Public",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+            }
+          ],
+          "lesson_refs": [
+            "A.04"
+          ],
+          "id": "A-qcm-02",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice4"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-a-08",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "La réglementation du T3P se trouve dans le :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Code pénal"
+            },
+            {
+              "id": "choice2",
+              "text": "Code du travail"
+            },
+            {
+              "id": "choice3",
+              "text": "Code préfectoral"
+            },
+            {
+              "id": "choice4",
+              "text": "Code des transports"
+            }
+          ],
+          "explanation": "Le Code des transports contient le cadre sectoriel du transport public particulier de personnes. Il s’articule avec d’autres textes, notamment Code de la route, assurances et droit pénal. La question recherche le code organisant spécifiquement le T3P.",
+          "sources": [],
+          "lesson_refs": [
+            "A.01",
+            "A.02"
+          ],
+          "id": "A-qcm-03",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice4"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-a-13",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Comment s'appelle le document sur lequel ne doivent pas figurer certaines condamnations définitives incompatibles avec l'exercice du transport public particulier de personnes ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Le bulletin n° 2 du casier judiciaire."
+            },
+            {
+              "id": "choice2",
+              "text": "Le bulletin n° 3 présenté par le conducteur remplace systématiquement le B2."
+            },
+            {
+              "id": "choice3",
+              "text": "Le relevé des points du permis de conduire."
+            }
+          ],
+          "explanation": "Le contrôle d’honorabilité se réfère au bulletin n° 2 du casier judiciaire et aux condamnations incompatibles prévues par les textes. Il ne faut pas remplacer cette exigence par « casier entièrement vierge », ni confondre le B2 avec le B3 remis à un particulier.",
+          "sources": [
+            {
+              "title": "Devenir chauffeur VTC · Service Public",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+            }
+          ],
+          "lesson_refs": [
+            "A.03"
+          ],
+          "id": "A-qcm-04",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-a-15",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Quel service délivre la carte professionnelle de conducteur de T3P ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "La DREAL"
+            },
+            {
+              "id": "choice2",
+              "text": "La préfecture"
+            },
+            {
+              "id": "choice3",
+              "text": "La DIRECCTE"
+            },
+            {
+              "id": "choice4",
+              "text": "La mairie"
+            }
+          ],
+          "explanation": "La carte professionnelle relève du préfet du département de domicile, ou du préfet de police dans le cas prévu pour Paris. Le registre des exploitants et la carte du conducteur sont deux démarches distinctes : ni la mairie ni la DREAL ne délivrent cette carte.",
+          "sources": [
+            {
+              "title": "Code des transports · obligations générales des conducteurs et commissions locales",
+              "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+            }
+          ],
+          "lesson_refs": [
+            "A.02"
+          ],
+          "id": "A-qcm-05",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-a-01",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Quelles sont les deux assurances obligatoires qu'un conducteur de T3P doit souscrire ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Responsabilité civile circulation seule, sans assurance couvrant l’exploitation professionnelle."
+            },
+            {
+              "id": "choice2",
+              "text": "Responsabilité civile circulation et responsabilité civile professionnelle."
+            },
+            {
+              "id": "choice3",
+              "text": "Responsabilité civile professionnelle seule, sans garantie du véhicule pour la circulation."
+            }
+          ],
+          "explanation": "Il faut distinguer la responsabilité civile liée à la circulation et celle liée à l’exploitation professionnelle. L’usage « transport de personnes à titre onéreux » doit être déclaré et couvert ; une assurance privée ordinaire ne suffit pas. La répartition conducteur/exploitant dépend de l’organisation et des contrats.",
+          "sources": [
+            {
+              "title": "Code des transports · obligations générales des conducteurs et commissions locales",
+              "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+            }
+          ],
+          "lesson_refs": [
+            "A.05"
+          ],
+          "id": "A-qcm-06",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-a-10",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Qui agrée les organismes de formation continue des conducteurs de T3P ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Les préfectures."
+            },
+            {
+              "id": "choice2",
+              "text": "Les organismes assureurs du centre."
+            },
+            {
+              "id": "choice3",
+              "text": "Les chambres de métiers et de l’artisanat, sans décision préfectorale."
+            }
+          ],
+          "explanation": "L'agrément d'un centre de formation T3P relève de l'autorité préfectorale. Il faut distinguer cet agrément du centre, la carte du conducteur et l'inscription de l'exploitant au REVTC.",
+          "sources": [
+            {
+              "title": "Code des transports — agrément des centres, R3120-9",
+              "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048387"
+            }
+          ],
+          "lesson_refs": [
+            "A.02",
+            "A.04"
+          ],
+          "id": "A-qcm-07",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2021-a-04",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Une passagère signale une difficulté à marcher et voyage sans accompagnant. Quelle première réponse prépare une aide adaptée ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Demander systématiquement qu’un proche réalise le trajet avec elle."
+            },
+            {
+              "id": "choice2",
+              "text": "Décider de la porter jusqu’au véhicule sans lui demander son accord."
+            },
+            {
+              "id": "choice3",
+              "text": "Lui demander l’aide souhaitée et convenir d’un point de prise en charge accessible."
+            }
+          ],
+          "explanation": "Les besoins ne se déduisent pas d’un handicap présumé. Demander l’aide souhaitée respecte l’autonomie et permet de préparer l’accès au véhicule.",
+          "sources": [],
+          "lesson_refs": [
+            "A.09"
+          ],
+          "id": "A-qcm-08",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "independent-a-03",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "id": "A-qcm-09",
+          "kind": "qcm",
+          "multiple": false,
+          "prompt": "Un client demande que son chauffeur ne soit pas d’une certaine origine. Quelle réponse professionnelle respecte le principe de non-discrimination ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Refuser ce critère discriminatoire et organiser la mission selon les compétences et disponibilités."
+            },
+            {
+              "id": "choice2",
+              "text": "Demander seulement de formuler cette préférence oralement."
+            },
+            {
+              "id": "choice3",
+              "text": "Appliquer cette préférence à toutes ses réservations."
+            }
+          ],
+          "answers": [
+            "choice1"
+          ],
+          "max_points": 1,
+          "explanation": "L’origine réelle ou supposée ne peut servir à sélectionner une personne pour satisfaire une demande discriminatoire. La mission s’organise selon des critères professionnels objectifs.",
+          "lesson_refs": [
+            "A.06"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "Question originale Intégrale Academy · simulation pédagogique"
+        },
+        {
+          "id": "A-qcm-10",
+          "kind": "qcm",
+          "multiple": false,
+          "prompt": "Un passager adresse des propos sexuels répétés à une autre passagère qui exprime son refus. Quelle réaction immédiate est adaptée ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Demander à la passagère de tolérer les propos jusqu’à destination."
+            },
+            {
+              "id": "choice2",
+              "text": "Poursuivre sans intervenir puisqu’il n’y a aucun contact physique."
+            },
+            {
+              "id": "choice3",
+              "text": "Faire cesser les propos sans se mettre en danger, protéger la personne visée et solliciter les secours si la situation l’exige."
+            }
+          ],
+          "answers": [
+            "choice3"
+          ],
+          "max_points": 1,
+          "explanation": "Les violences et le harcèlement ne se limitent pas aux contacts physiques. La protection, une intervention adaptée au danger et l’orientation vers les services compétents priment.",
+          "lesson_refs": [
+            "A.07",
+            "A.08"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "Question originale Intégrale Academy · simulation pédagogique"
+        },
+        {
+          "id": "A-qrc-01",
+          "kind": "qrc",
+          "prompt": "Expliquez la différence entre la responsabilité civile liée à la circulation et la responsabilité civile professionnelle. Donnez pour chacune un exemple de risque couvert, sans citer de données personnelles.",
+          "max_points": 2,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "A-qrc-01-c1",
+              "label": "Circulation",
+              "max_points": 1,
+              "expected": "Identifie les dommages causés à des tiers lors de l’usage du véhicule et donne un exemple : collision blessant un passager ou un tiers. La garantie doit couvrir le transport rémunéré de personnes.",
+              "partial_guidance": "0,5 pour la fonction correctement distinguée ; 0,5 pour un exemple cohérent de circulation.",
+              "critical": false,
+              "field_ids": [
+                "A-qrc-01"
+              ]
+            },
+            {
+              "id": "A-qrc-01-c2",
+              "label": "Exploitation professionnelle",
+              "max_points": 1,
+              "expected": "Identifie les dommages causés dans l’exercice professionnel hors du seul risque de circulation, avec exemple tel qu’un bagage détérioré par une mauvaise manipulation. Les garanties exactes dépendent du contrat.",
+              "partial_guidance": "0,5 pour la fonction ; 0,5 pour un exemple pertinent, sans exiger la formulation type.",
+              "critical": false,
+              "field_ids": [
+                "A-qrc-01"
+              ]
+            }
+          ],
+          "model_response": "La RC circulation couvre les dommages causés aux tiers par le véhicule, par exemple un passager blessé lors d’une collision, avec un contrat adapté au transport rémunéré. La RC professionnelle couvre les risques de l’activité selon le contrat, par exemple un bagage endommagé lors de sa manipulation par le conducteur.",
+          "lesson_refs": [
+            "A.05"
+          ],
+          "sources": [
+            {
+              "title": "Devenir conducteur VTC · Service Public",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        },
+        {
+          "id": "A-qrc-02",
+          "kind": "qrc",
+          "prompt": "Une passagère utilisant une canne vous demande de l’aide pour monter. Rédigez deux actions concrètes pour l’accueillir en respectant son autonomie et sa sécurité.",
+          "max_points": 2,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "A-qrc-02-c1",
+              "label": "Accord et besoin",
+              "max_points": 1,
+              "expected": "Demande l’aide souhaitée et obtient l’accord avant de toucher la personne, sa canne ou ses affaires.",
+              "partial_guidance": "0,5 pour demander le besoin ; 0,5 pour respecter le consentement et l’autonomie.",
+              "critical": false,
+              "field_ids": [
+                "A-qrc-02"
+              ]
+            },
+            {
+              "id": "A-qrc-02-c2",
+              "label": "Installation sûre",
+              "max_points": 1,
+              "expected": "Prévoit un arrêt autorisé et accessible et une installation adaptée sans précipitation, en sécurisant les aides à la mobilité et la ceinture.",
+              "partial_guidance": "0,5 pour une prise en charge accessible/sûre ; 0,5 pour une aide concrète à l’installation respectueuse.",
+              "critical": false,
+              "field_ids": [
+                "A-qrc-02"
+              ]
+            }
+          ],
+          "model_response": "Je lui demande quelle aide elle souhaite et j’attends son accord avant d’intervenir. Je choisis un emplacement autorisé et accessible, lui laisse le temps de s’installer et vérifie avec elle que la canne est rangée sans danger et que sa ceinture est utilisable.",
+          "lesson_refs": [
+            "A.09"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        },
+        {
+          "id": "A-qrc-03",
+          "kind": "qrc",
+          "prompt": "Un exploitant vous demande de refuser une réservation uniquement à cause de l’origine supposée du client. Expliquez le problème et la conduite à tenir.",
+          "max_points": 2,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "A-qrc-03-c1",
+              "label": "Reconnaître la discrimination",
+              "max_points": 1,
+              "expected": "Identifie le refus de service fondé sur l’origine réelle ou supposée comme un critère discriminatoire interdit.",
+              "partial_guidance": "0,5 pour identifier la discrimination ; 0,5 pour relier précisément au refus et au critère d’origine.",
+              "critical": false,
+              "field_ids": [
+                "A-qrc-03"
+              ]
+            },
+            {
+              "id": "A-qrc-03-c2",
+              "label": "Réponse professionnelle",
+              "max_points": 1,
+              "expected": "Refuse d’appliquer ce critère, traite la demande selon des critères objectifs et alerte/interroge l’interlocuteur compétent sans exposer inutilement les données du client.",
+              "partial_guidance": "0,5 pour ne pas exécuter le refus discriminatoire ; 0,5 pour une suite professionnelle concrète.",
+              "critical": false,
+              "field_ids": [
+                "A-qrc-03"
+              ]
+            }
+          ],
+          "model_response": "L’origine supposée est un critère discriminatoire et ne peut justifier un refus de service. Je n’applique pas cette consigne, j’évalue la réservation selon la disponibilité et les conditions objectives de transport, puis je signale la consigne à un responsable compétent en limitant les données communiquées.",
+          "lesson_refs": [
+            "A.06"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        },
+        {
+          "id": "A-qrc-04",
+          "kind": "qrc",
+          "prompt": "Pendant une course, une personne signale des attouchements imposés par un autre passager et demande de l’aide. Décrivez votre réaction immédiate puis la manière de l’orienter.",
+          "max_points": 2,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "A-qrc-04-c1",
+              "label": "Mise en sécurité",
+              "max_points": 1,
+              "expected": "Prend le signalement au sérieux, fait cesser si possible sans s’exposer, organise un arrêt sûr et protège la personne sans confrontation dangereuse.",
+              "partial_guidance": "0,5 pour prise au sérieux et intervention adaptée ; 0,5 pour la mise en sécurité.",
+              "critical": false,
+              "field_ids": [
+                "A-qrc-04"
+              ]
+            },
+            {
+              "id": "A-qrc-04-c2",
+              "label": "Secours et respect",
+              "max_points": 1,
+              "expected": "En cas de danger sollicite 17/112 ou 114 si parler est impossible ; écoute sans culpabiliser, respecte la volonté de la victime et propose l’orientation compétente.",
+              "partial_guidance": "0,5 pour recours pertinent aux secours en cas de danger (numéro exact non obligatoire si service clair) ; 0,5 pour écoute et orientation sans culpabilisation.",
+              "critical": false,
+              "field_ids": [
+                "A-qrc-04"
+              ]
+            }
+          ],
+          "model_response": "Je prends immédiatement la demande au sérieux, j’organise un arrêt en sécurité et je protège la personne sans provoquer une confrontation dangereuse. En cas de danger j’appelle le 17 ou le 112 ; le 114 permet un contact si parler est impossible. J’écoute sans la culpabiliser et je l’aide à joindre les services compétents.",
+          "lesson_refs": [
+            "A.07",
+            "A.08"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        },
+        {
+          "id": "A-qrc-05",
+          "kind": "qrc",
+          "prompt": "Vous préparez une mission VTC. Citez quatre vérifications documentaires ou réglementaires distinctes à effectuer avant le départ et expliquez brièvement l’utilité de chacune.",
+          "max_points": 2,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "A-qrc-05-c1",
+              "label": "Vérifications avant départ",
+              "max_points": 2,
+              "expected": "Accepte quatre catégories distinctes parmi carte professionnelle valide, permis/aptitude médicale, assurance adaptée circulation et RC professionnelle, conformité et contrôle technique du véhicule, inscription exploitant/signalétique, justificatif de réservation préalable. Chaque catégorie doit avoir une utilité pertinente.",
+              "partial_guidance": "0,5 par catégorie distincte accompagnée d’une utilité correcte, maximum quatre ; 0,25 si la vérification seule est précise mais sans utilité. Ne pas compter deux fois la même catégorie.",
+              "critical": false,
+              "field_ids": [
+                "A-qrc-05"
+              ]
+            }
+          ],
+          "model_response": "Je vérifie la validité de ma carte pour exercer, l’assurance couvrant le transport rémunéré pour être garanti, le contrôle technique du véhicule pour sa conformité et le justificatif de réservation pour prouver que la commande précède la prise en charge.",
+          "lesson_refs": [
+            "A.03",
+            "A.04",
+            "A.11"
+          ],
+          "sources": [
+            {
+              "title": "Devenir conducteur VTC · Service Public",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+            },
+            {
+              "title": "Justificatif de réservation · arrêté du 6 août 2025",
+              "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000052153206/"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "title": "Gestion",
+      "minutes": 45,
+      "coefficient": 2,
+      "minimum": 6,
+      "qcm_count": 16,
+      "qrc_count": 2,
+      "qcm_points": 1,
+      "qrc_points": 2,
+      "questions": [
+        {
+          "prompt": "L'EBE signifie :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "encaissement brut excédentaire"
+            },
+            {
+              "id": "choice2",
+              "text": "excédent brut d'exploitation"
+            },
+            {
+              "id": "choice3",
+              "text": "excédent bénéficiaire employé"
+            }
+          ],
+          "explanation": "EBE signifie excédent brut d’exploitation. Il sert à apprécier la performance de l’exploitation avant notamment amortissements et éléments financiers. Ce n’est pas le solde du compte bancaire.",
+          "sources": [],
+          "lesson_refs": [
+            "B.04"
+          ],
+          "id": "B-qcm-01",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-b-04",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Une course soumise à un taux de TVA de 10 % est facturée 30 € TTC. Quel est le montant de la TVA, arrondi au centime ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "2,73 €"
+            },
+            {
+              "id": "choice2",
+              "text": "1,96 €"
+            },
+            {
+              "id": "choice3",
+              "text": "3,00 €"
+            },
+            {
+              "id": "choice4",
+              "text": "1,65 €"
+            }
+          ],
+          "explanation": "Pour un transport soumis à 10 % de TVA, le prix HT est 30 ÷ 1,10 = 27,27 €. La TVA vaut 30 − 27,27 = 2,73 €. Calculer 10 % du TTC donnerait à tort 3 €. Vérifiez le taux applicable avant d’utiliser la formule.",
+          "sources": [
+            {
+              "title": "TVA des transports de voyageurs · BOFiP",
+              "url": "https://bofip.impots.gouv.fr/bofip/477-PGP.html"
+            }
+          ],
+          "lesson_refs": [
+            "B.06"
+          ],
+          "id": "B-qcm-02",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-b-06",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Un chèque est émis et payable en France métropolitaine. Quelle est sa durée de validité pour l’encaissement à compter de la date inscrite ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "10 ans et 8 jours"
+            },
+            {
+              "id": "choice2",
+              "text": "1 an et 8 jours"
+            },
+            {
+              "id": "choice3",
+              "text": "6 mois"
+            },
+            {
+              "id": "choice4",
+              "text": "3 mois et 5 jours"
+            }
+          ],
+          "explanation": "Pour un chèque émis et payable en France métropolitaine, la durée d’encaissement est un an et huit jours à compter de la date inscrite. Cette durée ne doit pas être confondue avec la disponibilité réelle de la provision ni avec la durée de conservation des justificatifs.",
+          "sources": [
+            {
+              "title": "Paiement par chèque · Service Public",
+              "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2402"
+            }
+          ],
+          "lesson_refs": [
+            "B.08"
+          ],
+          "id": "B-qcm-03",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-b-07",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Qu'appelle-t-on TVA collectée ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "la TVA acquittée par l'artisan lorsqu'il achète des biens et services"
+            },
+            {
+              "id": "choice2",
+              "text": "la TVA reversée à l'état après déduction de la TVA sur les achats"
+            },
+            {
+              "id": "choice3",
+              "text": "la TVA acquittée par le client lors du règlement de la prestation"
+            }
+          ],
+          "explanation": "La TVA collectée est la TVA facturée au client sur les ventes/prestations imposables. Pour une prestation de services, l’exigibilité suit en principe l’encaissement, sauf option ou règle particulière. TVA nette à reverser = TVA collectée exigible − TVA déductible, sous réserve des règles applicables.",
+          "sources": [
+            {
+              "title": "TVA des transports de voyageurs · BOFiP",
+              "url": "https://bofip.impots.gouv.fr/bofip/477-PGP.html"
+            }
+          ],
+          "lesson_refs": [
+            "B.06"
+          ],
+          "id": "B-qcm-04",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-b-13",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Que signifie le sigle SASU ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Société A Simplification Unipersonnelle"
+            },
+            {
+              "id": "choice2",
+              "text": "Société par Action Simplifiée Unique"
+            },
+            {
+              "id": "choice3",
+              "text": "Société Anonyme Simplifiée et Unipersonnelle"
+            },
+            {
+              "id": "choice4",
+              "text": "Société par Action Simplifiée Unipersonnelle"
+            }
+          ],
+          "explanation": "SASU signifie société par actions simplifiée unipersonnelle : une société avec un seul associé. La lettre U décrit le nombre d’associés, pas un régime fiscal ni une simplification automatique de toutes les obligations.",
+          "sources": [],
+          "lesson_refs": [
+            "B.01"
+          ],
+          "id": "B-qcm-05",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice4"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-b-14",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Les achats de carburant figurent :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Au compte de résultat, dans les produits"
+            },
+            {
+              "id": "choice2",
+              "text": "Au bilan, à l'actif"
+            },
+            {
+              "id": "choice3",
+              "text": "Au compte de résultat, dans les charges"
+            },
+            {
+              "id": "choice4",
+              "text": "Au bilan, au passif"
+            }
+          ],
+          "explanation": "Le carburant consommé dans l’activité est une charge du compte de résultat. Les produits correspondent aux recettes de l’activité. Un solde bancaire, une dette ou un stock relève d’une autre lecture comptable.",
+          "sources": [],
+          "lesson_refs": [
+            "B.04",
+            "B.05"
+          ],
+          "id": "B-qcm-06",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-b-15",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Une entreprise assujettie à la TVA facture en France métropolitaine une prestation de transport de voyageurs, sans prestation touristique accessoire. Quel taux de TVA applique-t-elle ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "10 %"
+            },
+            {
+              "id": "choice2",
+              "text": "7 %"
+            },
+            {
+              "id": "choice3",
+              "text": "5,5 %"
+            },
+            {
+              "id": "choice4",
+              "text": "20%"
+            }
+          ],
+          "explanation": "Le transport de voyageurs soumis à TVA relève en principe du taux de 10 % en France métropolitaine. Distinguez le taux du service et la situation d’un exploitant en franchise en base, qui ne facture pas la TVA tant que les conditions sont réunies.",
+          "sources": [
+            {
+              "title": "TVA des transports de voyageurs · BOFiP",
+              "url": "https://bofip.impots.gouv.fr/bofip/477-PGP.html"
+            }
+          ],
+          "lesson_refs": [
+            "B.06"
+          ],
+          "id": "B-qcm-07",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-b-16",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le dirigeant d'une micro-entreprise :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "est soumis à l'impôt sur les sociétés"
+            },
+            {
+              "id": "choice2",
+              "text": "est soumis à l'impôt sur le revenu"
+            },
+            {
+              "id": "choice3",
+              "text": "n'est pas soumis à l'impôt"
+            }
+          ],
+          "explanation": "Le régime micro-entreprise relève de l’impôt sur le revenu, selon les règles de la catégorie concernée et les options autorisées. Il ne signifie pas absence d’impôt. Une option vers un autre cadre fiscal doit être distinguée du maintien dans le régime micro.",
+          "sources": [],
+          "lesson_refs": [
+            "B.07"
+          ],
+          "id": "B-qcm-08",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-b-18",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Une entreprise individuelle :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "ne peut embaucher qu'un apprenti"
+            },
+            {
+              "id": "choice2",
+              "text": "peut embaucher des salariés"
+            },
+            {
+              "id": "choice3",
+              "text": "doit changer de statut juridique pour embaucher un salarié"
+            }
+          ],
+          "explanation": "Une entreprise individuelle peut employer des salariés, y compris sans changer de forme juridique. « Individuelle » décrit l’exercice en nom propre, pas l’obligation de travailler seul ; l’employeur doit alors respecter les formalités et obligations sociales.",
+          "sources": [
+            {
+              "title": "Service Public · Choisir la forme juridique de l’entreprise",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F23844?language=fr"
+            }
+          ],
+          "lesson_refs": [
+            "B.01",
+            "B.12"
+          ],
+          "id": "B-qcm-09",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-b-04",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le résultat d'une entreprise est obtenu par :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "la différence entre actif et passif"
+            },
+            {
+              "id": "choice2",
+              "text": "la différence entre produits et charges"
+            },
+            {
+              "id": "choice3",
+              "text": "stock + créances clients - dettes fournisseurs"
+            }
+          ],
+          "explanation": "Le résultat d’une période se calcule par produits moins charges. L’actif moins le passif n’est pas la formule du bénéfice ; stocks et créances moins dettes fournisseurs servent à une autre analyse, celle du besoin en fonds de roulement.",
+          "sources": [],
+          "lesson_refs": [
+            "B.04"
+          ],
+          "id": "B-qcm-10",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-b-05",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Qu'est-ce qu'une créance client ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "une facture due à un fournisseur"
+            },
+            {
+              "id": "choice2",
+              "text": "une facture réglée par un client"
+            },
+            {
+              "id": "choice3",
+              "text": "une facture impayée par un client"
+            },
+            {
+              "id": "choice4",
+              "text": "une facture en attente de création"
+            }
+          ],
+          "explanation": "Une créance client est une somme due à l’entreprise pour une vente réalisée et non encore réglée. La facture impayée constitue donc la réponse attendue. Une dette fournisseur est au contraire une somme que l’entreprise doit payer.",
+          "sources": [],
+          "lesson_refs": [
+            "B.03",
+            "B.08"
+          ],
+          "id": "B-qcm-11",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-b-09",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Qu'est-ce qu'un chiffre d'affaires ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "la différence entre les produits et les charges"
+            },
+            {
+              "id": "choice2",
+              "text": "l'ensemble des commandes ou devis"
+            },
+            {
+              "id": "choice3",
+              "text": "l'ensemble des sommes facturées aux clients"
+            },
+            {
+              "id": "choice4",
+              "text": "l'argent qui reste en banque après avoir payé toutes les charges"
+            }
+          ],
+          "explanation": "Dans le cadre comptable du sujet, le chiffre d’affaires correspond aux ventes facturées aux clients, usuellement hors taxe. Il ne s’agit ni du bénéfice ni du solde bancaire ni des devis non acceptés. Pour la déclaration du micro-entrepreneur, il faut distinguer les sommes effectivement encaissées.",
+          "sources": [],
+          "lesson_refs": [
+            "B.04",
+            "B.07"
+          ],
+          "id": "B-qcm-12",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-b-13",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Lors de la création d'une société, la publication d'une annonce légale est :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "facultative"
+            },
+            {
+              "id": "choice2",
+              "text": "nécessaire pour faire de la publicité"
+            },
+            {
+              "id": "choice3",
+              "text": "obligatoire"
+            }
+          ],
+          "explanation": "La constitution d’une société nécessite la publication d’un avis dans un support habilité à recevoir des annonces légales. Cette formalité informe juridiquement les tiers ; elle n’a pas la même fonction qu’une publicité destinée à trouver des clients.",
+          "sources": [
+            {
+              "title": "Service Public · Formalités d’immatriculation d’une société",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F35934"
+            }
+          ],
+          "lesson_refs": [
+            "B.02"
+          ],
+          "id": "B-qcm-13",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-b-14",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Quel est le code qui permet de déterminer l'activité réalisée par une entreprise ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "APE"
+            },
+            {
+              "id": "choice2",
+              "text": "SIREN"
+            },
+            {
+              "id": "choice3",
+              "text": "SIRET"
+            }
+          ],
+          "explanation": "Le code APE caractérise l’activité principale exercée. Le SIREN identifie l’entreprise et le SIRET identifie un établissement. L’APE est statistique et ne vaut ni carte professionnelle ni inscription au registre des exploitants VTC.",
+          "sources": [
+            {
+              "title": "Insee · Présentation générale de la NAF et du code APE",
+              "url": "https://www.insee.fr/fr/information/3281579"
+            }
+          ],
+          "lesson_refs": [
+            "B.02"
+          ],
+          "id": "B-qcm-14",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-b-17",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Qui attribue le code APE d'une entreprise ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "URSSAF"
+            },
+            {
+              "id": "choice2",
+              "text": "CMA"
+            },
+            {
+              "id": "choice3",
+              "text": "SSI"
+            },
+            {
+              "id": "choice4",
+              "text": "INSEE"
+            }
+          ],
+          "explanation": "L'Insee attribue le code APE à partir de l'activité principale déclarée. Ce code permet de classer statistiquement l'entreprise ; il ne vaut pas à lui seul autorisation d'exercer une profession réglementée.",
+          "sources": [
+            {
+              "title": "Attribution et modification du code APE — Insee",
+              "url": "https://www.insee.fr/fr/information/7614104"
+            }
+          ],
+          "lesson_refs": [
+            "B.02"
+          ],
+          "id": "B-qcm-15",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice4"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2021-b-07",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Dans un bilan :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Le total de l'actif est toujours égal au total du passif"
+            },
+            {
+              "id": "choice2",
+              "text": "Si le total de l'actif est inférieur au passif il y a perte"
+            },
+            {
+              "id": "choice3",
+              "text": "Si le total de l'actif est supérieur au passif il y a bénéfice"
+            }
+          ],
+          "explanation": "Un bilan est équilibré : le total de l'actif égale le total du passif. L'actif décrit les emplois et le passif les ressources, notamment les capitaux propres et les dettes. Le bénéfice se lit dans le résultat, pas dans un déséquilibre entre les deux côtés.",
+          "sources": [],
+          "lesson_refs": [
+            "B.03"
+          ],
+          "id": "B-qcm-16",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2021-b-09",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "id": "B-qrc-01",
+          "kind": "qrc",
+          "prompt": "Une entreprise réalise 12 000 € de chiffre d’affaires HT. Ses charges variables sont de 4 800 € et ses charges fixes de 5 000 €, pour la même période. Calculez la marge sur coûts variables, puis le résultat simplifié après ces charges. Détaillez les calculs.",
+          "max_points": 2,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "B-qrc-01-c1",
+              "label": "Marge sur coûts variables",
+              "max_points": 1,
+              "expected": "12 000 − 4 800 = 7 200 € de marge sur coûts variables.",
+              "partial_guidance": "0,5 pour la méthode CA moins charges variables ; 0,5 pour le résultat exact et son unité.",
+              "critical": false,
+              "field_ids": [
+                "B-qrc-01"
+              ]
+            },
+            {
+              "id": "B-qrc-01-c2",
+              "label": "Résultat simplifié",
+              "max_points": 1,
+              "expected": "7 200 − 5 000 = 2 200 € de bénéfice simplifié, ou 12 000 − 4 800 − 5 000.",
+              "partial_guidance": "0,5 pour retirer les charges fixes de la marge ; 0,5 pour 2 200 € et interprétation positive. Ne pas pénaliser deux fois une erreur de calcul propagée si la méthode suivante est correcte.",
+              "critical": false,
+              "field_ids": [
+                "B-qrc-01"
+              ]
+            }
+          ],
+          "model_response": "La marge sur coûts variables est 12 000 − 4 800 = 7 200 €. Le résultat simplifié est 7 200 − 5 000 = 2 200 € : l’entreprise dégage un bénéfice sur les charges indiquées.",
+          "lesson_refs": [
+            "B.03",
+            "B.04"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        },
+        {
+          "id": "B-qrc-02",
+          "kind": "qrc",
+          "prompt": "Une prestation soumise à une TVA de 10 % est facturée 132 € TTC. Calculez le prix HT et la TVA. Expliquez pourquoi la TVA encaissée ne constitue pas intégralement une recette disponible pour l’entreprise.",
+          "max_points": 2,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "B-qrc-02-c1",
+              "label": "Prix HT",
+              "max_points": 0.75,
+              "expected": "132 / 1,10 = 120 € HT.",
+              "partial_guidance": "0,25 pour la formule division par 1,10 ; 0,5 pour 120 €.",
+              "critical": false,
+              "field_ids": [
+                "B-qrc-02"
+              ]
+            },
+            {
+              "id": "B-qrc-02-c2",
+              "label": "Montant de TVA",
+              "max_points": 0.75,
+              "expected": "132 − 120 = 12 € de TVA ; accepte 120 × 10 %.",
+              "partial_guidance": "0,25 pour la méthode ; 0,5 pour 12 €. Un report d’erreur initial conserve les points de méthode.",
+              "critical": false,
+              "field_ids": [
+                "B-qrc-02"
+              ]
+            },
+            {
+              "id": "B-qrc-02-c3",
+              "label": "Trésorerie et TVA",
+              "max_points": 0.5,
+              "expected": "La TVA collectée est destinée à être reversée à l’État, après déduction éventuelle de TVA déductible selon les règles ; elle ne représente pas du chiffre d’affaires HT.",
+              "partial_guidance": "0,5 pour la dette fiscale à reverser ; pas d’exigence de détail de déclaration.",
+              "critical": false,
+              "field_ids": [
+                "B-qrc-02"
+              ]
+            }
+          ],
+          "model_response": "Le prix HT est 132 ÷ 1,10 = 120 €. La TVA est 132 − 120 = 12 €. Cette TVA collectée est à reverser à l’État après la déduction éventuellement autorisée ; elle ne doit pas être assimilée à une marge disponible.",
+          "lesson_refs": [
+            "B.05",
+            "B.08"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "title": "Sécurité routière",
+      "minutes": 30,
+      "coefficient": 3,
+      "minimum": 6,
+      "qcm_count": 20,
+      "qrc_count": 0,
+      "qcm_points": 1,
+      "qrc_points": 0,
+      "questions": [
+        {
+          "prompt": "Dans quel cas un conducteur circulant à allure fortement réduite dans une file de voitures est-il obligé de faire usage de ses feux de détresse ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Lorsque son véhicule est le dernier d'une file de circulation ininterrompue"
+            },
+            {
+              "id": "choice2",
+              "text": "Lorsque son véhicule est le premier d'une file de circulation ininterrompue"
+            },
+            {
+              "id": "choice3",
+              "text": "Lorsque son véhicule circule sur une bande d'arrêt d'urgence"
+            },
+            {
+              "id": "choice4",
+              "text": "Ce n'est pas obligatoire"
+            }
+          ],
+          "explanation": "Un véhicule contraint de circuler à une allure fortement réduite avertit les autres avec ses feux de détresse. Dans une file ininterrompue, cette obligation concerne le dernier véhicule. Allumer les feux de détresse n’autorise pas à circuler sur la bande d’arrêt d’urgence.",
+          "sources": [],
+          "lesson_refs": [
+            "C.03",
+            "C.12"
+          ],
+          "id": "C-qcm-01",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-c-04",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Les témoins sur le tableau de bord du véhicule qui alertent le conducteur d'une urgence mécanique sont de couleur :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "verte"
+            },
+            {
+              "id": "choice2",
+              "text": "bleue"
+            },
+            {
+              "id": "choice3",
+              "text": "rouge"
+            },
+            {
+              "id": "choice4",
+              "text": "orange"
+            }
+          ],
+          "explanation": "Un témoin rouge signale généralement une alerte majeure imposant une réaction immédiate adaptée : se mettre en sécurité et consulter la notice. Orange signale le plus souvent une anomalie ou une vigilance ; bleu et vert renseignent habituellement sur un équipement en service.",
+          "sources": [],
+          "lesson_refs": [
+            "C.01"
+          ],
+          "id": "C-qcm-02",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-c-05",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Dans quel cas l'arrêt est-il autorisé sur la bande d'arrêt d'urgence de l'autoroute ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "en cas de panne ou d'accident"
+            },
+            {
+              "id": "choice2",
+              "text": "dans tous les cas"
+            },
+            {
+              "id": "choice3",
+              "text": "jamais"
+            },
+            {
+              "id": "choice4",
+              "text": "pour téléphoner"
+            }
+          ],
+          "explanation": "La bande d’arrêt d’urgence sert aux situations d’urgence, notamment panne ou accident. Un appel téléphonique ou une pause de confort ne justifie pas de s’y arrêter. Recherchez un emplacement sécurisé et suivez les consignes de protection.",
+          "sources": [],
+          "lesson_refs": [
+            "C.12"
+          ],
+          "id": "C-qcm-03",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-c-07",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Quand le croisement s'avère difficile, le conducteur d'une voiture, en agglomération doit au besoin s'arrêter pour laisser passer :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "un tracteur"
+            },
+            {
+              "id": "choice2",
+              "text": "un véhicule de transport en commun"
+            },
+            {
+              "id": "choice3",
+              "text": "un véhicule de transport de marchandises"
+            }
+          ],
+          "explanation": "En agglomération, lorsque le croisement avec un véhicule de transport en commun est difficile, le conducteur de la voiture facilite son passage et s’arrête si nécessaire. Anticiper l’encombrement évite de bloquer les deux véhicules.",
+          "sources": [],
+          "lesson_refs": [
+            "C.04"
+          ],
+          "id": "C-qcm-04",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-c-08",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Après un accident matériel, le contrat prévoit le délai minimal de déclaration autorisé par le Code des assurances. Quel est ce délai ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "2 jours"
+            },
+            {
+              "id": "choice2",
+              "text": "Cinq jours ouvrés."
+            },
+            {
+              "id": "choice3",
+              "text": "1 mois"
+            },
+            {
+              "id": "choice4",
+              "text": "7 jours"
+            }
+          ],
+          "explanation": "Après un accident matériel, transmettez rapidement le constat à l’assureur et respectez le délai de déclaration prévu par le contrat, qui ne peut en principe être inférieur à cinq jours ouvrés. Le sujet abrège cette précision en « 5 jours » : il ne s’agit pas de cinq jours calendaires.",
+          "sources": [
+            {
+              "title": "Déclaration des dégâts matériels · Service Public",
+              "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2152"
+            }
+          ],
+          "lesson_refs": [
+            "C.12",
+            "A.05"
+          ],
+          "id": "C-qcm-05",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-c-09",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Un permis B, permet de transporter au maximum :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "8 passagers"
+            },
+            {
+              "id": "choice2",
+              "text": "9 passagers"
+            },
+            {
+              "id": "choice3",
+              "text": "7 passagers"
+            },
+            {
+              "id": "choice4",
+              "text": "6 passagers"
+            }
+          ],
+          "explanation": "Le permis B permet au maximum huit passagers, soit neuf places conducteur compris, dans les limites de la catégorie du véhicule. Le nombre inscrit sur la carte grise et les conditions propres à l’activité peuvent réduire la capacité réellement utilisable.",
+          "sources": [],
+          "lesson_refs": [
+            "C.06"
+          ],
+          "id": "C-qcm-06",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-c-10",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Par temps de pluie, l'utilisation des feux de brouillard arrière est :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "interdite"
+            },
+            {
+              "id": "choice2",
+              "text": "obligatoire"
+            },
+            {
+              "id": "choice3",
+              "text": "conseillée"
+            }
+          ],
+          "explanation": "Les feux de brouillard arrière s’utilisent en cas de brouillard ou de chute de neige ; la pluie seule ne les justifie pas et leur forte lumière peut éblouir les conducteurs suiveurs. Ne confondez pas leurs règles avec celles des feux avant.",
+          "sources": [],
+          "lesson_refs": [
+            "C.11"
+          ],
+          "id": "C-qcm-07",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-c-11",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Sur une route à forte déclivité, deux voitures se croisent difficilement. Avant qu’une marche arrière soit nécessaire, laquelle doit en principe s’arrêter la première pour faciliter le passage ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Aucune : chaque conducteur décide sans règle."
+            },
+            {
+              "id": "choice2",
+              "text": "La voiture qui monte."
+            },
+            {
+              "id": "choice3",
+              "text": "La voiture qui descend."
+            }
+          ],
+          "explanation": "Sur une route de montagne ou à forte déclivité, le véhicule descendant facilite le passage au véhicule montant et s’arrête d’abord lorsque le croisement est difficile. Si une marche arrière devient nécessaire, les règles dépendent aussi de la catégorie des véhicules et de la position des refuges : la priorité ne doit pas être appliquée aveuglément.",
+          "sources": [],
+          "lesson_refs": [
+            "C.04"
+          ],
+          "id": "C-qcm-08",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-c-12",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Dans un tunnel éclairé, hors agglomération, je circule :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "en feux de croisement"
+            },
+            {
+              "id": "choice2",
+              "text": "en feux de brouillard"
+            },
+            {
+              "id": "choice3",
+              "text": "en feux de route"
+            }
+          ],
+          "explanation": "Dans un tunnel, même éclairé, utilisez les feux de croisement. Les feux de route peuvent éblouir et les feux de brouillard ne remplacent pas l’éclairage adapté au tunnel.",
+          "sources": [],
+          "lesson_refs": [
+            "C.11"
+          ],
+          "id": "C-qcm-09",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-c-13",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Lorsque le permis a été invalidé en raison d'une perte totale de points, le nouveau permis obtenu est :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "un permis probatoire doté d'un capital de 12 points"
+            },
+            {
+              "id": "choice2",
+              "text": "un permis non probatoire doté d'un capital de 12 points"
+            },
+            {
+              "id": "choice3",
+              "text": "un permis probatoire doté d'un capital de 6 points"
+            }
+          ],
+          "explanation": "Après une invalidation pour solde de points nul, le nouveau permis est probatoire avec six points. Ne confondez pas la récupération progressive des points et le droit de reprendre immédiatement une activité professionnelle soumise à conditions.",
+          "sources": [
+            {
+              "title": "Permis probatoire · Service Public",
+              "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2390"
+            }
+          ],
+          "lesson_refs": [
+            "A.03",
+            "C.05"
+          ],
+          "id": "C-qcm-10",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-c-14",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Dans le cas où plusieurs infractions entrainant un retrait de points seraient commises simultanément, la perte maximale de points est de :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "8 points"
+            },
+            {
+              "id": "choice2",
+              "text": "12 points"
+            },
+            {
+              "id": "choice3",
+              "text": "6 points"
+            }
+          ],
+          "explanation": "Pour plusieurs infractions commises simultanément, le retrait est plafonné à huit points. Un permis probatoire disposant de six points peut néanmoins perdre tout son solde. Le plafond ne signifie pas qu’un conducteur conserve forcément son droit de conduire.",
+          "sources": [
+            {
+              "title": "Retrait simultané de points · Service Public",
+              "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F11863"
+            }
+          ],
+          "lesson_refs": [
+            "C.05"
+          ],
+          "id": "C-qcm-11",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2023-c-15",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Quel délai minimal doit séparer deux stages volontaires donnant droit à récupération de points, lorsque le permis est encore valide ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "une fois tous les 2 ans"
+            },
+            {
+              "id": "choice2",
+              "text": "une fois par an"
+            },
+            {
+              "id": "choice3",
+              "text": "trois fois par an"
+            }
+          ],
+          "explanation": "Pour récupérer des points par un stage volontaire, le permis doit rester valide et le délai minimal entre deux stages donnant récupération est d’un an. Le stage peut rendre jusqu’à quatre points dans la limite du plafond applicable. « Une fois par an » ne signifie pas un nouveau droit dès chaque 1er janvier.",
+          "sources": [
+            {
+              "title": "Service Public · Stage de sensibilisation à la sécurité routière",
+              "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F14208?edit=1"
+            }
+          ],
+          "lesson_refs": [
+            "A.04"
+          ],
+          "id": "C-qcm-12",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-c-01",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Par brouillard, la visibilité est inférieure à 50 mètres. Quelle est la vitesse maximale réglementaire, sous réserve d’une limitation locale plus basse et de l’adaptation aux conditions ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "30 km à l'heure"
+            },
+            {
+              "id": "choice2",
+              "text": "70 km à l'heure"
+            },
+            {
+              "id": "choice3",
+              "text": "50 km à l'heure"
+            }
+          ],
+          "explanation": "Si la visibilité est inférieure à 50 m, le plafond est de 50 km/h sur l’ensemble des réseaux routier et autoroutier. C’est une vitesse maximale : si la visibilité ou l’adhérence l’exigent, il faut rouler moins vite.",
+          "sources": [
+            {
+              "title": "Code de la route · article R413-4, visibilité inférieure à 50 m",
+              "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006842181"
+            }
+          ],
+          "lesson_refs": [
+            "C.02",
+            "C.11"
+          ],
+          "id": "C-qcm-13",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-c-04",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Sur un trajet de 100 km sur autoroute, si je roule à 130 km/h au lieu de 120 km/h, je « gagne » environ :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "8 minutes"
+            },
+            {
+              "id": "choice2",
+              "text": "15 minutes"
+            },
+            {
+              "id": "choice3",
+              "text": "10 minutes"
+            },
+            {
+              "id": "choice4",
+              "text": "4 minutes"
+            }
+          ],
+          "explanation": "À vitesse constante, 100 km à 120 km/h prennent 50 minutes. À 130 km/h, le temps est 100 ÷ 130 × 60 = 46,15 minutes. Le gain théorique n'est que d'environ 3 min 51 s, donc quatre minutes, sans tenir compte du trafic.",
+          "sources": [],
+          "lesson_refs": [
+            "C.02"
+          ],
+          "id": "C-qcm-14",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice4"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2021-c-01",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Vous êtes au volant de votre véhicule et recevez un appel sur votre téléphone portable. Vous prenez le téléphone en main, vous encourez :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "un retrait de deux points"
+            },
+            {
+              "id": "choice2",
+              "text": "un retrait d'un point"
+            },
+            {
+              "id": "choice3",
+              "text": "un retrait de trois points"
+            }
+          ],
+          "explanation": "L'usage d'un téléphone tenu en main au volant est sanctionné par le retrait de trois points, en plus de l'amende applicable. La bonne méthode consiste à préparer les communications avant de partir et à s'arrêter dans un endroit autorisé pour manipuler le téléphone.",
+          "sources": [
+            {
+              "title": "Barème des retraits de points — Service Public",
+              "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F31551"
+            }
+          ],
+          "lesson_refs": [
+            "C.09"
+          ],
+          "id": "C-qcm-15",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2021-c-03",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le décret n° 2016-448 du 13 avril 2016 modifiant certaines dispositions du code de la route relatives aux véhicules interdit les « vitres surteintées ». A cette fin, il impose :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "un taux minimal de transparence de 80% sur les vitres arrières et lunettes-arrières"
+            },
+            {
+              "id": "choice2",
+              "text": "un taux minimal de transparence de 80% sur les vitres avant, le pare-prise et les vitres arrières"
+            },
+            {
+              "id": "choice3",
+              "text": "un taux minimal de transparence de 70% sur les vitres avant et le pare-prise"
+            },
+            {
+              "id": "choice4",
+              "text": "un taux minimal de transparence de 70% sur les vitres avant, le pare-prise et les vitres arrières"
+            }
+          ],
+          "explanation": "Le pare-brise et les vitres latérales avant doivent transmettre au moins 70 % de la lumière, sous réserve des exceptions prévues. La règle de transparence ne se résume pas à la teinte visible : il faut considérer l'ensemble vitre et film.",
+          "sources": [
+            {
+              "title": "Équipements obligatoires — Service Public",
+              "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F19459"
+            }
+          ],
+          "lesson_refs": [
+            "C.01"
+          ],
+          "id": "C-qcm-16",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2021-c-08",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Un véhicule en panne constitue un obstacle. Vous pouvez installer le triangle sans mettre votre vie en danger. À quelle distance minimale en amont de l’obstacle le placez-vous ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "10 mètres au moins de votre véhicule"
+            },
+            {
+              "id": "choice2",
+              "text": "30 mètres au moins de votre véhicule"
+            },
+            {
+              "id": "choice3",
+              "text": "50 mètres au moins de votre véhicule"
+            }
+          ],
+          "explanation": "Un triangle de présignalisation se place à au moins 30 mètres de l'obstacle, et peut devoir être placé plus loin pour être visible. Il ne faut pas l'installer si cette action met manifestement la vie du conducteur en danger, notamment selon la situation sur autoroute.",
+          "sources": [
+            {
+              "title": "Équipements obligatoires — Service Public",
+              "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F19459"
+            }
+          ],
+          "lesson_refs": [
+            "C.12"
+          ],
+          "id": "C-qcm-17",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2021-c-09",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "En agglomération, lorsque vous dépassez latéralement, un piéton ou un cycliste, vous devez laisser un espace d'au moins :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "3 mètres"
+            },
+            {
+              "id": "choice2",
+              "text": "1 mètre"
+            },
+            {
+              "id": "choice3",
+              "text": "0,50 mètre"
+            },
+            {
+              "id": "choice4",
+              "text": "1,50 mètres"
+            }
+          ],
+          "explanation": "Pour dépasser un piéton ou un cycliste, la distance latérale minimale est d'un mètre en agglomération et d'un mètre cinquante hors agglomération. Si les conditions ne permettent pas cette marge, il faut attendre pour dépasser.",
+          "sources": [
+            {
+              "title": "Code de la route — usage des voies",
+              "url": "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074228/LEGISCTA000006129092/"
+            }
+          ],
+          "lesson_refs": [
+            "C.04"
+          ],
+          "id": "C-qcm-18",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2021-c-19",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Pendant une mission longue, le conducteur bâille et peine à garder une trajectoire régulière. Quelle action traite le risque immédiat ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Réduire légèrement la vitesse et compter sur la conversation avec le client."
+            },
+            {
+              "id": "choice2",
+              "text": "Rejoindre un endroit sûr pour interrompre la conduite et se reposer."
+            },
+            {
+              "id": "choice3",
+              "text": "Augmenter le volume sonore tout en poursuivant jusqu’à destination."
+            }
+          ],
+          "explanation": "Les signes de somnolence imposent une interruption dans un lieu sûr. La musique ou la conversation peuvent masquer la fatigue sans restaurer la vigilance.",
+          "sources": [],
+          "lesson_refs": [
+            "C.07"
+          ],
+          "id": "C-qcm-19",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "independent-c-02",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le téléphone demande de confirmer une nouvelle destination pendant que le véhicule roule. Quelle organisation évite la manipulation dangereuse ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Saisir seulement le numéro de rue en gardant le téléphone sous le volant."
+            },
+            {
+              "id": "choice2",
+              "text": "Confirmer rapidement au prochain ralentissement sans s’arrêter."
+            },
+            {
+              "id": "choice3",
+              "text": "S’arrêter dans un endroit autorisé et sûr avant de modifier la destination."
+            }
+          ],
+          "explanation": "La saisie détourne l’attention visuelle et mentale. Une modification de destination se prépare à l’arrêt dans des conditions sûres, même si elle paraît brève.",
+          "sources": [],
+          "lesson_refs": [
+            "C.09"
+          ],
+          "id": "C-qcm-20",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "independent-c-03",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        }
+      ]
+    },
+    {
+      "id": "D",
+      "title": "Expression et compréhension en français",
+      "minutes": 30,
+      "coefficient": 2,
+      "minimum": 6,
+      "qcm_count": 7,
+      "qrc_count": 3,
+      "qcm_points": 2,
+      "qrc_points": 2,
+      "questions": [
+        {
+          "id": "D-qcm-01",
+          "kind": "qcm",
+          "multiple": false,
+          "prompt": "Pendant les travaux, qui peut encore utiliser la sortie principale ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Aucun voyageur."
+            },
+            {
+              "id": "choice2",
+              "text": "Les voyageurs à pied."
+            },
+            {
+              "id": "choice3",
+              "text": "Les voitures uniquement."
+            }
+          ],
+          "answers": [
+            "choice2"
+          ],
+          "max_points": 2,
+          "explanation": "La ligne 3 maintient l’accès des piétons ; la fermeture concerne l’accès des voitures.",
+          "lesson_refs": [
+            "D.01"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "Question originale Intégrale Academy · simulation pédagogique"
+        },
+        {
+          "id": "D-qcm-02",
+          "kind": "qcm",
+          "multiple": false,
+          "prompt": "Où se trouve le parking réservé aux prises en charge ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Derrière la médiathèque, à trois cents mètres du hall."
+            },
+            {
+              "id": "choice2",
+              "text": "À l’intérieur du hall."
+            },
+            {
+              "id": "choice3",
+              "text": "Devant la sortie principale."
+            }
+          ],
+          "answers": [
+            "choice1"
+          ],
+          "max_points": 2,
+          "explanation": "Les lignes 4 et 5 situent précisément le parking Est.",
+          "lesson_refs": [
+            "D.02"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "Question originale Intégrale Academy · simulation pédagogique"
+        },
+        {
+          "id": "D-qcm-03",
+          "kind": "qcm",
+          "multiple": false,
+          "prompt": "Pourquoi la réservation prévoit-elle un départ à 18 heures alors que le train arrive à 17 h 40 ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Parce que le parking n’ouvre qu’à 18 heures."
+            },
+            {
+              "id": "choice2",
+              "text": "Parce que le point d’assistance ferme à 18 heures."
+            },
+            {
+              "id": "choice3",
+              "text": "Pour laisser le temps de récupérer les bagages."
+            }
+          ],
+          "answers": [
+            "choice3"
+          ],
+          "max_points": 2,
+          "explanation": "La cause est explicitement donnée à la ligne 8.",
+          "lesson_refs": [
+            "D.04"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "Question originale Intégrale Academy · simulation pédagogique"
+        },
+        {
+          "id": "D-qcm-04",
+          "kind": "qcm",
+          "multiple": false,
+          "prompt": "Combien de voyageuses et de valises sont annoncées ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Deux voyageuses et trois valises."
+            },
+            {
+              "id": "choice2",
+              "text": "Une voyageuse et deux valises."
+            },
+            {
+              "id": "choice3",
+              "text": "Deux voyageuses et deux valises."
+            }
+          ],
+          "answers": [
+            "choice3"
+          ],
+          "max_points": 2,
+          "explanation": "Mme Bernard et sa sœur font deux personnes. La valise lourde est comprise dans les deux valises.",
+          "lesson_refs": [
+            "D.02"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "Question originale Intégrale Academy · simulation pédagogique"
+        },
+        {
+          "id": "D-qcm-05",
+          "kind": "qcm",
+          "multiple": false,
+          "prompt": "À quoi renvoie « Il » au début de la ligne 14 ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Au conducteur."
+            },
+            {
+              "id": "choice2",
+              "text": "Au parking Est."
+            },
+            {
+              "id": "choice3",
+              "text": "Au train."
+            }
+          ],
+          "answers": [
+            "choice1"
+          ],
+          "max_points": 2,
+          "explanation": "Le sujet reste le conducteur, qui stationne puis accompagne la cliente.",
+          "lesson_refs": [
+            "D.03"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "Question originale Intégrale Academy · simulation pédagogique"
+        },
+        {
+          "id": "D-qcm-06",
+          "kind": "qcm",
+          "multiple": false,
+          "prompt": "Quelle affirmation respecte exactement les horaires annoncés ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Le train doit arriver à 18 h 30."
+            },
+            {
+              "id": "choice2",
+              "text": "Le point d’assistance reste ouvert après l’heure de départ initialement prévue."
+            },
+            {
+              "id": "choice3",
+              "text": "Le point d’assistance ferme dès l’arrivée du train."
+            }
+          ],
+          "answers": [
+            "choice2"
+          ],
+          "max_points": 2,
+          "explanation": "Le départ prévu à 18 heures précède la fermeture de l’assistance à 18 h 30.",
+          "lesson_refs": [
+            "D.02",
+            "D.04"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "Question originale Intégrale Academy · simulation pédagogique"
+        },
+        {
+          "id": "D-qcm-07",
+          "kind": "qcm",
+          "multiple": false,
+          "prompt": "Dans la dernière ligne, « modalités d’accueil » désigne :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Le nombre de trains circulant dans la gare."
+            },
+            {
+              "id": "choice2",
+              "text": "La manière dont la rencontre et l’accompagnement seront organisés."
+            },
+            {
+              "id": "choice3",
+              "text": "Les seules caractéristiques techniques du véhicule."
+            }
+          ],
+          "answers": [
+            "choice2"
+          ],
+          "max_points": 2,
+          "explanation": "L’expression rassemble les dispositions pratiques convenues pour recevoir et accompagner les voyageuses.",
+          "lesson_refs": [
+            "D.06"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "Question originale Intégrale Academy · simulation pédagogique"
+        },
+        {
+          "id": "D-qrc-01",
+          "kind": "qrc",
+          "prompt": "À partir du texte, expliquez pourquoi le lieu habituel de prise en charge change et indiquez le nouveau lieu prévu.",
+          "max_points": 2,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "D-qrc-01-c1",
+              "label": "Cause",
+              "max_points": 1,
+              "expected": "La rénovation du parvis ferme l’accès des voitures à la sortie principale.",
+              "partial_guidance": "0,5 pour les travaux ; 0,5 pour leur conséquence sur l’accès automobile.",
+              "critical": false,
+              "field_ids": [
+                "D-qrc-01"
+              ]
+            },
+            {
+              "id": "D-qrc-01-c2",
+              "label": "Nouveau lieu",
+              "max_points": 1,
+              "expected": "Le parking Est, derrière la médiathèque à trois cents mètres du hall.",
+              "partial_guidance": "0,5 pour parking Est ; 0,5 pour un repère exact complémentaire (médiathèque ou distance).",
+              "critical": false,
+              "field_ids": [
+                "D-qrc-01"
+              ]
+            }
+          ],
+          "model_response": "Les travaux de rénovation du parvis ferment l’accès des voitures à la sortie principale. La prise en charge est déplacée au parking Est, derrière la médiathèque, à trois cents mètres du hall.",
+          "lesson_refs": [
+            "D.01",
+            "D.04"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        },
+        {
+          "id": "D-qrc-02",
+          "kind": "qrc",
+          "prompt": "Résumez dans l’ordre les deux déplacements que le conducteur effectuera pour accueillir Mme Bernard selon l’organisation convenue.",
+          "max_points": 2,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "D-qrc-02-c1",
+              "label": "Stationner puis rejoindre",
+              "max_points": 1,
+              "expected": "Il stationne d’abord sur une place autorisée du parking Est puis rejoint la cliente au point d’assistance du hall.",
+              "partial_guidance": "0,5 pour stationnement initial autorisé au parking Est ; 0,5 pour aller au point d’assistance.",
+              "critical": false,
+              "field_ids": [
+                "D-qrc-02"
+              ]
+            },
+            {
+              "id": "D-qrc-02-c2",
+              "label": "Accompagner vers le véhicule",
+              "max_points": 1,
+              "expected": "Il accompagne ensuite Mme Bernard jusqu’au véhicule par le cheminement balisé, sans la zone de travaux.",
+              "partial_guidance": "0,5 pour accompagnement au véhicule ; 0,5 pour l’itinéraire balisé/évitant les travaux.",
+              "critical": false,
+              "field_ids": [
+                "D-qrc-02"
+              ]
+            }
+          ],
+          "model_response": "Le conducteur stationne d’abord le véhicule sur une place autorisée du parking Est et rejoint Mme Bernard au point d’assistance du hall. Il l’accompagne ensuite au véhicule en empruntant le cheminement balisé.",
+          "lesson_refs": [
+            "D.03",
+            "D.05"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        },
+        {
+          "id": "D-qrc-03",
+          "kind": "qrc",
+          "prompt": "Le train est finalement retardé. D’après le texte, expliquez ce que Mme Bernard doit faire puis ce que le conducteur doit confirmer.",
+          "max_points": 2,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "D-qrc-03-c1",
+              "label": "Information et accord",
+              "max_points": 1,
+              "expected": "Mme Bernard informe le conducteur du retard ; ils conviennent ensemble d’une nouvelle heure.",
+              "partial_guidance": "0,5 pour prévenir le conducteur ; 0,5 pour convenir de l’horaire sans l’inventer.",
+              "critical": false,
+              "field_ids": [
+                "D-qrc-03"
+              ]
+            },
+            {
+              "id": "D-qrc-03-c2",
+              "label": "Confirmation écrite",
+              "max_points": 1,
+              "expected": "Le conducteur confirme par écrit le lieu, l’heure et les modalités d’accueil.",
+              "partial_guidance": "0,25 pour écrit ; 0,25 chacun pour lieu, heure et modalités d’accueil.",
+              "critical": false,
+              "field_ids": [
+                "D-qrc-03"
+              ]
+            }
+          ],
+          "model_response": "Mme Bernard doit prévenir le conducteur du retard. Ils doivent convenir ensemble d’une nouvelle heure de rendez-vous. Le conducteur confirme ensuite par écrit le lieu, l’heure et les modalités d’accueil.",
+          "lesson_refs": [
+            "D.04",
+            "D.09"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        }
+      ],
+      "passage_title": "Une prise en charge déplacée à la gare",
+      "passage_lines": [
+        "La gare des Ormes rénove son parvis du 12 au 26 octobre.",
+        "Pendant les travaux, l’accès des voitures à la sortie principale est fermé.",
+        "Les voyageurs à pied peuvent cependant continuer à utiliser cette sortie.",
+        "Les prises en charge réservées sont déplacées vers le parking Est.",
+        "Ce parking est situé à trois cents mètres du hall, derrière la médiathèque.",
+        "Un cheminement balisé permet de le rejoindre sans traverser la zone de travaux.",
+        "Le mardi 13 octobre, le train de Mme Bernard est annoncé à 17 h 40.",
+        "Sa réservation prévoit un départ à 18 heures pour laisser le temps de récupérer ses bagages.",
+        "Elle voyage avec sa sœur et deux valises, dont une particulièrement lourde.",
+        "Elle prévient le conducteur qu’elle se déplace lentement avec une canne.",
+        "Le conducteur lui demande quelle aide elle souhaite recevoir.",
+        "À sa demande, il propose de la retrouver au point d’assistance du hall.",
+        "Il stationnera d’abord le véhicule sur une place autorisée du parking Est.",
+        "Il l’accompagnera ensuite jusqu’au véhicule par le cheminement balisé.",
+        "La gare précise que le point d’assistance est ouvert jusqu’à 18 h 30.",
+        "Si le train est retardé, Mme Bernard devra en informer le conducteur.",
+        "Ils conviendront alors ensemble d’une nouvelle heure de rendez-vous.",
+        "Le conducteur confirmera par écrit le lieu, l’heure et les modalités d’accueil."
+      ]
+    },
+    {
+      "id": "E",
+      "title": "Anglais · niveau A2",
+      "minutes": 30,
+      "coefficient": 1,
+      "minimum": 4,
+      "qcm_count": 20,
+      "qrc_count": 0,
+      "qcm_points": 1,
+      "qrc_points": 0,
+      "questions": [
+        {
+          "prompt": "À l’accueil, le passager dit : “Good evening. I’m here for the shuttle booked by Northbridge Ltd.” Quelle réponse vérifie utilement son identité de réservation ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "“Good evening. What time would you like to return tomorrow?”"
+            },
+            {
+              "id": "choice2",
+              "text": "“Good evening. May I have your name and booking reference, please?”"
+            },
+            {
+              "id": "choice3",
+              "text": "“Good evening. Which station would you like to reach?”"
+            }
+          ],
+          "explanation": "Le client annonce un transport réservé par une entreprise. Le nom et la référence permettent de vérifier la mission ; la destination et l’horaire du retour ne vérifient pas, à eux seuls, son identité de réservation.",
+          "sources": [
+            {
+              "title": "British Council — Question words ; échanges professionnels originaux",
+              "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/question-words"
+            }
+          ],
+          "lesson_refs": [
+            "E.01"
+          ],
+          "id": "E-qcm-01",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-01",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Vous présentez votre rôle : « Je suis le conducteur chargé de votre transfert vers le port. » Quelle phrase anglaise transmet cette information ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "“I am the driver for your transfer to the port.”"
+            },
+            {
+              "id": "choice2",
+              "text": "“I am the driver collecting you from the port.”"
+            },
+            {
+              "id": "choice3",
+              "text": "“I am the driver for your transfer to the airport.”"
+            }
+          ],
+          "explanation": "Driver désigne le conducteur ; for your transfer to the port indique sa mission et sa destination. Les autres phrases changent le rôle ou le sens du déplacement.",
+          "sources": [
+            {
+              "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+              "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+            }
+          ],
+          "lesson_refs": [
+            "E.01"
+          ],
+          "id": "E-qcm-02",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-02",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le passager précise : “We only need a one-way transfer today. Someone else will collect us tomorrow.” Que devez-vous confirmer ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Un aller-retour aujourd’hui assuré par le même conducteur."
+            },
+            {
+              "id": "choice2",
+              "text": "Un aller simple aujourd’hui, puis un retour demain avec ce même conducteur."
+            },
+            {
+              "id": "choice3",
+              "text": "Un transfert aller simple aujourd’hui ; un autre transport est prévu pour le lendemain."
+            }
+          ],
+          "explanation": "Only et one-way limitent la demande à un trajet simple. Tomorrow situe la prise en charge par une autre personne au lendemain, pas plus tard le même jour.",
+          "sources": [
+            {
+              "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+              "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+            }
+          ],
+          "lesson_refs": [
+            "E.02"
+          ],
+          "id": "E-qcm-03",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-03",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Pour vérifier si le client veut une prise en charge à l’hôtel ou au centre d’affaires, quelle question est correctement ciblée ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "“Would you like me to take you to the hotel or to the business centre?”"
+            },
+            {
+              "id": "choice2",
+              "text": "“Would you like me to collect you at the hotel or at the business centre?”"
+            },
+            {
+              "id": "choice3",
+              "text": "“Did you come from the hotel or from the business centre yesterday?”"
+            }
+          ],
+          "explanation": "Collect you concerne la prise en charge et présente les deux lieux possibles. Les autres questions portent sur la destination ou le trajet passé, et non sur le lieu où venir chercher le client.",
+          "sources": [
+            {
+              "title": "British Council — Question words ; échanges professionnels originaux",
+              "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/question-words"
+            }
+          ],
+          "lesson_refs": [
+            "E.02"
+          ],
+          "id": "E-qcm-04",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-04",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le message reçu est : “Please collect us at noon, not at midnight.” Quelle distinction faut-il conserver ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Midi, et non minuit."
+            },
+            {
+              "id": "choice2",
+              "text": "Minuit, et non midi."
+            },
+            {
+              "id": "choice3",
+              "text": "Tout de suite, sans attendre midi."
+            }
+          ],
+          "explanation": "Noon désigne midi et midnight minuit. La négation écarte explicitement la deuxième heure ; il n’est pas demandé une plage de douze heures.",
+          "sources": [
+            {
+              "title": "British Council — Prepositions of time ; exemples professionnels originaux",
+              "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/prepositions-time"
+            }
+          ],
+          "lesson_refs": [
+            "E.03"
+          ],
+          "id": "E-qcm-05",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-05",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Votre planning indique vendredi. Le client écrit : “Could we move the booking to the following Monday?” Quel changement demande-t-il ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Reporter la réservation au lundi suivant."
+            },
+            {
+              "id": "choice2",
+              "text": "La déplacer au lundi précédent."
+            },
+            {
+              "id": "choice3",
+              "text": "La conserver le vendredi en changeant seulement l’heure."
+            }
+          ],
+          "explanation": "The following Monday désigne le lundi qui suit. Move the booking demande de déplacer la réservation, sans donner dans cette phrase une nouvelle heure précise.",
+          "sources": [
+            {
+              "title": "British Council — Prepositions of time ; exemples professionnels originaux",
+              "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/prepositions-time"
+            }
+          ],
+          "lesson_refs": [
+            "E.03"
+          ],
+          "id": "E-qcm-06",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-06",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Consigne reçue : “Go past the café. The entrance is on your left, opposite the lift.” Quel chemin correspond ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Dépasser le café, puis chercher l’entrée à droite, en face de l’ascenseur."
+            },
+            {
+              "id": "choice2",
+              "text": "Dépasser le café, puis chercher l’entrée à gauche, derrière l’ascenseur."
+            },
+            {
+              "id": "choice3",
+              "text": "Dépasser le café, puis chercher l’entrée à gauche, en face de l’ascenseur."
+            }
+          ],
+          "explanation": "Go past demande de dépasser, on your left indique la gauche et opposite signifie en face. Les trois repères doivent être associés, sans inventer une entrée dans le café.",
+          "sources": [
+            {
+              "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+              "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+            }
+          ],
+          "lesson_refs": [
+            "E.04"
+          ],
+          "id": "E-qcm-07",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-07",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le client écrit : “I’m still inside the building, next to the reception desk.” Où se trouve-t-il ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "À l’extérieur du bâtiment, près du bureau d’accueil."
+            },
+            {
+              "id": "choice2",
+              "text": "À l’intérieur du bâtiment, loin du bureau d’accueil."
+            },
+            {
+              "id": "choice3",
+              "text": "À l’intérieur du bâtiment, près du bureau d’accueil."
+            }
+          ],
+          "explanation": "“Inside” indique l’intérieur ; “next to” signifie à côté de ou près de. Le client se trouve donc à l’intérieur, près du bureau d’accueil.",
+          "sources": [
+            {
+              "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+              "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+            }
+          ],
+          "lesson_refs": [
+            "E.04"
+          ],
+          "id": "E-qcm-08",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-08",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Un client vous prévient : “This bag is heavier than it looks. Can we lift it together?” Que propose-t-il ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "De soulever ensemble un sac moins lourd qu’il n’en a l’air."
+            },
+            {
+              "id": "choice2",
+              "text": "De soulever ensemble un sac plus lourd qu’il n’en a l’air."
+            },
+            {
+              "id": "choice3",
+              "text": "De porter seul un sac plus lourd qu’il n’en a l’air."
+            }
+          ],
+          "explanation": "Heavier than it looks indique un poids supérieur à l’apparence. Together exprime une action à deux ; le passager ne demande ni de vider le bagage ni de rester seul.",
+          "sources": [
+            {
+              "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+              "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+            }
+          ],
+          "lesson_refs": [
+            "E.05"
+          ],
+          "id": "E-qcm-09",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-09",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Vous souhaitez demander l’autorisation de déplacer une canne pour libérer le passage. Quelle phrase respecte ce sens ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "“Could you move your walking stick so I can leave the car?”"
+            },
+            {
+              "id": "choice2",
+              "text": "“May I take your walking stick back to reception?”"
+            },
+            {
+              "id": "choice3",
+              "text": "“May I move your walking stick so the doorway is clear?”"
+            }
+          ],
+          "explanation": "May I demande une permission avant l’action ; so the doorway is clear donne le but. Les autres phrases imposent un abandon ou proposent une destination différente pour la canne.",
+          "sources": [
+            {
+              "title": "British Council — Question words ; échanges professionnels originaux",
+              "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/question-words"
+            }
+          ],
+          "lesson_refs": [
+            "E.05"
+          ],
+          "id": "E-qcm-10",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-10",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le message écrit indique : “Could you lower the music a little? I need to make a short call.” Quelle demande le client formule-t-il ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Couper complètement la musique pour le reste du trajet."
+            },
+            {
+              "id": "choice2",
+              "text": "Baisser un peu la musique pour lui permettre de téléphoner."
+            },
+            {
+              "id": "choice3",
+              "text": "Passer un appel à sa place depuis le téléphone du conducteur."
+            }
+          ],
+          "explanation": "Lower the music concerne le volume sonore. Le client précise qu’il passera lui-même un appel ; il ne demande pas au conducteur de téléphoner.",
+          "sources": [
+            {
+              "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+              "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+            }
+          ],
+          "lesson_refs": [
+            "E.06"
+          ],
+          "id": "E-qcm-11",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-11",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le véhicule est à l’arrêt. Vous devez demander au passager de fermer sa porte avant le départ. Quelle formulation est polie et précise ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "“Could you close your door before we set off, please?”"
+            },
+            {
+              "id": "choice2",
+              "text": "“Could you open your door before we set off, please?”"
+            },
+            {
+              "id": "choice3",
+              "text": "“Could you close your door when we arrive, please?”"
+            }
+          ],
+          "explanation": "Could you… please formule une demande. Before we set off situe la fermeture avant le départ ; la deuxième phrase raconte un passé, la troisième demande l’action opposée en mouvement.",
+          "sources": [
+            {
+              "title": "British Council — Question words ; échanges professionnels originaux",
+              "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/question-words"
+            }
+          ],
+          "lesson_refs": [
+            "E.06"
+          ],
+          "id": "E-qcm-12",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-12",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le conducteur explique : “The tunnel is closed, so we will use the bridge. The journey should take about ten minutes longer.” Quelle information est donnée ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Un détour par le pont à cause du tunnel fermé, avec environ dix minutes de moins."
+            },
+            {
+              "id": "choice2",
+              "text": "Un passage par le tunnel à cause du pont fermé, avec environ dix minutes de plus."
+            },
+            {
+              "id": "choice3",
+              "text": "Un détour par le pont à cause du tunnel fermé, avec environ dix minutes de plus."
+            }
+          ],
+          "explanation": "So relie la fermeture à l’itinéraire de remplacement. About marque une approximation et longer une durée supplémentaire, sans garantie d’un temps exact.",
+          "sources": [
+            {
+              "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+              "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+            }
+          ],
+          "lesson_refs": [
+            "E.07"
+          ],
+          "id": "E-qcm-13",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-13",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Vous voulez vérifier si le passager préfère le trajet le plus direct ou un passage par le bord de mer. Quelle question correspond ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "“Would you prefer the direct route or the route along the coast?”"
+            },
+            {
+              "id": "choice2",
+              "text": "“Did you use the coastal route when you arrived yesterday?”"
+            },
+            {
+              "id": "choice3",
+              "text": "“How long did your previous journey along the coast take?”"
+            }
+          ],
+          "explanation": "Would you prefer demande une préférence entre deux itinéraires. Along the coast signifie le long de la côte ; les deux autres phrases interrogent le trajet passé plutôt que la préférence actuelle.",
+          "sources": [
+            {
+              "title": "British Council — Question words ; échanges professionnels originaux",
+              "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/question-words"
+            }
+          ],
+          "lesson_refs": [
+            "E.07"
+          ],
+          "id": "E-qcm-14",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-14",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le tarif indique : “Parking fees are included. Admission tickets are not.” Quelle distinction faut-il expliquer ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Le stationnement est inclus, les billets d’entrée ne le sont pas."
+            },
+            {
+              "id": "choice2",
+              "text": "Les billets d’entrée sont inclus, mais pas le stationnement."
+            },
+            {
+              "id": "choice3",
+              "text": "Ni le stationnement ni les billets d’entrée ne sont inclus."
+            }
+          ],
+          "explanation": "Parking fees concerne les frais de stationnement et admission tickets les billets d’entrée. Are not limite clairement ce qui est compris dans le tarif.",
+          "sources": [
+            {
+              "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+              "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+            }
+          ],
+          "lesson_refs": [
+            "E.08"
+          ],
+          "id": "E-qcm-15",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-15",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le client demande : “Is that the total price, or will there be an extra charge for waiting?” Quelle précision attend-il ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Il demande depuis combien de temps le conducteur l’attend."
+            },
+            {
+              "id": "choice2",
+              "text": "Il veut savoir si les frais de stationnement sont compris dans le prix."
+            },
+            {
+              "id": "choice3",
+              "text": "Il veut savoir si l’attente entraînera un supplément au prix annoncé."
+            }
+          ],
+          "explanation": "Extra charge signifie supplément facturé. La question distingue un total tout compris d’un prix auquel pourrait s’ajouter l’attente.",
+          "sources": [
+            {
+              "title": "British Council — Question words ; échanges professionnels originaux",
+              "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/question-words"
+            }
+          ],
+          "lesson_refs": [
+            "E.08"
+          ],
+          "id": "E-qcm-16",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-16",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le message dit : “The speaker has not finished yet. Please wait for our confirmation before coming to the entrance.” Quelle conduite correspond au message ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Rejoindre l’entrée dès la fin de l’intervention, sans attendre de confirmation."
+            },
+            {
+              "id": "choice2",
+              "text": "Rejoindre immédiatement l’entrée, car l’intervention est déjà terminée."
+            },
+            {
+              "id": "choice3",
+              "text": "Attendre la confirmation avant de rejoindre l’entrée, car l’intervention n’est pas terminée."
+            }
+          ],
+          "explanation": "Not… yet signifie pas encore ; before impose d’attendre la confirmation. Le texte ne transforme pas cette attente en annulation définitive.",
+          "sources": [
+            {
+              "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+              "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+            }
+          ],
+          "lesson_refs": [
+            "E.09"
+          ],
+          "id": "E-qcm-17",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-17",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Vous êtes arrêté et devez annoncer : « Une route est fermée. Je vous communiquerai une nouvelle estimation dans quelques minutes. » Quelle phrase convient ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "“A road was closed. I gave you an arrival estimate a few minutes ago.”"
+            },
+            {
+              "id": "choice2",
+              "text": "“A road is closed. I’ll give you an updated arrival estimate in a few minutes.”"
+            },
+            {
+              "id": "choice3",
+              "text": "“The road is closed. We will definitely arrive in a few minutes.”"
+            }
+          ],
+          "explanation": "Closed signale la fermeture, I’ll annonce l’action à venir et updated estimate une estimation révisée. La phrase ne promet pas un horaire garanti.",
+          "sources": [
+            {
+              "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+              "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+            }
+          ],
+          "lesson_refs": [
+            "E.09"
+          ],
+          "id": "E-qcm-18",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-18",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le client dit : “The receipt is for me, but the invoice should show my employer’s name.” Quels documents demande-t-il ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Une facture personnelle pour le client et un reçu au nom de son employeur."
+            },
+            {
+              "id": "choice2",
+              "text": "Un reçu pour lui et une facture établie avec le nom de son employeur."
+            },
+            {
+              "id": "choice3",
+              "text": "Un reçu et une facture établis tous les deux au nom du client."
+            }
+          ],
+          "explanation": "Receipt est le reçu ; invoice est la facture. Le possessif my renvoie au client et employer à son employeur, pas au conducteur.",
+          "sources": [
+            {
+              "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+              "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+            }
+          ],
+          "lesson_refs": [
+            "E.10"
+          ],
+          "id": "E-qcm-19",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-19",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Vous venez de rendre la monnaie et voulez vérifier que le client l’a reçue correctement. Quelle phrase correspond ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "“Here is your change. Could you check the amount, please?”"
+            },
+            {
+              "id": "choice2",
+              "text": "“Here is the invoice. Could you check the address, please?”"
+            },
+            {
+              "id": "choice3",
+              "text": "“Here is the fare. Could you pay the amount, please?”"
+            }
+          ],
+          "explanation": "Dans ce contexte, change signifie la monnaie rendue. Check the amount demande de vérifier le montant, sans annoncer un solde qui resterait à payer.",
+          "sources": [
+            {
+              "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+              "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+            }
+          ],
+          "lesson_refs": [
+            "E.10"
+          ],
+          "id": "E-qcm-20",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "v6-module-e-20",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        }
+      ]
+    },
+    {
+      "id": "F",
+      "title": "Développement commercial et gestion VTC",
+      "minutes": 30,
+      "coefficient": 3,
+      "minimum": 6,
+      "qcm_count": 12,
+      "qrc_count": 4,
+      "qcm_points": 1,
+      "qrc_points": 2,
+      "questions": [
+        {
+          "prompt": "Le prix psychologique correspond :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "au prix perçu par le consommateur"
+            },
+            {
+              "id": "choice2",
+              "text": "au prix dont se souvient le consommateur"
+            },
+            {
+              "id": "choice3",
+              "text": "au prix de référence pour une catégorie de produits/prestations"
+            },
+            {
+              "id": "choice4",
+              "text": "au prix que le consommateur est prêt à payer pour acheter le produit/la prestation"
+            }
+          ],
+          "explanation": "Le prix psychologique est le prix que le client est prêt à accepter pour le produit ou le service. Il s’analyse avec le coût de revient et les prix du marché ; un prix simplement mémorisé ou affiché par un concurrent n’est pas sa définition.",
+          "sources": [],
+          "lesson_refs": [
+            "F.03"
+          ],
+          "id": "F-qcm-01",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice4"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-f-01",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "De manière générale, quelle est l'attitude à adopter lors de l'approche du lieu de destination?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Demander à votre client de rassembler ses effets personnels"
+            },
+            {
+              "id": "choice2",
+              "text": "Préparer la mission suivante"
+            },
+            {
+              "id": "choice3",
+              "text": "Informer le client de votre arrivée prochaine"
+            }
+          ],
+          "explanation": "À l’approche de la destination, informer le client lui permet de préparer sereinement la fin de course. Garder l’attention sur la circulation et la dépose ; la mission suivante se prépare au moment approprié, sans précipiter le passager.",
+          "sources": [],
+          "lesson_refs": [
+            "H.10",
+            "F.09"
+          ],
+          "id": "F-qcm-02",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-f-03",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Pour prendre en charge un client dans un hôtel, il convient de :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "l'attendre devant la porte d'entrée de l'hôtel"
+            },
+            {
+              "id": "choice2",
+              "text": "se faire annoncer auprès de la réception de l'hôtel"
+            },
+            {
+              "id": "choice3",
+              "text": "klaxonner pour informer de l'arrivée du véhicule"
+            }
+          ],
+          "explanation": "À l’hôtel, se faire annoncer à la réception facilite la rencontre discrète avec le client et le respect des accès. Klaxonner n’est pas un mode d’accueil professionnel ; attendre sans coordination peut faire manquer la prise en charge.",
+          "sources": [],
+          "lesson_refs": [
+            "H.04",
+            "F.07"
+          ],
+          "id": "F-qcm-03",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-f-06",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Quelle est la première étape d'une stratégie commerciale d'un chauffeur VTC ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "L'étude de marché"
+            },
+            {
+              "id": "choice2",
+              "text": "Le marketing mix"
+            },
+            {
+              "id": "choice3",
+              "text": "Le plan d'action"
+            }
+          ],
+          "explanation": "L’étude de marché précède le choix détaillé des actions commerciales : identifier clients, besoins, concurrence et territoire. Le marketing mix organise ensuite l’offre, le prix, la distribution et la communication ; le plan d’action met la stratégie en œuvre.",
+          "sources": [],
+          "lesson_refs": [
+            "F.01"
+          ],
+          "id": "F-qcm-04",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-f-07",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Votre client oublie son portefeuille dans votre véhicule. Que faites-vous ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Attendre la prochaine réservation de ce client avant de le prévenir."
+            },
+            {
+              "id": "choice2",
+              "text": "Sécuriser le portefeuille, contacter rapidement le client et organiser une restitution sûre."
+            },
+            {
+              "id": "choice3",
+              "text": "Confier immédiatement le portefeuille au prochain passager qui reconnaît son propriétaire."
+            }
+          ],
+          "explanation": "Après avoir sécurisé le portefeuille et identifié la course, contacter rapidement le client de façon discrète, puis convenir d’une restitution sûre. Ne pas exposer les documents personnels ou publier leur photographie ; conserver une trace limitée de la restitution.",
+          "sources": [],
+          "lesson_refs": [
+            "H.10",
+            "F.11"
+          ],
+          "id": "F-qcm-05",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2022-f-08",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Vous connaissez un VTC qui va démarrer son activité avec des prix très bas afin d'attirer un maximum de clients. Que pensez-vous de cette politique tarifaire ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Le volume de clients suffit toujours à rendre rentable une course vendue sous son coût."
+            },
+            {
+              "id": "choice2",
+              "text": "Le prix risque de réduire la rentabilité et d’altérer la perception de la qualité."
+            },
+            {
+              "id": "choice3",
+              "text": "Le prix très bas garantit à lui seul une clientèle fidèle et solvable."
+            }
+          ],
+          "explanation": "Un prix très bas peut attirer des clients sans couvrir le coût complet de la prestation. Avant une remise, calculer la marge après approche, retour, commission et charges ; vérifier aussi l'effet possible du tarif sur l'image du service.",
+          "sources": [],
+          "lesson_refs": [
+            "F.03"
+          ],
+          "id": "F-qcm-06",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2021-f-01",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "En cas de retard très important du client, que faites-vous ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Partir sans contacter le client dès que l’horaire est dépassé."
+            },
+            {
+              "id": "choice2",
+              "text": "Accepter de l’attendre sans limite sans vérifier les autres réservations."
+            },
+            {
+              "id": "choice3",
+              "text": "Contacter le client, réévaluer l’attente et proposer un remplaçant si les engagements suivants l’exigent."
+            }
+          ],
+          "explanation": "Si le client est fortement retardé, le contacter pour estimer son heure d'arrivée et vérifier les engagements suivants. Si l'attente compromet une autre course, proposer avec son accord une solution de remplacement ; expliquer les conditions d'attente convenues et garder une trace du nouvel accord.",
+          "sources": [],
+          "lesson_refs": [
+            "F.10",
+            "H.08"
+          ],
+          "id": "F-qcm-07",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2021-f-06",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Le panier moyen est :",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "la moyenne des achats par client"
+            },
+            {
+              "id": "choice2",
+              "text": "la taille moyenne des paniers de courses en France"
+            },
+            {
+              "id": "choice3",
+              "text": "la taille des achats à charger dans le coffre"
+            }
+          ],
+          "explanation": "Le panier moyen mesure le montant moyen des achats ou prestations par client ou commande selon la définition retenue. Il se calcule en divisant le chiffre d'affaires du périmètre par le nombre correspondant ; il faut conserver la même définition pour comparer les périodes.",
+          "sources": [],
+          "lesson_refs": [
+            "F.12"
+          ],
+          "id": "F-qcm-08",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "exam-annales-2021-f-14",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Un quartier compte cinq nouveaux hôtels. Quelle donnée transforme cette observation en estimation commerciale exploitable ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Le seul nombre de chambres construites."
+            },
+            {
+              "id": "choice2",
+              "text": "Leurs besoins réels de transferts, horaires et conditions de partenariat."
+            },
+            {
+              "id": "choice3",
+              "text": "Le tarif le plus élevé affiché par un hôtel."
+            }
+          ],
+          "explanation": "La présence d’hôtels signale un marché possible ; les besoins, créneaux et modalités d’achat permettent d’évaluer les courses accessibles.",
+          "sources": [],
+          "lesson_refs": [
+            "F.01"
+          ],
+          "id": "F-qcm-09",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "independent-f-01",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Une offre « transfert familles » promet deux sièges enfants sur réservation. Quel contrôle doit précéder la confirmation ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Remplacer les sièges promis par une remise sur la course."
+            },
+            {
+              "id": "choice2",
+              "text": "Confirmer la formule puis vérifier les équipements le jour même."
+            },
+            {
+              "id": "choice3",
+              "text": "Vérifier les équipements adaptés disponibles et la capacité de transport avec les bagages."
+            }
+          ],
+          "explanation": "L’offre doit correspondre à une capacité réelle. Le matériel, le nombre de passagers et les bagages conditionnent l’exécution de la promesse commerciale.",
+          "sources": [],
+          "lesson_refs": [
+            "F.02"
+          ],
+          "id": "F-qcm-10",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "independent-f-02",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Un devis prévoit le trajet et le prix mais ne traite pas l’attente à l’arrivée du train. Quelle précision réduit un désaccord ultérieur ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Le délai inclus, le point de départ du décompte et le prix de l’attente supplémentaire."
+            },
+            {
+              "id": "choice2",
+              "text": "La seule durée habituelle du trajet routier."
+            },
+            {
+              "id": "choice3",
+              "text": "Une mention « attente possible » sans durée ni montant."
+            }
+          ],
+          "explanation": "Une attente facturable doit pouvoir être comprise et calculée à partir des conditions proposées. Une formule générale ne précise ni le seuil ni le coût.",
+          "sources": [],
+          "lesson_refs": [
+            "F.04"
+          ],
+          "id": "F-qcm-11",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "independent-f-04",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Un hôtel propose des transferts à horaires fixes avec règlement à 45 jours. Quel point doit être étudié en plus du prix par course ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Le montant du règlement comme s’il était encaissé le jour de la course."
+            },
+            {
+              "id": "choice2",
+              "text": "Le bénéfice prévisionnel seul, sans tenir compte des dates des flux bancaires."
+            },
+            {
+              "id": "choice3",
+              "text": "Le financement des dépenses engagées avant le règlement."
+            }
+          ],
+          "explanation": "Le carburant, les commissions et d’autres dépenses peuvent être payés avant l’encaissement. Le délai client crée donc un besoin de trésorerie.",
+          "sources": [],
+          "lesson_refs": [
+            "F.07"
+          ],
+          "id": "F-qcm-12",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 1,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "independent-f-07",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "id": "F-qrc-01",
+          "kind": "qrc",
+          "prompt": "Une course rapporte 96 € HT avant une commission de 25 %. Elle entraîne 22 € de coûts variables hors commission. Calculez la somme restant pour couvrir les charges fixes et expliquez pourquoi elle ne représente pas encore le bénéfice net.",
+          "max_points": 2,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "F-qrc-01-c1",
+              "label": "Calcul de contribution",
+              "max_points": 1.5,
+              "expected": "Commission 96 × 25 % = 24 € ; reste 96 − 24 − 22 = 50 €.",
+              "partial_guidance": "0,5 pour 24 € de commission (ou 72 € après commission) ; 0,5 pour retirer 22 € ; 0,5 pour 50 €. Accepter une méthode équivalente.",
+              "critical": false,
+              "field_ids": [
+                "F-qrc-01"
+              ]
+            },
+            {
+              "id": "F-qrc-01-c2",
+              "label": "Interprétation",
+              "max_points": 0.5,
+              "expected": "Les charges fixes et autres charges non incluses restent à payer ; 50 € est une contribution, pas un bénéfice net.",
+              "partial_guidance": "0,5 pour signaler au moins les charges fixes restant à couvrir.",
+              "critical": false,
+              "field_ids": [
+                "F-qrc-01"
+              ]
+            }
+          ],
+          "model_response": "La commission est 96 × 25 % = 24 €. Il reste 96 − 24 − 22 = 50 € pour couvrir les charges fixes. Ces 50 € ne sont pas un bénéfice net, car les charges fixes et les autres charges non comprises dans le calcul restent à payer.",
+          "lesson_refs": [
+            "F.05",
+            "F.06"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        },
+        {
+          "id": "F-qrc-02",
+          "kind": "qrc",
+          "prompt": "Vous prospectez les hôtels d’un quartier. Proposez une action de prospection précise puis un indicateur chiffrable pour mesurer son efficacité. Expliquez le lien entre les deux.",
+          "max_points": 2,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "F-qrc-02-c1",
+              "label": "Action ciblée",
+              "max_points": 1,
+              "expected": "Action concrète adressée aux décideurs des hôtels, par exemple rendez-vous avec réception/responsable, présentation d’une offre adaptée et recueil des besoins.",
+              "partial_guidance": "0,5 pour cible et canal précis ; 0,5 pour proposition/objectif concret.",
+              "critical": false,
+              "field_ids": [
+                "F-qrc-02"
+              ]
+            },
+            {
+              "id": "F-qrc-02-c2",
+              "label": "Indicateur cohérent",
+              "max_points": 1,
+              "expected": "Indicateur mesurable relié à l’action : nombre de rendez-vous / hôtels contactés, réservations / propositions ou CA/marge des partenariats sur période.",
+              "partial_guidance": "0,5 pour mesure définie ; 0,5 pour lien/formule/période permettant une comparaison utile.",
+              "critical": false,
+              "field_ids": [
+                "F-qrc-02"
+              ]
+            }
+          ],
+          "model_response": "Je contacte les responsables de réception de dix hôtels pour proposer un rendez-vous sur leurs transferts récurrents. Je suis le nombre de rendez-vous obtenus divisé par le nombre d’hôtels contactés sur le mois ; cet indicateur mesure l’efficacité de cette première prise de contact.",
+          "lesson_refs": [
+            "F.01",
+            "F.07",
+            "F.11"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        },
+        {
+          "id": "F-qrc-03",
+          "kind": "qrc",
+          "prompt": "Un client conteste 15 € d’attente ajoutés à sa facture. Rédigez une courte réponse professionnelle expliquant quelles informations vous allez vérifier et comment vous lui apporterez une réponse.",
+          "max_points": 2,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "F-qrc-03-c1",
+              "label": "Vérifications factuelles",
+              "max_points": 1,
+              "expected": "Compare devis/conditions acceptées (franchise, départ du décompte, tarif), horaires réels et montant calculé.",
+              "partial_guidance": "0,5 pour les conditions tarifaires acceptées ; 0,5 pour horaires/décompte appliqué.",
+              "critical": false,
+              "field_ids": [
+                "F-qrc-03"
+              ]
+            },
+            {
+              "id": "F-qrc-03-c2",
+              "label": "Réponse professionnelle",
+              "max_points": 1,
+              "expected": "Accuse réception sans agressivité, promet une explication vérifiable et une correction si erreur, sans affirmer que toute contestation entraîne remboursement.",
+              "partial_guidance": "0,5 pour accueil respectueux ; 0,5 pour suite concrète et conditionnelle.",
+              "critical": false,
+              "field_ids": [
+                "F-qrc-03"
+              ]
+            }
+          ],
+          "model_response": "Bonjour, j’ai bien reçu votre remarque. Je vais comparer les conditions d’attente acceptées lors de la réservation avec les horaires constatés et le calcul des 15 €. Je vous transmettrai le détail et corrigerai la facture si une erreur est confirmée.",
+          "lesson_refs": [
+            "F.09",
+            "F.10"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        },
+        {
+          "id": "F-qrc-04",
+          "kind": "qrc",
+          "prompt": "Un canal de réservation génère 2 000 € HT de ventes et prélève 400 € de commissions. Un second génère les mêmes ventes pour 180 € de prospection. Tous les autres coûts sont identiques. Comparez leur contribution et citez un autre élément à examiner avant de choisir un seul canal.",
+          "max_points": 2,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "F-qrc-04-c1",
+              "label": "Comparaison",
+              "max_points": 1.5,
+              "expected": "Premier canal : 1 600 € ; second : 1 820 € ; avantage de 220 € pour le second avant autres coûts identiques.",
+              "partial_guidance": "0,5 par contribution exacte et 0,5 pour écart de 220 € / avantage correctement chiffré.",
+              "critical": false,
+              "field_ids": [
+                "F-qrc-04"
+              ]
+            },
+            {
+              "id": "F-qrc-04-c2",
+              "label": "Choix à compléter",
+              "max_points": 0.5,
+              "expected": "Un facteur pertinent : régularité/volume, temps de prospection, délai de paiement, risque de dépendance, annulations, fidélisation.",
+              "partial_guidance": "0,5 pour un facteur distinct des coûts déjà comptés et pertinent.",
+              "critical": false,
+              "field_ids": [
+                "F-qrc-04"
+              ]
+            }
+          ],
+          "model_response": "Le premier canal laisse 2 000 − 400 = 1 600 €. Le second laisse 2 000 − 180 = 1 820 €, soit 220 € de plus avant les autres coûts identiques. Je compare aussi la régularité des réservations et le temps de prospection avant de dépendre d’un seul canal.",
+          "lesson_refs": [
+            "F.06",
+            "F.07",
+            "F.11"
+          ],
+          "sources": [
+            {
+              "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+              "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        }
+      ]
+    },
+    {
+      "id": "G",
+      "title": "Réglementation nationale VTC",
+      "minutes": 20,
+      "coefficient": 3,
+      "minimum": 6,
+      "qcm_count": 6,
+      "qrc_count": 2,
+      "qcm_points": 2,
+      "qrc_points": 4,
+      "questions": [
+        {
+          "prompt": "Vous créez une entreprise VTC et détenez déjà votre carte professionnelle personnelle. Un hôtel propose une première mission, mais votre entreprise n’est pas encore inscrite au registre des exploitants. Quelle vérification manque avant de commencer ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "La confirmation écrite de l’hôtel, qui autorise l’activité dès la première commande"
+            },
+            {
+              "id": "choice2",
+              "text": "La finalisation de l’inscription de l’exploitant au REVTC, distincte de la carte du conducteur"
+            },
+            {
+              "id": "choice3",
+              "text": "La copie de la carte professionnelle jointe au devis, qui remplace l’inscription de l’entreprise"
+            }
+          ],
+          "explanation": "La carte concerne l’aptitude professionnelle du conducteur ; le registre concerne l’exploitant. Une commande ne remplace pas cette inscription. Le dossier d’entreprise doit être conforme avant le démarrage des transports.",
+          "sources": [
+            {
+              "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+            },
+            {
+              "title": "Registre VTC — Informations générales et capacité financière",
+              "url": "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+            }
+          ],
+          "lesson_refs": [
+            "G.01"
+          ],
+          "id": "G-qcm-01",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 2,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "vtc-g-independent-01",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Vous ajoutez un second véhicule à votre activité. Pour démarrer plus vite, un collègue propose de photocopier la signalétique du premier véhicule et de la poser sur le second. Quelle réponse convient ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Obtenir et poser la signalétique appropriée au second véhicule après les démarches requises"
+            },
+            {
+              "id": "choice2",
+              "text": "Accepter la copie puisque les deux véhicules appartiennent au même exploitant"
+            },
+            {
+              "id": "choice3",
+              "text": "Utiliser à la place un lumineux de taxi jusqu’à réception de la signalétique"
+            }
+          ],
+          "explanation": "L’appartenance à la même entreprise ne rend pas interchangeables les documents et la signalétique des véhicules. Il faut mettre le dossier du second véhicule en cohérence et utiliser le support réglementaire qui lui correspond.",
+          "sources": [
+            {
+              "title": "Code des transports — Article R3122-8, signalétique VTC",
+              "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000034389549/2026-05-03"
+            },
+            {
+              "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+            }
+          ],
+          "lesson_refs": [
+            "G.04"
+          ],
+          "id": "G-qcm-02",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 2,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "vtc-g-independent-04",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Après votre dépose devant un restaurant, un passant ouvre la porte et vous propose de payer immédiatement pour un trajet. Il n’a effectué aucune réservation et vous n’avez pas encore accepté. Quelle décision prenez-vous ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Accepter puis saisir la réservation une fois le passager installé, avant de démarrer le moteur"
+            },
+            {
+              "id": "choice2",
+              "text": "Accepter à condition que le paiement soit effectué par carte plutôt qu’en espèces"
+            },
+            {
+              "id": "choice3",
+              "text": "Ne pas effectuer cette prise en charge à la demande dans la rue ; la mission doit relever d’une réservation préalable"
+            }
+          ],
+          "explanation": "Le moyen de paiement ne transforme pas une demande dans la rue en réservation préalable. Saisir après la prise en charge un document censé la précéder ne corrige pas la situation.",
+          "sources": [
+            {
+              "title": "Code des transports — Obligations du transport public particulier de personnes",
+              "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+            },
+            {
+              "title": "Code des transports — Sanctions pénales du transport public particulier de personnes",
+              "url": "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000023086525/LEGISCTA000023071123/"
+            }
+          ],
+          "lesson_refs": [
+            "G.06"
+          ],
+          "id": "G-qcm-03",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 2,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "vtc-g-independent-06",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "La dernière course est terminée et vous ne disposez d’aucune réservation suivante. Vous souhaitez rester sur une place de la voie publique devant une salle de spectacle pour attirer un nouveau client. Quelle organisation est conforme ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Rejoindre l’établissement de l’exploitant ou un emplacement autorisé hors chaussée, selon la règle de fin de prestation"
+            },
+            {
+              "id": "choice2",
+              "text": "Rester sur la place en affichant une promotion, puisque la dernière course est terminée"
+            },
+            {
+              "id": "choice3",
+              "text": "Rester devant la salle tant que le véhicule est arrêté et que le moteur est coupé"
+            }
+          ],
+          "explanation": "Sans nouvelle réservation ni contrat avec le client final, la fin de prestation impose le retour prévu par le texte vers l’établissement ou un emplacement autorisé hors chaussée. Couper le moteur ou afficher un prix ne crée pas d’exception.",
+          "sources": [
+            {
+              "title": "Code des transports — Article L3122-9, fin de prestation",
+              "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029529985/2026-01-27"
+            }
+          ],
+          "lesson_refs": [
+            "G.08"
+          ],
+          "id": "G-qcm-04",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 2,
+          "answers": [
+            "choice1"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "vtc-g-independent-08",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Votre véhicule professionnel tombe en panne. Un proche propose sa voiture particulière assurée pour ses déplacements privés, et votre carte professionnelle est valide. Que vérifiez-vous avant d’envisager un remplacement ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Seulement l’accord oral du client, qui dispense des règles applicables au véhicule"
+            },
+            {
+              "id": "choice2",
+              "text": "Seulement la validité de votre carte, qui étend automatiquement l’assurance privée au transport de clients"
+            },
+            {
+              "id": "choice3",
+              "text": "L’éligibilité du véhicule, l’assurance adaptée au transport rémunéré et la conformité du dossier de remplacement"
+            }
+          ],
+          "explanation": "La validité du titre du conducteur ne valide pas le véhicule utilisé. L’assurance doit couvrir l’usage réel et les conditions propres à l’exploitation doivent être réunies avant d’accepter la solution de remplacement.",
+          "sources": [
+            {
+              "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+            }
+          ],
+          "lesson_refs": [
+            "G.10"
+          ],
+          "id": "G-qcm-05",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 2,
+          "answers": [
+            "choice3"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "vtc-g-independent-10",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "prompt": "Vous terminez une prestation et disposez déjà d’une réservation suivante documentée, dans un autre quartier. Un collègue affirme que vous devez obligatoirement retourner à votre établissement entre les deux. Quelle analyse retenez-vous ?",
+          "options": [
+            {
+              "id": "choice1",
+              "text": "Considérer qu’une application simplement ouverte constitue toujours une réservation suivante"
+            },
+            {
+              "id": "choice2",
+              "text": "Vérifier que la réservation suivante est réelle et justifiable : le texte prévoit cette exception au retour de fin de prestation"
+            },
+            {
+              "id": "choice3",
+              "text": "Effectuer systématiquement l’aller-retour jusqu’à l’établissement, même avec une réservation suivante établie"
+            }
+          ],
+          "explanation": "L’article L3122-9 prévoit l’exception liée à une autre réservation préalable ou à un contrat avec le client final. Une mission suivante documentée doit être distinguée d’un simple espoir de recevoir une commande.",
+          "sources": [
+            {
+              "title": "Code des transports — Article L3122-9, fin de prestation",
+              "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029529985/2026-01-27"
+            }
+          ],
+          "lesson_refs": [
+            "G.08"
+          ],
+          "id": "G-qcm-06",
+          "kind": "qcm",
+          "multiple": false,
+          "max_points": 2,
+          "answers": [
+            "choice2"
+          ],
+          "origin": "Sélection pédagogique révisée du parcours VTC",
+          "source_question_id": "vtc-g-independent-20",
+          "source_version": "20261010-vtc-v10-lecons-video"
+        },
+        {
+          "id": "G-qrc-01",
+          "kind": "qrc",
+          "prompt": "Vous contrôlez un justificatif de réservation préalable VTC en octobre 2026. Citez les sept catégories d’informations qu’il doit comporter. Précisez la solution prévue si le nom et le téléphone du client ne figurent pas sur ce justificatif.",
+          "max_points": 4,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "G-qrc-01-c1",
+              "label": "Exploitant",
+              "max_points": 0.5,
+              "expected": "Nom/dénomination sociale et coordonnées de l’exploitant.",
+              "partial_guidance": "0,25 pour identité ; 0,25 pour coordonnées.",
+              "critical": false,
+              "field_ids": [
+                "G-qrc-01"
+              ]
+            },
+            {
+              "id": "G-qrc-01-c2",
+              "label": "REVTC",
+              "max_points": 0.5,
+              "expected": "Numéro d’inscription de l’exploitant au registre VTC.",
+              "partial_guidance": "0,5 pour le numéro REVTC, distinct du SIREN.",
+              "critical": false,
+              "field_ids": [
+                "G-qrc-01"
+              ]
+            },
+            {
+              "id": "G-qrc-01-c3",
+              "label": "Identification entreprise",
+              "max_points": 0.5,
+              "expected": "Numéro unique d’identification de l’exploitant (SIREN).",
+              "partial_guidance": "0,5 pour SIREN/numéro unique ; accepter SIRET si la réponse précise l’identification de l’exploitant et contient le SIREN.",
+              "critical": false,
+              "field_ids": [
+                "G-qrc-01"
+              ]
+            },
+            {
+              "id": "G-qrc-01-c4",
+              "label": "Client",
+              "max_points": 0.5,
+              "expected": "Nom et coordonnées téléphoniques du client.",
+              "partial_guidance": "0,25 pour nom ; 0,25 pour téléphone.",
+              "critical": false,
+              "field_ids": [
+                "G-qrc-01"
+              ]
+            },
+            {
+              "id": "G-qrc-01-c5",
+              "label": "Réservation",
+              "max_points": 0.5,
+              "expected": "Date et heure auxquelles le client a effectué la réservation préalable.",
+              "partial_guidance": "0,25 pour date et 0,25 pour heure, sans confondre avec prise en charge.",
+              "critical": false,
+              "field_ids": [
+                "G-qrc-01"
+              ]
+            },
+            {
+              "id": "G-qrc-01-c6",
+              "label": "Prise en charge horaire",
+              "max_points": 0.5,
+              "expected": "Date et heure de prise en charge souhaitées.",
+              "partial_guidance": "0,25 pour date ; 0,25 pour heure.",
+              "critical": false,
+              "field_ids": [
+                "G-qrc-01"
+              ]
+            },
+            {
+              "id": "G-qrc-01-c7",
+              "label": "Prise en charge lieu",
+              "max_points": 0.5,
+              "expected": "Lieu de prise en charge demandé par le client.",
+              "partial_guidance": "0,5 pour lieu de départ/prise en charge.",
+              "critical": false,
+              "field_ids": [
+                "G-qrc-01"
+              ]
+            },
+            {
+              "id": "G-qrc-01-c8",
+              "label": "Exception coordonnées client",
+              "max_points": 0.5,
+              "expected": "Le conducteur doit fournir sans délai à l’agent de contrôle les moyens de prendre contact avec le client.",
+              "partial_guidance": "0,25 pour un moyen réel de contact client ; 0,25 pour disponibilité immédiate au contrôle.",
+              "critical": false,
+              "field_ids": [
+                "G-qrc-01"
+              ]
+            }
+          ],
+          "model_response": "Le support papier ou électronique comporte l’identité et les coordonnées de l’exploitant, son numéro REVTC, son numéro unique d’identification (SIREN), le nom et le téléphone du client, la date et l’heure de réservation, la date et l’heure souhaitées de prise en charge, et le lieu de prise en charge. Si les coordonnées du client n’y figurent pas, le conducteur doit fournir sans délai à l’agent les moyens de joindre le client.",
+          "lesson_refs": [
+            "G.05",
+            "G.11"
+          ],
+          "sources": [
+            {
+              "title": "Justificatif de réservation · arrêté du 6 août 2025",
+              "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000052153206/"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        },
+        {
+          "id": "G-qrc-02",
+          "kind": "qrc",
+          "prompt": "Une société VTC change de siège, ajoute un véhicule et recrute un conducteur. Le responsable veut conserver son dossier REVTC inchangé et prêter son numéro d’inscription à un ami exploitant. Analysez ces deux décisions et indiquez la démarche correcte.",
+          "max_points": 4,
+          "max_chars": 4000,
+          "rubric": [
+            {
+              "id": "G-qrc-02-c1",
+              "label": "Actualiser le dossier",
+              "max_points": 2,
+              "expected": "Met à jour les informations d’exploitant/changement de siège, les plaques des véhicules et l’identité/numéro de carte professionnelle des conducteurs rattachés. Vérifie conformité du nouveau véhicule/conducteur.",
+              "partial_guidance": "0,5 pour siège/coordonnées ; 0,5 pour véhicule/plaque ; 0,5 pour identité conducteur et numéro de carte ; 0,5 pour démarche effective de mise à jour et vérification.",
+              "critical": false,
+              "field_ids": [
+                "G-qrc-02"
+              ]
+            },
+            {
+              "id": "G-qrc-02-c2",
+              "label": "Inscription propre à l’exploitant",
+              "max_points": 2,
+              "expected": "Refuse le prêt/transfert du numéro ; chaque exploitant doit respecter son obligation propre d’inscription et de conformité avant de réaliser des courses.",
+              "partial_guidance": "1 pour interdiction de mettre l’inscription à disposition d’un tiers ; 1 pour inscription/dossier autonome de l’ami.",
+              "critical": false,
+              "field_ids": [
+                "G-qrc-02"
+              ]
+            }
+          ],
+          "model_response": "Le dossier doit être mis à jour avec le nouveau siège, le véhicule et sa plaque, ainsi que l’identité du conducteur et son numéro de carte professionnelle, après vérification de leur conformité. L’inscription ne peut pas être prêtée à un autre exploitant. L’ami doit disposer de sa propre inscription et remplir ses obligations avant d’exploiter.",
+          "lesson_refs": [
+            "G.01",
+            "G.04",
+            "G.11"
+          ],
+          "sources": [
+            {
+              "title": "Registre des exploitants VTC · Code des transports, article L3122-3",
+              "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054336017"
+            }
+          ],
+          "origin": "QRC originale Intégrale Academy · barème pédagogique explicite"
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "Épreuves et notation VTC · article 2, arrêté du 6 avril 2017 consolidé",
+      "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
+    }
+  ],
+  "notice": "Sujet pédagogique Intégrale Academy conforme à la composition et aux règles de notation des sept matières d’admissibilité. Il ne s’agit pas d’un sujet officiel CMA ni d’une décision d’admissibilité. Les QRC sont évaluées par IA selon un barème explicite ; un doute de correction appelle une vérification humaine. La pratique de conduite relève d’une épreuve distincte.",
+  "qcm_scoring_notice": "Dans ce sujet, chaque QCM demande une seule réponse : la bonne réponse rapporte les points annoncés ; une réponse fausse ou absente rapporte zéro. Les QRC sont notées selon les éléments attendus et peuvent recevoir des points partiels. Aucun document ni aide extérieure pendant les épreuves.",
+  "timing_notice": "Chaque matière dispose de son propre temps serveur. Fermer ou recharger la page ne suspend pas le chronomètre. À l’échéance, la dernière sauvegarde serveur constitue votre copie. Une pause est possible entre deux matières, avant de démarrer la suivante. Les 3 h 50 correspondent à la somme des temps maximaux d’épreuve.",
+  "extra_training": true
+}

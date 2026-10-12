@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Simulation CMA · VTC · Intégrale Academy</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-cma.css', v='20261012-1') }}">
+</head>
+<body>
+<header class="cma-top"><a href="{{ back_url }}">← Retour au parcours</a><strong>INTÉGRALE ACADEMY <span>/ VTC</span></strong><span>{{ 'Aperçu administrateur' if preview else 'Mon entraînement' }}</span></header>
+<main class="cma-shell">
+  <header class="cma-intro"><p class="cma-eyebrow">LES SEPT MATIÈRES DE L’ADMISSIBILITÉ</p><h1>Votre simulation CMA complète.</h1><p>Enchaînez les épreuves, rédigez vos réponses courtes et retrouvez un bilan détaillé selon les coefficients et les minima de chaque matière.</p><div class="cma-pills"><span>3 h 50 d’épreuves</span><span>91 QCM + 16 QRC</span><span>7 matières · coefficient total 17</span><span>Entraînement complémentaire aux 105 h de modules</span></div></header>
+  <noscript><p class="cma-alert">Activez JavaScript pour répondre. Le chronomètre reste géré par le serveur lorsque vous avez commencé une matière.</p></noscript>
+  <p id="cmaError" class="cma-alert" role="alert" hidden></p>
+  <section id="cmaLanding" class="cma-card">
+    <h2>{{ 'Explorer le sujet sans dossier stagiaire' if preview else 'Avant de commencer' }}</h2>
+    <div class="cma-table"><table><caption>Durées, composition et critères d’admissibilité</caption><thead><tr><th>Matière</th><th>Durée</th><th>Composition</th><th>Coefficient</th><th>Minimum</th></tr></thead><tbody>{% for subject in bank.subjects %}<tr><th scope="row">{{ subject.id }} · {{ subject.title }}</th><td>{{ subject.minutes }} min</td><td>{{ subject.qcm_count }} QCM{% if subject.qrc_count %} + {{ subject.qrc_count }} QRC{% endif %}</td><td>{{ subject.coefficient }}</td><td>{{ subject.minimum }}/20</td></tr>{% endfor %}</tbody></table></div>
+    <p><strong>Objectif : moyenne pondérée d’au moins 10/20 et chaque minimum atteint.</strong> En français, un point est retiré au-delà de cinq fautes d’orthographe dans l’ensemble des trois réponses courtes.</p>
+    <p>{{ bank.qcm_scoring_notice }}</p>
+    {% if preview %}<p class="cma-note">Aperçu libre : choisissez une matière et testez les réponses. Aucun chronomètre d’épreuve ni résultat stagiaire n’est enregistré.</p>{% else %}<p>{{ bank.timing_notice }}</p><p>Vos réponses sont sauvegardées sur le serveur pendant la saisie. Vérifiez l’indicateur « Enregistré » avant de quitter une page. Après remise d’une matière, sa copie est définitive. Les corrigés s’ouvrent quand les sept matières sont remises.</p>{% endif %}
+    <p class="cma-note">Les réponses rédigées sont transmises au service OpenAI pour une correction pédagogique selon un barème défini par le centre. Utilisez les situations fictives du sujet et évitez d’y inscrire des informations personnelles. Si la correction est indisponible, la copie est conservée sans note inventée ; une correction incertaine est signalée pour vérification humaine.</p>
+    <p class="cma-note">{{ bank.notice }}</p>
+    {% if not config.aiAvailable %}<p class="cma-alert">La correction des réponses rédigées n’est pas encore disponible. Vous pouvez réaliser les épreuves ; votre copie sera conservée pour une correction ultérieure.</p>{% endif %}
+    <div class="cma-actions"><button type="button" class="cma-primary" id="cmaStart">{{ 'Explorer la matière A' if preview else 'Commencer ou reprendre ma simulation' }}</button></div>
+  </section>
+  <section id="cmaPaper" hidden>
+    <div class="cma-paper-heading"><div><p class="cma-eyebrow" id="cmaSubjectMeta"></p><h2 id="cmaSubjectTitle"></h2></div><div class="cma-clock" role="timer" aria-live="off"><span id="cmaClockLabel">Temps restant</span><strong id="cmaClock">—</strong></div></div>
+    <div id="cmaPreviewSelect" class="cma-actions" hidden><label for="cmaSubjectSelect">Matière à prévisualiser</label><select id="cmaSubjectSelect">{% for subject in bank.subjects %}<option value="{{ subject.id }}">{{ subject.id }} · {{ subject.title }}</option>{% endfor %}</select></div>
+    <div class="cma-workspace"><aside class="cma-index cma-card"><h3>Ma copie</h3><p id="cmaAnswered" aria-live="polite"></p><progress id="cmaProgress" value="0" max="100"></progress><nav id="cmaQuestionGrid" aria-label="Naviguer dans les questions"></nav><button type="button" id="cmaUnanswered" class="cma-secondary">Voir les réponses manquantes</button><p class="cma-note" id="cmaSaved" role="status"></p><button type="button" id="cmaSaveNow" class="cma-secondary">Enregistrer maintenant</button></aside>
+    <section class="cma-card cma-answer"><details id="cmaPassage" class="cma-passage" hidden open><summary id="cmaPassageTitle"></summary><ol id="cmaPassageLines"></ol></details><p id="cmaQuestionMeta" class="cma-eyebrow"></p><form id="cmaForm"><fieldset id="cmaQuestion"></fieldset><div class="cma-actions cma-navigation"><button type="button" id="cmaPrevious" class="cma-secondary">← Précédente</button><button type="button" id="cmaNext" class="cma-primary">Suivante →</button></div><div class="cma-submit"><button type="submit" id="cmaSubmit" class="cma-primary">Remettre cette matière</button><div id="cmaConfirm" hidden><p id="cmaConfirmText"></p><div class="cma-actions"><button type="button" id="cmaConfirmSubmit" class="cma-primary">Confirmer la remise définitive</button><button type="button" id="cmaCancelSubmit" class="cma-secondary">Revenir à ma copie</button></div></div></div></form></section></div>
+  </section>
+  <section id="cmaBetween" class="cma-card" tabindex="-1" hidden></section>
+  <section id="cmaResult" tabindex="-1" hidden></section>
+  {% if history %}<section class="cma-card cma-history" id="cmaHistory"><h2>Mes simulations enregistrées</h2><div class="cma-table"><table><thead><tr><th>Début (UTC)</th><th>État de la copie</th><th>Accès</th></tr></thead><tbody>{% for attempt in history %}<tr><td>{{ attempt.created_at[:16]|replace('T',' à ') }}</td><td>{{ 'Sept matières remises' if attempt.status == 'submitted' else 'À reprendre' }}</td><td><a href="{{ attempt.url }}">{{ 'Voir le bilan' if attempt.status == 'submitted' else 'Reprendre' }} →</a></td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+  <footer class="cma-footer"><p>Référentiel vérifié le {{ bank.reviewed_at }} · Édition {{ bank.version }}</p>{% for source in bank.sources %}<a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.title }}</a>{% endfor %}</footer>
+</main>
+<script type="application/json" id="cmaConfig">{{ config|tojson }}</script>
+<script src="{{ url_for('static', filename='js/vtc-cma.js', v='20261012-1') }}" defer></script>
+</body></html>

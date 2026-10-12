@@ -1,6 +1,6 @@
 {
   "id": "vtc",
-  "title": "VTC · Le parcours illustré",
+  "title": "VTC · Le parcours de 105 heures",
   "sources": [
     {
       "title": "Programme et modalités de l’examen · arrêté du 6 avril 2017 modifié",
@@ -31,28 +31,29 @@
       "url": "https://modules.securite-routiere.gouv.fr/jsrt/Fatigue/Fatigue.html"
     }
   ],
-  "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction.",
+  "notice": "Parcours pédagogique VTC de 105 heures avec productions personnelles corrigées. La simulation CMA de 3 h 50 est proposée en complément ; les examens de module restent des bilans pédagogiques. La préparation écrite ne remplace pas l'entraînement à la conduite ni l'épreuve pratique en circulation.",
   "final_exam_id": "vtc-final",
-  "version": "20261010-vtc-v10-lecons-video",
-  "reviewed_on": "2026-10-10",
-  "planned_minutes": 5422,
+  "version": "20261012-vtc-v12-cma-105h",
+  "reviewed_on": "2026-10-12",
+  "planned_minutes": 6300,
   "lesson_count": 96,
   "workshop_count": 96,
   "modules": [
     {
       "id": "academy-vtc-a",
-      "version": "20261010-vtc-v10-lecons-video",
+      "version": "20261012-vtc-v12-cma-105h",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
         "20261007-vtc-v5-annales",
-        "20261010-vtc-v6-pedagogie"
+        "20261010-vtc-v6-pedagogie",
+        "20261010-vtc-v10-lecons-video"
       ],
       "letter": "A",
       "title": "VTC A · Exercer dans le cadre du T3P",
-      "planned_minutes": 755,
+      "planned_minutes": 840,
       "illustration": "images/vtc/module-a.webp",
       "mock_exam_id": "vtc-a",
       "exam": {
@@ -125,12 +126,12 @@
       "counts": {
         "sections": 16,
         "lessons": 12,
-        "activities": 42,
+        "activities": 46,
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
         "required_videos": 13,
-        "assets": 59,
+        "assets": 98,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -142,7 +143,9 @@
         "comparison_tables": 4,
         "annales_lessons": 10,
         "free_exercises": 60,
-        "lesson_videos": 12
+        "lesson_videos": 12,
+        "productions": 4,
+        "production_minutes": 85
       },
       "duration_breakdown": [
         {
@@ -168,23 +171,29 @@
         {
           "label": "Synthèse, vidéo et approfondissement",
           "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 85
         }
-      ]
+      ],
+      "required_minutes": 840
     },
     {
       "id": "academy-vtc-b",
-      "version": "20261010-vtc-v10-lecons-video",
+      "version": "20261012-vtc-v12-cma-105h",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
         "20261007-vtc-v5-annales",
-        "20261010-vtc-v6-pedagogie"
+        "20261010-vtc-v6-pedagogie",
+        "20261010-vtc-v10-lecons-video"
       ],
       "letter": "B",
       "title": "VTC B · Gérer son entreprise",
-      "planned_minutes": 693,
+      "planned_minutes": 840,
       "illustration": "images/vtc/module-b.webp",
       "mock_exam_id": "vtc-b",
       "exam": {
@@ -257,12 +266,12 @@
       "counts": {
         "sections": 16,
         "lessons": 12,
-        "activities": 42,
+        "activities": 46,
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
         "required_videos": 13,
-        "assets": 57,
+        "assets": 96,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -274,7 +283,9 @@
         "comparison_tables": 4,
         "annales_lessons": 11,
         "free_exercises": 160,
-        "lesson_videos": 12
+        "lesson_videos": 12,
+        "productions": 4,
+        "production_minutes": 147
       },
       "duration_breakdown": [
         {
@@ -300,23 +311,29 @@
         {
           "label": "Synthèse, vidéo et approfondissement",
           "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 147
         }
-      ]
+      ],
+      "required_minutes": 840
     },
     {
       "id": "academy-vtc-c",
-      "version": "20261010-vtc-v10-lecons-video",
+      "version": "20261012-vtc-v12-cma-105h",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
         "20261007-vtc-v5-annales",
-        "20261010-vtc-v6-pedagogie"
+        "20261010-vtc-v6-pedagogie",
+        "20261010-vtc-v10-lecons-video"
       ],
       "letter": "C",
       "title": "VTC C · Conduire en sécurité",
-      "planned_minutes": 706,
+      "planned_minutes": 780,
       "illustration": "images/vtc/module-c.webp",
       "mock_exam_id": "vtc-c",
       "exam": {
@@ -389,12 +406,12 @@
       "counts": {
         "sections": 16,
         "lessons": 12,
-        "activities": 42,
+        "activities": 46,
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
         "required_videos": 13,
-        "assets": 52,
+        "assets": 91,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -406,7 +423,9 @@
         "comparison_tables": 4,
         "annales_lessons": 12,
         "free_exercises": 127,
-        "lesson_videos": 12
+        "lesson_videos": 12,
+        "productions": 4,
+        "production_minutes": 74
       },
       "duration_breakdown": [
         {
@@ -432,23 +451,29 @@
         {
           "label": "Synthèse, vidéo et approfondissement",
           "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 74
         }
-      ]
+      ],
+      "required_minutes": 780
     },
     {
       "id": "academy-vtc-d",
-      "version": "20261010-vtc-v10-lecons-video",
+      "version": "20261012-vtc-v12-cma-105h",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
         "20261007-vtc-v5-annales",
-        "20261010-vtc-v6-pedagogie"
+        "20261010-vtc-v6-pedagogie",
+        "20261010-vtc-v10-lecons-video"
       ],
       "letter": "D",
       "title": "VTC D · Comprendre et s’exprimer en français",
-      "planned_minutes": 618,
+      "planned_minutes": 720,
       "illustration": "images/vtc/module-d.webp",
       "mock_exam_id": "vtc-d",
       "exam": {
@@ -521,12 +546,12 @@
       "counts": {
         "sections": 16,
         "lessons": 12,
-        "activities": 42,
+        "activities": 46,
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
         "required_videos": 13,
-        "assets": 53,
+        "assets": 92,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -538,7 +563,9 @@
         "comparison_tables": 4,
         "annales_lessons": 6,
         "free_exercises": 109,
-        "lesson_videos": 12
+        "lesson_videos": 12,
+        "productions": 4,
+        "production_minutes": 102
       },
       "duration_breakdown": [
         {
@@ -564,23 +591,29 @@
         {
           "label": "Synthèse, vidéo et approfondissement",
           "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 102
         }
-      ]
+      ],
+      "required_minutes": 720
     },
     {
       "id": "academy-vtc-e",
-      "version": "20261010-vtc-v10-lecons-video",
+      "version": "20261012-vtc-v12-cma-105h",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
         "20261007-vtc-v5-annales",
-        "20261010-vtc-v6-pedagogie"
+        "20261010-vtc-v6-pedagogie",
+        "20261010-vtc-v10-lecons-video"
       ],
       "letter": "E",
       "title": "VTC E · Accueillir en anglais",
-      "planned_minutes": 718,
+      "planned_minutes": 840,
       "illustration": "images/vtc/module-e.webp",
       "mock_exam_id": "vtc-e",
       "exam": {
@@ -653,12 +686,12 @@
       "counts": {
         "sections": 16,
         "lessons": 12,
-        "activities": 42,
+        "activities": 46,
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
         "required_videos": 13,
-        "assets": 103,
+        "assets": 142,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -670,7 +703,9 @@
         "comparison_tables": 4,
         "annales_lessons": 12,
         "free_exercises": 190,
-        "lesson_videos": 12
+        "lesson_videos": 12,
+        "productions": 4,
+        "production_minutes": 122
       },
       "duration_breakdown": [
         {
@@ -696,23 +731,29 @@
         {
           "label": "Synthèse, vidéo et approfondissement",
           "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 122
         }
-      ]
+      ],
+      "required_minutes": 840
     },
     {
       "id": "academy-vtc-f",
-      "version": "20261010-vtc-v10-lecons-video",
+      "version": "20261012-vtc-v12-cma-105h",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
         "20261007-vtc-v5-annales",
-        "20261010-vtc-v6-pedagogie"
+        "20261010-vtc-v6-pedagogie",
+        "20261010-vtc-v10-lecons-video"
       ],
       "letter": "F",
       "title": "VTC F · Développer son activité VTC",
-      "planned_minutes": 678,
+      "planned_minutes": 780,
       "illustration": "images/vtc/module-f.webp",
       "mock_exam_id": "vtc-f",
       "exam": {
@@ -785,12 +826,12 @@
       "counts": {
         "sections": 16,
         "lessons": 12,
-        "activities": 42,
+        "activities": 46,
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
         "required_videos": 13,
-        "assets": 57,
+        "assets": 96,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -802,7 +843,9 @@
         "comparison_tables": 4,
         "annales_lessons": 11,
         "free_exercises": 120,
-        "lesson_videos": 12
+        "lesson_videos": 12,
+        "productions": 4,
+        "production_minutes": 102
       },
       "duration_breakdown": [
         {
@@ -828,23 +871,29 @@
         {
           "label": "Synthèse, vidéo et approfondissement",
           "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 102
         }
-      ]
+      ],
+      "required_minutes": 780
     },
     {
       "id": "academy-vtc-g",
-      "version": "20261010-vtc-v10-lecons-video",
+      "version": "20261012-vtc-v12-cma-105h",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
         "20261007-vtc-v5-annales",
-        "20261010-vtc-v6-pedagogie"
+        "20261010-vtc-v6-pedagogie",
+        "20261010-vtc-v10-lecons-video"
       ],
       "letter": "G",
       "title": "VTC G · Appliquer les règles du VTC",
-      "planned_minutes": 612,
+      "planned_minutes": 720,
       "illustration": "images/vtc/module-g.webp",
       "mock_exam_id": "vtc-g",
       "exam": {
@@ -917,12 +966,12 @@
       "counts": {
         "sections": 16,
         "lessons": 12,
-        "activities": 42,
+        "activities": 46,
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
         "required_videos": 13,
-        "assets": 51,
+        "assets": 90,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -934,7 +983,9 @@
         "comparison_tables": 4,
         "annales_lessons": 12,
         "free_exercises": 151,
-        "lesson_videos": 12
+        "lesson_videos": 12,
+        "productions": 4,
+        "production_minutes": 108
       },
       "duration_breakdown": [
         {
@@ -960,23 +1011,29 @@
         {
           "label": "Synthèse, vidéo et approfondissement",
           "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 108
         }
-      ]
+      ],
+      "required_minutes": 720
     },
     {
       "id": "academy-vtc-h",
-      "version": "20261010-vtc-v10-lecons-video",
+      "version": "20261012-vtc-v12-cma-105h",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
         "20261007-vtc-v5-annales",
-        "20261010-vtc-v6-pedagogie"
+        "20261010-vtc-v6-pedagogie",
+        "20261010-vtc-v10-lecons-video"
       ],
       "letter": "H",
       "title": "VTC H · Réaliser une mission professionnelle",
-      "planned_minutes": 642,
+      "planned_minutes": 780,
       "illustration": "images/vtc/module-h.webp",
       "mock_exam_id": "vtc-h",
       "exam": {
@@ -1049,12 +1106,12 @@
       "counts": {
         "sections": 16,
         "lessons": 12,
-        "activities": 42,
+        "activities": 46,
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
         "required_videos": 13,
-        "assets": 51,
+        "assets": 90,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -1066,7 +1123,9 @@
         "comparison_tables": 4,
         "annales_lessons": 5,
         "free_exercises": 147,
-        "lesson_videos": 12
+        "lesson_videos": 12,
+        "productions": 4,
+        "production_minutes": 138
       },
       "duration_breakdown": [
         {
@@ -1092,8 +1151,13 @@
         {
           "label": "Synthèse, vidéo et approfondissement",
           "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 138
         }
-      ]
+      ],
+      "required_minutes": 780
     }
   ],
   "exam_versions": [
@@ -1103,7 +1167,8 @@
     "20261007-vtc-v4-visuals",
     "20261007-vtc-v5-annales",
     "20261010-vtc-v6-pedagogie",
-    "20261010-vtc-v10-lecons-video"
+    "20261010-vtc-v10-lecons-video",
+    "20261012-vtc-v12-cma-105h"
   ],
   "video_count": 104,
   "narrated_video_count": 104,
@@ -1114,10 +1179,10 @@
   "diagnostic_count": 8,
   "adaptive_review_count": 8,
   "duration_status": "programme_previsionnel",
-  "duration_note": "Charge indicative recalculée après allègement. La durée dépend des acquis et des révisions ; elle reste à mesurer avec un groupe pilote. Les affectations existantes conservent leur durée configurée.",
+  "duration_note": "Parcours de 105 heures : cours, mises en situation et 32 productions personnelles avec reprise des corrections. Les budgets d’activité sont prévisionnels ; le temps de travail réellement suivi reste enregistré. La simulation CMA de 3 h 50 est proposée en complément.",
   "module_exam_questions": 240,
   "final_exam_questions": 100,
-  "activity_count": 336,
+  "activity_count": 368,
   "exercise_count": 1279,
   "decision_count": 1809,
   "visual_edition_on": "2026-10-07",
@@ -1125,7 +1190,7 @@
   "comparison_table_count": 32,
   "inline_manual_figure_count": 20,
   "animated_video_count": 104,
-  "video_minutes": 288.5,
+  "video_minutes": 290.3,
   "video_min_seconds": 114.8,
   "annales_question_count": 404,
   "annales_source_count": 8,
@@ -1133,8 +1198,15 @@
   "annales_active_count": 330,
   "annales_lesson_count": 79,
   "free_exercise_count": 1064,
-  "programme_file": "programme_lecons_video_v10.json",
+  "programme_file": "programme_cma_105h_v12.json",
   "lesson_video_count": 96,
   "summary_video_count": 8,
-  "paced_video_minutes": 366.4
+  "paced_video_minutes": 368.6,
+  "base_version": "20261010-vtc-v10-lecons-video",
+  "required_minutes": 6300,
+  "base_programme_minutes": 5422,
+  "production_count": 32,
+  "production_minutes": 878,
+  "cma_simulation_minutes": 230,
+  "cma_simulation_is_additional": true
 }

@@ -68,6 +68,10 @@ def project_course(course: Mapping[str, Any], module: Mapping[str, Any]) -> Dict
     activities = [activity for section in sections for activity in section.get("activities") or []]
     if not activities:
         raise CourseImportError("Le module doit contenir au moins une activité.")
+    if course.get('version') == '20261012-vtc-v12-cma-105h':
+        # The authored workload is mandatory in this 105-hour programme. Credit
+        # still comes exclusively from the server's active-time heartbeats.
+        required_minutes = max(required_minutes, sum(int(item.get('planned_minutes') or 0) for item in activities))
     return {
         **course,
         "title": str(module.get("title") or course.get("title") or "Module"),

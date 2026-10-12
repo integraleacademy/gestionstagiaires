@@ -1,0 +1,1238 @@
+{
+  "version": "20261012-vtc-v12-cma-105h",
+  "base_version": "20261010-vtc-v10-lecons-video",
+  "planned_minutes": 6300,
+  "required_minutes": 6300,
+  "status": "programme_previsionnel",
+  "duration_note": "Parcours de 105 heures : cours, mises en situation et 32 productions personnelles avec reprise des corrections. Les budgets d’activité sont prévisionnels ; le temps de travail réellement suivi reste enregistré. La simulation CMA de 3 h 50 est proposée en complément.",
+  "estimation_method": "Base pédagogique V10 de 5422 minutes conservée ; 878 minutes ajoutées pour 32 productions originales, ventilées par étapes et livrables. La durée réellement constatée reste à évaluer sur un groupe pilote.",
+  "modules": [
+    {
+      "letter": "A",
+      "title": "VTC A · Exercer dans le cadre du T3P",
+      "planned_minutes": 840,
+      "required_minutes": 840,
+      "base_minutes": 755,
+      "production_minutes": 85,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 240
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 267
+        },
+        {
+          "label": "Missions",
+          "minutes": 68
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 52
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 85
+        }
+      ],
+      "productions": [
+        {
+          "id": "vtc-a-production-01",
+          "title": "Produire · Décider si une première mission peut commencer",
+          "minutes": 20,
+          "after_section_id": "vtc-a-03",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 4,
+              "deliverable": "Identifier les acquis et manques des trois dossiers"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 5,
+              "deliverable": "Comparer trois décisions juridiquement distinctes"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 8,
+              "deliverable": "Tableau et message à l’hôtel"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 3,
+              "deliverable": "Corriger les confusions entre personne, entreprise et autorisation"
+            }
+          ]
+        },
+        {
+          "id": "vtc-a-production-02",
+          "title": "Produire · Répondre à une demande d’assistance sans discriminer",
+          "minutes": 20,
+          "after_section_id": "vtc-a-06",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 4,
+              "deliverable": "Séparer faits et préférence discriminatoire"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 5,
+              "deliverable": "Relier besoin d’aide et garanties"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 8,
+              "deliverable": "Plan de prise en charge et réponse client"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 3,
+              "deliverable": "Améliorer les formulations et les vérifications"
+            }
+          ]
+        },
+        {
+          "id": "vtc-a-production-03",
+          "title": "Produire · Protéger une passagère et rendre compte des faits",
+          "minutes": 20,
+          "after_section_id": "vtc-a-09",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 4,
+              "deliverable": "Repérer les faits, paroles et besoins"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 5,
+              "deliverable": "Choisir une réaction sûre et proportionnée"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 8,
+              "deliverable": "Paroles d’aide et note chronologique"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 3,
+              "deliverable": "Retirer les suppositions et données inutiles"
+            }
+          ]
+        },
+        {
+          "id": "vtc-a-production-04",
+          "title": "Produire · Préparer un contrôle et traiter un incident client",
+          "minutes": 25,
+          "after_section_id": "vtc-a-12",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 5,
+              "deliverable": "Reconstituer la chronologie du contrôle et du dommage"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 6,
+              "deliverable": "Séparer preuve, garantie et responsabilité"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 10,
+              "deliverable": "Dossier d’action et réponse client"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 4,
+              "deliverable": "Vérifier exactitude des faits et confidentialité"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "letter": "B",
+      "title": "VTC B · Gérer son entreprise",
+      "planned_minutes": 840,
+      "required_minutes": 840,
+      "base_minutes": 693,
+      "production_minutes": 147,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 264
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 169
+        },
+        {
+          "label": "Missions",
+          "minutes": 76
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 56
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 147
+        }
+      ],
+      "productions": [
+        {
+          "id": "vtc-b-production-01",
+          "title": "Produire · Comparer un statut, un régime et un besoin de trésorerie",
+          "minutes": 35,
+          "after_section_id": "vtc-b-03",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 6,
+              "deliverable": "Repérer les affirmations fausses et les informations manquantes"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 9,
+              "deliverable": "Construire comparaison et mini-bilan"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 14,
+              "deliverable": "Note de décision argumentée"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 6,
+              "deliverable": "Revoir les confusions entre résultat, cash et statut"
+            }
+          ]
+        },
+        {
+          "id": "vtc-b-production-02",
+          "title": "Produire · Calculer le prix, la TVA et la contribution d’une course",
+          "minutes": 35,
+          "after_section_id": "vtc-b-06",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 6,
+              "deliverable": "Relever les bases HT/TTC et les coûts"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 10,
+              "deliverable": "Établir les formules de contribution et de seuil"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 13,
+              "deliverable": "Calculs détaillés et explication"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 6,
+              "deliverable": "Vérifier les arrondis et distinguer contribution du revenu"
+            }
+          ]
+        },
+        {
+          "id": "vtc-b-production-03",
+          "title": "Produire · Construire un plan de trésorerie sur deux semaines",
+          "minutes": 35,
+          "after_section_id": "vtc-b-09",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 6,
+              "deliverable": "Repérer dates de mouvements et créance réelle"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 10,
+              "deliverable": "Calculer les deux scénarios"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 13,
+              "deliverable": "Tableau et plan de trésorerie"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 6,
+              "deliverable": "Vérifier le cumul et les limites de période"
+            }
+          ]
+        },
+        {
+          "id": "vtc-b-production-04",
+          "title": "Produire · Comparer deux solutions de véhicule sur un même horizon",
+          "minutes": 42,
+          "after_section_id": "vtc-b-12",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 8,
+              "deliverable": "Relever les conditions des deux offres"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 12,
+              "deliverable": "Calculer coût et besoin de trésorerie"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 15,
+              "deliverable": "Tableau et note avant signature"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 7,
+              "deliverable": "Tester les hypothèses et corriger les comparaisons"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "letter": "C",
+      "title": "VTC C · Conduire en sécurité",
+      "planned_minutes": 780,
+      "required_minutes": 780,
+      "base_minutes": 706,
+      "production_minutes": 74,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 240
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 234
+        },
+        {
+          "label": "Missions",
+          "minutes": 52
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 52
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 74
+        }
+      ],
+      "productions": [
+        {
+          "id": "vtc-c-production-01",
+          "title": "Produire · Justifier une marge de sécurité avant le départ",
+          "minutes": 15,
+          "after_section_id": "vtc-c-03",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 3,
+              "deliverable": "Repérer anomalies et hypothèses"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 4,
+              "deliverable": "Comparer deux distances avec unités"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 5,
+              "deliverable": "Décision et calculs argumentés"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 3,
+              "deliverable": "Revoir arrondis et limites"
+            }
+          ]
+        },
+        {
+          "id": "vtc-c-production-02",
+          "title": "Produire · Sécuriser l’installation et une traversée urbaine",
+          "minutes": 18,
+          "after_section_id": "vtc-c-06",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 4,
+              "deliverable": "Distinguer équipement et circulation"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 4,
+              "deliverable": "Associer chaque risque à une décision"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 7,
+              "deliverable": "Plan et consignes passagers"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 3,
+              "deliverable": "Vérifier la protection des usagers vulnérables"
+            }
+          ]
+        },
+        {
+          "id": "vtc-c-production-03",
+          "title": "Produire · Organiser un relais face à la somnolence",
+          "minutes": 20,
+          "after_section_id": "vtc-c-09",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 4,
+              "deliverable": "Identifier les risques cumulés"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 5,
+              "deliverable": "Choisir arrêt et relais vérifiable"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 7,
+              "deliverable": "Plan et messages de service"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 4,
+              "deliverable": "Corriger promesses et divulgations inutiles"
+            }
+          ]
+        },
+        {
+          "id": "vtc-c-production-04",
+          "title": "Produire · Préparer une décision météo et un compte rendu de panne",
+          "minutes": 21,
+          "after_section_id": "vtc-c-12",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 4,
+              "deliverable": "Relever faits météo et panne"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 5,
+              "deliverable": "Hiérarchiser décisions et interlocuteurs"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 8,
+              "deliverable": "Décision et compte rendu"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 4,
+              "deliverable": "Retirer toute cause ou promesse inventée"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "letter": "D",
+      "title": "VTC D · Comprendre et s’exprimer en français",
+      "planned_minutes": 720,
+      "required_minutes": 720,
+      "base_minutes": 618,
+      "production_minutes": 102,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 180
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 196
+        },
+        {
+          "label": "Missions",
+          "minutes": 56
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 58
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 102
+        }
+      ],
+      "productions": [
+        {
+          "id": "vtc-d-production-01",
+          "title": "Produire · Résumer un dossier sans inventer la cause du retard",
+          "minutes": 24,
+          "after_section_id": "vtc-d-03",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 5,
+              "deliverable": "Annoter dates, acteurs et conditions"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 6,
+              "deliverable": "Séparer preuves et suppositions"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 9,
+              "deliverable": "Relevé et synthèse de dossier"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 4,
+              "deliverable": "Vérifier fidélité, chronologie et langue"
+            }
+          ]
+        },
+        {
+          "id": "vtc-d-production-02",
+          "title": "Produire · Clarifier les pronoms et les conditions d’un échange",
+          "minutes": 24,
+          "after_section_id": "vtc-d-06",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 5,
+              "deliverable": "Repérer pronoms et mots de condition"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 6,
+              "deliverable": "Tracer qui doit confirmer quoi"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 9,
+              "deliverable": "Analyse et message clarifié"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 4,
+              "deliverable": "Éliminer ambiguïtés et fausses certitudes"
+            }
+          ]
+        },
+        {
+          "id": "vtc-d-production-03",
+          "title": "Produire · Corriger un message et expliquer ses choix de langue",
+          "minutes": 26,
+          "after_section_id": "vtc-d-09",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 5,
+              "deliverable": "Repérer les familles d’erreurs"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 6,
+              "deliverable": "Associer corrections et règles"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 10,
+              "deliverable": "Texte corrigé puis nouveau message"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 5,
+              "deliverable": "Relire les accords et le degré de confirmation"
+            }
+          ]
+        },
+        {
+          "id": "vtc-d-production-04",
+          "title": "Produire · Répondre à des questions courtes puis à une réclamation",
+          "minutes": 28,
+          "after_section_id": "vtc-d-12",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 6,
+              "deliverable": "Lire puis relever les éléments utiles"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 7,
+              "deliverable": "Construire quatre réponses et leurs appuis"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 10,
+              "deliverable": "QRC et réponse client"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 5,
+              "deliverable": "Relire fidélité, concision et orthographe"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "letter": "E",
+      "title": "VTC E · Accueillir en anglais",
+      "planned_minutes": 840,
+      "required_minutes": 840,
+      "base_minutes": 718,
+      "production_minutes": 122,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 216
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 240
+        },
+        {
+          "label": "Missions",
+          "minutes": 58
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 76
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 122
+        }
+      ],
+      "productions": [
+        {
+          "id": "vtc-e-production-01",
+          "title": "Produire · Confirm a booking in your own words",
+          "minutes": 28,
+          "after_section_id": "vtc-e-03",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 5,
+              "deliverable": "Read the booking and requested changes"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 6,
+              "deliverable": "Prepare questions and correct numbers"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 11,
+              "deliverable": "Write a reply and six-turn dialogue"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 6,
+              "deliverable": "Check times, clarity and corrected wording"
+            }
+          ]
+        },
+        {
+          "id": "vtc-e-production-02",
+          "title": "Produire · Guide a passenger to a safe meeting point",
+          "minutes": 30,
+          "after_section_id": "vtc-e-06",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 6,
+              "deliverable": "Read the fictional map and passenger request"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 7,
+              "deliverable": "Order directions and assistance checks"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 11,
+              "deliverable": "Write directions, dialogue and welcome"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 6,
+              "deliverable": "Check landmarks, consent and simple English"
+            }
+          ]
+        },
+        {
+          "id": "vtc-e-production-03",
+          "title": "Produire · Explain a delay and negotiate a route change",
+          "minutes": 30,
+          "after_section_id": "vtc-e-09",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 6,
+              "deliverable": "Read route, price and time assumptions"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 7,
+              "deliverable": "Compare totals and consent sequence"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 11,
+              "deliverable": "Write explanation and dialogue"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 6,
+              "deliverable": "Correct numbers and uncertainty language"
+            }
+          ]
+        },
+        {
+          "id": "vtc-e-production-04",
+          "title": "Produire · Handle payment, a lost item and a local question",
+          "minutes": 34,
+          "after_section_id": "vtc-e-12",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 7,
+              "deliverable": "Separate payment, item and local facts"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 8,
+              "deliverable": "Plan three distinct replies"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 12,
+              "deliverable": "Write dialogue and messages"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 7,
+              "deliverable": "Check status, dates and natural simple English"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "letter": "F",
+      "title": "VTC F · Développer son activité VTC",
+      "planned_minutes": 780,
+      "required_minutes": 780,
+      "base_minutes": 678,
+      "production_minutes": 102,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 240
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 186
+        },
+        {
+          "label": "Missions",
+          "minutes": 76
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 48
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 102
+        }
+      ],
+      "productions": [
+        {
+          "id": "vtc-f-production-01",
+          "title": "Produire · Construire une offre à partir d’un petit diagnostic commercial",
+          "minutes": 24,
+          "after_section_id": "vtc-f-03",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 5,
+              "deliverable": "Lire les observations et hypothèses de coût"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 6,
+              "deliverable": "Choisir cible et vérifier prix"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 9,
+              "deliverable": "Note d’offre et protocole de test"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 4,
+              "deliverable": "Contrôler chiffres et promesses"
+            }
+          ]
+        },
+        {
+          "id": "vtc-f-production-02",
+          "title": "Produire · Rédiger un devis et qualifier une demande de partenariat",
+          "minutes": 24,
+          "after_section_id": "vtc-f-06",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 5,
+              "deliverable": "Extraire demande et conditions du devis"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 6,
+              "deliverable": "Comparer canaux et réserves"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 9,
+              "deliverable": "Devis et message de qualification"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 4,
+              "deliverable": "Vérifier chiffres, dates et absence de promesses"
+            }
+          ]
+        },
+        {
+          "id": "vtc-f-production-03",
+          "title": "Produire · Concevoir un partenariat et une communication respectueuse",
+          "minutes": 26,
+          "after_section_id": "vtc-f-09",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 5,
+              "deliverable": "Distinguer partenariat et projet de publication"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 6,
+              "deliverable": "Définir circuit et données nécessaires"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 10,
+              "deliverable": "Proposition, analyse et publication"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 5,
+              "deliverable": "Retirer données et engagements non autorisés"
+            }
+          ]
+        },
+        {
+          "id": "vtc-f-production-04",
+          "title": "Produire · Analyser la qualité et répondre à une réclamation documentée",
+          "minutes": 28,
+          "after_section_id": "vtc-f-12",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 6,
+              "deliverable": "Lire indicateurs et traces d’incident"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 7,
+              "deliverable": "Calculer taux et choisir actions"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 10,
+              "deliverable": "Analyse, réponse et plan de progrès"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 5,
+              "deliverable": "Contrôler dénominateurs et responsabilités"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "letter": "G",
+      "title": "VTC G · Appliquer les règles du VTC",
+      "planned_minutes": 720,
+      "required_minutes": 720,
+      "base_minutes": 612,
+      "production_minutes": 108,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 180
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 192
+        },
+        {
+          "label": "Missions",
+          "minutes": 60
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 52
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 108
+        }
+      ],
+      "productions": [
+        {
+          "id": "vtc-g-production-01",
+          "title": "Produire · Vérifier deux dossiers de véhicule avant engagement",
+          "minutes": 25,
+          "after_section_id": "vtc-g-03",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 5,
+              "deliverable": "Comparer contrats et fiches techniques"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 6,
+              "deliverable": "Appliquer trois conditions distinctes"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 9,
+              "deliverable": "Note motivée avec échéance"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 5,
+              "deliverable": "Vérifier seuils, unités et réserves"
+            }
+          ]
+        },
+        {
+          "id": "vtc-g-production-02",
+          "title": "Produire · Reconstituer un justificatif authentique et refuser une prise en charge irrégulière",
+          "minutes": 25,
+          "after_section_id": "vtc-g-06",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 5,
+              "deliverable": "Repérer les données réellement confirmées"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 6,
+              "deliverable": "Contrôler mentions et chronologie"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 9,
+              "deliverable": "Justificatif pédagogique et réponse"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 5,
+              "deliverable": "Vérifier authenticité et exception de contact"
+            }
+          ]
+        },
+        {
+          "id": "vtc-g-production-03",
+          "title": "Produire · Planifier l’attente aéroport, le prix et la fin de course",
+          "minutes": 28,
+          "after_section_id": "vtc-g-09",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 6,
+              "deliverable": "Lire horaires, accès et demande de changement"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 7,
+              "deliverable": "Construire attente et séquence d’accord"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 10,
+              "deliverable": "Plan, confirmation de prix et fin de mission"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 5,
+              "deliverable": "Vérifier authenticité, délais et stationnement"
+            }
+          ]
+        },
+        {
+          "id": "vtc-g-production-04",
+          "title": "Produire · Organiser un remplacement et une veille réglementaire utile",
+          "minutes": 30,
+          "after_section_id": "vtc-g-12",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 6,
+              "deliverable": "Examiner les pièces et la fiche ancienne"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 7,
+              "deliverable": "Comparer les règles datées et décider"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 11,
+              "deliverable": "Note de remplacement et veille opérationnelle"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 6,
+              "deliverable": "Contrôler sources, réserves et responsabilités"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "letter": "H",
+      "title": "VTC H · Réaliser une mission professionnelle",
+      "planned_minutes": 780,
+      "required_minutes": 780,
+      "base_minutes": 642,
+      "production_minutes": 138,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 144
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 242
+        },
+        {
+          "label": "Missions",
+          "minutes": 76
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 52
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        },
+        {
+          "label": "Productions personnelles et reprise des corrections",
+          "minutes": 138
+        }
+      ],
+      "productions": [
+        {
+          "id": "vtc-h-production-01",
+          "title": "Produire · Préparer une mission et défendre son itinéraire",
+          "minutes": 30,
+          "after_section_id": "vtc-h-03",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 5,
+              "deliverable": "Repérer les données de réservation et les contraintes de trajet"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 8,
+              "deliverable": "Établir les horaires et comparer les trois possibilités"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 11,
+              "deliverable": "Rédiger fiche, justification, préparation et message client"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 6,
+              "deliverable": "Vérifier les calculs et reprendre les conseils de correction"
+            }
+          ]
+        },
+        {
+          "id": "vtc-h-production-02",
+          "title": "Produire · Organiser un accueil et une dépose en sécurité",
+          "minutes": 35,
+          "after_section_id": "vtc-h-06",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 6,
+              "deliverable": "Identifier les demandes et les risques de chaque scène"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 9,
+              "deliverable": "Ordonner décisions de sécurité et réponses au client"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 13,
+              "deliverable": "Rédiger dialogue, décisions et observations à demander"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 7,
+              "deliverable": "Écarter les formulations ambiguës et préparer l’exercice avec le formateur"
+            }
+          ]
+        },
+        {
+          "id": "vtc-h-production-03",
+          "title": "Produire · Informer, gérer un changement et présenter la facture",
+          "minutes": 35,
+          "after_section_id": "vtc-h-09",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 6,
+              "deliverable": "Distinguer la fiche d’information, les conditions de prix et les faits réalisés"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 9,
+              "deliverable": "Préparer les messages et établir le calcul de l’attente"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 13,
+              "deliverable": "Rédiger la réponse touristique et les lignes de facture"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 7,
+              "deliverable": "Vérifier accord, bases HT/TTC et absence de frais inventés"
+            }
+          ]
+        },
+        {
+          "id": "vtc-h-production-04",
+          "title": "Produire · Analyser une prestation et préparer son entraînement pratique",
+          "minutes": 38,
+          "after_section_id": "vtc-h-12",
+          "work_phases": [
+            {
+              "title": "Prendre connaissance du dossier",
+              "minutes": 7,
+              "deliverable": "Séparer les faits des bilans Alpha et Bêta"
+            },
+            {
+              "title": "Construire le raisonnement",
+              "minutes": 10,
+              "deliverable": "Relier notes, règle de sécurité et priorités réelles"
+            },
+            {
+              "title": "Rédiger la première version",
+              "minutes": 13,
+              "deliverable": "Rédiger la clôture, l’analyse et les trois exercices"
+            },
+            {
+              "title": "Relire et reprendre la correction",
+              "minutes": 8,
+              "deliverable": "Vérifier le barème et rendre les objectifs observables avec le formateur"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "additional_simulation": {
+    "title": "Simulation théorique CMA",
+    "minutes": 230,
+    "included_in_105_hours": false
+  },
+  "validation": {
+    "real_learners_tested": 0,
+    "measured_median_minutes": null,
+    "status": "a_valider_avec_un_groupe_pilote"
+  },
+  "historical_progress": "Les éditions antérieures restent disponibles ; toute montée d’édition conserve les activités, réponses, vidéos et temps acquis et ajoute les productions restant à réaliser. Les parcours certifiés ne sont pas réécrits."
+}

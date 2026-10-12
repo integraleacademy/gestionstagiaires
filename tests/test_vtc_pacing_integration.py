@@ -69,7 +69,9 @@ def test_historical_editions_and_cross_course_assets_remain_isolated(letter):
     cid = f'academy-vtc-{letter.lower()}'
     module = next(m for m in vtc.curriculum_manifest()['modules'] if m['id'] == cid)
     for version in module['previous_versions']:
-        if version in VERSIONS:
+        # V10 composes mandatory lesson videos and has its own coverage. It is
+        # now historical because V12 is current, not an untouched pre-v9 JSON.
+        if version in VERSIONS or version == vtc.REQUIRED_VERSION:
             continue
         before = vtc._repair_english_listening(old_course(letter, version))
         assert vtc.load_bundled_course(cid, version) == before

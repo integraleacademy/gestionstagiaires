@@ -21,6 +21,8 @@ import elearning_orders as learning
 from elearning_native.importer import CourseCatalog, CourseImportError
 from elearning_native.paths import project_course, project_progress
 from elearning_native.store import NativeElearningStore
+from elearning_native.vtc_105_migration import read_transition_session, lineage_versions
+from elearning_native.vtc_cma import learner_attempt_summaries
 
 
 CUSTOMER_ENDPOINTS = {"manuals_shop." + name for name in (
@@ -94,12 +96,17 @@ class ProgressReader:
 
     def report(self, order, person, *, detailed=True):
         session_id, learner_id = "el-" + order["id"], str(person["id"])
+        session_view = read_transition_session({
+            'id': session_id, 'training_type': order['course_code'].upper(),
+            'aps_native_path_title': 'Mon parcours ' + order['course_code'].upper(),
+            'aps_native_modules': order.get('modules', []),
+        }, person, self.database_path)
         raw_rows = self.rows("progress", session_id, learner_id)
         by_key = {(r["course_id"], r["course_version"]): r for r in raw_rows}
         modules, exam_keys, course_titles = [], set(), {}
         total = completed = active = required = finished = 0
         starts, updates = [], []
-        for assignment in order.get("modules", []):
+        for assignment in session_view.get('aps_native_modules', []):
             assigned_key = (str(assignment.get("course_id") or ""), str(assignment.get("course_version") or ""))
             if all(assigned_key):
                 # Historical connections remain evidence even if the purchased
@@ -126,6 +133,8 @@ class ProgressReader:
                 continue
             key = (course["id"], course["version"])
             course_titles[key] = course["title"]
+            for historical_version in lineage_versions(session_view, course['id']):
+                course_titles[(course['id'], historical_version)] = course['title']
             progress = project_progress(by_key.get(key, {}), course)
             access = {"session_id": session_id, "trainee_id": learner_id,
                       "course_id": key[0], "course_version": key[1]}
@@ -158,7 +167,8 @@ class ProgressReader:
                           completed_videos=progress["completed_video_count"], total_videos=progress["required_video_count"],
                           started_at_label=date_label(progress.get("started_at")), updated_at_label=date_label(progress.get("updated_at")))
             if course.get("mock_exam_id"):
-                exam_keys.add((course["mock_exam_id"], course["version"]))
+                for historical_version in lineage_versions(session_view, course['id']):
+                    exam_keys.add((course["mock_exam_id"], historical_version))
             if detailed:
                 for section in course["sections"]:
                     rows = []
@@ -171,12 +181,17 @@ class ProgressReader:
                             production = activity["production"]
                             rows[-1]["production"] = {
                                 "draft": bool(answer.get("production_draft")),
+                                "ai_feedback": answer.get("production_ai_feedback"),
+                                "first_responses": [{"label": field["label"], "text": answer.get("production_first_answers", {}).get(field["id"], "")} for field in production["response_fields"]],
                                 "responses": [{"label": field["label"], "text": answer["production_answers"].get(field["id"], "")}
                                               for field in production["response_fields"]],
                                 "review": [{"label": criterion["label"], "needs_help": answer.get("production_self_review", {}).get(criterion["id"]) == "needs_help"}
                                            for criterion in production["rubric"] if answer.get("production_self_review", {}).get(criterion["id"]) in ("checked", "needs_help")],
                             }
-                            if self.ai_path.is_file():
+                            # VTC corrections use the tracked production attempt
+                            # projection above; APS analyses retain their own
+                            # history and grading schema in production_ai.sqlite3.
+                            if activity.get("vtc", {}).get("kind") != "production" and self.ai_path.is_file():
                                 from elearning_native.production_ai import read_analyses
                                 rows[-1]["production"]["ai"] = read_analyses(self.ai_path, access, activity["id"])
                     module["sections"].append({"title": section.get("title") or "Séquence", "activities": rows,
@@ -196,8 +211,10 @@ class ProgressReader:
                   "started_at_label": date_label(min(starts)) if starts else "Pas encore commencé",
                   "updated_at_label": date_label(max(updates)) if updates else "Aucune activité enregistrée",
                   "generated_at_label": date_label(dt.datetime.now(dt.timezone.utc).isoformat()),
-                  "connections": [], "exams": []}
+                  "connections": [], "exams": [], "cma_attempts": []}
         if detailed:
+            if order['course_code'] == 'vtc':
+                report['cma_attempts'] = learner_attempt_summaries(self.database_path, session_id, learner_id)
             for connection in self.rows("connections", session_id, learner_id):
                 key = (connection["course_id"], connection["course_version"])
                 if key not in course_titles:

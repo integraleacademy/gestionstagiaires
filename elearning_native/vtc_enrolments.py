@@ -12,15 +12,19 @@ import re
 from .importer import CourseImportError
 from .paths import assigned_modules
 from .vtc_lesson_videos import COURSE_VERSION, REQUIRED_VERSION
+from .vtc_productions import VERSION as PROGRAMME_VERSION
 
 MARKER = 'vtc_lesson_video_version'
+PROGRAMME_MARKER = 'vtc_programme_version'
 COURSE_ID = re.compile(r'academy-vtc-[a-h]')
 
 
 def mark_new_vtc_enrolment(session_obj, trainee):
     """Call only when a new administrative trainee is created, never on transfer."""
     if 'VTC' in str(session_obj.get('training_type') or session_obj.get('type_formation') or '').upper():
-        trainee.setdefault(MARKER, REQUIRED_VERSION)
+        if MARKER not in trainee:
+            trainee[MARKER] = REQUIRED_VERSION
+            trainee.setdefault(PROGRAMME_MARKER, PROGRAMME_VERSION)
 
 
 def _refs(section):
@@ -29,11 +33,11 @@ def _refs(section):
                      if re.fullmatch(r'[A-H]\.\d{2}', str(activity.get('vtc', {}).get('ref'))))
 
 
-def _map_sections(course_id, source_version, selected):
+def _map_sections(course_id, source_version, selected, target_version=REQUIRED_VERSION):
     from . import vtc
     try:
         before = vtc.load_bundled_course(course_id, source_version)
-        after = vtc.load_bundled_course(course_id, REQUIRED_VERSION)
+        after = vtc.load_bundled_course(course_id, target_version)
     except (OSError, ValueError, TypeError) as exc:
         raise CourseImportError('Le parcours VTC ne peut pas être résolu. Contactez l’équipe pédagogique.') from exc
     if not before or not after:
@@ -84,11 +88,12 @@ def effective_learner_session(session_obj, trainee):
             updated.append(module)
             continue
         current = module.get('course_version') or COURSE_VERSION
-        target = REQUIRED_VERSION if trainee.get(MARKER) == REQUIRED_VERSION else current
+        target = (PROGRAMME_VERSION if trainee.get(PROGRAMME_MARKER) == PROGRAMME_VERSION else
+                  REQUIRED_VERSION if trainee.get(MARKER) == REQUIRED_VERSION else current)
         item = copy.deepcopy(module)
         item['course_version'] = target
         if target != current and item.get('section_ids') is not None:
-            item['section_ids'] = _map_sections(course_id, current, item['section_ids'])
+            item['section_ids'] = _map_sections(course_id, current, item['section_ids'], target)
         changed = changed or item != module
         updated.append(item)
     if not changed:

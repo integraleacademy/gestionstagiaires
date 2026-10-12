@@ -13,7 +13,7 @@ from elearning_native import vtc
 from elearning_native.importer import CourseImportError
 from elearning_native.paths import assigned_modules, path_revision
 from elearning_native.vtc_enrolments import (
-    COURSE_VERSION, REQUIRED_VERSION, MARKER,
+    COURSE_VERSION, REQUIRED_VERSION, MARKER, PROGRAMME_MARKER, PROGRAMME_VERSION,
     effective_learner_session, mark_new_vtc_enrolment,
 )
 from tests import test_native_elearning_web as web_tests
@@ -56,7 +56,7 @@ def test_old_people_are_unchanged_and_empty_versions_are_frozen():
 def test_marker_is_vtc_only_idempotent_and_does_not_create_an_assignment():
     new = {}
     mark_new_vtc_enrolment({'training_type': 'Chauffeur VTC'}, new)
-    assert new == {MARKER: REQUIRED_VERSION}
+    assert new == {MARKER: REQUIRED_VERSION, PROGRAMME_MARKER: PROGRAMME_VERSION}
     untouched = {MARKER: 'historical-marker'}
     mark_new_vtc_enrolment({'training_type': 'VTC'}, untouched)
     assert untouched == {MARKER: 'historical-marker'}

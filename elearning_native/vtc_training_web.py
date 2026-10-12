@@ -23,7 +23,8 @@ def _bank(course):
     current = vtc.load_bundled_course(cid)
     if not current:
         abort(404)
-    versions = dict.fromkeys((course['version'], current['version']))
+    from .vtc_productions import VERSION as PRODUCTION_VERSION, BASE_VERSION
+    versions = dict.fromkeys((course['version'], BASE_VERSION if course['version'] == PRODUCTION_VERSION else current['version'], current['version']))
     for version in versions:
         if not isinstance(version, str) or not re.fullmatch(r'[A-Za-z0-9_-]+', version):
             abort(404)

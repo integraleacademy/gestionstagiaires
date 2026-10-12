@@ -966,6 +966,15 @@ class NativeElearningStore:
             completed = [str(value) for value in _json_list(row["completed_json"])]
             answers = _json_dict(row["answers_json"])
             already_completed = activity_id in completed
+            if (not already_completed and key[2].startswith("academy-vtc-")
+                    and answer is not None and answer.get("production_ai_hash")):
+                # VTC feedback was checked before entering this transaction. A
+                # second tab may have saved a newer draft in that interval; its
+                # text must not be overwritten by the previously checked copy.
+                saved_production = answers.get(activity_id)
+                if (not isinstance(saved_production, Mapping)
+                        or saved_production.get("production_answers") != answer.get("production_answers")):
+                    raise TrackingError("Votre brouillon a changé. Rechargez la page et faites corriger la copie actuelle avant de continuer.")
             if assessment_attempt is not None and not already_completed:
                 try:
                     assessment.record_attempt(connection, access, activity_id=activity_id,
