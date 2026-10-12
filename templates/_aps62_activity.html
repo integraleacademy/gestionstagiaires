@@ -49,5 +49,6 @@
   <section class="aps-editorial"><span class="aps-label">Je retiens et je réutilise</span><h2>La décision à savoir expliquer</h2><p class="aps-takeaway">{{ lesson.decision }}</p><p>{{ lesson.reason }}</p><div class="aps-pitfall"><b>Le piège de ce dossier</b><p>{{ lesson.pitfall }}</p></div><p>{{ lesson.instruction }}</p></section>
   <details class="aps-transcript"><summary>Repères du manuel et sources de référence</summary><p>Manuel APS, édition de septembre 2026 : {% for ref in lesson.manual_refs %}leçon {{ ref.ref }}, page {{ ref.page }} du fichier{% if not loop.last %} ; {% endif %}{% endfor %}.</p><ul>{% for source in lesson.sources %}<li><a href="{{ source[1] }}" target="_blank" rel="noopener noreferrer">{{ source[0] }} ↗</a></li>{% endfor %}</ul><p class="aps-small">Sources de référence de l’édition {{ lesson.edition|default('2026-10-03') }}. Les consignes et informations évolutives se vérifient au moment de l’utilisation.</p></details>
   {% endif %}
+  {% if lesson is defined and lesson.worked_examples %}{% include '_aps62_worked_examples.html' %}{% endif %}
 </div>
 <dialog class="aps-image-dialog" id="apsImageDialog"><button type="button" data-aps-close aria-label="Fermer la fiche agrandie">Fermer ×</button><img alt="Repère du manuel en grand format"></dialog>

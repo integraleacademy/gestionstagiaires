@@ -38,7 +38,9 @@ class APSV12ContentTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.manifest = curriculum_manifest()
-        cls.courses = [load_bundled_course(f"academy-aps62-{number:02}", VERSION) for number in range(1, 16)]
+        # Authored snapshots stay immutable; delivery rules are checked separately
+        # by test_aps62_without_productions, including older assigned editions.
+        cls.courses = [read(ROOT / "courses" / f"academy-aps62-{number:02}" / (VERSION + ".json")) for number in range(1, 16)]
         cls.exams = [load_exam(f"module-{number:02}", VERSION) for number in range(1, 16)] + [load_exam("final", VERSION)]
 
     def assert_distinct_options(self, options):
@@ -55,7 +57,10 @@ class APSV12ContentTests(unittest.TestCase):
         self.assertEqual(digest.hexdigest(), V11_SHA256)
         for current in self.courses:
             old = load_bundled_course(current["id"], PREVIOUS)
-            self.assertEqual(old, read(ROOT / "courses" / current["id"] / (PREVIOUS + ".json")))
+            original = read(ROOT / "courses" / current["id"] / (PREVIOUS + ".json"))
+            self.assertEqual(old["version"], original["version"])
+            self.assertEqual(old["required_minutes"], original["required_minutes"])
+            self.assertEqual(old["activity_order"], [a["id"] for a in activities(original) if not a.get("production")])
         self.assertEqual(load_exam("module-01", PREVIOUS)["questions"][2]["prompt"], "Que vérifie-t-on avant de prendre un poste ?")
 
     def test_new_edition_preserves_ids_order_and_time_budgets(self):
@@ -129,7 +134,10 @@ class APSV12ContentTests(unittest.TestCase):
         workshops = exercise_count = remediation_count = 0
         for course in self.courses:
             original_json = read(ROOT / "courses" / course["id"] / (VERSION + ".json"))
-            self.assertEqual(course, original_json, "Legacy adaptation must not replace v12 authored workshops")
+            delivered = load_bundled_course(course["id"], VERSION)
+            self.assertEqual([a["practice"] for a in activities(delivered) if a.get("practice")],
+                             [a["practice"] for a in activities(original_json) if a.get("practice")],
+                             "Delivery changes must not replace v12 authored workshops")
             for activity in activities(course):
                 practice = activity.get("practice")
                 if not practice:

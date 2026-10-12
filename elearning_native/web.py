@@ -1083,6 +1083,11 @@ def create_native_elearning_blueprint(
         if not order:
             abort(404, "Ce module ne contient aucune activité.")
         requested_id = str(request.args.get("activity") or order[0])
+        replacement = course.get('retired_activity_redirects', {}).get(requested_id)
+        if replacement:
+            return redirect(url_for('native_elearning.admin_preview', course_id=course_id,
+                                    version=course['version'], activity=replacement,
+                                    _anchor='exemple-' + requested_id))
         if requested_id not in order:
             abort(404, "Activité introuvable.")
         index = order.index(requested_id)
@@ -1982,6 +1987,7 @@ def create_native_elearning_blueprint(
         if not order:
             abort(404)
         requested_id = str(request.args.get("activity") or progress.get("current_activity_id") or "")
+        requested_id = course.get('retired_activity_redirects', {}).get(requested_id, requested_id)
         if course.get("training_label") == "A3P" and request.args.get("activity") and requested_id not in order:
             abort(404, "Cette ressource ne fait pas partie des objectifs à distance affectés.")
         if requested_id not in order or (not request.args.get("activity") and requested_id not in required_order):
