@@ -29,10 +29,15 @@
     </div>
   </section>
 
-  <section class="store-section store-collection" aria-labelledby="collection-title">
+  <section class="store-section store-collection" id="collection" aria-labelledby="collection-title" data-catalogue>
     <div class="store-section-heading"><div><span class="store-kicker">LA COLLECTION INTÉGRALE ACADEMY</span><h2 id="collection-title">À chaque formation,<br>son manuel.</h2></div><a class="button secondary" href="{{ url_for('manuals_shop.public_presentation') }}">Tous les manuels et tarifs →</a></div>
     <p class="store-intro">Formation initiale, recyclage ou remise à niveau : choisissez les supports adaptés à vos prochaines sessions.</p>
-    <div class="store-book-grid">{% for book in books %}<a class="store-book" href="{{ url_for('manuals_shop.public_manual_detail', code=book.code) }}" style="--book-color:{{ book.color }}"><div><img src="{{ url_for('static', filename='manuals/' ~ book.code ~ '.jpg') }}" alt="Couverture {{ book.name }}" width="146" height="207" loading="lazy"></div><span>{{ book.category_name }}</span><h3>{{ book.name }}</h3><p>Dès <strong>{{ book.bulk_price|manuals_money }}</strong> TTC / ex.</p></a>{% endfor %}</div>
+    {% include 'manuals/_catalogue_filters.html' %}
+    {% for code, label in categories %}{% set category_books = books|selectattr('category', 'equalto', code)|list %}
+    <section class="catalogue-category" data-catalogue-group aria-labelledby="category-{{ code }}">
+      <div class="catalogue-category-heading"><h3 id="category-{{ code }}">{{ label }}</h3><span data-category-count>{{ category_books|length }} manuel{{ 's' if category_books|length != 1 else '' }}</span></div>
+      <div class="store-book-grid">{% for book in category_books %}<a class="store-book" data-catalogue-card data-category="{{ book.category }}" data-search="{{ book.name }} {{ book.title }} {{ book.category_name }}" href="{{ url_for('manuals_shop.public_manual_detail', code=book.code) }}" style="--book-color:{{ book.color }}"><div><img src="{{ url_for('static', filename='manuals/' ~ book.code ~ '.jpg') }}" alt="Couverture {{ book.name }}" width="146" height="207" loading="lazy"></div><span>{{ book.category_name }}</span><h4>{{ book.name }}</h4><p>Dès <strong>{{ book.bulk_price|manuals_money }}</strong> TTC / ex.</p></a>{% endfor %}</div>
+    </section>{% endfor %}
     <p class="store-price-note">Prix à partir de 100 exemplaires par titre. Commande dès 50 exemplaires. Personnalisation avec votre logo et livraison incluses.</p>
   </section>
 

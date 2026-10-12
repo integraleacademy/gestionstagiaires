@@ -1,10 +1,12 @@
+{% set catalogue_books = catalogue_books|default(books) %}
+{% set catalogue_id = catalogue_id|default('catalogue') %}
+{% set catalogue_usb = catalogue_usb|default(false) %}
 <div class="catalogue-tools" data-catalogue-tools hidden>
-  <label for="catalogue-search">Rechercher un manuel</label>
-  <input type="search" id="catalogue-search" placeholder="APS, SSIAP 2, H0B0…" data-catalogue-search autocomplete="off">
-  <div class="catalogue-filters" role="group" aria-label="Filtrer les manuels par domaine">
-    <button type="button" data-category-filter="" aria-pressed="true">Tous les manuels</button>
-    {% for code, label in categories %}<button type="button" data-category-filter="{{ code }}" aria-pressed="false">{{ label }}</button>{% endfor %}
+  <div class="catalogue-tools-heading"><div><strong>Choisir une catégorie</strong><p>Sélectionnez votre domaine de formation ou explorez toute la collection.</p></div><div class="catalogue-search"><label for="{{ catalogue_id }}-search">{{ 'Rechercher un support' if catalogue_usb else 'Rechercher un manuel' }}</label><input type="search" id="{{ catalogue_id }}-search" placeholder="APS, SSIAP 2, H0B0…" data-catalogue-search autocomplete="off"></div></div>
+  <div class="catalogue-filters" role="group" aria-label="Filtrer les {{ 'supports' if catalogue_usb else 'manuels' }} par catégorie">
+    <button type="button" data-category-filter="" aria-pressed="true">{{ 'Tous les supports' if catalogue_usb else 'Tous les manuels' }} <span aria-hidden="true">{{ catalogue_books|length }}</span></button>
+    {% for code, label in categories %}{% set category_books = catalogue_books|selectattr('category', 'equalto', code)|list %}{% if category_books %}<button type="button" data-category-filter="{{ code }}" aria-pressed="false">{{ label }} <span aria-hidden="true">{{ category_books|length }}</span></button>{% endif %}{% endfor %}
   </div>
-  <p class="small" data-catalogue-count aria-live="polite">{{ books|length }} manuels</p>
+  <p class="small" data-catalogue-count aria-live="polite">{{ catalogue_books|length }} {{ 'supports' if catalogue_usb else 'manuels' }}</p>
 </div>
-<p data-catalogue-empty hidden>Aucun manuel ne correspond à votre recherche. Essayez un autre titre ou un autre domaine.</p>
+<p class="catalogue-empty" data-catalogue-empty hidden>Aucun {{ 'support' if catalogue_usb else 'manuel' }} ne correspond à votre recherche. Essayez un autre titre ou une autre catégorie.</p>
