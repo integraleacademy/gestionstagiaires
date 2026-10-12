@@ -125,6 +125,45 @@ class ProductionAITransportTests(unittest.TestCase):
         feedback = validate_feedback(output, self.prepared)
         self.assertIsNone(feedback["indicative_grade"])
 
+    def test_apostrophe_typography_uses_the_original_learner_excerpt(self):
+        for apostrophe in ("'", "\u2018", "\u2019"):
+            with self.subTest(apostrophe=apostrophe):
+                output = valid_output()
+                output["criteria"][1]["evidence"] = [{
+                    "field_id": "suite", "quote": "avant l" + apostrophe + "affectation",
+                }]
+                feedback = validate_feedback(output, self.prepared)
+                quote = feedback["criteria"][1]["evidence"][0]["quote"]
+                self.assertEqual(quote, "avant l’affectation")
+                self.assertIn(quote, ANSWERS["suite"])
+                self.assertEqual(feedback["indicative_grade"], 15.0)
+
+    def test_canonical_accents_and_spacing_keep_the_original_excerpt(self):
+        answers = {**ANSWERS, "suite": "Le responsable e\u0301tudie\n\nl’affectation avant de décider."}
+        output = valid_output()
+        output["criteria"][1]["evidence"] = [{
+            "field_id": "suite", "quote": "responsable étudie l'affectation",
+        }]
+        feedback = validate_feedback(output, _prepare_input(PRODUCTION, answers, []))
+        quote = feedback["criteria"][1]["evidence"][0]["quote"]
+        self.assertEqual(quote, "responsable e\u0301tudie\n\nl’affectation")
+        self.assertIn(quote, answers["suite"])
+
+    def test_typographic_matching_never_accepts_changed_words_or_a_different_field(self):
+        for field_id, quote in (("suite", "après l'affectation"), ("analyse", "avant l'affectation"),
+                                ("suite", "avant… l'affectation"), ("suite", "avant L'affectation")):
+            output = valid_output()
+            output["criteria"][1]["evidence"] = [{"field_id": field_id, "quote": quote}]
+            with self.subTest(field_id=field_id, quote=quote), self.assertRaisesRegex(ValueError, "unsupported_evidence"):
+                validate_feedback(output, self.prepared)
+
+    def test_level_score_contradictions_still_reject_feedback(self):
+        for level, score in (("satisfactory", 2), ("incorrect", 2), ("missing", 2)):
+            output = valid_output()
+            output["criteria"][0].update(level=level, score=score)
+            with self.subTest(level=level, score=score), self.assertRaisesRegex(ValueError, "inconsistent_score"):
+                validate_feedback(output, self.prepared)
+
     def test_json_schema_is_strict_at_every_object(self):
         def inspect(value):
             if not isinstance(value, dict):
@@ -143,6 +182,18 @@ class ProductionAITransportTests(unittest.TestCase):
                          {"status": "completed", "output": [{"type": "message", "content": [{"type": "refusal", "refusal": "No"}]}]}):
             with self.subTest(response=response), patch("elearning_native.production_ai.urlopen", return_value=FakeResponse(response)), self.assertRaises(ValueError):
                 call_openai(self.prepared, api_key="fake", model="gpt-4.1")
+
+    def test_incomplete_responses_have_closed_technical_causes(self):
+        for reason, cause in (("max_output_tokens", "incomplete_max_output_tokens"),
+                              ("content_filter", "incomplete_content_filter"),
+                              ("private-provider-detail", "incomplete_response")):
+            payload = {"status": "incomplete", "incomplete_details": {"reason": reason},
+                       "output": [{"type": "message", "content": [{"type": "output_text", "text": "private partial text"}]}]}
+            with self.subTest(reason=reason), patch("elearning_native.production_ai.urlopen", return_value=FakeResponse(payload)) as mocked:
+                with self.assertRaises(ValueError) as raised:
+                    call_openai(self.prepared, api_key="fake", model="gpt-4.1")
+                self.assertEqual(str(raised.exception), cause)
+                self.assertEqual(mocked.call_count, 1)
 
     def test_context_only_uses_lesson_in_same_dossier(self):
         course = {"author_email": "secret@example.invalid", "sections": [
@@ -257,6 +308,32 @@ class ProductionAIQueueTests(unittest.TestCase):
             self.assertEqual(public["status"], "failed")
             self.assertIsNone(public["feedback"])
             self.assertNotIn("secret-key-must-stay-private", json.dumps(public))
+
+    def test_response_diagnostics_log_only_closed_codes_without_private_exception_details(self):
+        private = "private-learner-text-and-provider-body-secret-key"
+        cases = [(ValueError("inconsistent_score"), "inconsistent_score"),
+                 (ValueError("unsupported_evidence"), "unsupported_evidence"),
+                 (ValueError("incomplete_coverage"), "incomplete_coverage"),
+                 (ValueError("incomplete_max_output_tokens"), "incomplete_max_output_tokens"),
+                 (json.JSONDecodeError(private, private, 0), "invalid_json"),
+                 (TypeError(private), "invalid_response_type"),
+                 (KeyError(private), "invalid_response_field"),
+                 (ValueError(private), "invalid_response_unknown")]
+        for index, (error, cause) in enumerate(cases):
+            job = self.request({**ANSWERS, "analyse": ANSWERS["analyse"] + str(index)})
+            with self.subTest(cause=cause), patch("elearning_native.production_ai.call_openai", side_effect=error) as mocked, \
+                    self.assertLogs("elearning_native.production_ai", level="WARNING") as captured:
+                self.service._run_job(job["id"])
+            self.assertEqual(mocked.call_count, 1)
+            self.assertEqual(len(captured.records), 1)
+            self.assertEqual(captured.records[0].getMessage(), "APS production AI response rejected: cause=" + cause)
+            self.assertIsNone(captured.records[0].exc_info)
+            self.assertNotIn(private, "\n".join(captured.output))
+            public = self.service.get_analysis(ACCESS, job["id"])
+            self.assertEqual(public["status"], "failed")
+            self.assertEqual(public["error_code"], "invalid_response")
+            self.assertIsNone(public["feedback"])
+            self.assertNotIn(private, json.dumps(public))
 
     def test_orphaned_running_job_requires_explicit_retry(self):
         job = self.request()
