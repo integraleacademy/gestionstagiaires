@@ -9,7 +9,7 @@
 <div class="nellive">
   <header class="nellive-head">
     <div class="nellive-head__copy"><span>Suivi pédagogique en direct</span><h1>{{ initial.course.title }}</h1><p>Version {{ initial.course.version }} · actualisation automatique toutes les 10 secondes</p></div>
-    <div class="nellive-actions"><span class="nellive-connection" id="nativeLiveConnection"><i></i><b>Connecté</b></span><a class="nellive-button" href="{{ url_for('native_elearning.admin_written_work', course_id=initial.course.id) }}">Travaux écrits</a><a class="nellive-button" href="{{ url_for('native_elearning.admin_course_export', course_id=initial.course.id) }}">Exporter CSV</a><a class="nellive-button" href="{{ url_for('native_elearning.admin_catalog') }}">← Cours et affectations</a></div>
+    <div class="nellive-actions"><span class="nellive-connection" id="nativeLiveConnection"><i></i><b>Connecté</b></span><a class="nellive-button" href="{{ url_for('native_elearning.admin_course_attempts', course_id=initial.course.id) }}">Réponses et erreurs</a><a class="nellive-button" href="{{ url_for('native_elearning.admin_written_work', course_id=initial.course.id) }}">Travaux écrits</a><a class="nellive-button" href="{{ url_for('native_elearning.admin_course_export', course_id=initial.course.id) }}">Exporter CSV</a><a class="nellive-button" href="{{ url_for('native_elearning.admin_catalog') }}">← Cours et affectations</a></div>
   </header>
 
   <section class="nellive-stats" aria-label="Synthèse">
@@ -33,5 +33,6 @@
 
 <script id="nativeLiveConfig" type="application/json">{{ {'initial': initial, 'liveUrl': live_url}|tojson }}</script>
 <style>.nellive-duration{display:block;font-size:10px;font-weight:500;color:#64748b;margin-top:4px}.nellive-status--awaiting_time{background:#fff7ed;color:#9a3412}</style>
-<script src="{{ url_for('static', filename='js/native-elearning-live.js', v='20260908-2') }}" defer></script>
+<script src="{{ url_for('static', filename='js/native-elearning-live.js', v='20261012-assessments') }}" defer></script>
 {% endblock %}
+

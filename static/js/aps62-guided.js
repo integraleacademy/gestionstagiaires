@@ -17,6 +17,7 @@
   const draft = root.querySelector('[data-practice-draft]');
   const cacheKey = `aps62-guided:${location.pathname}:${config.courseVersion}:${config.activityId}`;
   let index = 0, busy = false, verified = '', stepVerified = false;
+  let pendingCheck = null;
   const drills = new Map();
 
   function answers() {
@@ -59,13 +60,21 @@
     });
   }
   async function request(payload) {
+    const isCheck = Boolean(payload.practice_step) && !preview;
+    if (isCheck) {
+      const fingerprint = JSON.stringify(payload);
+      if (!pendingCheck || pendingCheck.fingerprint !== fingerprint) {
+        pendingCheck = {fingerprint, id: globalThis.crypto?.randomUUID?.() || `check-${Date.now()}-${Math.random().toString(36).slice(2)}`};
+      }
+    }
     const response = await fetch(preview ? access.answerUrl : access.practiceUrl, {
       method: 'POST', credentials: 'same-origin',
       headers: {'Content-Type':'application/json', 'Accept':'application/json', 'X-Elearning-CSRF':access.csrfToken},
-      body: JSON.stringify({...payload, ...(!preview ? {access_token:access.accessToken} : {})}),
+      body: JSON.stringify({...payload, ...(isCheck ? {request_id:pendingCheck.id} : {}), ...(!preview ? {access_token:access.accessToken} : {})}),
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result.ok) throw new Error(result.error || 'La vérification a échoué. Réessayez.');
+    if (isCheck) pendingCheck = null;
     return result;
   }
   async function lock(action) {

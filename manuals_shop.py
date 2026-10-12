@@ -37,6 +37,8 @@ PUBLIC_ENDPOINTS = {"home", "manuals_shop.public_presentation", "manuals_shop.pu
 CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.elearning_soon", "manuals_shop.presentation", "manuals_shop.manual_detail", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo", "manuals_shop.order_payment", "manuals_shop.order_payment_status"}
 PUBLIC_ENDPOINTS |= organisme_profile.PUBLIC_ENDPOINTS | elearning_demo.PUBLIC_ENDPOINTS
 CUSTOMER_ENDPOINTS |= elearning_orders.CUSTOMER_ENDPOINTS | elearning_groups.CUSTOMER_ENDPOINTS | elearning_reporting.CUSTOMER_ENDPOINTS | organisme_profile.CUSTOMER_ENDPOINTS
+CUSTOMER_ENDPOINTS |= {'native_module_signatures.' + name for name in (
+    'index', 'order_modules', 'prepare_order', 'reissue', 'snapshot_pdf', 'send', 'refresh', 'signed_pdf', 'audit_archive')}
 SAFE_ENDPOINTS = {"static", "admin_login", "admin_login_post", "admin_logout", "manuals_shop.elearning_access"} | PUBLIC_ENDPOINTS | CUSTOMER_ENDPOINTS
 MAX_LOGO_BYTES = 5 * 1024 * 1024
 

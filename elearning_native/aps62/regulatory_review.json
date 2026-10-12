@@ -1,6 +1,6 @@
 {
-  "checked_on": "2026-10-06",
-  "edition": "20261010-aps62-v11",
+  "checked_on": "2026-10-12",
+  "edition": "20261012-aps62-v12",
   "status": "Correspondance pédagogique documentée ; conformité complète non attestée.",
   "ministry_minutes": 3720,
   "adef_minutes": 3030,
@@ -336,7 +336,7 @@
       "reference": "Annexe III · Séquences théoriques autorisées à distance",
       "ministry_minutes": 420,
       "adef_minutes": 390,
-      "objectives": "Définition et modes de menace, Vigipirate, vigilance factuelle, détection, alerte, retour d’expérience et bilan de blessures.",
+      "objectives": "Modes d’action traditionnels et émergents, reconnaissance visuelle des familles de matériels, limites d’identification, NRBC-E et cyber, Vigipirate, vigilance factuelle, protection et alerte, lésions par balles et explosions, retour d’expérience.",
       "evidence": [
         {
           "section": "aps62-12-01",
@@ -367,8 +367,52 @@
           "label": "12.07"
         }
       ],
-      "review_note": "Couverture partielle : compléter et valider les supports de reconnaissance du matériel et des modes opératoires du référentiel avec un formateur. TFP APS : 6 h 30 à distance. Les 6 h de pratique du programme ministériel de 13 h ne figurent pas dans ces 7 h.",
-      "coverage": "Complément requis"
+      "review_note": "Édition v12 : quatre dossiers écrits enrichis, trois fiches SVG et évaluations ciblées. La reconnaissance porte sur les familles, les observations et les limites ; aucun procédé de fabrication, de déclenchement ou de neutralisation d’EEI n’est décrit. La revue documentaire ne remplace pas la validation par un formateur ni l’apprentissage pratique sur supports factices contrôlés. Le point du référentiel relatif au fonctionnement des EEI reste à traiter dans le cadre pédagogique sécurisé approprié ; sa couverture complète n’est pas attestée ici. TFP APS : 6 h 30 à distance. Les 6 h de pratique du programme ministériel de 13 h ne figurent pas dans ces 7 h.",
+      "coverage": "Supports théoriques renforcés ; validation formateur requise",
+      "v12_evidence": [
+        {
+          "section": "aps62-12-01",
+          "written_topics": [
+            "Définition et limites du rôle de l’APS",
+            "Reconnaître les modes d’action traditionnels",
+            "Comprendre l’évolution de la menace sans enquêter"
+          ],
+          "diagram": null
+        },
+        {
+          "section": "aps62-12-02",
+          "written_topics": [
+            "Lire la fiche de reconnaissance visuelle",
+            "Matériel factice : la ressemblance ne prouve pas l’absence de danger",
+            "Explosifs et objets suspects : aucune apparence ne suffit"
+          ],
+          "diagram": "media/aps62/v12/reconnaissance-materiels.svg"
+        },
+        {
+          "section": "aps62-12-06",
+          "written_topics": [
+            "NRBC-E : nommer les familles de dangers",
+            "Observer sans chercher à identifier une substance",
+            "Cyber : protéger les informations et le dispositif du site"
+          ],
+          "diagram": "media/aps62/v12/nrbc-cyber.svg"
+        },
+        {
+          "section": "aps62-12-07",
+          "written_topics": [
+            "Blessures par balles : l’aspect extérieur ne mesure pas la gravité",
+            "Pneumothorax : un risque respiratoire après un traumatisme",
+            "Explosion : souffle, projections et impacts",
+            "Construire un bilan utile depuis une zone sûre"
+          ],
+          "diagram": "media/aps62/v12/blessures-alerte.svg"
+        }
+      ],
+      "trainer_validation": {
+        "status": "pending",
+        "checked_on": null,
+        "scope": "Vérifier la reconnaissance des matériels sur supports factices contrôlés, les modalités sûres de traitement des points sensibles du référentiel et l’adéquation de la durée au public."
+      }
     },
     {
       "id": "academy-aps62-13",

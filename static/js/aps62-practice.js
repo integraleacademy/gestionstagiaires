@@ -14,6 +14,7 @@
   const exercises = [...root.querySelectorAll('[data-exercise-id]')];
   const key = `aps62-practice:${location.pathname}:${config.courseVersion}:${config.activityId}:${config.practice.revision}`;
   let verified = '', busy = false;
+  let pendingCheck = null;
   const reviewRoot = root.querySelector('[data-remediation]');
   function reviewAnswers() {
     return Object.fromEntries([...root.querySelectorAll('[data-review-id]')].flatMap(el => {
@@ -173,13 +174,21 @@
     controls.forEach(field => { field.disabled = true; });
     check.textContent = 'Vérification…';
     try {
+      const isCheck = event.currentTarget === form && !preview;
+      if (isCheck) {
+        const fingerprint = JSON.stringify(answers);
+        if (!pendingCheck || pendingCheck.fingerprint !== fingerprint) {
+          pendingCheck = {fingerprint, id: globalThis.crypto?.randomUUID?.() || `check-${Date.now()}-${Math.random().toString(36).slice(2)}`};
+        }
+      }
       const response = await fetch(preview ? access.answerUrl : access.practiceUrl, {
         method: 'POST', credentials: 'same-origin',
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Elearning-CSRF': access.csrfToken},
-        body: JSON.stringify({practice_answers: answers, review_answers: reviewAnswers(), ...(!preview ? {access_token: access.accessToken} : {})}),
+        body: JSON.stringify({practice_answers: answers, review_answers: reviewAnswers(), ...(isCheck ? {request_id:pendingCheck.id} : {}), ...(!preview ? {access_token: access.accessToken} : {})}),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.ok) throw new Error(result.error || 'Impossible de vérifier vos réponses. Réessayez.');
+      if (isCheck) pendingCheck = null;
       render(result);
       verified = result.correct ? JSON.stringify(answers) : '';
     } catch (error) {

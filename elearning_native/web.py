@@ -44,6 +44,8 @@ from . import vtc, a3p, mac_aps
 from .exams import ExamStore, load_exam, public_exam, grade_exam
 from .practice import public_practice, grade_practice
 from .production import public_production, production_feedback, normalize_production, normalize_self_review
+from .production_ai import ProductionAIService, ProductionAIError, build_course_references, read_analyses
+from .assessment import describe_history
 from .vtc_adaptive import select_activity as select_vtc_activity
 from .vtc_enrolments import effective_learner_session
 
@@ -373,6 +375,66 @@ def create_native_elearning_blueprint(
 
     def store() -> NativeElearningStore:
         return NativeElearningStore(root() / "tracking.sqlite3")
+
+    production_ai_lock = threading.Lock()
+
+    def production_ai_service():
+        override = current_app.config.get('NATIVE_ELEARNING_PRODUCTION_AI_SERVICE')
+        if override is not None:
+            return override
+        key = str(root())
+        with production_ai_lock:
+            services = current_app.extensions.setdefault('native_production_ai_services', {})
+            if key not in services:
+                services[key] = ProductionAIService(root() / 'production_ai.sqlite3')
+            return services[key]
+
+    def production_ai_config(course, activity_id, *, access_token='', preview=False):
+        prefix = 'native_elearning.admin_production_' if preview else 'native_elearning.activity_production_'
+        kwargs = {'course_id': course['id'], 'version': course['version']} if preview else {}
+        return {'analysisUrl': url_for(prefix+'analysis', activity_id=activity_id, **kwargs),
+                'historyUrl': url_for(prefix+'analyses', activity_id=activity_id, **kwargs),
+                'csrfToken': _csrf_token(), 'accessToken': access_token, 'version': course['version'],
+                'configured': (production_ai_service().configured if
+                    current_app.config.get('NATIVE_ELEARNING_PRODUCTION_AI_SERVICE') is not None else
+                    bool(os.environ.get('OPENAI_API_KEY', '').strip())) and
+                    (not preview or session.get('admin_role') != 'viewer')}
+
+    def production_analysis_response(access, course, activity, *, create, preview=False):
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify(ok=False, error='Requête invalide.'), 400
+        try:
+            service = production_ai_service()
+            if not create:
+                result = service.list_analyses(access, activity['id'])
+                if payload.get('analysis_id'):
+                    job = service.get_analysis(access, str(payload['analysis_id']))
+                    if job is None or job.get('activity_id') != activity['id']:
+                        abort(404)
+                    result['analysis'] = job
+                return jsonify(ok=True, **result)
+            answers = normalize_production(activity['production'], payload.get('production_answers'))
+            if not preview:
+                progress = current_progress(access, course)
+                saved = progress.get('answers', {}).get(activity['id'], {})
+                if activity['id'] in progress.get('completed_activity_ids', []):
+                    if answers != saved.get('production_answers'):
+                        return jsonify(ok=False, error='Cette activité est terminée. Vous pouvez analyser la production enregistrée.'), 409
+                else:
+                    # Capture the work BEFORE any AI or model-answer correction.
+                    store().record_production(access, activity['id'], answers, capture_first=True)
+            job = service.request_analysis(access, activity['production'], answers,
+                activity_id=activity['id'], course_references=build_course_references(course, activity['id']),
+                retry=payload.get('retry') is True)
+            return jsonify(ok=True, analysis=job), 202 if job['status'] in ('queued', 'running') else 200
+        except ProductionAIError as exc:
+            response = jsonify(ok=False, error=str(exc), code=exc.code, retry_after=exc.retry_after)
+            if exc.retry_after:
+                response.headers['Retry-After'] = str(exc.retry_after)
+            return response, exc.http_status
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 400
 
     def max_archive_bytes() -> int:
         try:
@@ -1040,6 +1102,7 @@ def create_native_elearning_blueprint(
                                      activity_id=requested_id, version=course["version"]),
             },
             preview_can_answer=session.get("admin_role") != "viewer",
+            production_ai_config=production_ai_config(course, requested_id, preview=True) if raw_activity.get('production') else None,
             exam_url=url_for('native_elearning.admin_exam',exam_id=course['mock_exam_id'],version=course['version']) if course.get('mock_exam_id') else '',
         )
 
@@ -1350,7 +1413,7 @@ def create_native_elearning_blueprint(
         save_data(data)
         return redirect(url_for("native_elearning.admin_catalog"))
 
-    def live_payload(course_id: str, *, include_work: bool = False) -> Dict[str, Any]:
+    def live_payload(course_id: str, *, include_work: bool = False, include_attempts: bool = False) -> Dict[str, Any]:
         try:
             course = catalog().load_course(course_id)
         except CourseImportError:
@@ -1359,12 +1422,27 @@ def create_native_elearning_blueprint(
         identities: Dict[Tuple[str, str], Dict[str, str]] = {}
         session_paths: Dict[Tuple[str, str], Dict[str, Any]] = {}
         data = load_data()
-        for session_obj in data.get("sessions", []) or []:
+        reporting_sessions = list(data.get("sessions", []) or [])
+        # Purchases use the same tracking store under virtual session IDs. Build
+        # their identities from the tenant-scoped administrative data as well.
+        for order in data.get("manual_orders", []) or []:
+            if not isinstance(order, dict) or order.get("order_type") != "elearning" or not order.get("id"):
+                continue
+            reporting_sessions.append({
+                "id": "el-" + str(order["id"]),
+                "name": order.get("group_name") or order.get("reference") or "Parcours " + str(order.get("course_code") or "").upper(),
+                "training_type": str(order.get("course_code") or "").upper(),
+                "aps_native_modules": order.get("modules") or [],
+                "trainees": order.get("learners") or [],
+            })
+        for session_obj in reporting_sessions:
             if not isinstance(session_obj, dict):
                 continue
             assigned_here = any(item.get("course_id") == course_id for item in assigned_modules(session_obj))
             for trainee in session_trainees(session_obj):
                 trainee_id = str(trainee.get("id") or trainee.get("trainee_id") or "")
+                if not session_obj.get("id") or not trainee_id:
+                    continue
                 if assigned_here:
                     try:
                         effective = effective_learner_session(session_obj, trainee)
@@ -1376,6 +1454,10 @@ def create_native_elearning_blueprint(
                     "trainee_name": f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
                     "session_name": str(session_obj.get("name") or session_obj.get("id") or ""),
                 }
+        # SQLite is shared by all tenants. An unknown identity is not an
+        # anonymised row: it may contain another centre's answers and analyses.
+        # Authorise the pair before enriching or reading any detailed history.
+        rows = [row for row in rows if (str(row["session_id"]), str(row["trainee_id"])) in identities]
         versions: Dict[str, Dict[str, Any]] = {str(course.get("version") or ""): course}
         for row in rows:
             row_version = str(row.get("course_version") or "")
@@ -1406,6 +1488,9 @@ def create_native_elearning_blueprint(
             row["active_time_label"] = _format_seconds(row.get("active_seconds"))
             row["required_time_label"] = _format_seconds(row["required_seconds"])
             row["remaining_time_label"] = _format_seconds(row["remaining_seconds"])
+            if include_attempts:
+                row['assessment_attempts'] = describe_history(row_course, [attempt for attempt in
+                    store().assessment_history(row) if attempt['activity_id'] in row_course.get('activity_order', [])])
             if include_work:
                 row['written_work'] = [
                     {'activity_id': item['id'], 'title': item.get('title', ''),
@@ -1434,6 +1519,7 @@ def create_native_elearning_blueprint(
                         'self_review': [{'label': criterion['label'], 'needs_help': saved.get('production_self_review', {}).get(criterion['id']) == 'needs_help'}
                                        for criterion in production['rubric'] if saved.get('production_self_review', {}).get(criterion['id']) in ('checked', 'needs_help')],
                         'submitted_at': saved.get('submitted_at', saved.get('production_first_submitted_at', '')),
+                        'ai': read_analyses(root() / 'production_ai.sqlite3', row, item['id']),
                     })
             row.pop("answers", None)
         return {
@@ -1458,6 +1544,33 @@ def create_native_elearning_blueprint(
     @admin_required
     def admin_live_api(course_id: str) -> Any:
         return jsonify(live_payload(course_id))
+
+    @blueprint.get('/admin/elearning/courses/<course_id>/attempts')
+    @admin_required
+    def admin_course_attempts(course_id):
+        payload = live_payload(course_id, include_attempts=True)
+        return render_template('admin_native_elearning_attempts.html', initial=payload)
+
+    @blueprint.get('/admin/elearning/courses/<course_id>/attempts.csv')
+    @admin_required
+    def admin_course_attempts_export(course_id):
+        payload = live_payload(course_id, include_attempts=True)
+        output = io.StringIO(newline='')
+        writer = csv.writer(output, delimiter=';')
+        writer.writerow(['Stagiaire', 'Session', 'Version', 'Dossier', 'Question ou exercice',
+                         'Type', 'Essai', 'Réponse enregistrée', 'Résultat', 'Date UTC'])
+        def cell(value):
+            value = str(value if value is not None else '')
+            return "'"+value if value.lstrip().startswith(('=', '+', '-', '@')) or value.startswith(('\t', '\r', '\n')) else value
+        for row in payload['learners']:
+            for attempt in row.get('assessment_attempts', []):
+                writer.writerow([cell(value) for value in [row['trainee_name'], row['session_name'],
+                    row['course_version'], attempt['dossier'], attempt['title'], attempt['kind'],
+                    attempt['attempt_number'], attempt['answer_text'],
+                    'Réussi' if attempt['correct'] else 'À revoir', attempt['submitted_at']]])
+        response = Response('\ufeff'+output.getvalue(), content_type='text/csv; charset=utf-8')
+        response.headers['Content-Disposition'] = f'attachment; filename="essais-{course_id}.csv"'
+        return response
 
     @blueprint.get('/admin/elearning/courses/<course_id>/work')
     @admin_required
@@ -1508,6 +1621,12 @@ def create_native_elearning_blueprint(
                 "Durée obligatoire (secondes)",
                 "Temps restant (secondes)",
                 "Durée atteinte",
+                "Premier essai enregistré questions (%)",
+                "Questions avec premier essai enregistré",
+                "Nombre d’essais questions",
+                "Erreurs questions avant correction",
+                "Premier essai enregistré ateliers (%)",
+                "Nombre d’essais ateliers",
             ]
         )
         for row in payload["learners"]:
@@ -1528,6 +1647,12 @@ def create_native_elearning_blueprint(
                     row["required_seconds"],
                     row["remaining_seconds"],
                     "Oui" if row["duration_met"] else "Non",
+                    row['assessment_summary']['first_attempt_score_percent'],
+                    row['assessment_summary']['assessed_items'],
+                    row['assessment_summary']['attempt_count'],
+                    row['assessment_summary']['incorrect_attempt_count'],
+                    row['assessment_summary']['practice']['first_attempt_score_percent'],
+                    row['assessment_summary']['practice']['attempt_count'],
                 ]
             )
         response = Response("\ufeff" + output.getvalue(), content_type="text/csv; charset=utf-8")
@@ -1750,6 +1875,7 @@ def create_native_elearning_blueprint(
             remaining_time_label=_format_seconds(progress["remaining_seconds"]),
             csrf_token=csrf,
             access_token=access_token,
+            production_ai_config=production_ai_config(course, requested_id, access_token=access_token) if raw_activity.get('production') else None,
             heartbeat_seconds=CLIENT_HEARTBEAT_SECONDS,
             idle_seconds=CLIENT_IDLE_SECONDS,
             is_last_activity=index + 1 == len(order),
@@ -1877,11 +2003,58 @@ def create_native_elearning_blueprint(
             result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None, step=payload.get('practice_step') if isinstance(payload, dict) else None)
         except ValueError as exc:
             return jsonify({'ok': False, 'error': str(exc)}), 400
-        if activity['practice'].get('mode') == 'journey':
-            store().record_practice_result(access, activity_id, result)
+        for detail in result['feedback']:
+            exercise = next((item for item in activity['practice']['exercises'] if item['id'] == detail['id']), {})
+            detail.setdefault('competency', exercise.get('competency') or activity.get('title', ''))
+        try:
+            store().record_practice_result(access, activity_id, result,
+                request_id=payload.get('request_id', '') if isinstance(payload, dict) else '')
+        except TrackingError as exc:
+            return jsonify(ok=False, error=str(exc)), 409
         response = jsonify({'ok': True, **result})
         response.headers['Cache-Control'] = 'private, no-store'
         return response
+
+    def production_analysis_context(activity_id):
+        access, course, _order, _scored_ids = api_context()
+        activity = next((item for _, item in _activity_pairs(course) if item.get('id') == activity_id), None)
+        if not activity or not activity.get('production'):
+            abort(404)
+        if not can_complete(course, current_progress(access, course), activity_id):
+            abort(409, 'Terminez d’abord l’activité précédente.')
+        return access, course, activity
+
+    @blueprint.post('/api/elearning/v1/activities/<activity_id>/production-analysis')
+    def activity_production_analysis(activity_id):
+        return production_analysis_response(*production_analysis_context(activity_id), create=True)
+
+    @blueprint.post('/api/elearning/v1/activities/<activity_id>/production-analyses')
+    def activity_production_analyses(activity_id):
+        return production_analysis_response(*production_analysis_context(activity_id), create=False)
+
+    def admin_production_context(course_id, activity_id):
+        _require_csrf()
+        course = preview_course(course_id)
+        activity = next((item for _, item in _activity_pairs(course) if item.get('id') == activity_id), None)
+        if not activity or not activity.get('production'):
+            abort(404)
+        nonce = str(session.get('native_elearning_nonce') or '')
+        if not nonce:
+            abort(401)
+        access = {'session_id': 'admin-preview', 'trainee_id': hashlib.sha256(nonce.encode()).hexdigest(),
+                  'course_id': course['id'], 'course_version': course['version']}
+        return access, course, activity
+
+    @blueprint.post('/api/admin/elearning/courses/<course_id>/preview/activities/<activity_id>/production-analysis')
+    @admin_required
+    @admin_write_required
+    def admin_production_analysis(course_id, activity_id):
+        return production_analysis_response(*admin_production_context(course_id, activity_id), create=True, preview=True)
+
+    @blueprint.post('/api/admin/elearning/courses/<course_id>/preview/activities/<activity_id>/production-analyses')
+    @admin_required
+    def admin_production_analyses(course_id, activity_id):
+        return production_analysis_response(*admin_production_context(course_id, activity_id), create=False, preview=True)
 
     @blueprint.post('/api/elearning/v1/activities/<activity_id>/production')
     def activity_production(activity_id: str) -> Any:
@@ -1948,6 +2121,12 @@ def create_native_elearning_blueprint(
                     result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None)
                 except ValueError as exc:
                     return jsonify({'ok': False, 'error': str(exc)}), 400
+                # A direct completion request must preserve errors too, even if
+                # the learner did not use the separate "check" endpoint first.
+                try:
+                    store().record_practice_result(access, activity_id, result)
+                except TrackingError as exc:
+                    return jsonify(ok=False, error=str(exc)), 409
                 if not result['correct']:
                     return jsonify({'ok': False, 'error': 'Corrigez les exercices indiqués avant de continuer.', 'practice_result': result}), 400
                 answer = {**current.get('answers', {}).get(activity_id, {}), 'practice_draft': False,
@@ -2001,6 +2180,13 @@ def create_native_elearning_blueprint(
         except TrackingError as exc:
             return jsonify({"ok": False, "error": str(exc)}), 400
         if course.get('settings', {}).get('require_correct_answers') and not correct:
+            try:
+                store().record_question_attempt(access, activity_id, response_payload, correct,
+                    request_id=payload.get('request_id', ''), competency=activity.get('title', ''),
+                    revision=course['version'])
+            except TrackingError as exc:
+                return jsonify(ok=False, error=str(exc)), 409
+            current = current_progress(access, course)
             response = jsonify({"ok": True, "already_answered": False, "correct": False,
                 "retry_required": True, "explanation": str(activity.get('explanation') or ''),
                 "progress": current, "next_activity_id": activity_id})
@@ -2011,16 +2197,18 @@ def create_native_elearning_blueprint(
             "correct": correct,
             "submitted_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
         }
-        result = store().complete_activity(
-            access,
-            activity_id,
-            activity_order=order,
-            scored_activity_ids=scored_ids,
-            mastery_score=float(course.get("settings", {}).get("mastery_score") or 80),
-            required_seconds=int(course.get("required_minutes") or 0) * 60,
-            answer=answer,
-            video_requirements=course_videos(course),
-        )
+        try:
+            result = store().complete_activity(
+                access, activity_id, activity_order=order, scored_activity_ids=scored_ids,
+                mastery_score=float(course.get("settings", {}).get("mastery_score") or 80),
+                required_seconds=int(course.get("required_minutes") or 0) * 60,
+                answer=answer, video_requirements=course_videos(course),
+                assessment_attempt={'answer': response_payload, 'correct': correct,
+                    'request_id': payload.get('request_id', ''), 'competency': activity.get('title', ''),
+                    'revision': course['version']},
+            )
+        except TrackingError as exc:
+            return jsonify(ok=False, error=str(exc)), 409
         return jsonify(
             {
                 "ok": True,
@@ -2054,5 +2242,6 @@ def create_native_elearning_blueprint(
                       csrf_token=_csrf_token, require_csrf=_require_csrf,
                       prepare_activity=prepare_activity, asset_token_for=training_asset_token)
     return blueprint
+
 
 

@@ -1,0 +1,890 @@
+{
+  "version": "20261012-aps62-v12",
+  "reviewed_on": "2026-10-12",
+  "previous_version": "20261010-aps62-v11",
+  "previous_edition_sha256": "d79c85a5422bb1a8ceccfd97c8562e4a9324b4c9d041ade0bd38bf6e25072a21",
+  "wording_repairs": [
+    {
+      "id": "aps62-final-v10-06-integrite_rapport",
+      "reason": "Retirer une omission pouvait signifier la corriger ; l’énoncé vise explicitement l’effacement de sa mention.",
+      "previous_prompt": "Le responsable veut retirer une omission du rapport pour éviter une remarque du client. Quelle proposition reste professionnelle ?",
+      "prompt": "Le responsable veut retirer du rapport la mention d’un contrôle oublié pour éviter une remarque du client. Quelle proposition reste professionnelle ?"
+    },
+    {
+      "id": "aps62-q-01-01",
+      "reason": "Distinguer le cadre législatif des règles contractuelles et internes, qui encadrent aussi la mission.",
+      "previous_prompt": "Quel texte encadre les activités privées de sécurité ?",
+      "prompt": "Quel texte législatif fixe le cadre des activités privées de sécurité ?"
+    },
+    {
+      "id": "aps62-q-01-03",
+      "reason": "Les trois anciennes propositions étaient des contrôles légitimes de prise de poste. La question cible désormais trois objectifs explicites.",
+      "previous_prompt": "Que vérifie-t-on avant de prendre un poste ?",
+      "prompt": "Quel ensemble permet de connaître les actions attendues, les limites géographiques de la mission et les moyens de donner l’alerte ?"
+    },
+    {
+      "id": "aps62-q-01-11",
+      "reason": "Séparer une autorisation juridique ou organisationnelle de l’ouverture technique d’une porte.",
+      "previous_prompt": "Un badge de visite autorise-t-il l’accès à toutes les zones ?",
+      "prompt": "En matière de droit d’accès, que permet la possession d’un badge de visite ?"
+    },
+    {
+      "id": "aps62-q-01-13",
+      "reason": "Une batterie chargée est un contrôle utile, mais ne constitue pas l’objectif opérationnel complet.",
+      "previous_prompt": "Pourquoi vérifier la radio à la relève ?",
+      "prompt": "Quel est l’objectif opérationnel du contrôle de fonctionnement de la radio à la relève ?"
+    },
+    {
+      "id": "aps62-q-01-21",
+      "reason": "Préciser l’objectif de suivi ; un simple constat fait aussi partie d’une relève utile.",
+      "previous_prompt": "Quelle information relève d’une relève utile ?",
+      "prompt": "Quelle transmission permet à l’équipe entrante de poursuivre le traitement d’un écart encore ouvert ?"
+    },
+    {
+      "id": "aps62-q-02-29",
+      "reason": "Correction grammaticale sans modification du raisonnement ou de la réponse.",
+      "previous_prompt": "Un agent invoque sa peur après avoir employé la force. Que doit porter l'analyse ?",
+      "prompt": "Un agent invoque sa peur après avoir employé la force. Sur quoi doit porter l’analyse ?"
+    },
+    {
+      "id": "aps62-q-04-18",
+      "reason": "Supprimer la contradiction entre un refus et une fouille déjà qualifiée de consentie.",
+      "previous_prompt": "Un visiteur refuse une fouille de bagage consentie. Que faire ?",
+      "prompt": "Un visiteur refuse de consentir à une fouille de son bagage. Que faire ?"
+    },
+    {
+      "id": "aps62-q-04-27",
+      "reason": "La question porte sur l’action de l’APS, conformément aux réponses proposées, et non sur l’identité du décideur légal.",
+      "previous_prompt": "Qui décide seul, au poste, de notifier officiellement une violation à la CNIL ?",
+      "prompt": "Un APS découvre un possible incident concernant des données personnelles. Quel est son rôle au poste avant toute décision de notification à la CNIL ?"
+    },
+    {
+      "id": "aps62-q-05-28",
+      "reason": "Montrer le parcours explique la consigne, mais ne vérifie pas à lui seul sa compréhension.",
+      "previous_prompt": "Comment vérifier qu’une consigne d’accueil a été comprise ?",
+      "prompt": "Comment vérifier qu’une consigne d’accueil a été comprise ?"
+    },
+    {
+      "id": "aps62-q-06-05",
+      "reason": "Distinguer une correction de brouillon d’une erreur de suivi déjà enregistrée nécessitant information et traçabilité.",
+      "previous_prompt": "Un agent constate sa propre erreur. Quelle réponse déontologique ?",
+      "prompt": "Un agent découvre, dans une entrée déjà validée, sa propre erreur susceptible de fausser le suivi d’un incident. Quelle réponse déontologique ?"
+    },
+    {
+      "id": "aps62-q-06-12",
+      "reason": "Un récit encore identifiable ne doit pas être qualifié d’anonymisé.",
+      "previous_prompt": "Un récit du poste reste identifiable malgré le retrait des noms. Comment le traiter ?",
+      "prompt": "Un récit du poste reste identifiable malgré le retrait des noms. Comment le traiter ?"
+    },
+    {
+      "id": "aps62-q-06-19",
+      "reason": "Écarter l’hypothèse d’un signalement utile à la sécurité qui changerait la réponse.",
+      "previous_prompt": "Une rumeur concerne la vie privée d’un salarié. Quelle place dans la relève ?",
+      "prompt": "Une rumeur concerne la vie privée d’un salarié, sans lien avec la mission ni danger signalé. Quelle place dans la relève ?"
+    },
+    {
+      "id": "aps62-q-06-28",
+      "reason": "Demander une conduite et exclure une urgence immédiate, plutôt que demander abstraitement la valeur d’une procédure.",
+      "previous_prompt": "Que vaut une procédure réellement inconnue de l’agent ?",
+      "prompt": "Une procédure prévue pour une tâche non urgente vous est inconnue. Que faire avant de l’appliquer ?"
+    },
+    {
+      "id": "aps62-q-07-05",
+      "reason": "Plusieurs effets étaient possibles ; la question vise désormais explicitement le risque d’aggravation.",
+      "previous_prompt": "Un public se rassemble autour d’un conflit. Quel effet possible ?",
+      "prompt": "Un public se rassemble autour d’un conflit. Quel risque d’aggravation faut-il anticiper ?"
+    },
+    {
+      "id": "aps62-q-07-11",
+      "reason": "Une baisse du risque ou un besoin de traduction peuvent aussi conduire à réévaluer ; préciser le sens de l’évolution recherchée.",
+      "previous_prompt": "Quel indice mérite une réévaluation du risque ?",
+      "prompt": "Quel indice traduit une possible aggravation du conflit et justifie de réévaluer les mesures de protection ?"
+    },
+    {
+      "id": "aps62-q-07-15",
+      "reason": "L’ancien angle avec toutes les personnes devant soi pouvait être un positionnement défendable.",
+      "previous_prompt": "Quel emplacement de l’agent est préférable ?",
+      "prompt": "Quel emplacement permet à l’agent d’observer un conflit tout en conservant une possibilité de retrait ?"
+    },
+    {
+      "id": "aps62-q-07-21",
+      "reason": "Un bref silence peut parfois accompagner une baisse ; la réponse attendue repose ici sur plusieurs indices directs concordants.",
+      "previous_prompt": "Quel signe peut indiquer une baisse de tension ?",
+      "prompt": "Quel ensemble de signes directement observés concorde le mieux avec une baisse de tension ?"
+    },
+    {
+      "id": "aps62-q-07-22",
+      "reason": "Fixer les possibilités réelles et la limite d’accès, absentes de l’ancien énoncé.",
+      "previous_prompt": "Comment présenter un choix limité mais réel ?",
+      "prompt": "L’accès n’est pas encore autorisé. Une attente sur place et un contact avec le responsable sont réellement possibles. Quelle phrase propose ces deux choix sans autoriser l’entrée ?"
+    },
+    {
+      "id": "aps62-q-09-08",
+      "reason": "Les trois arguments étaient insuffisants à eux seuls dans certains contextes ; le défaut recherché est maintenant précis.",
+      "previous_prompt": "Quel argument est insuffisant à lui seul ?",
+      "prompt": "Quel argument repose seulement sur l’habitude de l’équipe, sans vérifier les faits ni le cadre applicable ?"
+    },
+    {
+      "id": "aps62-q-09-13",
+      "reason": "Les trois écrits étaient traçables à des degrés divers ; expliciter les quatre informations évaluées.",
+      "previous_prompt": "Quel écrit montre une décision traçable ?",
+      "prompt": "Quel écrit relie le fait observé, l’heure, la mesure décidée et l’information du responsable ?"
+    },
+    {
+      "id": "aps62-q-10-07",
+      "reason": "Distinguer le DUERP du plan de prévention d’une intervention, qui comporte également une analyse des risques.",
+      "previous_prompt": "Quel document rassemble l’évaluation des risques professionnels ?",
+      "prompt": "Quel document de l’employeur transcrit l’évaluation des risques professionnels pour l’ensemble des unités de travail ?"
+    },
+    {
+      "id": "aps62-q-10-22",
+      "reason": "Les vérifications partielles deviennent clairement insuffisantes, sans présenter un contrôle utile comme faux.",
+      "previous_prompt": "Une zone est balisée par une entreprise technique. Que vérifier avant d’y entrer ?",
+      "prompt": "Une zone est balisée par une entreprise technique. Quel ensemble de vérifications permet de décider si votre entrée est autorisée et sûre ?"
+    },
+    {
+      "id": "aps62-q-11-18",
+      "reason": "Ne pas exclure arbitrairement l’existence d’un APS possédant par ailleurs une habilitation et une mission adaptées.",
+      "previous_prompt": "Le client demande une réparation électrique urgente. Que répondre ?",
+      "prompt": "Un APS n’est ni habilité ni chargé d’effectuer la réparation électrique demandée en urgence par le client. Que doit-il répondre ?"
+    },
+    {
+      "id": "aps62-q-11-28",
+      "reason": "Le mot choc pouvait désigner un autre type de traumatisme ; préciser le risque électrique étudié.",
+      "previous_prompt": "Une personne victime d’un choc se sent mieux. Que faire ?",
+      "prompt": "Une personne a subi un choc électrique et dit se sentir mieux. Que faire ?"
+    },
+    {
+      "id": "aps62-q-13-23",
+      "reason": "Distinguer l’autorisation et la minimisation d’un simple contrôle de disponibilité technique du fichier.",
+      "previous_prompt": "Un export de main courante est demandé. Que vérifier ?",
+      "prompt": "Un export de main courante est demandé. Quelles vérifications permettent de décider si cette transmission est autorisée et proportionnée au besoin ?"
+    },
+    {
+      "id": "aps62-q-13-30",
+      "reason": "Ne pas suggérer qu’un traitement encore inconnu peut être clôturé par une simple description des suites attendues.",
+      "previous_prompt": "Quel critère permet une bonne clôture d’incident ?",
+      "prompt": "Avant de clore un incident, que doit confirmer le suivi ?"
+    },
+    {
+      "id": "aps62-q-14-07",
+      "reason": "Définir l’objet et le circuit, afin de ne pas confondre conservation d’un badge et manipulation d’un objet potentiellement dangereux.",
+      "previous_prompt": "Un objet a été volontairement remis à l’agent après un incident. Que faire ?",
+      "prompt": "Un badge d’accès trouvé après un incident a été volontairement remis à l’agent ; la procédure prévoit sa remise au responsable. Que faire ?"
+    },
+    {
+      "id": "aps62-q-14-16",
+      "reason": "La réponse attendue concerne l’accès ; l’ancien comportement interne pouvait relever d’une autre mesure.",
+      "previous_prompt": "Un comportement enfreint une consigne interne mais aucun délit n’est établi. Que faire ?",
+      "prompt": "Au contrôle d’entrée, un visiteur ne remplit pas une condition d’accès licite prévue par la consigne ; aucun délit n’est établi. Que faire ?"
+    },
+    {
+      "id": "aps62-q-15-04",
+      "reason": "Supprimer la contradiction entre refus et fouille déjà présentée comme consentie.",
+      "previous_prompt": "Un visiteur refuse une fouille consentie de son sac. Que faire ?",
+      "prompt": "Un visiteur refuse de consentir à une fouille de son sac. Que faire ?"
+    },
+    {
+      "id": "aps62-q-15-11",
+      "reason": "Faire libérer à la demande des secours pouvait être légitime ; préciser que l’erreur consiste à attendre cette demande.",
+      "previous_prompt": "Un accès réservé aux secours est occupé par un véhicule. Que faire ?",
+      "prompt": "Un accès réservé aux secours est occupé par un véhicule. Que faire ?"
+    }
+  ],
+  "independent_workshop_contexts": [
+    {
+      "activity": "aps62-01-01-transfert",
+      "exercise": "application",
+      "previous_context": "Le client demande maintenant de surveiller une porte donnant sur la rue depuis l’intérieur du site.\n\nExpliquez ce qui change et ce qui reste à vérifier."
+    },
+    {
+      "activity": "aps62-01-03-transfert",
+      "exercise": "application",
+      "previous_context": "On vous demande un travail de manutention pendant une ronde.\n\nFormulez les vérifications à effectuer sur la mission, la prévention et l’organisation du poste."
+    },
+    {
+      "activity": "aps62-02-01-transfert",
+      "exercise": "application",
+      "previous_context": "Une infraction grave est évoquée dans un message.\n\nExpliquez pourquoi le langage courant ne suffit pas à distinguer contravention, délit et crime."
+    },
+    {
+      "activity": "aps62-02-02-transfert",
+      "exercise": "application",
+      "previous_context": "L’agent se souvient imparfaitement de l’ordre des gestes.\n\nQuelle formulation choisir pour signaler les souvenirs incertains ?"
+    },
+    {
+      "activity": "aps62-02-03-transfert",
+      "exercise": "application",
+      "previous_context": "Un responsable vous demande de consulter le dossier médical de la personne sur un ordinateur ouvert.\n\nQuel autre moyen permet de transmettre les faits utiles ?"
+    },
+    {
+      "activity": "aps62-03-01-transfert",
+      "exercise": "application",
+      "previous_context": "Un vendeur affirme maintenant avoir vu une soustraction.\n\nQuelles précisions lui demander sans présenter son témoignage comme votre observation ?"
+    },
+    {
+      "activity": "aps62-03-02-transfert",
+      "exercise": "application",
+      "previous_context": "Les forces de l’ordre demandent une précision que vous n’avez pas observée.\n\nFormulez une réponse utile sans invention."
+    },
+    {
+      "activity": "aps62-04-01-transfert",
+      "exercise": "application",
+      "previous_context": "Une personne filmée demande ses propres images.\n\nExpliquez vers qui l’orienter et pourquoi il faut aussi protéger les tiers visibles."
+    },
+    {
+      "activity": "aps62-05-01-transfert",
+      "exercise": "application",
+      "previous_context": "Une personne ne comprend pas bien le français.\n\nProposez une adaptation qui conserve le même niveau de contrôle."
+    },
+    {
+      "activity": "aps62-05-02-transfert",
+      "exercise": "application",
+      "previous_context": "Comparez les obligations d’un agent public, d’un salarié privé et d’un visiteur.\n\nIndiquez les points à vérifier au lieu de généraliser."
+    },
+    {
+      "activity": "aps62-05-03-transfert",
+      "exercise": "application",
+      "previous_context": "La personne menace maintenant un participant.\n\nQuelles informations nouvelles changent l’évaluation ?\n\nQue faut-il continuer à distinguer ?"
+    },
+    {
+      "activity": "aps62-06-01-transfert",
+      "exercise": "application",
+      "previous_context": "Le cadeau est offert après une intervention, sans demande explicite.\n\nQuelles règles internes et quels risques devez-vous encore examiner ?"
+    },
+    {
+      "activity": "aps62-06-02-transfert",
+      "exercise": "application",
+      "previous_context": "Un supérieur demande le document sur son adresse personnelle pour gagner du temps.\n\nComment vérifier et proposer une solution appropriée ?"
+    },
+    {
+      "activity": "aps62-06-03-transfert",
+      "exercise": "application",
+      "previous_context": "Un document contient une erreur matérielle avérée.\n\nComment la corriger de façon traçable au lieu d’effacer l’ancienne information ?"
+    },
+    {
+      "activity": "aps62-06-04-transfert",
+      "exercise": "application",
+      "previous_context": "Le remplaçant arrive avec un badge du site mais sans vérification officielle disponible.\n\nQuelle distinction doit guider votre compte rendu ?"
+    },
+    {
+      "activity": "aps62-07-01-transfert",
+      "exercise": "application",
+      "previous_context": "Une seconde personne rejoint la réclamation.\n\nComment adapter votre positionnement et votre demande de relais sans dramatiser ?"
+    },
+    {
+      "activity": "aps62-07-02-transfert",
+      "exercise": "application",
+      "previous_context": "Le référent ne répond pas.\n\nFormulez une suite honnête qui conserve la limite d’accès."
+    },
+    {
+      "activity": "aps62-07-03-transfert",
+      "exercise": "application",
+      "previous_context": "La personne se déplace vers une zone interdite.\n\nExpliquez comment réévaluer la réponse et maintenir une information claire au PC."
+    },
+    {
+      "activity": "aps62-07-04-transfert",
+      "exercise": "application",
+      "previous_context": "Le visiteur présente des difficultés de compréhension.\n\nQuelles adaptations peuvent être tentées sans abandonner les limites ?"
+    },
+    {
+      "activity": "aps62-07-05-transfert",
+      "exercise": "application",
+      "previous_context": "Une semaine après, la même contradiction réapparaît.\n\nQuel indicateur manquait dans le suivi de la mesure ?"
+    },
+    {
+      "activity": "aps62-08-01-transfert",
+      "exercise": "application",
+      "previous_context": "Un message oral contredit la fiche validée.\n\nComment demander confirmation et conserver la trace de l’arbitrage ?"
+    },
+    {
+      "activity": "aps62-08-03-transfert",
+      "exercise": "application",
+      "previous_context": "L’heure exacte de la découverte est incertaine.\n\nComment distinguer heure de constat, heure de saisie et heure rapportée ?"
+    },
+    {
+      "activity": "aps62-08-05-transfert",
+      "exercise": "application",
+      "previous_context": "La relève est retardée.\n\nÀ qui rendre compte et comment préserver la continuité sans inventer une autorisation de quitter le poste ?"
+    },
+    {
+      "activity": "aps62-09-01-transfert",
+      "exercise": "application",
+      "previous_context": "Une caméra ne couvre pas le premier geste.\n\nPourquoi cette limite doit-elle apparaître dans l’analyse ?"
+    },
+    {
+      "activity": "aps62-09-02-transfert",
+      "exercise": "application",
+      "previous_context": "Le propriétaire revient pendant l’appel.\n\nPourquoi faut-il informer les secours au lieu de simplement raccrocher ?"
+    },
+    {
+      "activity": "aps62-09-03-transfert",
+      "exercise": "application",
+      "previous_context": "Le visiteur accepte librement d’attendre.\n\nComment vérifier que cette attente ne devient pas une contrainte déguisée ?"
+    },
+    {
+      "activity": "aps62-10-01-transfert",
+      "exercise": "application",
+      "previous_context": "Le passage sert aussi d’issue.\n\nPourquoi une barrière mal placée pourrait-elle créer un second risque ?"
+    },
+    {
+      "activity": "aps62-10-02-transfert",
+      "exercise": "application",
+      "previous_context": "Une consigne prévoit un appel horaire.\n\nQuelles autres composantes de la réponse au travail isolé faut-il vérifier ?"
+    },
+    {
+      "activity": "aps62-10-03-transfert",
+      "exercise": "application",
+      "previous_context": "Un responsable confirme oralement le changement mais sans précision sur le produit.\n\nQuelles questions restent ouvertes ?"
+    },
+    {
+      "activity": "aps62-10-04-transfert",
+      "exercise": "application",
+      "previous_context": "Une consigne de mise à l’abri est reçue.\n\nComment expliquer au public pourquoi sortir immédiatement n’est pas forcément la bonne réponse ?"
+    },
+    {
+      "activity": "aps62-10-05-transfert",
+      "exercise": "application",
+      "previous_context": "Un EPI est neuf mais incompatible avec un autre équipement.\n\nPourquoi la nouveauté ne suffit-elle pas à valider son usage ?"
+    },
+    {
+      "activity": "aps62-10-07-transfert",
+      "exercise": "application",
+      "previous_context": "Un appareil est annoncé « ATEX » sans correspondance vérifiée avec la zone.\n\nPourquoi faut-il encore contrôler son adéquation exacte ?"
+    },
+    {
+      "activity": "aps62-11-01-transfert",
+      "exercise": "application",
+      "previous_context": "Une installation paraît hors tension parce qu’un voyant est éteint.\n\nPourquoi cela ne constitue-t-il pas une vérification d’absence de tension ?"
+    },
+    {
+      "activity": "aps62-11-02-transfert",
+      "exercise": "application",
+      "previous_context": "Le courant paraît coupé mais d’autres sources d’énergie existent.\n\nQuelle information doit rester explicitement non confirmée ?"
+    },
+    {
+      "activity": "aps62-12-01-transfert",
+      "exercise": "application",
+      "previous_context": "Une ancienne publication réapparaît sans date.\n\nQuels éléments empêchent de la présenter comme une information du jour ?"
+    },
+    {
+      "activity": "aps62-12-02-transfert",
+      "exercise": "application",
+      "previous_context": "Un propriétaire potentiel se présente.\n\nPourquoi cette affirmation doit-elle être traitée selon la procédure plutôt que provoquer une manipulation immédiate ?"
+    },
+    {
+      "activity": "aps62-12-03-transfert",
+      "exercise": "application",
+      "previous_context": "Une mesure est impossible avec le matériel disponible.\n\nComment signaler l’écart et faire valider une réponse adaptée ?"
+    },
+    {
+      "activity": "aps62-12-04-transfert",
+      "exercise": "application",
+      "previous_context": "Une attitude inhabituelle s’explique par une difficulté de compréhension.\n\nComment actualiser le signalement et éviter de maintenir une interprétation dépassée ?"
+    },
+    {
+      "activity": "aps62-12-06-transfert",
+      "exercise": "application",
+      "previous_context": "Après exercice, un numéro d’astreinte s’avère périmé.\n\nFormulez une action, un responsable, une échéance et un test de correction."
+    },
+    {
+      "activity": "aps62-12-07-transfert",
+      "exercise": "application",
+      "previous_context": "Un témoin signale une nouvelle victime dans une autre zone.\n\nComment mettre à jour les secours sans perdre la trace du premier signalement ?"
+    },
+    {
+      "activity": "aps62-14-01-transfert",
+      "exercise": "application",
+      "previous_context": "La personne présente un badge appartenant à un autre salarié.\n\nQu’est-ce qui est établi et qu’est-ce qui reste à déterminer ?"
+    },
+    {
+      "activity": "aps62-14-02-transfert",
+      "exercise": "application",
+      "previous_context": "Une nouvelle image montre un passage en caisse mais pas le ticket.\n\nPourquoi faut-il encore éviter une conclusion précipitée ?"
+    },
+    {
+      "activity": "aps62-14-03-transfert",
+      "exercise": "application",
+      "previous_context": "Un agent qualifié est disponible mais n’a pas reçu la consigne du site.\n\nQuelles étapes manquent avant son relais ?"
+    },
+    {
+      "activity": "aps62-14-04-transfert",
+      "exercise": "application",
+      "previous_context": "La personne refuse un soin proposé.\n\nComment rendre compte de ce refus et rechercher les instructions adaptées sans conclure seul sur sa santé ?"
+    },
+    {
+      "activity": "aps62-14-05-transfert",
+      "exercise": "application",
+      "previous_context": "Un objet a déjà été déplacé.\n\nPourquoi faut-il tracer ce déplacement plutôt que le remettre discrètement « comme avant » ?"
+    },
+    {
+      "activity": "aps62-14-06-transfert",
+      "exercise": "application",
+      "previous_context": "L’OPJ demande qui a personnellement vu le début.\n\nPourquoi la réponse « nous l’avons vu » peut-elle être insuffisante ?"
+    },
+    {
+      "activity": "aps62-14-07-transfert",
+      "exercise": "application",
+      "previous_context": "Un renfort arrive et confirme avoir observé directement une infraction.\n\nReprenez votre plan en indiquant uniquement les décisions que cette information change."
+    },
+    {
+      "activity": "aps62-15-01-transfert",
+      "exercise": "application",
+      "previous_context": "Une modification de scène réduit un passage.\n\nQuelles parties du dispositif doivent être réexaminées par les responsables ?"
+    },
+    {
+      "activity": "aps62-15-03-transfert",
+      "exercise": "application",
+      "previous_context": "Une entrée supplémentaire est ouverte.\n\nQuelles vérifications sont nécessaires pour qu’elle ne crée pas un accès non maîtrisé ?"
+    },
+    {
+      "activity": "aps62-15-04-transfert",
+      "exercise": "application",
+      "previous_context": "Un public voisin commence à se déplacer vers la même issue.\n\nQue doit savoir le PC pour éviter de concentrer les flux ?"
+    },
+    {
+      "activity": "aps62-15-06-transfert",
+      "exercise": "application",
+      "previous_context": "Un VIP demande à faire entrer trois accompagnants non prévus.\n\nQui doit valider l’exception et comment la tracer ?"
+    },
+    {
+      "activity": "aps62-15-07-transfert",
+      "exercise": "application",
+      "previous_context": "La douchette fonctionne hors ligne et les résultats deviennent incertains.\n\nQuelle procédure de mode dégradé doit être confirmée avant de poursuivre ?"
+    }
+  ],
+  "coverage_exam_questions": [
+    "aps62-final-v10-12-information",
+    "aps62-final-v10-12-faits",
+    "aps62-final-v10-12-situation_evolutive",
+    "aps62-q-12-03",
+    "aps62-q-12-04",
+    "aps62-q-12-05",
+    "aps62-q-12-06",
+    "aps62-q-12-08",
+    "aps62-q-12-10",
+    "aps62-q-12-19",
+    "aps62-q-12-21",
+    "aps62-q-12-22",
+    "aps62-q-12-25",
+    "aps62-q-12-26",
+    "aps62-q-12-27",
+    "aps62-q-12-28",
+    "aps62-q-12-29"
+  ],
+  "course_question_changes": [
+    "aps62-11-01-q1",
+    "aps62-11-01-q2",
+    "aps62-12-01-q1",
+    "aps62-12-01-q2",
+    "aps62-12-02-q1",
+    "aps62-12-02-q2",
+    "aps62-12-06-q1",
+    "aps62-12-06-q2",
+    "aps62-12-07-q1",
+    "aps62-12-07-q2"
+  ],
+  "workshop_wording_repairs": [
+    {
+      "activity": "aps62-02-02-atelier",
+      "exercise": "constat",
+      "reason": "Le cas décrit une tentative de coup ; éviter de transformer cette tentative en coups effectivement portés."
+    },
+    {
+      "activity": "aps62-06-03-atelier",
+      "exercise": "constat",
+      "reason": "Cibler le préalable d’identité des contrôleurs, sans englober la vérification de tous les documents du poste."
+    },
+    {
+      "activity": "aps62-07-04-transfert",
+      "exercise": "application",
+      "reason": "Expliciter les deux éléments attendus au lieu de comparer abstraitement plusieurs formulations de fermeté."
+    },
+    {
+      "activity": "aps62-09-03-etude",
+      "exercise": "classement",
+      "reason": "Une évolution observée est aussi une information apprise ensuite ; distinguer changement actuel et information sur le passé."
+    },
+    {
+      "activity": "aps62-10-07-atelier",
+      "exercise": "constat",
+      "reason": "La facture et la préférence du propriétaire étaient également inconnues ; cibler l’adéquation de sécurité recherchée."
+    },
+    {
+      "activity": "aps62-11-01-transfert",
+      "exercise": "variante",
+      "reason": "L’ancien corrigé parlait d’étincelles absentes alors que le cas fournit seulement l’état d’un voyant."
+    },
+    {
+      "activity": "aps62-11-02-transfert",
+      "exercise": "variante",
+      "reason": "Poser une question sur la conduite à tenir, conformément aux réponses proposées, au lieu de demander uniquement une information."
+    },
+    {
+      "activity": "aps62-12-01-transfert",
+      "exercise": "application",
+      "reason": "Citer une qualification rapportée peut être utile si elle est attribuée ; rendre explicite la fausse confirmation dans le distracteur."
+    },
+    {
+      "activity": "aps62-12-04-transfert",
+      "exercise": "variante",
+      "reason": "L’ancien corrigé exigeait une autorisation vérifiée qui ne figurait pas dans le cas."
+    },
+    {
+      "activity": "aps62-12-04-transfert",
+      "exercise": "application",
+      "reason": "Un signalement peut aussi contenir une hypothèse attribuée ; cibler le fait directement observable évalué ici."
+    },
+    {
+      "activity": "aps62-12-07-transfert",
+      "exercise": "variante",
+      "reason": "Le cas portait sur une nouvelle victime, mais l’ancien corrigé affirmait un nouvel incident."
+    },
+    {
+      "activity": "aps62-14-02-atelier",
+      "exercise": "constat",
+      "reason": "Le cas se déroule au portique de sortie, sans observation personnelle du passage en caisse."
+    },
+    {
+      "activity": "aps62-14-04-atelier",
+      "exercise": "evolution",
+      "reason": "Éviter qu’un « si nécessaire » permette de différer l’alerte face à une difficulté respiratoire exprimée pendant une contrainte."
+    },
+    {
+      "activity": "aps62-14-07-etude",
+      "exercise": "choix-2",
+      "reason": "Les réponses sont des résumés des pièces, alors que l’ancien énoncé demandait une action."
+    },
+    {
+      "activity": "aps62-14-07-etude",
+      "exercise": "classement",
+      "reason": "Une déclaration est aussi une pièce du dossier ; préciser les catégories par la source évite leur recouvrement."
+    },
+    {
+      "activity": "aps62-15-01-transfert",
+      "exercise": "application",
+      "reason": "L’ancienne question parlait d’un accès déjà utilisé mais attendait une action avant l’ouverture ; fixer le moment du cas."
+    },
+    {
+      "activity": "aps62-15-07-atelier",
+      "exercise": "constat",
+      "reason": "Distinguer le message de l’outil d’une utilisation réellement confirmée par vérification."
+    },
+    {
+      "activity": "aps62-15-07-etude",
+      "exercise": "classement",
+      "reason": "Préciser dans le dossier le premier relais par fonction ; sans cette consigne, plusieurs responsables pouvaient être sollicités légitimement."
+    }
+  ],
+  "section_budget_repairs": [
+    {
+      "section": "aps62-01-01",
+      "previous_minutes": 60,
+      "minutes": 57
+    },
+    {
+      "section": "aps62-01-02",
+      "previous_minutes": 60,
+      "minutes": 57
+    },
+    {
+      "section": "aps62-01-03",
+      "previous_minutes": 60,
+      "minutes": 56
+    },
+    {
+      "section": "aps62-01-04",
+      "previous_minutes": 60,
+      "minutes": 70
+    },
+    {
+      "section": "aps62-02-01",
+      "previous_minutes": 60,
+      "minutes": 56
+    },
+    {
+      "section": "aps62-02-02",
+      "previous_minutes": 60,
+      "minutes": 55
+    },
+    {
+      "section": "aps62-02-03",
+      "previous_minutes": 60,
+      "minutes": 69
+    },
+    {
+      "section": "aps62-03-01",
+      "previous_minutes": 60,
+      "minutes": 53
+    },
+    {
+      "section": "aps62-03-02",
+      "previous_minutes": 60,
+      "minutes": 67
+    },
+    {
+      "section": "aps62-05-01",
+      "previous_minutes": 60,
+      "minutes": 56
+    },
+    {
+      "section": "aps62-05-02",
+      "previous_minutes": 60,
+      "minutes": 55
+    },
+    {
+      "section": "aps62-05-03",
+      "previous_minutes": 60,
+      "minutes": 69
+    },
+    {
+      "section": "aps62-06-01",
+      "previous_minutes": 60,
+      "minutes": 57
+    },
+    {
+      "section": "aps62-06-02",
+      "previous_minutes": 60,
+      "minutes": 57
+    },
+    {
+      "section": "aps62-06-03",
+      "previous_minutes": 60,
+      "minutes": 56
+    },
+    {
+      "section": "aps62-06-04",
+      "previous_minutes": 60,
+      "minutes": 70
+    },
+    {
+      "section": "aps62-07-01",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-07-02",
+      "previous_minutes": 60,
+      "minutes": 57
+    },
+    {
+      "section": "aps62-07-03",
+      "previous_minutes": 60,
+      "minutes": 57
+    },
+    {
+      "section": "aps62-07-04",
+      "previous_minutes": 60,
+      "minutes": 57
+    },
+    {
+      "section": "aps62-07-05",
+      "previous_minutes": 60,
+      "minutes": 71
+    },
+    {
+      "section": "aps62-08-01",
+      "previous_minutes": 60,
+      "minutes": 68
+    },
+    {
+      "section": "aps62-08-02",
+      "previous_minutes": 60,
+      "minutes": 53
+    },
+    {
+      "section": "aps62-08-03",
+      "previous_minutes": 60,
+      "minutes": 63
+    },
+    {
+      "section": "aps62-08-04",
+      "previous_minutes": 60,
+      "minutes": 53
+    },
+    {
+      "section": "aps62-08-05",
+      "previous_minutes": 60,
+      "minutes": 63
+    },
+    {
+      "section": "aps62-09-01",
+      "previous_minutes": 60,
+      "minutes": 56
+    },
+    {
+      "section": "aps62-09-02",
+      "previous_minutes": 60,
+      "minutes": 55
+    },
+    {
+      "section": "aps62-09-03",
+      "previous_minutes": 60,
+      "minutes": 69
+    },
+    {
+      "section": "aps62-10-01",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-10-02",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-10-03",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-10-04",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-10-05",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-10-06",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-10-07",
+      "previous_minutes": 60,
+      "minutes": 72
+    },
+    {
+      "section": "aps62-11-01",
+      "previous_minutes": 60,
+      "minutes": 53
+    },
+    {
+      "section": "aps62-11-02",
+      "previous_minutes": 60,
+      "minutes": 67
+    },
+    {
+      "section": "aps62-12-01",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-12-02",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-12-03",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-12-04",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-12-05",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-12-06",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-12-07",
+      "previous_minutes": 60,
+      "minutes": 72
+    },
+    {
+      "section": "aps62-14-01",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-14-02",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-14-03",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-14-04",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-14-05",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-14-06",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-14-07",
+      "previous_minutes": 60,
+      "minutes": 72
+    },
+    {
+      "section": "aps62-15-01",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-15-02",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-15-03",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-15-04",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-15-05",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-15-06",
+      "previous_minutes": 60,
+      "minutes": 58
+    },
+    {
+      "section": "aps62-15-07",
+      "previous_minutes": 60,
+      "minutes": 72
+    }
+  ],
+  "counts": {
+    "modules": 15,
+    "sections": 62,
+    "activities": 452,
+    "course_questions": 124,
+    "practice_exercises": 364,
+    "planned_minutes": 3720,
+    "module12_minutes": 420
+  },
+  "limits": [
+    "Les 62 vidéos, leurs voix et leurs transcriptions n’ont pas été régénérées.",
+    "Une revue éditoriale ne garantit pas l’absence absolue d’ambiguïté ; les remontées apprenants et formateurs restent nécessaires.",
+    "Les durées restent un scénario pédagogique à éprouver ; aucune attestation de conformité globale ni validation pratique n’est délivrée par cette révision."
+  ]
+}

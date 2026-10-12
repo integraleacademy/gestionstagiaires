@@ -35,7 +35,7 @@
   {% if activity.practice.journal %}<section class="aps-journal"><h3>Votre entrée de main courante</h3><p>Composez l’entrée avec les propositions ci-dessus. Le document se met à jour avec vos choix.</p><dl data-journal-preview></dl></section>{% endif %}
   <section class="aps-remediation" data-remediation hidden><h3>Réviser les points à reprendre</h3><p>Une autre situation pour chaque difficulté repérée. Répondez, puis vérifiez vos révisions.</p><div data-remediation-items></div><button type="button" class="aps-practice-review">Vérifier mes révisions</button><p data-review-status role="status"></p></section>
   <p class="aps-practice-result" role="status" aria-live="polite" data-practice-result></p>
-  <p class="aps-small" data-practice-draft role="status">{{ 'Aucun résultat stagiaire n’est enregistré en aperçu.' if preview_mode else 'Vos réponses seront enregistrées lorsque vous terminerez l’activité.' }}</p>
+  <p class="aps-small" data-practice-draft role="status">{{ 'Aucun résultat stagiaire n’est enregistré en aperçu.' if preview_mode else 'Chaque vérification conserve votre réponse et vos erreurs. Vous pouvez les corriger pour progresser.' }}</p>
   <noscript>Activez JavaScript pour réaliser cet atelier interactif.</noscript>
   <script id="apsPracticeConfig" type="application/json">{{ {
     'practice': activity.practice,

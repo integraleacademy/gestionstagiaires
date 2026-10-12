@@ -11,7 +11,7 @@
 <div class="nel-admin">
   <header class="nel-head">
     <div><span class="nel-eyebrow">Intégrale Academy · Formations</span><h1>E-learning</h1><p>Explorez les cours illustrés, composez les parcours de vos sessions et suivez le travail de vos stagiaires.</p></div>
-    <a class="nel-button" href="{{ url_for('admin_sessions') }}">← Sessions</a>
+    <div style="display:flex;flex-wrap:wrap;gap:10px">{% if config.get('NATIVE_MODULE_SIGNATURES_ENABLED') %}<a class="nel-button" href="{{ url_for('native_module_signatures.index') }}">Tableaux de suivi à signer</a>{% endif %}<a class="nel-button" href="{{ url_for('admin_sessions') }}">← Sessions</a></div>
   </header>
 
   {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="nel-flash nel-flash--{{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
@@ -88,4 +88,5 @@
 }|tojson }}</script>
 <script src="{{ url_for('static', filename='js/native-elearning-admin.js', v='20260907-1') }}" defer></script>
 {% endblock %}
+
 

@@ -4,6 +4,7 @@ from types import ModuleType
 
 from .web import create_native_elearning_blueprint
 from .mac_aps import is_training as is_mac_aps_training
+from .module_signature_web import register_module_signatures
 from elearning_orders import learner_context
 
 
@@ -11,6 +12,7 @@ def register_native_elearning(legacy_app: ModuleType) -> None:
     """Attach the native APS e-learning routes to the legacy Flask app."""
 
     flask_app = legacy_app.app
+    register_module_signatures(legacy_app)
     if "native_elearning" in flask_app.blueprints:
         return
     flask_app.register_blueprint(
@@ -31,5 +33,6 @@ def register_native_elearning(legacy_app: ModuleType) -> None:
         )
     )
     flask_app.config["NATIVE_ELEARNING_ENABLED"] = True
+
 
 

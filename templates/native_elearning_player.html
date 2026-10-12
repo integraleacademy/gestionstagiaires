@@ -140,7 +140,7 @@
       <div class="native-progress-summary">
         <div><span>Activités terminées</span><strong id="nativeProgressLabel">{{ progress.progress_percent|round|int }} %</strong></div>
         <div class="native-progress-track" aria-hidden="true"><i id="nativeProgressBar" style="width:{{ progress.progress_percent }}%"></i></div>
-        {% if progress.scored_activities %}<small>Score actuel : <b id="nativeScoreLabel">{{ progress.score_percent|round|int }} %</b></small>{% endif %}
+        {% if progress.scored_activities %}<small>Score actuel : <b id="nativeScoreLabel">{{ progress.score_percent|round|int }} %</b></small><small>Premier essai enregistré : <b id="nativeFirstScoreLabel">{{ ((progress.assessment_summary.first_attempt_score_percent|round|int) ~ ' %') if progress.assessment_summary and progress.assessment_summary.first_attempt_score_percent is not none else '—' }}</b></small>{% endif %}
         {% if progress.required_seconds %}<section class="native-duration-summary">
           <span>Durée obligatoire : <b>{{ required_time_label }}</b></span>
           <span id="nativeDurationStatus">{{ 'Durée obligatoire atteinte' if progress.duration_met else 'Temps actif restant' }}</span>
@@ -323,17 +323,18 @@
     'initialVideoProgress': progress.get('video_progress', {})
   }|tojson }}</script>
   <script src="{{ url_for('static', filename='js/native-video-pacing.js', v='20261010-pacing') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261010-vtc-lessons') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261012-assessments') }}" defer></script>
   {% endif %}
 {% if course.training_label == 'VTC' %}<script src="{{ url_for('static', filename='js/vtc-video-companion.js', v='20261011-readable-video') }}" defer></script>{% endif %}
 {% if course.training_label == 'MAC APS' %}<script src="{{ url_for('static', filename='js/mac-aps-elearning.js', v='20261012-1') }}" defer></script>{% endif %}
 <script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-2') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>
-<script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261007-6') }}" defer></script>
-{% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261007-6-1') }}" defer></script>{% endif %}
+<script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261012-assessments') }}" defer></script>
+{% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261012-assessments') }}" defer></script>{% endif %}
 {% if activity.practice and activity.practice.mode == 'journey' %}<script src="{{ url_for('static', filename='js/vtc-journey.js', v='20261010-v6') }}" defer></script>{% endif %}
 {% if activity.a3p and activity.a3p.kind == 'case' %}<script src="{{ url_for('static', filename='js/a3p-elearning.js', v='20261010-2') }}" defer></script>{% endif %}
 {% if activity.production %}<script src="{{ url_for('static', filename='js/aps62-production.js', v='20261010-v10') }}" defer></script>{% endif %}
 </body>
 </html>
+
 

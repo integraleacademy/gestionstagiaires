@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-assessment-review.css', v='20261012') }}">
+<main class="assessment-review">
+  <header><span class="assessment-eyebrow">Suivi pédagogique</span><h1>Réponses et erreurs avant correction</h1><p>{{ initial.course.title }}</p>
+    <nav><a href="{{ url_for('native_elearning.admin_live', course_id=initial.course.id) }}">← Suivi du module</a><a href="{{ url_for('native_elearning.admin_course_attempts_export', course_id=initial.course.id) }}">Télécharger tous les essais en CSV</a></nav>
+    <p class="assessment-note">Le premier essai enregistré est calculé sur les questions déjà vérifiées. Les ateliers ont leur propre résultat. Les réponses précédant l’activation de ce suivi ne peuvent pas être reconstituées.</p>
+  </header>
+  {% for learner in initial.learners %}
+  {% set stats = learner.assessment_summary %}
+  <section class="assessment-card"><h2>{{ learner.trainee_name }}</h2><p>{{ learner.session_name }} · {{ learner.course_version }}</p>
+    <div class="assessment-metrics"><p>Premier essai · questions<strong>{{ (stats.first_attempt_score_percent|round|int) ~ ' %' if stats.first_attempt_score_percent is not none else '—' }}</strong><small>{{ stats.assessed_items }} question(s) enregistrée(s)</small></p><p>Score actuel · questions<strong>{{ learner.score_percent|round|int }} %</strong><small>{{ stats.attempt_count }} essai(s), {{ stats.incorrect_attempt_count }} erreur(s)</small></p><p>Premier essai · ateliers<strong>{{ (stats.practice.first_attempt_score_percent|round|int) ~ ' %' if stats.practice.first_attempt_score_percent is not none else '—' }}</strong><small>{{ stats.practice.attempt_count }} essai(s), {{ stats.practice.incorrect_attempt_count }} erreur(s)</small></p></div>
+    {% if learner.assessment_attempts %}<details><summary>Voir les {{ learner.assessment_attempts|length }} réponses enregistrées</summary><div class="assessment-table-wrap"><table><thead><tr><th scope="col">Question ou exercice</th><th scope="col">Essai</th><th scope="col">Réponse donnée</th><th scope="col">Résultat</th><th scope="col">Date UTC</th></tr></thead><tbody>
+    {% for attempt in learner.assessment_attempts %}<tr class="{{ 'assessment-error' if not attempt.correct }}"><td><small>{{ attempt.dossier }}</small><strong>{{ attempt.title }}</strong><small>{{ 'Question évaluée' if attempt.kind == 'question' else 'Atelier' }}</small></td><td>{{ attempt.attempt_number }}{{ ' · initial' if attempt.attempt_number == 1 }}</td><td class="assessment-answer">{{ attempt.answer_text }}</td><td>{{ 'Réussi' if attempt.correct else 'À revoir' }}{% if not attempt.correct and attempt.explanation %}<details><summary>Repère pédagogique</summary><p>{{ attempt.explanation }}</p></details>{% endif %}</td><td>{{ attempt.submitted_at }}</td></tr>{% endfor %}
+    </tbody></table></div></details>{% else %}<p class="assessment-note">Aucun essai enregistré pour ce module. Les réponses déjà corrigées avant la mise en place de l’historique restent conservées dans le suivi existant.</p>{% endif %}
+  </section>
+  {% else %}<section class="assessment-card"><h2>Aucun parcours démarré</h2><p>Les premiers essais apparaîtront ici dès qu’un stagiaire vérifie une réponse.</p></section>{% endfor %}
+</main>
+{% endblock %}

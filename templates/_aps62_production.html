@@ -2,7 +2,7 @@
 <section class="aps-production" data-aps-production>
   <header><span class="aps-label">À vous de produire · Dossier fictif</span><h2>Votre mission</h2>
     <p>{{ production.brief }}</p><p>Examinez les pièces et rédigez votre réponse. Vous pourrez ensuite la comparer aux repères, l’améliorer et signaler les points à revoir avec votre formateur.</p>
-    <p class="aps-small">Ce travail est un entraînement avec autoévaluation. Il ne reçoit pas de note automatique ni de validation du formateur.</p>
+    <p class="aps-small">Ce travail est un entraînement. Vous pouvez demander une analyse personnalisée par l’IA avec une note indicative ; la validation du formateur reste distincte.</p>
   </header>
   {% if production.instructions %}<p>{{ production.instructions }}</p>{% endif %}
   {% if production.audio %}<section class="aps-production-audio"><h3>{{ production.audio.title or 'Écouter la situation' }}</h3><audio controls preload="metadata" src="{{ production.audio.src }}" aria-label="{{ production.audio.title or 'Appel fictif' }}"></audio>
@@ -24,6 +24,28 @@
   </form>
   <p data-production-status role="status" aria-live="polite"></p>
   <section class="aps-production-feedback" data-production-feedback hidden aria-label="Repères de comparaison"></section>
+  <section class="aps-production-ai" data-production-ai aria-labelledby="apsProductionAITitle">
+    <header class="aps-ai-heading">
+      <span class="aps-label">Votre retour personnalisé</span>
+      <h3 id="apsProductionAITitle">Comprendre vos points forts et progresser</h3>
+      <p>L’IA examine votre production critère par critère : ce qui est réussi, les erreurs à corriger, les éléments à compléter et les passages du cours à revoir.</p>
+      <p class="aps-ai-notice">La note proposée est indicative. Cette analyse ne constitue ni une validation par votre formateur, ni une certification de compétence.</p>
+    </header>
+    <div class="aps-ai-actions">
+      <button type="button" class="aps-practice-check aps-ai-request" data-ai-request{% if not production_ai_config|default({}) or not production_ai_config.configured %} disabled{% endif %}>Analyser ma production</button>
+      <button type="button" class="aps-ai-secondary" data-ai-refresh>Actualiser mes analyses</button>
+    </div>
+    <p class="aps-ai-privacy">Seuls votre texte et les éléments pédagogiques de cet exercice sont transmis à OpenAI. Utilisez les informations fictives du dossier.</p>
+    <p class="aps-ai-status" data-ai-status role="status" aria-live="polite">{% if not production_ai_config|default({}) or not production_ai_config.configured %}L’analyse personnalisée est momentanément indisponible. Les repères de comparaison restent accessibles.{% endif %}</p>
+    <p class="aps-ai-stale" data-ai-stale hidden>Votre texte a changé depuis cette analyse. Vous pouvez demander un nouveau retour après avoir terminé vos corrections.</p>
+    <div data-ai-result hidden></div>
+    <details class="aps-ai-history" data-ai-history hidden>
+      <summary>Mes analyses et versions précédentes</summary>
+      <label for="apsProductionAIHistory">Choisir une version analysée</label>
+      <select id="apsProductionAIHistory" data-ai-history-select></select>
+      <details class="aps-ai-snapshot"><summary>Voir le texte envoyé pour cette analyse</summary><div data-ai-answer-snapshot></div></details>
+    </details>
+  </section>
   <script id="apsProductionConfig" type="application/json">{{ {
     'production': production, 'completed': activity_completed,
     'preview': preview_mode|default(false),
@@ -32,4 +54,8 @@
     'csrfToken': preview_config.csrfToken if preview_mode else csrf_token,
     'accessToken': access_token|default('')
   }|tojson }}</script>
+  <script id="apsProductionAIConfig" type="application/json">{{ production_ai_config|default({})|tojson }}</script>
 </section>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-production-ai.css', v='20261012-1') }}">
+<script src="{{ url_for('static', filename='js/aps62-production-ai.js', v='20261012-1') }}" defer></script>
+

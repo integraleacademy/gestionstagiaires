@@ -47,6 +47,7 @@
     lastInteraction: Date.now(),
     toastTimeout: 0,
     saving: false,
+    pendingAnswer: null,
     progress: {
       remaining_seconds: Number(config.initialRemainingSeconds || 0),
       module_complete: Boolean(config.initialModuleComplete),
@@ -425,6 +426,8 @@
     if (progressBar) progressBar.style.width = `${percent}%`;
     if (progressLabel) progressLabel.textContent = `${Math.round(percent)} %`;
     if (scoreLabel) scoreLabel.textContent = `${Math.round(Number(progress.score_percent) || 0)} %`;
+    const firstScore = document.getElementById('nativeFirstScoreLabel');
+    if (firstScore) firstScore.textContent = progress.assessment_summary?.first_attempt_score_percent == null ? '—' : `${Math.round(progress.assessment_summary.first_attempt_score_percent)} %`;
     if (remainingTime) remainingTime.textContent = formatSeconds(progress.remaining_seconds);
     if (durationStatus) durationStatus.textContent = progress.duration_met ? "Durée obligatoire atteinte" : "Temps actif restant";
     updateAction();
@@ -661,13 +664,25 @@
     actionButton.textContent = "Enregistrement…";
     try {
       if (mode === "answer") {
-        const result = await postJson(config.answerUrl, { answer: collectAnswer() });
+        const answer = collectAnswer();
+        const fingerprint = JSON.stringify(answer);
+        if (!state.pendingAnswer || state.pendingAnswer.fingerprint !== fingerprint) {
+          state.pendingAnswer = {fingerprint, id: makeId()};
+        }
+        const result = await postJson(config.answerUrl, { answer, request_id: state.pendingAnswer.id });
+        state.pendingAnswer = null;
         applyProgress(result.progress);
         showAnswerFeedback(Boolean(result.correct), Boolean(result.retry_required));
         if (result.explanation) {
           const detail = document.createElement('p');
           detail.textContent = result.explanation;
           document.getElementById('nativeAnswerFeedback')?.append(detail);
+        }
+        const diagnostic = result.progress?.assessment_diagnostics?.question?.[config.activityId];
+        if (diagnostic) {
+          const attempts = document.createElement('p');
+          attempts.textContent = `Premier essai enregistré : ${diagnostic.first_correct ? 'réussi' : 'à revoir'} · ${diagnostic.attempts} essai${diagnostic.attempts > 1 ? 's' : ''}.`;
+          document.getElementById('nativeAnswerFeedback')?.append(attempts);
         }
         if (result.retry_required) {
           actionButton.dataset.mode = "answer";
@@ -756,3 +771,4 @@
   window.addEventListener("pagehide", finishTracking);
   window.addEventListener("pageshow", (event) => { if (event.persisted && state.stopped) startTracking(); });
 })();
+

@@ -14,6 +14,7 @@ from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Seque
 
 from .videos import videos_complete, vtc_pacing_enabled, mac_aps_pacing_enabled
 from .vtc_video_quality import compatible_record
+from . import assessment
 
 
 HEARTBEAT_MAX_CREDIT_SECONDS = 20.0
@@ -149,6 +150,7 @@ class NativeElearningStore:
                 progress_columns = {row["name"] for row in connection.execute("PRAGMA table_info(learner_course_progress)")}
                 if "video_progress_json" not in progress_columns:
                     connection.execute("ALTER TABLE learner_course_progress ADD COLUMN video_progress_json TEXT NOT NULL DEFAULT '{}'")
+                assessment.ensure_schema(connection)
             _INITIALIZED_DATABASES.add(key)
 
     @contextlib.contextmanager
@@ -225,6 +227,7 @@ class NativeElearningStore:
     ) -> Dict[str, Any]:
         completed = [str(value) for value in _json_list(row["completed_json"])]
         answers = _json_dict(row["answers_json"])
+        assessment_diagnostics = _json_dict(row['assessment_diagnostics_json'])
         total = len(activity_order)
         progress_percent = round((len(set(completed)) / total) * 100, 2) if total else 0.0
         correct_count = sum(
@@ -240,6 +243,8 @@ class NativeElearningStore:
             "current_activity_id": row["current_activity_id"],
             "completed_activity_ids": completed,
             "answers": answers,
+            "assessment_diagnostics": assessment_diagnostics,
+            "assessment_summary": assessment.summary_for(assessment_diagnostics),
             "video_progress": _json_dict(row["video_progress_json"]),
             "active_seconds": math.floor(float(row["active_seconds"] or 0) * 100) / 100,
             "score_percent": round(float(row["score_percent"] or 0), 2),
@@ -286,7 +291,23 @@ class NativeElearningStore:
             ),
         )
 
-    def record_practice_result(self, access, activity_id, result):
+    def record_question_attempt(self, access, activity_id, answer, correct, *, request_id='', competency='', revision=''):
+        """Persist an initial/error response without unlocking an activity."""
+        now = _utc_iso()
+        with self._transaction() as connection:
+            self._ensure_progress_row(connection, access, now_iso=now)
+            try:
+                return assessment.record_attempt(connection, access, activity_id=activity_id,
+                    item_id=activity_id, kind='question', answer=answer, correct=correct,
+                    submitted_at=now, request_id=request_id, competency=competency, revision=revision)
+            except ValueError as exc:
+                raise TrackingError(str(exc)) from exc
+
+    def assessment_history(self, access, *, activity_id=None):
+        with self._connect() as connection:
+            return assessment.history_for(connection, access, activity_id=activity_id)
+
+    def record_practice_result(self, access, activity_id, result, *, request_id=''):
         """Save server-marked choices and weak concepts; never award time or completion."""
         now = _utc_iso()
         with self._transaction() as connection:
@@ -301,6 +322,13 @@ class NativeElearningStore:
             chosen.update(result['answers'])
             diagnostics = saved.setdefault('practice_diagnostics', {})
             for item in result['feedback']:
+                try:
+                    assessment.record_attempt(connection, access, activity_id=activity_id,
+                        item_id=item['id'], kind='practice', answer=result['answers'][item['id']],
+                        correct=item['correct'], submitted_at=now, request_id=request_id,
+                        competency=item.get('competency', ''), revision=result['revision'])
+                except ValueError as exc:
+                    raise TrackingError(str(exc)) from exc
                 if (item['id'] in diagnostics and previous_choices.get(item['id']) == chosen.get(item['id'])
                         and diagnostics[item['id']].get('correct') == item['correct']):
                     continue  # A retry or full confirmation must not inflate attempts.
@@ -316,7 +344,7 @@ class NativeElearningStore:
                         details={'passed': result['passed'], 'total': result['total'],
                                  'exercise_ids': [f['id'] for f in result['feedback']]})
 
-    def record_production(self, access, activity_id, answers, *, compared=False, self_review=None):
+    def record_production(self, access, activity_id, answers, *, compared=False, self_review=None, capture_first=False):
         """Keep an individual draft and first submission without awarding a score."""
         now = _utc_iso()
         with self._transaction() as connection:
@@ -327,9 +355,10 @@ class NativeElearningStore:
             stored = _json_dict(row['answers_json'])
             saved = stored.setdefault(activity_id, {})
             saved.update(production_answers=dict(answers), production_draft=True)
-            if compared:
+            if compared or capture_first:
                 saved.setdefault('production_first_answers', dict(answers))
                 saved.setdefault('production_first_submitted_at', now)
+            if compared:
                 saved['production_feedback_seen'] = True
             if self_review is not None and saved.get('production_feedback_seen'):
                 saved['production_self_review'] = dict(self_review)
@@ -917,6 +946,7 @@ class NativeElearningStore:
         required_seconds: int = 0,
         answer: Optional[Mapping[str, Any]] = None,
         video_requirements: Optional[Mapping[str, Mapping[str, float]]] = None,
+        assessment_attempt: Optional[Mapping[str, Any]] = None,
     ) -> Dict[str, Any]:
         if activity_id not in activity_order:
             raise TrackingError("Activité inconnue.")
@@ -936,6 +966,13 @@ class NativeElearningStore:
             completed = [str(value) for value in _json_list(row["completed_json"])]
             answers = _json_dict(row["answers_json"])
             already_completed = activity_id in completed
+            if assessment_attempt is not None and not already_completed:
+                try:
+                    assessment.record_attempt(connection, access, activity_id=activity_id,
+                        item_id=activity_id, kind='question', submitted_at=now_iso,
+                        **dict(assessment_attempt))
+                except ValueError as exc:
+                    raise TrackingError(str(exc)) from exc
             if not already_completed:
                 completed.append(activity_id)
             if answer is not None and (activity_id not in answers or
@@ -1072,3 +1109,4 @@ class NativeElearningStore:
             }
             for row in rows
         ]
+

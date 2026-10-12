@@ -55,7 +55,8 @@ class PacedEditionTests(unittest.TestCase):
 
     def test_catalogue_is_complete_and_no_learning_content_is_lost(self):
         manifest = curriculum_manifest()
-        if manifest['version'] != VERSION:
+        if not all(VERSION in [module['version'], *module.get('previous_versions', [])]
+                   for module in manifest['modules']):
             self.assertEqual(manifest['version'], PREVIOUS)
             self.skipTest('All paced media are required before advancing the catalogue')
         videos = read(ROOT/'video_manifest_v9.json')
@@ -68,7 +69,7 @@ class PacedEditionTests(unittest.TestCase):
         minutes = activities = 0
         for module in manifest['modules']:
             self.assertIn(PREVIOUS, module['previous_versions'])
-            current = load_bundled_course(module['id'])
+            current = load_bundled_course(module['id'], VERSION)
             previous = load_bundled_course(module['id'], PREVIOUS)
             self.assertEqual(current['version'], VERSION)
             self.assertEqual(learning_content(current), learning_content(previous))

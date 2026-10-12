@@ -73,7 +73,11 @@
     progress.append(track, element("span", "", `${Math.round(Number(item.progress_percent) || 0)} %`));
     progressCell.append(progress);
     row.append(progressCell);
-    row.append(element("td", "", `${Math.round(Number(item.score_percent) || 0)} %`));
+    const scoreCell = element('td', '', `${Math.round(Number(item.score_percent) || 0)} %`);
+    const initial = item.assessment_summary?.first_attempt_score_percent;
+    scoreCell.append(element('small', 'nellive-duration', initial == null ? 'Premier essai : non enregistré' : `Premier essai : ${Math.round(initial)} % (${item.assessment_summary.assessed_items} questions)`));
+    if (item.assessment_summary?.total_attempt_count) scoreCell.append(element('small', 'nellive-duration', `${item.assessment_summary.total_attempt_count} essais, questions et ateliers`));
+    row.append(scoreCell);
     const timeCell = element("td", "nellive-time", item.active_time_label || "00:00:00");
     if (item.required_seconds) {
       timeCell.append(element("small", "nellive-duration", `Obligatoire : ${item.required_time_label}`));
@@ -137,3 +141,4 @@
   render(payload);
   window.setInterval(refresh, 10000);
 })();
+

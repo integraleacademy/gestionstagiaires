@@ -56,6 +56,7 @@ class ProgressReader:
         self.catalog = CourseCatalog(root)
         self.database_path = root / "tracking.sqlite3"
         self.courses = {}
+        self.ai_path = root / "production_ai.sqlite3"
 
     def course(self, module):
         # Missing version must not silently report against today's curriculum.
@@ -87,6 +88,7 @@ class ProgressReader:
         if table == "progress":
             for row in records:
                 row.setdefault("video_progress_json", "{}")
+                row.setdefault("assessment_diagnostics_json", "{}")
             return [NativeElearningStore._serialize_progress(row) for row in records]
         return records
 
@@ -125,6 +127,8 @@ class ProgressReader:
             key = (course["id"], course["version"])
             course_titles[key] = course["title"]
             progress = project_progress(by_key.get(key, {}), course)
+            access = {"session_id": session_id, "trainee_id": learner_id,
+                      "course_id": key[0], "course_version": key[1]}
             ids = set(progress["completed_activity_ids"])
             activities = [a for section in course["sections"] for a in section.get("activities", [])]
             questions = [a for a in activities if a.get("scored")]
@@ -147,6 +151,9 @@ class ProgressReader:
                           status_label=STATUS_LABELS.get(progress["status"], "En cours"),
                           completed_activities=len(ids), total_activities=len(course["activity_order"]),
                           score_percent=progress["score_percent"] if answered else None,
+                          assessment_summary=progress.get("assessment_summary") or {},
+                          assessment_diagnostics=progress.get("assessment_diagnostics") or {},
+                          assessment_attempts=self.assessment_attempts(access, course) if detailed else [],
                           answered_questions=answered, total_questions=len(questions),
                           completed_videos=progress["completed_video_count"], total_videos=progress["required_video_count"],
                           started_at_label=date_label(progress.get("started_at")), updated_at_label=date_label(progress.get("updated_at")))
@@ -169,6 +176,9 @@ class ProgressReader:
                                 "review": [{"label": criterion["label"], "needs_help": answer.get("production_self_review", {}).get(criterion["id"]) == "needs_help"}
                                            for criterion in production["rubric"] if answer.get("production_self_review", {}).get(criterion["id"]) in ("checked", "needs_help")],
                             }
+                            if self.ai_path.is_file():
+                                from elearning_native.production_ai import read_analyses
+                                rows[-1]["production"]["ai"] = read_analyses(self.ai_path, access, activity["id"])
                     module["sections"].append({"title": section.get("title") or "Séquence", "activities": rows,
                                                "completed": sum(a["completed"] for a in rows), "total": len(rows)})
             modules.append(module)
@@ -210,6 +220,18 @@ class ProgressReader:
                 title = "Examen blanc final" if attempt["exam_id"] in {"final", "vtc-final"} else "Examen blanc " + attempt["exam_id"].replace("vtc-", "").replace("module-", "module ")
                 report["exams"].append({**row, "title": title, "date_label": date_label(attempt["submitted_at"])})
         return report
+
+    def assessment_attempts(self, access, course):
+        """Return the purchased module's recorded checks without creating a DB."""
+        if not self.database_path.is_file():
+            return []
+        from elearning_native.assessment import describe_history, history_for
+        selected = set(course["activity_order"])
+        with sqlite3.connect(self.database_path.as_uri() + "?mode=ro", uri=True, timeout=15) as db:
+            db.row_factory = sqlite3.Row
+            if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='learner_assessment_attempts'").fetchone():
+                return []
+            return describe_history(course, [row for row in history_for(db, access) if row["activity_id"] in selected])
 
 
 def group_progress(host, group):
@@ -483,3 +505,4 @@ def register_routes(host, bp, *, page, customer, partner_data):
             writer.writerow(["'" + str(value) if str(value).lstrip().startswith(("=", "+", "-", "@")) else value for value in values])
         return Response("\ufeff" + output.getvalue(), content_type="text/csv; charset=utf-8",
                         headers={"Content-Disposition": 'attachment; filename="releve-connexions.csv"'})
+

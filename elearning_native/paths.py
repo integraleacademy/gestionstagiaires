@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Mapping
 from .importer import CourseCatalog, CourseImportError
 from .videos import course_videos, videos_complete
 from .vtc_video_quality import compatible_progress
+from .assessment import summary_for
 
 
 MAX_PATH_MODULES = 100
@@ -138,6 +139,9 @@ def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> 
     scored = [activity["id"] for section in course.get("sections") or []
               for activity in section.get("activities") or [] if activity.get("scored")]
     answers = {key: value for key, value in (progress.get("answers") or {}).items() if key in order}
+    raw_diagnostics = progress.get('assessment_diagnostics') or {}
+    diagnostics = {kind: {key: value for key, value in (raw_diagnostics.get(kind) or {}).items() if key in order}
+                   for kind in ('question', 'practice')}
     correct = sum(bool(answers.get(key, {}).get("correct")) for key in scored)
     score = round(correct / len(scored) * 100, 2) if scored else 100.0
     finished = bool(order) and len(completed) == len(order)
@@ -151,6 +155,7 @@ def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> 
     )
     return {
         **progress, "answers": answers, "completed_activity_ids": [key for key in order if key in completed],
+        "assessment_diagnostics": diagnostics, "assessment_summary": summary_for(diagnostics),
         "progress_percent": round(len(completed) / len(order) * 100, 2) if order else 0,
         "score_percent": score, "correct_answers": correct, "scored_activities": len(scored),
         "status": status, "active_seconds": active_seconds,
@@ -164,4 +169,5 @@ def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> 
                                      for video_id, duration in videos.items()),
         "completed_at": progress.get("completed_at") if finished and duration_met else None,
     }
+
 

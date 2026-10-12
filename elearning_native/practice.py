@@ -48,7 +48,7 @@ def _learning_text(value):
 def adapt_course(course):
     if course.get('source', {}).get('type') != 'academy-aps62':
         return course
-    if course.get('interaction_revision') in ('20261006-aps62-v3', '20261006-aps62-v4', '20261006-aps62-v5', '20261007-aps62-v6', '20261007-aps62-v7', '20261007-aps62-v8', '20261007-aps62-v9', '20261010-aps62-v10', '20261010-aps62-v11'):
+    if course.get('interaction_revision') in ('20261006-aps62-v3', '20261006-aps62-v4', '20261006-aps62-v5', '20261007-aps62-v6', '20261007-aps62-v7', '20261007-aps62-v8', '20261007-aps62-v9', '20261010-aps62-v10', '20261010-aps62-v11', '20261012-aps62-v12'):
         return copy.deepcopy(course)
     course = _learning_text(course)
     total = 0
@@ -167,3 +167,4 @@ def grade_practice(practice, answers, review_answers=None, *, step=None):
     return {'correct': passed == len(feedback), 'passed': passed, 'total': len(feedback),
             'review': review,
             'feedback': feedback, 'answers': normalized, 'revision': practice['revision']}
+
