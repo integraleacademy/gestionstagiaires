@@ -245,7 +245,7 @@
               {% endif %}
             </form>
             <div class="native-answer-feedback{% if activity_completed %} is-visible {{ 'is-correct' if saved_answer.get('correct') else 'is-incorrect' }}{% endif %}" id="nativeAnswerFeedback" role="status" aria-live="polite">
-              {% if activity_completed %}{{ 'Bonne réponse enregistrée.' if saved_answer.get('correct') else 'Réponse enregistrée. La correction sera reprise avec votre formateur.' }}{% endif %}
+              {% if activity_completed %}{{ 'Bonne réponse enregistrée.' if saved_answer.get('correct') else 'Réponse enregistrée. Consultez l’explication pour reprendre les points à améliorer.' if course.training_label == 'VTC' else 'Réponse enregistrée. La correction sera reprise avec votre formateur.' }}{% endif %}
               {% if answer_explanation %}<p>{{ answer_explanation }}</p>{% endif %}
             </div>
           {% endif %}
@@ -329,7 +329,7 @@
     'initialTimedObjectives': progress.get('timed_objectives', [])
   }|tojson }}</script>
   <script src="{{ url_for('static', filename='js/native-video-pacing.js', v='20261010-pacing') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261012-macaps-v2') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261012-autonomous-v2' if course.training_label == 'VTC' else '20261012-macaps-v2') }}" defer></script>
   {% endif %}
 {% if course.training_label == 'VTC' %}<script src="{{ url_for('static', filename='js/vtc-video-companion.js', v='20261011-readable-video') }}" defer></script>{% endif %}
 {% if course.training_label == 'MAC APS' %}<script src="{{ url_for('static', filename='js/mac-aps-elearning.js', v='20261012-1') }}" defer></script>{% endif %}
@@ -339,7 +339,7 @@
 {% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261012-assessments') }}" defer></script>{% endif %}
 {% if activity.practice and activity.practice.mode == 'journey' %}<script src="{{ url_for('static', filename='js/vtc-journey.js', v='20261010-v6') }}" defer></script>{% endif %}
 {% if activity.a3p and activity.a3p.kind == 'case' %}<script src="{{ url_for('static', filename='js/a3p-elearning.js', v='20261010-2') }}" defer></script>{% endif %}
-{% if activity.production %}<script src="{{ url_for('static', filename='js/vtc-production.js' if course.training_label == 'VTC' else 'js/aps62-production.js', v='20261012-optional' if course.training_label == 'VTC' else '20261012-v12') }}" defer></script>{% endif %}
+{% if activity.production %}<script src="{{ url_for('static', filename='js/vtc-production.js' if course.training_label == 'VTC' else 'js/aps62-production.js', v='20261012-autonomous-v2' if course.training_label == 'VTC' else '20261012-v12') }}" defer></script>{% endif %}
 </body>
 </html>
 

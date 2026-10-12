@@ -21,6 +21,7 @@ from pathlib import Path
 CURRENT_VERSION = "20261012-cma-v1"
 BANK_ROOT = Path(__file__).parent / "vtc" / "cma"
 LETTERS = tuple("ABCDEFG")
+RETRYABLE_CORRECTION_MESSAGE = "La correction doit être vérifiée à nouveau. Votre copie est conservée ; vous pouvez relancer cette matière."
 _SPECS = ((45, 3, 6, 10, 5, 1, 2), (45, 2, 6, 16, 2, 1, 2),
           (30, 3, 6, 20, 0, 1, 0), (30, 2, 6, 7, 3, 2, 2),
           (30, 1, 4, 20, 0, 1, 0), (30, 3, 6, 12, 4, 1, 2),
@@ -96,12 +97,19 @@ def public_subject(subject):
     return public
 
 
+def _public_notice(bank):
+    return bank["notice"].replace(
+        "Les QRC sont évaluées selon un barème explicite ; un doute de correction appelle une vérification par l’équipe pédagogique.",
+        "Les réponses courtes sont évaluées selon un barème explicite. Une analyse complémentaire est lancée si nécessaire.")
+
+
 def public_bank(bank, *, questions=False):
     public = {k: copy.deepcopy(bank[k]) for k in (
         "id", "version", "title", "reviewed_at", "minutes", "question_count", "qcm_count",
         "qrc_count", "coefficient_total", "sources", "notice", "qcm_scoring_notice",
         "timing_notice", "extra_training")}
     public["subjects"] = [public_subject(s) for s in bank["subjects"]]
+    public["notice"] = _public_notice(bank)
     if not questions:
         for subject in public["subjects"]:
             for key in ("questions", "passage_title", "passage_lines"):
@@ -154,6 +162,41 @@ def qrc_assignment(bank, subject):
 
 def needs_ai(subject, answers):
     return any(q["kind"] == "qrc" and str(answers.get(q["id"]) or "").strip() for q in subject["questions"])
+
+
+def _verified_correction(correction, letter):
+    """Only a checked result is reusable; legacy review flags are not a grade."""
+    if (not isinstance(correction, dict) or correction.get("status") != "corrected"
+            or correction.get("subject") != letter):
+        return False
+    score = correction.get("score")
+    if (not isinstance(score, (int, float)) or isinstance(score, bool)
+            or not math.isfinite(score) or not 0 <= score <= 20
+            or type(correction.get("minimum_met")) is not bool):
+        return False
+    written = [q for q in correction.get("corrections", []) if q.get("kind") == "qrc"]
+    ai = correction.get("ai_feedback")
+    if any(str(q.get("selected") or "").strip() for q in written) and not isinstance(ai, dict):
+        return False
+    if ai is not None and (not isinstance(ai, dict) or ai.get("status") != "corrected"
+                           or ai.get("needs_human_review") or ai.get("human_review_reasons")):
+        return False
+    if ai and any(item.get("status") == "uncertain" for item in ai.get("criteria", [])):
+        return False
+    for question in written:
+        for item in [question, *question.get("criteria", [])]:
+            points, maximum = item.get("points"), item.get("max_points")
+            if (item.get("status") == "uncertain" or not isinstance(points, (int, float))
+                    or isinstance(points, bool) or not math.isfinite(points)
+                    or not isinstance(maximum, (int, float)) or isinstance(maximum, bool)
+                    or not math.isfinite(maximum) or not 0 <= points <= maximum):
+                return False
+    if correction.get("subject") == "D" and ai:
+        count, errors = ai.get("spelling_error_count"), ai.get("spelling_errors")
+        if (ai.get("spelling_review_complete") is not True or type(count) is not int
+                or count < 0 or not isinstance(errors, list) or count != len(errors)):
+            return False
+    return True
 
 
 def grade_subject(bank, letter, answers, *, qrc_grader=None, allow_pending=False):
@@ -221,7 +264,7 @@ def grade_subject(bank, letter, answers, *, qrc_grader=None, allow_pending=False
         score = None
     else:
         score = round(max(0, min(20, qcm_score + qrc_score - penalty)), 2)
-    return {"subject": letter, "title": subject["title"], "coefficient": subject["coefficient"],
+    result = {"subject": letter, "title": subject["title"], "coefficient": subject["coefficient"],
             "minimum": subject["minimum"], "qcm_score": qcm_score, "qrc_score": None if pending else round(qrc_score, 2),
             "score": score, "max_score": 20, "minimum_met": score >= subject["minimum"] if score is not None and not review else None,
             "status": "pending_correction" if pending else "needs_human_review" if review else "corrected",
@@ -229,6 +272,12 @@ def grade_subject(bank, letter, answers, *, qrc_grader=None, allow_pending=False
             "spelling_errors": copy.deepcopy((ai_result or {}).get("spelling_errors", [])),
             "corrections": corrections, "ai_feedback": copy.deepcopy(ai_result),
             "lesson_refs": sorted({ref for q in corrections if q["points"] is None or q["points"] < q["max_points"] for ref in q["lesson_refs"]})}
+    if (pending and not allow_pending) or (not pending and not _verified_correction(result, letter)):
+        # The correction engine performs its bounded second analysis. An
+        # incomplete response must still remain retryable at this boundary.
+        from .vtc_ai import VtcAIError
+        raise VtcAIError("invalid_response")
+    return result
 
 
 def result_for(bank, state):
@@ -238,9 +287,14 @@ def result_for(bank, state):
     for letter in LETTERS:
         part = state["parts"][letter]
         row = copy.deepcopy(part.get("correction")) or grade_subject(bank, letter, part["answers"], allow_pending=True)
+        if part.get("correction") and not _verified_correction(row, letter):
+            # Keep the historical analysis as provisional evidence, even when
+            # only its top-level review flag was changed in an older record.
+            row.update(status="needs_human_review", minimum_met=None)
         row["delivery"] = part["status"]
         row["submitted_at"] = part.get("submitted_at")
-        row["grading_status"] = part.get("grading_status", "pending") if row["status"] == "pending_correction" else row["status"]
+        row["grading_status"] = part.get("grading_status", "pending") if row["status"] in {
+            "pending_correction", "needs_human_review"} else row["status"]
         row["grading_error"] = part.get("grading_error")
         rows.append(row)
     pending = [row["subject"] for row in rows if row["status"] == "pending_correction"]
@@ -249,12 +303,12 @@ def result_for(bank, state):
     weighted_sum = sum(row["score"] * row["coefficient"] for row in rows) if all(row["score"] is not None for row in rows) else None
     average = round(weighted_sum / 17, 2) if weighted_sum is not None else None
     passed = weighted_sum >= 170 and all(row["minimum_met"] for row in rows) if not pending and not review else None
-    return {"subjects": rows, "weighted_average": average if not review else None,
+    return {"subjects": rows, "weighted_average": average if not pending and not review else None,
             "provisional_average": average, "passed": passed,
             "status": "pending_correction" if pending else "needs_human_review" if review else "admissible" if passed else "not_admissible",
             "pending_subjects": pending, "review_subjects": review,
             "failed_minima": [r["subject"] for r in rows if r["minimum_met"] is False],
-            "notice": bank["notice"]}
+            "notice": _public_notice(bank)}
 
 
 def _utc(ts):
@@ -465,6 +519,13 @@ class CmaStore:
             self._write(db, state, now)
             return state
 
+    @staticmethod
+    def _grading_journal(part):
+        history = part.setdefault("grading_history", [])
+        if not isinstance(history, list) or any(not isinstance(entry, dict) for entry in history):
+            raise CmaError("L’historique de correction doit être vérifié. Votre copie est conservée.", status=409)
+        return history
+
     def claim_grading(self, session_id, trainee_id, attempt_id, letter):
         now = self.clock()
         with self._db() as db:
@@ -474,11 +535,26 @@ class CmaStore:
                 raise CmaError("Les corrigés s’ouvrent après remise des sept matières.", status=409)
             subject_for(load_bank(state["version"]), letter)
             part = state["parts"][letter]
-            if part.get("correction"):
+            if _verified_correction(part.get("correction"), letter):
                 return state, None
             if part.get("grading_status") == "working" and part.get("lease_until", 0) > now:
                 raise CmaError("Cette correction est déjà en cours. Vous pouvez reprendre son résultat dans quelques instants.", code="grading_busy", status=409)
+            history = self._grading_journal(part)
+            previous = part.get("correction")
+            if previous and not any(entry.get("correction") == previous for entry in history):
+                # Legacy analyses have no reliable completion timestamp. Record
+                # when they were preserved, without inventing a grading date.
+                history.append({"status": "previous_correction", "recorded_at": _utc(now),
+                                "correction": copy.deepcopy(previous)})
+            old_claim = part.get("lease")
+            if old_claim:
+                old_entry = next((entry for entry in history if entry.get("claim") == old_claim), None)
+                if old_entry is None:
+                    old_entry = {"claim": old_claim}
+                    history.append(old_entry)
+                old_entry.update(status="expired", finished_at=_utc(now))
             claim = secrets.token_hex(16)
+            history.append({"claim": claim, "status": "working", "started_at": _utc(now)})
             part.update(grading_status="working", lease=claim, lease_until=now + 120, grading_error=None)
             self._write(db, state, now)
             return state, claim
@@ -487,13 +563,33 @@ class CmaStore:
         now = self.clock()
         with self._db() as db:
             state = self._owned(db, session_id, trainee_id, attempt_id)
+            subject_for(load_bank(state["version"]), letter)
             part = state["parts"][letter]
+            if not isinstance(claim, str) or not re.fullmatch(r"[a-f0-9]{32}", claim):
+                raise CmaError("Correction introuvable. Rechargez le bilan.", status=409)
             if part.get("lease") != claim:
+                if not part.get("lease") and part.get("last_grading_claim") == claim:
+                    # A transport retry cannot append history or replace the
+                    # result of an already finished worker, even after restart.
+                    return state
                 raise CmaError("Une autre correction a repris cette matière. Rechargez le bilan.", status=409)
+            history = self._grading_journal(part)
+            entry = next((item for item in history if item.get("claim") == claim), None)
+            if entry is None:
+                # A worker started just before deployment may finish afterwards.
+                entry = {"claim": claim}
+                history.append(entry)
+            entry["finished_at"] = _utc(now)
             if correction is not None:
-                part.update(correction=copy.deepcopy(correction), grading_status=correction["status"], grading_error=None)
+                entry["correction"] = copy.deepcopy(correction)
+            if _verified_correction(correction, letter):
+                part.update(correction=copy.deepcopy(correction), grading_status="corrected", grading_error=None)
+                entry.update(status="corrected")
             else:
-                part.update(grading_status="unavailable", grading_error=error or "Correction temporairement indisponible. Votre copie est conservée.")
+                message = error or RETRYABLE_CORRECTION_MESSAGE
+                part.update(grading_status="unavailable", grading_error=message)
+                entry.update(status="unavailable", error=message)
+            part["last_grading_claim"] = claim
             part.pop("lease", None)
             part.pop("lease_until", None)
             self._write(db, state, now)

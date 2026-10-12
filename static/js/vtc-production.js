@@ -11,26 +11,50 @@
   const saved=config.saved || {};
   fields.forEach(field=>{field.value=saved.production_answers?.[field.dataset.productionField] || '';});
   const collect=()=>Object.fromEntries(fields.map(field=>[field.dataset.productionField,field.value.trim()]));
+  let completedAnswers=config.completed?collect():null;
   const same=(a,b)=>Boolean(a&&b)&&Object.keys(a).length===Object.keys(b).length&&Object.keys(a).every(key=>Object.prototype.hasOwnProperty.call(b,key)&&a[key]===b[key]);
+  const validPoints=(points,maximum)=>Number.isFinite(points)&&Number.isFinite(maximum)&&maximum>0&&points>=0&&points<=maximum;
+  const confirmed=result=>Boolean(result)&&result.status==='corrected'&&result.needs_human_review===false
+    &&(result.human_review_reasons===undefined||(Array.isArray(result.human_review_reasons)&&result.human_review_reasons.length===0))
+    &&validPoints(result.score,result.max_score)&&Array.isArray(result.criteria)&&result.criteria.length>0
+    &&result.criteria.every(item=>item&&item.status!=='uncertain'&&(item.uncertain===undefined||item.uncertain===false)&&validPoints(item.points,item.max_points))
+    &&Math.abs(result.criteria.reduce((sum,item)=>sum+item.points,0)-result.score)<1e-7
+    &&Math.abs(result.criteria.reduce((sum,item)=>sum+item.max_points,0)-result.max_score)<1e-7;
+  // Historic manual decisions are only displayed for workshops already completed on the server.
+  const archived=result=>Boolean(config.completed)&&Boolean(result)&&result.status==='trainer_reviewed'
+    &&result.needs_human_review===false&&result.trainer_review?.outcome==='reviewed'&&validPoints(result.score,result.max_score);
+  const retryMessage='Cette correction n’est pas confirmée. Relancez la correction de votre copie ; vos réponses sont conservées et vous pouvez poursuivre le parcours sans terminer cet atelier facultatif.';
+  const errorText=message=>!message||/\b(?:IA|ChatGPT|OpenAI|formateurs?)\b|intervention humaine|équipe pédagogique/i.test(String(message))
+    ?'La correction est momentanément indisponible. Votre texte reste affiché ; vous pouvez réessayer ou poursuivre le parcours.'
+    :String(message);
   function node(tag,text){const el=document.createElement(tag);if(text!==undefined)el.textContent=String(text);return el;}
   function list(title,items,parent=feedback){if(!Array.isArray(items)||!items.length)return;parent.append(node('h3',title));const ul=node('ul');items.forEach(text=>ul.append(node('li',text)));parent.append(ul);}
   function send(payload){
     const run=async()=>{
       const response=await fetch(config.url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Elearning-CSRF':config.csrfToken},body:JSON.stringify({...payload,...(config.preview?{}:{access_token:config.accessToken})})});
       const result=(response.headers.get('content-type')||'').includes('application/json')?await response.json():{};
-      if(!response.ok||!result.ok)throw new Error(result.error || 'Votre demande n’a pas abouti. Gardez votre copie et réessayez.');
+      if(!response.ok||!result.ok)throw new Error(errorText(result.error));
       return result;
     };
     const result=queue.then(run,run);queue=result.catch(()=>{});return result;
   }
   function showFeedback(result,answers){
     latestFeedback=result;correctedAnswers={...answers};feedback.replaceChildren();
+    if(!confirmed(result)&&!archived(result)){
+      feedback.append(node('h2',config.completed?'Atelier terminé · résultat conservé':'Correction à relancer'),node('p',config.completed?'Cet atelier a déjà été validé. Votre copie et son état d’avancement sont conservés.':retryMessage));
+      feedback.hidden=false;reviewLabel.hidden=true;review.checked=false;button.textContent='Relancer ma correction';return;
+    }
+    button.textContent='Obtenir ma correction détaillée';
+    if(archived(result)){
+      feedback.append(node('h2','Résultat conservé de cet atelier terminé'),node('p',`${result.score} / ${result.max_score}`));
+      const detail=node('details');detail.append(node('summary','Commentaire conservé avec ce résultat'),node('p',result.trainer_review.comment));feedback.append(detail);
+      feedback.hidden=false;reviewLabel.hidden=true;review.checked=true;return;
+    }
     feedback.append(node('h2','Votre correction détaillée'));
     const heading=node('div');heading.className='vtc-feedback-score';
     if(Number.isFinite(result.score)&&Number.isFinite(result.max_score))heading.append(node('strong',`${result.score} / ${result.max_score}`));
-    heading.append(node('span',result.trainer_review?'Retour du formateur':'Retour pédagogique'));feedback.append(heading);
+    heading.append(node('span','Retour pédagogique'));feedback.append(heading);
     if(result.summary)feedback.append(node('p',result.summary));
-    if(result.needs_human_review){const warning=node('p','Certains points nécessitent une relecture du formateur. Vous pouvez reprendre votre réponse et demander une nouvelle correction. Votre copie est conservée et vous pouvez poursuivre le parcours.');warning.className='vtc-feedback-warning';feedback.append(warning);list('Points à vérifier',(result.human_review_reasons||[]).map(reason=>/^Le correcteur .+ demande une relecture du formateur[.]$/.test(reason)?'Une relecture du formateur est nécessaire pour confirmer certains points.':reason));}
     list('Ce que vous avez bien fait',result.strengths);
     (result.criteria||[]).forEach(criterion=>{
       const box=node('article');box.className='vtc-feedback-criterion';box.append(node('h4',`${criterion.label} · ${criterion.points} / ${criterion.max_points}`));
@@ -45,26 +69,28 @@
     });
     list('Vos prochaines étapes',result.next_steps);
     if(result.revision_targets?.length){feedback.append(node('h3','Les notions à revoir'));const ul=node('ul');result.revision_targets.forEach(target=>ul.append(node('li',typeof target==='string'?target:(target.title||target.label||target.ref||''))));feedback.append(ul);}
-    if(result.trainer_review){feedback.append(node('h3','Relecture du formateur'),node('p',result.trainer_review.comment));}
+    if(config.completed&&result.trainer_review){const archived=node('details');archived.append(node('summary','Commentaire conservé avec ce résultat'),node('p',result.trainer_review.comment));feedback.append(archived);}
     feedback.append(node('p','Cette correction accompagne votre atelier facultatif. Elle ne constitue pas un résultat à l’examen officiel.'));
-    feedback.hidden=false;reviewLabel.hidden=Boolean(config.preview)||Boolean(result.needs_human_review);review.checked=Boolean(config.completed);
+    feedback.hidden=false;reviewLabel.hidden=Boolean(config.preview);review.checked=Boolean(config.completed);
   }
   function showHistory(attempts){
     history.replaceChildren();if(!attempts?.length){history.hidden=true;return;}history.append(node('h3','Vos copies et vos progrès'));
     [...attempts].reverse().forEach((attempt,index)=>{
       const detail=node('details');const date=new Date(attempt.submitted_at).toLocaleString('fr-FR');
-      const score=Number.isFinite(attempt.feedback?.score)?` · ${attempt.feedback.score}/${attempt.feedback.max_score}`:'';
-      const state={processing:'Correction en cours',failed:'Correction à relancer',corrected:'Corrigé',needs_human_review:'Relecture demandée',trainer_reviewed:'Relu par le formateur'}[attempt.status]||'';
+      const verified=(attempt.status==='corrected'&&confirmed(attempt.feedback))||(attempt.status==='trainer_reviewed'&&archived(attempt.feedback));
+      const score=verified?` · ${attempt.feedback.score}/${attempt.feedback.max_score}`:'';
+      const state=attempt.status==='processing'?'Correction en cours':verified?'Correction enregistrée':'Correction à relancer';
       detail.append(node('summary',`Copie ${index+1} · ${date} · ${state}${score}`));
       config.production.response_fields.forEach(field=>detail.append(node('h4',field.label),node('p',attempt.answers?.[field.id]||'Sans réponse')));
-      if(attempt.feedback?.summary)detail.append(node('p',attempt.feedback.summary));history.append(detail);
+      if(verified&&confirmed(attempt.feedback)&&attempt.feedback?.summary)detail.append(node('p',attempt.feedback.summary));
+      if(verified&&attempt.feedback?.trainer_review?.comment){const archived=node('details');archived.append(node('summary','Commentaire conservé'),node('p',attempt.feedback.trainer_review.comment));detail.append(archived);}history.append(detail);
     });history.hidden=false;
   }
   async function saveDraft(){
     if(config.preview||config.completed||busy||leaving)return;
     const currentRevision=revision,answers=collect();
     try{await send({stage:'draft',production_answers:answers});if(currentRevision===revision){dirty=false;saveStatus.textContent='Brouillon enregistré.';}}
-    catch(error){saveStatus.textContent=error.message;}
+    catch(error){saveStatus.textContent=errorText(error.message);}
   }
   async function saveDraftForNavigation(){
     if(config.preview||config.completed)return;
@@ -101,8 +127,8 @@
     clearTimeout(timer);busy=true;button.disabled=true;fields.forEach(field=>{field.readOnly=true;});review.checked=false;
     status.textContent='Analyse de vos réponses… La correction peut prendre quelques instants';
     const answers=collect();
-    try{const result=await send({stage:'correct',production_answers:answers});dirty=false;showFeedback(result.feedback,answers);showHistory(result.history||[]);saveStatus.textContent=config.preview?'Aperçu : aucun suivi stagiaire modifié.':'Copie et correction enregistrées.';status.textContent=result.current_copy===false?'Une autre copie a été enregistrée dans votre espace. Rechargez la page avant de valider cet atelier.':result.feedback.needs_human_review?'Vous pouvez reprendre les points signalés ou demander une relecture à votre formateur.':'Lisez votre correction. Vous pouvez améliorer votre réponse, puis la faire corriger à nouveau.';feedback.scrollIntoView?.({behavior:'smooth',block:'start'});}
-    catch(error){status.textContent=error.message;if(!config.preview)saveStatus.textContent='Votre copie reste affichée sur cette page. Vérifiez l’enregistrement avant de fermer.';}
+    try{const result=await send({stage:'correct',production_answers:answers});dirty=false;showFeedback(result.feedback,answers);showHistory(result.history||[]);saveStatus.textContent=config.preview?'Aperçu : aucun suivi stagiaire modifié.':confirmed(result.feedback)?'Copie et correction enregistrées.':'Copie enregistrée ; correction à relancer.';status.textContent=result.current_copy===false?'Une autre copie a été enregistrée dans votre espace. Rechargez la page avant de valider cet atelier.':!confirmed(result.feedback)?retryMessage:'Lisez votre correction. Vous pouvez améliorer votre réponse, puis la faire corriger à nouveau.';feedback.scrollIntoView?.({behavior:'smooth',block:'start'});}
+    catch(error){status.textContent=errorText(error.message);if(!config.preview)saveStatus.textContent='Votre copie reste affichée sur cette page. Vérifiez l’enregistrement avant de fermer.';}
     finally{busy=false;button.disabled=false;fields.forEach(field=>{field.readOnly=false;});}
   });
   if(saved.production_ai_feedback){showFeedback(saved.production_ai_feedback,saved.production_ai_answers||saved.production_answers||{});if(!same(collect(),correctedAnswers)){review.checked=false;status.textContent='La correction affichée concerne votre copie précédente. Faites corriger la version actuelle pour valider cet atelier.';}}
@@ -112,15 +138,16 @@
   // The shared player delegates completion to the production currently mounted.
   window.aps62Production={
     saveDraftForNavigation,
-    markCompleted(){config.completed=true;dirty=false;clearTimeout(timer);fields.forEach(field=>{field.readOnly=true;});button.disabled=true;review.disabled=true;},
+    markCompleted(){completedAnswers=collect();config.completed=true;dirty=false;clearTimeout(timer);fields.forEach(field=>{field.readOnly=true;});button.disabled=true;review.disabled=true;},
     collectForCompletion(){
+      if(config.completed)return{production_answers:{...completedAnswers},production_reviewed:true};
       if(leaving)throw new Error('Le brouillon est en cours d’enregistrement avant de passer à la suite.');
       if(busy)throw new Error('Attendez la fin de la correction.');
       if(!form.reportValidity())throw new Error('Complétez votre production.');
       const answers=collect();
       if(!latestFeedback||!correctedAnswers||!same(answers,correctedAnswers))throw new Error('Faites corriger la version actuelle de votre travail pour valider cet atelier.');
-      if(latestFeedback.needs_human_review)throw new Error('Reprenez les points signalés ou faites relire cette copie par votre formateur.');
-      if(!latestFeedback.trainer_review && Number(latestFeedback.score)<Number(config.production.pass_points||12))throw new Error('Pour valider cet atelier, améliorez votre réponse avec les conseils pour atteindre l’objectif de 12/20. Vous pouvez poursuivre le parcours sans valider cet atelier facultatif.');
+      if(!confirmed(latestFeedback))throw new Error('Relancez la correction de cette copie avant de valider cet atelier facultatif.');
+      if(Number(latestFeedback.score)<Number(config.production.pass_points||12))throw new Error('Pour valider cet atelier, améliorez votre réponse avec les conseils pour atteindre l’objectif de 12/20. Vous pouvez poursuivre le parcours sans valider cet atelier facultatif.');
       if(!review.checked)throw new Error('Confirmez que vous avez lu la correction et les conseils.');
       clearTimeout(timer);return{production_answers:answers,production_reviewed:true};
     }

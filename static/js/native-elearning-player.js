@@ -649,6 +649,7 @@
     feedback.textContent = correct
       ? "Bonne réponse enregistrée."
       : retryRequired ? "À reprendre : consultez l’explication et choisissez à nouveau avant de continuer."
+      : document.body.classList.contains("vtc-course") ? "Réponse enregistrée. Consultez l’explication pour reprendre les points à améliorer."
       : "Réponse enregistrée. La correction sera reprise avec votre formateur.";
     feedback.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }

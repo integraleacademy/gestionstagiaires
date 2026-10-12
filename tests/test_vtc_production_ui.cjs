@@ -6,7 +6,7 @@ const path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../static/js/vtc-production.js'),'utf8');
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 const ANSWER='Je confirme le point de rendez-vous et l’heure de prise en charge.';
-const FEEDBACK={score:17,max_score:20,needs_human_review:false,summary:'Votre réponse est précise.',strengths:['Le rendez-vous est confirmé.'],criteria:[{label:'Informer',points:17,max_points:20,feedback:'Préciser le nom de réservation.',evidence:'Je confirme',improvement:'Ajouter la référence.'}],errors:[],next_steps:['Vérifier le numéro.'],model_response:{report:'<img src=x onerror=alert(1)> Exemple de référence.'}};
+const FEEDBACK={status:'corrected',human_review_reasons:[],score:17,max_score:20,needs_human_review:false,summary:'Votre réponse est précise.',strengths:['Le rendez-vous est confirmé.'],criteria:[{label:'Informer',points:17,max_points:20,feedback:'Préciser le nom de réservation.',evidence:'Je confirme',improvement:'Ajouter la référence.'}],errors:[],next_steps:['Vérifier le numéro.'],model_response:{report:'<img src=x onerror=alert(1)> Exemple de référence.'}};
 function fixture(options={}){
  const config={production:{response_fields:[{id:'report',label:'Votre message'}],pass_points:12},url:'/production',csrfToken:'csrf',accessToken:'signed',saved:{production_answers:{report:ANSWER}},...options};
  const textareas=config.production.response_fields.map(field=>`<textarea data-production-field="${field.id}" required></textarea>`).join('');
@@ -43,9 +43,9 @@ test('Provider failure preserves text and does not invent feedback',async()=>{
  assert.throws(()=>f.w.aps62Production.collectForCompletion(),/corriger/);f.close();
 });
 test('Insufficient scores and uncertain feedback both require further work',async()=>{
- for(const result of [{...FEEDBACK,score:8},{...FEEDBACK,needs_human_review:true}]){
+ for(const result of [{...FEEDBACK,score:8,criteria:FEEDBACK.criteria.map(item=>({...item,points:8}))},{...FEEDBACK,needs_human_review:true}]){
   const f=fixture();f.setFeedback(result);await f.submit();f.w.document.querySelector('[data-vtc-reviewed]').checked=true;
-  assert.throws(()=>f.w.aps62Production.collectForCompletion(),/12\/20|formateur/);f.close();
+  assert.throws(()=>f.w.aps62Production.collectForCompletion(),/12\/20|Relancez/);f.close();
  }
 });
 test('A changed draft restored after reload is not treated as the corrected copy',()=>{
@@ -80,13 +80,15 @@ test('Restored legacy notice and review reason use neutral wording',()=>{
  const legacy={...FEEDBACK,needs_human_review:true,notice:'Correction pédagogique formative réalisée avec l’IA.',human_review_reasons:['Le correcteur IA demande une relecture du formateur.']};
  const f=fixture({saved:{production_answers:{report:ANSWER},production_ai_answers:{report:ANSWER},production_ai_feedback:legacy}});
  const visible=f.w.document.querySelector('[data-vtc-production-feedback]').textContent;
- assert.doesNotMatch(visible,/intelligence artificielle|ChatGPT|OpenAI|\bIA\b/i);
+ assert.doesNotMatch(visible,/intelligence artificielle|ChatGPT|OpenAI|\bIA\b|formateur|17\s*\/\s*20|Votre réponse est précise/i);
  assert.match(visible,/vous pouvez poursuivre le parcours/);
- assert.match(visible,/relecture du formateur est nécessaire/);
+ assert.match(visible,/Relancez la correction/);
+ assert.equal(f.w.document.querySelector('textarea').value,ANSWER);
+ assert.equal(f.w.document.querySelector('[data-vtc-review-label]').hidden,true);
  f.close();
 });
 test('The workshop score never claims to be a condition for continuing the course',async()=>{
- const f=fixture();f.setFeedback({...FEEDBACK,score:8});await f.submit();
+ const f=fixture();f.setFeedback({...FEEDBACK,score:8,criteria:FEEDBACK.criteria.map(item=>({...item,points:8}))});await f.submit();
  f.w.document.querySelector('[data-vtc-reviewed]').checked=true;
  assert.throws(()=>f.w.aps62Production.collectForCompletion(),/Vous pouvez poursuivre le parcours sans valider cet atelier facultatif/);
  f.close();
@@ -155,4 +157,68 @@ test('Unedited drafts, previews and completed workshops pass without any save or
    await f.skip();assert.equal(f.w.location.hash,'#next');assert.equal(f.requests.length,0);
   }finally{f.close();}
  }
+});
+
+test('A cleared global flag cannot display or validate incoherent legacy criteria',()=>{
+ const variants=[
+  {...FEEDBACK,human_review_reasons:['Doute qui reste à lever.']},
+  {...FEEDBACK,human_review_reasons:null},
+  {...FEEDBACK,score:19},
+  {...FEEDBACK,criteria:[]},
+  ...[{status:'uncertain'},{uncertain:true},{points:21},{points:-1},{points:'17'},{points:true},{max_points:null}].map(change=>({...FEEDBACK,criteria:FEEDBACK.criteria.map(item=>({...item,...change}))}))
+ ];
+ for(const legacy of variants){
+  const f=fixture({saved:{production_answers:{report:ANSWER},production_ai_answers:{report:ANSWER},production_ai_feedback:legacy},history:[{status:'corrected',submitted_at:'2026-10-12T06:00:00Z',answers:{report:ANSWER},feedback:legacy}]});
+  try{
+   const d=f.w.document;
+   d.querySelector('[data-vtc-reviewed]').checked=true;
+   assert.throws(()=>f.w.aps62Production.collectForCompletion(),/Relancez/);
+   assert.match(d.querySelector('[data-vtc-production-feedback]').textContent,/Correction à relancer/);
+   assert.doesNotMatch(d.querySelector('[data-vtc-production-feedback]').textContent,/17\s*\/\s*20|Votre réponse est précise/);
+   assert.doesNotMatch(d.querySelector('[data-vtc-production-history]').textContent,/17\s*\/\s*20|Votre réponse est précise/);
+  }finally{f.close();}
+ }
+});
+test('Historic manual results are archived only for already completed workshops',()=>{
+ const historical={...FEEDBACK,status:'trainer_reviewed',score:8,human_review_reasons:['Ancien doute levé.'],trainer_review:{outcome:'reviewed',comment:'Décision historique conservée.'}};
+ for(const completed of [false,true]){
+  const f=fixture({completed,saved:{production_answers:{report:ANSWER},production_ai_answers:{report:ANSWER},production_ai_feedback:historical},history:[{status:'trainer_reviewed',submitted_at:'2026-10-12T06:00:00Z',answers:{report:ANSWER},feedback:historical}]});
+  try{
+   const d=f.w.document;
+   d.querySelector('[data-vtc-reviewed]').checked=true;
+   if(completed){
+    d.querySelector('form').reportValidity=()=>{throw new Error('An already completed workshop needs no new validation');};
+    d.querySelector('textarea').value='Une saisie ne peut pas remplacer la copie déjà validée.';
+    assert.deepEqual(JSON.parse(JSON.stringify(f.w.aps62Production.collectForCompletion())),{production_answers:{report:ANSWER},production_reviewed:true});
+    assert.match(d.querySelector('[data-vtc-production-feedback]').textContent,/Résultat conservé de cet atelier terminé/);
+    assert.match(d.querySelector('[data-vtc-production-feedback]').textContent,/8 \/ 20/);
+   }else{
+    assert.throws(()=>f.w.aps62Production.collectForCompletion(),/Relancez/);
+    assert.doesNotMatch(d.querySelector('[data-vtc-production-feedback]').textContent,/8 \/ 20|Décision historique/);
+    assert.doesNotMatch(d.querySelector('[data-vtc-production-history]').textContent,/8\/20|Décision historique/);
+   }
+   assert.equal(f.requests.length,0);
+  }finally{f.close();}
+ }
+});
+test('Marking the corrected current draft complete freezes that copy for later navigation',async()=>{
+ const f=fixture();
+ try{
+  f.input('La copie améliorée à conserver après validation.');await f.submit();
+  f.w.document.querySelector('[data-vtc-reviewed]').checked=true;
+  const submitted=f.w.aps62Production.collectForCompletion();
+  f.w.aps62Production.markCompleted();
+  f.w.document.querySelector('textarea').value='Une autre valeur ne doit pas remplacer la copie terminée.';
+  assert.deepEqual(JSON.parse(JSON.stringify(f.w.aps62Production.collectForCompletion())),JSON.parse(JSON.stringify(submitted)));
+ }finally{f.close();}
+});
+test('Legacy provider and trainer instructions in errors use an autonomous retry message',async()=>{
+ const f=fixture();
+ try{
+  f.w.fetch=async()=>({ok:false,headers:{get:()=> 'application/json'},json:async()=>({ok:false,error:'Le correcteur IA attend une relecture du formateur avec OpenAI.'})});
+  await f.submit();
+  const visible=f.w.document.querySelector('[data-vtc-production-status]').textContent;
+  assert.match(visible,/réessayer ou poursuivre/);
+  assert.doesNotMatch(visible,/ChatGPT|OpenAI|\bIA\b|formateur/i);
+ }finally{f.close();}
 });

@@ -17,7 +17,7 @@
     <p><strong>Objectif : moyenne pondérée d’au moins 10/20 et chaque minimum atteint.</strong> En français, un point est retiré au-delà de cinq fautes d’orthographe dans l’ensemble des trois réponses courtes.</p>
     <p>{{ bank.qcm_scoring_notice }}</p>
     {% if preview %}<p class="cma-note">Aperçu libre : choisissez une matière et testez les réponses. Aucun chronomètre d’épreuve ni résultat stagiaire n’est enregistré.</p>{% else %}<p>{{ bank.timing_notice }}</p><p>Vos réponses sont sauvegardées sur le serveur pendant la saisie. Vérifiez l’indicateur « Enregistré » avant de quitter une page. Après remise d’une matière, sa copie est définitive. Les corrigés s’ouvrent quand les sept matières sont remises.</p>{% endif %}
-    <p class="cma-note">Les réponses rédigées reçoivent une correction pédagogique selon un barème défini par le centre. Utilisez les situations fictives du sujet et évitez d’y inscrire des informations personnelles. Si la correction est indisponible, la copie est conservée pour une correction ultérieure ; les points qui nécessitent une relecture sont signalés.</p>
+    <p class="cma-note">Les réponses rédigées reçoivent une correction détaillée selon un barème défini par le centre. Une analyse complémentaire est lancée si nécessaire. Utilisez les situations fictives du sujet et évitez d’y inscrire des informations personnelles. En cas d’interruption, vos réponses sont conservées et vous pouvez relancer la correction.</p>
     <p class="cma-note">{{ bank.notice }}</p>
     {% if not config.aiAvailable %}<p class="cma-alert">La correction des réponses rédigées n’est pas encore disponible. Vous pouvez réaliser les épreuves ; votre copie sera conservée pour une correction ultérieure.</p>{% endif %}
     <div class="cma-actions"><button type="button" class="cma-primary" id="cmaStart">{{ 'Explorer la matière A' if preview else 'Commencer ou reprendre ma simulation' }}</button></div>
@@ -34,5 +34,5 @@
   <footer class="cma-footer"><p>Référentiel vérifié le {{ bank.reviewed_at }} · Édition {{ bank.version }}</p>{% for source in bank.sources %}<a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.title }}</a>{% endfor %}</footer>
 </main>
 <script type="application/json" id="cmaConfig">{{ config|tojson }}</script>
-<script src="{{ url_for('static', filename='js/vtc-cma.js', v='20261012-optional') }}" defer></script>
+<script src="{{ url_for('static', filename='js/vtc-cma.js', v='20261012-autonomous') }}" defer></script>
 </body></html>

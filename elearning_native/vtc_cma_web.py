@@ -5,6 +5,9 @@ from . import vtc_cma as cma
 from .paths import allows_free_module_navigation, assigned_modules
 
 
+CORRECTION_UNAVAILABLE = "La correction est momentanément indisponible. Vos réponses sont conservées ; vous pourrez réessayer dans quelques instants."
+
+
 def register(blueprint, *, admin_required, learner_context, root, csrf_token, require_csrf):
     def database():
         return cma.CmaStore(root() / "tracking.sqlite3")
@@ -43,6 +46,11 @@ def register(blueprint, *, admin_required, learner_context, root, csrf_token, re
                                           token=token, attempt_id=state["id"])
                           for action in ("state", "save", "submit", "start_part", "grade")}
         if public.get("result"):
+            # Older attempts may have retained an obsolete provider-labelled
+            # error. Keep the stored history and expose the current wording.
+            for result in public["result"]["subjects"]:
+                if result.get("grading_error"):
+                    result["grading_error"] = CORRECTION_UNAVAILABLE
             add_links(public["result"]["subjects"], token)
         return public
 
@@ -159,7 +167,7 @@ def register(blueprint, *, admin_required, learner_context, root, csrf_token, re
             correction = cma.grade_subject(cma.load_bank(state["version"]), letter, state["parts"][letter]["answers"])
         except VtcAIError:
             state = db.finish_grading(*principal, attempt_id, letter, claim,
-                                     error="La correction IA est indisponible pour le moment. Votre copie est conservée ; vous pourrez relancer cette matière.")
+                                     error=CORRECTION_UNAVAILABLE)
             return jsonify(ok=False, code="ai_unavailable", error=state["parts"][letter]["grading_error"], state=serialize(state, token)), 503
         # The entitlement is checked again after a potentially slow provider call.
         learner_access(token)
@@ -177,6 +185,6 @@ def register(blueprint, *, admin_required, learner_context, root, csrf_token, re
         try:
             result = cma.grade_subject(bank, data.get("subject"), data.get("answers"))
         except VtcAIError:
-            return jsonify(ok=False, error="La correction IA est indisponible. Aucune note n’a été inventée."), 503
+            return jsonify(ok=False, error="La correction est momentanément indisponible. Réessayez dans quelques instants."), 503
         add_links([result])
         return jsonify(ok=True, result=result)

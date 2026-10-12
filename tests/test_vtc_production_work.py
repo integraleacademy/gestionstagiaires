@@ -1,11 +1,12 @@
 """Written VTC work is durable; only server corrections can release completion."""
 import copy
+import json
 from unittest.mock import patch
 
 import pytest
 
 from elearning_native.store import NativeElearningStore, TrackingError
-from elearning_native.vtc_ai import VtcAIError
+from elearning_native.vtc_ai import CORRECTION_REVISION, VtcAIError
 from elearning_native.vtc_production_work import VtcWrittenWork, WrittenWorkError
 
 
@@ -29,7 +30,9 @@ ANSWERS = {'message': 'Bonjour, je vous retrouve à 9 h au point de prise en cha
 ACTIVITY = {'id': ASSIGNMENT['id'], 'production': ASSIGNMENT, 'vtc': {'kind': 'production'}}
 FEEDBACK = {'status': 'corrected', 'provider': 'openai', 'model': 'test-provider', 'score': 18, 'max_score': 20,
             'percent': 90, 'needs_human_review': False, 'summary': 'Le message est précis et les contrôles sont pertinents.',
-            'criteria': [], 'errors': [], 'next_steps': ['Précisez le numéro de réservation.'], 'model_response': ASSIGNMENT['model_response']}
+            'human_review_reasons': [],
+            'criteria': [{'id': 'client', 'label': 'Informer le client', 'points': 9, 'max_points': 10, 'status': 'partial'},
+                         {'id': 'booking', 'label': 'Vérifier la réservation', 'points': 9, 'max_points': 10, 'status': 'partial'}], 'errors': [], 'next_steps': ['Précisez le numéro de réservation.'], 'model_response': ASSIGNMENT['model_response']}
 
 
 @pytest.fixture
@@ -76,29 +79,101 @@ def test_failure_saves_original_copy_without_fake_grade_and_retry_can_succeed(wo
         assert submit(service, access)['ok']
 
 
-def test_revised_correction_contract_does_not_reuse_an_uncertain_old_result(work):
+def replace_legacy_feedback(service, access, attempt_id, feedback, *, completed=False):
+    """Reconstruct an immutable legacy record; new graders may not emit it."""
+    with service.tracking._transaction() as db:
+        db.execute('UPDATE vtc_written_attempts SET status=?,feedback_json=?,human_review_json=? WHERE id=?',
+                   (feedback['status'], json.dumps(feedback), json.dumps(feedback.get('trainer_review', {})), attempt_id))
+        row = service.tracking._progress_row(db, access)
+        saved = json.loads(row['answers_json'])
+        activity_id = db.execute('SELECT activity_id FROM vtc_written_attempts WHERE id=?', (attempt_id,)).fetchone()[0]
+        answer = saved[activity_id]
+        answer.update(production_ai_feedback=copy.deepcopy(feedback), needs_trainer_help=bool(feedback.get('needs_human_review')))
+        completed_ids = json.loads(row['completed_json'])
+        if completed:
+            completed_ids.append(activity_id)
+            answer.update(production_draft=False, production_reviewed=True, review_status='trainer_reviewed')
+        db.execute('UPDATE learner_course_progress SET answers_json=?,completed_json=? WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?',
+                   (json.dumps(saved), json.dumps(completed_ids), *service.tracking._key_values(access)))
+
+
+@pytest.mark.parametrize('old_revision', [False, True])
+def test_uncertain_legacy_results_are_retried_even_when_the_digest_is_current(work, old_revision):
     service, access = work
-    uncertain = {**FEEDBACK, 'needs_human_review': True}
-    with patch('elearning_native.vtc_ai.grade_written_work', side_effect=[uncertain, FEEDBACK]) as api:
-        with patch('elearning_native.vtc_ai.CORRECTION_REVISION', 'legacy-free-quotes'), \
-                patch('elearning_native.vtc_production_work.time.time', return_value=2_000_000_000):
-            first = submit(service, access)
-        with patch('elearning_native.vtc_production_work.time.time', return_value=2_000_000_010):
-            refreshed = submit(service, access)
-            repeated = submit(service, access)
-    assert api.call_count == 2
-    assert refreshed['cached'] is False
+    with patch('elearning_native.vtc_ai.CORRECTION_REVISION', 'legacy-free-quotes' if old_revision else CORRECTION_REVISION), \
+            patch('elearning_native.vtc_production_work.time.time', return_value=2_000_000_000), \
+            patch('elearning_native.vtc_ai.grade_written_work', return_value=FEEDBACK):
+        first = submit(service, access)
+    uncertain = {**FEEDBACK, 'status': 'needs_human_review', 'needs_human_review': True,
+                 'human_review_reasons': ['Ancienne correction à vérifier.']}
+    replace_legacy_feedback(service, access, first['attempt_id'], uncertain)
+    with patch('elearning_native.vtc_production_work.time.time', return_value=2_000_000_010), \
+            patch('elearning_native.vtc_ai.grade_written_work', return_value=FEEDBACK) as api:
+        refreshed = submit(service, access)
+        repeated = submit(service, access)
+    assert api.call_count == 1
+    assert refreshed['cached'] is False and repeated['cached'] is True
     assert refreshed['attempt_id'] != first['attempt_id']
-    assert repeated['cached'] is True
     assert repeated['attempt_id'] == refreshed['attempt_id']
-    assert refreshed['feedback']['needs_human_review'] is False
     history = service.history(access, ACTIVITY['id'])
     assert [row['status'] for row in history] == ['corrected', 'needs_human_review']
+    assert history[1]['feedback'] == uncertain
     assert all(row['answers'] == ANSWERS for row in history)
     progress = current(service, access)
     assert progress['answers'][ACTIVITY['id']]['production_first_answers'] == ANSWERS
-    assert progress['active_seconds'] == 0
-    assert progress['completed_activity_ids'] == []
+    assert progress['answers'][ACTIVITY['id']]['needs_trainer_help'] is False
+    assert progress['active_seconds'] == 0 and progress['completed_activity_ids'] == []
+    assert service.completion_answer(access, ACTIVITY, {'production_answers': ANSWERS, 'production_reviewed': True}, progress)['review_status'] == 'ai_feedback_read'
+
+
+@pytest.mark.parametrize('target,field,value', [
+    ('root', 'human_review_reasons', ['Incertitude persistante.']),
+    ('root', 'human_review_reasons', None),
+    ('root', 'needs_human_review', True),
+    ('root', 'score', 19),
+    ('root', 'criteria', []),
+    ('criterion', 'status', 'uncertain'),
+    ('criterion', 'uncertain', True),
+    ('criterion', 'points', True),
+    ('criterion', 'points', '9'),
+    ('criterion', 'points', float('nan')),
+    ('criterion', 'points', float('inf')),
+    ('criterion', 'points', -1),
+    ('criterion', 'points', 11),
+    ('criterion', 'max_points', 0),
+    ('criterion', 'max_points', float('inf')),
+    ('criterion', 'max_points', True),
+])
+def test_incoherent_output_saves_copy_without_score_or_validation(work, target, field, value):
+    service, access = work
+    invalid = copy.deepcopy(FEEDBACK)
+    (invalid if target == 'root' else invalid['criteria'][0])[field] = value
+    with patch('elearning_native.vtc_ai.grade_written_work', return_value=invalid):
+        with pytest.raises(VtcAIError) as error:
+            submit(service, access)
+    assert error.value.code == 'invalid_response'
+    attempt = service.history(access, ACTIVITY['id'])[0]
+    assert attempt['status'] == 'failed' and attempt['feedback'] == {}
+    saved = current(service, access)
+    assert saved['answers'][ACTIVITY['id']]['production_first_answers'] == ANSWERS
+    assert 'production_ai_feedback' not in saved['answers'][ACTIVITY['id']]
+    assert saved['active_seconds'] == 0 and saved['completed_activity_ids'] == []
+
+
+def test_clearing_only_a_legacy_flag_does_not_release_or_cache_its_score(work):
+    service, access = work
+    with patch('elearning_native.vtc_production_work.time.time', return_value=2_000_000_000), \
+            patch('elearning_native.vtc_ai.grade_written_work', return_value=FEEDBACK):
+        first = submit(service, access)
+    invalid = copy.deepcopy(FEEDBACK)
+    invalid['criteria'][0]['status'] = 'uncertain'
+    replace_legacy_feedback(service, access, first['attempt_id'], invalid)
+    with pytest.raises(WrittenWorkError, match='non confirmée'):
+        service.completion_answer(access, ACTIVITY, {'production_answers': ANSWERS, 'production_reviewed': True}, current(service, access))
+    with patch('elearning_native.vtc_production_work.time.time', return_value=2_000_000_010), \
+            patch('elearning_native.vtc_ai.grade_written_work', return_value=FEEDBACK) as api:
+        refreshed = submit(service, access)
+    assert api.call_count == 1 and refreshed['attempt_id'] != first['attempt_id']
 
 
 def test_revised_draft_requires_its_own_correction_and_preserves_first_response(work):
@@ -119,7 +194,7 @@ def test_revised_draft_requires_its_own_correction_and_preserves_first_response(
 
 def test_acknowledgement_and_server_threshold_are_required_not_client_score(work):
     service, access = work
-    with patch('elearning_native.vtc_ai.grade_written_work', return_value={**FEEDBACK, 'score': 8}):
+    with patch('elearning_native.vtc_ai.grade_written_work', return_value={**FEEDBACK, 'score': 8, 'criteria': [{**item, 'points': 4} for item in FEEDBACK['criteria']]}):
         submit(service, access)
     with pytest.raises(WrittenWorkError, match='Lisez'):
         service.completion_answer(access, ACTIVITY, {'production_answers': ANSWERS}, current(service, access))
@@ -127,18 +202,32 @@ def test_acknowledgement_and_server_threshold_are_required_not_client_score(work
         service.completion_answer(access, ACTIVITY, {'production_answers': ANSWERS, 'production_reviewed': True, 'score': 20}, current(service, access))
 
 
-def test_uncertain_copy_can_be_released_only_by_recorded_trainer_review(work):
+@pytest.mark.parametrize('completed', [False, True])
+def test_old_manual_decisions_are_immutable_and_only_completed_work_is_preserved(work, completed):
     service, access = work
-    with patch('elearning_native.vtc_ai.grade_written_work', return_value={**FEEDBACK, 'needs_human_review': True}):
+    with patch('elearning_native.vtc_ai.grade_written_work', return_value=FEEDBACK):
         submitted = submit(service, access)
+    historical = {**copy.deepcopy(FEEDBACK), 'status': 'trainer_reviewed', 'score': 8,
+                  'human_review_reasons': ['Ancien doute levé lors de la validation.'],
+                  'trainer_review': {'outcome': 'reviewed', 'comment': 'Décision historique conservée.', 'reviewer': 'old-reviewer'}}
+    replace_legacy_feedback(service, access, submitted['attempt_id'], historical, completed=completed)
+    before = current(service, access)
+    prior_history = service.history(access, ACTIVITY['id'])
     payload = {'production_answers': ANSWERS, 'production_reviewed': True}
-    with pytest.raises(WrittenWorkError, match='formateur'):
-        service.completion_answer(access, ACTIVITY, payload, current(service, access))
-    service.trainer_review(submitted['attempt_id'], comment='Le raisonnement a été vérifié avec le stagiaire et correspond aux attendus.', reviewer='trainer', outcome='reviewed')
-    result = service.completion_answer(access, ACTIVITY, payload, current(service, access))
-    assert result['review_status'] == 'trainer_reviewed'
-    assert result['production_ai_feedback']['trainer_review']['reviewer'] == 'trainer'
-    assert current(service, access)['completed_activity_ids'] == []
+    if completed:
+        # A stale/missing current form is irrelevant to an already acquired completion.
+        assert service.completion_answer(access, ACTIVITY, {}, before) == before['answers'][ACTIVITY['id']]
+    else:
+        with pytest.raises(WrittenWorkError, match='non confirmée'):
+            service.completion_answer(access, ACTIVITY, payload, before)
+    with pytest.raises(WrittenWorkError) as retired:
+        service.trainer_review(submitted['attempt_id'], comment='Nouvelle décision interdite.', reviewer='admin', outcome='reviewed', allowed_owners={(access['session_id'], access['trainee_id'])})
+    assert retired.value.status == 410
+    after = current(service, access)
+    assert after['answers'] == before['answers']
+    assert after['completed_activity_ids'] == before['completed_activity_ids']
+    assert after['active_seconds'] == before['active_seconds']
+    assert service.history(access, ACTIVITY['id']) == prior_history
 
 
 def test_other_learner_cannot_use_correction_or_read_history(work):

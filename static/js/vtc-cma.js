@@ -7,6 +7,7 @@
   const el = (tag, text, cls) => { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; if (cls) n.className = cls; return n; };
   const number = value => value == null ? 'En attente' : new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 2}).format(value);
   const subjectInfo = id => bank.subjects.find(s => s.id === id);
+  const subjectsToGrade = result => [...new Set([...(result.pending_subjects || []), ...(result.review_subjects || [])])];
   let state = null, paper = null, answers = {}, position = 0, revision = 0;
   let generation = 0, savedGeneration = 0, saveTimer, saveChain = Promise.resolve(), saving = 0;
   let submitting = false, conflicted = false, grading = false, autoGraded = false;
@@ -17,8 +18,14 @@
   async function request(url, data) {
     const options = {credentials: 'same-origin', cache: 'no-store', headers: {Accept: 'application/json'}};
     if (data !== undefined) Object.assign(options, {method: 'POST', headers: {...options.headers, 'Content-Type': 'application/json', 'X-Elearning-CSRF': config.csrfToken}, body: JSON.stringify(data)});
-    const response = await fetch(url, options);
-    const body = (response.headers.get('content-type') || '').includes('application/json') ? await response.json() : {};
+    let response, body;
+    try {
+      response = await fetch(url, options);
+      const parsed = (response.headers.get('content-type') || '').includes('application/json') ? await response.json() : {};
+      body = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      throw new Error('La connexion a été interrompue. Vos réponses enregistrées sont conservées. Réessayez dans quelques instants.');
+    }
     if (!response.ok || !body.ok) {
       const ex = new Error(body.error || ([401, 403].includes(response.status) ? 'Votre accès a expiré ou n’est plus autorisé. Revenez au parcours pour vous reconnecter.' : 'La connexion a été interrompue. Votre dernière sauvegarde serveur est conservée. Réessayez.'));
       ex.code = body.code; ex.state = body.state; throw ex;
@@ -96,7 +103,7 @@
     if (!config.preview && state.id) history.replaceState(null, '', `${config.homeUrl}?attempt=${encodeURIComponent(state.id)}`);
     if (state.status === 'submitted') {
       paper = null; clearTimeout(saveTimer); renderResults(state.result);
-      if (!autoGraded && config.aiAvailable && state.result.pending_subjects.length) { autoGraded = true; void gradePending(); }
+      if (!autoGraded && config.aiAvailable && subjectsToGrade(state.result).length) { autoGraded = true; void gradePending(); }
       return;
     }
     if (state.paper) {
@@ -185,46 +192,47 @@
   }
   function subjectResult(row) {
     const box = el('section', undefined, 'cma-card');
-    box.append(el('p', `MATIÈRE ${row.subject} · COEFFICIENT ${row.coefficient}`, 'cma-eyebrow'), el('h2', `${row.title} · ${number(row.score)}${row.score == null ? '' : ' / 20'}`));
-    box.append(el('p', `QCM : ${number(row.qcm_score)} points · QRC : ${number(row.qrc_score)} points · Minimum : ${row.minimum}/20`));
+    const verified = row.status === 'corrected', score = verified ? row.score : null;
+    box.append(el('p', `MATIÈRE ${row.subject} · COEFFICIENT ${row.coefficient}`, 'cma-eyebrow'), el('h2', `${row.title} · ${number(score)}${score == null ? '' : ' / 20'}`));
+    box.append(el('p', `QCM : ${number(row.qcm_score)} points · QRC : ${number(verified ? row.qrc_score : null)} points · Minimum : ${row.minimum}/20`));
     if (row.status === 'needs_human_review') {
-      box.append(el('p', 'La correction nécessite une vérification humaine. La note éventuelle est provisoire et ne permet pas de conclure à l’admissibilité simulée. Contactez votre formateur depuis votre espace habituel.', 'cma-alert'));
-      (row.ai_feedback?.human_review_reasons || []).forEach(reason => box.append(el('p', /^Le correcteur .+ demande une relecture du formateur[.]$/.test(reason) ? 'Une relecture du formateur est nécessaire pour confirmer certains points.' : reason, 'cma-note')));
+      box.append(el('p', 'Une analyse complémentaire de vos réponses est nécessaire pour finaliser cette correction. Elle se lance à l’ouverture du bilan ; vous pouvez aussi la reprendre avec le bouton ci-dessus.', 'cma-note'));
     }
     if (row.status === 'pending_correction') box.append(el('p', row.grading_error || (row.grading_status === 'working' ? 'La correction rédigée est en cours.' : 'La copie est remise. La correction des réponses rédigées reste à effectuer.'), 'cma-note'));
     if (row.subject === 'D') {
-      box.append(el('p', row.status === 'pending_correction' ? 'Orthographe : vérification en attente.' : `Orthographe : ${number(row.spelling_error_count)} faute(s) relevée(s) ; pénalité appliquée : ${row.spelling_penalty} point.`, 'cma-note'));
-      if (row.spelling_errors?.length) { const details = el('details'); details.append(el('summary', 'Voir les occurrences d’orthographe relevées')); const list = el('ul'); row.spelling_errors.forEach(e => list.append(el('li', `${e.field_id} : « ${e.excerpt} » → « ${e.correction} »`))); details.append(list); box.append(details); }
+      box.append(el('p', !verified ? 'Orthographe : vérification en attente.' : `Orthographe : ${number(row.spelling_error_count)} faute(s) relevée(s) ; pénalité appliquée : ${row.spelling_penalty} point.`, 'cma-note'));
+      if (verified && row.spelling_errors?.length) { const details = el('details'); details.append(el('summary', 'Voir les occurrences d’orthographe relevées')); const list = el('ul'); row.spelling_errors.forEach(e => list.append(el('li', `${e.field_id} : « ${e.excerpt} » → « ${e.correction} »`))); details.append(list); box.append(details); }
     }
     if (row.lesson_links?.length) { box.append(el('h3', 'Vos révisions conseillées'), lessonLinks(row.lesson_links)); }
-    (row.ai_feedback?.next_steps || []).forEach(step => box.append(el('p', typeof step === 'string' ? step : step.text || step.title || 'Reprendre les éléments signalés dans le barème.', 'cma-note')));
-    row.corrections.forEach(q => box.append(correctionCard(q))); return box;
+    if (verified) (row.ai_feedback?.next_steps || []).forEach(step => box.append(el('p', typeof step === 'string' ? step : step.text || step.title || 'Reprendre les éléments signalés dans le barème.', 'cma-note')));
+    row.corrections.forEach(q => box.append(correctionCard(!verified && q.kind === 'qrc' ? {...q, points: null, criteria: q.criteria.map(c => ({...c, points: null, feedback: '', improvement: ''}))} : q))); return box;
   }
   function renderResults(result) {
     visible('cmaResult'); const panel = $('cmaResult'); panel.replaceChildren();
     const hero = el('div', undefined, 'cma-result-hero'); hero.append(el('p', 'BILAN DE VOTRE SIMULATION', 'cma-eyebrow'));
-    const labels = {pending_correction: 'Copie remise · corrections en cours', needs_human_review: 'Vérification humaine nécessaire', admissible: 'Critères d’admissibilité atteints', not_admissible: 'Des critères restent à atteindre'};
+    const labels = {pending_correction: 'Copie remise · corrections en cours', needs_human_review: 'Analyse complémentaire des réponses', admissible: 'Critères d’admissibilité atteints', not_admissible: 'Des critères restent à atteindre'};
     hero.append(el('h2', labels[result.status]), el('p', result.weighted_average == null ? 'La moyenne définitive sera disponible lorsque toutes les matières auront une correction vérifiée.' : `Moyenne pondérée : ${number(result.weighted_average)} / 20. Objectif : au moins 10/20 et tous les minima atteints.`));
     if (result.failed_minima.length) hero.append(el('p', `Minimum non atteint : ${result.failed_minima.join(', ')}.`));
     if (result.status === 'not_admissible' && result.weighted_average >= 10 && !result.failed_minima.length) hero.append(el('p', 'La moyenne affichée est arrondie ; le calcul sans arrondi reste inférieur à 10/20.'));
     hero.append(el('p', 'Ce bilan est un entraînement pédagogique. L’admissibilité officielle est décidée par la CMA.')); panel.append(hero);
     const controls = el('div', undefined, 'cma-card');
-    if (result.pending_subjects.length) {
+    const pending = subjectsToGrade(result);
+    if (pending.length) {
       const grade = el('button', grading ? 'Correction des réponses rédigées…' : 'Lancer ou reprendre les corrections', 'cma-primary'); grade.id = 'cmaGrade'; grade.type = 'button'; grade.disabled = grading;
       grade.addEventListener('click', () => void gradePending()); controls.append(grade);
-      controls.append(el('p', `${result.pending_subjects.length} matière(s) rédigée(s) en attente. La correction avance matière par matière ; vous pouvez revenir consulter le bilan.`, 'cma-note'));
+      controls.append(el('p', grading ? 'Analyse de vos réponses… La correction peut prendre quelques instants' : `${pending.length} matière(s) rédigée(s) en attente. La correction avance matière par matière ; vous pouvez revenir consulter le bilan.`, 'cma-note'));
     }
     const restart = el('a', 'Retour aux simulations', 'cma-secondary'); restart.href = config.homeUrl; controls.append(restart); panel.append(controls);
     const tableBox = el('div', undefined, 'cma-card cma-table'), table = el('table'), thead = el('thead'), headings = el('tr');
     ['Matière', 'Note / 20', 'Coefficient', 'Minimum', 'État'].forEach(label => headings.append(el('th', label))); thead.append(headings); table.append(thead);
-    const tbody = el('tbody'); result.subjects.forEach(row => { const tr = el('tr'); [row.subject, number(row.score), row.coefficient, `${row.minimum}/20`, row.status === 'corrected' ? row.minimum_met ? 'Minimum atteint' : 'Minimum non atteint' : row.status === 'needs_human_review' ? 'À vérifier' : 'Correction en attente'].forEach((text, i) => tr.append(el(i ? 'td' : 'th', String(text), i === 1 && row.status === 'corrected' ? row.minimum_met ? 'cma-grade-good' : 'cma-grade-low' : ''))); tbody.append(tr); });
+    const tbody = el('tbody'); result.subjects.forEach(row => { const tr = el('tr'); [row.subject, number(row.status === 'corrected' ? row.score : null), row.coefficient, `${row.minimum}/20`, row.status === 'corrected' ? row.minimum_met ? 'Minimum atteint' : 'Minimum non atteint' : 'Correction en attente'].forEach((text, i) => tr.append(el(i ? 'td' : 'th', String(text), i === 1 && row.status === 'corrected' ? row.minimum_met ? 'cma-grade-good' : 'cma-grade-low' : ''))); tbody.append(tr); });
     table.append(tbody); tableBox.append(table); panel.append(tableBox);
     result.subjects.forEach(row => panel.append(subjectResult(row)));
   }
   async function gradePending() {
     if (grading || !state?.result) return;
     grading = true; error(''); renderResults(state.result);
-    const pending = [...state.result.pending_subjects];
+    const pending = subjectsToGrade(state.result);
     try {
       for (const subject of pending) {
         try { const data = await request(state.urls.grade, {version: state.version, subject}); applyState(data.state); }
@@ -238,13 +246,14 @@
     error(''); clearTimeout(saveTimer);
     try {
       if (config.preview) {
+        $('cmaSaved').textContent = 'Analyse de vos réponses… La correction peut prendre quelques instants';
         const data = await request(config.previewGradeUrl, {version: bank.version, subject: paper.id, answers});
         visible('cmaResult'); const panel = $('cmaResult'); panel.replaceChildren();
         const notice = el('div', undefined, 'cma-card'); notice.append(el('h2', 'Correction de l’aperçu'), el('p', 'Cette correction n’a créé aucune tentative ni progression stagiaire.'));
         const back = el('button', 'Revenir à l’aperçu', 'cma-secondary'); back.type = 'button'; back.addEventListener('click', () => { visible('cmaPaper'); renderQuestion(); }); notice.append(back); panel.append(notice, subjectResult(data.result)); panel.focus();
       } else await queueSave(true);
     } catch (ex) { error(ex.message); }
-    finally { submitting = false; $('cmaQuestion').disabled = conflicted; $('cmaSubmit').disabled = false; $('cmaConfirmSubmit').disabled = false; $('cmaConfirm').hidden = true; }
+    finally { submitting = false; $('cmaQuestion').disabled = conflicted; $('cmaSubmit').disabled = false; $('cmaConfirmSubmit').disabled = false; $('cmaConfirm').hidden = true; if (config.preview) $('cmaSaved').textContent = 'Aperçu : réponses conservées uniquement dans cette page.'; }
   }
   $('cmaStart').addEventListener('click', async () => {
     error(''); if (config.preview) { renderPaper(bank.subjects[0], {}); return; }

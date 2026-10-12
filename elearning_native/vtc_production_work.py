@@ -36,6 +36,29 @@ def submission_hash(assignment, answers):
                                      separators=(',', ':')).encode()).hexdigest()
 
 
+def _verified_feedback(feedback):
+    """Only a confirmed correction may be reused or release a new completion."""
+    if (not isinstance(feedback, dict) or feedback.get('status') != 'corrected'
+            or feedback.get('needs_human_review') is not False
+            or feedback.get('human_review_reasons', []) != []):
+        return False
+    def valid_points(points, maximum):
+        return (type(points) in (int, float) and type(maximum) in (int, float)
+                and math.isfinite(points) and math.isfinite(maximum)
+                and maximum > 0 and 0 <= points <= maximum)
+    score, maximum = feedback.get('score'), feedback.get('max_score')
+    criteria = feedback.get('criteria')
+    if not valid_points(score, maximum) or not isinstance(criteria, list) or not criteria:
+        return False
+    for criterion in criteria:
+        if (not isinstance(criterion, dict) or criterion.get('status') == 'uncertain'
+                or criterion.get('uncertain', False) is not False
+                or not valid_points(criterion.get('points'), criterion.get('max_points'))):
+            return False
+    return (math.isclose(sum(item['points'] for item in criteria), score, abs_tol=1e-7)
+            and math.isclose(sum(item['max_points'] for item in criteria), maximum, abs_tol=1e-7))
+
+
 class VtcWrittenWork:
     def __init__(self, tracking_store):
         self.tracking = tracking_store
@@ -88,7 +111,8 @@ class VtcWrittenWork:
             latest = connection.execute('''SELECT * FROM vtc_written_attempts
                 WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=? AND activity_id=?
                 AND content_hash=? ORDER BY created_epoch DESC LIMIT 1''', (*key, digest)).fetchone()
-            if latest and latest['status'] in ('corrected', 'needs_human_review', 'trainer_reviewed'):
+            if (latest and latest['status'] == 'corrected'
+                    and _verified_feedback(_json_dict(latest['feedback_json']))):
                 return dict(latest), True
             pending = connection.execute('''SELECT id FROM vtc_written_attempts
                 WHERE session_id=? AND trainee_id=? AND status='processing' AND updated_epoch>?''',
@@ -118,6 +142,7 @@ class VtcWrittenWork:
             work.setdefault('production_first_answers', copy.deepcopy(answers))
             work.setdefault('production_first_submitted_at', _utc_iso(now))
             work['production_ai_attempt'] = attempt_id
+            work['needs_trainer_help'] = False
             connection.execute('''UPDATE learner_course_progress SET answers_json=?, updated_at=?
                 WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?''',
                 (json.dumps(saved, ensure_ascii=False), _utc_iso(now), *key[:4]))
@@ -126,7 +151,10 @@ class VtcWrittenWork:
 
     def finish(self, attempt, feedback=None, error_code=''):
         now = time.time()
-        status = ('needs_human_review' if feedback.get('needs_human_review') else 'corrected') if feedback else 'failed'
+        verified = _verified_feedback(feedback)
+        status = 'corrected' if verified else 'failed'
+        if feedback and not verified:
+            feedback, error_code = None, error_code or 'invalid_response'
         with self.tracking._transaction() as connection:
             connection.execute('''UPDATE vtc_written_attempts SET status=?,feedback_json=?,error_code=?,updated_epoch=?
                 WHERE id=? AND status='processing' ''',
@@ -147,12 +175,12 @@ class VtcWrittenWork:
                         production_ai_answers=copy.deepcopy(answers),
                         production_ai_hash=submission_hash(assignment, answers),
                         production_ai_attempt=attempt_id, production_feedback_seen=True,
-                        needs_trainer_help=bool(feedback.get('needs_human_review')))
+                        needs_trainer_help=False)
             connection.execute('''UPDATE learner_course_progress SET answers_json=?,updated_at=?
                 WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?''',
                 (json.dumps(saved, ensure_ascii=False), now, *self.tracking._key_values(access)))
             self.tracking._event(connection, access, 'vtc_written_corrected', activity_id=activity_id,
-                at=now, details={'attempt_id': attempt_id, 'needs_human_review': bool(feedback.get('needs_human_review'))})
+                at=now, details={'attempt_id': attempt_id, 'verified': True})
         return True
 
     def submit(self, access, course, activity, payload, current):
@@ -180,6 +208,8 @@ class VtcWrittenWork:
         else:
             try:
                 feedback = vtc_ai.grade_written_work(assignment, answers)
+                if not _verified_feedback(feedback):
+                    raise vtc_ai.VtcAIError('invalid_response')
             except vtc_ai.VtcAIError as exc:
                 self.finish(attempt, error_code=str(exc.code))
                 raise
@@ -206,51 +236,25 @@ class VtcWrittenWork:
         with self.tracking._connect() as connection:
             row = connection.execute('''SELECT * FROM vtc_written_attempts
                 WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=? AND activity_id=?
-                AND content_hash=? AND status IN ('corrected','trainer_reviewed')
+                AND content_hash=? AND status='corrected'
                 ORDER BY updated_epoch DESC LIMIT 1''', (*self._key(access, activity_id), digest)).fetchone()
-        if not row:
-            raise WrittenWorkError('Pour valider cet atelier, faites corriger cette version de votre travail. Une copie signalée doit être revue par le formateur.')
-        feedback = _json_dict(row['feedback_json'])
-        if row['status'] != 'trainer_reviewed' and float(feedback.get('score') or 0) < float(activity['production'].get('pass_points') or 12):
+        feedback = _json_dict(row['feedback_json']) if row else {}
+        if not row or not _verified_feedback(feedback):
+            raise WrittenWorkError('Pour valider cet atelier, faites corriger cette version de votre travail. Une correction non confirmée peut être relancée ; votre copie est conservée et cet atelier reste facultatif.')
+        if float(feedback['score']) < float(activity['production'].get('pass_points') or 12):
             raise WrittenWorkError('Pour valider cet atelier, reprenez votre réponse avec les conseils de correction pour atteindre l’objectif de 12/20. Vous pouvez poursuivre le parcours sans valider cet atelier facultatif.')
         if answers != existing.get('production_answers'):
             raise WrittenWorkError('Votre brouillon a changé. Enregistrez et faites corriger la copie actuelle avant de valider cet atelier.', 409)
         return {**existing, 'production_answers': answers, 'production_draft': False,
                 'production_ai_feedback': feedback, 'production_ai_hash': digest,
                 'production_ai_attempt': row['id'], 'production_feedback_seen': True,
-                'production_reviewed': True, 'review_status': 'trainer_reviewed' if row['status'] == 'trainer_reviewed' else 'ai_feedback_read',
+                'production_reviewed': True, 'review_status': 'ai_feedback_read',
                 'needs_trainer_help': False, 'submitted_at': _utc_iso()}
 
     def trainer_review(self, attempt_id, *, comment, reviewer, outcome, allowed_owners=None):
-        comment = str(comment or '').strip()
-        if outcome not in ('reviewed', 'revise') or not 20 <= len(comment) <= 6000:
-            raise WrittenWorkError('Indiquez une décision et un retour pédagogique de 20 à 6 000 caractères.')
-        now = _utc_iso()
-        with self.tracking._transaction() as connection:
+        """Retire the old action without modifying previously validated work."""
+        with self.tracking._connect() as connection:
             attempt = connection.execute('SELECT * FROM vtc_written_attempts WHERE id=?', (attempt_id,)).fetchone()
             if not attempt or (allowed_owners is not None and (attempt['session_id'], attempt['trainee_id']) not in allowed_owners):
                 raise WrittenWorkError('Production introuvable.', 404)
-            if attempt['status'] == 'processing':
-                raise WrittenWorkError('Attendez la fin de la correction avant de relire cette copie.', 409)
-            access = {key: attempt[key] for key in ('session_id','trainee_id','course_id','course_version')}
-            feedback = _json_dict(attempt['feedback_json'])
-            review = {'comment': comment, 'reviewer': str(reviewer), 'reviewed_at': now, 'outcome': outcome}
-            feedback.update(trainer_review=review, needs_human_review=outcome != 'reviewed',
-                            status='trainer_reviewed' if outcome == 'reviewed' else 'needs_human_review')
-            connection.execute('''UPDATE vtc_written_attempts SET status=?,feedback_json=?,human_review_json=?,updated_epoch=? WHERE id=?''',
-                (feedback['status'], json.dumps(feedback, ensure_ascii=False), json.dumps(review, ensure_ascii=False), time.time(), attempt_id))
-            row = self.tracking._progress_row(connection, access)
-            saved = _json_dict(row['answers_json'])
-            work = saved.get(attempt['activity_id'], {})
-            if (attempt['activity_id'] not in _json_list(row['completed_json'])
-                    and work.get('production_answers') == _json_dict(attempt['answers_json'])):
-                work.update(production_ai_feedback=feedback, production_ai_attempt=attempt_id,
-                            production_ai_answers=_json_dict(attempt['answers_json']),
-                            production_ai_hash=attempt['content_hash'], production_feedback_seen=True,
-                            needs_trainer_help=outcome != 'reviewed')
-                connection.execute('''UPDATE learner_course_progress SET answers_json=?, updated_at=?
-                    WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?''',
-                    (json.dumps(saved, ensure_ascii=False), now, *self.tracking._key_values(access)))
-            self.tracking._event(connection, access, 'vtc_written_trainer_review', activity_id=attempt['activity_id'],
-                                 at=now, details={'attempt_id': attempt_id, 'outcome': outcome, 'reviewer': str(reviewer)})
-        return feedback
+        raise WrittenWorkError('Cette action n’est plus disponible. Une nouvelle correction peut être demandée depuis l’atelier.', 410)

@@ -12,6 +12,7 @@ import elearning_orders
 from elearning_native import vtc, vtc_cma as cma
 from elearning_native.store import NativeElearningStore
 from elearning_native.vtc_ai import VtcAIError
+from elearning_native.vtc_cma_web import CORRECTION_UNAVAILABLE
 from tests import test_native_elearning_web as web_tests
 from tests.test_vtc_cma import fake_grade, full_answers
 
@@ -153,6 +154,8 @@ def test_unavailable_ai_preserves_copies_without_mark_and_retry_succeeds(case):
     with patch("elearning_native.vtc_ai.grade_written_work", side_effect=VtcAIError("timeout")):
         response = post(case, config, state["urls"]["grade"], subject="A")
     assert response.status_code == 503
+    assert response.json["error"] == CORRECTION_UNAVAILABLE
+    assert not re.search(r"\bIA\b|OpenAI|ChatGPT|formateur", response.json["error"], re.I)
     result = response.json["state"]["result"]
     assert result["passed"] is None and result["weighted_average"] is None
     assert result["subjects"][0]["score"] is None and result["subjects"][0]["grading_status"] == "unavailable"
@@ -161,6 +164,51 @@ def test_unavailable_ai_preserves_copies_without_mark_and_retry_succeeds(case):
         retried = post(case, config, state["urls"]["grade"], subject="A")
     assert retried.status_code == 200
     assert retried.json["state"]["result"]["subjects"][0]["score"] == 20
+
+
+def test_legacy_uncertain_cma_result_can_be_finished_by_the_learner(case):
+    config, state = complete(case)
+    bank = cma.load_bank()
+    dbpath = case.persist_dir / "native_elearning" / "tracking.sqlite3"
+    # Reproduce a persisted pre-upgrade attempt, without issuing a new
+    # uncertain correction through the current grading contract.
+    with sqlite3.connect(dbpath) as db:
+        saved = json.loads(db.execute("SELECT state_json FROM vtc_cma_attempts WHERE attempt_id=?", (state["id"],)).fetchone()[0])
+        answers = copy.deepcopy(saved["parts"]["A"]["answers"])
+        for letter in ["A", "B", "D", "F", "G"]:
+            part = saved["parts"][letter]
+            part["correction"] = cma.grade_subject(bank, letter, part["answers"], qrc_grader=fake_grade)
+            part["grading_status"] = "corrected"
+        old = saved["parts"]["A"]
+        old["correction"].update(status="needs_human_review", minimum_met=None)
+        old["correction"]["ai_feedback"].update(status="needs_human_review", needs_human_review=True)
+        old.update(grading_status="needs_human_review", grading_error="La correction IA est indisponible.")
+        db.execute("UPDATE vtc_cma_attempts SET state_json=? WHERE attempt_id=?", (json.dumps(saved), state["id"]))
+    result = case.client.get(state["urls"]["state"]).json["state"]["result"]
+    assert result["review_subjects"] == ["A"] and result["passed"] is None
+    assert result["subjects"][0]["grading_error"] == CORRECTION_UNAVAILABLE
+    with patch("elearning_native.vtc_ai.grade_written_work", side_effect=fake_grade) as grade:
+        corrected = post(case, config, state["urls"]["grade"], subject="A")
+        assert corrected.status_code == 200, corrected.text
+        assert grade.call_count == 1
+        assert corrected.json["state"]["result"]["passed"] is True
+        assert corrected.json["state"]["result"]["weighted_average"] == 20
+        assert corrected.json["state"]["result"]["review_subjects"] == []
+        assert post(case, config, state["urls"]["grade"], subject="A").status_code == 200
+        assert grade.call_count == 1
+    restored = cma.CmaStore(dbpath).read("session-aps", "trainee-1", state["id"])
+    assert restored["parts"]["A"]["answers"] == answers
+
+
+def test_preview_unavailable_correction_uses_neutral_retry_message(case):
+    case._admin_login()
+    _, config = page_config(case, url="/admin/elearning/vtc/simulation-cma")
+    subject = cma.subject_for(cma.load_bank(), "G")
+    with patch("elearning_native.vtc_ai.grade_written_work", side_effect=VtcAIError("invalid_response")):
+        response = post(case, config, config["previewGradeUrl"], subject="G", answers=full_answers(subject))
+    assert response.status_code == 503
+    assert response.json["error"] == "La correction est momentanément indisponible. Réessayez dans quelques instants."
+    assert not re.search(r"\bIA\b|OpenAI|ChatGPT|formateur", response.json["error"], re.I)
 
 
 @pytest.mark.parametrize("boundary", ["unassigned", "future", "disabled", "anonymous"])

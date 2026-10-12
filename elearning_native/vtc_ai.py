@@ -7,7 +7,8 @@ this interface. A provider failure never returns a grade.
 
 Configuration: OPENAI_API_KEY; optional OPENAI_VTC_MODEL, falling back to
 OPENAI_ELEARNING_MODEL and then gpt-4.1. Requests use Responses Structured Outputs,
-store=False, no tools, a 35-second timeout and a bounded response size.
+store=False, no tools and a bounded response size. At most two analyses share a
+35-second budget; the first reserves 15 seconds for an automatic verification.
 """
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ import math
 import os
 import re
 import threading
+import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -26,12 +28,13 @@ from urllib.request import Request, urlopen
 _LOGGER = logging.getLogger(__name__)
 _SLOTS = threading.BoundedSemaphore(2)
 _TIMEOUT = 35
+_FIRST_PASS_TIMEOUT = 20
 _MAX_RESPONSE_BYTES = 196_608
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}\Z")
-CORRECTION_REVISION = "vtc-written-excerpt-refs-v1"
+CORRECTION_REVISION = "vtc-written-autonomous-v2"
 NOTICE = (
-    "Correction pédagogique formative. Elle peut être revue "
-    "par votre formateur et ne constitue ni une décision de jury ni un résultat officiel CMA."
+    "Correction pédagogique formative. Elle ne constitue "
+    "ni une décision de jury ni un résultat officiel CMA."
 )
 
 _INSTRUCTIONS = """Tu es le correcteur pédagogique d'une formation VTC en français.
@@ -47,13 +50,14 @@ Ne donne jamais de points pour une simple présence de mots-clés : vérifie les
 relations, calculs, conditions, négations et contradictions. N'invente aucune règle,
 source, citation légale, information client ou compétence démontrée. N'exige rien
 qui ne soit prévu par le barème. Si le barème ne permet pas de trancher, marque le
-critère uncertain et needs_human_review=true. Une réponse ambiguë demande aussi
-une revue humaine. Une réponse clairement fausse ou hors sujet reçoit zéro sur
-les critères concernés si le barème permet de le décider avec certitude. Dans
-le contexte production, une copie entièrement hors sujet demande en plus une
-relecture pédagogique. Dans le contexte cma_simulation, une erreur évidente ou
-un hors sujet certain n'exige pas de revue humaine : c'est une réponse notée zéro,
-sans invalider les autres réponses justes de la même matière.
+critère uncertain et needs_human_review=true : ce drapeau technique déclenche une
+vérification AUTOMATIQUE, jamais une intervention du formateur. Un doute réel sur
+le sens de la copie doit être signalé ainsi. Ne masque jamais une incertitude pour
+produire une note. Une réponse clairement fausse ou hors sujet reçoit zéro sur
+les critères concernés si le barème permet de le décider avec certitude, dans les
+productions comme dans la simulation. Une erreur de connaissance, même sur un
+critère critical, n'est pas une incertitude de correction. Elle n'invalide pas les
+autres réponses justes de la même matière.
 Une case vide ne démontre aucun acquis et vaut 0
 pour les critères de ce seul champ. N'accorde pas de points à un autre champ pour
 compenser une réponse absente. Les critères critical manqués doivent être signalés.
@@ -79,8 +83,11 @@ en anglais. revision_ids ne contient que des identifiants de révision fournis.
 Dans tous les textes destinés au stagiaire, parle uniquement du travail, du
 barème, de la correction et des conseils. N'évoque ni IA, intelligence artificielle,
 ChatGPT, OpenAI, modèle informatique ni technologie de correction. Ne prétends
-jamais qu'un formateur ou une personne a relu la copie. Une relecture par le
-formateur peut être proposée lorsqu'elle est nécessaire. Pour une production,
+jamais qu'un formateur ou une personne a relu la copie. Ne demande jamais au
+stagiaire de solliciter un formateur ou une autre personne pour faire corriger,
+relire ou valider son travail. Si la correction reste incertaine, signale-le avec
+les champs techniques prévus ; le service prendra en charge la vérification.
+Pour une production,
 présente les améliorations comme des conseils pour cet atelier facultatif ;
 ne conditionne jamais la poursuite du parcours à sa réalisation ou à sa note.
 
@@ -99,6 +106,25 @@ spelling_review_complete=true. Reste concis : 1 à 3 phrases utiles par critère
 au plus 6 points forts, 10 erreurs de fond, 6 prochaines actions.
 """
 
+_VERIFICATION_INSTRUCTIONS = """
+Cette demande est la seconde et dernière analyse automatique de la même copie.
+La première analyse n'a pas satisfait les vérifications du serveur. verification
+contient seulement les catégories d'anomalies constatées et, le cas échéant, les
+identifiants des critères concernés. Aucune ancienne note n'est un acquis.
+Repars du sujet, des documents, du barème et de la copie d'origine pour corriger
+indépendamment l'ensemble des critères, en approfondissant les points signalés.
+Vérifie le sens des phrases, les calculs, les réponses absentes, les plafonds et le
+crédit partiel. Vérifie que chaque evidence_id et excerpt_id appartient au champ
+autorisé et que le passage prouve réellement ce que tu lui attribues.
+Si l'orthographe est demandée, recompte ses occurrences exactes sans doublon ni
+chevauchement. Ne confonds pas une réponse fausse avec une correction incertaine.
+Rends une correction complète, précise et concise, dans le même schéma. Il ne
+suffit pas de retirer un drapeau d'incertitude : chaque point doit être justifié.
+Si tu ne peux toujours pas trancher à partir des seules informations fournies,
+conserve uncertain / needs_human_review=true. Le service proposera une relance
+sans attribuer de note ; ne propose aucune intervention humaine.
+"""
+
 
 class VtcAIError(RuntimeError):
     """A safe, displayable error. No provider response body or answer is retained."""
@@ -108,15 +134,15 @@ class VtcAIError(RuntimeError):
         "busy": "Plusieurs corrections sont en cours. Réessayez dans quelques instants.",
         "timeout": "La correction a pris trop de temps. Réessayez dans quelques instants ; aucune note n’a été attribuée.",
         "rate_limited": "Le service de correction est momentanément sollicité. Réessayez plus tard ; aucune note n’a été attribuée.",
-        "refused": "La correction n’a pas pu être réalisée. Demandez une relecture à votre formateur.",
-        "invalid_response": "La correction reçue n’a pas pu être vérifiée. Réessayez ou demandez une relecture à votre formateur.",
+        "refused": "La correction n’a pas pu être finalisée. Réessayez dans quelques instants ; aucune note n’a été attribuée.",
+        "invalid_response": "Les vérifications de la correction n’ont pas pu être finalisées. Relancez la correction dans quelques instants ; aucune note n’a été attribuée.",
         "unavailable": "Le service de correction est momentanément indisponible. Réessayez plus tard ; aucune note n’a été attribuée.",
     }
 
     def __init__(self, code):
         self.code = code if code in self._MESSAGES else "unavailable"
         self.message = self._MESSAGES[self.code]
-        self.retryable = self.code not in {"not_configured", "refused"}
+        self.retryable = self.code != "not_configured"
         super().__init__(self.message)
 
 
@@ -384,7 +410,8 @@ def _resolve_excerpt(identifier, excerpts, answers, allowed_fields, diagnostics)
     return "", True
 
 
-def _validate_feedback(raw, assignment, answers, model):
+def _validate_feedback(raw, assignment, answers, model, *, issues=None):
+    issues = [] if issues is None else issues
     excerpts = _answer_excerpts(answers)
     diagnostics = {"unknown_reference": 0, "wrong_field": 0, "source_mismatch": 0, "missing_evidence": 0}
     _keys(raw, _schema(assignment, excerpts)["required"])
@@ -395,11 +422,20 @@ def _validate_feedback(raw, assignment, answers, model):
             or not isinstance(raw["criteria"], list) or len(raw["criteria"]) != len(rubric)):
         raise ValueError("Évaluation invalide.")
     reasons = _texts(raw["human_review_reasons"], 20)
-    cma = assignment["grading_context"] == "cma_simulation"
-    if raw["assessment"] == "ambiguous" or (raw["assessment"] == "off_topic" and not cma):
-        reasons.append("La pertinence ou le sens de la copie nécessite une relecture du formateur.")
-    if raw["needs_human_review"] and not reasons:
-        reasons.append("Une relecture du formateur est nécessaire pour confirmer certains points.")
+
+    def flag(code, message, criterion_id=None):
+        # Only server-controlled categories and authored IDs reach the next
+        # developer message; never promote provider prose to an instruction.
+        issue = {"code": code}
+        if criterion_id is not None:
+            issue["criterion_id"] = criterion_id
+        issues.append(issue)
+        reasons.append(message)
+
+    if raw["assessment"] == "ambiguous":
+        flag("ambiguous_copy", "Le sens de la copie nécessite une nouvelle vérification.")
+    if raw["needs_human_review"] or raw["human_review_reasons"]:
+        flag("provider_uncertainty", "Certains points de la correction restent à vérifier.")
     criteria = {}
     for row in raw["criteria"]:
         _keys(row, ("id", "points", "status", "feedback", "evidence_id", "improvement"))
@@ -413,29 +449,27 @@ def _validate_feedback(raw, assignment, answers, model):
         points = min(maximum, round(max(0, min(maximum, requested)), 2))
         if raw["assessment"] == "off_topic" and points > 0:
             points = 0
-            reasons.append("Une copie décrite comme entièrement hors sujet avait reçu des points ; le formateur doit confirmer la correction.")
+            flag("off_topic_with_points", "Une copie décrite comme entièrement hors sujet avait reçu des points.", row["id"])
         if requested < 0 or requested > maximum:
-            reasons.append(f'Le score proposé pour « {criterion["label"]} » dépassait son barème.')
+            flag("score_out_of_range", f'Le score proposé pour « {criterion["label"]} » dépassait son barème.', row["id"])
         relevant_answers = [answers[field_id] for field_id in criterion["field_ids"]]
         evidence, invalid_evidence = _resolve_excerpt(row["evidence_id"], excerpts, answers,
                                                        criterion["field_ids"], diagnostics)
         if invalid_evidence:
-            reasons.append(f'Le repère de preuve pour « {criterion["label"]} » ne correspond pas à un extrait autorisé de la copie.')
+            flag("invalid_evidence", f'Le repère de preuve pour « {criterion["label"]} » ne correspond pas à un extrait autorisé de la copie.', row["id"])
         if not any(relevant_answers):
             if points:
-                reasons.append(f'Un champ vide avait reçu des points pour « {criterion["label"]} » ; son score est ramené à zéro.')
+                flag("blank_with_points", f'Un champ vide avait reçu des points pour « {criterion["label"]} ».', row["id"])
             points, evidence = 0, ""
         elif points > 0 and not evidence:
             diagnostics["missing_evidence"] += 1
-            reasons.append(f'Les points attribués à « {criterion["label"]} » nécessitent une preuve dans la copie.')
+            flag("missing_evidence", f'Les points attribués à « {criterion["label"]} » nécessitent une preuve dans la copie.', row["id"])
         status = "met" if points == maximum else "partial" if points > 0 else "not_met"
         if row["status"] == "uncertain":
             status = "uncertain"
-            reasons.append(f'Le critère « {criterion["label"]} » demande une relecture.')
+            flag("uncertain_criterion", f'Le critère « {criterion["label"]} » nécessite une nouvelle analyse.', row["id"])
         elif row["status"] != status:
-            reasons.append(f'Le commentaire et les points de « {criterion["label"]} » demandent une vérification.')
-        if criterion["critical"] and points < maximum and not cma:
-            reasons.append(f'Le critère essentiel « {criterion["label"]} » doit être revu avec le formateur.')
+            flag("status_score_mismatch", f'Le commentaire et les points de « {criterion["label"]} » demandent une vérification.', row["id"])
         criteria[row["id"]] = {
             "id": row["id"], "label": criterion["label"], "field_ids": criterion["field_ids"],
             "points": points, "max_points": maximum, "status": status,
@@ -454,7 +488,7 @@ def _validate_feedback(raw, assignment, answers, model):
         excerpt, invalid_excerpt = _resolve_excerpt(error["excerpt_id"], excerpts, answers,
                                                     [error["field_id"]], diagnostics)
         if invalid_excerpt:
-            reasons.append("Un repère d’erreur ne correspond pas au champ indiqué de la copie.")
+            flag("invalid_error_excerpt", "Un repère d’erreur ne correspond pas au champ indiqué de la copie.", error["criterion_id"])
         errors.append({"criterion_id": error["criterion_id"], "field_id": error["field_id"],
                        "excerpt": excerpt, "explanation": _text(error["explanation"], 2400, empty=False),
                        "correction": _text(error["correction"], 2400, empty=False)})
@@ -467,6 +501,8 @@ def _validate_feedback(raw, assignment, answers, model):
     if not set(revision_ids).issubset(targets):
         raise ValueError("Révision inconnue dans la correction.")
     spelling_errors, spelling_complete = _validate_spelling(raw, assignment, answers, reasons)
+    if assignment["spelling_review"] and not spelling_complete:
+        issues.append({"code": "spelling_incomplete"})
     score = round(sum(row["points"] for row in criteria.values()), 2)
     max_score = round(sum(row["max_points"] for row in criteria.values()), 2)
     reasons = list(dict.fromkeys(reasons))
@@ -531,7 +567,7 @@ def _validate_spelling(raw, assignment, answers, reasons):
     if raw["spelling_error_count"] != len(errors):
         complete = False
     if not complete:
-        reasons.append("Le décompte des fautes d’orthographe doit être confirmé par le formateur.")
+        reasons.append("Le décompte des fautes d’orthographe nécessite une nouvelle vérification.")
     return errors, complete
 
 
@@ -550,13 +586,13 @@ def _strict_json(value):
     return json.loads(value, object_pairs_hook=pairs, parse_constant=invalid_constant)
 
 
-def _request_correction(payload, api_key):
+def _request_correction(payload, api_key, *, timeout=_TIMEOUT):
     request = Request("https://api.openai.com/v1/responses",
                       data=json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8"),
                       headers={"Authorization": "Bearer " + api_key, "Content-Type": "application/json"},
                       method="POST")
     try:
-        with urlopen(request, timeout=_TIMEOUT) as response:
+        with urlopen(request, timeout=timeout) as response:
             raw = response.read(_MAX_RESPONSE_BYTES + 1)
     except HTTPError as error:
         raise VtcAIError("rate_limited" if error.code == 429 else "unavailable") from None
@@ -597,13 +633,24 @@ def _request_correction(payload, api_key):
         raise VtcAIError("invalid_response") from None
 
 
+def _verification_payload(payload, issues):
+    """Recheck the original source; never forward a candidate score or its prose."""
+    verified = copy.deepcopy(payload)
+    verified["instructions"] += "\n" + _VERIFICATION_INSTRUCTIONS
+    developer = json.loads(verified["input"][0]["content"][0]["text"])
+    developer["verification"] = {"attempt": 2, "issues": issues}
+    verified["input"][0]["content"][0]["text"] = json.dumps(developer, ensure_ascii=False)
+    return verified
+
+
 def grade_written_work(assignment, answers):
     """Return validated formative feedback, or raise VtcAIError without a grade.
 
     Blank optional fields are accepted and earn no points. An entirely blank
     submission is rejected; the CMA adapter can mark it unanswered without an API
-    call. Human-review feedback contains a provisional score but never validates
-    mastery or an official-simulation outcome on its own.
+    call. An uncertain candidate is checked again automatically within the same
+    time budget. Neither an uncertain grade nor a demand for human review is ever
+    returned: a failed verification raises a retryable error without a score.
     """
     normalized = normalize_answers(assignment, answers)
     private = _private_assignment(assignment)
@@ -632,11 +679,30 @@ def grade_written_work(assignment, answers):
     if not _SLOTS.acquire(blocking=False):
         raise VtcAIError("busy")
     try:
-        raw = _request_correction(payload, api_key)
-        try:
-            return _validate_feedback(raw, private, normalized, model)
-        except (ValueError, TypeError, KeyError, OverflowError):
-            raise VtcAIError("invalid_response") from None
+        deadline = time.monotonic() + _TIMEOUT
+        for attempt in range(2):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise VtcAIError("timeout")
+            timeout = min(_FIRST_PASS_TIMEOUT if attempt == 0 else _TIMEOUT, remaining)
+            issues, feedback = [], None
+            try:
+                raw = _request_correction(payload, api_key, timeout=timeout)
+                feedback = _validate_feedback(raw, private, normalized, model, issues=issues)
+            except VtcAIError as error:
+                if error.code != "invalid_response":
+                    raise
+                issues.append({"code": "invalid_response"})
+            except (ValueError, TypeError, KeyError, OverflowError):
+                issues.append({"code": "invalid_response"})
+            if time.monotonic() >= deadline:
+                raise VtcAIError("timeout")
+            if feedback is not None and not feedback["needs_human_review"]:
+                return feedback
+            if attempt == 1:
+                raise VtcAIError("invalid_response")
+            _LOGGER.info("vtc_ai_automatic_verification issue_count=%d", len(issues))
+            payload = _verification_payload(payload, issues)
     except VtcAIError as error:
         _LOGGER.warning("vtc_ai_correction_failed code=%s", error.code)
         raise
