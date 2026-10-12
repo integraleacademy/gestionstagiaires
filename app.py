@@ -31283,6 +31283,8 @@ def _replace_in_docx(doc: Document, replacements: dict) -> None:
 
 
 def _etiquette_template_name(training_type: str) -> Optional[str]:
+    if (training_type or "").strip().upper().startswith("SSIAP"):
+        return "etiquette_ssiap.docx"
     template_map = {
         "A3P": "etiquette_a3p.docx",
         "APS": "etiquette_aps.docx",
@@ -31293,6 +31295,34 @@ def _etiquette_template_name(training_type: str) -> Optional[str]:
         "DIRIGEANT VAE": "etiquette_dirigeant.docx",
     }
     return template_map.get((training_type or "").strip().upper())
+
+
+def _ssiap_etiquette_checklist(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Use the SSIAP dossier document keys for both printed and Word labels."""
+    docs_by_key = {
+        (document.get("key") or "").strip(): document
+        for document in (trainee.get("documents") or [])
+        if isinstance(document, dict)
+    }
+    checklist = [{
+        "label": "Contrat de formation signé",
+        "checked": (trainee.get("convention_status") or "").strip().lower() == "signed",
+    }]
+    for label, key in (
+        ("Pièce d’identité", "id"),
+        ("Carte vitale", "carte_vitale_doc"),
+        ("Photo d’identité", "photo"),
+        ("Certificat médical de moins de 3 mois", "certificat_medical_ssiap"),
+        ("Attestation secourisme (PSC1 ou SST)", "attestation_secourisme_ssiap"),
+    ):
+        status = ((docs_by_key.get(key) or {}).get("status") or "").strip().upper()
+        checklist.append({"label": label, "checked": status == "CONFORME"})
+    # These paper-only items remain available for manual checking, as on APS labels.
+    checklist.extend([
+        {"label": "Fiche CNIL signée", "checked": False},
+        {"label": "Dossier examen", "checked": False},
+    ])
+    return checklist
 
 
 def _build_etiquette_docx_bytes(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> bytes:
@@ -31313,6 +31343,10 @@ def _build_etiquette_docx_bytes(session_obj: Dict[str, Any], trainee: Dict[str, 
         "{{TYPE_FORMATION}}": training_type,
         "{{DATES}}": f"{fr_date(_session_get(session_obj,'date_start',''))} → {fr_date(_session_get(session_obj,'date_end',''))}",
     }
+    if training_type.startswith("SSIAP"):
+        for index, item in enumerate(_ssiap_etiquette_checklist(trainee)):
+            marker = "✓" if item["checked"] else "○"
+            replacements[f"{{{{SSIAP_ITEM_{index}}}}}"] = f"{marker}  {item['label']}"
     _replace_in_docx(doc, replacements)
     _enforce_etiquette_paper_source(doc)
 
@@ -31513,6 +31547,9 @@ def admin_etiquette_print_page(session_id: str, trainee_id: str):
         elif item in checklist_status_map:
             checked = checklist_status_map[item]
         checklist.append({"label": item, "checked": checked})
+
+    if training_type.startswith("SSIAP"):
+        checklist = _ssiap_etiquette_checklist(t)
 
     return render_template(
         "admin_etiquette_print.html",
