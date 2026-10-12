@@ -68,7 +68,7 @@ class NativeElearningTenantExportTests(unittest.TestCase):
             self.tracking.record_question_attempt(access, "question-1", {"selected": ["REPONSE-PRIVEE-OF-" + label]},
                                                    False, request_id="request-private-" + label)
             job = self.ai.request_analysis(access, PRODUCTION, answers, activity_id="content-1")
-            output = valid_output()
+            output = valid_output(answers=answers)
             output["summary"] = "ANALYSE-PRIVEE-OF-" + label
             with patch("elearning_native.production_ai.urlopen", return_value=FakeResponse(envelope(output))):
                 self.ai._run_job(job["id"])

@@ -18,7 +18,6 @@ import socket
 import sqlite3
 import threading
 import time
-import unicodedata
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
@@ -31,11 +30,13 @@ from urllib.request import Request, urlopen
 from .production import normalize_production
 
 
-PROMPT_VERSION = "aps-production-feedback-20261012-v2"
+PROMPT_VERSION = "aps-production-feedback-20261012-v3"
 DEFAULT_MODEL = "gpt-4.1"
 API_URL = "https://api.openai.com/v1/responses"
 MAX_RESPONSE_BYTES = 256 * 1024
 MAX_PROMPT_BYTES = 100 * 1024
+MAX_EXCERPT_CHARS = 250
+MAX_ANSWER_EXCERPTS = 256
 MAX_ATTEMPTS = 3
 RETRY_DELAY_SECONDS = 60
 STALE_RUNNING_SECONDS = 240
@@ -79,8 +80,14 @@ Correspondance obligatoire : level=satisfactory exige un score de 3 ou 4 ;
 level=missing ou incorrect exige un score de 0 ou 1. Utilise level=partial pour
 un critère partiellement réussi, notamment avec un score de 2. Une erreur dans
 une partie du travail ne rend pas tout le critère incorrect : apprécie son ensemble.
-Les citations doivent être de courts extraits EXACTS d'un champ de la réponse, sans
-les réécrire ni ajouter des points de suspension. Si rien ne convient, evidence=[].
+La copie du stagiaire est fournie en extraits contigus, dans l'ordre de chaque
+champ : leur concaténation reconstitue exactement sa réponse complète. Analyse
+l'ensemble de cette copie. Pour citer un passage, sélectionne uniquement son
+excerpt_id fourni, sous la forme evidence=[{"excerpt_id":"identifiant fourni"}].
+Ne recopie jamais le passage dans evidence et n'y fournis ni quote ni field_id :
+le serveur restituera le champ et le texte original. N'invente aucun identifiant.
+Un critère peut citer des extraits de plusieurs champs. Si rien ne convient,
+evidence=[]. Réserve les excerpt_id à evidence, sans les employer dans la prose.
 N'invente pas de problème lorsqu'une réponse est bonne. Utilise des listes vides
 lorsqu'il n'y a pas d'erreur ou de manque. Fournis les corrections prioritaires,
 leurs raisons, une méthode concrète et un plan de progrès réalisable en 1 à 3 étapes.
@@ -236,9 +243,41 @@ def _array(items: Mapping[str, Any], maximum: int = 8, minimum: int = 0) -> dict
     return {"type": "array", "items": dict(items), "minItems": minimum, "maxItems": maximum}
 
 
+def build_answer_excerpts(prepared: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Lossless, bounded slices; IDs belong to this exact copy and field."""
+    answers = prepared["answers"]
+    copy_id = hashlib.sha256(_json(answers).encode("utf-8")).hexdigest()[:12]
+    excerpts = []
+    for field_number, field in enumerate(prepared["exercise"]["fields"], 1):
+        field_id = field["id"]
+        source = answers[field_id]
+        start, number = 0, 0
+        while start < len(source):
+            end = min(start + MAX_EXCERPT_CHARS, len(source))
+            if end < len(source):
+                window = source[start:end]
+                # Prefer a sentence, then a word boundary in the latter half.
+                # Very long words/whitespace runs are sliced without losing text.
+                for pattern in (r'(?:[.!?;:]["»”\']?\s+|\n+)', r'\s+'):
+                    boundaries = [match.end() for match in re.finditer(pattern, window)
+                                  if match.end() >= MAX_EXCERPT_CHARS // 2]
+                    if boundaries:
+                        end = start + boundaries[-1]
+                        break
+            number += 1
+            excerpts.append({"id": f"extrait-{copy_id}-{field_number}-{number}", "field_id": field_id,
+                             "start": start, "end": end, "text": source[start:end]})
+            if len(excerpts) > MAX_ANSWER_EXCERPTS:
+                raise ProductionAIError("input_too_large", "Ce dossier est trop volumineux pour l’analyse. Contactez votre formateur.")
+            start = end
+    return excerpts
+
+
 def feedback_schema(prepared: Mapping[str, Any]) -> dict[str, Any]:
     fields = [field["id"] for field in prepared["exercise"]["fields"]]
     criteria = [row["id"] for row in prepared["exercise"]["rubric"]]
+    excerpt_ids = [row["id"] for row in build_answer_excerpts(prepared) if row["text"].strip()]
+    evidence_id = {"type": "string", "enum": excerpt_ids} if excerpt_ids else {"type": "string"}
     refs = _array({"type": "string", "enum": [row["id"] for row in prepared["references"]]}, 5, 1)
     return _object({
         "status": {"type": "string", "enum": ["evaluated", "needs_clarification"]},
@@ -248,7 +287,7 @@ def feedback_schema(prepared: Mapping[str, Any]) -> dict[str, Any]:
             "level": {"type": "string", "enum": ["satisfactory", "partial", "missing", "incorrect"]},
             "score": {"type": "integer", "minimum": 0, "maximum": 4},
             "explanation": _text(1600),
-            "evidence": _array(_object({"field_id": {"type": "string", "enum": fields}, "quote": _text(250)}), 3),
+            "evidence": _array(_object({"excerpt_id": evidence_id}), 3 if excerpt_ids else 0),
             "strengths": _array(_text(650), 4),
             "errors": _array(_text(850), 4),
             "missing": _array(_text(850), 4),
@@ -294,37 +333,6 @@ def _validate_schema(value: Any, schema: Mapping[str, Any]) -> None:
         raise ValueError("invalid_schema")
 
 
-def _quote_normalized(value: str) -> str:
-    return " ".join(unicodedata.normalize("NFC", value).translate({0x2018: "'", 0x2019: "'"}).split())
-
-
-def _original_evidence_quote(source: str, quote: str) -> str | None:
-    """Match only canonical text/spacing/apostrophes; return the learner's text.
-
-    Prefix lengths map the normalised match back to original text, including its
-    accents and whitespace. The final comparison disallows any approximate match.
-    """
-    wanted = _quote_normalized(quote)
-    start = _quote_normalized(source).find(wanted) if wanted else -1
-    if start < 0:
-        return None
-    if quote in source:
-        return quote
-
-    def boundary(length):
-        low, high = 0, len(source)
-        while low < high:
-            middle = (low + high) // 2
-            if len(_quote_normalized(source[:middle + 1])) > length:
-                high = middle
-            else:
-                low = middle + 1
-        return low
-
-    original = source[boundary(start):boundary(start + len(wanted))].strip()
-    return original if _quote_normalized(original) == wanted else None
-
-
 def _invalid_response_cause(exc: Exception) -> str:
     """A closed technical vocabulary; exception messages can contain private text."""
     if isinstance(exc, json.JSONDecodeError):
@@ -343,6 +351,7 @@ def validate_feedback(value: Any, prepared: Mapping[str, Any]) -> dict[str, Any]
     _validate_schema(value, feedback_schema(prepared))
     criteria = {row["id"]: row for row in prepared["exercise"]["rubric"]}
     fields = {row["id"]: row for row in prepared["exercise"]["fields"]}
+    excerpts = {row["id"]: row for row in build_answer_excerpts(prepared)}
     if (len({row["criterion_id"] for row in value["criteria"]}) != len(criteria)
             or len({row["field_id"] for row in value["corrected_response"]}) != len(fields)):
         raise ValueError("incomplete_coverage")
@@ -350,11 +359,17 @@ def validate_feedback(value: Any, prepared: Mapping[str, Any]) -> dict[str, Any]
         if ((row["level"] == "satisfactory" and row["score"] < 3)
                 or (row["level"] in ("missing", "incorrect") and row["score"] > 1)):
             raise ValueError("inconsistent_score")
+        resolved = []
         for evidence in row["evidence"]:
-            quote = _original_evidence_quote(prepared["answers"][evidence["field_id"]], evidence["quote"])
-            if quote is None:
+            excerpt = excerpts.get(evidence["excerpt_id"])
+            if (not excerpt or excerpt["field_id"] not in fields or not excerpt["text"].strip()
+                    or not 0 < len(excerpt["text"]) <= MAX_EXCERPT_CHARS
+                    or not 0 <= excerpt["start"] < excerpt["end"] <= len(prepared["answers"][excerpt["field_id"]])
+                    or excerpt["end"] - excerpt["start"] != len(excerpt["text"])
+                    or prepared["answers"][excerpt["field_id"]][excerpt["start"]:excerpt["end"]] != excerpt["text"]):
                 raise ValueError("unsupported_evidence")
-            evidence["quote"] = quote
+            resolved.append({"field_id": excerpt["field_id"], "quote": excerpt["text"]})
+        row["evidence"] = resolved
         row["label"] = criteria[row["criterion_id"]]["label"]
     for row in value["corrected_response"]:
         row["label"] = fields[row["field_id"]]["label"]
@@ -372,17 +387,25 @@ def call_openai(prepared: Mapping[str, Any], *, api_key: str, model: str,
                 timeout: int = 60) -> dict[str, Any]:
     reference_payload = {"dossier_de_reference": prepared["exercise"], "reperes_du_cours": [
         {key: row[key] for key in ("id", "title", "text")} for row in prepared["references"]]}
+    excerpts = build_answer_excerpts(prepared)
+    learner_payload = {"texte_stagiaire_a_evaluer": [
+        {"field_id": field["id"], "extraits": [{"excerpt_id": row["id"], "text": row["text"]}
+            for row in excerpts if row["field_id"] == field["id"]]}
+        for field in prepared["exercise"]["fields"]]}
     payload = {
         "model": model, "store": False, "instructions": INSTRUCTIONS,
         "input": [
             {"role": "developer", "content": [{"type": "input_text", "text": _json(reference_payload)}]},
-            {"role": "user", "content": [{"type": "input_text", "text": _json({"texte_stagiaire_a_evaluer": prepared["answers"]})}]},
+            {"role": "user", "content": [{"type": "input_text", "text": _json(learner_payload)}]},
         ],
         "text": {"format": {"type": "json_schema", "name": "aps_production_feedback", "strict": True,
                             "schema": feedback_schema(prepared)}},
         "max_output_tokens": 6500,
     }
-    request = Request(API_URL, data=_json(payload).encode("utf-8"), method="POST",
+    encoded = _json(payload).encode("utf-8")
+    if len(encoded) > MAX_PROMPT_BYTES:
+        raise ProductionAIError("input_too_large", "Ce dossier est trop volumineux pour l’analyse. Contactez votre formateur.")
+    request = Request(API_URL, data=encoded, method="POST",
                       headers={"Authorization": "Bearer " + api_key, "Content-Type": "application/json"})
     # A single network call. Automatic retries can cause duplicate billing after
     # an ambiguous timeout; retrying is instead an explicit, deduplicated action.
@@ -625,6 +648,8 @@ class ProductionAIService:
         feedback = None
         error_code = error_message = ""
         try:
+            if row["prompt_version"] != PROMPT_VERSION:
+                raise ProductionAIError("prompt_updated", "Le moteur d’analyse a été mis à jour. Cette demande n’a pas été envoyée ; relancez l’analyse pour utiliser la nouvelle version.", 409)
             if not self.configured:
                 raise ProductionAIError("not_configured", "L’analyse IA est momentanément indisponible. Votre travail reste enregistré.", 503)
             feedback = call_openai(json.loads(row["input_json"]), api_key=self._key(), model=row["model"])
