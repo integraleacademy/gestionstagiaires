@@ -1,0 +1,13 @@
+{% set preview_sets = [
+  {'code':'aps', 'name':'APS', 'text':'Cours illustrés, cas à discuter, ateliers de mise en pratique et bilans : ces extraits montrent trois façons d’aborder les situations du métier.', 'slides':['Un atelier de gestion des conflits', 'Comprendre la mise en sécurité incendie', 'Lire une image de vidéosurveillance']},
+  {'code':'ssiap1', 'name':'SSIAP 1', 'text':'Dans ces extraits du premier jour : la propagation de la chaleur, les dangers des fumées et les critères de résistance au feu.', 'slides':['Les chemins de la chaleur', 'Comprendre les fumées', 'Distinguer les critères R, E et I']}
+] %}
+<section class="sf-section sf-previews" id="apercus" aria-labelledby="sf-preview-title"><div class="sf-shell">
+  <div class="sf-section-head"><div><p class="sf-kicker">À L’INTÉRIEUR DES SUPPORTS</p><h2 id="sf-preview-title">De vraies diapositives,<br>à découvrir ici.</h2></div><p>Découvrez une sélection de diapositives APS et SSIAP 1. Cliquez sur chaque image pour la lire en grand.</p></div>
+  {% for preview in preview_sets if not book or book.code == preview.code %}
+  <div class="sf-preview-heading"><h3>PowerPoint {{ preview.name }}</h3><p>{{ preview.text }}</p></div>
+  <div class="sf-preview-grid">{% for label in preview.slides %}<figure><a href="{{ url_for('static', filename='manuals/powerpoint-previews/' ~ preview.code ~ '-' ~ loop.index ~ '.webp') }}" data-course-image aria-label="Agrandir la diapositive {{ preview.name }} : {{ label }}"><img src="{{ url_for('static', filename='manuals/powerpoint-previews/' ~ preview.code ~ '-' ~ loop.index ~ '.webp') }}" alt="Extrait du PowerPoint {{ preview.name }} : {{ label }}" width="1440" height="810" loading="lazy"><span>Agrandir ↗</span></a><figcaption>{{ label }}</figcaption></figure>{% endfor %}</div>
+  {% endfor %}
+  <p class="sf-note">Extraits des supports de formation. Les fichiers PowerPoint complets sont fournis avec la commande.</p>
+</div></section>
+<dialog class="cs-lightbox" aria-label="Diapositive du support formateur agrandie"><form method="dialog"><button type="submit" aria-label="Fermer l’aperçu">Fermer ×</button></form><img alt=""><p></p></dialog>

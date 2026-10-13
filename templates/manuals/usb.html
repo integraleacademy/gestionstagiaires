@@ -3,7 +3,7 @@
 {% from 'manuals/_usb_macros.html' import usb_art, support_name %}
 {% block title %}{{ 'PowerPoint ' ~ book.name ~ ' sur clé USB' if book else 'Supports formateurs PowerPoint sur clé USB' }}{% endblock %}
 {% block description %}{{ 'Découvrez le support PowerPoint ' ~ book.name ~ ' : contenu, utilisation et tarif TTC.' if book else 'Des cours prêts à projeter : 14 supports PowerPoint pour vos formateurs. 99 € ou 199 € TTC, clé USB et livraison incluses, sans abonnement.' }}{% endblock %}
-{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/usb-showcase.css', v='20261013-1') }}">{% endblock %}
+{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/usb-showcase.css', v='20261013-2') }}"><script src="{{ url_for('static', filename='js/course-showcase.js', v='20261012-design-1') }}" defer></script>{% endblock %}
 {% block content %}
 <div class="sf-showcase">
   {% if book %}{% include 'manuals/_usb_detail.html' %}{% else %}{% include 'manuals/_usb_catalogue.html' %}{% endif %}

@@ -1,0 +1,33 @@
+<div class="mc-catalogue">
+  <div class="mc-shell">
+    <nav class="mc-breadcrumb" aria-label="Fil d’Ariane"><a href="{{ url_for('home') }}">Accueil</a><span aria-hidden="true">/</span><span aria-current="page">Manuels de formation</span></nav>
+    <section class="mc-hero" aria-labelledby="mc-title">
+      <div><p class="mc-kicker">LA COLLECTION INTÉGRALE ACADEMY</p><h1 id="mc-title">Des manuels qui<br>donnent envie<br><em>d’apprendre.</em></h1><p class="mc-lead">Un support illustré pour suivre les cours, comprendre et réviser. Offrez à vos stagiaires un livre personnalisé aux couleurs de votre organisme.</p><div class="mc-actions"><a class="mc-button" href="#collection">Découvrir les {{ books|length }} manuels <span aria-hidden="true">↓</span></a><a class="mc-link" href="/personnalisation-livraison">Votre logo sur la couverture →</a></div><p class="mc-note">Sécurité privée · Incendie · Électricité · Transport · Secourisme</p></div>
+      <figure class="mc-books"><span class="mc-visual-label">VOTRE ORGANISME, VOTRE COUVERTURE</span><div>{% for code, name in [('aps','APS'),('ssiap1','SSIAP 1'),('a3p','A3P')] %}<img src="{{ url_for('static', filename='manuals/' ~ code ~ '.webp') }}" alt="Couverture personnalisable du manuel {{ name }}" width="212" height="300" fetchpriority="high">{% endfor %}</div><figcaption>Le contenu est prêt.<strong>La signature, c’est la vôtre.</strong></figcaption></figure>
+    </section>
+    <div class="mc-benefits" aria-label="Inclus avec vos manuels"><div>{{ icon('logo') }}<p><strong>Votre logo inclus</strong>Sur la couverture de vos livres</p></div><div>{{ icon('book') }}<p><strong>Dès 50 exemplaires</strong>Par titre de la collection</p></div><div>{{ icon('truck') }}<p><strong>Livraison incluse</strong>Des tarifs affichés en TTC</p></div></div>
+  </div>
+
+  <section class="mc-section mc-collection" id="collection" aria-labelledby="collection-title"><div class="mc-shell">
+    <div class="mc-section-head"><div><p class="mc-kicker">{{ books|length }} MANUELS · {{ categories|length }} DOMAINES</p><h2 id="collection-title">Trouvez le manuel<br>de votre formation.</h2></div><p>Comparez les tarifs et découvrez une sélection de pages pour apprécier les illustrations, les explications et les mises en situation.</p></div>
+    <div data-catalogue>{% include 'manuals/_catalogue_filters.html' %}
+      {% for code, label in categories %}{% set category_books = books|selectattr('category', 'equalto', code)|list %}
+      <section class="catalogue-category" data-catalogue-group aria-labelledby="category-{{ code }}"><div class="catalogue-category-heading"><h3 id="category-{{ code }}">{{ label }}</h3><span data-category-count>{{ category_books|length }} manuel{{ 's' if category_books|length != 1 else '' }}</span></div><div class="discovery-grid" data-catalogue-grid>{% for book in category_books %}{{ book_card(book, compact=true) }}{% endfor %}</div></section>
+      {% endfor %}
+    </div><p class="mc-note">Les aperçus présentent des pages sélectionnées dans plusieurs parties des manuels. Pour SSIAP 3 et les recyclages SSIAP 2 et 3, trois pages d’exemple sont actuellement proposées.</p>
+  </div></section>
+
+  <section class="mc-section" aria-labelledby="mc-order-title"><div class="mc-shell">
+    <div class="mc-section-head"><div><p class="mc-kicker">POUR VOTRE PROCHAINE SESSION</p><h2 id="mc-order-title">Vos manuels,<br>à votre image.</h2></div><p>La personnalisation de la couverture et la livraison sont comprises dans les prix affichés.</p></div>
+    <ol class="mc-steps"><li><span>01</span><h3>Choisissez vos titres</h3><p>Préparez votre commande dès 50 exemplaires par titre. Le tarif diminue à partir de 100 exemplaires.</p></li><li><span>02</span><h3>Validez votre couverture</h3><p>Transmettez votre logo, puis vérifiez le bon à tirer avant de donner votre accord pour l’impression.</p></li><li><span>03</span><h3>Suivez votre commande</h3><p>Retrouvez sa préparation et son expédition dans votre espace organisme. Notre équipe confirme le délai selon votre projet.</p></li></ol>
+  </div></section>
+
+  <section class="mc-section mc-faq" aria-labelledby="mc-faq-title"><div class="mc-shell mc-split"><div><p class="mc-kicker">LES RÉPONSES UTILES</p><h2 id="mc-faq-title">Préparer votre<br>prochaine commande.</h2><p class="mc-muted">Une date de session à respecter ? Indiquez-la à notre équipe avant de commander pour faire confirmer le délai.</p><a class="mc-link" href="mailto:clement@integraleacademy.com?subject=Commande%20de%20manuels%20et%20date%20de%20session">Échanger avec notre équipe →</a></div><div class="mc-faq-list">
+    <details><summary>Comment découvrir l’intérieur des manuels ?</summary><p>Chaque fiche présente des pages illustrées et un PDF d’aperçu. Les extraits comprennent 15 à 20 pages sélectionnées lorsqu’un manuel complet est disponible. SSIAP 3 et les recyclages SSIAP 2 et 3 disposent actuellement de trois pages d’exemple.</p></details>
+    <details><summary>Votre logo et le bon à tirer</summary><p>La couverture de chaque manuel est personnalisée avec votre logo. Transmettez-le lors de la commande ou depuis son suivi, puis validez le bon à tirer avant l’impression.</p><a class="mc-link" href="/personnalisation-livraison">Personnalisation et livraison →</a></details>
+    <details><summary>Quel délai prévoir pour la livraison ?</summary><p>Le délai est confirmé par notre équipe en fonction de votre commande, du règlement et de la validation du bon à tirer. Pour une échéance précise, faites confirmer la faisabilité avant de commander.</p></details>
+    <details><summary>Les supports PowerPoint sont-ils inclus ?</summary><p>Les supports formateurs sur clé USB sont vendus séparément, à 99 € ou 199 € TTC selon la formation, sans abonnement.</p><a class="mc-link" href="/supports-formateurs">Voir les supports et leurs aperçus →</a></details>
+    <details id="sur-mesure"><summary>Un manuel pour une autre formation</summary><p>Notre équipe peut étudier un support adapté à votre programme, à votre public et à votre organisme. Indiquez les quantités envisagées et la date de votre prochaine session.</p><a class="mc-link" href="mailto:clement@integraleacademy.com?subject=Projet%20de%20manuel%20sur%20mesure">Présenter mon projet →</a></details>
+  </div></div></section>
+  <div class="mc-shell"><section class="mc-final"><div><p class="mc-kicker">VOTRE PROCHAINE SESSION SE PRÉPARE ICI</p><h2>Un support à conserver.<br>Des repères à retrouver.</h2></div><a class="mc-button" href="{{ url_for('manuals_shop.catalogue') }}">Préparer ma commande <span aria-hidden="true">→</span></a></section></div>
+</div>
