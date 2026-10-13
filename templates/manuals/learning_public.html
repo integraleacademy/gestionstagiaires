@@ -2,13 +2,9 @@
 {% set is_mac = course and course.code == 'mac-aps' %}
 {% block title %}{{ 'E-learning ' ~ course.name if course else 'Parcours e-learning pour les organismes de formation' }}{% endblock %}
 {% block description %}{{ (course.title ~ ' : programme, durée pédagogique et accès pour vos stagiaires.') if course else 'Découvrez les parcours e-learning disponibles, leur programme et le suivi de progression pour votre organisme.' }}{% endblock %}
-{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/course-showcase.css', v='20261012-design-1') }}"><script src="{{ url_for('static', filename='js/course-showcase.js', v='20261012-design-1') }}" defer></script>{% endblock %}
+{% block extra_styles %}{% if not course %}<link rel="stylesheet" href="{{ url_for('static', filename='css/learning-catalogue.css', v='20261013-1') }}">{% endif %}<link rel="stylesheet" href="{{ url_for('static', filename='css/course-showcase.css', v='20261012-design-1') }}"><script src="{{ url_for('static', filename='js/course-showcase.js', v='20261012-design-1') }}" defer></script>{% endblock %}
 {% block content %}
 {% if course %}{% include 'manuals/_course_showcase.html' %}{% else %}
-<div class="shop-wrap">
-<nav class="manual-breadcrumb" aria-label="Fil d’Ariane"><a href="/">Accueil</a> / E-learning</nav>
-<section class="catalogue-hero"><div><span class="eyebrow">LES PARCOURS EN LIGNE</span><h1>Apprendre à son rythme. Suivre chaque progression.</h1><p>Des accès individuels ou en groupe, des activités pédagogiques et un espace de suivi pour votre organisme.</p></div></section>
-<div class="compact-grid">{% for code,item in courses.items() %}<article class="form-card"><span class="eyebrow blue">{{ item.duration_label }}</span><h2>{{ item.name }}</h2><p>{{ item.title }}</p><strong>{{ item.unit_cents|manuals_money ~ ' TTC / stagiaire' if item.unit_cents is not none else 'Tarif sur devis' }}</strong>{% if code == 'mac-aps' %}<p>Tarif unique pour tous les organismes.</p>{% endif %}<p><a class="button primary" href="{{ url_for('manuals_shop.public_course',code=code) }}">Programme et modalités →</a></p>{% if code == 'mac-aps' %}<a class="text-link" href="{{ url_for('manuals_shop.mac_aps_demo') }}">Démonstration MAC APS →</a>{% endif %}</article>{% endfor %}</div>
-</div>
+{% include 'manuals/_learning_catalogue.html' %}
 {% endif %}
 {% endblock %}

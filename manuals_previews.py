@@ -1,4 +1,4 @@
-"""Public samples contain at most ten pages, including at their old URLs."""
+"""Public samples contain at most twenty selected pages, including at their old URLs."""
 from functools import lru_cache
 from pathlib import Path
 import posixpath
@@ -8,7 +8,7 @@ from pypdf import PdfReader
 
 from manuals_presentation import PRESENTATIONS
 
-MAX_PREVIEW_PAGES = 10
+MAX_PREVIEW_PAGES = 20
 LEGACY_SPECIMENS = {
     "specimenssiap.pdf": "ssiap1",
     "specimenaps.pdf": "aps",
@@ -17,6 +17,16 @@ LEGACY_SPECIMENS = {
     "specimendssp.pdf": "dssp",
     "specimensst.pdf": "sst",
 }
+
+# Previously shared 8- and 10-page URLs now resolve to the curated selection.
+LEGACY_SPECIMENS.update({
+    f"manuals/specimens/{code}-10-pages.pdf": code
+    for code in ("ssiap1", "aps", "a3p", "vtc", "dssp", "sst")
+})
+LEGACY_SPECIMENS.update({
+    f"manuals/specimens/{code}.pdf": code
+    for code in ("ssiap2", "bs_be", "mac_sst", "h0b0", "ssiap1_recyclage", "mac_aps")
+})
 
 
 def preview_path():

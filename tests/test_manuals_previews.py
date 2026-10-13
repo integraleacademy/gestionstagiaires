@@ -26,7 +26,7 @@ def test_every_download_contains_only_advertised_pages(client, code, book):
     assert response.status_code == 200, code
     assert response.mimetype == "application/pdf"
     reader = PdfReader(io.BytesIO(response.data))
-    assert len(reader.pages) == book["specimen_pages"] <= 10
+    assert len(reader.pages) == book["specimen_pages"] <= 20
     assert not reader.attachments
     assert response.headers["Cache-Control"] == "no-store"
     assert "noindex" in response.headers["X-Robots-Tag"]
@@ -40,7 +40,7 @@ def test_old_urls_and_query_parameters_cannot_expose_full_source(client, legacy,
     assert response.status_code == 308
     assert response.location == "/static/" + PRESENTATIONS[code]["specimen"]
     result = client.get(old, follow_redirects=True)
-    assert len(PdfReader(io.BytesIO(result.data)).pages) == 10
+    assert len(PdfReader(io.BytesIO(result.data)).pages) == PRESENTATIONS[code]["specimen_pages"]
     assert client.head(old).status_code == 308
     # Dot segments must obey the same policy as Flask's static-file handler.
     assert client.get("/static/manuals/../" + legacy).status_code == 308
@@ -59,7 +59,7 @@ def test_unknown_and_full_replacement_files_are_never_served(tmp_path):
             writer.add_blank_page(width=420, height=595)
         writer.write(target)
 
-    write(10)
+    write(PRESENTATIONS["ssiap1"]["specimen_pages"])
     url = "/static/" + PRESENTATIONS["ssiap1"]["specimen"]
     assert client.get(url).status_code == 200
     write(264)

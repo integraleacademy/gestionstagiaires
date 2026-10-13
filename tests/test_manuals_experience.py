@@ -39,7 +39,8 @@ def test_public_pages_headers_and_real_assets(shop):
     assert '/manuels/mac_sst' in c.get('/sitemap.xml').text
     for code in ['ssiap2','mac_aps','ssiap1_recyclage','h0b0','bs_be','mac_sst']:
         response=c.get('/manuels/'+code)
-        assert ('manuals/specimens/'+code+'.pdf') in response.text
+        from manuals_presentation import PRESENTATIONS
+        assert PRESENTATIONS[code]['specimen'] in response.text
         assert 'Caractéristiques du manuel' in response.text
 
 

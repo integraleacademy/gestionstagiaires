@@ -5,10 +5,10 @@ and obsolete combined SSIAP/SST descriptions are deliberately not advertised.
 Prices always come from manuals_shop.CATALOGUE.
 """
 
+from manuals_preview_selection import PREVIEW_SELECTIONS, preview_filename
+
 PRESENTATIONS = {
     "ssiap1": {
-        "specimen": "manuals/specimens/ssiap1-10-pages.pdf",
-        "specimen_pages": 10,
         "audience": "Pour vos stagiaires en sécurité incendie",
         "lead": "Rendre la sécurité incendie concrète, page après page.",
         "intro": "Un support illustré pour accompagner les cours de sécurité incendie et d’assistance à personnes. Les scènes métier, les schémas et les repères opérationnels aident vos stagiaires à faire le lien entre les notions abordées en salle et les situations professionnelles.",
@@ -21,8 +21,6 @@ PRESENTATIONS = {
         "preview_labels": ["Scènes métier illustrées", "Schémas pédagogiques", "Repères opérationnels"],
     },
     "aps": {
-        "specimen": "manuals/specimens/aps-10-pages.pdf",
-        "specimen_pages": 10,
         "audience": "Pour vos futurs agents de prévention et de sécurité",
         "lead": "Relier les cours aux missions quotidiennes de l’agent.",
         "intro": "Un manuel qui s’appuie sur des situations professionnelles pour donner du sens aux apprentissages. Les illustrations et les ateliers visuels permettent au formateur d’expliquer, de faire observer et de relier les notions aux missions de prévention et de sécurité.",
@@ -35,8 +33,6 @@ PRESENTATIONS = {
         "preview_labels": ["Situations professionnelles", "Ateliers visuels", "Mises en pratique"],
     },
     "a3p": {
-        "specimen": "manuals/specimens/a3p-10-pages.pdf",
-        "specimen_pages": 10,
         "audience": "Pour vos stagiaires en protection physique des personnes",
         "lead": "Visualiser les missions et comprendre les méthodes de protection.",
         "intro": "Les missions illustrées et les schémas de protection donnent des repères visuels aux stagiaires. Ce support accompagne le travail du formateur en reliant les explications aux méthodes de mission et aux exemples professionnels.",
@@ -49,8 +45,6 @@ PRESENTATIONS = {
         "preview_labels": ["Missions illustrées", "Schémas de protection", "Exemples professionnels"],
     },
     "vtc": {
-        "specimen": "manuals/specimens/vtc-10-pages.pdf",
-        "specimen_pages": 10,
         "audience": "Pour vos futurs chauffeurs VTC",
         "lead": "Un fil conducteur pour apprendre, comprendre et réviser.",
         "intro": "Un support structuré qui associe illustrations pleine page, notions expliquées en images et cas pratiques commentés. Il aide à organiser les révisions et à travailler les situations professionnelles liées à l’activité de chauffeur VTC.",
@@ -63,8 +57,6 @@ PRESENTATIONS = {
         "preview_labels": ["Illustrations pleine page", "Notions en images", "Cas pratiques commentés"],
     },
     "dssp": {
-        "specimen": "manuals/specimens/dssp-10-pages.pdf",
-        "specimen_pages": 10,
         "audience": "Pour vos stagiaires dirigeants de sociétés de sécurité privée",
         "lead": "Des méthodes et des repères pour aborder la gestion d’une société.",
         "intro": "Un manuel consacré à la gestion d’une société de sécurité privée, avec des méthodes, des calculs expliqués et des fiches professionnelles. Il donne des supports concrets au formateur pour aborder le management et l’organisation.",
@@ -77,8 +69,6 @@ PRESENTATIONS = {
         "preview_labels": ["Management et organisation", "Calculs expliqués", "Fiches professionnelles"],
     },
     "sst": {
-        "specimen": "manuals/specimens/sst-10-pages.pdf",
-        "specimen_pages": 10,
         "audience": "Pour vos stagiaires sauveteurs secouristes du travail",
         "lead": "Des repères visuels pour la prévention et les premiers secours.",
         "intro": "Un support dédié à la prévention et aux premiers secours, avec des situations et des repères illustrés. Il accompagne les explications du formateur et permet aux stagiaires de retrouver les notions travaillées pendant la formation.",
@@ -187,9 +177,18 @@ def presentation_books(catalogue):
         result.append({**book, **defaults, **editorial, "specs": PRODUCT_SPECS.get(book["code"], {})})
     return result
 
-# Extraits authentiques issus des manuels fournis, préparés le 12 octobre 2026.
-for _code in ('ssiap2', 'bs_be', 'mac_sst', 'h0b0', 'ssiap1_recyclage', 'mac_aps'):
-    PRESENTATIONS[_code]["specimen"] = "manuals/specimens/" + _code + ".pdf"
-    PRESENTATIONS[_code]["specimen_pages"] = 8
+# A single editorial selection drives the PDF, gallery and advertised count.
+for _code, _selection in PREVIEW_SELECTIONS.items():
+    PRESENTATIONS[_code].update({
+        "specimen": preview_filename(_code),
+        "specimen_pages": len(_selection["pages"]),
+        "preview_labels": [label for _, label in _selection["gallery"]],
+        "preview_examples": _selection.get("examples", False),
+        "preview_note": (
+            "Trois exemples de pages de la collection pour découvrir les illustrations et les fiches pédagogiques."
+            if _selection.get("examples") else
+            "Des pages choisies dans plusieurs parties du manuel : situations illustrées, cours et repères pratiques. Ces pages figurent aussi dans l’extrait PDF."
+        ),
+    })
 
 PRODUCT_SPECS = {'ssiap2': {'pages': 264, 'format': 'A5 (148 × 210 mm)', 'edition': 'Octobre 2026'}, 'bs_be': {'pages': 64, 'format': 'A5 (148 × 210 mm)', 'edition': 'Octobre 2026'}, 'mac_sst': {'pages': 24, 'format': 'A5 (148 × 210 mm)', 'edition': 'Octobre 2026'}, 'h0b0': {'pages': 32, 'format': 'A5 (148 × 210 mm)', 'edition': 'Octobre 2026'}, 'ssiap1_recyclage': {'pages': 64, 'format': 'A5 (148 × 210 mm)', 'edition': 'Octobre 2026'}, 'mac_aps': {'pages': 64, 'format': 'A5 (148 × 210 mm)', 'edition': 'Octobre 2026'}}

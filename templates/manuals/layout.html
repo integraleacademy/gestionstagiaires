@@ -30,7 +30,7 @@
     {% if public %}
       <a href="{{ url_for('manuals_shop.public_presentation') }}" {% if request.endpoint in ['manuals_shop.public_presentation','manuals_shop.public_manual_detail'] %}aria-current="page"{% endif %}>Manuels</a>
       <a href="{{ url_for('manuals_shop.usb_catalogue') }}">Clés USB</a>
-      <a href="{{ url_for('manuals_shop.public_elearning') }}">E-learning</a>
+      <a href="{{ url_for('manuals_shop.public_elearning') }}" {% if request.endpoint in ['manuals_shop.public_elearning','manuals_shop.public_course'] %}aria-current="page"{% endif %}>E-learning</a>
       <a href="{{ url_for('home') }}#contact">Contact</a>
       {% if session.get('admin_logged_in') %}<a class="nav-account" href="{{ url_for('manuals_shop.home') }}">Mon espace →</a>{% else %}<a href="{{ url_for('admin_login', next=url_for('manuals_shop.home')) }}">Connexion</a><a class="nav-account" href="{{ url_for('manuals_shop.register_account') }}">Créer mon espace →</a>{% endif %}
     {% elif staff %}<a href="{{ url_for('admin_sessions') }}">Administration</a><a href="{{ url_for('admin_partners') }}">Organismes</a><a href="{{ url_for('manuals_shop.presentation') }}" {% if request.endpoint in ['manuals_shop.presentation','manuals_shop.manual_detail'] %}aria-current="page"{% endif %}>Présentation des manuels</a><a href="{{ url_for('manuals_shop.admin_orders') }}">Commandes reçues</a><a href="{{ url_for('manuals_shop.elearning_admin') }}">E-learning</a>
