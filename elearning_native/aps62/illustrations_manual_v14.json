@@ -1,0 +1,142 @@
+{
+  "source": "Manuel APS 332 pages — édition du 03.10.2026",
+  "pdf_sha256": "1bd4dd293f223406f201c2899aa1364ec448ada3233d011349b523833c54185b",
+  "method": "Embedded images extracted without cropping, recoloring or generation; original dimensions preserved; WebP quality 95, method 6.",
+  "illustrations": {
+    "welcome": {
+      "src": "media/aps62/v14/illustrations/welcome.webp",
+      "pdf_page": 10,
+      "pdf_image_xref": 21,
+      "width": 1122,
+      "height": 1402,
+      "source_image_sha256": "531805a505cfad5760f6c5cf9d7209b48b60b6f297678213a3bca100dc90a049",
+      "asset_sha256": "2eb842633d75439296184e41ceed22808d767ab3db851d2d523ac5ddf3208528"
+    },
+    "conflict": {
+      "src": "media/aps62/v14/illustrations/conflict.webp",
+      "pdf_page": 48,
+      "pdf_image_xref": 60,
+      "width": 1122,
+      "height": 1402,
+      "source_image_sha256": "d781d9dea6eea63ae92928bd47e8e76e8201ced99a2b21ac5de6c511cd502841",
+      "asset_sha256": "7937631071309b9cebeb990646f8c904c3237c81b30a2ab88a8e0ec48c00005a"
+    },
+    "radio": {
+      "src": "media/aps62/v14/illustrations/radio.webp",
+      "pdf_page": 72,
+      "pdf_image_xref": 85,
+      "width": 1122,
+      "height": 1402,
+      "source_image_sha256": "8c04ffefc2c1aae9890fff6b18f0d7aebb39b0bcc9929571a80253c96a39f5f9",
+      "asset_sha256": "ea21349f7ad0db9ce09f8185ff61ff96e171fb726681f0a2882171f9923030cb"
+    },
+    "coordination": {
+      "src": "media/aps62/v14/illustrations/coordination.webp",
+      "pdf_page": 2,
+      "pdf_image_xref": 7,
+      "width": 1536,
+      "height": 1024,
+      "source_image_sha256": "9243caca5d7ff26d6dfa64f8494a758a97f112ecdf0432216864588d7e945970",
+      "asset_sha256": "dbc9d5222a7087a9878a1e4de2d5ac34283141e4c074c7accbf3b649ba51bd97"
+    },
+    "overview": {
+      "src": "media/aps62/v14/illustrations/overview.webp",
+      "pdf_page": 7,
+      "pdf_image_xref": 17,
+      "width": 1536,
+      "height": 1024,
+      "source_image_sha256": "944e60111fe818df653931f54b8d122a47b12f126e487378ce29ddc28d15c727",
+      "asset_sha256": "d1862b0c6c9dd033417555ba0966eb92fc3499e06df656f9d585a8278a507368"
+    },
+    "monitoring": {
+      "src": "media/aps62/v14/illustrations/monitoring.webp",
+      "pdf_page": 236,
+      "pdf_image_xref": 256,
+      "width": 1122,
+      "height": 1402,
+      "source_image_sha256": "96f9550880050d04925cf06de3008ba2dfe21318be33c22e3d6bb495a80a2038",
+      "asset_sha256": "3d5c34ac0e5e8c7d7898c74224cc03f86ec30ba20f27b680de6e5e6e832b11f2"
+    },
+    "fire": {
+      "src": "media/aps62/v14/illustrations/fire.webp",
+      "pdf_page": 92,
+      "pdf_image_xref": 106,
+      "width": 1122,
+      "height": 1402,
+      "source_image_sha256": "ac3ae2a623988a99f840187f34dfc2cf4e81a44ab39e3b5a7e69c4488c6bc198",
+      "asset_sha256": "7570200eab15e31ffb037e5359e4c34305a6ded10705f613e8ddea769146ed88"
+    },
+    "industrial": {
+      "src": "media/aps62/v14/illustrations/industrial.webp",
+      "pdf_page": 310,
+      "pdf_image_xref": 334,
+      "width": 1122,
+      "height": 1402,
+      "source_image_sha256": "13315aedc6adbfa7e22c181fb320a42decbb36463d84aab424b48caf04f726f8",
+      "asset_sha256": "64e8d7bcfad5e07e35c96835c7c55ff868ef879482d4e397c88488059bae8648"
+    },
+    "observation": {
+      "src": "media/aps62/v14/illustrations/observation.webp",
+      "pdf_page": 114,
+      "pdf_image_xref": 130,
+      "width": 1122,
+      "height": 1402,
+      "source_image_sha256": "da49bcd5374b2077e7633dd477526ca1729d4ac39a9ea321bbb691618f60740f",
+      "asset_sha256": "f198e09cb5300e28e32fa7d2d527c12cc0bd7e8024c29f728887bd853badf34c"
+    },
+    "threat": {
+      "src": "media/aps62/v14/illustrations/threat.webp",
+      "pdf_page": 132,
+      "pdf_image_xref": 149,
+      "width": 1122,
+      "height": 1402,
+      "source_image_sha256": "74a8e6d8a6e69e1a2d60aa91d8ecd1bea2100866c66d3d04b2cdb3deabe34951",
+      "asset_sha256": "b49ad8c2521000b9e4464bd66f343e4d294c746d98b4a18909a671917d227e0e"
+    },
+    "patrol": {
+      "src": "media/aps62/v14/illustrations/patrol.webp",
+      "pdf_page": 158,
+      "pdf_image_xref": 176,
+      "width": 1122,
+      "height": 1402,
+      "source_image_sha256": "d013c1fd69f278e12b291b7c553e5d0fb0cad50bd6e85465b55e3fa11ee65c9e",
+      "asset_sha256": "28e6063fed017d6d2259aec7d663f1f89a718264ae1344f5ea46ca1a4761186f"
+    },
+    "access": {
+      "src": "media/aps62/v14/illustrations/access.webp",
+      "pdf_page": 216,
+      "pdf_image_xref": 235,
+      "width": 1122,
+      "height": 1402,
+      "source_image_sha256": "7be2cb844f41ef485b2a3649eb31674efb7361f68a4d24cb989768bf55339e82",
+      "asset_sha256": "278a8a448baffdd4b9dd85c7ae43529d72291cba0687eafc49946e81a60dec97"
+    },
+    "alarm": {
+      "src": "media/aps62/v14/illustrations/alarm.webp",
+      "pdf_page": 254,
+      "pdf_image_xref": 275,
+      "width": 1122,
+      "height": 1402,
+      "source_image_sha256": "481057aef39c54adf4f14b26123852222b12bde15728239e422071d356ce322e",
+      "asset_sha256": "ba171f4b5171ea6c13e35cd0b5ebfa5a487ed87cf775705a99e8fd4acfbf1345"
+    },
+    "event": {
+      "src": "media/aps62/v14/illustrations/event.webp",
+      "pdf_page": 276,
+      "pdf_image_xref": 298,
+      "width": 1122,
+      "height": 1402,
+      "source_image_sha256": "1b1260a32399fb8d8f71bcb3f01b6c48c214c6008d06dbbbf76afa38e0e559e6",
+      "asset_sha256": "a90a42c20ab80b1970b6aeec3f958dadb0ba28894a3d1bfc2a43257f89581213"
+    },
+    "support": {
+      "src": "media/aps62/v14/illustrations/support.webp",
+      "pdf_page": 294,
+      "pdf_image_xref": 317,
+      "width": 1122,
+      "height": 1402,
+      "source_image_sha256": "94fae0e5332f0b1a8eb689b291899656b670cf3fe3554a461f6d98744ff4ecb2",
+      "asset_sha256": "1d24943a965ebdaab58906725854314f5d7ec6969dc84a776bf7f15b672c4d6d"
+    }
+  }
+}

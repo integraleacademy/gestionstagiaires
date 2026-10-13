@@ -146,8 +146,8 @@ def test_illustrations_use_signed_assets_in_the_actual_player():
         response = case.client.get('/admin/elearning/courses/academy-aps62-01/preview',
                                    query_string={'activity':'aps62-01-01-comprendre'})
         assert response.status_code == 200
-        assert response.text.count('class="aps-teaching-scene"') == 3
-        source = html.unescape(re.search(r'data-aps-image="([^"]+/v13/illustrations/access.webp[^\"]*)"', response.text).group(1))
+        assert response.text.count('class="aps-teaching-scene') == 3
+        source = html.unescape(re.search(r'data-aps-image="([^"]+/v14/illustrations/welcome.webp[^\"]*)"', response.text).group(1))
         assert case.client.get(source).status_code == 200
         assert case.client.get(source.split('?')[0]).status_code == 401
         assert case.client.get(source.replace('/academy-aps62-01/', '/academy-aps62-02/')).status_code == 403

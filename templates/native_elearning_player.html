@@ -10,7 +10,7 @@
   <title>{{ activity.title }} · {{ course.title }}</title>
   {% if player_brand.get('logo_url') %}<link rel="icon" href="{{ player_brand.logo_url }}">{% else %}<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261011-vtc-readable-video') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261013-aps-illustrations') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261013-aps-manual-illustrations') }}">
   {% if course.training_label == 'MAC APS' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-elearning.css', v='20261012-2') }}">{% endif %}
   {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261010-2') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
