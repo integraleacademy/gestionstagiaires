@@ -152,7 +152,7 @@
       {% if exam_url %}<a class="aps-exam-link" href="{{ exam_url }}"><strong>Mon examen blanc →</strong><span>30 questions · correction · nouvelles tentatives</span></a>{% endif %}
       <nav class="native-course-nav">
         {% for nav_section in navigation %}
-          {% if course.training_label in ['A3P', 'MAC APS'] %}<details class="a3p-nav-chapter"{% if nav_section.activities|selectattr('current')|list %} open{% endif %}><summary>{{ nav_section.title }}</summary>{% else %}<section><h2>{{ nav_section.title }}</h2>{% endif %}
+          {% if course.training_label == 'A3P' %}<details class="a3p-nav-chapter"{% if nav_section.activities|selectattr('current')|list %} open{% endif %}><summary>{{ nav_section.title }}</summary>{% else %}<section><h2>{{ nav_section.title }}</h2>{% endif %}
             <ol>
               {% for item in nav_section.activities %}
                 <li class="{% if item.current %}is-current{% endif %} {% if item.completed %}is-complete{% endif %} {% if item.locked %}is-locked{% endif %}">
@@ -164,7 +164,7 @@
                 </li>
               {% endfor %}
             </ol>
-          {% if course.training_label in ['A3P', 'MAC APS'] %}</details>{% else %}</section>{% endif %}
+          {% if course.training_label == 'A3P' %}</details>{% else %}</section>{% endif %}
         {% endfor %}
       </nav>
       <a class="native-back-link" href="{{ portal_url }}">{{ '← Retour aux modules' if preview_mode else '← Retour à mon espace' }}</a>
