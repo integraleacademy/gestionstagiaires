@@ -317,7 +317,7 @@
       grade.addEventListener('click', () => void gradePending()); controls.append(grade);
       controls.append(el('p', grading ? 'Analyse de vos réponses… La correction peut prendre quelques instants' : `${pending.length} matière(s) rédigée(s) en attente. La correction avance matière par matière ; vous pouvez revenir consulter le bilan.`, 'cma-note'));
     }
-    const restart = el('a', 'Retour aux simulations', 'cma-secondary'); restart.href = config.homeUrl; controls.append(restart); panel.append(controls);
+    const restart = el('a', 'Retour aux examens', 'cma-secondary'); restart.href = config.homeUrl; controls.append(restart); panel.append(controls);
     const tableBox = el('div', undefined, 'cma-card cma-table'), table = el('table'), thead = el('thead'), headings = el('tr');
     ['Matière', 'Note / 20', 'Coefficient', 'Minimum', 'État'].forEach(label => headings.append(el('th', label))); thead.append(headings); table.append(thead);
     const tbody = el('tbody'); result.subjects.forEach(row => { const tr = el('tr'); [row.subject, number(row.status === 'corrected' ? row.score : null), row.coefficient, `${row.minimum}/20`, row.status === 'corrected' ? row.minimum_met ? 'Minimum atteint' : 'Minimum non atteint' : 'Correction en attente'].forEach((text, i) => tr.append(el(i ? 'td' : 'th', String(text), i === 1 && row.status === 'corrected' ? row.minimum_met ? 'cma-grade-good' : 'cma-grade-low' : ''))); tbody.append(tr); });

@@ -233,4 +233,7 @@ def _exam(exam_id,version):
     return json.loads((ROOT/'exams'/version/(exam_id+'.json')).read_text())
 
 def load_exam(exam_id,version):
-    return copy.deepcopy(_exam(exam_id,version))
+    exam = copy.deepcopy(_exam(exam_id,version))
+    if exam is not None and exam_id == 'vtc-final':
+        exam['title'] = 'Quiz final de révision – 100 questions'
+    return exam

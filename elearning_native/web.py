@@ -977,10 +977,10 @@ def create_native_elearning_blueprint(
             expected = {m['id'] for m in final_manifest['modules']}
             academy = [m for m in modules if m['course'] and m['course']['id'] in expected]
             if {m['course']['id'] for m in academy} != expected:
-                abort(403, 'L’examen final nécessite l’affectation de tous les modules du parcours ' + ('MAC APS.' if exam_id == 'macaps-final' else 'A3P.' if exam_id == 'a3p-final' else 'VTC.' if is_vtc else 'APS.'))
+                abort(403, ('Le quiz final nécessite l’affectation de tous les modules du parcours ' if is_vtc else 'L’examen final nécessite l’affectation de tous les modules du parcours ') + ('MAC APS.' if exam_id == 'macaps-final' else 'A3P.' if exam_id == 'a3p-final' else 'VTC.' if is_vtc else 'APS.'))
             versions = {m['course']['version'] for m in academy}
             if len(versions) != 1:
-                abort(403, 'Les modules de cet examen doivent appartenir à la même édition.')
+                abort(403, 'Les modules de ce quiz doivent appartenir à la même édition.' if is_vtc else 'Les modules de cet examen doivent appartenir à la même édition.')
             rows = store().learner_progress(str(session_obj['id']), str(trainee.get('id') or trainee.get('trainee_id')))
             by_key = {(r['course_id'],r['course_version']): r for r in rows}
             for m in academy:
@@ -990,7 +990,7 @@ def create_native_elearning_blueprint(
                 if c.get('training_label') == 'A3P':
                     full = project_course(full, {'required_minutes': full['required_minutes']})
                 if set(c['activity_order']) != set(full['activity_order']) or not project_progress(by_key.get((c['id'],c['version']),{}),c)['module_complete']:
-                    abort(403, 'Terminez tous les modules complets et leurs durées obligatoires pour ouvrir l’examen final.')
+                    abort(403, 'Terminez tous les modules complets et leurs durées obligatoires pour ouvrir ' + ('le quiz final.' if is_vtc else 'l’examen final.'))
             exam = load_exam(exam_id, versions.pop())
             back_url = url_for('native_elearning.learner_path', token=token)
         else:

@@ -87,7 +87,7 @@ def test_all_eight_assigned_vtc_modules_are_linked_before_any_completion(case, t
         assert f'href="{BASE}/exams/vtc-{letter}"' in body
         assert "Module verrouillé" not in body
     assert "0 / 8" in response.text
-    assert "Commencer l’examen final" not in response.text
+    assert "Commencer le quiz final" not in response.text
     assert learner_rows(case) == {}
     assert case.data == before
     assert case.saved_data is None
@@ -179,7 +179,7 @@ def test_module_h_exam_can_be_taken_but_never_unlocks_the_final_or_completes_cou
         "version": exam["version"], "attempt_id": config["attemptId"], "answers": {},
     }, headers={"X-Elearning-CSRF": config["csrfToken"]})
     assert final_submit.status_code == 403
-    assert "Commencer l’examen final" not in case.client.get(BASE).text
+    assert "Commencer le quiz final" not in case.client.get(BASE).text
 
 
 @pytest.mark.parametrize("boundary", ["unassigned", "before_start", "disabled", "logged_out"])

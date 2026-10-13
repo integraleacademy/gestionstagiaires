@@ -2,17 +2,17 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Simulation CMA · VTC · Intégrale Academy</title>
+  <title>Examen en conditions réelles · VTC · Intégrale Academy</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-cma.css', v='20261013-pause-reset') }}">
 </head>
 <body>
 <header class="cma-top"><a href="{{ back_url }}">← Retour au parcours</a><strong>INTÉGRALE ACADEMY <span>/ VTC</span></strong><span>{{ 'Aperçu administrateur' if preview else 'Mon entraînement' }}</span></header>
 <main class="cma-shell">
-  <header class="cma-intro"><p class="cma-eyebrow">LES SEPT MATIÈRES DE L’ADMISSIBILITÉ</p><h1>Votre simulation CMA complète.</h1><p>Enchaînez les épreuves, rédigez vos réponses courtes et retrouvez un bilan détaillé selon les coefficients et les minima de chaque matière.</p><div class="cma-pills"><span>3 h 50 d’épreuves</span><span>91 QCM + 16 QRC</span><span>7 matières · coefficient total 17</span><span>Entraînement complémentaire aux 105 h de modules</span></div></header>
+  <header class="cma-intro"><p class="cma-eyebrow">FORMAT CMA · LES SEPT MATIÈRES DE L’ADMISSIBILITÉ</p><h1>Examen en conditions réelles</h1><p>Enchaînez les épreuves, rédigez vos réponses courtes et retrouvez un bilan détaillé selon les coefficients et les minima de chaque matière.</p><div class="cma-pills"><span>3 h 50 d’épreuves</span><span>91 QCM + 16 QRC</span><span>7 matières · coefficient total 17</span><span>Entraînement complémentaire aux 105 h de modules</span></div></header>
   <noscript><p class="cma-alert">Activez JavaScript pour répondre. Le chronomètre reste géré par le serveur lorsque vous avez commencé une matière.</p></noscript>
   <p id="cmaError" class="cma-alert" role="alert" hidden></p>
   <section id="cmaLanding" class="cma-card">
-    <h2>Examen en conditions réelles</h2>
+    <h2>Avant de commencer</h2>
     <div class="cma-exam-rules">
       <div><strong>01 · Un temps limité</strong><p>Un décompte par matière, avec des alertes à 5 minutes et à 1 minute de la fin.</p></div>
       <div><strong>02 · Une pause à votre rythme</strong><p>Mettez le chronomètre en pause pour revenir plus tard. Vos réponses et le temps restant sont conservés.</p></div>
@@ -45,9 +45,9 @@
   </section>
   <section id="cmaBetween" class="cma-card" tabindex="-1" hidden></section>
   <section id="cmaResult" tabindex="-1" hidden></section>
-  {% if history %}<section class="cma-card cma-history" id="cmaHistory"><h2>Mes simulations enregistrées</h2><div class="cma-table"><table><thead><tr><th>Début (UTC)</th><th>État de la copie</th><th>Accès</th></tr></thead><tbody>{% for attempt in history %}<tr><td>{{ attempt.created_at[:16]|replace('T',' à ') }}</td><td>{{ 'Sept matières remises' if attempt.status == 'submitted' else 'À reprendre' }}</td><td><a href="{{ attempt.url }}">{{ 'Voir le bilan' if attempt.status == 'submitted' else 'Reprendre' }} →</a></td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+  {% if history %}<section class="cma-card cma-history" id="cmaHistory"><h2>Mes examens en conditions réelles</h2><div class="cma-table"><table><thead><tr><th>Début (UTC)</th><th>État de la copie</th><th>Accès</th></tr></thead><tbody>{% for attempt in history %}<tr><td>{{ attempt.created_at[:16]|replace('T',' à ') }}</td><td>{{ 'Sept matières remises' if attempt.status == 'submitted' else 'À reprendre' }}</td><td><a href="{{ attempt.url }}">{{ 'Voir le bilan' if attempt.status == 'submitted' else 'Reprendre' }} →</a></td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
   <footer class="cma-footer"><p>Référentiel vérifié le {{ bank.reviewed_at }} · Édition {{ bank.version }}</p>{% for source in bank.sources %}<a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.title }}</a>{% endfor %}</footer>
 </main>
 <script type="application/json" id="cmaConfig">{{ config|tojson }}</script>
-<script src="{{ url_for('static', filename='js/vtc-cma.js', v='20261013-pause-reset') }}" defer></script>
+<script src="{{ url_for('static', filename='js/vtc-cma.js', v='20261013-vtc-labels') }}" defer></script>
 </body></html>

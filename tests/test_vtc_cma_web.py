@@ -354,7 +354,7 @@ def test_admin_work_lists_cma_only_learner_without_creating_course_progress(case
     case._admin_login()
     response = case.client.get("/admin/elearning/courses/academy-vtc-a/work")
     assert response.status_code == 200, response.text[:1000]
-    assert "Alice Martin" in response.text and "Simulations CMA" in response.text
+    assert "Alice Martin" in response.text and "Examens en conditions réelles" in response.text
     assert state["id"] in response.text
     assert progress_count() == 0
 

@@ -189,7 +189,7 @@ class VtcWebTests(unittest.TestCase):
         with patch('elearning_native.web.NativeElearningStore.learner_progress',return_value=progress):
             self.assertEqual(self.client.get('/espace/public-token/elearning/exams/vtc-final').status_code,200)
             path=self.client.get('/espace/public-token/elearning').get_data(as_text=True)
-            self.assertIn('Commencer l’examen final',path)
+            self.assertIn('Commencer le quiz final',path)
             self.assertIn('Les sept matières théoriques VTC',path)
             modules[0]['section_ids']=[vtc.load_bundled_course('academy-vtc-a',VERSION)['sections'][0]['id']]
             self.assertEqual(self.client.get('/espace/public-token/elearning/exams/vtc-final').status_code,403)

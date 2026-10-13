@@ -27,7 +27,7 @@ NOTICE = (
     "Parcours pédagogique VTC de 105 heures minimum : cours et activités, avec "
     "approfondissements au choix parmi les exercices, missions et révisions. "
     "Les productions personnelles sont facultatives. "
-    "La simulation CMA de 3 h 50 est proposée en complément ; les examens de module "
+    "L’examen en conditions réelles de 3 h 50 est proposé en complément ; les examens de module "
     "restent des bilans pédagogiques. La préparation écrite ne remplace pas "
     "l'entraînement à la conduite ni l'épreuve pratique en circulation."
 )
