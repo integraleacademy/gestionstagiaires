@@ -57,6 +57,9 @@ La révision de média des huit cours passe à 15. Un lecteur ouvert sur une
 ancienne chronologie doit recharger sa page avant d’envoyer de nouvelles
 positions. Le pilote D.02 reste inchangé malgré cette révision de collection.
 
+Après publication, une nouvelle modification du rendu doit utiliser une nouvelle
+révision et de nouvelles URL de média.
+
 La publication vise la branche `test-v2` et son service Render existant. Elle
 n’ajoute aucune variable d’environnement, aucun service et aucune dépendance
 de synthèse au serveur applicatif.
@@ -77,3 +80,10 @@ python scripts/vtc/render_henri_collection.py --render
 sert au diagnostic ; un sous-ensemble ne publie jamais le manifeste complet.
 La validation auditive de référence reste celle de D.02 par l’utilisateur ;
 les contrôles des 103 autres vidéos sont des contrôles techniques complets.
+
+Après des générations par lots, la commande locale suivante assemble les
+résultats et refait les contrôles de toute la collection sans aucun appel vocal :
+
+```sh
+python scripts/vtc/assemble_henri_collection.py
+```
