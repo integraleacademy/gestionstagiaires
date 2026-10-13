@@ -1,0 +1,11 @@
+{% macro scene(illustration) -%}
+{% if illustration %}
+<figure class="aps-teaching-scene">
+  <button type="button" class="aps-page-zoom" data-aps-image="{{ illustration.src }}" aria-label="Agrandir l’illustration : {{ illustration.alt }}">
+    <img src="{{ illustration.src }}" alt="{{ illustration.alt }}" width="1200" height="800" loading="lazy" decoding="async">
+    <span>Agrandir l’illustration ↗</span>
+  </button>
+  <figcaption>{{ illustration.caption }}</figcaption>
+</figure>
+{% endif %}
+{%- endmacro %}

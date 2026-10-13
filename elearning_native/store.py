@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence
 
 from .videos import videos_complete, vtc_pacing_enabled, mac_aps_pacing_enabled
-from .vtc_video_quality import compatible_record
+from .video_compatibility import compatible_record
 from . import assessment
 
 

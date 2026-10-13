@@ -10,7 +10,7 @@ import json
 import math
 from pathlib import Path
 from typing import Any, Mapping
-from .vtc_video_quality import compatible_record
+from .video_compatibility import compatible_record
 
 
 ACADEMY_VIDEOS = ({

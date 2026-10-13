@@ -4,6 +4,7 @@ import json
 import unittest
 
 from elearning_native.academy import ROOT, curriculum_manifest, load_bundled_course
+from elearning_native.aps_media import restore_course_voice
 from elearning_native.paths import project_course, project_progress
 from elearning_native.videos import course_videos
 from tests import test_native_elearning_web as fixture
@@ -32,7 +33,9 @@ class APSDeliveryTests(unittest.TestCase):
                     self.assertEqual(delivered['planned_minutes'], source['planned_minutes'])
                     self.assertEqual([sum(a.get('planned_minutes', 0) for a in s['activities']) for s in delivered['sections']],
                                      [sum(a.get('planned_minutes', 0) for a in s['activities']) for s in source['sections']])
-                    self.assertEqual(course_videos(delivered), course_videos(source))
+                    # The independent voice repair has a reviewed timeline map;
+                    # retiring writing must not add/remove any required video.
+                    self.assertEqual(course_videos(delivered), course_videos(restore_course_voice(copy.deepcopy(source))))
                     self.assertNotIn('À vous de produire', json.dumps(delivered, ensure_ascii=False))
                     self.assertEqual(path.read_bytes(), before)
 

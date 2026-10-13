@@ -6,6 +6,7 @@
   </div>
   <div class="aps-visual-bridge" aria-hidden="true">↓</div>
   <div class="aps-visual-choice" data-aps-lesson-page>
+    {% if lesson.illustrations %}{{ scene(lesson.illustrations.action) }}{% endif %}
     <article class="aps-visual-good"><span class="aps-visual-step">2 · L’action adaptée</span><p>{{ lesson.visual_guide.action }}</p></article>
     <article class="aps-visual-why"><span class="aps-visual-step">3 · Pourquoi cette action ?</span><p>{{ lesson.visual_guide.why }}</p></article>
   </div>

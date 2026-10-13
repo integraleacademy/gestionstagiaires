@@ -73,3 +73,12 @@
   [data-aps-lesson].is-paginated [data-aps-lesson-page][hidden],[data-aps-lesson].is-paginated [data-aps-lesson-group][hidden]{display:block!important}
   .aps-lesson-progress,.aps-lesson-navigation{display:none!important}
 }
+
+/* Contextual scenes stay inside the existing reading steps. */
+.aps-teaching-scene{max-width:680px;margin:0 auto 24px;width:100%}
+.aps-visual-choice>.aps-teaching-scene{grid-column:1/-1;margin-bottom:4px}
+.aps-teaching-scene .aps-page-zoom{background:#edf3fa}
+.aps-teaching-scene .aps-page-zoom img{width:100%;height:auto;max-height:340px;object-fit:contain}
+.aps-teaching-scene .aps-page-zoom span{padding:6px 12px;font-size:11px}
+.aps-book .aps-teaching-scene figcaption{font-size:13px;line-height:1.6;margin:8px 0 0}
+@media(max-width:650px){.aps-teaching-scene .aps-page-zoom img{max-height:none}.aps-teaching-scene{margin-bottom:18px}}

@@ -10,6 +10,8 @@ import json
 from functools import lru_cache
 from pathlib import Path
 from .practice import REVISION, adapt_course
+from .aps_illustrations import illustrate_course
+from .aps_media import restore_course_voice
 
 ROOT = Path(__file__).parent / 'aps62'
 DELIVERY_REVISION = '20261012-aps-sans-production-personnelle'
@@ -94,8 +96,9 @@ def curriculum_ids():
 
 @lru_cache(maxsize=32)
 def _course(course_id, version):
-    return _without_personal_productions(adapt_course(json.loads(
+    course = _without_personal_productions(adapt_course(json.loads(
         (ROOT / 'courses' / course_id / (version + '.json')).read_text(encoding='utf-8'))))
+    return illustrate_course(restore_course_voice(course))
 
 
 def load_bundled_course(course_id, version=None):

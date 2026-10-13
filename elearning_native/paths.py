@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Mapping
 
 from .importer import CourseCatalog, CourseImportError
 from .videos import course_videos, videos_complete
-from .vtc_video_quality import compatible_progress
+from .video_compatibility import compatible_progress
 from .assessment import summary_for
 from .mac_aps_timing import FIXED_MINUTES, is_timed_course, objective_progress
 
