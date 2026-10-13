@@ -216,7 +216,7 @@
     // Some players dispatch ratechange synchronously during that assignment.
     if (reader?.pacingInitializing) return;
     const pacing = reader?.pacing;
-    if ((pacing || !videoCompleted(video)) && !allowedVideoRate(video)) video.playbackRate = pacing ? .85 : 1;
+    if ((pacing || !videoCompleted(video)) && !allowedVideoRate(video)) video.playbackRate = pacing ? pacing.rates[0] : 1;
   }
 
   function learningPauseActive() {

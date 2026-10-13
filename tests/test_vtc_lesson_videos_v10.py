@@ -40,10 +40,10 @@ def test_complete_collection_is_additive_for_existing_and_required_for_new(lette
         v1, v2 = before['blocks'][0]['video'], after['blocks'][0]['video']
         assert v1['required'] is False and v2['required'] is True
         assert {**v1, 'required': True} == v2
-        assert v2['default_playback_rate'] == .85
+        assert v2['default_playback_rate'] == 1
         assert len(v2['chapters']) in (4, 5)
         assert all(p['duration_seconds'] in (4, 5) for p in v2['learning_pauses'])
-        assert activity_playback_policy(new, after['id'])[v2['id']]['rates'] == (.85, 1)
+        assert activity_playback_policy(new, after['id'])[v2['id']]['rates'] == (1,)
         assert not activity_playback_policy(old, before['id'])
         assert vtc.bundled_asset(cid, new['version'], v2['src'])
         other = 'b' if letter == 'a' else 'a'
@@ -103,7 +103,8 @@ def test_actual_learner_page_enforces_only_assigned_video_and_serves_authorized_
         assert config['activityId'] == 'vtc-a-01-cours'
         assert bool(config['requiredVideos']) is mandatory
         assert 'Lire la transcription de cette leçon' in body and 'data-video-pacing-config' in body
-        assert '0,85×' in body
+        assert 'data-playback-rate' not in body
+        assert 'data-video-pacing-config' in body
         url = html.unescape(re.search(r'<source src="([^"]+lesson-a-01\.mp4[^"]*)"', body)[1])
         media = case.client.get(url, headers={'Range': 'bytes=0-31'})
         assert media.status_code == 206 and len(media.data) == 32
@@ -117,7 +118,7 @@ def test_actual_learner_page_enforces_only_assigned_video_and_serves_authorized_
                 def ping(position, playing=True, ended=False):
                     return case._api_post(config['heartbeatUrl'], config, tracking_session_id=tracking,
                         activity_id=config['activityId'], visible=True, focused=True, recent_activity=True,
-                        media_playing=playing, videos=[dict(id=video_id, position=position, rate=.85,
+                        media_playing=playing, videos=[dict(id=video_id, position=position, rate=1,
                                                           playing=playing, ended=ended)])
                 ping(0)
                 clock[0] += 1
@@ -130,7 +131,7 @@ def test_actual_learner_page_enforces_only_assigned_video_and_serves_authorized_
                     target = pause['at_seconds']
                     while position < target:
                         step = min(3.4, target-position)
-                        clock[0] += step/.85
+                        clock[0] += step
                         position = min(target, position+step)
                         response = ping(position, position < target, position == duration)
                         assert response.status_code == 200 and not response.json['video_resync']

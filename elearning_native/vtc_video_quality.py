@@ -138,14 +138,15 @@ def repair_course(course):
                 for key in ('src', 'poster', 'captions', 'duration_seconds', 'chapters', 'transcript',
                             'learning_pauses', 'presentation', 'render_revision'):
                     video[key] = copy.deepcopy(row[key])
-                video.update(default_playback_rate=.85, allowed_playback_rates=[.85, 1])
+                video.update(default_playback_rate=1, allowed_playback_rates=[1])
                 if video.get('id') == expected_id:
                     activity.setdefault('vtc', {})['transcript'] = row['transcript']
                 for key in ('src', 'poster', 'captions'):
                     if row[key] not in course['assets']:
                         course['assets'].append(row[key])
     course.setdefault('counts', {})['assets'] = len(course['assets'])
-    course['vtc_media_revision'] = 11
+    # Playback policy changed, but media IDs, timelines and earned viewing stay intact.
+    course['vtc_media_revision'] = 13
     return course
 
 

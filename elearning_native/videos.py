@@ -116,9 +116,13 @@ def activity_playback_policy(course: Mapping[str, Any], activity_id: str) -> dic
                 block = pending.pop()
                 pending.extend(block.get("children") or [])
                 video = block.get("video") or {}
-                if not video.get("required") or video.get("default_playback_rate") != .85:
+                if not video.get("required"):
                     continue
-                if video.get("allowed_playback_rates") != [.85, 1]:
+                if video.get("default_playback_rate") == 1 and video.get("allowed_playback_rates") == [1]:
+                    rates = (1,)
+                elif video.get("default_playback_rate") == .85 and video.get("allowed_playback_rates") == [.85, 1]:
+                    rates = (.85, 1)  # Historical, independently tested media layer.
+                else:
                     continue
                 pauses = [pause for pause in video.get("learning_pauses") or []
                           if isinstance(pause, dict)
@@ -127,7 +131,7 @@ def activity_playback_policy(course: Mapping[str, Any], activity_id: str) -> dic
                           and 0 < pause["at_seconds"] < float(video.get("duration_seconds") or 0)
                           and pause.get("duration_seconds") in (4, 5)]
                 policy[str(video.get("id") or block.get("id"))] = {
-                    "rates": (.85, 1), "pauses": pauses,
+                    "rates": rates, "pauses": pauses,
                 }
     return policy
 

@@ -18,11 +18,8 @@
     try { config = JSON.parse(configNode.textContent); } catch (_) { return; }
     if (!config || !Array.isArray(config.scenes) || !Array.isArray(config.captions)) return;
     const scenes = config.scenes.filter(validInterval).sort((a, b) => a.start - b.start);
-    const captions = config.captions.filter(validInterval).sort((a, b) => a.start - b.start);
     if (!scenes.length) return;
 
-    const caption = panel.querySelector("[data-video-caption]");
-    const captionToggle = panel.querySelector("[data-video-caption-toggle]");
     const sceneTitle = panel.querySelector("[data-video-scene-title]");
     const sceneNumber = panel.querySelector("[data-video-scene-number]");
     const points = panel.querySelector("[data-video-points]");
@@ -34,9 +31,6 @@
 
     function render() {
       const time = Number(video.currentTime) || 0;
-      const currentCaption = captions.find((cue) => time >= cue.start && time < cue.end);
-      const text = currentCaption?.text || "";
-      if (caption.textContent !== text) caption.textContent = text;
       // Keep the final scene on the final frame and never expose a future scene
       // in a short timing gap. Backward seeking recomputes every revealed card.
       const scene = scenes.find((item) => time >= item.start && time < item.end)
@@ -123,7 +117,6 @@
       expand.focus({ preventScroll: true });
     }
 
-    captionToggle.addEventListener("change", () => { caption.hidden = !captionToggle.checked; });
     expand.addEventListener("click", () => {
       if (expandedReader === closeReader) closeReader(); else openReader();
     });

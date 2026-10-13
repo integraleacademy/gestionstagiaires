@@ -45,8 +45,8 @@ def test_current_media_preserves_obligations_and_completed_progress(letter, vers
         assert video['src'].startswith('media/vtc/v11/')
         assert video['render_revision'] == 11
         assert video['required'] is prior[vid]['required']
-        assert video['default_playback_rate'] == .85
-        assert video['allowed_playback_rates'] == [.85, 1]
+        assert video['default_playback_rate'] == 1
+        assert video['allowed_playback_rates'] == [1]
         assert len(video['presentation']['scenes']) == len(prior[vid]['chapters'])
         for key in ('src', 'poster', 'captions'):
             assert vtc.bundled_asset(cid, version, video[key])
@@ -112,7 +112,7 @@ def test_real_preview_serves_revision_and_accessible_companion_without_tracking(
         body = page.get_data(as_text=True)
         assert 'data-vtc-video-reader' in body and 'Agrandir la lecture' in body
         assert 'Repères synchronisés avec la vidéo' in body
-        assert '0,85×' in body and 'data-video-pacing-config' in body
+        assert 'data-playback-rate' not in body and 'data-video-pacing-config' in body
         url = html.unescape(re.search(r'<source src="([^"]+/media/vtc/v11/[^"]+)"', body)[1])
         media = case.client.get(url, headers={'Range': 'bytes=0-31'})
         assert media.status_code == 206 and len(media.data) == 32
@@ -171,7 +171,7 @@ def test_predeployment_tab_is_paused_for_reload_without_changing_saved_progress(
             first_heartbeat = case._api_post(fresh['heartbeatUrl'], fresh,
                 tracking_session_id=resumed.json['tracking_session_id'], activity_id=aid,
                 visible=True, focused=True, recent_activity=True, media_playing=True,
-                videos=[dict(id=vid, position=expected['watched_seconds'], rate=.85, playing=True, ended=False)])
+                videos=[dict(id=vid, position=expected['watched_seconds'], rate=1, playing=True, ended=False)])
             assert first_heartbeat.status_code == 200
             assert not first_heartbeat.json['duplicate'] and first_heartbeat.json['active']
     finally:

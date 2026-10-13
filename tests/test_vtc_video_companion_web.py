@@ -57,7 +57,8 @@ def test_authorized_vtc_previews_render_readable_metadata_for_lessons_and_synthe
         assert 'data-video-reader-expand aria-expanded="false"' in body
         assert 'Repères synchronisés avec la vidéo' in body
         assert 'aria-live="off" data-video-companion hidden' in body
-        assert 'data-video-pacing-config' in body and '0,85×' in body
+        assert 'data-video-pacing-config' in body and 'data-playback-rate' not in body
+        assert 'Texte de la voix' not in body and 'data-video-caption-toggle' not in body
         assert 'nativeElearningConfig' not in body
     finally:
         case.tearDown()

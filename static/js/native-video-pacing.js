@@ -9,8 +9,13 @@
       if (!node) return null;
       let config;
       try { config = JSON.parse(node.textContent); } catch (_) { return null; }
-      if (config.default_playback_rate !== .85 || JSON.stringify(config.allowed_playback_rates) !== "[0.85,1]") return null;
-      const rates = [.85, 1];
+      const fixed = config.default_playback_rate === 1
+        && JSON.stringify(config.allowed_playback_rates) === "[1]";
+      const legacy = config.default_playback_rate === .85
+        && JSON.stringify(config.allowed_playback_rates) === "[0.85,1]";
+      if (!fixed && !legacy) return null;
+      const rates = fixed ? [1] : [.85, 1];
+      const defaultRate = rates[0];
       const pauses = (config.learning_pauses || []).filter(p => Number.isFinite(p.at_seconds)
         && p.at_seconds > 0 && [4, 5].includes(p.duration_seconds)).sort((a, b) => a.at_seconds - b.at_seconds);
       const seen = new Set(pauses.filter(p => p.at_seconds <= Number(options.savedPosition || 0)));
@@ -43,18 +48,19 @@
         if (!remaining) { resume(); return; }
         timer = window.setTimeout(tick, 100);
       };
-      video.playbackRate = .85;
-      video.defaultPlaybackRate = .85;
+      video.playbackRate = defaultRate;
+      video.defaultPlaybackRate = defaultRate;
       video.preservesPitch = true;
       if (selector) {
-        selector.value = "0.85";
+        selector.value = String(defaultRate);
         selector.addEventListener("change", () => {
           const rate = Number(selector.value);
           if (rates.includes(rate)) video.playbackRate = rate;
         });
       }
       video.addEventListener("ratechange", () => {
-        if (!rates.includes(video.playbackRate)) video.playbackRate = .85;
+        if (fixed && video.defaultPlaybackRate !== 1) video.defaultPlaybackRate = 1;
+        if (!rates.includes(video.playbackRate)) video.playbackRate = defaultRate;
         if (selector) selector.value = String(video.playbackRate);
         anchor();
       });
