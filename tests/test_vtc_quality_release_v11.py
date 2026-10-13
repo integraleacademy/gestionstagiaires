@@ -42,8 +42,9 @@ def test_current_media_preserves_obligations_and_completed_progress(letter, vers
     assert after['planned_minutes'] == before['planned_minutes']
     assert after['version'] == before['version']
     for vid, video in current.items():
-        assert video['src'].startswith('media/vtc/v11/')
-        assert video['render_revision'] == 11
+        revision = 14 if vid == 'vtc-d-02-explanation-v10' else 11
+        assert video['src'].startswith(f'media/vtc/v{revision}/')
+        assert video['render_revision'] == revision
         assert video['required'] is prior[vid]['required']
         assert video['default_playback_rate'] == 1
         assert video['allowed_playback_rates'] == [1]

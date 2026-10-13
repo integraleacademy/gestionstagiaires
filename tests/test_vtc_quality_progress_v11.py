@@ -20,7 +20,8 @@ DATA = {'lessons': {'A.01': ROW}, 'modules': {}}
 
 @pytest.fixture
 def revision():
-    with patch('elearning_native.vtc_video_quality.quality_manifest', return_value=DATA):
+    with patch('elearning_native.vtc_video_quality.quality_manifest', return_value=DATA), \
+            patch('elearning_native.vtc_video_quality.approved_voice_updates', return_value={}):
         yield
 
 

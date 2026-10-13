@@ -18,10 +18,11 @@ def all_videos(course):
 
 def test_all_104_current_videos_are_normal_speed_without_changing_media_or_time():
     n=0
-    source=vtc_video_quality.quality_manifest()
+    source=copy.deepcopy(vtc_video_quality.quality_manifest())
+    source['lessons'].update(vtc_video_quality.approved_voice_updates())
     for mod in vtc.curriculum_manifest()['modules']:
         course=vtc.load_bundled_course(mod['id'])
-        assert course['vtc_media_revision']==13
+        assert course['vtc_media_revision']==(14 if mod['id']=='academy-vtc-d' else 13)
         for activity,video in all_videos(course):
             n+=1
             row=source['modules'][mod['id'][-1].upper()] if video['id'].endswith('-capsule') else source['lessons'][activity['vtc']['ref']]
