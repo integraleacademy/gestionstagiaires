@@ -24,6 +24,7 @@ WORK = Path(os.environ.get('VTC_HENRI_WORK', '/tmp/vtc-henri-all'))
 PREFIX = 'media/vtc/v15'
 OUTPUT = base.OUT/'assets'/PREFIX
 MANIFEST = base.OUT/'video_voice_v15.json'
+OVERRIDES = Path(__file__).with_name('voice_delivery_overrides_v15.json')
 VOICE = {'fr': 'fr-FR-HenriNeural', 'en': 'en-GB-RyanNeural'}
 RATE = {'fr': '-2%', 'en': '-6%'}
 APPROVED_SHA = 'a9e6aae708388e899694043f90576e5b748b26b7be8a8673b63a3cdb1bed06fc'
@@ -85,13 +86,14 @@ def direction(text, *, first, last, kind):
 def prepare_rows():
     prior = json.loads((base.OUT/'video_quality_v11.json').read_text())
     rows = base.quality_rows()
+    overrides = json.loads(OVERRIDES.read_text()) if OVERRIDES.exists() else {}
     for row in rows:
         if row['ref'] == 'D.02':
             continue
         before = prior['lessons' if '.' in row['ref'] else 'modules'][row['ref']]
         row.update(previous_src=before['src'], previous_duration_seconds=before['duration_seconds'],
                    previous_chapters=deepcopy(before['chapters']), previous_media_sha256=before['media_sha256'])
-        for scene in row['scenes']:
+        for scene_index,scene in enumerate(row['scenes']):
             original = base.scene_text(scene)
             segments = []
             for segment in scene['segments']:
@@ -108,6 +110,13 @@ def prepare_rows():
                     segments.append(dict(lang='fr', text=text, delivery=delivery))
             scene['segments'] = segments
             assert base.scene_text(scene) == original
+            for edit in overrides.get(row['ref'],{}).get(str(scene_index),[]):
+                matches=[s for s in segments if edit['text'] in s['text'] and s['lang']=='fr']
+                assert len(matches)==1,(row['ref'],scene_index,edit['text'])
+                segment=matches[0]
+                speech=segment['delivery'].get('speech_text',segment['text']).replace(edit['text'],edit['speech_text'])
+                assert base.canonical(speech)==base.canonical(segment['text'])
+                segment['delivery'].update(speech_text=speech,rate='-2%')
     return rows
 
 
@@ -125,6 +134,8 @@ def approved_take():
 
 def reading_breaks(segment):
     """Shorter complete clauses for a dense passage; never cut inside a word."""
+    if segment['delivery'].get('speech_text'):
+        return [segment]  # Keep the explicitly directed punctuation intact.
     parts, current, cursor = [], '', 0
     for match in re.finditer(r'[.!?;:,][»”"\']?(?:\s+|$)', segment['text']):
         current += segment['text'][cursor:match.end()]
@@ -158,10 +169,12 @@ async def generate(rows):
 
     async def take(segment):
         delivery = segment['delivery']
-        piece = await base.synthesize(segment, speech_slots, locks, voice_map=VOICE,
+        speech_text=delivery.get('speech_text',segment['text'])
+        assert base.canonical(speech_text)==base.canonical(segment['text'])
+        piece = await base.synthesize(dict(segment,text=speech_text), speech_slots, locks, voice_map=VOICE,
             rate_map={segment['lang']:delivery['rate']}, pitch_map={segment['lang']:delivery['pitch']},
             cache_dir=WORK/'speech')
-        return dict(piece, gap_after_seconds=delivery['gap_after_seconds']) if piece else None
+        return dict(piece, text=segment['text'],gap_after_seconds=delivery['gap_after_seconds']) if piece else None
 
     async def one(row):
         if row['ref'] == 'D.02':
