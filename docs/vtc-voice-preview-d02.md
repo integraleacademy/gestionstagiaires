@@ -7,23 +7,45 @@ ralentissement supplémentaire. Le générateur principal utilise désormais
 `fr-FR-HenriNeural` à `-2%`, comme les vidéos existantes, avec une lecture à 1×.
 Le texte plus oral reste prêt dans `scripts/vtc/voice_preview_d02.json`.
 
-La nouvelle vérification du 13 octobre avec Henri a renvoyé HTTP 403 avant
-réception du moindre octet audio. Aucun aperçu Henri révisé n’a donc été généré
-ou mis en ligne. Le précédent essai féminin n’est pas retenu et ne doit pas
-servir de remplacement automatique. La synthèse D.02 vers Microsoft a déjà été
-autorisée par l’utilisateur ; aucune nouvelle autorisation n’est attendue.
+L’aperçu Henri a été généré le 13 octobre : 145,45 secondes. Il est remis à
+l’utilisateur pour écoute et n’a pas remplacé la vidéo du cours. Le précédent
+essai féminin n’est pas retenu. La synthèse D.02 vers Microsoft a déjà été
+explicitement autorisée par l’utilisateur.
 
-Préparer puis générer Henri lorsque le service permet de nouveau la synthèse :
+Les précédentes erreurs HTTP 403 provenaient du protocole de connexion utilisé
+par edge-tts 7.2.8. Le correctif proposé dans
+[la PR amont 492](https://github.com/rany2/edge-tts/pull/492) a été relu puis testé
+dans un environnement de génération isolé. La révision exacte
+`5f9b7e4319d0b70d147b9e63144e64078e3eb858` est épinglée dans
+`scripts/vtc/voice_preview_requirements.txt` ; elle utilise le protocole v2.
+Ce correctif n’était pas encore fusionné en amont au moment de l’essai. Il n’a
+pas été ajouté aux dépendances de l’application déployée.
+
+Préparer puis générer Henri dans un environnement Python 3.12 isolé :
 
 ```sh
+python -m pip install -r scripts/vtc/voice_preview_requirements.txt
 python scripts/vtc/render_voice_preview.py
 python scripts/vtc/render_voice_preview.py --render
 ```
 
 La sortie est isolée dans `media/vtc/voice-preview-d02-henri/`. Les sous-titres
-seront recalculés sur les mots réellement générés et contrôlés à 1×. Ne pas
+sont recalculés sur les mots réellement générés et contrôlés à 1×. Ne pas
 ralentir Henri pour résoudre un éventuel problème de lisibilité : ajuster la
 ponctuation du texte, puis refaire la synthèse et les contrôles.
+
+Contrôles du nouvel aperçu Henri :
+
+- Décodage intégral avec `ffmpeg -xerror` réussi ; pic audio à −3,1 dBFS.
+- 32 sous-titres sans perte de texte ni chevauchement, deux lignes de 44 caractères
+  au plus, 19,81 caractères/seconde au maximum, durée minimale de 3,001 secondes.
+- Contrôle visuel de trois images du MP4, dont le passage d’exemple.
+- 14 tests du générateur et des protections de l’aperçu réussis.
+- SHA-256 du MP4 remis :
+  `fa58f040ceb81d8964439ffef91600ec2b671f7b5c24439ec3d1b7ede7fadfae`.
+
+Les repères de mots proviennent de la synthèse Microsoft ; ces contrôles ne
+constituent pas une écoute subjective ni une reconnaissance vocale indépendante.
 
 ## Essai féminin antérieur — non retenu
 

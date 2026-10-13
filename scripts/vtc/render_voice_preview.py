@@ -8,6 +8,7 @@ Generated media use a separate namespace and do not replace learner media.
 import argparse
 import asyncio
 from copy import deepcopy
+from importlib import metadata
 import json
 import os
 from pathlib import Path
@@ -55,6 +56,7 @@ def plan(row):
 async def generate(row, signature):
     # TLS validation stays enabled and supports the runtime's configured CA.
     import edge_tts.communicate as communication
+    from edge_tts.constants import SEC_MS_GEC_VERSION
     cafile = ssl.get_default_verify_paths().cafile
     if cafile:
         communication._SSL_CTX.load_verify_locations(cafile=cafile)
@@ -70,6 +72,12 @@ async def generate(row, signature):
         rate_map=RATE, revision='voice-preview-d02-henri', playback_rate=1)
     result.update(preview_only=True, voice_time_stretching=False,
                   preview_source_sha256=base.file_sha(SOURCE))
+    package_source = metadata.distribution('edge-tts').read_text('direct_url.json')
+    package_source = json.loads(package_source) if package_source else {}
+    result['speech_client'] = dict(version=metadata.version('edge-tts'),
+        protocol_version=SEC_MS_GEC_VERSION.split('-')[0],
+        source_revision=package_source.get('vcs_info', {}).get('commit_id'),
+        requirements_sha256=base.file_sha(Path(__file__).with_name('voice_preview_requirements.txt')))
     # Decode the whole result, not just its metadata, before making it reviewable.
     base.ffmpeg(['-xerror', '-i', OUTPUT/'lesson-d-02.mp4', '-f', 'null', '-'])
     base.atomic_json(OUTPUT/'preview.json', result)
