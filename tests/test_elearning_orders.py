@@ -174,10 +174,13 @@ def test_partners_cannot_read_other_orders_or_change_prices(shop):
 
 
 def test_invalid_learners_and_unknown_price(shop):
-    prepare(shop)
+    pid = prepare(shop)
     c = shop["client"]
     fields = form(c); fields.setlist("email",["Same@example.test","same@example.test"])
     assert c.post("/admin/organisme/e-learning/recapitulatif",data=fields).status_code == 400
+    # An explicit administrator setting can still leave a negotiated price unset.
+    host._atomic_update_data(lambda data: host._partner_or_404(data, pid).update(
+        elearning_pricing={"vtc": {"unit_cents": None}}), partner_id=pid)
     fields = form(c); fields["course_code"]="vtc"
     assert c.post("/admin/organisme/e-learning/recapitulatif",data=fields).status_code == 400
     fields = form(c); fields.setlist("first_name",[""])

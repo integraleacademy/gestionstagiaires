@@ -82,3 +82,25 @@ def test_only_existing_specimens_and_previews_are_advertised(shop):
             assert 'Télécharger l’extrait' not in page.text
             assert 'brochure-manuels-2026.pdf#page=' + str(book['brochure_page']) in page.text
         assert ('id="apercus"' in page.text) == bool(book['preview_labels'])
+
+
+def test_every_trainer_product_has_three_public_previews_and_working_assets(shop):
+    client = shop['client']
+    products = [book for book in CATALOGUE if book['usb_price'] is not None]
+    catalogue = client.get('/supports-formateurs')
+    assert catalogue.status_code == 200
+    assert catalogue.text.count('data-support-preview ') == 3 * len(products) == 42
+    assets = set()
+    for book in products:
+        page = client.get('/supports-formateurs/' + book['code'])
+        assert page.status_code == 200
+        assert page.text.count('data-support-preview ') == 3
+        assert f'data-preview-group="{book["code"]}"' in page.text
+        assert 'href="#apercus"' in page.text
+        assert f'<option value="{book["code"]}">' in catalogue.text
+        assert ('Extraits du PowerPoint' in page.text) == (book['code'] in {'aps', 'ssiap1'})
+        assert '.pptx' not in page.text
+        assets.update(re.findall(r'<img[^>]+src="([^"]+)"', page.text))
+    for src in assets:
+        assert client.get(src).status_code == 200, src
+    assert client.get('/supports-formateurs/mac_sst').status_code == 404

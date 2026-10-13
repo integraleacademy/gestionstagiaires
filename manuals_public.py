@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from xml.sax.saxutils import escape
 from flask import Response, abort, request, session, url_for
 from manuals_catalogue import CATALOGUE
+from manuals_support_previews import SUPPORT_PREVIEWS
 import elearning_orders
 
 TERMS_VERSION = '2026-10-12'
@@ -70,14 +71,14 @@ def register_routes(host, bp, *, page):
 
     @bp.get('/supports-formateurs')
     def usb_catalogue():
-        return page('usb.html', public=True, staff=False, books=[b for b in CATALOGUE if b['usb_price'] is not None], book=None)
+        return page('usb.html', public=True, staff=False, books=[b for b in CATALOGUE if b['usb_price'] is not None], book=None, support_previews=SUPPORT_PREVIEWS)
 
     @bp.get('/supports-formateurs/<code>')
     def usb_detail(code):
         book = next((b for b in CATALOGUE if b['code'] == code and b['usb_price'] is not None), None)
         if not book:
             abort(404)
-        return page('usb.html', public=True, staff=False, books=CATALOGUE, book=book)
+        return page('usb.html', public=True, staff=False, books=CATALOGUE, book=book, support_previews=SUPPORT_PREVIEWS)
 
     @bp.get('/e-learning')
     def public_elearning():

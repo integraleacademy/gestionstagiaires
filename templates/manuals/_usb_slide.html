@@ -1,0 +1,23 @@
+{# Native presentation artwork: the same content is enlarged in the reader. #}
+<div class="sf-slide-frame" style="--slide-accent:{{ item.color }}">
+  <div class="sf-slide sf-slide--{{ slide.kind }}">
+    <div class="sf-slide-masthead"><strong>INTÉGRALE <span>ACADEMY</span></strong><span>{{ support_name(item) }}{% if 'recyclage' in item.code %} · Recyclage{% endif %}</span></div>
+    <div class="sf-slide-content">
+      <div class="sf-slide-label">{{ slide.label }}</div>
+      <div class="sf-slide-title">{{ slide.title }}</div>
+      {% if slide.kind == 'lesson' %}
+        <div class="sf-slide-lesson">
+          <div><p class="sf-slide-lead">{{ slide.lead }}</p><div class="sf-slide-points">{% for label, text in slide.points %}<div><span>{{ '%02d'|format(loop.index) }}</span><p><strong>{{ label }}</strong>{{ text }}</p></div>{% endfor %}</div></div>
+          <img src="{{ url_for('static', filename='manuals/powerpoint-previews/' ~ item.code ~ '-scene.webp') }}" alt="Illustration pédagogique {{ item.name }} : {{ slide.title }}" loading="lazy" width="600" height="720">
+        </div>
+      {% elif slide.kind == 'method' %}
+        <p class="sf-slide-lead">{{ slide.lead }}</p>
+        <div class="sf-slide-table">{% for label, text in slide.rows %}<div><strong><span>{{ '%02d'|format(loop.index) }}</span>{{ label }}</strong><p>{{ text }}</p></div>{% endfor %}</div>
+      {% else %}
+        <div class="sf-slide-case"><div class="sf-slide-scenario"><span>LE POINT DE DÉPART</span><p>{{ slide.scenario }}</p><small>Un cas à travailler avec le groupe</small></div><div class="sf-slide-questions"><strong>À VOUS DE JOUER</strong>{% for question in slide.questions %}<p><span>{{ loop.index }}</span>{{ question }}</p>{% endfor %}</div></div>
+      {% endif %}
+      <div class="sf-slide-takeaway"><strong>À RETENIR</strong><span>{{ slide.takeaway }}</span></div>
+    </div>
+    <div class="sf-slide-footer"><span>COLLECTION FORMATEURS</span><span>APERÇU PÉDAGOGIQUE · {{ slide_number }} / 3</span></div>
+  </div>
+</div>

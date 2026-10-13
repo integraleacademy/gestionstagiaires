@@ -7,7 +7,7 @@
       <h1 id="sf-title">Vos cours,<br><em>prêts à projeter.</em></h1>
       <p class="sf-lead">Un support pour guider la séance.<br>Un formateur pour lui donner vie.</p>
       <p class="sf-intro">Retrouvez vos formations en PowerPoint, sur clé USB. Des supports pour accompagner vos explications, nourrir les échanges et avancer avec vos stagiaires.</p>
-      <div class="sf-actions"><a class="sf-button" href="#collection">Explorer les {{ books|length }} supports <span aria-hidden="true">↓</span></a><a class="sf-link" href="#apercus">Voir les diapositives →</a></div>
+      <div class="sf-actions"><a class="sf-button" href="#collection">Explorer les {{ books|length }} supports <span aria-hidden="true">↓</span></a><a class="sf-link" href="#apercus">Voir les aperçus →</a></div>
       <p class="sf-hero-note">Sécurité privée · Incendie · Électricité · Transport · Secourisme</p>
     </div>
     <figure class="sf-hero-visual">
@@ -34,7 +34,7 @@
         <div class="sf-product-body">
           <p class="sf-category">{{ item.category_name }}</p>
           <h3 id="support-{{ item.code }}"><a href="{{ url_for('manuals_shop.usb_detail', code=item.code) }}">{{ support_name(item) }}{% if 'recyclage' in item.code %}<span>Recyclage / Remise à niveau</span>{% endif %}</a></h3>
-          <p class="sf-product-description">{{ item.title }}</p>
+          <p class="sf-product-description">{{ item.title }}</p><a class="sf-card-preview" href="{{ url_for('manuals_shop.usb_detail', code=item.code, _anchor='apercus') }}">Voir les 3 aperçus ↗</a>
           <div class="sf-product-footer"><p><strong>{{ item.usb_price|manuals_money }}</strong><span>TTC · Livraison incluse</span></p><a class="sf-product-link" href="{{ url_for('manuals_shop.usb_detail', code=item.code) }}" aria-label="Découvrir le support PowerPoint {{ item.name }}">Découvrir <span aria-hidden="true">↗</span></a></div>
         </div>
       </article>
@@ -57,8 +57,8 @@
 
 <section class="sf-demo" aria-labelledby="sf-demo-title"><div class="sf-shell sf-demo-inner">
   <div class="sf-demo-icon" aria-hidden="true">{{ icon('screen') }}<span>PowerPoint</span></div>
-  <div><p class="sf-kicker">UNE AUTRE FORMATION EN VUE ?</p><h2 id="sf-demo-title">Parlons du support qu’il vous faut.</h2><p>Indiquez la formation que vous préparez. Notre équipe vous renseignera sur son contenu et les aperçus disponibles.</p></div>
-  <a class="sf-button sf-button-white" href="mailto:clement@integraleacademy.com?subject=Demande%20d%27aper%C3%A7u%20PowerPoint">Demander un aperçu <span aria-hidden="true">↗</span></a>
+  <div><p class="sf-kicker">BESOIN D’UN CONSEIL ?</p><h2 id="sf-demo-title">Parlons du support qu’il vous faut.</h2><p>Indiquez la formation que vous préparez. Notre équipe vous renseignera sur son contenu et son utilisation en séance.</p></div>
+  <a class="sf-button sf-button-white" href="mailto:clement@integraleacademy.com?subject=Question%20sur%20un%20support%20PowerPoint">Échanger avec notre équipe <span aria-hidden="true">↗</span></a>
 </div></section>
 
 <section class="sf-section sf-pairing" aria-labelledby="sf-pairing-title"><div class="sf-shell sf-split">
@@ -71,7 +71,7 @@
   <div class="sf-faq-list">
     <details><summary>Que comprend le prix du support ?</summary><p>Le PowerPoint de la formation choisie, fourni sur clé USB, et la livraison. Les tarifs sont de 99 € ou 199 € TTC selon la référence. Les manuels stagiaires sont vendus séparément.</p></details>
     <details><summary>Quel matériel faut-il prévoir ?</summary><p>Un ordinateur équipé de PowerPoint ou d’un lecteur compatible, ainsi qu’un port USB. Pour une séance collective, prévoyez également un écran ou un vidéoprojecteur. La compatibilité avec un autre logiciel dépend des fonctions utilisées : contactez-nous en cas de doute.</p></details>
-    <details><summary>Puis-je voir des diapositives avant de commander ?</summary><p>Oui. Une sélection de diapositives APS et SSIAP 1 est consultable sur cette page et sur leurs fiches. Pour une autre référence, demandez à notre équipe les aperçus disponibles.</p><a class="sf-link" href="#apercus">Voir les extraits →</a></details>
+    <details><summary>Puis-je voir des diapositives avant de commander ?</summary><p>Oui. Chaque formation dispose de trois aperçus sur cette page et sur sa fiche. Les extraits APS et SSIAP 1 proviennent des PowerPoint. Les autres aperçus sont des diapositives de présentation créées à partir des manuels : la mise en page du support livré peut différer.</p><a class="sf-link" href="#apercus">Voir les aperçus →</a></details>
     <details><summary>Quand recevrai-je ma clé USB ?</summary><p>La livraison est incluse dans le prix. Notre équipe confirme le délai selon votre commande et son règlement. Si votre session approche, faites confirmer le délai avant de commander.</p></details>
     <details><summary>Y a-t-il un abonnement ou des mises à jour automatiques ?</summary><p>Il s’agit d’un achat unique portant sur la version livrée. Aucun abonnement ni service de mise à jour automatique n’est facturé.</p></details>
     <details><summary>Puis-je diffuser ou adapter les fichiers ?</summary><p>La licence couvre l’usage pédagogique par votre organisme. La revente et la diffusion publique des fichiers ne sont pas autorisées. Une adaptation ou une utilisation sur une plateforme tierce doit être convenue avec notre équipe.</p></details>

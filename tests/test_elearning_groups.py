@@ -6,6 +6,7 @@ in-memory Qonto substitute. No bill or learner email reaches a real provider.
 import copy
 import json
 import time
+from decimal import Decimal
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -180,6 +181,32 @@ def test_quote_does_not_charge_and_verified_full_payment_alone_activates_batch(s
     assert sum(method == "POST" and path == "/v2/client_invoices" for method, path, *_ in merchant["calls"]) == 1
 
 
+def test_default_vtc_price_is_public_and_billed_at_150_euros_per_learner(shop, merchant):
+    client = shop["client"]
+    public = client.get("/e-learning/vtc")
+    assert public.status_code == 200 and "150,00 €" in public.text
+    assert "Sur devis" not in public.text
+    catalogue = client.get("/e-learning")
+    assert catalogue.status_code == 200 and "150,00 €" in catalogue.text
+    prepare(shop)  # A new partner, with no negotiated VTC override.
+    url = create(client, code="vtc", name="VTC octobre 2026")
+    save(shop, url, [person(), person("alex@example.test", "Alex", "Durand")])
+    fields = quote(client, url)
+    fields.update(total_cents="0", unit_cents="1", free_snapshot="true")
+    order = confirm(shop, url, fields)
+    assert order["unit_cents"] == 15000 and order["total_cents"] == 30000
+    assert order["free_snapshot"] is False
+    run(order)
+    assert Decimal(merchant["invoice"]["total_amount"]["value"]) == Decimal("300.00")
+    assert merchant["invoice"]["total_amount"]["currency"] == "EUR"
+    current = purchases(shop)[0]
+    assert current["commerce"]["status"] == "waiting_payment"
+    assert not learning.entitled(current)
+    mark_paid(merchant)
+    retry(order)
+    assert learning.entitled(purchases(shop)[0])
+
+
 def test_new_people_after_payment_are_a_separate_batch_and_keep_existing_access(shop, merchant):
     prepare(shop)
     client = shop["client"]
@@ -240,7 +267,9 @@ def test_tariff_change_requires_review_and_new_total_is_server_priced(shop, merc
 
 
 def test_unconfigured_price_keeps_group_editable_without_an_order(shop):
-    prepare(shop)
+    pid = prepare(shop)
+    host._atomic_update_data(lambda data: host._partner_or_404(data, pid).update(
+        elearning_pricing={"vtc": {"unit_cents": None}}), partner_id=pid)
     client = shop["client"]
     url = create(client, code="vtc", name="VTC novembre 2026")
     group = save(shop, url, [person()])

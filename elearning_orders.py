@@ -26,7 +26,7 @@ import manuals_commerce as commerce
 COURSES = {
     "aps": {"name": "APS", "title": "Agent de prévention et de sécurité", "color": "#2468b3", "default_cents": 5900, "folder": "aps62"},
     "mac-aps": {"name": "MAC APS", "title": "Maintien et actualisation des compétences APS", "color": "#173c5b", "default_cents": 6000, "fixed_cents": 6000},
-    "vtc": {"name": "VTC", "title": "Chauffeur VTC", "color": "#7951a8", "default_cents": None, "folder": "vtc"},
+    "vtc": {"name": "VTC", "title": "Chauffeur VTC", "color": "#7951a8", "default_cents": 15000, "folder": "vtc"},
 }
 CUSTOMER_ENDPOINTS = {"manuals_shop.elearning_checkout", "manuals_shop.elearning_order", "manuals_shop.elearning_confirm", "manuals_shop.elearning_refresh", "manuals_shop.elearning_status", "manuals_shop.elearning_invoice"}
 MAX_LEARNERS = 100
