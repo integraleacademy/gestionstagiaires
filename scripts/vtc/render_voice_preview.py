@@ -12,6 +12,7 @@ from importlib import metadata
 import json
 import os
 from pathlib import Path
+import re
 import ssl
 import sys
 
@@ -21,11 +22,23 @@ from scripts.vtc import render_quality_videos_v11 as base
 
 SOURCE = Path(__file__).with_name('voice_preview_d02.json')
 VOICE = {'fr': 'fr-FR-HenriNeural'}
-# Preserve Henri's existing synthesis rate; naturalness comes from the wording.
+# Keep -2% as the slowest delivery; thought groups may be slightly livelier.
 RATE = {'fr': '-2%'}
 PREFIX = 'media/vtc/voice-preview-d02-henri'
 OUTPUT = base.OUT/'assets'/PREFIX
 WORK = Path(os.environ.get('VTC_VOICE_PREVIEW_WORK', '/tmp/vtc-voice-preview-d02-henri'))
+
+
+def delivery_settings(segment):
+    direction = segment.get('delivery', {})
+    rate = direction.get('rate', RATE[segment['lang']])
+    pitch = direction.get('pitch', '+0Hz')
+    gap = direction.get('gap_after_seconds', .12)
+    if (not re.fullmatch(r'[+-]\d+%', rate) or not -2 <= int(rate[:-1]) <= 4
+            or not re.fullmatch(r'[+-]\d+Hz', pitch) or not -2 <= int(pitch[:-2]) <= 2
+            or not isinstance(gap, (int, float)) or not 0 <= gap <= .35):
+        raise ValueError('Henri delivery must stay subtle and must not slow down further')
+    return dict(rate=rate, pitch=pitch, gap_after_seconds=gap)
 
 
 def prepare():
@@ -40,6 +53,9 @@ def prepare():
     row.update(previous_src=prior['src'], previous_duration_seconds=prior['duration_seconds'],
                previous_chapters=deepcopy(prior['chapters']), previous_media_sha256=prior['media_sha256'])
     base.validate_lesson(row)
+    for scene in row['scenes']:
+        for segment in scene['segments']:
+            delivery_settings(segment)
     signature = base.digest(base.json_bytes(dict(row=row, voice=VOICE, rate=RATE, playback_rate=1))
                             + base.code_signature().encode() + Path(__file__).read_bytes())
     return row, signature
@@ -49,6 +65,9 @@ def plan(row):
     return dict(status='prepared_not_generated', lesson=row['ref'], title=row['title'],
                 scenes=len(row['scenes']), words=sum(len(base.scene_text(s).split()) for s in row['scenes']),
                 voice=VOICE['fr'], synthesis_rate=RATE['fr'], playback_rate=1,
+                delivery_mode='authored-thought-groups',
+                takes=sum(len(scene['segments']) for scene in row['scenes']),
+                synthesis_rate_range=['-2%', '+4%'],
                 speech_service='Microsoft speech', transfer='Reviewed narration only; no learner data',
                 output_prefix=PREFIX, replaces_live_video=False)
 
@@ -64,13 +83,21 @@ async def generate(row, signature):
     for folder in (WORK, speech, OUTPUT):
         folder.mkdir(parents=True, exist_ok=True)
     slots, locks = asyncio.Semaphore(2), {}
+    async def take(segment):
+        direction = delivery_settings(segment)
+        piece = await base.synthesize(segment, slots, locks, voice_map=VOICE,
+            rate_map={segment['lang']: direction['rate']},
+            pitch_map={segment['lang']: direction['pitch']}, cache_dir=speech)
+        return dict(piece, gap_after_seconds=direction['gap_after_seconds'])
     spoken = await asyncio.gather(*(asyncio.gather(*(
-        base.synthesize(segment, slots, locks, voice_map=VOICE, rate_map=RATE, cache_dir=speech)
+        take(segment)
         for segment in scene['segments'])) for scene in row['scenes']))
     result = await asyncio.to_thread(base.render, row, spoken, signature,
         output_dir=OUTPUT, work_dir=WORK, media_prefix=PREFIX, voice_map=VOICE,
-        rate_map=RATE, revision='voice-preview-d02-henri', playback_rate=1)
+        rate_map=RATE, revision='voice-preview-d02-henri-rhythm-2', playback_rate=1)
     result.update(preview_only=True, voice_time_stretching=False,
+                  delivery_mode='authored-thought-groups', rate_mode='per-segment',
+                  synthesis_rate_range=['-2%', '+4%'],
                   preview_source_sha256=base.file_sha(SOURCE))
     package_source = metadata.distribution('edge-tts').read_text('direct_url.json')
     package_source = json.loads(package_source) if package_source else {}

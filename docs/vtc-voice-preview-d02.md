@@ -3,14 +3,58 @@
 ## Choix retenu : Henri
 
 L’utilisateur préfère Henri et a confirmé conserver cette voix, sans
-ralentissement supplémentaire. Le générateur principal utilise désormais
-`fr-FR-HenriNeural` à `-2%`, comme les vidéos existantes, avec une lecture à 1×.
-Le texte plus oral reste prêt dans `scripts/vtc/voice_preview_d02.json`.
+ralentissement supplémentaire. Le générateur principal utilise
+`fr-FR-HenriNeural`, avec une lecture à 1×. Le texte plus oral figure dans
+`scripts/vtc/voice_preview_d02.json`.
 
-L’aperçu Henri a été généré le 13 octobre : 145,45 secondes. Il est remis à
-l’utilisateur pour écoute et n’a pas remplacé la vidéo du cours. Le précédent
+Le premier aperçu Henri a été généré le 13 octobre : 145,45 secondes à débit
+uniforme de `-2%`. Après le retour « encore un peu robot », un deuxième aperçu
+de 136,65 secondes a été généré avec les réglages décrits ci-dessous. Il est
+remis à l’utilisateur pour écoute et n’a pas remplacé la vidéo du cours. Le précédent
 essai féminin n’est pas retenu. La synthèse D.02 vers Microsoft a déjà été
 explicitement autorisée par l’utilisateur.
+
+## Deuxième aperçu Henri : rythme et liaisons
+
+Le texte de 384 mots reste strictement identique au premier aperçu Henri.
+Quinze groupes de phrases liées remplacent les quatre longues prises uniformes.
+Les questions restent avec leurs réponses et les exemples avec leur explication :
+aucun montage mot à mot. Les groupes sont dirigés selon leur sens :
+
+- Débit de `-2%` à `+4%` : aucune prise n’est ralentie davantage qu’avant.
+- Hauteur de `-1Hz` à `+2Hz` : petites variations, voix Henri conservée.
+- Silence de liaison supplémentaire de 40 à 160 ms entre les groupes, en plus
+  des marges naturelles conservées autour des mots. Aucun étirement du signal.
+
+Ce sont les paramètres exposés par le client utilisé. Selon
+[sa documentation](https://github.com/rany2/edge-tts#custom-ssml), le service Edge
+ne permet pas un SSML libre : l’aperçu n’utilise donc pas de balises de style
+émotionnel ou d’accentuation mot à mot. Les variations sont des choix éditoriaux,
+pas une mesure objective du naturel.
+
+Chaque prise enregistre ses paramètres réels dans `spoken_segments` ; le cache
+distingue voix, débit, hauteur et texte. Le montage recalcule les repères des
+mots et des cartes après chaque liaison. Le champ global `rate` reste le débit
+par défaut ; `rate_mode: per-segment` indique que les prises ont leurs propres
+réglages.
+
+Contrôles du deuxième aperçu :
+
+- Décodage intégral réussi ; durée 136,65 s, pic −3,0 dBFS, moyenne −22,4 dBFS.
+- Texte identique au premier aperçu, sous-titres intégraux sans chevauchement.
+- 33 sous-titres, au plus deux lignes de 44 caractères, 19,893 caractères/seconde
+  au maximum, durée minimale de 1,716 s à 1×.
+- Contrôle visuel de deux images du MP4, dont la réponse sur la date de course.
+- 16 tests réussis, dont la transmission des paramètres au synthétiseur,
+  l’isolation du cache et la conservation des échantillons audio et des repères
+  aux raccords.
+- SHA-256 du deuxième MP4 :
+  `a9e6aae708388e899694043f90576e5b748b26b7be8a8673b63a3cdb1bed06fc`.
+
+Le naturel reste à apprécier à l’écoute par l’utilisateur. Ces vérifications
+techniques ne constituent pas une évaluation perceptive de la voix.
+
+## Connexion et génération
 
 Les précédentes erreurs HTTP 403 provenaient du protocole de connexion utilisé
 par edge-tts 7.2.8. Le correctif proposé dans
@@ -34,7 +78,7 @@ sont recalculés sur les mots réellement générés et contrôlés à 1×. Ne p
 ralentir Henri pour résoudre un éventuel problème de lisibilité : ajuster la
 ponctuation du texte, puis refaire la synthèse et les contrôles.
 
-Contrôles du nouvel aperçu Henri :
+Contrôles du premier aperçu Henri (145,45 s) :
 
 - Décodage intégral avec `ffmpeg -xerror` réussi ; pic audio à −3,1 dBFS.
 - 32 sous-titres sans perte de texte ni chevauchement, deux lignes de 44 caractères

@@ -230,7 +230,7 @@ def background(row, scene, index):
     return im
 
 
-async def synthesize(segment, slots, locks, *, voice_map=None, rate_map=None, cache_dir=None):
+async def synthesize(segment, slots, locks, *, voice_map=None, rate_map=None, pitch_map=None, cache_dir=None):
     import edge_tts
     voice_map = VOICES if voice_map is None else voice_map
     rate_map = RATES if rate_map is None else rate_map
@@ -239,7 +239,13 @@ async def synthesize(segment, slots, locks, *, voice_map=None, rate_map=None, ca
     if not canonical(text):
         return None
     lang = segment['lang']
-    key = digest(json_bytes(dict(voice=voice_map[lang], rate=rate_map[lang], text=text)))
+    pitch = (pitch_map or {}).get(lang, '+0Hz')
+    settings = dict(voice=voice_map[lang], rate=rate_map[lang], pitch=pitch)
+    cache_key = dict(voice=settings['voice'], rate=settings['rate'], text=text)
+    # Preserve existing neutral-pitch caches; distinct directions need distinct takes.
+    if pitch != '+0Hz':
+        cache_key['pitch'] = pitch
+    key = digest(json_bytes(cache_key))
     target = cache_dir/(key+'.mp3')
     timing = target.with_suffix('.json')
     async with locks.setdefault(key, asyncio.Lock()), slots:
@@ -249,8 +255,8 @@ async def synthesize(segment, slots, locks, *, voice_map=None, rate_map=None, ca
                     words = []
                     async def collect():
                         with target.with_suffix('.partial').open('wb') as audio:
-                            async for chunk in edge_tts.Communicate(text, voice=voice_map[lang],
-                                    rate=rate_map[lang], boundary='WordBoundary').stream():
+                            async for chunk in edge_tts.Communicate(text, **settings,
+                                    boundary='WordBoundary').stream():
                                 if chunk['type'] == 'audio':
                                     audio.write(chunk['data'])
                                 elif chunk['type'] == 'WordBoundary':
@@ -268,7 +274,8 @@ async def synthesize(segment, slots, locks, *, voice_map=None, rate_map=None, ca
         assert canonical(text) == ''.join(canonical(w['text']) for w in words)
     trim_start = max(0, words[0]['offset']/1e7-.10)
     end = min(duration(target), (words[-1]['offset']+words[-1]['duration'])/1e7+.18)
-    return dict(segment, audio=target, words=words, trim_start=trim_start, seconds=end-trim_start)
+    return dict(segment, audio=target, words=words, trim_start=trim_start,
+                seconds=end-trim_start, speech_settings=settings)
 
 
 def assemble_scene(scene, pieces, folder, index, *, playback_rate=.85):
@@ -286,10 +293,19 @@ def assemble_scene(scene, pieces, folder, index, *, playback_rate=.85):
         pcm.append(raw)
         segment_start = offset
         offset += len(raw)/(SAMPLE_RATE*2)
-        segments.append(dict(lang=piece['lang'],text=piece['text'],start_seconds=segment_start,end_seconds=offset))
+        segment = dict(lang=piece['lang'],text=piece['text'],start_seconds=segment_start,end_seconds=offset)
+        if 'speech_settings' in piece:
+            segment['speech_settings'] = piece['speech_settings']
+        segments.append(segment)
         if n < len(pieces)-1:
-            gap = round(.12*SAMPLE_RATE)*2
+            # Authored joins are additional silence, never time stretching or
+            # trimming inside spoken words. Ordinary course renders keep .12s.
+            gap_seconds = piece.get('gap_after_seconds', .12)
+            if not isinstance(gap_seconds, (int, float)) or not 0 <= gap_seconds <= 2:
+                raise ValueError('Invalid narration join silence')
+            gap = round(gap_seconds*SAMPLE_RATE)*2
             pcm.append(b'\0'*gap)
+            segment['join_silence_seconds'] = gap/(SAMPLE_RATE*2)
             offset += gap/(SAMPLE_RATE*2)
     speech_end = (words[-1]['offset']+words[-1]['duration'])/1e7
     # Round upward to a frame boundary, adding time only to the silent tail.

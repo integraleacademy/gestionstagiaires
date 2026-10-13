@@ -1,4 +1,5 @@
 """Offline safeguards for a preview that must not replace learner media."""
+import asyncio
 import json
 import re
 import wave
@@ -30,7 +31,10 @@ def test_preview_preparation_keeps_lesson_identity_and_existing_collection():
     assert preview.PREFIX == 'media/vtc/voice-preview-d02-henri'
     for scene in row['scenes']:
         text = renderer.scene_text(scene)
+        assert not re.search(r'[.!?][A-Za-zÀ-ÖØ-öø-ÿ]', text), 'A take boundary must not merge sentences'
         assert all(text.count(p['anchor_text']) == 1 for p in scene['points'])
+        for segment in scene['segments']:
+            assert int(preview.delivery_settings(segment)['rate'][:-1]) >= -2
 
 
 def test_default_command_never_generates_audio(monkeypatch, capsys):
@@ -84,3 +88,55 @@ def test_scene_assembly_does_not_stretch_the_voice(tmp_path):
     assert assembled[len(original):].strip(b'\0') == b''
     assert result['seconds'] >= 3+renderer.TAIL_SILENCE
     assert result['segments'][0]['end_seconds'] == 3
+
+
+def test_directed_takes_reach_synthesizer_and_do_not_reuse_wrong_prosody(tmp_path, monkeypatch):
+    import edge_tts
+    calls = []
+
+    class Speech:
+        def __init__(self, text, **settings):
+            calls.append(settings)
+        async def stream(self):
+            yield dict(type='audio', data=b'timing-test-only')
+            yield dict(type='WordBoundary', text='Bonjour', offset=1_000_000, duration=5_000_000)
+
+    monkeypatch.setattr(edge_tts, 'Communicate', Speech)
+    monkeypatch.setattr(renderer, 'duration', lambda _: 1.)
+
+    async def run():
+        slots, locks = asyncio.Semaphore(1), {}
+        segment = dict(lang='fr', text='Bonjour.')
+        results = []
+        for rate, pitch in [('-2%', '+0Hz'), ('+4%', '+1Hz'), ('+4%', '+2Hz'), ('+4%', '+1Hz')]:
+            results.append(await renderer.synthesize(segment, slots, locks,
+                voice_map=preview.VOICE, rate_map={'fr': rate}, pitch_map={'fr': pitch}, cache_dir=tmp_path))
+        return results
+
+    results = asyncio.run(run())
+    assert len(calls) == 3
+    assert [(c['rate'], c['pitch']) for c in calls] == [('-2%', '+0Hz'), ('+4%', '+1Hz'), ('+4%', '+2Hz')]
+    assert len({str(r['audio']) for r in results}) == 3
+    assert results[1]['audio'] == results[3]['audio']
+    assert all(c['voice'] == 'fr-FR-HenriNeural' and c['boundary'] == 'WordBoundary' for c in calls)
+
+
+def test_authored_join_keeps_audio_samples_and_word_timing(tmp_path):
+    texts = ['La course part demain. ', 'Le client vient ici.']
+    original = b'\x10\x00' * (renderer.SAMPLE_RATE*3)
+    wav = tmp_path/'take.wav'
+    with wave.open(str(wav), 'wb') as f:
+        f.setparams((1,2,renderer.SAMPLE_RATE,0,'NONE','not compressed'))
+        f.writeframes(original)
+    pieces = [dict(lang='fr', text=t, audio=wav, words=boundaries(t,.65),
+                   trim_start=0, seconds=3, gap_after_seconds=.07) for t in texts]
+    scene = dict(segments=[dict(lang='fr', text=t) for t in texts])
+    result = renderer.assemble_scene(scene, pieces, tmp_path, 0, playback_rate=1)
+    with wave.open(str(result['path']), 'rb') as f:
+        assembled = f.readframes(f.getnframes())
+    gap = b'\0' * (round(.07*renderer.SAMPLE_RATE)*2)
+    expected = original+gap+original
+    assert assembled[:len(expected)] == expected
+    assert assembled[len(expected):].strip(b'\0') == b''
+    assert result['segments'][1]['start_seconds'] == pytest.approx(3.07)
+    assert result['words'][4]['offset'] == 31_900_000
