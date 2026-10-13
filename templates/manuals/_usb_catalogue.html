@@ -1,0 +1,78 @@
+{% set lowest_price = books|map(attribute='usb_price')|min %}
+<div class="sf-shell">
+  <nav class="sf-breadcrumb" aria-label="Fil d’Ariane"><a href="{{ url_for('home') }}">Accueil</a><span aria-hidden="true">/</span><span aria-current="page">Supports formateurs</span></nav>
+  <section class="sf-hero" aria-labelledby="sf-title">
+    <div class="sf-hero-copy">
+      <p class="sf-kicker">LA COLLECTION FORMATEURS</p>
+      <h1 id="sf-title">Vos cours,<br><em>prêts à projeter.</em></h1>
+      <p class="sf-lead">Un support pour guider la séance.<br>Un formateur pour lui donner vie.</p>
+      <p class="sf-intro">Retrouvez vos formations en PowerPoint, sur clé USB. Des supports pour accompagner vos explications, nourrir les échanges et avancer avec vos stagiaires.</p>
+      <div class="sf-actions"><a class="sf-button" href="#collection">Explorer les {{ books|length }} supports <span aria-hidden="true">↓</span></a><a class="sf-link" href="#utilisation">Comment ça fonctionne →</a></div>
+      <p class="sf-hero-note">Sécurité privée · Incendie · Électricité · Transport · Secourisme</p>
+    </div>
+    <figure class="sf-hero-visual">
+      <img src="{{ url_for('static', filename='manuals/previews/supports-formateurs.webp') }}" alt="Illustration d’une séance SSIAP 1 : un formateur, un PowerPoint sur ordinateur et une clé USB, avec le manuel stagiaire" width="1536" height="1024" fetchpriority="high">
+      <span class="sf-visual-tag">PowerPoint · Sur clé USB</span>
+      <figcaption><span>Votre support formateur<strong>À partir de {{ (lowest_price / 100)|int }} € <small>TTC</small></strong></span><span>Clé USB et livraison incluses<br><b>Achat unique, sans abonnement</b></span></figcaption>
+    </figure>
+  </section>
+  <div class="sf-benefits" aria-label="Inclus avec chaque support">
+    <div>{{ icon('screen') }}<p><strong>Un cours à projeter</strong>Le PowerPoint de votre formation</p></div>
+    <div>{{ icon('truck') }}<p><strong>Clé USB et livraison incluses</strong>Le prix affiché est en TTC</p></div>
+    <div>{{ icon('check') }}<p><strong>Un achat, sans abonnement</strong>Votre version livrée, sans mensualités</p></div>
+  </div>
+</div>
+
+<section class="sf-section sf-collection" id="collection" aria-labelledby="sf-collection-title"><div class="sf-shell">
+  <div class="sf-section-head"><div><p class="sf-kicker">{{ books|length }} SUPPORTS · {{ categories|length }} DOMAINES</p><h2 id="sf-collection-title">À chaque formation,<br>son support.</h2></div><p>Choisissez votre domaine, retrouvez votre formation et découvrez les modalités d’utilisation.</p></div>
+  <div data-catalogue data-catalogue-unit="support">
+    {% with catalogue_usb=true, catalogue_id='supports' %}{% include 'manuals/_catalogue_filters.html' %}{% endwith %}
+    <div class="sf-product-grid">
+      {% for item in books %}
+      <article class="sf-product" data-catalogue-card data-category="{{ item.category }}" data-search="{{ item.name }} {{ item.title }} {{ item.category_name }}" aria-labelledby="support-{{ item.code }}" style="--sf-product:{{ item.color }}">
+        <div class="sf-product-art"><span class="sf-format">POWERPOINT<br><b>SUR CLÉ USB</b></span>{{ usb_art(item) }}</div>
+        <div class="sf-product-body">
+          <p class="sf-category">{{ item.category_name }}</p>
+          <h3 id="support-{{ item.code }}"><a href="{{ url_for('manuals_shop.usb_detail', code=item.code) }}">{{ support_name(item) }}{% if 'recyclage' in item.code %}<span>Recyclage / Remise à niveau</span>{% endif %}</a></h3>
+          <p class="sf-product-description">{{ item.title }}</p>
+          <div class="sf-product-footer"><p><strong>{{ item.usb_price|manuals_money }}</strong><span>TTC · Livraison incluse</span></p><a class="sf-product-link" href="{{ url_for('manuals_shop.usb_detail', code=item.code) }}" aria-label="Découvrir le support PowerPoint {{ item.name }}">Découvrir <span aria-hidden="true">↗</span></a></div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+  <p class="sf-catalogue-note">Chaque référence comprend le support PowerPoint de la formation choisie sur clé USB. Les manuels stagiaires sont vendus séparément. Visuels des clés à titre d’illustration.</p>
+</div></section>
+
+<section class="sf-section sf-use" id="utilisation" aria-labelledby="sf-use-title"><div class="sf-shell">
+  <div class="sf-section-head"><div><p class="sf-kicker">DE VOTRE COMMANDE À VOTRE SALLE</p><h2 id="sf-use-title">Ouvrez le support.<br>Animez la séance.</h2></div><p>Gardez un fil conducteur pour vos cours, tout en laissant la place à vos explications et aux questions du groupe.</p></div>
+  <ol class="sf-steps">
+    <li><span>01</span><h3>Choisissez votre formation</h3><p>Sélectionnez la référence qui correspond à votre session. Le tarif est indiqué sur chaque fiche, dès une clé USB.</p></li>
+    <li><span>02</span><h3>Préparez votre séance</h3><p>À réception, ouvrez le support avec PowerPoint ou un lecteur compatible. Parcourez le contenu avant votre intervention.</p></li>
+    <li><span>03</span><h3>Projetez et transmettez</h3><p>Appuyez-vous sur la présentation pour expliquer, faire participer vos stagiaires et accompagner leur progression.</p></li>
+  </ol>
+</div></section>
+
+<section class="sf-demo" aria-labelledby="sf-demo-title"><div class="sf-shell sf-demo-inner">
+  <div class="sf-demo-icon" aria-hidden="true">{{ icon('screen') }}<span>PowerPoint</span></div>
+  <div><p class="sf-kicker">VOIR AVANT DE CHOISIR</p><h2 id="sf-demo-title">Envie de voir quelques diapositives ?</h2><p>Indiquez-nous la formation qui vous intéresse. Notre équipe vous renseignera sur le support et les aperçus disponibles.</p></div>
+  <a class="sf-button sf-button-white" href="mailto:clement@integraleacademy.com?subject=Demande%20d%27aper%C3%A7u%20PowerPoint">Demander un aperçu <span aria-hidden="true">↗</span></a>
+</div></section>
+
+<section class="sf-section sf-pairing" aria-labelledby="sf-pairing-title"><div class="sf-shell sf-split">
+  <div class="sf-book-visual"><span>LA MÊME COLLECTION, DEUX USAGES</span><div>{% for code in ['aps','ssiap1','a3p'] %}<img src="{{ url_for('static', filename='manuals/' ~ code ~ '.webp') }}" alt="Couverture du manuel {{ code|upper }}" width="212" height="300" loading="lazy">{% endfor %}</div><p>Les manuels stagiaires de la collection</p></div>
+  <div><p class="sf-kicker">LE BON DUO POUR VOS SESSIONS</p><h2 id="sf-pairing-title">Le PowerPoint pour expliquer.<br>Le manuel pour retrouver.</h2><p class="sf-muted">Côté formateur, un support à projeter. Côté stagiaire, un livre pour suivre le cours, prendre ses repères et réviser après la séance.</p><p class="sf-muted">Complétez vos supports avec les manuels de la collection, dont la couverture est personnalisée avec le logo de votre organisme.</p><a class="sf-link" href="{{ url_for('manuals_shop.public_presentation') }}">Découvrir les manuels et leurs extraits →</a><p class="sf-note">Les manuels sont proposés séparément, dès 50 exemplaires par titre.</p></div>
+</div></section>
+
+<section class="sf-section sf-faq" aria-labelledby="sf-faq-title"><div class="sf-shell sf-split">
+  <div><p class="sf-kicker">LES RÉPONSES UTILES</p><h2 id="sf-faq-title">Avant votre<br>première séance.</h2><p class="sf-muted">Une question sur une référence ou votre équipement ? Nous vous aidons à préparer votre commande.</p><a class="sf-link" href="mailto:clement@integraleacademy.com?subject=Question%20supports%20formateurs">Échanger avec notre équipe →</a></div>
+  <div class="sf-faq-list">
+    <details><summary>Que comprend le prix du support ?</summary><p>Le PowerPoint de la formation choisie, fourni sur clé USB, et la livraison. Les tarifs sont de 99 € ou 199 € TTC selon la référence. Les manuels stagiaires sont vendus séparément.</p></details>
+    <details><summary>Quel matériel faut-il prévoir ?</summary><p>Un ordinateur équipé de PowerPoint ou d’un lecteur compatible, ainsi qu’un port USB. Pour une séance collective, prévoyez également un écran ou un vidéoprojecteur. La compatibilité avec un autre logiciel dépend des fonctions utilisées : contactez-nous en cas de doute.</p></details>
+    <details><summary>Y a-t-il un abonnement ou des mises à jour automatiques ?</summary><p>Il s’agit d’un achat unique portant sur la version livrée. Aucun abonnement ni service de mise à jour automatique n’est facturé.</p></details>
+    <details><summary>Puis-je diffuser ou adapter les fichiers ?</summary><p>La licence couvre l’usage pédagogique par votre organisme. La revente et la diffusion publique des fichiers ne sont pas autorisées. Une adaptation ou une utilisation sur une plateforme tierce doit être convenue avec notre équipe.</p></details>
+    <details><summary>Comment commander plusieurs références ?</summary><p>Depuis la fiche d’un support, cliquez sur « Choisir ce support ». Connectez-vous à votre espace organisme, sélectionnez vos références et vos quantités, puis préparez votre commande.</p></details>
+  </div>
+</div></section>
+
+<div class="sf-shell sf-final"><div><p class="sf-kicker">VOTRE PROCHAINE SESSION SE PRÉPARE ICI</p><h2>Donnez un support<br>à votre savoir-faire.</h2></div><a class="sf-button" href="#collection">Trouver mon support <span aria-hidden="true">↑</span></a></div>
