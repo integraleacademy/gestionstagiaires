@@ -110,6 +110,10 @@ def public_bank(bank, *, questions=False):
         "timing_notice", "extra_training")}
     public["subjects"] = [public_subject(s) for s in bank["subjects"]]
     public["notice"] = _public_notice(bank)
+    public["timing_notice"] = ("Chaque matière dispose de son propre chronomètre. Utilisez « Mettre en pause » "
+                               "avant de quitter la page pour conserver le temps restant et revenir plus tard. "
+                               "À l’échéance, la dernière sauvegarde constitue votre copie. "
+                               "Les 3 h 50 correspondent au temps maximal d’épreuve, hors pauses.")
     if not questions:
         for subject in public["subjects"]:
             for key in ("questions", "passage_title", "passage_lines"):
@@ -324,18 +328,18 @@ def _expire(state, now):
 
 
 def _next_letter(state):
-    return next((letter for letter in LETTERS if state["parts"][letter]["status"] in {"running", "not_started"}), None)
+    return next((letter for letter in LETTERS if state["parts"][letter]["status"] in {"running", "paused", "not_started"}), None)
 
 
 def public_attempt(bank, state, *, now=None):
     now = time.time() if now is None else now
     current = _next_letter(state)
     parts = [{"subject": letter, **{k: copy.deepcopy(part[k]) for k in
-              ("status", "started_at", "deadline", "submitted_at", "revision") if k in part}}
+              ("status", "started_at", "deadline", "submitted_at", "revision", "remaining_seconds") if k in part}}
              for letter, part in state["parts"].items()]
     public = {"id": state["id"], "version": state["version"], "created_at": state["created_at"],
               "status": state["status"], "server_now": now, "current_subject": current, "parts": parts}
-    if current and state["parts"][current]["status"] == "running":
+    if current and state["parts"][current]["status"] in {"running", "paused"}:
         public["paper"] = public_subject(subject_for(bank, current))
         public["answers"] = copy.deepcopy(state["parts"][current]["answers"])
     if state["status"] == "submitted":
@@ -385,8 +389,9 @@ def learner_attempt_summaries(db_path, session_id, trainee_id, *, limit=30):
                 letter = spec["id"]
                 part, grade = state["parts"][letter], results.get(letter, {})
                 if part.get("started_at") is not None:
-                    end = datetime.fromisoformat(part["submitted_at"]).timestamp() if part.get("submitted_at") else now
-                    seconds += max(0, min(spec["minutes"] * 60, int(end - part["started_at"])))
+                    end = (part["paused_at"] if part["status"] == "paused" else
+                           datetime.fromisoformat(part["submitted_at"]).timestamp() if part.get("submitted_at") else now)
+                    seconds += max(0, min(spec["minutes"] * 60, int(end - part["started_at"] - part.get("paused_seconds", 0))))
                 subjects.append({"id": letter, "title": spec["title"], "status": part["status"],
                                  "submitted_at": part.get("submitted_at"), "score": grade.get("score"),
                                  "max_score": 20, "coefficient": spec["coefficient"], "minimum": spec["minimum"],
@@ -508,7 +513,7 @@ class CmaStore:
                 self._write(db, state, now)
                 return state
             if part["status"] != "running" or _next_letter(state) != letter:
-                raise CmaError("Cette matière n’a pas commencé.", status=409)
+                raise CmaError("Reprenez cette matière avant de modifier ou valider vos réponses.", status=409)
             if not isinstance(revision, int) or isinstance(revision, bool) or revision != part["revision"]:
                 raise CmaError("La copie a changé dans une autre page. Rechargez pour reprendre la dernière sauvegarde.", code="revision_conflict", status=409)
             part["answers"] = normalize_answers(subject, answers)
@@ -516,6 +521,48 @@ class CmaStore:
             if submit:
                 part.update(status="submitted", submitted_at=_utc(now))
             _expire(state, now)
+            self._write(db, state, now)
+            return state
+
+    def control(self, session_id, trainee_id, attempt_id, letter, action, revision, *, answers=None):
+        """Persist clock controls atomically with ownership and revision checks.
+
+        Pausing saves the current draft in the same transaction as its remaining
+        time. Reset is restricted to the current, unfinished paper and leaves it
+        paused until the learner explicitly resumes. Old clients cannot replay
+        answers or clock controls over a resumed/reset paper.
+        """
+        if action not in {"pause", "resume", "reset"}:
+            raise CmaError("Action inconnue.")
+        now = self.clock()
+        with self._db() as db:
+            state = self._owned(db, session_id, trainee_id, attempt_id)
+            subject = subject_for(load_bank(state["version"]), letter)
+            part = state["parts"][letter]
+            _expire(state, now)
+            if part["status"] in {"submitted", "expired"}:
+                self._write(db, state, now)
+                return state
+            if _next_letter(state) != letter or part["status"] not in {"running", "paused"}:
+                raise CmaError("Cette matière n’a pas commencé.", status=409)
+            if not isinstance(revision, int) or isinstance(revision, bool) or revision != part["revision"]:
+                raise CmaError("La copie a changé dans une autre page. Rechargez pour reprendre la dernière sauvegarde.", code="revision_conflict", status=409)
+            if action == "pause":
+                if part["status"] != "running":
+                    raise CmaError("Cette matière est déjà en pause.", status=409)
+                part["answers"] = normalize_answers(subject, answers)
+                part.update(status="paused", paused_at=now, remaining_seconds=part.pop("deadline") - now)
+            elif action == "resume":
+                if part["status"] != "paused":
+                    raise CmaError("Cette matière est déjà en cours.", status=409)
+                part["paused_seconds"] = part.get("paused_seconds", 0) + max(0, now - part.pop("paused_at"))
+                part.update(status="running", deadline=now + part.pop("remaining_seconds"))
+            else:
+                part = {"status": "paused", "started_at": now, "paused_at": now,
+                        "remaining_seconds": subject["minutes"] * 60, "paused_seconds": 0,
+                        "answers": {}, "correction": None, "grading_status": "pending", "revision": revision}
+                state["parts"][letter] = part
+            part["revision"] += 1
             self._write(db, state, now)
             return state
 

@@ -12,3 +12,5 @@
 #cmaSubjectTitle:focus{outline:none}
 @media(max-width:480px){.cma-exam-bar .cma-clock{width:112px;min-width:112px}.cma-exam-bar h2{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.cma-paper-title .cma-eyebrow{font-size:.58rem;letter-spacing:.04em}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+.cma-session-controls{display:flex;flex-wrap:wrap;gap:.65rem;padding:0 1.4rem 1rem}.cma-session-controls button{font-size:.85rem}.cma-time-notice.is-paused{background:#e4f2eb;color:var(--cma-green);font-weight:600}.cma-pause-info{border-color:#9fc9b4;background:#f5fbf8}.cma-pause-info h3{color:var(--cma-green)}.cma-exam-running .cma-index{top:285px}.cma-answer legend{scroll-margin-top:300px}
+@media(max-width:800px){.cma-session-controls{padding:0 .9rem .8rem}.cma-session-controls button{flex:1 1 auto}.cma-answer legend{scroll-margin-top:320px}}

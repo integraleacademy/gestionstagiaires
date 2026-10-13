@@ -451,3 +451,91 @@ def test_qcm_answer_positions_are_varied_and_english_distractors_are_not_placeho
         assert len(set(positions)) >= 3
     english = cma.subject_for(bank, "E")
     assert all(len({o["text"] for o in q["options"]}) == len(q["options"]) for q in english["questions"])
+
+
+def test_pause_survives_closing_and_overnight_return_without_counting_pause_time(timed_store, monkeypatch):
+    store, clock = timed_store
+    monkeypatch.setattr(cma.time, 'time', lambda: clock[0])
+    state = store.create('session', 'trainee')
+    aid, answers = state['id'], {'A-qrc-01': 'Réponse juste avant la pause.'}
+    clock[0] += 120.25
+    paused = store.control('session', 'trainee', aid, 'A', 'pause', 0, answers=answers)
+    assert paused['parts']['A']['remaining_seconds'] == 2579.75
+    assert 'deadline' not in paused['parts']['A']
+    clock[0] += 86400
+    # New store instance simulates a closed page and restarted application.
+    store = cma.CmaStore(store.path, clock=lambda: clock[0])
+    reloaded = store.create('session', 'trainee')
+    assert reloaded == paused
+    public = cma.public_attempt(cma.load_bank(), store.read('session', 'trainee', aid), now=clock[0])
+    assert public['current_subject'] == 'A' and public['paper']['id'] == 'A'
+    assert public['answers'] == answers and public['parts'][0]['status'] == 'paused'
+    assert 'result' not in public
+    assert cma.learner_attempt_summaries(store.path, 'session', 'trainee')[0]['exam_seconds'] == 120
+    resumed = store.control('session', 'trainee', aid, 'A', 'resume', 1)
+    assert resumed['parts']['A']['deadline'] == clock[0] + 2579.75
+    assert resumed['parts']['A']['answers'] == answers
+    clock[0] += 60
+    store.control('session', 'trainee', aid, 'A', 'pause', 2, answers=answers)
+    clock[0] += 300
+    resumed = store.control('session', 'trainee', aid, 'A', 'resume', 3)
+    assert cma.learner_attempt_summaries(store.path, 'session', 'trainee')[0]['exam_seconds'] == 180
+    clock[0] = resumed['parts']['A']['deadline']
+    expired = store.read('session', 'trainee', aid)
+    assert expired['parts']['A']['status'] == 'expired'
+    assert cma.learner_attempt_summaries(store.path, 'session', 'trainee')[0]['exam_seconds'] == 2700
+
+
+def test_paused_copy_cannot_be_edited_submitted_skipped_or_corrected(timed_store):
+    store, _ = timed_store
+    aid = store.create('s', 't')['id']
+    paused = store.control('s', 't', aid, 'A', 'pause', 0, answers={})
+    for submit in (False, True):
+        with pytest.raises(cma.CmaError):
+            store.save('s', 't', aid, 'A', {'A-qrc-01': 'Modification en pause'}, 1, submit=submit)
+    with pytest.raises(cma.CmaError):
+        store.start_part('s', 't', aid, 'B')
+    with pytest.raises(cma.CmaError):
+        store.claim_grading('s', 't', aid, 'A')
+    assert store.start_part('s', 't', aid, 'A') == paused
+    assert store.read('s', 't', aid) == paused
+
+
+def test_reset_clears_current_answers_restores_full_time_and_keeps_other_papers(timed_store):
+    store, clock = timed_store
+    aid = store.create('s', 't')['id']
+    previous = store.save('s', 't', aid, 'A', {'A-qrc-01': 'Matière terminée'}, 0, submit=True)['parts']['A']
+    store.start_part('s', 't', aid, 'B')
+    store.save('s', 't', aid, 'B', {'B-qrc-01': 'À effacer'}, 0)
+    clock[0] += 100
+    reset = store.control('s', 't', aid, 'B', 'reset', 1)
+    assert reset['parts']['A'] == previous
+    assert reset['parts']['B']['answers'] == {}
+    assert reset['parts']['B']['remaining_seconds'] == 2700
+    assert reset['parts']['B']['status'] == 'paused'
+    clock[0] += 86400
+    assert store.read('s', 't', aid) == reset
+    resumed = store.control('s', 't', aid, 'B', 'resume', 2)
+    assert resumed['parts']['B']['deadline'] == clock[0] + 2700
+    for action in ('pause', 'resume', 'reset'):
+        with pytest.raises(cma.CmaError) as ex:
+            store.control('s', 't', aid, 'B', action, 1, answers={'B-qrc-01': 'Ancien onglet'})
+        assert ex.value.code == 'revision_conflict'
+    with pytest.raises(cma.CmaError):
+        store.save('s', 't', aid, 'B', {'B-qrc-01': 'Ancien onglet'}, 1)
+    assert store.read('s', 't', aid) == resumed
+
+
+@pytest.mark.parametrize('action', ['pause', 'resume', 'reset'])
+def test_clock_controls_respect_owner_and_never_reopen_expired_papers(timed_store, action):
+    store, clock = timed_store
+    aid = store.create('s', 't')['id']
+    with pytest.raises(cma.CmaError) as ex:
+        store.control('other', 't', aid, 'A', action, 0, answers={})
+    assert ex.value.status == 404
+    with pytest.raises(cma.CmaError):
+        store.control('s', 't', aid, 'B', action, 0, answers={})
+    clock[0] += 2700
+    after = store.control('s', 't', aid, 'A', action, 0, answers={'A-qrc-01': 'Trop tard'})
+    assert after['parts']['A']['status'] == 'expired'
+    assert after['parts']['A']['answers'] == {}

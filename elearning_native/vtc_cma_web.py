@@ -59,7 +59,7 @@ def register(blueprint, *, admin_required, learner_context, root, csrf_token, re
         prefix = "cma_learner_" if token else "cma_admin_exam_"
         public["urls"] = {action: url_for("native_elearning." + prefix + action,
                                           **({"token": token} if token else {}), attempt_id=state["id"])
-                          for action in ("state", "save", "submit", "start_part", "grade")}
+                          for action in ("state", "save", "submit", "start_part", "pause", "resume", "reset", "grade")}
         if public.get("result"):
             # Older attempts may have retained an obsolete provider-labelled
             # error. Keep the stored history and expose the current wording.
@@ -121,6 +121,8 @@ def register(blueprint, *, admin_required, learner_context, root, csrf_token, re
         cma.subject_for(cma.load_bank(state["version"]), letter)
         if action == "start":
             state = db.start_part(*principal, attempt_id, letter)
+        elif action in {"pause", "resume", "reset"}:
+            state = db.control(*principal, attempt_id, letter, action, data.get("revision"), answers=data.get("answers"))
         else:
             state = db.save(*principal, attempt_id, letter, data.get("answers"), data.get("revision"), submit=action == "submit")
         return json_state(state, token)
@@ -167,6 +169,21 @@ def register(blueprint, *, admin_required, learner_context, root, csrf_token, re
     def cma_admin_exam_submit(attempt_id):
         return mutate(None, attempt_id, "submit")
 
+    @blueprint.post("/api/admin/elearning/vtc/simulation-cma/<attempt_id>/pause")
+    @admin_required
+    def cma_admin_exam_pause(attempt_id):
+        return mutate(None, attempt_id, "pause")
+
+    @blueprint.post("/api/admin/elearning/vtc/simulation-cma/<attempt_id>/resume")
+    @admin_required
+    def cma_admin_exam_resume(attempt_id):
+        return mutate(None, attempt_id, "resume")
+
+    @blueprint.post("/api/admin/elearning/vtc/simulation-cma/<attempt_id>/reset")
+    @admin_required
+    def cma_admin_exam_reset(attempt_id):
+        return mutate(None, attempt_id, "reset")
+
     @blueprint.post("/api/admin/elearning/vtc/simulation-cma/<attempt_id>/next")
     @admin_required
     def cma_admin_exam_start_part(attempt_id):
@@ -200,6 +217,18 @@ def register(blueprint, *, admin_required, learner_context, root, csrf_token, re
     @blueprint.post("/api/espace/<token>/elearning/vtc/simulation-cma/<attempt_id>/submit")
     def cma_learner_submit(token, attempt_id):
         return mutate(token, attempt_id, "submit")
+
+    @blueprint.post("/api/espace/<token>/elearning/vtc/simulation-cma/<attempt_id>/pause")
+    def cma_learner_pause(token, attempt_id):
+        return mutate(token, attempt_id, "pause")
+
+    @blueprint.post("/api/espace/<token>/elearning/vtc/simulation-cma/<attempt_id>/resume")
+    def cma_learner_resume(token, attempt_id):
+        return mutate(token, attempt_id, "resume")
+
+    @blueprint.post("/api/espace/<token>/elearning/vtc/simulation-cma/<attempt_id>/reset")
+    def cma_learner_reset(token, attempt_id):
+        return mutate(token, attempt_id, "reset")
 
     @blueprint.post("/api/espace/<token>/elearning/vtc/simulation-cma/<attempt_id>/next")
     def cma_learner_start_part(token, attempt_id):

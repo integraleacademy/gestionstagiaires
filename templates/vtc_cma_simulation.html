@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Simulation CMA · VTC · Intégrale Academy</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-cma.css', v='20261013-exam') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-cma.css', v='20261013-pause-reset') }}">
 </head>
 <body>
 <header class="cma-top"><a href="{{ back_url }}">← Retour au parcours</a><strong>INTÉGRALE ACADEMY <span>/ VTC</span></strong><span>{{ 'Aperçu administrateur' if preview else 'Mon entraînement' }}</span></header>
@@ -12,33 +12,36 @@
   <noscript><p class="cma-alert">Activez JavaScript pour répondre. Le chronomètre reste géré par le serveur lorsque vous avez commencé une matière.</p></noscript>
   <p id="cmaError" class="cma-alert" role="alert" hidden></p>
   <section id="cmaLanding" class="cma-card">
-    <h2>Préparez-vous aux conditions d’examen</h2>
+    <h2>Examen en conditions réelles</h2>
     <div class="cma-exam-rules">
-      <div><strong>01 · Un temps limité</strong><p>Un décompte par matière, sans pause pendant l’épreuve. Alertes à 5 minutes et à 1 minute de la fin.</p></div>
-      <div><strong>02 · Une copie définitive</strong><p>À zéro, la copie enregistrée est remise automatiquement. Le temps continue si vous quittez ou rechargez la page.</p></div>
+      <div><strong>01 · Un temps limité</strong><p>Un décompte par matière, avec des alertes à 5 minutes et à 1 minute de la fin.</p></div>
+      <div><strong>02 · Une pause à votre rythme</strong><p>Mettez le chronomètre en pause pour revenir plus tard. Vos réponses et le temps restant sont conservés.</p></div>
       <div><strong>03 · Un bilan à la fin</strong><p>Vous pouvez relire vos réponses dans la matière en cours. Les corrigés s’ouvrent après les sept matières.</p></div>
     </div>
     <div class="cma-table"><table><caption>Durées, composition et critères d’admissibilité</caption><thead><tr><th>Matière</th><th>Durée</th><th>Composition</th><th>Coefficient</th><th>Minimum</th></tr></thead><tbody>{% for subject in bank.subjects %}<tr><th scope="row">{{ subject.id }} · {{ subject.title }}</th><td>{{ subject.minutes }} min</td><td>{{ subject.qcm_count }} QCM{% if subject.qrc_count %} + {{ subject.qrc_count }} QRC{% endif %}</td><td>{{ subject.coefficient }}</td><td>{{ subject.minimum }}/20</td></tr>{% endfor %}</tbody></table></div>
     <p><strong>Objectif : moyenne pondérée d’au moins 10/20 et chaque minimum atteint.</strong> En français, un point est retiré au-delà de cinq fautes d’orthographe dans l’ensemble des trois réponses courtes.</p>
     <p>{{ bank.qcm_scoring_notice }}</p>
-    <p>{{ bank.timing_notice }}</p><p>Installez-vous au calme, sans consulter les cours, votre téléphone ou une aide extérieure. Préparez votre brouillon avant de lancer le décompte. Une pause reste possible entre deux matières.</p>
+    <p>{{ bank.timing_notice }}</p><p>Installez-vous au calme, sans consulter les cours, votre téléphone ou une aide extérieure. Préparez votre brouillon avant de lancer le décompte. Vous pouvez mettre en pause une matière ou faire une pause entre deux épreuves.</p>
     <p>Vos réponses sont sauvegardées pendant la saisie. Vérifiez l’indicateur « Enregistré » : à l’échéance, seules les réponses reçues à temps sont prises en compte.</p>
     {% if preview %}<p class="cma-note">Le mode chronométré vous permet de tester le même déroulement qu’un stagiaire. Cet essai administrateur est enregistré séparément et ne modifie aucun résultat stagiaire. L’exploration libre reste disponible sans chronomètre.</p>{% endif %}
     <p class="cma-note">Les réponses rédigées reçoivent une correction détaillée selon un barème défini par le centre. Une analyse complémentaire est lancée si nécessaire. Utilisez les situations fictives du sujet et évitez d’y inscrire des informations personnelles. En cas d’interruption, vos réponses sont conservées et vous pouvez relancer la correction.</p>
     <p class="cma-note">{{ bank.notice }}</p>
     {% if not config.aiAvailable %}<p class="cma-alert">La correction des réponses rédigées n’est pas encore disponible. Vous pouvez réaliser les épreuves ; votre copie sera conservée pour une correction ultérieure.</p>{% endif %}
-    <div class="cma-actions"><button type="button" class="cma-primary" id="cmaStart">{{ 'Tester les conditions d’examen' if preview else 'Commencer ou reprendre ma simulation chronométrée' }}</button>{% if preview %}<button type="button" class="cma-secondary" id="cmaExplore">Explorer librement les matières</button>{% endif %}</div>
+    <div class="cma-actions"><button type="button" class="cma-primary" id="cmaStart">Examen en conditions réelles</button>{% if preview %}<button type="button" class="cma-secondary" id="cmaExplore">Explorer librement les matières</button>{% endif %}</div>
   </section>
   <section id="cmaPaper" hidden>
     <div class="cma-exam-bar">
       <div class="cma-paper-heading"><div class="cma-paper-title"><p class="cma-eyebrow" id="cmaExamStage"></p><h2 id="cmaSubjectTitle" tabindex="-1"></h2><p id="cmaSubjectMeta" class="cma-note"></p></div><div class="cma-clock" id="cmaClockBox"><span id="cmaClockLabel">Temps restant</span><strong id="cmaClock" role="timer" aria-live="off">—</strong><span id="cmaClockDetail"></span></div></div>
+      <div class="cma-session-controls"><button type="button" id="cmaPause" class="cma-primary">Mettre en pause</button><button type="button" id="cmaReset" class="cma-secondary">Remettre à zéro</button></div>
       <progress id="cmaTimeProgress" class="cma-time-progress" value="0" max="100" aria-label="Temps restant pour cette matière"></progress>
       <p id="cmaTimeNotice" class="cma-time-notice" role="status" aria-live="polite" aria-atomic="true"></p>
     </div>
+    <div id="cmaResetConfirm" class="cma-alert" hidden><p id="cmaResetText"></p><div class="cma-actions"><button type="button" id="cmaConfirmReset" class="cma-primary">Confirmer la remise à zéro</button><button type="button" id="cmaCancelReset" class="cma-secondary">Annuler</button></div></div>
+    <div id="cmaPausedInfo" class="cma-card cma-pause-info" hidden><h3>Examen en pause</h3><p>Vos réponses et votre temps restant sont enregistrés. Vous pouvez fermer cette page et revenir plus tard.</p><p>À votre retour, cliquez sur « Reprendre » pour poursuivre cette matière.</p><a href="{{ back_url }}">Retour au parcours →</a></div>
     <ol id="cmaSubjectSteps" class="cma-subject-steps" aria-label="Avancement des sept épreuves"></ol>
     <div id="cmaPreviewSelect" class="cma-actions" hidden><label for="cmaSubjectSelect">Matière à prévisualiser</label><select id="cmaSubjectSelect">{% for subject in bank.subjects %}<option value="{{ subject.id }}">{{ subject.id }} · {{ subject.title }}</option>{% endfor %}</select></div>
-    <div class="cma-workspace"><aside class="cma-index cma-card"><h3>Ma copie</h3><p id="cmaAnswered" aria-live="polite"></p><progress id="cmaProgress" value="0" max="100"></progress><nav id="cmaQuestionGrid" aria-label="Naviguer dans les questions"></nav><button type="button" id="cmaUnanswered" class="cma-secondary">Voir les réponses manquantes</button><p class="cma-note" id="cmaSaved" role="status"></p><button type="button" id="cmaSaveNow" class="cma-secondary">Enregistrer maintenant</button></aside>
-    <section class="cma-card cma-answer"><details id="cmaPassage" class="cma-passage" hidden open><summary id="cmaPassageTitle"></summary><ol id="cmaPassageLines"></ol></details><p id="cmaQuestionMeta" class="cma-eyebrow"></p><form id="cmaForm"><fieldset id="cmaQuestion"></fieldset><div class="cma-actions cma-navigation"><button type="button" id="cmaPrevious" class="cma-secondary">← Précédente</button><button type="button" id="cmaNext" class="cma-primary">Suivante →</button></div><div class="cma-submit"><button type="submit" id="cmaSubmit" class="cma-primary">Remettre cette matière</button><div id="cmaConfirm" hidden><p id="cmaConfirmText"></p><div class="cma-actions"><button type="button" id="cmaConfirmSubmit" class="cma-primary">Confirmer la remise définitive</button><button type="button" id="cmaCancelSubmit" class="cma-secondary">Revenir à ma copie</button></div></div></div></form></section></div>
+    <div class="cma-workspace" id="cmaWorkspace"><aside class="cma-index cma-card"><h3>Ma copie</h3><p id="cmaAnswered" aria-live="polite"></p><progress id="cmaProgress" value="0" max="100"></progress><nav id="cmaQuestionGrid" aria-label="Naviguer dans les questions"></nav><button type="button" id="cmaUnanswered" class="cma-secondary">Voir les réponses manquantes</button><p class="cma-note" id="cmaSaved" role="status"></p><button type="button" id="cmaSaveNow" class="cma-secondary">Enregistrer maintenant</button></aside>
+    <section class="cma-card cma-answer"><details id="cmaPassage" class="cma-passage" hidden open><summary id="cmaPassageTitle"></summary><ol id="cmaPassageLines"></ol></details><p id="cmaQuestionMeta" class="cma-eyebrow"></p><form id="cmaForm"><fieldset id="cmaQuestion"></fieldset><div class="cma-actions cma-navigation"><button type="button" id="cmaPrevious" class="cma-secondary">← Précédente</button><button type="button" id="cmaNext" class="cma-primary">Suivante →</button></div><div class="cma-submit"><button type="submit" id="cmaSubmit" class="cma-primary">Valider mes réponses</button><div id="cmaConfirm" hidden><p id="cmaConfirmText"></p><div class="cma-actions"><button type="button" id="cmaConfirmSubmit" class="cma-primary">Confirmer la validation</button><button type="button" id="cmaCancelSubmit" class="cma-secondary">Revenir à ma copie</button></div></div></div></form></section></div>
   </section>
   <section id="cmaBetween" class="cma-card" tabindex="-1" hidden></section>
   <section id="cmaResult" tabindex="-1" hidden></section>
@@ -46,5 +49,5 @@
   <footer class="cma-footer"><p>Référentiel vérifié le {{ bank.reviewed_at }} · Édition {{ bank.version }}</p>{% for source in bank.sources %}<a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.title }}</a>{% endfor %}</footer>
 </main>
 <script type="application/json" id="cmaConfig">{{ config|tojson }}</script>
-<script src="{{ url_for('static', filename='js/vtc-cma.js', v='20261013-exam') }}" defer></script>
+<script src="{{ url_for('static', filename='js/vtc-cma.js', v='20261013-pause-reset') }}" defer></script>
 </body></html>

@@ -307,7 +307,7 @@ def test_admin_timed_trial_requires_csrf_version_role_and_own_session(case):
     with case.client.session_transaction() as browser:
         browser["admin_role"] = "viewer"
     assert post(case, config, config["startUrl"]).status_code == 403
-    for action in ["save", "submit", "start_part", "grade"]:
+    for action in ["save", "submit", "start_part", "pause", "resume", "reset", "grade"]:
         assert post(case, config, state["urls"][action], subject="A", revision=0, answers={}).status_code == 403
     with case.client.session_transaction() as browser:
         browser["admin_role"] = "admin"
@@ -384,3 +384,43 @@ def test_organisation_real_order_resolver_scopes_history_and_revocation(case):
     assert case.client.get(state["urls"]["state"]).status_code == 404
     case.data["partners"][0]["status"] = "active"
     assert case.data == frozen
+
+
+@pytest.mark.parametrize('admin', [False, True])
+def test_clock_pause_resume_and_real_reset_are_persisted_and_protected(case, admin):
+    url = BASE
+    if admin:
+        case._admin_login()
+        url = '/admin/elearning/vtc/simulation-cma'
+    config, state = start(case, url=url)
+    response, _ = page_config(case, url=url)
+    assert 'Examen en conditions réelles' in response.text
+    assert 'Remettre à zéro' in response.text and 'Valider mes réponses' in response.text
+    assert 'sans pause' not in response.text and 'Tester les conditions' not in response.text
+    for action in ('pause', 'resume', 'reset'):
+        endpoint = state['urls'][action]
+        assert case.client.post(endpoint, json={'subject': 'A', 'revision': 0}).status_code == 403
+        assert post(case, config, endpoint, subject='A', revision=0, answers={}, version='obsolete').status_code == 409
+    now = state['parts'][0]['started_at'] + 120
+    answers = {'A-qrc-01': 'La copie à retrouver demain.'}
+    with patch('elearning_native.vtc_cma.time.time', return_value=now):
+        response = post(case, config, state['urls']['pause'], subject='A', revision=0, answers=answers, remaining_seconds=999999)
+    assert response.status_code == 200, response.text
+    paused = response.json['state']
+    assert paused['parts'][0]['remaining_seconds'] == 2580
+    assert paused['answers'] == answers and paused['parts'][0]['status'] == 'paused'
+    with patch('elearning_native.vtc_cma.time.time', return_value=now + 86400):
+        _, page = page_config(case, url=url + '?attempt=' + state['id'])
+        assert page['state']['parts'][0]['status'] == 'paused'
+        assert page['state']['parts'][0]['remaining_seconds'] == 2580
+        assert post(case, config, config['startUrl']).json['state']['parts'][0]['status'] == 'paused'
+        response = post(case, config, state['urls']['resume'], subject='A', revision=1)
+        assert response.status_code == 200, response.text
+        resumed = response.json['state']
+        assert resumed['parts'][0]['deadline'] == now + 86400 + 2580
+        reset = post(case, config, state['urls']['reset'], subject='A', revision=2)
+        assert reset.status_code == 200, reset.text
+        assert reset.json['state']['answers'] == {}
+        assert reset.json['state']['parts'][0]['remaining_seconds'] == 2700
+        assert reset.json['state']['parts'][0]['status'] == 'paused'
+        assert 'result' not in reset.json['state']
