@@ -21,15 +21,16 @@ La première commande valide les sources, les quatre scènes, les cartes et leur
 ancrages sans contacter le service de synthèse. Les tests emploient des données
 de timing et un signal PCM synthétiques : ils ne valident pas une vraie narration.
 
-## Génération à autoriser
+## Génération autorisée
 
-Le contrôle automatique d’autorisation de cette session a refusé une tentative
-de synthèse, car il exige l’accord explicite de l’utilisateur avant le transfert
-du texte vers Microsoft. Ne pas lancer la commande suivante avant cet accord.
+L’utilisateur a explicitement autorisé le transfert du texte D.02 vers Microsoft
+le 13 octobre 2026 pour produire cet aperçu. La première tentative depuis
+l’environnement de préparation a échoué avec une réponse HTTP 403 du service
+vocal. Le workflow isolé `vtc-voice-preview.yml` reprend cette génération.
 Seuls les textes de cette leçon sont concernés, sans données de stagiaires,
 identifiants ni documents administratifs.
 
-Après cet accord, avec edge-tts, PyAV, Pillow et imageio-ffmpeg installés :
+Avec edge-tts, PyAV, Pillow et imageio-ffmpeg installés :
 
 ```sh
 python scripts/vtc/render_voice_preview.py --render
