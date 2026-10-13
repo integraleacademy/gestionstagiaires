@@ -269,6 +269,80 @@ def test_admin_preview_uses_no_student_database_and_viewer_cannot_invoke_ai(case
     assert case.saved_data is None
 
 
+def test_admin_timed_trial_resumes_and_expires_without_touching_learner_records(case):
+    case._admin_login()
+    path = case.persist_dir / "native_elearning" / "tracking.sqlite3"
+    before = path.read_bytes() if path.exists() else None
+    config, state = start(case, url="/admin/elearning/vtc/simulation-cma")
+    assert all(url.startswith("/api/admin/") for url in state["urls"].values())
+    assert state["parts"][0]["deadline"] - state["parts"][0]["started_at"] == 45 * 60
+    answers = {"A-qrc-01": "Réponse avant la fin du temps."}
+    saved = post(case, config, state["urls"]["save"], subject="A", revision=0, answers=answers)
+    assert saved.status_code == 200
+    assert post(case, config, config["startUrl"]).json["state"]["id"] == state["id"]
+    _, reloaded = page_config(case, url="/admin/elearning/vtc/simulation-cma?attempt=" + state["id"])
+    assert reloaded["state"]["answers"] == answers
+    assert reloaded["state"]["parts"][0]["deadline"] == state["parts"][0]["deadline"]
+    assert post(case, config, state["urls"]["start_part"], subject="B").status_code == 409
+    assert post(case, config, state["urls"]["grade"], subject="A").status_code == 409
+    with patch("elearning_native.vtc_cma.time.time", return_value=state["parts"][0]["deadline"] + 1):
+        late = post(case, config, state["urls"]["submit"], subject="A", revision=1,
+                    answers={"A-qrc-01": "Réponse hors délai"})
+    assert late.status_code == 200
+    assert late.json["state"]["current_subject"] == "B" and "paper" not in late.json["state"]
+    with case.client.session_transaction() as browser:
+        owner = browser["cma_preview_owner"]
+    trial = cma.CmaStore(case.persist_dir / "native_elearning" / "cma_admin_preview.sqlite3").read("admin-preview", owner, state["id"])
+    assert trial["parts"]["A"]["answers"] == answers
+    assert trial["parts"]["A"]["status"] == "expired"
+    assert (path.read_bytes() if path.exists() else None) == before
+    assert case.saved_data is None
+
+
+def test_admin_timed_trial_requires_csrf_version_role_and_own_session(case):
+    case._admin_login()
+    config, state = start(case, url="/admin/elearning/vtc/simulation-cma")
+    assert case.client.post(config["startUrl"], json={"version": config["bank"]["version"]}).status_code == 403
+    assert post(case, config, config["startUrl"], version="obsolete").status_code == 409
+    with case.client.session_transaction() as browser:
+        browser["admin_role"] = "viewer"
+    assert post(case, config, config["startUrl"]).status_code == 403
+    for action in ["save", "submit", "start_part", "grade"]:
+        assert post(case, config, state["urls"][action], subject="A", revision=0, answers={}).status_code == 403
+    with case.client.session_transaction() as browser:
+        browser["admin_role"] = "admin"
+        browser.pop("cma_preview_owner")
+    assert case.client.get(state["urls"]["state"]).status_code == 404
+    other = post(case, config, config["startUrl"]).json["state"]
+    assert other["id"] != state["id"]
+    assert case.client.get(state["urls"]["state"]).status_code == 404
+    with case.client.session_transaction() as browser:
+        browser.pop("admin_logged_in")
+    assert case.client.get(other["urls"]["state"]).status_code in [302, 401, 403]
+
+
+def test_admin_timed_trial_completes_seven_papers_before_corrections(case):
+    case._admin_login()
+    config, state = start(case, url="/admin/elearning/vtc/simulation-cma")
+    for subject in cma.load_bank()["subjects"]:
+        letter = subject["id"]
+        if letter != "A":
+            state = post(case, config, state["urls"]["start_part"], subject=letter).json["state"]
+        assert state["parts"][ord(letter) - ord("A")]["deadline"] - state["server_now"] <= subject["minutes"] * 60
+        state = post(case, config, state["urls"]["submit"], subject=letter, revision=0,
+                     answers=full_answers(subject)).json["state"]
+        if letter != "G":
+            assert "result" not in state
+    assert state["status"] == "submitted"
+    with patch("elearning_native.vtc_ai.grade_written_work", side_effect=fake_grade):
+        for letter in ["A", "B", "D", "F", "G"]:
+            result = post(case, config, state["urls"]["grade"], subject=letter)
+            assert result.status_code == 200
+            state = result.json["state"]
+    assert state["result"]["weighted_average"] == 20
+    assert state["result"]["subjects"][0]["corrections"][0]["lesson_links"][0]["url"].startswith("/admin/")
+
+
 def test_admin_work_lists_cma_only_learner_without_creating_course_progress(case):
     _, state = start(case)
     dbpath = case.persist_dir / "native_elearning" / "tracking.sqlite3"

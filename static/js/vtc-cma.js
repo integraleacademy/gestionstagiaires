@@ -11,20 +11,28 @@
   let state = null, paper = null, answers = {}, position = 0, revision = 0;
   let generation = 0, savedGeneration = 0, saveTimer, saveChain = Promise.resolve(), saving = 0;
   let submitting = false, conflicted = false, grading = false, autoGraded = false;
-  let clockSync = 0, timeAtSync = 0, expiryCheck = 0;
+  let clockSync = 0, wallClockSync = 0, timeAtSync = 0, expiryCheck = -Infinity;
+  let expired = false, expiryRefreshing = false;
 
   function error(message) { $('cmaError').textContent = message; $('cmaError').hidden = !message; }
-  function visible(id) { ['cmaLanding', 'cmaPaper', 'cmaBetween', 'cmaResult'].forEach(name => { $(name).hidden = name !== id; }); }
+  function visible(id) {
+    ['cmaLanding', 'cmaPaper', 'cmaBetween', 'cmaResult'].forEach(name => { $(name).hidden = name !== id; });
+    document.body.classList.toggle('cma-exam-running', id === 'cmaPaper');
+  }
   async function request(url, data) {
     const options = {credentials: 'same-origin', cache: 'no-store', headers: {Accept: 'application/json'}};
     if (data !== undefined) Object.assign(options, {method: 'POST', headers: {...options.headers, 'Content-Type': 'application/json', 'X-Elearning-CSRF': config.csrfToken}, body: JSON.stringify(data)});
     let response, body;
+    const controller = new AbortController(); options.signal = controller.signal;
+    const timeout = setTimeout(() => controller.abort(), /\/(grade|correct)$/.test(url) ? 120000 : 20000);
     try {
       response = await fetch(url, options);
       const parsed = (response.headers.get('content-type') || '').includes('application/json') ? await response.json() : {};
       body = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
     } catch {
       throw new Error('La connexion a été interrompue. Vos réponses enregistrées sont conservées. Réessayez dans quelques instants.');
+    } finally {
+      clearTimeout(timeout);
     }
     if (!response.ok || !body.ok) {
       const ex = new Error(body.error || ([401, 403].includes(response.status) ? 'Votre accès a expiré ou n’est plus autorisé. Revenez au parcours pour vous reconnecter.' : 'La connexion a été interrompue. Votre dernière sauvegarde serveur est conservée. Réessayez.'));
@@ -32,6 +40,17 @@
     }
     return body;
   }
+  function remainingSeconds() {
+    if (!paper || config.preview) return null;
+    const part = state?.parts.find(p => p.subject === paper.id);
+    if (!part || part.status !== 'running') return 0;
+    // A monotonic clock prevents a backwards clock adjustment from adding time;
+    // wall time also counts suspension on platforms that pause performance.now().
+    const elapsed = Math.max(0, performance.now() - clockSync, Date.now() - wallClockSync);
+    return Math.max(0, Math.ceil((part.deadline * 1000 - timeAtSync - elapsed) / 1000));
+  }
+  function paperLocked() { return submitting || conflicted || expired || (!config.preview && remainingSeconds() === 0); }
+  function cancelAutosave() { clearTimeout(saveTimer); saveTimer = null; }
   function answered(q) { return q.kind === 'qrc' ? !!(answers[q.id] || '').trim() : !!answers[q.id]?.length; }
   function progress() {
     if (!paper) return;
@@ -49,7 +68,10 @@
     generation++; progress(); $('cmaConfirm').hidden = true;
     if (config.preview) { $('cmaSaved').textContent = 'Aperçu : réponses conservées uniquement dans cette page.'; return; }
     $('cmaSaved').textContent = 'Modifications en attente d’enregistrement…';
-    clearTimeout(saveTimer); saveTimer = setTimeout(() => queueSave(), 700);
+    // Save throughout continuous typing, rather than waiting for a pause that
+    // may never happen. Send the last keystrokes immediately near the deadline.
+    if (remainingSeconds() <= 2) { cancelAutosave(); void queueSave(); }
+    else if (!saveTimer) saveTimer = setTimeout(() => { saveTimer = null; void queueSave(); }, 700);
   }
   function renderQuestion(focus = false) {
     const q = paper.questions[position], field = $('cmaQuestion'); field.replaceChildren();
@@ -62,7 +84,7 @@
       textarea.maxLength = q.max_chars; textarea.value = answers[q.id] || ''; textarea.spellcheck = false;
       textarea.setAttribute('aria-label', `Votre réponse à la question ${position + 1}`); textarea.setAttribute('aria-describedby', instruction.id);
       const count = el('p', `${textarea.value.length} / ${q.max_chars} caractères`, 'cma-count');
-      textarea.addEventListener('input', () => { answers[q.id] = textarea.value; count.textContent = `${textarea.value.length} / ${q.max_chars} caractères`; dirty(); });
+      textarea.addEventListener('input', () => { if (paperLocked()) return; answers[q.id] = textarea.value; count.textContent = `${textarea.value.length} / ${q.max_chars} caractères`; dirty(); });
       field.append(instruction, textarea, count);
     } else {
       field.append(el('p', q.multiple ? 'Cochez toutes les bonnes réponses. L’ensemble exact est attendu.' : 'Sélectionnez une seule réponse.', 'cma-note'));
@@ -70,22 +92,35 @@
         const label = el('label', undefined, 'cma-option'), input = el('input');
         input.type = q.multiple ? 'checkbox' : 'radio'; input.name = q.id; input.value = option.id;
         input.checked = (answers[q.id] || []).includes(option.id);
-        input.addEventListener('change', () => { answers[q.id] = q.multiple ? Array.from(field.querySelectorAll('input:checked')).map(n => n.value) : [option.id]; dirty(); });
+        input.addEventListener('change', () => { if (paperLocked()) return; answers[q.id] = q.multiple ? Array.from(field.querySelectorAll('input:checked')).map(n => n.value) : [option.id]; dirty(); });
         label.append(input, el('span', `${String.fromCharCode(65 + index)}. ${option.text}`)); field.append(label);
       });
       const clear = el('button', 'Effacer mon choix', 'cma-secondary'); clear.type = 'button';
-      clear.addEventListener('click', () => { answers[q.id] = []; dirty(); renderQuestion(); }); field.append(clear);
+      clear.addEventListener('click', () => { if (paperLocked()) return; answers[q.id] = []; dirty(); renderQuestion(); }); field.append(clear);
     }
     $('cmaPrevious').disabled = position === 0; $('cmaNext').disabled = position === paper.questions.length - 1;
-    field.disabled = submitting || conflicted; progress(); if (focus) legend.focus();
+    field.disabled = paperLocked(); progress(); if (focus) legend.focus();
   }
   function renderPaper(nextPaper, copy, fresh = true) {
     visible('cmaPaper'); paper = nextPaper;
-    if (fresh) { answers = copy || {}; position = 0; generation = savedGeneration = 0; conflicted = false; }
+    if (fresh) { cancelAutosave(); answers = copy || {}; position = 0; generation = savedGeneration = 0; conflicted = expired = false; expiryCheck = -Infinity; }
     $('cmaSubjectTitle').textContent = `${paper.id} · ${paper.title}`;
     $('cmaSubjectMeta').textContent = `${paper.minutes} min · coefficient ${paper.coefficient} · minimum ${paper.minimum}/20`;
     $('cmaPreviewSelect').hidden = !config.preview; $('cmaSubjectSelect').value = paper.id;
     $('cmaClockLabel').textContent = config.preview ? 'Durée de l’épreuve' : 'Temps restant';
+    $('cmaExamStage').textContent = config.preview ? 'Exploration libre · sans décompte' : `Épreuve ${bank.subjects.findIndex(s => s.id === paper.id) + 1} / ${bank.subjects.length} · conditions d’examen`;
+    $('cmaClockDetail').textContent = config.preview ? 'Sans décompte' : `sur ${paper.minutes} min · sans pause`;
+    $('cmaTimeProgress').hidden = config.preview;
+    $('cmaSubjectSteps').replaceChildren();
+    bank.subjects.forEach(subject => {
+      const status = state?.parts.find(p => p.subject === subject.id)?.status;
+      const done = !config.preview && ['submitted', 'expired'].includes(status);
+      const step = el('li', undefined, done ? 'is-done' : subject.id === paper.id ? 'is-active' : '');
+      if (subject.id === paper.id) step.setAttribute('aria-current', 'step');
+      step.append(el('strong', `${done ? '✓ ' : ''}${subject.id}`), el('span', `${subject.minutes} min`));
+      step.setAttribute('aria-label', `${subject.id} · ${subject.title} · ${done ? 'copie remise' : subject.id === paper.id ? 'en cours' : 'à venir'}`);
+      $('cmaSubjectSteps').append(step);
+    });
     $('cmaSubmit').textContent = config.preview ? 'Corriger cette matière · aperçu' : 'Remettre cette matière';
     $('cmaSaveNow').hidden = config.preview;
     $('cmaPassage').hidden = !paper.passage_lines;
@@ -95,14 +130,19 @@
     const grid = $('cmaQuestionGrid'); grid.replaceChildren();
     paper.questions.forEach((q, i) => { const b = el('button', String(i + 1)); b.type = 'button'; b.addEventListener('click', () => { position = i; renderQuestion(true); }); grid.append(b); });
     $('cmaSaved').textContent = config.preview ? 'Aperçu sans enregistrement stagiaire.' : 'Copie synchronisée avec le serveur.';
-    $('cmaConfirm').hidden = true; renderQuestion(); updateClock();
+    $('cmaConfirm').hidden = true;
+    $('cmaSubmit').disabled = $('cmaConfirmSubmit').disabled = $('cmaSaveNow').disabled = false;
+    renderQuestion(); updateClock();
+    if (fresh) { $('cmaSubjectTitle').focus({preventScroll: true}); $('cmaPaper').scrollIntoView?.({block: 'start'}); }
   }
   function applyState(next, preserveDraft = false) {
     const oldPaper = paper?.id;
-    state = next; clockSync = performance.now(); timeAtSync = next.server_now * 1000;
-    if (!config.preview && state.id) history.replaceState(null, '', `${config.homeUrl}?attempt=${encodeURIComponent(state.id)}`);
+    if (state?.id === next.id && next.server_now < state.server_now) return;
+    config.preview = false;
+    state = next; clockSync = performance.now(); wallClockSync = Date.now(); timeAtSync = next.server_now * 1000;
+    if (state.id) history.replaceState(null, '', `${config.homeUrl}?attempt=${encodeURIComponent(state.id)}`);
     if (state.status === 'submitted') {
-      paper = null; clearTimeout(saveTimer); renderResults(state.result);
+      paper = null; cancelAutosave(); renderResults(state.result);
       if (!autoGraded && config.aiAvailable && subjectsToGrade(state.result).length) { autoGraded = true; void gradePending(); }
       return;
     }
@@ -112,7 +152,7 @@
       if (preserveDraft && oldPaper === state.paper.id) { updateClock(); return; }
       renderPaper(state.paper, state.answers); return;
     }
-    paper = null; clearTimeout(saveTimer); generation = savedGeneration = 0;
+    paper = null; cancelAutosave(); generation = savedGeneration = 0;
     visible('cmaBetween'); const panel = $('cmaBetween'); panel.replaceChildren();
     const nextInfo = subjectInfo(state.current_subject), previous = state.parts.filter(p => ['submitted', 'expired'].includes(p.status));
     panel.append(el('p', 'COPIE ENREGISTRÉE', 'cma-eyebrow'), el('h2', `Prêt pour la matière ${nextInfo.id} ?`));
@@ -125,6 +165,7 @@
   }
   async function performSave(submit = false) {
     if (config.preview || !paper || conflicted || (!submit && generation === savedGeneration)) return true;
+    if (expired || remainingSeconds() === 0) { updateClock(); return false; }
     saving++; const sentGeneration = generation, sentSubject = paper.id, sentAnswers = JSON.parse(JSON.stringify(answers));
     try {
       const data = await request(submit ? state.urls.submit : state.urls.save, {version: state.version, subject: sentSubject, revision, answers: sentAnswers});
@@ -152,15 +193,28 @@
   }
   function updateClock() {
     if (!paper) return;
-    if (config.preview) { $('cmaClock').textContent = `${paper.minutes} min`; return; }
-    const part = state.parts.find(p => p.subject === paper.id);
-    const remaining = Math.max(0, Math.ceil((part.deadline * 1000 - timeAtSync - (performance.now() - clockSync)) / 1000));
+    if (config.preview) {
+      $('cmaClock').textContent = `${paper.minutes} min`;
+      $('cmaClockBox').classList.remove('is-urgent', 'is-critical');
+      $('cmaTimeNotice').textContent = 'Exploration libre : le chronomètre est désactivé.';
+      $('cmaTimeNotice').className = 'cma-time-notice'; return;
+    }
+    const remaining = remainingSeconds();
     $('cmaClock').textContent = `${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`;
-    $('cmaClock').parentElement.classList.toggle('is-urgent', remaining <= 300);
-    if (!remaining && !submitting && performance.now() - expiryCheck > 5000) {
-      expiryCheck = performance.now(); $('cmaQuestion').disabled = true;
+    $('cmaClockBox').classList.toggle('is-urgent', remaining <= 300);
+    $('cmaClockBox').classList.toggle('is-critical', remaining <= 60);
+    $('cmaTimeProgress').max = paper.minutes * 60; $('cmaTimeProgress').value = remaining;
+    const message = !remaining ? 'Temps écoulé. Remise automatique de la copie enregistrée…' : remaining <= 60 ? 'Dernière minute : terminez votre réponse. La copie sera remise automatiquement.' : remaining <= 300 ? 'Il reste 5 minutes ou moins. Relisez votre copie et vérifiez les réponses manquantes.' : 'Le temps continue si vous quittez cette page. Vos réponses sont enregistrées au fil de la saisie.';
+    if ($('cmaTimeNotice').textContent !== message) $('cmaTimeNotice').textContent = message;
+    $('cmaTimeNotice').className = `cma-time-notice${remaining <= 60 ? ' is-critical' : remaining <= 300 ? ' is-urgent' : ''}`;
+    if (!remaining) {
+      expired = true; cancelAutosave(); $('cmaConfirm').hidden = true;
+      $('cmaQuestion').disabled = $('cmaSubmit').disabled = $('cmaConfirmSubmit').disabled = $('cmaSaveNow').disabled = true;
+    }
+    if (!remaining && !expiryRefreshing && performance.now() - expiryCheck >= 5000) {
+      expiryCheck = performance.now(); expiryRefreshing = true;
       // No late client answers are sent: the server locks its last saved draft.
-      request(state.urls.state).then(data => applyState(data.state)).catch(ex => error(ex.message));
+      request(state.urls.state).then(data => { error(''); applyState(data.state); }).catch(ex => error(ex.message)).finally(() => { expiryRefreshing = false; });
     }
   }
   function lessonLinks(links) {
@@ -241,9 +295,9 @@
     } finally { grading = false; if (state?.result) renderResults(state.result); }
   }
   async function submitPaper() {
-    if (submitting || !paper || conflicted) return;
+    if (!paper || paperLocked()) { updateClock(); return; }
     submitting = true; $('cmaQuestion').disabled = true; $('cmaSubmit').disabled = true; $('cmaConfirmSubmit').disabled = true;
-    error(''); clearTimeout(saveTimer);
+    error(''); cancelAutosave();
     try {
       if (config.preview) {
         $('cmaSaved').textContent = 'Analyse de vos réponses… La correction peut prendre quelques instants';
@@ -253,20 +307,21 @@
         const back = el('button', 'Revenir à l’aperçu', 'cma-secondary'); back.type = 'button'; back.addEventListener('click', () => { visible('cmaPaper'); renderQuestion(); }); notice.append(back); panel.append(notice, subjectResult(data.result)); panel.focus();
       } else await queueSave(true);
     } catch (ex) { error(ex.message); }
-    finally { submitting = false; $('cmaQuestion').disabled = conflicted; $('cmaSubmit').disabled = false; $('cmaConfirmSubmit').disabled = false; $('cmaConfirm').hidden = true; if (config.preview) $('cmaSaved').textContent = 'Aperçu : réponses conservées uniquement dans cette page.'; }
+    finally { submitting = false; $('cmaQuestion').disabled = paperLocked(); $('cmaSubmit').disabled = $('cmaConfirmSubmit').disabled = paperLocked(); $('cmaConfirm').hidden = true; if (config.preview) $('cmaSaved').textContent = 'Aperçu : réponses conservées uniquement dans cette page.'; }
   }
   $('cmaStart').addEventListener('click', async () => {
-    error(''); if (config.preview) { renderPaper(bank.subjects[0], {}); return; }
+    error('');
     $('cmaStart').disabled = true;
     try { const data = await request(config.startUrl, {version: bank.version}); applyState(data.state); }
     catch (ex) { error(ex.message); } finally { $('cmaStart').disabled = false; }
   });
+  $('cmaExplore')?.addEventListener('click', () => { error(''); config.preview = true; state = null; renderPaper(bank.subjects[0], {}); });
   $('cmaSubjectSelect').addEventListener('change', () => { if (config.preview) { error(''); renderPaper(subjectInfo($('cmaSubjectSelect').value), {}); } });
   $('cmaPrevious').addEventListener('click', () => { if (position > 0) { position--; renderQuestion(true); } });
   $('cmaNext').addEventListener('click', () => { if (position < paper.questions.length - 1) { position++; renderQuestion(true); } });
   $('cmaUnanswered').addEventListener('click', () => { const index = paper.questions.findIndex(q => !answered(q)); if (index >= 0) { position = index; renderQuestion(true); } else $('cmaSubmit').focus(); });
   $('cmaSaveNow').addEventListener('click', () => void queueSave());
-  $('cmaForm').addEventListener('submit', event => { event.preventDefault(); if (config.preview) { void submitPaper(); return; } const count = paper.questions.filter(q => !answered(q)).length; $('cmaConfirmText').textContent = `${count ? `${count} réponse(s) manquante(s) seront notées zéro. ` : ''}Après remise, vous ne pourrez plus modifier cette matière. Confirmez-vous la remise ?`; $('cmaConfirm').hidden = false; $('cmaConfirmSubmit').focus(); });
+  $('cmaForm').addEventListener('submit', event => { event.preventDefault(); if (!paper || paperLocked()) { updateClock(); return; } if (config.preview) { void submitPaper(); return; } const count = paper.questions.filter(q => !answered(q)).length; $('cmaConfirmText').textContent = `${count ? `${count} réponse(s) manquante(s) seront notées zéro. ` : ''}Après remise, vous ne pourrez plus modifier cette matière. Confirmez-vous la remise ?`; $('cmaConfirm').hidden = false; $('cmaConfirmSubmit').focus(); });
   $('cmaCancelSubmit').addEventListener('click', () => { $('cmaConfirm').hidden = true; $('cmaSubmit').focus(); });
   $('cmaConfirmSubmit').addEventListener('click', () => void submitPaper());
   window.addEventListener('beforeunload', event => { if (!config.preview && paper && generation !== savedGeneration) { event.preventDefault(); event.returnValue = ''; } });

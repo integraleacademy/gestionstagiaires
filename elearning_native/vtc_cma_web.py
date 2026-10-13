@@ -1,4 +1,6 @@
 """CMA simulation pages and authenticated, CSRF-protected attempt API."""
+import secrets
+
 from flask import abort, jsonify, render_template, request, session, url_for
 
 from . import vtc_cma as cma
@@ -9,8 +11,20 @@ CORRECTION_UNAVAILABLE = "La correction est momentanément indisponible. Vos ré
 
 
 def register(blueprint, *, admin_required, learner_context, root, csrf_token, require_csrf):
-    def database():
-        return cma.CmaStore(root() / "tracking.sqlite3")
+    def database(*, preview=False):
+        # Timed administrator trials use the learner engine without appearing
+        # in learner records, course progress or organisation reports.
+        return cma.CmaStore(root() / ("cma_admin_preview.sqlite3" if preview else "tracking.sqlite3"))
+
+    def preview_access(*, create=False):
+        if not session.get("admin_logged_in"):
+            abort(403)
+        if create and not session.get("cma_preview_owner"):
+            session["cma_preview_owner"] = secrets.token_hex(16)
+        owner = session.get("cma_preview_owner")
+        if not owner:
+            raise cma.CmaError("Essai introuvable. Démarrez une simulation chronométrée.", status=404)
+        return ("admin-preview", owner)
 
     def learner_access(token):
         # Resolve current authentication/entitlement/date once on every request.
@@ -39,11 +53,12 @@ def register(blueprint, *, admin_required, learner_context, root, csrf_token, re
         from .vtc_ai import ai_configured
         return ai_configured()
 
-    def serialize(state, token):
+    def serialize(state, token=None):
         bank = cma.load_bank(state["version"])
         public = cma.public_attempt(bank, state)
-        public["urls"] = {action: url_for("native_elearning.cma_learner_" + action,
-                                          token=token, attempt_id=state["id"])
+        prefix = "cma_learner_" if token else "cma_admin_exam_"
+        public["urls"] = {action: url_for("native_elearning." + prefix + action,
+                                          **({"token": token} if token else {}), attempt_id=state["id"])
                           for action in ("state", "save", "submit", "start_part", "grade")}
         if public.get("result"):
             # Older attempts may have retained an obsolete provider-labelled
@@ -75,10 +90,14 @@ def register(blueprint, *, admin_required, learner_context, root, csrf_token, re
             if request.args.get("attempt"):
                 state = db.read(*principal, request.args["attempt"])
                 bank = cma.load_bank(state["version"])
+        elif request.args.get("attempt"):
+            state = database(preview=True).read(*preview_access(), request.args["attempt"])
+            bank = cma.load_bank(state["version"])
         config = {"bank": cma.public_bank(bank, questions=not token), "preview": not token,
+                  "adminPreview": not token,
                   "csrfToken": csrf_token(), "aiAvailable": ai_available(),
                   "homeUrl": url_for("native_elearning.cma_learner_home", token=token) if token else url_for("native_elearning.cma_admin_home"),
-                  "startUrl": url_for("native_elearning.cma_learner_create", token=token) if token else None,
+                  "startUrl": url_for("native_elearning.cma_learner_create", token=token) if token else url_for("native_elearning.cma_admin_exam_create"),
                   "previewGradeUrl": url_for("native_elearning.cma_admin_correct") if not token else None,
                   "state": serialize(state, token) if state else None}
         return render_template("vtc_cma_simulation.html", config=config, bank=config["bank"], history=history,
@@ -93,8 +112,9 @@ def register(blueprint, *, admin_required, learner_context, root, csrf_token, re
             raise cma.CmaError("L’édition du sujet ne correspond pas à votre tentative. Rechargez la page.", status=409)
 
     def mutate(token, attempt_id, action):
-        data, principal = payload(), learner_access(token)
-        db = database()
+        data = payload()
+        principal = learner_access(token) if token else preview_access()
+        db = database(preview=not token)
         state = db.read(*principal, attempt_id)
         validate_version(data, state)
         letter = data.get("subject")
@@ -123,6 +143,39 @@ def register(blueprint, *, admin_required, learner_context, root, csrf_token, re
     @admin_required
     def cma_admin_home():
         return home()
+
+    @blueprint.post("/api/admin/elearning/vtc/simulation-cma/start")
+    @admin_required
+    def cma_admin_exam_create():
+        data = payload()
+        if data.get("version") != cma.CURRENT_VERSION:
+            raise cma.CmaError("Le sujet a évolué. Rechargez la page avant de commencer.", status=409)
+        return json_state(database(preview=True).create(*preview_access(create=True)), None)
+
+    @blueprint.get("/api/admin/elearning/vtc/simulation-cma/<attempt_id>")
+    @admin_required
+    def cma_admin_exam_state(attempt_id):
+        return json_state(database(preview=True).read(*preview_access(), attempt_id), None)
+
+    @blueprint.post("/api/admin/elearning/vtc/simulation-cma/<attempt_id>/save")
+    @admin_required
+    def cma_admin_exam_save(attempt_id):
+        return mutate(None, attempt_id, "save")
+
+    @blueprint.post("/api/admin/elearning/vtc/simulation-cma/<attempt_id>/submit")
+    @admin_required
+    def cma_admin_exam_submit(attempt_id):
+        return mutate(None, attempt_id, "submit")
+
+    @blueprint.post("/api/admin/elearning/vtc/simulation-cma/<attempt_id>/next")
+    @admin_required
+    def cma_admin_exam_start_part(attempt_id):
+        return mutate(None, attempt_id, "start")
+
+    @blueprint.post("/api/admin/elearning/vtc/simulation-cma/<attempt_id>/grade")
+    @admin_required
+    def cma_admin_exam_grade(attempt_id):
+        return grade_attempt(None, attempt_id)
 
     @blueprint.get("/espace/<token>/elearning/vtc/simulation-cma")
     def cma_learner_home(token):
@@ -154,9 +207,13 @@ def register(blueprint, *, admin_required, learner_context, root, csrf_token, re
 
     @blueprint.post("/api/espace/<token>/elearning/vtc/simulation-cma/<attempt_id>/grade")
     def cma_learner_grade(token, attempt_id):
+        return grade_attempt(token, attempt_id)
+
+    def grade_attempt(token, attempt_id):
         from .vtc_ai import VtcAIError
-        data, principal = payload(), learner_access(token)
-        db = database()
+        data = payload()
+        principal = learner_access(token) if token else preview_access()
+        db = database(preview=not token)
         state = db.read(*principal, attempt_id)
         validate_version(data, state)
         letter = data.get("subject")
@@ -170,7 +227,8 @@ def register(blueprint, *, admin_required, learner_context, root, csrf_token, re
                                      error=CORRECTION_UNAVAILABLE)
             return jsonify(ok=False, code="ai_unavailable", error=state["parts"][letter]["grading_error"], state=serialize(state, token)), 503
         # The entitlement is checked again after a potentially slow provider call.
-        learner_access(token)
+        if token:
+            learner_access(token)
         state = db.finish_grading(*principal, attempt_id, letter, claim, correction=correction)
         return json_state(state, token)
 
