@@ -1,11 +1,13 @@
-<div class="a3p-lesson">
+<div class="a3p-lesson"{% if activity.a3p.kind == 'lesson' %} data-aps-lesson-group{% endif %}>
 {% if activity.a3p.delivery %}<span class="a3p-delivery a3p-delivery--{{ activity.a3p.delivery }}">{{ {'distance':'Objectif à distance · annexes II / XI','presentiel':'Préparation du présentiel · hors volume à distance','complement':'Ressource complémentaire · hors volume à distance'}[activity.a3p.delivery] }}</span>{% endif %}
 {% if activity.a3p.kind == 'lesson' %}
+  <div data-aps-lesson-page>
   <div class="a3p-objective"><span class="a3p-eyebrow">Objectif · Leçon {{ activity.a3p.ref }}</span><p>{{ activity.a3p.objective }}</p></div>
   {% if activity.a3p.delivery == 'presentiel' %}<p class="a3p-practice-note">Cette lecture prépare la compréhension. Les gestes, déplacements, matériels et mises en situation se travaillent avec un formateur ; ils ne sont pas validés à l’écran.</p>{% endif %}
   <nav class="a3p-page-index" aria-label="Parties de la leçon">{% for page in activity.a3p.pages %}<a href="#a3p-page-{{ page.page }}">{{ loop.index }} · {{ (page.components|selectattr('kind', 'equalto', 'heading')|map(attribute='text')|list|first)|default('Repères du cours') }}</a>{% endfor %}</nav>
+  </div>
   {% for page in activity.a3p.pages %}
-  <section class="a3p-reading" id="a3p-page-{{ page.page }}" aria-labelledby="a3p-page-title-{{ page.page }}">
+  <section class="a3p-reading" data-aps-lesson-page id="a3p-page-{{ page.page }}" aria-labelledby="a3p-page-title-{{ page.page }}">
     <header><span class="a3p-reading-number">{{ '%02d'|format(loop.index) }}</span><div><h2 id="a3p-page-title-{{ page.page }}">{{ (page.components|selectattr('kind', 'equalto', 'heading')|map(attribute='text')|list|first)|default('Repères du cours') }}</h2><span>{{ 'Arrêté · annexe XI' if page.page == 'XI' else 'Manuel A3P · page ' ~ page.page }}</span></div></header>
     {% for component in page.components %}
       {% if component.kind == 'heading' %}<h3>{{ component.text }}</h3>

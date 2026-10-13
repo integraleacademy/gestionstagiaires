@@ -2,6 +2,31 @@
   'use strict';
   const root = document.querySelector('[data-aps-lesson]');
   if (!root) return;
+
+  // VTC text is a stream of headings and paragraphs. Keep their order and
+  // existing DOM nodes, grouping complete paragraphs into short reading steps.
+  root.querySelectorAll('[data-native-lesson-split]').forEach(container => {
+    const children = [...container.children];
+    if (!children.length) { container.hidden = true; return; }
+    container.setAttribute('data-aps-lesson-group', '');
+    let chunk = [], words = 0, hasBody = false;
+    function flush() {
+      if (!chunk.length) return;
+      const page = document.createElement('div');
+      page.setAttribute('data-aps-lesson-page', '');
+      page.append(...chunk);
+      container.append(page);
+      chunk = []; words = 0; hasBody = false;
+    }
+    children.forEach(child => {
+      const heading = /^H[1-6]$/.test(child.tagName);
+      const size = child.textContent.trim().split(/\s+/).filter(Boolean).length;
+      if (hasBody && (heading || words + size > 260)) flush();
+      chunk.push(child); words += size;
+      if (!heading && !child.matches('.vtc-eyebrow, .aps-label')) hasBody = true;
+    });
+    flush();
+  });
   const pages = [...root.querySelectorAll('[data-aps-lesson-page]')];
   const groups = [...root.querySelectorAll('[data-aps-lesson-group]')];
   const navigation = root.querySelector('[data-aps-lesson-navigation]');
@@ -27,13 +52,31 @@
   navigation.hidden = false;
   progress.hidden = false;
 
+  const videoPage = pages.findIndex(page => page.querySelector('video'));
+  let videoShortcut = null;
+  if (videoPage >= 0) {
+    videoShortcut = document.createElement('button');
+    videoShortcut.type = 'button';
+    videoShortcut.className = 'aps-small-button';
+    videoShortcut.textContent = 'Revenir à la vidéo';
+    videoShortcut.setAttribute('data-lesson-video-shortcut', '');
+    progress.insertBefore(videoShortcut, bar.parentElement);
+    videoShortcut.addEventListener('click', () => show(videoPage, true));
+  }
+  root.querySelectorAll('audio, video').forEach(media => {
+    // A timed learning pause must not restart playback on a hidden step.
+    media.addEventListener('play', () => {
+      if (media.closest('[data-aps-lesson-page][hidden], [data-aps-lesson-group][hidden]')) media.pause();
+    });
+  });
+
   const storageKey = `apsLessonStep:v1:${location.pathname}:${root.dataset.lessonKey}`;
   let current = 0;
 
-  function anchoredPage() {
-    if (!location.hash) return -1;
+  function anchoredPage(hash = location.hash) {
+    if (!hash) return -1;
     let id;
-    try { id = decodeURIComponent(location.hash.slice(1)); } catch (_error) { return -1; }
+    try { id = decodeURIComponent(hash.slice(1)); } catch (_error) { return -1; }
     const target = document.getElementById(id);
     if (!target || !root.contains(target)) return -1;
     return pages.findIndex(page => page === target || page.contains(target) || target.contains(page));
@@ -63,6 +106,7 @@
     const last = current === pages.length - 1;
     next.hidden = last;
     completion.hidden = !last;
+    if (videoShortcut) videoShortcut.hidden = current === videoPage;
     try { sessionStorage.setItem(storageKey, String(current)); } catch (_error) { /* Reading works without storage. */ }
     if (focus) {
       status.focus({ preventScroll: true });
@@ -79,6 +123,15 @@
   show(anchor >= 0 ? anchor : initial, anchor >= 0);
   previous.addEventListener('click', () => show(current - 1, true));
   next.addEventListener('click', () => show(current + 1, true));
+  root.addEventListener('click', event => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    const link = event.target.closest('a[href^="#"]');
+    if (!link || link.target === '_blank') return;
+    const index = anchoredPage(link.hash);
+    if (index < 0) return;
+    event.preventDefault();
+    show(index, true);
+  });
   window.addEventListener('hashchange', () => {
     const index = anchoredPage();
     if (index >= 0) show(index, true);

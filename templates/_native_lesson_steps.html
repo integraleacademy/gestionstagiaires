@@ -1,0 +1,16 @@
+{% macro lesson_progress() %}
+<div class="aps-lesson-progress" data-aps-lesson-progress hidden>
+  <span class="aps-label">Lecture pas à pas</span>
+  <strong data-aps-lesson-status role="status" aria-live="polite" tabindex="-1"></strong>
+  <div class="aps-lesson-track" aria-hidden="true"><i data-aps-lesson-bar></i></div>
+</div>
+{% endmacro %}
+
+{% macro lesson_navigation() %}
+<nav class="aps-lesson-navigation" data-aps-lesson-navigation aria-label="Étapes du cours" hidden>
+  <button class="native-button native-button--secondary" type="button" data-aps-lesson-previous>← Précédent</button>
+  <span class="aps-lesson-count" data-aps-lesson-count aria-hidden="true"></span>
+  <button class="native-button native-button--primary" type="button" data-aps-lesson-next>Suivant →</button>
+  <div data-aps-lesson-completion hidden></div>
+</nav>
+{% endmacro %}

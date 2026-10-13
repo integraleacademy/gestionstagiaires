@@ -34,7 +34,16 @@
 .aps-sort-example dd {margin:3px 0 0}
 @media(max-width:650px) {.aps-visual-scene,.aps-visual-choice,.aps-term-map{grid-template-columns:1fr}.aps-visual-scene>div{padding:4px 20px 22px}.aps-visual-scene img{height:210px}.aps-visual-compare th,.aps-visual-compare td{padding:12px;font-size:.95rem}}
 
-/* APS lessons: one reading step at a time, with the original finish action. */
+/* Shared lesson reader: keep each course theme and the original finish action. */
+.native-lesson-reader{--aps-blue:var(--course-accent,#2860e8);--aps-muted:#526583;--aps-line:#dfe7f3}
+[data-aps-lesson] [hidden]{display:none!important}
+.native-lesson-reader .aps-lesson-navigation button:focus-visible{outline:3px solid var(--aps-blue);outline-offset:4px}
+.native-lesson-reader .aps-small-button{color:var(--aps-blue)}
+.native-lesson-reader.is-paginated :is(.a3p-reading,.mac-reading){margin-top:0;margin-bottom:0}
+.native-lesson-reader.is-paginated .native-block{margin-top:0}
+.native-lesson-reader.is-paginated .vtc-lesson-hero{margin-top:0}
+.native-lesson-reader.is-paginated [data-aps-lesson-page]>:first-child{margin-top:0}
+.native-lesson-reader.is-paginated .vtc-lesson-text:empty{display:none}
 .aps-lesson-progress{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:24px;scroll-margin-top:100px}
 .aps-lesson-progress strong{font-size:14px;color:var(--aps-muted)}
 .aps-lesson-progress strong:focus-visible{outline:3px solid var(--aps-blue);outline-offset:4px}
@@ -61,6 +70,6 @@
   .aps-lesson-navigation .native-preview-actions{flex-wrap:wrap}
 }
 @media print{
-  .aps-book.is-paginated [data-aps-lesson-page][hidden],.aps-book.is-paginated [data-aps-lesson-group][hidden]{display:block!important}
+  [data-aps-lesson].is-paginated [data-aps-lesson-page][hidden],[data-aps-lesson].is-paginated [data-aps-lesson-group][hidden]{display:block!important}
   .aps-lesson-progress,.aps-lesson-navigation{display:none!important}
 }

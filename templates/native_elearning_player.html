@@ -1,5 +1,7 @@
 <!doctype html>
 <html lang="fr">
+{% from '_native_lesson_steps.html' import lesson_progress, lesson_navigation %}
+{% set paged_reading = activity.type == 'content' and (activity.get('vtc', {}).get('kind') == 'lesson' or activity.get('a3p', {}).get('kind') == 'lesson' or activity.get('macaps', {}).get('kind') == 'lesson') %}
 {% set player_brand = (learner_brand|default({})) if course.training_label == 'MAC APS' else {} %}
 <head>
   <meta charset="utf-8">
@@ -8,7 +10,7 @@
   <title>{{ activity.title }} · {{ course.title }}</title>
   {% if player_brand.get('logo_url') %}<link rel="icon" href="{{ player_brand.logo_url }}">{% else %}<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261011-vtc-readable-video') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261013-lesson-steps') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261013-all-lesson-steps') }}">
   {% if course.training_label == 'MAC APS' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-elearning.css', v='20261012-2') }}">{% endif %}
   {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261010-2') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
@@ -149,7 +151,6 @@
         </section>{% endif %}
       </div>
       {% endif %}
-      {% if exam_url and not course.id.startswith('academy-aps62-') %}<a class="aps-exam-link" href="{{ exam_url }}"><strong>Mon examen blanc →</strong><span>30 questions · correction · nouvelles tentatives</span></a>{% endif %}
       <nav class="native-course-nav">
         {% for nav_section in navigation %}
           {% if course.training_label == 'A3P' %}<details class="a3p-nav-chapter"{% if nav_section.activities|selectattr('current')|list %} open{% endif %}><summary>{{ nav_section.title }}</summary>{% else %}<section><h2>{{ nav_section.title }}</h2>{% endif %}
@@ -167,7 +168,7 @@
           {% if course.training_label == 'A3P' %}</details>{% else %}</section>{% endif %}
         {% endfor %}
       </nav>
-      {% if exam_url and course.id.startswith('academy-aps62-') %}<a class="aps-exam-link" href="{{ exam_url }}"><strong>Mon examen blanc →</strong><span>30 questions · correction · nouvelles tentatives</span></a>{% endif %}
+      {% if exam_url %}<a class="aps-exam-link" href="{{ exam_url }}"><strong>Mon examen blanc →</strong><span>30 questions · correction · nouvelles tentatives</span></a>{% endif %}
       <a class="native-back-link" href="{{ portal_url }}">{{ '← Retour aux modules' if preview_mode else '← Retour à mon espace' }}</a>
     </aside>
     <button class="native-sidebar-overlay" id="nativeSidebarOverlay" type="button" tabindex="-1" aria-hidden="true" aria-label="Fermer le sommaire"></button>
@@ -205,12 +206,14 @@
           {% endif %}
 
           {% if activity.type == 'content' %}
-            <div class="native-content-flow">
-              {% for block in activity.blocks %}{{ render_block(block) }}{% endfor %}
+            <div class="native-content-flow{% if paged_reading %} native-lesson-reader{% endif %}"{% if paged_reading %} data-aps-lesson data-lesson-key="{{ course.id }}:{{ course.version }}:{{ activity.id }}"{% endif %}>
+              {% if paged_reading %}{{ lesson_progress() }}{% endif %}
+              {% for block in activity.blocks %}{% if paged_reading %}<div data-aps-lesson-page>{% endif %}{{ render_block(block) }}{% if paged_reading %}</div>{% endif %}{% endfor %}
               {% if activity.production and course.training_label == 'VTC' %}{% include '_vtc_production.html' %}{% elif activity.academy or activity.production %}{% include '_aps62_activity.html' %}{% endif %}
               {% if activity.vtc %}{% include '_vtc_activity.html' %}{% endif %}
               {% if activity.a3p %}{% include '_a3p_lesson.html' %}{% endif %}
               {% if activity.macaps %}{% include '_macaps_lesson.html' %}{% endif %}
+              {% if paged_reading %}{{ lesson_navigation() }}{% endif %}
             </div>
           {% else %}
             {% if activity.macaps %}{% include '_macaps_lesson.html' %}{% endif %}
@@ -259,7 +262,7 @@
         </div>
         {% endif %}
 
-        {% if exam_url and course.id.startswith('academy-aps62-') and (is_last_activity or activity_position == activity_count) %}
+        {% if exam_url and (is_last_activity or activity_position == activity_count) %}
         <a class="aps-exam-link aps-exam-link--module-end" href="{{ exam_url }}"><strong>Mon examen blanc →</strong><span>Vous êtes à la fin du module : entraînez-vous avec 30 questions et leur correction.</span></a>
         {% endif %}
         <div class="native-navigation-actions">
@@ -338,7 +341,7 @@
 {% if course.training_label == 'VTC' %}<script src="{{ url_for('static', filename='js/vtc-video-companion.js', v='20261011-readable-video') }}" defer></script>{% endif %}
 {% if course.training_label == 'MAC APS' %}<script src="{{ url_for('static', filename='js/mac-aps-elearning.js', v='20261012-1') }}" defer></script>{% endif %}
 <script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-2') }}" defer></script>
-{% if course.id.startswith('academy-aps62-') and activity.get('academy', {}).get('kind') == 'lesson' %}<script src="{{ url_for('static', filename='js/aps62-lesson.js', v='20261013-lesson-steps') }}" defer></script>{% endif %}
+{% if paged_reading or (course.id.startswith('academy-aps62-') and activity.get('academy', {}).get('kind') == 'lesson') %}<script src="{{ url_for('static', filename='js/aps62-lesson.js', v='20261013-all-lesson-steps') }}" defer></script>{% endif %}
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261012-assessments') }}" defer></script>
 {% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261012-assessments') }}" defer></script>{% endif %}
