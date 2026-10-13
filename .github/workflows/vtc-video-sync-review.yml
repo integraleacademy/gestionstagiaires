@@ -5,6 +5,9 @@ on:
     paths: ['.github/workflows/vtc-video-sync-review.yml', 'scripts/vtc_sync_review/changes.b64']
 permissions:
   contents: write
+concurrency:
+  group: vtc-video-sync-20261013
+  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -15,12 +18,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Apply reviewed patch with checksum verification
         run: |
           python - <<'PY'
           import base64,gzip,hashlib,pathlib,subprocess
           encoded=pathlib.Path('scripts/vtc_sync_review/changes.b64').read_text()
-          # Repair a transport transcription at the exact known base64 location.
           encoded=encoded.replace('FvVrRh1/g1','FvVrRh9/g1')
           patch=gzip.decompress(base64.b64decode(encoded))
           assert hashlib.sha256(patch).hexdigest()=='223ae746f93a4b9c30e7c3bcdd527614ff55b761b5d8048054db2581b15a60d2'
@@ -30,20 +35,46 @@ jobs:
           PY
       - name: Install test and media tooling
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
           python -m pip install -q -r requirements.txt pytest av numpy faster-whisper playwright imageio-ffmpeg
           npm install --no-save jsdom
           python -m playwright install --with-deps chromium
-      - name: Server regression tests
-        run: |
           mkdir -p /tmp/vtc-final-audit
-          python -m pytest -q tests/test_vtc_video_normal_speed.py tests/test_vtc_quality_release_v11.py tests/test_vtc_quality_progress_v11.py tests/test_vtc_video_companion_web.py tests/test_vtc_lesson_videos_v10.py tests/test_native_elearning_pacing.py tests/test_vtc_free_module_navigation.py tests/test_vtc_optional_progress.py tests/test_vtc_105_reporting.py --junitxml=/tmp/vtc-final-audit/tests.xml
+      - name: Server regression tests
+        id: server
+        continue-on-error: true
+        run: python -m pytest -q tests/test_vtc_video_normal_speed.py tests/test_vtc_quality_release_v11.py tests/test_vtc_quality_progress_v11.py tests/test_vtc_video_companion_web.py tests/test_vtc_lesson_videos_v10.py tests/test_native_elearning_pacing.py tests/test_vtc_free_module_navigation.py tests/test_vtc_optional_progress.py tests/test_vtc_105_reporting.py --junitxml=/tmp/vtc-final-audit/tests.xml
       - name: Player JavaScript and browser checks
+        id: browser
+        continue-on-error: true
         run: |
           node --test scripts/vtc_sync_review/player.test.cjs
           python scripts/vtc_sync_review/browser.py
       - name: Audit all timelines and 104 independent audio samples
+        id: media
+        continue-on-error: true
         run: python scripts/vtc_sync_review/audit.py
+      - name: Decode every video completely
+        id: decode
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import pathlib,json,subprocess,concurrent.futures
+          root=pathlib.Path('elearning_native/vtc');data=json.loads((root/'video_quality_v11.json').read_text())
+          rows=[(ref,row) for kind in ['lessons','modules'] for ref,row in data[kind].items()]
+          def check(item):
+              ref,row=item
+              decoded=subprocess.run(['ffmpeg','-v','error','-threads','1','-i',str(root/'assets'/row['src']),'-f','null','-'],capture_output=True,text=True)
+              result={'ref':ref,'ok':decoded.returncode==0 and not decoded.stderr.strip(),'errors':decoded.stderr[:1000]}
+              print(ref,result['ok'],flush=True)
+              return result
+          with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:results=list(pool.map(check,rows))
+          pathlib.Path('/tmp/vtc-final-audit/full-decoding.json').write_text(json.dumps(results,ensure_ascii=False,indent=2))
+          assert len(results)==104 and all(r['ok'] for r in results)
+          PY
       - name: Preserve tested code on isolated review branch only
+        if: steps.server.outcome == 'success' && steps.browser.outcome == 'success' && steps.media.outcome == 'success' && steps.decode.outcome == 'success'
         run: |
           git diff --check
           git config user.name 'github-actions[bot]'
@@ -58,3 +89,6 @@ jobs:
           name: vtc-final-audit
           path: /tmp/vtc-final-audit/
           retention-days: 3
+      - name: Require all checks
+        if: steps.server.outcome != 'success' || steps.browser.outcome != 'success' || steps.media.outcome != 'success' || steps.decode.outcome != 'success'
+        run: exit 1
