@@ -1,20 +1,20 @@
 {% for example in lesson.worked_examples %}
-<section class="aps-editorial" id="exemple-{{ example.id }}" aria-label="Exemple corrigé">
+<section class="aps-editorial" data-aps-lesson-group id="exemple-{{ example.id }}" aria-label="Exemple corrigé">
   <span class="aps-label">Exemple corrigé · Lecture guidée</span>
   <h2>{{ example.title }}</h2>
   <p>Consultez les documents, puis le corrigé expliqué. Aucune réponse à rédiger ou à envoyer.</p>
   {% if example.fiction_notice %}<p class="aps-small">{{ example.fiction_notice }}</p>{% endif %}
   {% if example.audio %}<h3>{{ example.audio.title }}</h3><audio controls preload="metadata" src="{{ example.audio.src }}" aria-label="{{ example.audio.title }}"></audio>
   {% if example.audio.transcript %}<details><summary>Lire la transcription</summary><p style="white-space:pre-line">{{ example.audio.transcript }}</p></details>{% endif %}{% endif %}
-  {% for doc in example.documents %}<article class="aps-evidence">
+  {% for doc in example.documents %}<article class="aps-evidence" data-aps-lesson-page>
     <h3>{{ doc.title }}</h3>
     {% if doc.text %}<p>{{ doc.text }}</p>{% endif %}
     {% if doc.image %}<img src="{{ doc.image }}" alt="{{ doc.image_alt or doc.title }}" style="max-width:100%;height:auto">{% endif %}
     {% if doc.rows %}<div class="aps-table-wrap"><table><tbody>{% for row in doc.rows %}<tr>{% for cell in row %}{% if loop.first %}<th scope="row">{{ cell }}</th>{% else %}<td>{{ cell }}</td>{% endif %}{% endfor %}</tr>{% endfor %}</tbody></table></div>{% endif %}
   </article>{% endfor %}
-  <details class="aps-model" open><summary>Le corrigé expliqué</summary>
-    {% for answer in example.answers %}<h3>{{ answer.label }}</h3><p style="white-space:pre-line">{{ answer.text }}</p>{% endfor %}
-    {% if example.points %}<h3>Repères à retenir</h3><ul>{% for point in example.points %}<li>{{ point }}</li>{% endfor %}</ul>{% endif %}
+  <details class="aps-model" data-aps-lesson-group open><summary>Le corrigé expliqué</summary>
+    {% for answer in example.answers %}<div data-aps-lesson-page><h3>{{ answer.label }}</h3><p style="white-space:pre-line">{{ answer.text }}</p></div>{% endfor %}
+    {% if example.points %}<div data-aps-lesson-page><h3>Repères à retenir</h3><ul>{% for point in example.points %}<li>{{ point }}</li>{% endfor %}</ul></div>{% endif %}
   </details>
 </section>
 {% endfor %}

@@ -33,3 +33,34 @@
 .aps-sort-example dt {font-weight:700;margin-top:12px}
 .aps-sort-example dd {margin:3px 0 0}
 @media(max-width:650px) {.aps-visual-scene,.aps-visual-choice,.aps-term-map{grid-template-columns:1fr}.aps-visual-scene>div{padding:4px 20px 22px}.aps-visual-scene img{height:210px}.aps-visual-compare th,.aps-visual-compare td{padding:12px;font-size:.95rem}}
+
+/* APS lessons: one reading step at a time, with the original finish action. */
+.aps-lesson-progress{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:24px;scroll-margin-top:100px}
+.aps-lesson-progress strong{font-size:14px;color:var(--aps-muted)}
+.aps-lesson-progress strong:focus-visible{outline:3px solid var(--aps-blue);outline-offset:4px}
+.aps-lesson-track{flex-basis:100%;height:5px;overflow:hidden;border-radius:99px;background:#e4ecfa}
+.aps-lesson-track i{display:block;height:100%;background:var(--aps-blue);border-radius:inherit}
+.aps-lesson-navigation{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;border-top:1px solid var(--aps-line);padding-top:22px;margin-top:28px}
+.aps-lesson-count{color:var(--aps-muted);font-size:12px}
+.aps-lesson-navigation>[data-aps-lesson-next],.aps-lesson-navigation>[data-aps-lesson-completion]{margin-left:auto}
+.aps-lesson-navigation .native-button{width:auto;min-height:48px}
+.aps-lesson-navigation .native-button:disabled{cursor:default}
+.aps-lesson-original-navigation[hidden]{display:none!important}
+.aps-book.is-paginated .aps-visual-bridge{display:none}
+.aps-book.is-paginated .aps-manual-lesson,.aps-book.is-paginated .aps-editorial,.aps-book.is-paginated .aps-visual-board,.aps-book.is-paginated .aps-sorting,.aps-book.is-paginated .aps-extra-case{margin-top:0;margin-bottom:0}
+.aps-book.is-paginated .aps-visual-start,.aps-book.is-paginated .aps-plain-course{margin-bottom:0}
+.aps-book.is-paginated .aps-plain-course>section{margin-top:16px;border-top:0;padding-top:0}
+.aps-book.is-paginated .aps-course-detail-title{margin-top:0!important}
+.aps-book.is-paginated .aps-manual-layout figure{max-width:260px}
+.aps-exam-link--module-end{margin:22px 0}
+@media(max-width:600px){
+  .aps-lesson-navigation{gap:10px}
+  .aps-lesson-navigation .native-button{padding:11px 13px;font-size:13px}
+  .aps-lesson-count{order:-1;flex-basis:100%;text-align:center}
+  .aps-lesson-navigation>[data-aps-lesson-completion]{max-width:65%}
+  .aps-lesson-navigation .native-preview-actions{flex-wrap:wrap}
+}
+@media print{
+  .aps-book.is-paginated [data-aps-lesson-page][hidden],.aps-book.is-paginated [data-aps-lesson-group][hidden]{display:block!important}
+  .aps-lesson-progress,.aps-lesson-navigation{display:none!important}
+}
