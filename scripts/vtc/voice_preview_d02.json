@@ -1,0 +1,264 @@
+{
+  "ref": "D.02",
+  "title": "Trouver l’information exacte",
+  "objective": "Répondre aux questions qui, quoi, où, quand et comment.",
+  "image": "media/vtc/module-d.webp",
+  "source_sha256": "642efb2aa24ad8dbdc66420d1d1d5ced8b48a2942af4d756e20d23dce378a9c6",
+  "scenes": [
+    {
+      "title": "Les repères essentiels",
+      "label": "COMPRENDRE",
+      "kind": "concept",
+      "segments": [
+        {
+          "lang": "fr",
+          "text": "Pour trouver la bonne information, commencez par une question simple : qu’est-ce qu’on me demande exactement ? Cherchez ensuite les mots qui y répondent, puis relisez la phrase autour. ",
+          "delivery": {
+            "rate": "+2%",
+            "pitch": "+1Hz",
+            "gap_after_seconds": 0.04,
+            "intention": "Accueillir et poser la question"
+          }
+        },
+        {
+          "lang": "fr",
+          "text": "Un même message peut donner l’heure de réservation, l’heure de prise en charge et l’heure d’arrivée. Attention, ces trois heures ne désignent pas la même chose. ",
+          "delivery": {
+            "rate": "-2%",
+            "pitch": "+0Hz",
+            "gap_after_seconds": 0.16,
+            "intention": "Distinguer les trois horaires"
+          }
+        },
+        {
+          "lang": "fr",
+          "text": "Dans un tableau ou un courriel, regardez aussi les en-têtes et les unités. Deux adultes et un enfant, par exemple, cela fait trois passagers. Le conducteur ne fait pas partie de ce total. ",
+          "delivery": {
+            "rate": "+3%",
+            "pitch": "+0Hz",
+            "gap_after_seconds": 0.08,
+            "intention": "Dérouler le contexte et l’exemple"
+          }
+        },
+        {
+          "lang": "fr",
+          "text": "Autre distinction : un départ souhaité n’est pas une arrivée impérative. Enfin, si le document ne donne pas une information, ne l’inventez pas. À l’examen, une réponse très précise doit pouvoir s’appuyer sur le texte.",
+          "delivery": {
+            "rate": "+0%",
+            "pitch": "-1Hz",
+            "gap_after_seconds": 0,
+            "intention": "Conclure sans ajouter d’information"
+          }
+        }
+      ],
+      "points": [
+        {
+          "label": "La question",
+          "text": "Chercher les mots qui répondent exactement à la question.",
+          "anchor_text": "Cherchez ensuite les mots"
+        },
+        {
+          "label": "Le contexte",
+          "text": "Lire les en-têtes, les unités et le sens des nombres.",
+          "anchor_text": "Dans un tableau ou un courriel"
+        }
+      ],
+      "pause": {
+        "seconds": 4,
+        "message": "Quelle heure le document vous demande-t-il de retrouver ?"
+      }
+    },
+    {
+      "title": "Extraire une information sans la déformer",
+      "label": "EXPLIQUER",
+      "kind": "concept",
+      "segments": [
+        {
+          "lang": "fr",
+          "text": "Voyons comment garder le sens du message. Séparez les dates, les heures, les lieux et les personnes. ",
+          "delivery": {
+            "rate": "+3%",
+            "pitch": "+1Hz",
+            "gap_after_seconds": 0.06,
+            "intention": "Introduire les repères"
+          }
+        },
+        {
+          "lang": "fr",
+          "text": "Si vous avez reçu deux versions d’un même message, repérez la plus récente. Puis cherchez ce qu’elle corrige exactement. Un changement d’heure n’implique pas un changement d’adresse. ",
+          "delivery": {
+            "rate": "+0%",
+            "pitch": "+0Hz",
+            "gap_after_seconds": 0.12,
+            "intention": "Expliquer ce que corrige le message"
+          }
+        },
+        {
+          "lang": "fr",
+          "text": "Quand vous formulez votre réponse, gardez donc le contexte et l’unité. Vous devez retrouver l’information demandée, sans lui faire dire davantage.",
+          "delivery": {
+            "rate": "-2%",
+            "pitch": "+0Hz",
+            "gap_after_seconds": 0,
+            "intention": "Faire ressortir le principe"
+          }
+        }
+      ],
+      "points": [
+        {
+          "label": "Les repères",
+          "text": "Distinguer dates, heures, lieux et personnes.",
+          "anchor_text": "Séparez les dates"
+        },
+        {
+          "label": "La correction",
+          "text": "Vérifier ce que le message le plus récent modifie.",
+          "anchor_text": "Si vous avez reçu deux versions"
+        },
+        {
+          "label": "Le point clé",
+          "text": "Une nouvelle heure ne change pas forcément l’adresse.",
+          "anchor_text": "Un changement d’heure"
+        }
+      ],
+      "pause": {
+        "seconds": 4,
+        "message": "Quel élément a réellement changé dans le message ?"
+      }
+    },
+    {
+      "title": "Un exemple expliqué",
+      "label": "METTRE EN PRATIQUE",
+      "kind": "method",
+      "segments": [
+        {
+          "lang": "fr",
+          "text": "Prenons une réservation effectuée le douze juin à dix-huit heures. La prise en charge est prévue le treize juin à sept heures trente. ",
+          "delivery": {
+            "rate": "+4%",
+            "pitch": "+0Hz",
+            "gap_after_seconds": 0.16,
+            "intention": "Installer la situation"
+          }
+        },
+        {
+          "lang": "fr",
+          "text": "Quelle est la date de la course ? C’est le treize juin. Le douze juin, c’est la date de la commande. ",
+          "delivery": {
+            "rate": "+0%",
+            "pitch": "+1Hz",
+            "gap_after_seconds": 0.1,
+            "intention": "Garder la question et sa réponse ensemble"
+          }
+        },
+        {
+          "lang": "fr",
+          "text": "Et à quelle heure faut-il prendre en charge le client ? À sept heures trente, pas à dix-huit heures. ",
+          "delivery": {
+            "rate": "-2%",
+            "pitch": "+2Hz",
+            "gap_after_seconds": 0.12,
+            "intention": "Souligner le bon horaire"
+          }
+        },
+        {
+          "lang": "fr",
+          "text": "Vous voyez la méthode : chaque chiffre doit rester lié à ce qu’il désigne. Pour un nombre, vérifiez ce qu’il compte : des passagers, des bagages, des véhicules ou des euros. ",
+          "delivery": {
+            "rate": "+3%",
+            "pitch": "+0Hz",
+            "gap_after_seconds": 0.06,
+            "intention": "Relier l’exemple à la méthode"
+          }
+        },
+        {
+          "lang": "fr",
+          "text": "Quatre places au total peuvent inclure celle du conducteur. En revanche, quatre passagers ne l’incluent pas. Retrouver un chiffre ne suffit donc pas. Il faut aussi en conserver le sens.",
+          "delivery": {
+            "rate": "-2%",
+            "pitch": "-1Hz",
+            "gap_after_seconds": 0,
+            "intention": "Clarifier places et passagers"
+          }
+        }
+      ],
+      "points": [
+        {
+          "label": "La commande",
+          "text": "Réservation : le 12 juin à 18 h.",
+          "anchor_text": "Prenons une réservation"
+        },
+        {
+          "label": "La course",
+          "text": "Prise en charge : le 13 juin à 7 h 30.",
+          "anchor_text": "La prise en charge est prévue"
+        },
+        {
+          "label": "L’unité",
+          "text": "Vérifier ce que compte le nombre.",
+          "anchor_text": "Pour un nombre, vérifiez"
+        }
+      ],
+      "pause": {
+        "seconds": 4,
+        "message": "Quelle différence faites-vous entre quatre places et quatre passagers ?"
+      }
+    },
+    {
+      "title": "La méthode à retenir",
+      "label": "RETENIR",
+      "kind": "method",
+      "segments": [
+        {
+          "lang": "fr",
+          "text": "Retenez trois réflexes. D’abord, identifiez ce que l’on vous demande : un nom, un lieu, une heure ou une condition. ",
+          "delivery": {
+            "rate": "+1%",
+            "pitch": "+1Hz",
+            "gap_after_seconds": 0.06,
+            "intention": "Lancer la synthèse"
+          }
+        },
+        {
+          "lang": "fr",
+          "text": "Ensuite, retrouvez la phrase qui apporte la preuve. Enfin, écartez les réponses qui ajoutent une supposition. ",
+          "delivery": {
+            "rate": "+2%",
+            "pitch": "+0Hz",
+            "gap_after_seconds": 0.12,
+            "intention": "Enchaîner les deux réflexes"
+          }
+        },
+        {
+          "lang": "fr",
+          "text": "Avant de valider, posez-vous cette question : est-ce bien écrit dans le document ? Et gardez cet exemple en tête : l’heure de réservation, l’heure de prise en charge et l’heure d’arrivée sont trois informations différentes.",
+          "delivery": {
+            "rate": "-2%",
+            "pitch": "+0Hz",
+            "gap_after_seconds": 0,
+            "intention": "Poser la question de contrôle et conclure"
+          }
+        }
+      ],
+      "points": [
+        {
+          "label": "Identifier",
+          "text": "Repérer le nom, le lieu, l’heure ou la condition demandée.",
+          "anchor_text": "D’abord, identifiez"
+        },
+        {
+          "label": "Prouver",
+          "text": "Retrouver la phrase qui donne la réponse.",
+          "anchor_text": "Ensuite, retrouvez"
+        },
+        {
+          "label": "Contrôler",
+          "text": "Écarter toute supposition ajoutée au texte.",
+          "anchor_text": "Enfin, écartez"
+        }
+      ]
+    }
+  ],
+  "preview_only": true,
+  "voice_direction": "Conserver Henri, fr-FR-HenriNeural, à la lecture x1, sans étirement audio. Garder les phrases liées en groupes de sens. Débit de -2 % à +4 % selon le passage, sans ralentissement supplémentaire ; hauteur de -1 à +2 Hz et courtes pauses de liaison choisies selon le sens. Aucun découpage mot à mot ni style émotionnel non pris en charge."
+}

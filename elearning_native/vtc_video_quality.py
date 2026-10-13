@@ -115,7 +115,7 @@ def quality_manifest():
 
 @lru_cache(maxsize=1)
 def approved_voice_updates():
-    """Load only reviewed replacements; keep the complete V11 collection intact."""
+    """Load the approved pilot, then the complete collection with that take intact."""
     path = ROOT/'video_voice_v14.json'
     if not path.exists():
         return {}
@@ -138,7 +138,38 @@ def approved_voice_updates():
                     [(c['start_seconds'], c['end_seconds']) for c in row['chapters']] !=
                     [(c['start_seconds'], c['end_seconds']) for c in before['chapters']])):
             raise ValueError(f'The VTC voice update is invalid: {ref}')
-    return data['lessons']
+    approved = data['lessons']
+    collection_path = ROOT/'video_voice_v15.json'
+    if not collection_path.exists():
+        return approved
+    collection = json.loads(collection_path.read_text())
+    if (not isinstance(collection, dict) or collection.get('revision') != 15
+            or collection.get('scope') != 'all-vtc-videos'
+            or not isinstance(collection.get('lessons'), dict) or set(collection['lessons']) != LESSONS
+            or not isinstance(collection.get('modules'), dict) or set(collection['modules']) != set('ABCDEFGH')
+            or collection['lessons'].get('D.02') != approved['D.02']
+            or collection.get('reference_media_sha256') != approved['D.02']['media_sha256']):
+        raise ValueError('The VTC voice collection is incomplete or changes the approved take')
+    baseline = quality_manifest()
+    for section, lesson in [('lessons', True), ('modules', False)]:
+        for ref, row in collection[section].items():
+            if ref == 'D.02':
+                continue
+            before = baseline[section][ref]
+            voices = {'fr': 'fr-FR-HenriNeural'}
+            if ref.startswith('E'):
+                voices['en'] = 'en-GB-RyanNeural'
+            if (not _valid_entry(ref, row, before, lesson, revision=15)
+                    or row.get('preview_only') is not False or row.get('voice') != voices
+                    or row.get('default_playback_rate') != 1 or row.get('allowed_playback_rates') != [1]
+                    or row.get('voice_time_stretching') is not False
+                    or row.get('previous_media_sha256') != before['media_sha256']
+                    or [c.get('ref') for c in row['chapters']] != [c.get('ref') for c in before['chapters']]
+                    or (row['duration_seconds'] == before['duration_seconds'] and
+                        [(c['start_seconds'], c['end_seconds']) for c in row['chapters']] !=
+                        [(c['start_seconds'], c['end_seconds']) for c in before['chapters']])):
+                raise ValueError(f'The VTC voice collection entry is invalid: {ref}')
+    return {**collection['lessons'], **collection['modules']}
 
 
 def repair_course(course):
@@ -159,7 +190,7 @@ def repair_course(course):
                     continue
                 expected_id = f'vtc-{letter.lower()}-capsule'
                 baseline = data['modules'][letter] if video.get('id') == expected_id else data['lessons'].get(ref)
-                row = updates.get(ref, baseline) if video.get('id') != expected_id else baseline
+                row = updates.get(letter if video.get('id') == expected_id else ref, baseline)
                 if not row or video.get('src') == row['src']:
                     continue
                 predecessors = {(baseline['previous_src'], baseline['previous_duration_seconds'])}
@@ -177,8 +208,9 @@ def repair_course(course):
                     if row[key] not in course['assets']:
                         course['assets'].append(row[key])
     course.setdefault('counts', {})['assets'] = len(course['assets'])
-    # An open D.02 player must reload before reporting against the new timeline.
-    course['vtc_media_revision'] = 14 if any(ref.startswith(letter+'.') for ref in updates) else 13
+    # Every open player must reload before reporting against a changed timeline.
+    module_updates = [row for ref, row in updates.items() if ref == letter or ref.startswith(letter+'.')]
+    course['vtc_media_revision'] = max([13, *(row['render_revision'] for row in module_updates)])
     return course
 
 
@@ -200,7 +232,7 @@ def compatible_record(video_id, record, duration):
         return record
     letter, number = match.groups()
     row = data['lessons'].get(f'{letter.upper()}.{number}') if number else data['modules'].get(letter.upper())
-    update = approved_voice_updates().get(f'{letter.upper()}.{number}') if number else None
+    update = approved_voice_updates().get(f'{letter.upper()}.{number}' if number else letter.upper())
     if row and update and duration == update['duration_seconds'] and duration != row['duration_seconds']:
         # Trusted V10 records first project to V11, then to the approved voice.
         # V11 records skip the first hop. Unknown durations remain unchanged.

@@ -19,7 +19,7 @@ APPROVED_SHA = 'a9e6aae708388e899694043f90576e5b748b26b7be8a8673b63a3cdb1bed06fc
 
 def test_published_media_matches_the_approved_take_exactly():
     updates = quality.approved_voice_updates()
-    assert set(updates) == {'D.02'}
+    assert set(updates) == quality.LESSONS | set('ABCDEFGH')
     row = updates['D.02']
     assert row['duration_seconds'] == 136.65
     assert row['media_sha256'] == APPROVED_SHA

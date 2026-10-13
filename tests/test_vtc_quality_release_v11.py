@@ -42,7 +42,7 @@ def test_current_media_preserves_obligations_and_completed_progress(letter, vers
     assert after['planned_minutes'] == before['planned_minutes']
     assert after['version'] == before['version']
     for vid, video in current.items():
-        revision = 14 if vid == 'vtc-d-02-explanation-v10' else 11
+        revision = 14 if vid == 'vtc-d-02-explanation-v10' else 15
         assert video['src'].startswith(f'media/vtc/v{revision}/')
         assert video['render_revision'] == revision
         assert video['required'] is prior[vid]['required']
@@ -114,7 +114,7 @@ def test_real_preview_serves_revision_and_accessible_companion_without_tracking(
         assert 'data-vtc-video-reader' in body and 'Agrandir la lecture' in body
         assert 'Repères synchronisés avec la vidéo' in body
         assert 'data-playback-rate' not in body and 'data-video-pacing-config' in body
-        url = html.unescape(re.search(r'<source src="([^"]+/media/vtc/v11/[^"]+)"', body)[1])
+        url = html.unescape(re.search(r'<source src="([^"]+/media/vtc/v15/[^"]+)"', body)[1])
         media = case.client.get(url, headers={'Range': 'bytes=0-31'})
         assert media.status_code == 206 and len(media.data) == 32
         assert media.mimetype == 'video/mp4'

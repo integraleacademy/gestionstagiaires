@@ -1,0 +1,660 @@
+{
+  "text": "L’accès ordinaire suppose un permis adapté dont la période probatoire est terminée, l’aptitude médicale requise, l’honorabilité professionnelle et la réussite à l’examen. Le bulletin n° 2 ne doit pas comporter les condamnations incompatibles prévues par le Code des transports. Il ne s’agit pas d’exiger, dans tous les cas, un casier entièrement vierge. Depuis le 12 août 2026, la voie nationale fondée sur l’expérience professionnelle antérieure a été supprimée pour les nouvelles demandes. Les dossiers déposés avant cette date conservent leur régime. La reconnaissance de qualifications de certains ressortissants de l'Union européenne ou de l'Espace économique européen relève d’une procédure distincte. Préparer l’examen ne donne pas encore le droit de transporter des clients.",
+  "words": [
+    {
+      "type": "WordBoundary",
+      "offset": 990000,
+      "duration": 4166660,
+      "text": "L’accès"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 5279580,
+      "duration": 4044160,
+      "text": "ordinaire"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 9446250,
+      "duration": 3553750,
+      "text": "suppose"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 13122500,
+      "duration": 612910,
+      "text": "un"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 13857910,
+      "duration": 3063750,
+      "text": "permis"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 17044160,
+      "duration": 3431250,
+      "text": "adapté"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 20597910,
+      "duration": 1102910,
+      "text": "dont"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 21823330,
+      "duration": 1102910,
+      "text": "la"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 23049160,
+      "duration": 3676660,
+      "text": "période"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 26847910,
+      "duration": 5024580,
+      "text": "probatoire"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 31995000,
+      "duration": 367500,
+      "text": "est"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 32485410,
+      "duration": 4902080,
+      "text": "terminée"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 40573330,
+      "duration": 5024580,
+      "text": "l’aptitude"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 45720410,
+      "duration": 4411660,
+      "text": "médicale"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 50255000,
+      "duration": 5024580,
+      "text": "requise"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 58343330,
+      "duration": 6372500,
+      "text": "l’honorabilité"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 64838330,
+      "duration": 6127500,
+      "text": "professionnelle"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 71088330,
+      "duration": 245000,
+      "text": "et"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 71455830,
+      "duration": 857910,
+      "text": "la"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 72436250,
+      "duration": 4411660,
+      "text": "réussite"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 76970410,
+      "duration": 245000,
+      "text": "à"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 77338330,
+      "duration": 5147080,
+      "text": "l’examen"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 91053750,
+      "duration": 1960830,
+      "text": "Le"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 93137080,
+      "duration": 3308750,
+      "text": "bulletin"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 96568750,
+      "duration": 4656660,
+      "text": "n° 2"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 101347910,
+      "duration": 857910,
+      "text": "ne"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 102328330,
+      "duration": 1470410,
+      "text": "doit"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 103921660,
+      "duration": 1347910,
+      "text": "pas"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 105392080,
+      "duration": 4534160,
+      "text": "comporter"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 110049160,
+      "duration": 857910,
+      "text": "les"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 111029580,
+      "duration": 5760000,
+      "text": "condamnations"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 116911660,
+      "duration": 6985410,
+      "text": "incompatibles"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 124019580,
+      "duration": 3308750,
+      "text": "prévues"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 127450830,
+      "duration": 1593330,
+      "text": "par"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 129166660,
+      "duration": 857910,
+      "text": "le"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 130147080,
+      "duration": 1960830,
+      "text": "Code"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 132230410,
+      "duration": 980410,
+      "text": "des"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 133333330,
+      "duration": 7107910,
+      "text": "transports"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 144041250,
+      "duration": 1500000,
+      "text": "Il"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 145666250,
+      "duration": 1000000,
+      "text": "ne"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 146791250,
+      "duration": 2875000,
+      "text": "s’agit"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 149791250,
+      "duration": 1250000,
+      "text": "pas"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 151166250,
+      "duration": 5500000,
+      "text": "d’exiger"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 159666250,
+      "duration": 1250000,
+      "text": "dans"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 161041250,
+      "duration": 1375000,
+      "text": "tous"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 162541250,
+      "duration": 875000,
+      "text": "les"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 163541250,
+      "duration": 2625000,
+      "text": "cas"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 169291250,
+      "duration": 625000,
+      "text": "un"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 170041250,
+      "duration": 3250000,
+      "text": "casier"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 173416250,
+      "duration": 4125000,
+      "text": "entièrement"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 177666250,
+      "duration": 5000000,
+      "text": "vierge"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 191416250,
+      "duration": 3875000,
+      "text": "Depuis"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 195416250,
+      "duration": 1125000,
+      "text": "le"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 196666250,
+      "duration": 12375000,
+      "text": "12 août 2026"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 212166250,
+      "duration": 1500000,
+      "text": "la"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 213791250,
+      "duration": 1500000,
+      "text": "voie"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 215416250,
+      "duration": 4750000,
+      "text": "nationale"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 220291250,
+      "duration": 3000000,
+      "text": "fondée"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 223416250,
+      "duration": 1500000,
+      "text": "sur"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 225041250,
+      "duration": 6000000,
+      "text": "l’expérience"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 231166250,
+      "duration": 6125000,
+      "text": "professionnelle"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 237416250,
+      "duration": 4375000,
+      "text": "antérieure"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 241916250,
+      "duration": 500000,
+      "text": "a"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 242541250,
+      "duration": 2250000,
+      "text": "été"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 244916250,
+      "duration": 4625000,
+      "text": "supprimée"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 249666250,
+      "duration": 1625000,
+      "text": "pour"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 251416250,
+      "duration": 500000,
+      "text": "les"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 252041250,
+      "duration": 3000000,
+      "text": "nouvelles"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 255166250,
+      "duration": 5250000,
+      "text": "demandes"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 269166250,
+      "duration": 2125000,
+      "text": "Les"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 271416250,
+      "duration": 3125000,
+      "text": "dossiers"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 274666250,
+      "duration": 4375000,
+      "text": "déposés"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 279166250,
+      "duration": 1875000,
+      "text": "avant"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 281166250,
+      "duration": 2125000,
+      "text": "cette"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 283416250,
+      "duration": 2000000,
+      "text": "date"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 285541250,
+      "duration": 4250000,
+      "text": "conservent"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 289916250,
+      "duration": 1375000,
+      "text": "leur"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 291416250,
+      "duration": 5375000,
+      "text": "régime"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 300391250,
+      "duration": 1785830,
+      "text": "La"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 302304580,
+      "duration": 6887910,
+      "text": "reconnaissance"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 309320000,
+      "duration": 1275410,
+      "text": "de"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 310722910,
+      "duration": 7142910,
+      "text": "qualifications"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 317993330,
+      "duration": 1275410,
+      "text": "de"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 319396660,
+      "duration": 3571250,
+      "text": "certains"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 323095410,
+      "duration": 5995000,
+      "text": "ressortissants"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 329217910,
+      "duration": 1020410,
+      "text": "de"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 330365830,
+      "duration": 2806250,
+      "text": "l'Union"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 333299580,
+      "duration": 5229580,
+      "text": "européenne"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 338656660,
+      "duration": 510000,
+      "text": "ou"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 339294580,
+      "duration": 892910,
+      "text": "de"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 340315000,
+      "duration": 3954160,
+      "text": "l'Espace"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 344396660,
+      "duration": 5102080,
+      "text": "économique"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 349626250,
+      "duration": 4591660,
+      "text": "européen"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 354345410,
+      "duration": 2806250,
+      "text": "relève"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 357279160,
+      "duration": 1658330,
+      "text": "d’une"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 359065000,
+      "duration": 4591660,
+      "text": "procédure"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 363784160,
+      "duration": 6632500,
+      "text": "distincte"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 379228330,
+      "duration": 4591660,
+      "text": "Préparer"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 383947500,
+      "duration": 4464160,
+      "text": "l’examen"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 388539580,
+      "duration": 1020410,
+      "text": "ne"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 389687500,
+      "duration": 2040830,
+      "text": "donne"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 391855830,
+      "duration": 1402910,
+      "text": "pas"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 393386250,
+      "duration": 3316250,
+      "text": "encore"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 396830410,
+      "duration": 892910,
+      "text": "le"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 397850830,
+      "duration": 1913330,
+      "text": "droit"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 399891250,
+      "duration": 892910,
+      "text": "de"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 400911660,
+      "duration": 5612080,
+      "text": "transporter"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 406651660,
+      "duration": 1020410,
+      "text": "des"
+    },
+    {
+      "type": "WordBoundary",
+      "offset": 407799580,
+      "duration": 4081660,
+      "text": "clients"
+    }
+  ],
+  "seconds": 42.3
+}

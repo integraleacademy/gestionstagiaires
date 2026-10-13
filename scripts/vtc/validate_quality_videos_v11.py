@@ -79,14 +79,15 @@ def inspect_audio(path, pauses, seconds):
                 first_sample_seconds=first_start,last_sample_end_seconds=last_end)
 
 
-def inspect_one(row, video, captures=False):
+def inspect_one(row, video, captures=False, *, expected_signature=None, playback_rate=.85, revision=11, work_dir=None):
     ref = row['ref']
     renderer.validate_lesson(row)
-    assert video['content_sha256'] == renderer.signature_for(row), ref
+    assert video['content_sha256'] == (expected_signature or renderer.signature_for(row)), ref
+    work_dir = renderer.WORK if work_dir is None else work_dir
     assert video['source_sha256'] == row['source_sha256']
-    assert video['default_playback_rate'] == .85
-    assert video['allowed_playback_rates'] == [.85,1]
-    assert video['render_revision'] == 11
+    assert video['default_playback_rate'] == playback_rate
+    assert video['allowed_playback_rates'] == ([playback_rate,1] if playback_rate != 1 else [1])
+    assert video['render_revision'] == revision
     for key in ('previous_src','previous_duration_seconds','previous_chapters','previous_media_sha256'):
         assert video[key] == row[key], (ref,key)
     assert video['source_authoring_sha256'] == renderer.digest(renderer.json_bytes(row))
@@ -111,8 +112,8 @@ def inspect_one(row, video, captures=False):
     for cue in cues:
         assert len(cue['text'].splitlines()) <= 2
         assert max(map(len,cue['text'].splitlines())) <= 44
-        assert (cue['end']-cue['start'])/.85 >= 1.-.001, (ref,cue)
-        assert len(cue['text'].replace('\n',' '))*.85/(cue['end']-cue['start']) <= 20., (ref,cue)
+        assert (cue['end']-cue['start'])/playback_rate >= 1.-.001, (ref,cue)
+        assert len(cue['text'].replace('\n',' '))*playback_rate/(cue['end']-cue['start']) <= 20., (ref,cue)
         assert max(font.getlength(line) for line in cue['text'].splitlines()) <= 1170
     assert [dict(c,start=round(c['start'],3),end=round(c['end'],3)) for c in cues] == video['presentation']['captions']
     assert len(video['scenes']) == len(row['scenes']) == len(video['chapters'])
@@ -136,7 +137,7 @@ def inspect_one(row, video, captures=False):
         assert [r['anchor_text'] for r in timing['reveals']] == [p['anchor_text'] for p in scene['points']]
         literal = renderer.scene_text(scene)
         normalized = renderer.canonical(literal)
-        words = json.loads((renderer.WORK/ref/f'words-{i:02}.json').read_text())
+        words = json.loads((work_dir/ref/f'words-{i:02}.json').read_text())
         assert ''.join(renderer.canonical(w['text']) for w in words) == normalized
         timeline = [word for word in words for character in renderer.canonical(word['text'])]
         cursor = 0
@@ -168,7 +169,7 @@ def inspect_one(row, video, captures=False):
             assert pause['duration_seconds'] == scene['pause']['seconds']
             assert pause['message'] == scene['pause']['message']
         if captures:
-            folder = renderer.WORK/'qa'/ref
+            folder = work_dir/'qa'/ref
             folder.mkdir(parents=True,exist_ok=True)
             frame_path = folder/f'{i:02}.jpg'
             at = min(timing['speech_end_seconds']-.1,timing['reveals'][-1]['at_seconds']+1)
@@ -178,8 +179,8 @@ def inspect_one(row, video, captures=False):
                 scenes=len(video['scenes']),cards=sum(len(s['reveals']) for s in video['scenes']),
                 caption_cues=len(cues),pauses=len(video['learning_pauses']),
                 media_sha256=video['media_sha256'],content_sha256=video['content_sha256'],
-                minimum_caption_seconds=min((c['end']-c['start'])/.85 for c in cues),
-                maximum_caption_cps=max(len(c['text'].replace('\n',' '))*.85/(c['end']-c['start']) for c in cues),
+                minimum_caption_seconds=min((c['end']-c['start'])/playback_rate for c in cues),
+                maximum_caption_cps=max(len(c['text'].replace('\n',' '))*playback_rate/(c['end']-c['start']) for c in cues),
                 video=inspect_video(path,video['duration_seconds']),
                 audio=inspect_audio(path,video['learning_pauses'],video['duration_seconds']),captures=capture_files)
 
