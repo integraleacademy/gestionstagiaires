@@ -1,0 +1,130 @@
+{
+  "ref": "D.02",
+  "title": "Trouver l’information exacte",
+  "objective": "Répondre aux questions qui, quoi, où, quand et comment.",
+  "image": "media/vtc/module-d.webp",
+  "source_sha256": "642efb2aa24ad8dbdc66420d1d1d5ced8b48a2942af4d756e20d23dce378a9c6",
+  "scenes": [
+    {
+      "title": "Les repères essentiels",
+      "label": "COMPRENDRE",
+      "kind": "concept",
+      "segments": [
+        {
+          "lang": "fr",
+          "text": "Pour trouver la bonne information, commencez par une question simple : qu’est-ce qu’on me demande exactement ? Cherchez ensuite les mots qui y répondent, puis relisez la phrase autour. Un même message peut donner l’heure de réservation, l’heure de prise en charge et l’heure d’arrivée. Attention, ces trois heures ne désignent pas la même chose. Dans un tableau ou un courriel, regardez aussi les en-têtes et les unités. Deux adultes et un enfant, par exemple, cela fait trois passagers. Le conducteur ne fait pas partie de ce total. Autre distinction : un départ souhaité n’est pas une arrivée impérative. Enfin, si le document ne donne pas une information, ne l’inventez pas. À l’examen, une réponse très précise doit pouvoir s’appuyer sur le texte."
+        }
+      ],
+      "points": [
+        {
+          "label": "La question",
+          "text": "Chercher les mots qui répondent exactement à la question.",
+          "anchor_text": "Cherchez ensuite les mots"
+        },
+        {
+          "label": "Le contexte",
+          "text": "Lire les en-têtes, les unités et le sens des nombres.",
+          "anchor_text": "Dans un tableau ou un courriel"
+        }
+      ],
+      "pause": {
+        "seconds": 4,
+        "message": "Quelle heure le document vous demande-t-il de retrouver ?"
+      }
+    },
+    {
+      "title": "Extraire une information sans la déformer",
+      "label": "EXPLIQUER",
+      "kind": "concept",
+      "segments": [
+        {
+          "lang": "fr",
+          "text": "Voyons comment garder le sens du message. Séparez les dates, les heures, les lieux et les personnes. Si vous avez reçu deux versions d’un même message, repérez la plus récente. Puis cherchez ce qu’elle corrige exactement. Un changement d’heure n’implique pas un changement d’adresse. Quand vous formulez votre réponse, gardez donc le contexte et l’unité. Vous devez retrouver l’information demandée, sans lui faire dire davantage."
+        }
+      ],
+      "points": [
+        {
+          "label": "Les repères",
+          "text": "Distinguer dates, heures, lieux et personnes.",
+          "anchor_text": "Séparez les dates"
+        },
+        {
+          "label": "La correction",
+          "text": "Vérifier ce que le message le plus récent modifie.",
+          "anchor_text": "Si vous avez reçu deux versions"
+        },
+        {
+          "label": "Le point clé",
+          "text": "Une nouvelle heure ne change pas forcément l’adresse.",
+          "anchor_text": "Un changement d’heure"
+        }
+      ],
+      "pause": {
+        "seconds": 4,
+        "message": "Quel élément a réellement changé dans le message ?"
+      }
+    },
+    {
+      "title": "Un exemple expliqué",
+      "label": "METTRE EN PRATIQUE",
+      "kind": "method",
+      "segments": [
+        {
+          "lang": "fr",
+          "text": "Prenons une réservation effectuée le douze juin à dix-huit heures. La prise en charge est prévue le treize juin à sept heures trente. Quelle est la date de la course ? C’est le treize juin. Le douze juin, c’est la date de la commande. Et à quelle heure faut-il prendre en charge le client ? À sept heures trente, pas à dix-huit heures. Vous voyez la méthode : chaque chiffre doit rester lié à ce qu’il désigne. Pour un nombre, vérifiez ce qu’il compte : des passagers, des bagages, des véhicules ou des euros. Quatre places au total peuvent inclure celle du conducteur. En revanche, quatre passagers ne l’incluent pas. Retrouver un chiffre ne suffit donc pas. Il faut aussi en conserver le sens."
+        }
+      ],
+      "points": [
+        {
+          "label": "La commande",
+          "text": "Réservation : le 12 juin à 18 h.",
+          "anchor_text": "Prenons une réservation"
+        },
+        {
+          "label": "La course",
+          "text": "Prise en charge : le 13 juin à 7 h 30.",
+          "anchor_text": "La prise en charge est prévue"
+        },
+        {
+          "label": "L’unité",
+          "text": "Vérifier ce que compte le nombre.",
+          "anchor_text": "Pour un nombre, vérifiez"
+        }
+      ],
+      "pause": {
+        "seconds": 4,
+        "message": "Quelle différence faites-vous entre quatre places et quatre passagers ?"
+      }
+    },
+    {
+      "title": "La méthode à retenir",
+      "label": "RETENIR",
+      "kind": "method",
+      "segments": [
+        {
+          "lang": "fr",
+          "text": "Retenez trois réflexes. D’abord, identifiez ce que l’on vous demande : un nom, un lieu, une heure ou une condition. Ensuite, retrouvez la phrase qui apporte la preuve. Enfin, écartez les réponses qui ajoutent une supposition. Avant de valider, posez-vous cette question : est-ce bien écrit dans le document ? Et gardez cet exemple en tête : l’heure de réservation, l’heure de prise en charge et l’heure d’arrivée sont trois informations différentes."
+        }
+      ],
+      "points": [
+        {
+          "label": "Identifier",
+          "text": "Repérer le nom, le lieu, l’heure ou la condition demandée.",
+          "anchor_text": "D’abord, identifiez"
+        },
+        {
+          "label": "Prouver",
+          "text": "Retrouver la phrase qui donne la réponse.",
+          "anchor_text": "Ensuite, retrouvez"
+        },
+        {
+          "label": "Contrôler",
+          "text": "Écarter toute supposition ajoutée au texte.",
+          "anchor_text": "Enfin, écartez"
+        }
+      ]
+    }
+  ],
+  "preview_only": true,
+  "voice_direction": "Voix masculine française, ton posé et chaleureux ; ponctuation orale et phrases complètes ; aucun étirement audio."
+}

@@ -13,7 +13,9 @@ MAX_CPS = 20.
 MIN_NATIVE_SECONDS = .85
 
 
-def make_cues(source, boundaries, scene_end=None):
+def make_cues(source, boundaries, scene_end=None, *, playback_rate=PLAYBACK_RATE):
+    if playback_rate not in (.85, 1):
+        raise ValueError('Unsupported caption playback rate')
     words = align_words(source, boundaries)
     if not words:
         raise ValueError('No narrated words')
@@ -34,10 +36,10 @@ def make_cues(source, boundaries, scene_end=None):
             seconds = edges[end]-edges[start]
             if seconds > 7.5:
                 break
-            if best[end] is None or seconds < MIN_NATIVE_SECONDS-.0001:
+            if best[end] is None or seconds < playback_rate-.0001:
                 continue
             count = len(wrapped.replace('\n', ' '))
-            if count*PLAYBACK_RATE/seconds > MAX_CPS-.005:
+            if count*playback_rate/seconds > MAX_CPS-.005:
                 continue
             punctuation = re.search(r'[.!?;:,][»”\"\']?$', text)
             dangling = words[end-1]['text'].lower() in {'de','du','des','le','la','les','un','une','à','et','en','pour','ne'}
