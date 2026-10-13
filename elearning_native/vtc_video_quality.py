@@ -23,11 +23,11 @@ def _number(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
-def _valid_entry(ref, row, prior, is_lesson):
-    if not isinstance(row, dict) or row.get('render_revision') != 11:
+def _valid_entry(ref, row, prior, is_lesson, *, revision=11):
+    if not isinstance(row, dict) or row.get('render_revision') != revision:
         return False
     suffix = ref.lower().replace('.', '-')
-    prefix = f'media/vtc/v11/lesson-{suffix}'
+    prefix = f'media/vtc/v{revision}/lesson-{suffix}'
     if any(row.get(key) != prefix + ext for key, ext in
            [('src', '.mp4'), ('poster', '.jpg'), ('captions', '.vtt')]):
         return False
@@ -113,6 +113,34 @@ def quality_manifest():
     return data
 
 
+@lru_cache(maxsize=1)
+def approved_voice_updates():
+    """Load only reviewed replacements; keep the complete V11 collection intact."""
+    path = ROOT/'video_voice_v14.json'
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text())
+    if (not isinstance(data, dict) or data.get('revision') != 14
+            or not isinstance(data.get('lessons'), dict) or not data['lessons']
+            or not set(data['lessons']) <= LESSONS):
+        raise ValueError('The VTC voice update collection is invalid')
+    predecessors = quality_manifest()['lessons']
+    for ref, row in data['lessons'].items():
+        before = predecessors[ref]
+        if (not _valid_entry(ref, row, before, True, revision=14)
+                or row.get('preview_only') is not False
+                or row.get('voice') != {'fr': 'fr-FR-HenriNeural'}
+                or row.get('default_playback_rate') != 1 or row.get('allowed_playback_rates') != [1]
+                or row.get('voice_time_stretching') is not False
+                or row.get('previous_media_sha256') != before['media_sha256']
+                or [c.get('ref') for c in row['chapters']] != [c.get('ref') for c in before['chapters']]
+                or (row['duration_seconds'] == before['duration_seconds'] and
+                    [(c['start_seconds'], c['end_seconds']) for c in row['chapters']] !=
+                    [(c['start_seconds'], c['end_seconds']) for c in before['chapters']])):
+            raise ValueError(f'The VTC voice update is invalid: {ref}')
+    return data['lessons']
+
+
 def repair_course(course):
     cid, version = course.get('id', ''), course.get('version')
     if cid not in {f'academy-vtc-{m}' for m in 'abcdefgh'} or version not in VERSIONS:
@@ -120,6 +148,7 @@ def repair_course(course):
     data = quality_manifest()
     if not data:
         return course
+    updates = approved_voice_updates()
     letter = cid[-1].upper()
     for section in course.get('sections', []):
         for activity in section.get('activities', []):
@@ -129,11 +158,14 @@ def repair_course(course):
                 if not isinstance(video, dict):
                     continue
                 expected_id = f'vtc-{letter.lower()}-capsule'
-                row = data['modules'][letter] if video.get('id') == expected_id else data['lessons'].get(ref)
+                baseline = data['modules'][letter] if video.get('id') == expected_id else data['lessons'].get(ref)
+                row = updates.get(ref, baseline) if video.get('id') != expected_id else baseline
                 if not row or video.get('src') == row['src']:
                     continue
-                if (video.get('src') != row['previous_src']
-                        or video.get('duration_seconds') != row['previous_duration_seconds']):
+                predecessors = {(baseline['previous_src'], baseline['previous_duration_seconds'])}
+                if row is not baseline:
+                    predecessors.add((baseline['src'], baseline['duration_seconds']))
+                if (video.get('src'), video.get('duration_seconds')) not in predecessors:
                     raise ValueError('Unexpected VTC predecessor video')
                 for key in ('src', 'poster', 'captions', 'duration_seconds', 'chapters', 'transcript',
                             'learning_pauses', 'presentation', 'render_revision'):
@@ -145,8 +177,8 @@ def repair_course(course):
                     if row[key] not in course['assets']:
                         course['assets'].append(row[key])
     course.setdefault('counts', {})['assets'] = len(course['assets'])
-    # Playback policy changed, but media IDs, timelines and earned viewing stay intact.
-    course['vtc_media_revision'] = 13
+    # An open D.02 player must reload before reporting against the new timeline.
+    course['vtc_media_revision'] = 14 if any(ref.startswith(letter+'.') for ref in updates) else 13
     return course
 
 
@@ -168,6 +200,12 @@ def compatible_record(video_id, record, duration):
         return record
     letter, number = match.groups()
     row = data['lessons'].get(f'{letter.upper()}.{number}') if number else data['modules'].get(letter.upper())
+    update = approved_voice_updates().get(f'{letter.upper()}.{number}') if number else None
+    if row and update and duration == update['duration_seconds'] and duration != row['duration_seconds']:
+        # Trusted V10 records first project to V11, then to the approved voice.
+        # V11 records skip the first hop. Unknown durations remain unchanged.
+        record = compatible_record(video_id, record, row['duration_seconds'])
+        row = update
     if (not row or duration != row['duration_seconds']
             or record.get('duration_seconds') != row['previous_duration_seconds']):
         return record
