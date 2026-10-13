@@ -340,9 +340,12 @@ def register(host):
     @customer
     def elearning_soon():
         data, partner = partner_data()
+        view = request.args.get("view", "groups")
+        if view not in {"groups", "catalogue", "orders"}:
+            view = "groups"
         orders = sorted((o for o in data.get("manual_orders", []) if elearning_orders.is_order(o) and o.get("partner_id") == partner["id"]), key=lambda o: o.get("created_at", ""), reverse=True)
         groups = elearning_groups.dashboard(data, partner)
-        return page("elearning_catalogue.html", partner=partner, courses=elearning_orders.prices(partner), groups=groups, orders=orders, values=partner, rows=[], request_id=secrets.token_hex(16), errors=[], **elearning_groups.dashboard_filter(groups, request.args))
+        return page("elearning_catalogue.html", dashboard_view=view, partner=partner, courses=elearning_orders.prices(partner), groups=groups, orders=orders, values=partner, rows=[], request_id=secrets.token_hex(16), errors=[], **elearning_groups.dashboard_filter(groups, request.args))
 
     def presentation_context():
         # Staff can inspect the same editorial pages without impersonating a

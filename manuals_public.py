@@ -47,7 +47,9 @@ def register_routes(host, bp, *, page):
         if request.endpoint in {'manuals_shop.order_payment', 'manuals_shop.order_detail'} and session.get('manuals_cart_completed') == (request.view_args or {}).get('order_id'):
             session.pop('manuals_cart_completed', None)
             completed = str(session.get('partner_id', '')) + ':' + str(session.get('user_id', ''))
-        return {'cart_completed_key':completed, 'terms_version': TERMS_VERSION, 'canonical_url': public_origin() + request.path,
+        return {'storefront_staff': bool(session.get('admin_logged_in') and host._is_super_admin_session()),
+                'storefront_customer': bool(session.get('admin_logged_in') and host._is_external_partner_session()),
+                'cart_completed_key':completed, 'terms_version': TERMS_VERSION, 'canonical_url': public_origin() + request.path,
                 'public_origin': public_origin(), 'page_indexable': indexable() and request.endpoint in CACHEABLE}
 
     @host.app.after_request

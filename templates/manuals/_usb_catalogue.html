@@ -7,7 +7,7 @@
       <h1 id="sf-title">Vos cours,<br><em>prêts à projeter.</em></h1>
       <p class="sf-lead">Un support pour guider la séance.<br>Un formateur pour lui donner vie.</p>
       <p class="sf-intro">Retrouvez vos formations en PowerPoint, sur clé USB. Des supports pour accompagner vos explications, nourrir les échanges et avancer avec vos stagiaires.</p>
-      <div class="sf-actions"><a class="sf-button" href="#collection">Explorer les {{ books|length }} supports <span aria-hidden="true">↓</span></a><a class="sf-link" href="#apercus">Voir les aperçus →</a></div>
+      <div class="sf-actions"><a class="sf-button" href="{{ url_for('manuals_shop.catalogue', _anchor='supports-formateurs') if session.get('admin_logged_in') else url_for('admin_login', next=url_for('manuals_shop.catalogue', _anchor='supports-formateurs')) }}">Commander des clés USB <span aria-hidden="true">→</span></a><a class="sf-link" href="#collection">Explorer les {{ books|length }} supports ↓</a><a class="sf-link" href="#apercus">Voir les aperçus →</a></div>
       <p class="sf-hero-note">Sécurité privée · Incendie · Électricité · Transport · Secourisme</p>
     </div>
     <figure class="sf-hero-visual">
