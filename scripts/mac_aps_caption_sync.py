@@ -94,7 +94,7 @@ def parse_vtt(path):
     return _validated(cues)
 
 
-def reflow_captions(cues, font_path, font_size=44, max_width=1170):
+def reflow_captions(cues, font_path, font_size=38, max_width=1170):
     """Balance captions on at most two measured lines and merge problem cues.
 
     A problem cue contains one word or lasts less than one second. Only adjacent

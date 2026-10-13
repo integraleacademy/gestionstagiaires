@@ -24,9 +24,9 @@ PARTNER = {"id": "specimen-mac-aps-centre", "name": "Centre de formation exemple
 ORDER = {"id": "specimen-mac-aps-access", "course_code": "mac-aps", "group_name": "Groupe MAC APS · Démonstration"}
 MEDIA_ROOT = Path(__file__).parent / "static" / "elearning-demo" / "mac-aps"
 MEDIA = {
-    "video": ("republique-extrait-v2.mp4", "video/mp4"),
-    "affiche": ("republique-poster-v2.jpg", "image/jpeg"),
-    "sous-titres": ("republique-extrait-v2.vtt", "text/vtt"),
+    "video": ("republique-extrait-v3.mp4", "video/mp4"),
+    "affiche": ("republique-poster-v3.jpg", "image/jpeg"),
+    "sous-titres": ("republique-extrait-v3.vtt", "text/vtt"),
 }
 
 

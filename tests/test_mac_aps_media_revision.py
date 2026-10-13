@@ -47,8 +47,11 @@ def all_courses():
 
 
 def video_rows(course):
+    # This release replaces the five summaries. Optional APS revision videos
+    # have their own unchanged media and are covered by lesson-video tests.
     return [block['video'] for section in course['sections'] for activity in section['activities']
-            for block in activity.get('blocks', []) if block.get('video')]
+            for block in activity.get('blocks', []) if re.fullmatch(
+                r'macaps-0[1-5]-video', block.get('video', {}).get('id', ''))]
 
 
 def test_visual_revision_preserves_teaching_graph_snapshot_and_progress(media_manifests):

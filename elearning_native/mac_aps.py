@@ -18,7 +18,8 @@ ROOT = Path(__file__).parent / "mac_aps"
 LEGACY_VERSION = "20261012-macaps-v1"
 VERSION = "20261012-macaps-v2"
 SUPPORTED_VERSIONS = (LEGACY_VERSION, VERSION)
-MEDIA_REVISION = "20261012-mac-aps-v2"
+MEDIA_REVISION = "20261013-mac-aps-v3"
+REVIEWED_MEDIA_REVISIONS = {"20261012-mac-aps-v2": "v2", MEDIA_REVISION: "v3"}
 _MEDIA_FIELDS = ("src", "poster", "captions", "render_revision", "burned_captions",
                  "video_sha256", "caption_cues")
 PRINCIPAL_MODULE_NUMBERS = ("02", "03", "05")
@@ -74,6 +75,31 @@ def _media():
     return json.loads((ROOT / "media_manifest.json").read_text(encoding="utf-8"))
 
 
+@lru_cache(maxsize=1)
+def _lesson_videos():
+    """Explicit, frozen selection of existing Academy videos; no runtime TTS."""
+    from . import academy
+    selection = json.loads((ROOT / "lesson_videos.json").read_text(encoding="utf-8"))
+    result = {}
+    for lesson_id, (source_ref, purpose) in selection["lessons"].items():
+        course_id = "academy-" + source_ref.rsplit("-", 1)[0]
+        source = academy.load_bundled_course(course_id, selection["source_version"])
+        candidates = [block["video"] for section in source["sections"]
+                      for activity in section["activities"] for block in activity.get("blocks", [])
+                      if block.get("video", {}).get("id") == source_ref + "-video"]
+        if len(candidates) != 1:
+            raise ValueError("Selected MAC APS lesson video is missing: " + lesson_id)
+        video = copy.deepcopy(candidates[0])
+        if any(video[key] not in source["assets"] for key in ("src", "poster", "captions")):
+            raise ValueError("Selected MAC APS lesson assets are invalid: " + lesson_id)
+        video.update(id=lesson_id + "-revision-video", required=False, lesson_explainer=True,
+                     course_only=False, source_course_id=course_id,
+                     source_course_version=selection["source_version"], source_video_id=source_ref + "-video",
+                     learning_purpose=purpose)
+        result[lesson_id] = video
+    return result
+
+
 @lru_cache(maxsize=5)
 def _original_media(number):
     return json.loads((ROOT / "assets" / "media" / "mac-aps" / "v1" /
@@ -94,11 +120,12 @@ def _original_video(number):
 
 def _reviewed_media(number):
     manifest = _media()
-    if manifest.get("revision") != MEDIA_REVISION:
+    directory = REVIEWED_MEDIA_REVISIONS.get(manifest.get("revision"))
+    if not directory:
         return None
     entry = manifest.get("videos", {}).get(number)
-    prefix = "media/mac-aps/v2/module-" + number
-    if (not isinstance(entry, dict) or entry.get("render_revision") != MEDIA_REVISION
+    prefix = "media/mac-aps/" + directory + "/module-" + number
+    if (not isinstance(entry, dict) or entry.get("render_revision") != manifest["revision"]
             or any(entry.get(key) != prefix + extension
                    for key, extension in (("src", ".mp4"), ("poster", ".jpg"), ("captions", ".vtt")))):
         raise ValueError("Reviewed MAC APS media is invalid: " + number)
@@ -116,7 +143,7 @@ def _video(number, version=None):
 
 def _with_reviewed_media(course):
     """Overlay only visual media on detached courses; old signed URLs still work."""
-    if not course or _media().get("revision") != MEDIA_REVISION:
+    if not course or _media().get("revision") not in REVIEWED_MEDIA_REVISIONS:
         return course
     assets = course.setdefault("assets", [])
     for section in course.get("sections", []):
@@ -139,6 +166,12 @@ def _with_reviewed_media(course):
                     for key in ("src", "poster", "captions"):
                         if row[key] not in assets:
                             assets.append(row[key])
+                # Preserve already-issued URLs from the preceding visual release.
+                if _media()["revision"] == MEDIA_REVISION:
+                    for extension in (".mp4", ".jpg", ".vtt"):
+                        prior = "media/mac-aps/v2/module-" + number + extension
+                        if prior not in assets:
+                            assets.append(prior)
     course.setdefault("counts", {})["assets"] = len(assets)
     return course
 
@@ -337,6 +370,12 @@ def _course(number):
     sections, assets, timed_objectives = [], [], []
     for objective in objectives:
         grouped = [_section(lessons[ref], objective["lesson_minutes"]) for ref in objective["lesson_refs"]]
+        for section in grouped:
+            if selected := _lesson_videos().get(section["id"]):
+                video = copy.deepcopy(selected)
+                section["activities"][0]["blocks"].append({"id": video["id"], "type": "video",
+                    "html": "", "children": [], "video": video})
+                assets.extend(video[key] for key in ("src", "poster", "captions") if video[key] not in assets)
         if objective.get("video_module"):
             grouped.append(_video_section(objective["video_module"], objective["id"], minutes=objective["video_minutes"]))
             video = _video(objective["video_module"])
@@ -395,6 +434,13 @@ def bundled_asset(course_id, version, name):
     course = load_bundled_course(course_id, version)
     if not course or name not in course["assets"]:
         return None
+    if name.startswith("media/aps62/"):
+        from . import academy
+        # The MAC course's allowlist above grants only the selected lesson assets.
+        for video in _lesson_videos().values():
+            if name in (video["src"], video["poster"], video["captions"]):
+                return academy.bundled_asset(video["source_course_id"], video["source_course_version"], name)
+        return None
     root = (ROOT / "assets").resolve()
     path = (root / name).resolve()
     return path if root in path.parents and path.is_file() else None
@@ -426,6 +472,7 @@ def curriculum_manifest(version=None):
         course = _course(number)
         lessons = [lesson for lesson in _lessons() if lesson["module"] == number]
         video = _video(number) if number in ("02", "03") else None
+        lesson_videos = {row["src"]: row for ref, row in _lesson_videos().items() if ref.startswith("macaps-" + number + "-")}
         objectives = [row for row in legal_objectives() if row["module"] == number]
         modules.append({**copy.deepcopy(info), "number": number, "id": course["id"], "version": VERSION,
                         "pedagogical_scope": "principal", "planned_minutes": course["planned_minutes"],
@@ -434,6 +481,7 @@ def curriculum_manifest(version=None):
                         "objective_count": len(objectives), "objectives": objectives,
                         "objective_question_count": sum(len(_exams()["objectives"][row["id"]]) for row in objectives),
                         "has_video": bool(video), "video_minutes": round(video["duration_seconds"] / 60, 1) if video else 0,
+                        "lesson_video_count": len(lesson_videos), "lessons_with_video": len(lessons),
                         "required_section_ids": [s["id"] for s in course["sections"]],
                         "lessons": [{"ref": lesson["id"], "title": lesson["title"], "activity": lesson["id"] + "-cours",
                                      "mode": lesson["mode"], "objective_id": lesson["objective_id"]} for lesson in lessons]})
@@ -446,7 +494,11 @@ def curriculum_manifest(version=None):
             "exam_question_count": sum(len(rows) for rows in _exams()["modules"].values()) + len(_exams()["final"]),
             "activity_count": sum(_course(number)["counts"]["activities"] for number in MODULES),
             "planned_minutes": TOTAL_MINUTES, "required_minutes": TOTAL_MINUTES,
-            "video_count": 2, "video_minutes": round(sum(_video(n)["duration_seconds"] for n in ("02", "03")) / 60, 1),
+            "video_count": 2 + len({v["src"] for v in _lesson_videos().values()}),
+            "lesson_video_count": len({v["src"] for v in _lesson_videos().values()}),
+            "lessons_with_video": len(_lesson_videos()),
+            "video_minutes": round((sum(_video(n)["duration_seconds"] for n in ("02", "03")) +
+                sum(v["duration_seconds"] for v in {v["src"]: v for v in _lesson_videos().values()}.values())) / 60, 1),
             "final_exam_id": "macaps-final", "complements": complement_manifest(),
             "regulatory_review": regulatory_review()}
 

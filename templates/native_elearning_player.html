@@ -23,6 +23,7 @@
     <section class="native-block native-block--{{ block.type|lower }}" data-native-block="{{ block.type }}">
       {% if block.video and block.video.src %}
         {% if block.video.required or block.video.lesson_explainer %}<h2 class="native-video-title">{{ block.video.title }}</h2>{% endif %}
+        {% if block.video.learning_purpose %}<p class="mac-video-note">{{ block.video.learning_purpose }}</p>{% endif %}
         {% set readable_video = course.training_label == 'VTC' and block.video.presentation %}
         <div class="native-video-shell{% if readable_video %} vtc-readable-video{% endif %}"{% if readable_video %} data-vtc-video-reader{% endif %}>
           {% if readable_video %}

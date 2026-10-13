@@ -624,6 +624,7 @@ def create_native_elearning_blueprint(
                 "allowed_playback_rates": video.get("allowed_playback_rates", [1]),
                 "learning_pauses": video.get("learning_pauses", []),
                 "lesson_explainer": bool(video.get("lesson_explainer")),
+                "learning_purpose": str(video.get("learning_purpose") or ''),
                 "transcript": str(video.get("transcript") or '') if video.get("lesson_explainer") else '',
                 "presentation": video.get("presentation") if course_id in {f"academy-vtc-{letter}" for letter in "abcdefgh"} else None,
             }

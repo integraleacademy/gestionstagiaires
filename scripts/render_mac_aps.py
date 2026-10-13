@@ -31,13 +31,13 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "elearning_native/mac_aps"
 ILLUSTRATIONS = RES / "assets/illustrations"
-ASSETS = RES / "assets/media/mac-aps/v2"
+ASSETS = RES / "assets/media/mac-aps/v3"
 WORK = Path(os.environ.get("MAC_APS_MEDIA_WORK", "/tmp/mac-aps-media"))
 FONT = ROOT / "scripts/academy_videos/assets/Manrope-600.ttf"
 BOLD = ROOT / "scripts/academy_videos/assets/Manrope-800.ttf"
 VOICE = "fr-FR-HenriNeural"
 RATE = "-2%"
-REVISION = "20261012-mac-aps-v2"
+REVISION = "20261013-mac-aps-v3"
 W, H, FPS = 1280, 720, 25
 NAVY, BLUE, GOLD = "#172b4d", "#235dd1", "#e9b647"
 BG, MUTED, LIGHT = "#f5f8fd", "#536682", "#e4edfb"
@@ -378,11 +378,11 @@ def frame(module, scene_index, active=()):
     else:
         raise ValueError(kind)
     # Captions occupy their own area; diagrams and illustration never cover them.
-    d.rectangle((0, 550, W, H), fill="#0f1b2c")
+    d.rectangle((0, 592, W, H), fill="#0f1b2c")
     for i in range(len(module_data["scenes"])):
         step = 1188 / len(module_data["scenes"])
         x = 46 + i * step
-        d.rounded_rectangle((x, 546, x + step - 10, 550), radius=2, fill=BLUE if i <= scene_index else "#d3dded")
+        d.rounded_rectangle((x, 588, x + step - 10, 592), radius=2, fill=BLUE if i <= scene_index else "#d3dded")
     return im
 
 
@@ -453,7 +453,7 @@ WrapStyle: 2
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,AcademyManrope600,44,&H00FFFFFF,&H00FFFFFF,&H000F1B2C,&H000F1B2C,0,0,0,0,100,100,0,0,1,0,0,2,55,55,64,1
+Style: Default,AcademyManrope600,38,&H00FFFFFF,&H00FFFFFF,&H000F1B2C,&H000F1B2C,0,0,0,0,100,100,0,0,1,0,0,2,55,55,22,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -516,7 +516,7 @@ def encode(module, voices, folder):
     (ASSETS / f"module-{module}.vtt").write_text("WEBVTT\n\n" + "".join(f"{stamp(c['start'])} --> {stamp(c['end'])}\n{c['text']}\n\n" for c in captions).rstrip() + "\n", encoding="utf-8")
     transcript = "\n\n".join(scene["text"] for scene in MODULES[module]["scenes"])
     entry = {"id": f"mac-aps-module-{module}-video", "module": module, "title": "Synthèse vidéo · " + MODULES[module]["title"],
-             "src": f"media/mac-aps/v2/module-{module}.mp4", "poster": f"media/mac-aps/v2/module-{module}.jpg", "captions": f"media/mac-aps/v2/module-{module}.vtt",
+             "src": f"media/mac-aps/v3/module-{module}.mp4", "poster": f"media/mac-aps/v3/module-{module}.jpg", "captions": f"media/mac-aps/v3/module-{module}.vtt",
              "duration_seconds": round(actual, 3), "narration_seconds": round(narration_seconds, 3), "voice": VOICE, "rate": RATE,
              "burned_captions": True, "required": False, "transcript": transcript, "words": len(transcript.split()), "chapters": chapters,
              "caption_cues": len(captions), "render_revision": REVISION, "source_sha256": source_signature(module), "video_sha256": hashlib.sha256(out.read_bytes()).hexdigest()}
@@ -536,7 +536,7 @@ def verify_entry(module, full_decode=False):
     transcript = "\n\n".join(s["text"] for s in MODULES[module]["scenes"])
     assert entry["transcript"] == transcript and entry["words"] == len(transcript.split())
     for field, extension in [("src", "mp4"), ("poster", "jpg"), ("captions", "vtt")]:
-        assert entry[field] == f"media/mac-aps/v2/module-{module}.{extension}"
+        assert entry[field] == f"media/mac-aps/v3/module-{module}.{extension}"
         file = RES / "assets" / entry[field]
         assert file.is_file() and not file.is_symlink() and file.stat().st_size > 500
     movie = ASSETS / f"module-{module}.mp4"

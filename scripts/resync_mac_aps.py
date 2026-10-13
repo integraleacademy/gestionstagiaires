@@ -28,7 +28,7 @@ from mac_aps_caption_sync import parse_vtt, reflow_captions
 
 ROOT = render.ROOT
 SOURCE = render.RES / "assets/media/mac-aps/v1"
-WORK = Path("/tmp/mac-aps-resync-v2")
+WORK = Path("/tmp/mac-aps-resync-v3")
 PLAN = Path(__file__).with_name("mac_aps_visual_sync.json")
 TIMING = Path(__file__).with_name("mac_aps_visual_timing.json")
 
@@ -196,11 +196,11 @@ def build(module):
     assert re.sub(r"\s+", "", " ".join(c["text"] for c in cues)) == re.sub(r"\s+", "", source["transcript"])
     write_vtt(render.ASSETS / f"module-{module}.vtt", cues)
     render.frame(module, 0, []).save(render.ASSETS / f"module-{module}.jpg", quality=91)
-    entry = {**source, "src": f"media/mac-aps/v2/module-{module}.mp4", "poster": f"media/mac-aps/v2/module-{module}.jpg",
-             "captions": f"media/mac-aps/v2/module-{module}.vtt", "caption_cues": len(cues), "render_revision": render.REVISION,
+    entry = {**source, "src": f"media/mac-aps/v3/module-{module}.mp4", "poster": f"media/mac-aps/v3/module-{module}.jpg",
+             "captions": f"media/mac-aps/v3/module-{module}.vtt", "caption_cues": len(cues), "render_revision": render.REVISION,
              "source_sha256": render.source_signature(module), "video_sha256": sha(destination), "source_video_sha256": sha(original),
              "audio_preserved": True, "audio_packet_sha256": audio_hash(destination).split("=")[-1], "playback_duration_seconds": actual,
-             "subtitle_font_pixels": 44, "subtitle_bottom_margin_pixels": 64, "frame_rate": render.FPS,
+             "subtitle_font_pixels": 38, "subtitle_bottom_margin_pixels": 22, "subtitle_band_pixels": 128, "frame_rate": render.FPS,
              "visual_sync": [{"scene_index": s["scene_index"], "events": [{"start_seconds": e["start_seconds"], "active": e["active"], "anchor": e["anchor"]} for e in s["events"]]} for s in aligned["scenes"]]}
     save_json(render.ASSETS / f"module-{module}.json", entry)
     render.verify_entry(module, full_decode=True)
@@ -217,13 +217,13 @@ def demo():
     render.run(["ffmpeg", "-nostdin", "-v", "error", "-xerror", "-y", "-i", str(render.ASSETS / "module-02.mp4"),
                 "-an", "-frames:v", str(86 * render.FPS), "-c:v", "libx264", "-preset", "veryfast", "-crf", "25",
                 "-threads", "2", str(silent)])
-    destination = demo_root / "republique-extrait-v2.mp4"
+    destination = demo_root / "republique-extrait-v3.mp4"
     remux(silent, original, destination)
     assert abs(render.duration(destination) - 86) < .05
     cues = reflow_captions([c for c in parse_vtt(render.ASSETS / "module-02.vtt") if c["end"] <= 86], render.FONT)
     assert render.normalize(" ".join(c["text"] for c in cues)) == render.normalize(" ".join(c["text"] for c in parse_vtt(demo_root / "republique-extrait.vtt")))
-    write_vtt(demo_root / "republique-extrait-v2.vtt", cues)
-    render.frame("02", 0, []).save(demo_root / "republique-poster-v2.jpg", quality=91)
+    write_vtt(demo_root / "republique-extrait-v3.vtt", cues)
+    render.frame("02", 0, []).save(demo_root / "republique-poster-v3.jpg", quality=91)
     render.run(["ffmpeg", "-nostdin", "-v", "error", "-xerror", "-i", str(destination), "-f", "null", "-"])
     print("Extrait public : 86 secondes, piste AAC originale préservée", flush=True)
 
