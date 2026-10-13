@@ -1,0 +1,64 @@
+name: VTC video synchronization review
+on:
+  push:
+    branches: ['codex/vtc-video-sync-20261013']
+    paths: ['.github/workflows/vtc-video-sync-review.yml', 'scripts/vtc_sync_review/**']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Collect source files for isolated tests
+        run: |
+          python - <<'PY'
+          import pathlib, zipfile
+          root = pathlib.Path('.')
+          paths = list(root.glob('*.py')) + [root/'requirements.txt']
+          for folder in ['elearning_native','scripts','tests','templates','static/js','static/css','docs']:
+              paths.extend((root/folder).rglob('*'))
+          with zipfile.ZipFile('/tmp/vtc-source.zip','w',zipfile.ZIP_DEFLATED) as z:
+              for p in sorted(set(paths)):
+                  if p.is_file() and p.suffix in {'.py','.json','.js','.html','.css','.md','.txt','.vtt','.ass','.yml'} and p.stat().st_size < 10000000:
+                      z.write(p,p.as_posix())
+          print('Source archive bytes:',pathlib.Path('/tmp/vtc-source.zip').stat().st_size)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vtc-source-inspection
+          path: /tmp/vtc-source.zip
+          retention-days: 3
+      - name: Check all VTC timelines and decode every video
+        run: |
+          mkdir -p /tmp/vtc-audit
+          python - <<'PY'
+          import pathlib,json,subprocess,concurrent.futures,hashlib
+          root=pathlib.Path('elearning_native/vtc')
+          data=json.loads((root/'video_quality_v11.json').read_text())
+          rows=[(kind,ref,row) for kind in ['lessons','modules'] for ref,row in data[kind].items()]
+          def check(item):
+              kind,ref,row=item
+              path=root/'assets'/row['src']
+              probed=subprocess.run(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(path)],capture_output=True,text=True)
+              streams=json.loads(probed.stdout) if probed.returncode==0 else {}
+              decoded=subprocess.run(['ffmpeg','-v','error','-threads','1','-i',str(path),'-f','null','-'],capture_output=True,text=True)
+              return {'kind':kind,'ref':ref,'src':row['src'],'duration':row['duration_seconds'],'probe':streams,'decode_ok':decoded.returncode==0 and not decoded.stderr.strip(),'decode_error':decoded.stderr[:1000],'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'scene_count':len(row['presentation']['scenes']),'caption_count':len(row['presentation']['captions'])}
+          with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+              results=list(pool.map(check,rows))
+          pathlib.Path('/tmp/vtc-audit/media.json').write_text(json.dumps(results,ensure_ascii=False,indent=2))
+          summary={'videos':len(results),'decoded':sum(x['decode_ok'] for x in results),'scenes':sum(x['scene_count'] for x in results),'captions':sum(x['caption_count'] for x in results),'seconds':sum(x['duration'] for x in results)}
+          print(json.dumps(summary,ensure_ascii=False))
+          pathlib.Path('/tmp/vtc-audit/summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2))
+          if not all(x['decode_ok'] for x in results): raise SystemExit('Video decoding failed')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vtc-media-initial-audit
+          path: /tmp/vtc-audit/
+          retention-days: 3
