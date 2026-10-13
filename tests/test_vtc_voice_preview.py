@@ -25,6 +25,9 @@ def test_preview_preparation_keeps_lesson_identity_and_existing_collection():
     assert preview.PREFIX not in before.decode()
     assert live.read_bytes() == before
     assert preview.plan(row)['status'] == 'prepared_not_generated'
+    assert preview.VOICE == {'fr': 'fr-FR-HenriNeural'}
+    assert preview.RATE == {'fr': '-2%'}
+    assert preview.PREFIX == 'media/vtc/voice-preview-d02-henri'
     for scene in row['scenes']:
         text = renderer.scene_text(scene)
         assert all(text.count(p['anchor_text']) == 1 for p in scene['points'])

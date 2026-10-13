@@ -19,11 +19,12 @@ sys.path.insert(0, str(ROOT))
 from scripts.vtc import render_quality_videos_v11 as base
 
 SOURCE = Path(__file__).with_name('voice_preview_d02.json')
-VOICE = {'fr': 'fr-FR-RemyMultilingualNeural'}
-RATE = {'fr': '+0%'}
-PREFIX = 'media/vtc/voice-preview-d02'
+VOICE = {'fr': 'fr-FR-HenriNeural'}
+# Preserve Henri's existing synthesis rate; naturalness comes from the wording.
+RATE = {'fr': '-2%'}
+PREFIX = 'media/vtc/voice-preview-d02-henri'
 OUTPUT = base.OUT/'assets'/PREFIX
-WORK = Path(os.environ.get('VTC_VOICE_PREVIEW_WORK', '/tmp/vtc-voice-preview-d02'))
+WORK = Path(os.environ.get('VTC_VOICE_PREVIEW_WORK', '/tmp/vtc-voice-preview-d02-henri'))
 
 
 def prepare():
@@ -66,7 +67,7 @@ async def generate(row, signature):
         for segment in scene['segments'])) for scene in row['scenes']))
     result = await asyncio.to_thread(base.render, row, spoken, signature,
         output_dir=OUTPUT, work_dir=WORK, media_prefix=PREFIX, voice_map=VOICE,
-        rate_map=RATE, revision='voice-preview-d02', playback_rate=1)
+        rate_map=RATE, revision='voice-preview-d02-henri', playback_rate=1)
     result.update(preview_only=True, voice_time_stretching=False,
                   preview_source_sha256=base.file_sha(SOURCE))
     # Decode the whole result, not just its metadata, before making it reviewable.

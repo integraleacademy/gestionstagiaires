@@ -1,5 +1,32 @@
 # Aperçu de narration D.02 — 13 octobre 2026
 
+## Choix retenu : Henri
+
+L’utilisateur préfère Henri et a confirmé conserver cette voix, sans
+ralentissement supplémentaire. Le générateur principal utilise désormais
+`fr-FR-HenriNeural` à `-2%`, comme les vidéos existantes, avec une lecture à 1×.
+Le texte plus oral reste prêt dans `scripts/vtc/voice_preview_d02.json`.
+
+La nouvelle vérification du 13 octobre avec Henri a renvoyé HTTP 403 avant
+réception du moindre octet audio. Aucun aperçu Henri révisé n’a donc été généré
+ou mis en ligne. Le précédent essai féminin n’est pas retenu et ne doit pas
+servir de remplacement automatique. La synthèse D.02 vers Microsoft a déjà été
+autorisée par l’utilisateur ; aucune nouvelle autorisation n’est attendue.
+
+Préparer puis générer Henri lorsque le service permet de nouveau la synthèse :
+
+```sh
+python scripts/vtc/render_voice_preview.py
+python scripts/vtc/render_voice_preview.py --render
+```
+
+La sortie est isolée dans `media/vtc/voice-preview-d02-henri/`. Les sous-titres
+seront recalculés sur les mots réellement générés et contrôlés à 1×. Ne pas
+ralentir Henri pour résoudre un éventuel problème de lisibilité : ajuster la
+ponctuation du texte, puis refaire la synthèse et les contrôles.
+
+## Essai féminin antérieur — non retenu
+
 Un aperçu autonome de 136,05 secondes a été généré avec une voix française
 féminine, Kokoro-82M / ff_siwis. Il est destiné à la comparaison par l’utilisateur.
 Il ne remplace aucune des 104 vidéos et ne modifie ni le manifeste ni la

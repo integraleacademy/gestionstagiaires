@@ -126,5 +126,5 @@
     }
   ],
   "preview_only": true,
-  "voice_direction": "Voix masculine française, ton posé et chaleureux ; ponctuation orale et phrases complètes ; aucun étirement audio."
+  "voice_direction": "Conserver Henri, fr-FR-HenriNeural, au débit existant de -2 % et à la lecture x1 ; phrases complètes et ponctuation orale ; aucune voix de remplacement ni ralentissement supplémentaire."
 }
