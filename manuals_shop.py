@@ -32,6 +32,7 @@ import manuals_accounts
 import manuals_public
 import manuals_fulfillment
 import manuals_metrics
+import manuals_previews
 from manuals_presentation import presentation_books
 
 
@@ -163,6 +164,7 @@ def save_logo(host, upload, partner_id, draft_id):
 
 def register(host):
     app = host.app
+    manuals_previews.register(app)
     # Partners can read their own negotiated prices, but cannot write them
     # through the general profile editor (not in PARTNER_SELF_EDITABLE_FIELDS).
     host.PARTNER_VISIBLE_FIELDS.add("elearning_pricing")

@@ -77,8 +77,8 @@ def test_only_existing_specimens_and_previews_are_advertised(shop):
         page = client.get('/manuels/' + book['code'])
         if book['specimen']:
             assert (root / book['specimen']).is_file()
-            assert 'Consulter le spécimen' in page.text
+            assert f'Feuilleter {book["specimen_pages"]} pages' in page.text
         else:
-            assert 'Consulter le spécimen' not in page.text
+            assert 'Télécharger l’extrait' not in page.text
             assert 'brochure-manuels-2026.pdf#page=' + str(book['brochure_page']) in page.text
         assert ('id="apercus"' in page.text) == bool(book['preview_labels'])
