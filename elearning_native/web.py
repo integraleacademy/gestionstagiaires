@@ -40,6 +40,7 @@ from werkzeug.exceptions import Conflict
 
 from .videos import activity_playback_policy, activity_videos, course_videos, video_blocker, videos_complete
 from .academy import curriculum_manifest
+from .aps_editorial import question_for_history
 from . import vtc, a3p, mac_aps
 from .mac_aps_timing import completion_blocker as macaps_completion_blocker
 from .exams import ExamStore, load_exam, public_exam, grade_exam
@@ -225,6 +226,7 @@ def _course_access_payload(
         "section_ids": [str(section["id"]) for section in course.get("sections") or []],
         "module_title": str(course.get("title") or ""),
         "required_minutes": int(course.get("required_minutes") or 0),
+        **({"aps_editorial_revision": course["aps_editorial_revision"]} if course.get("aps_editorial_revision") else {}),
         **({"vtc_media_revision": course["vtc_media_revision"]} if course.get("vtc_media_revision") else {}),
     }
 
@@ -2005,6 +2007,7 @@ def create_native_elearning_blueprint(
         pairs = _activity_pairs(course)
         index = order.index(requested_id)
         raw_activity = next(activity for _, activity in pairs if str(activity.get("id")) == requested_id)
+        raw_activity = question_for_history(raw_activity, course, progress)
         section = next(section for section, activity in pairs if str(activity.get("id")) == requested_id)
         activity = prepare_activity(select_vtc_activity(course, raw_activity, progress), asset_token, course_id,
             production_revealed=bool(progress.get('answers', {}).get(requested_id, {}).get('production_feedback_seen')))
@@ -2096,6 +2099,15 @@ def create_native_elearning_blueprint(
         if (request.endpoint != "native_elearning.tracking_finish" and course.get("vtc_media_revision")
                 and access.get("vtc_media_revision") != course["vtc_media_revision"]):
             abort(409, "Les vidéos ont été améliorées. Rechargez la page : votre progression enregistrée est conservée.")
+        # Keep tracking/video time from open tabs, but never grade an old
+        # question or workshop against a changed answer key.
+        if (course.get("aps_editorial_revision")
+                and access.get("aps_editorial_revision") != course["aps_editorial_revision"]
+                and request.endpoint in {"native_elearning.activity_answer",
+                    "native_elearning.activity_practice", "native_elearning.activity_complete"}):
+            response = jsonify(ok=False, error="Les exercices ont été renouvelés. Rechargez la page : votre progression enregistrée est conservée.")
+            response.status_code = 409
+            abort(response)
         order = [str(value) for value in course.get("activity_order") or []]
         return access, course, order, _scored_activity_ids(course)
 
@@ -2382,6 +2394,7 @@ def create_native_elearning_blueprint(
             return jsonify(ok=False, error=f"Poursuivez l’étude de cet objectif : {_format_seconds(objective['remaining_seconds'])} de temps actif restent à effectuer avant sa validation.", progress=current), 409
         existing = current.get("answers", {}).get(activity_id)
         if isinstance(existing, Mapping):
+            activity = question_for_history(activity, course, current)
             return jsonify({"ok": True, "already_answered": True, "correct": bool(existing.get("correct")), "progress": current,
                             "explanation": str(activity.get('explanation') or '')})
         payload = request.get_json(silent=True) or {}
@@ -2396,7 +2409,7 @@ def create_native_elearning_blueprint(
             try:
                 store().record_question_attempt(access, activity_id, response_payload, correct,
                     request_id=payload.get('request_id', ''), competency=activity.get('title', ''),
-                    revision=course['version'])
+                    revision=activity.get('aps_editorial_question', course['version']))
             except TrackingError as exc:
                 return jsonify(ok=False, error=str(exc)), 409
             current = current_progress(access, course)
@@ -2408,6 +2421,7 @@ def create_native_elearning_blueprint(
         answer = {
             **response_payload,
             "correct": correct,
+            **({"content_revision": activity["aps_editorial_question"]} if activity.get("aps_editorial_question") else {}),
             "submitted_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
         }
         try:
@@ -2419,7 +2433,7 @@ def create_native_elearning_blueprint(
                 answer=answer, video_requirements=course_videos(course),
                 assessment_attempt={'answer': response_payload, 'correct': correct,
                     'request_id': payload.get('request_id', ''), 'competency': activity.get('title', ''),
-                    'revision': course['version']},
+                    'revision': activity.get('aps_editorial_question', course['version'])},
             )
         except TrackingError as exc:
             return jsonify(ok=False, error=str(exc)), 409

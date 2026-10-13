@@ -15,7 +15,7 @@
   const summary = root.querySelector('[data-practice-result]');
   const status = root.querySelector('[data-stage-status]');
   const draft = root.querySelector('[data-practice-draft]');
-  const cacheKey = `aps62-guided:${location.pathname}:${config.courseVersion}:${config.activityId}`;
+  const cacheKey = `aps62-guided:${location.pathname}:${config.courseVersion}:${config.activityId}:${config.practice.revision}`;
   let index = 0, busy = false, verified = '', stepVerified = false;
   let pendingCheck = null;
   const drills = new Map();

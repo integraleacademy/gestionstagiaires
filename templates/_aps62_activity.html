@@ -1,6 +1,6 @@
 {% set lesson = activity.academy %}
 {% set paginated_lesson = course.id.startswith('academy-aps62-') and lesson.kind == 'lesson' %}
-<div class="aps-book" data-aps-work{% if paginated_lesson %} data-aps-lesson data-lesson-key="{{ course.id }}:{{ course.version }}:{{ activity.id }}"{% endif %}>
+<div class="aps-book" data-aps-work{% if paginated_lesson %} data-aps-lesson data-lesson-key="{{ course.id }}:{{ course.version }}:{{ activity.id }}:{{ lesson.editorial_revision|default('') }}"{% endif %}>
   {% if paginated_lesson %}
   <div class="aps-lesson-progress" data-aps-lesson-progress hidden>
     <span class="aps-label">Lecture pas à pas</span>
@@ -10,7 +10,7 @@
   {% endif %}
   {% if activity.production %}{% include '_aps62_production.html' %}
   {% elif lesson.kind == 'lesson' %}
-  {% include '_aps62_lesson.html' %}
+  {% if lesson.editorial_revision %}{% include '_aps62_lesson_varied.html' %}{% else %}{% include '_aps62_lesson.html' %}{% endif %}
   {% elif lesson.kind == 'memory' %}
   <section class="aps-editorial"><span class="aps-label">Les mots à retenir</span><h2>{{ 'Revoir les mots du cours' if lesson.plain_language else 'Expliquez avant de retourner' }}</h2><p>{{ lesson.instruction }}</p><div class="aps-flashcards">{% for card in lesson.cards %}<details><summary><span>{{ '%02d'|format(loop.index) }}</span><h3>{{ card.front }}</h3><b>{{ 'Lire la définition +' if lesson.plain_language else 'Vérifier mon explication +' }}</b></summary><p>{{ card.back }}</p></details>{% endfor %}</div></section>
   {% if lesson.transcript %}<details class="aps-transcript"><summary>Lire la transcription de la capsule</summary>{% for paragraph in lesson.transcript.split('\n\n') %}<p>{{ paragraph }}</p>{% endfor %}<p class="aps-small">{% if lesson.voice == 'fr-FR-HenriNeural' %}Narration de synthèse Henri · Sous-titres français incrustés et transcription accessible.{% else %}Narration de synthèse Piper · <a href="https://datashare.ed.ac.uk/handle/10283/2353" target="_blank" rel="noopener noreferrer">base vocale SIWIS</a> de J. Yamagishi, P.-E. Honnet, P. Garner et A. Lazaridis (2017), <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>, adaptée en capsules pédagogiques.{% endif %}</p></details>{% endif %}
