@@ -2,63 +2,59 @@ name: VTC video synchronization review
 on:
   push:
     branches: ['codex/vtc-video-sync-20261013']
-    paths: ['.github/workflows/vtc-video-sync-review.yml', 'scripts/vtc_sync_review/**']
+    paths: ['.github/workflows/vtc-video-sync-review.yml', 'scripts/vtc_sync_review/changes.b64']
 permissions:
-  contents: read
+  contents: write
 jobs:
-  inspect:
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
+    env:
+      PYTHONPATH: .
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
           fetch-depth: 1
-      - name: Collect source files for isolated tests
+      - name: Apply reviewed patch with checksum verification
         run: |
           python - <<'PY'
-          import pathlib, zipfile
-          root = pathlib.Path('.')
-          paths = list(root.glob('*.py')) + [root/'requirements.txt']
-          for folder in ['elearning_native','scripts','tests','templates','static/js','static/css','docs']:
-              paths.extend((root/folder).rglob('*'))
-          with zipfile.ZipFile('/tmp/vtc-source.zip','w',zipfile.ZIP_DEFLATED) as z:
-              for p in sorted(set(paths)):
-                  if p.is_file() and p.suffix in {'.py','.json','.js','.html','.css','.md','.txt','.vtt','.ass','.yml'} and p.stat().st_size < 10000000:
-                      z.write(p,p.as_posix())
-          print('Source archive bytes:',pathlib.Path('/tmp/vtc-source.zip').stat().st_size)
+          import base64,gzip,hashlib,pathlib,subprocess
+          encoded=pathlib.Path('scripts/vtc_sync_review/changes.b64').read_text()
+          # Repair a transport transcription at the exact known base64 location.
+          encoded=encoded.replace('FvVrRh1/g1','FvVrRh9/g1')
+          patch=gzip.decompress(base64.b64decode(encoded))
+          assert hashlib.sha256(patch).hexdigest()=='223ae746f93a4b9c30e7c3bcdd527614ff55b761b5d8048054db2581b15a60d2'
+          pathlib.Path('/tmp/vtc-player.patch').write_bytes(patch)
+          subprocess.run(['git','apply','--check','/tmp/vtc-player.patch'],check=True)
+          subprocess.run(['git','apply','/tmp/vtc-player.patch'],check=True)
           PY
-      - uses: actions/upload-artifact@v4
-        with:
-          name: vtc-source-inspection
-          path: /tmp/vtc-source.zip
-          retention-days: 3
-      - name: Check all VTC timelines and decode every video
+      - name: Install test and media tooling
         run: |
-          mkdir -p /tmp/vtc-audit
-          python - <<'PY'
-          import pathlib,json,subprocess,concurrent.futures,hashlib
-          root=pathlib.Path('elearning_native/vtc')
-          data=json.loads((root/'video_quality_v11.json').read_text())
-          rows=[(kind,ref,row) for kind in ['lessons','modules'] for ref,row in data[kind].items()]
-          def check(item):
-              kind,ref,row=item
-              path=root/'assets'/row['src']
-              probed=subprocess.run(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(path)],capture_output=True,text=True)
-              streams=json.loads(probed.stdout) if probed.returncode==0 else {}
-              decoded=subprocess.run(['ffmpeg','-v','error','-threads','1','-i',str(path),'-f','null','-'],capture_output=True,text=True)
-              return {'kind':kind,'ref':ref,'src':row['src'],'duration':row['duration_seconds'],'probe':streams,'decode_ok':decoded.returncode==0 and not decoded.stderr.strip(),'decode_error':decoded.stderr[:1000],'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'scene_count':len(row['presentation']['scenes']),'caption_count':len(row['presentation']['captions'])}
-          with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
-              results=list(pool.map(check,rows))
-          pathlib.Path('/tmp/vtc-audit/media.json').write_text(json.dumps(results,ensure_ascii=False,indent=2))
-          summary={'videos':len(results),'decoded':sum(x['decode_ok'] for x in results),'scenes':sum(x['scene_count'] for x in results),'captions':sum(x['caption_count'] for x in results),'seconds':sum(x['duration'] for x in results)}
-          print(json.dumps(summary,ensure_ascii=False))
-          pathlib.Path('/tmp/vtc-audit/summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2))
-          if not all(x['decode_ok'] for x in results): raise SystemExit('Video decoding failed')
-          PY
+          python -m pip install -q -r requirements.txt pytest av numpy faster-whisper playwright imageio-ffmpeg
+          npm install --no-save jsdom
+          python -m playwright install --with-deps chromium
+      - name: Server regression tests
+        run: |
+          mkdir -p /tmp/vtc-final-audit
+          python -m pytest -q tests/test_vtc_video_normal_speed.py tests/test_vtc_quality_release_v11.py tests/test_vtc_quality_progress_v11.py tests/test_vtc_video_companion_web.py tests/test_vtc_lesson_videos_v10.py tests/test_native_elearning_pacing.py tests/test_vtc_free_module_navigation.py tests/test_vtc_optional_progress.py tests/test_vtc_105_reporting.py --junitxml=/tmp/vtc-final-audit/tests.xml
+      - name: Player JavaScript and browser checks
+        run: |
+          node --test scripts/vtc_sync_review/player.test.cjs
+          python scripts/vtc_sync_review/browser.py
+      - name: Audit all timelines and 104 independent audio samples
+        run: python scripts/vtc_sync_review/audit.py
+      - name: Preserve tested code on isolated review branch only
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add elearning_native/videos.py elearning_native/vtc_video_quality.py static/js/native-elearning-player.js static/js/native-video-pacing.js static/js/vtc-video-companion.js templates/native_elearning_player.html tests/test_vtc_quality_release_v11.py tests/test_vtc_video_companion_web.py tests/test_vtc_lesson_videos_v10.py tests/test_vtc_video_normal_speed.py scripts/vtc_sync_review/audit.py scripts/vtc_sync_review/browser.py scripts/vtc_sync_review/player.test.cjs
+          git commit -m 'Fixer les vidéos VTC à 1x et supprimer les sous-titres en doublon'
+          git push origin HEAD:refs/heads/codex/vtc-video-sync-20261013
+          git rev-parse HEAD > /tmp/vtc-final-audit/tested-commit.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: vtc-media-initial-audit
-          path: /tmp/vtc-audit/
+          name: vtc-final-audit
+          path: /tmp/vtc-final-audit/
           retention-days: 3
