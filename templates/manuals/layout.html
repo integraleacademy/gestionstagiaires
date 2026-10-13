@@ -41,12 +41,12 @@
     {% if storefront_staff %}
     <a href="{{ url_for('admin_sessions') }}">Administration</a>
     <a href="{{ url_for('admin_partners') }}">Organismes</a>
-    <a href="{{ url_for('manuals_shop.admin_orders') }}" {% if request.endpoint in ['manuals_shop.admin_orders','manuals_shop.admin_order'] %}aria-current="page"{% endif %}>Commandes manuels et USB</a>
+    <a href="{{ url_for('manuals_shop.admin_orders') }}" {% if request.endpoint in ['manuals_shop.admin_orders','manuals_shop.admin_order'] %}aria-current="page"{% endif %}>Commandes Manuels et Clés USB</a>
     <a href="{{ url_for('manuals_shop.elearning_admin') }}" {% if request.endpoint == 'manuals_shop.elearning_admin' %}aria-current="page"{% endif %}>Commandes e-learning</a>
     {% else %}
     <a href="{{ url_for('manuals_shop.home') }}" {% if request.endpoint == 'manuals_shop.home' %}aria-current="page"{% endif %}>Vue d’ensemble</a>
-    <a href="{{ url_for('manuals_shop.elearning_soon') }}" {% if request.endpoint and request.endpoint.startswith('manuals_shop.elearning_') and request.endpoint != 'manuals_shop.elearning_demo' %}aria-current="page"{% endif %}>Mon e-learning</a>
-    <a href="{{ url_for('manuals_shop.home', _anchor='mes-commandes') }}">Commandes manuels et USB</a>
+    <a href="{{ url_for('manuals_shop.elearning_soon') }}" {% if request.endpoint and request.endpoint.startswith('manuals_shop.elearning_') and request.endpoint != 'manuals_shop.elearning_demo' %}aria-current="page"{% endif %}>Mes accès e-learning</a>
+    <a href="{{ url_for('manuals_shop.home', _anchor='mes-commandes') }}">Commandes Manuels et Clés USB</a>
     <a href="{{ url_for('manuals_shop.organisme_profile') }}" {% if request.endpoint == 'manuals_shop.organisme_profile' %}aria-current="page"{% endif %}>Mon organisme</a>
     {% endif %}
     <a class="organisme-logout" href="{{ url_for('admin_logout') }}">Déconnexion</a>

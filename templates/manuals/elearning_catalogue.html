@@ -1,6 +1,6 @@
 {% extends 'manuals/layout.html' %}
 {% from 'manuals/_elearning_ui.html' import icon, group_title, errors_box %}
-{% block title %}Mon e-learning{% endblock %}
+{% block title %}Mes accès e-learning{% endblock %}
 {% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static',filename='css/elearning-orders.css',v='20261010-3') }}"><link rel="stylesheet" href="{{ url_for('static',filename='css/elearning-dashboard.css',v='20261013-1') }}"><script src="{{ url_for('static',filename='js/elearning-orders.js',v='20261010-3') }}" defer></script>{% endblock %}
 {% block content %}
 {% set current_state = filter_state|default('all') %}{% set search_query = filter_query|default('') %}
@@ -9,7 +9,7 @@
   {{ errors_box(errors|default([])) }}
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <header class="el-workspace-heading">
-    <div><span class="eyebrow blue">VOTRE ESPACE ORGANISME</span><h1>Mon e-learning</h1><p>Vos accès, vos stagiaires et vos factures, chacun à sa place.</p></div>
+    <div><span class="eyebrow blue">VOTRE ESPACE ORGANISME</span><h1>Mes accès e-learning</h1><p>Vos accès, vos stagiaires et vos factures, chacun à sa place.</p></div>
     <a class="button secondary" href="{{ url_for('manuals_shop.public_elearning') }}">Catalogue et démonstrations {{ icon('arrow') }}</a>
   </header>
   <nav class="el-workspace-nav" aria-label="Rubriques e-learning">
