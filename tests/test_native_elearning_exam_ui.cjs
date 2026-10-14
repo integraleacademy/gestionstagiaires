@@ -54,3 +54,57 @@ test('APS choices shuffle by stable ID and preserve their positions when a draft
  assert.equal(reopened.window.document.querySelector('input:checked').value,'3');
  reopened.close();
 });
+
+test('The module timer continues through exam correction and stops when leaving the page', async()=>{
+  const f=fixture(),w=f.window,d=w.document;
+  f.resolve();
+  const tracking={activityId:'aps62-01-examen-blanc',accessToken:'module-access',csrfToken:'csrf',
+    startUrl:'/time/start',heartbeatUrl:'/time/heartbeat',finishUrl:'/time/finish',
+    initialActiveSeconds:12600,initialRemainingSeconds:1800,heartbeatSeconds:15,idleSeconds:300};
+  const panel=d.createElement('section');
+  panel.innerHTML='<strong id="nativeActiveTimer"></strong><strong id="nativeRemainingTime"></strong><span id="nativeDurationStatus"></span><div id="nativeTrackingState"><span></span></div>';
+  d.body.prepend(panel);
+  const cfg=d.createElement('script');cfg.id='nativeElearningConfig';cfg.type='application/json';cfg.textContent=JSON.stringify(tracking);d.body.append(cfg);
+  let now=0,seconds=12600,last=0,active=false,visible=true;
+  const calls=[],intervals=[];
+  w.Date.now=()=>now;
+  w.setInterval=(fn,delay)=>{intervals.push({fn,delay});return intervals.length;};
+  Object.defineProperty(d,'visibilityState',{get:()=>visible?'visible':'hidden'});
+  d.hasFocus=()=>visible;
+  const examFetch=w.fetch;
+  w.fetch=async(url,options)=>{
+    if(!url.startsWith('/time/'))return examFetch(url,options);
+    const body=JSON.parse(options.body);calls.push({url,body,keepalive:options.keepalive});
+    if(active)seconds+=Math.min(20,(now-last)/1000);
+    active=url==='/time/heartbeat'&&body.visible&&body.focused&&body.recent_activity;
+    last=now;
+    return{ok:true,json:async()=>({ok:true,tracking_session_id:'exam-session',active,
+      progress:{active_seconds:seconds,remaining_seconds:14400-seconds,module_complete:false}})};
+  };
+  const settle=async()=>{for(let i=0;i<15;i++)await Promise.resolve();};
+  try{
+    w.eval(fs.readFileSync(path.join(__dirname,'../static/js/native-elearning-player.js'),'utf8'));
+    await settle();
+    assert.equal(calls[0].url,'/time/start');
+    assert.equal(calls[0].body.activity_id,'aps62-01-examen-blanc');
+    assert.equal(d.getElementById('nativeActiveTimer').textContent,'03:30:00');
+    for(let i=0;i<3;i++){d.querySelector('input[value="1"]').click();if(i<2)d.getElementById('examNext').click();}
+    d.getElementById('examForm').dispatchEvent(new w.Event('submit',{cancelable:true}));
+    await settle();
+    assert.equal(d.getElementById('examResult').hidden,false);
+    const heartbeat=intervals.find(i=>i.delay===15000).fn;
+    now=15000;await heartbeat();
+    assert.equal(d.getElementById('nativeActiveTimer').textContent,'03:30:15');
+    assert.equal(d.getElementById('nativeRemainingTime').textContent,'00:29:45');
+    visible=false;d.dispatchEvent(new w.Event('visibilitychange'));await settle();
+    now=45000;await heartbeat();
+    assert.equal(d.getElementById('nativeActiveTimer').textContent,'03:30:15');
+    visible=true;w.dispatchEvent(new w.Event('focus'));await settle();
+    now=60000;await heartbeat();
+    assert.equal(d.getElementById('nativeActiveTimer').textContent,'03:30:30');
+    w.dispatchEvent(new w.Event('pagehide'));await settle();
+    assert.equal(calls.at(-1).url,'/time/finish');
+    assert.equal(calls.at(-1).keepalive,true);
+    const count=calls.length;await heartbeat();assert.equal(calls.length,count);
+  }finally{f.close();}
+});

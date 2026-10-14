@@ -167,7 +167,7 @@
           {% if course.training_label == 'A3P' %}</details>{% else %}</section>{% endif %}
         {% endfor %}
       </nav>
-      {% if exam_url %}<a class="aps-exam-link" href="{{ exam_url }}"><strong>Mon examen blanc →</strong><span>30 questions · correction · nouvelles tentatives</span></a>{% endif %}
+      {% if exam_url %}<a class="aps-exam-link" href="{{ exam_url }}"><strong>Mon examen blanc →</strong><span>30 questions · correction{% if course.id.startswith('academy-aps62-') %} · temps inclus dans le module{% else %} · nouvelles tentatives{% endif %}</span></a>{% endif %}
       <a class="native-back-link" href="{{ portal_url }}">{{ '← Retour aux modules' if preview_mode else '← Retour à mon espace' }}</a>
     </aside>
     <button class="native-sidebar-overlay" id="nativeSidebarOverlay" type="button" tabindex="-1" aria-hidden="true" aria-label="Fermer le sommaire"></button>
@@ -262,7 +262,7 @@
         {% endif %}
 
         {% if exam_url and (is_last_activity or activity_position == activity_count) %}
-        <a class="aps-exam-link aps-exam-link--module-end" href="{{ exam_url }}"><strong>Mon examen blanc →</strong><span>Vous êtes à la fin du module : entraînez-vous avec 30 questions et leur correction.</span></a>
+        <a class="aps-exam-link aps-exam-link--module-end" href="{{ exam_url }}"><strong>Mon examen blanc →</strong><span>Vous êtes à la fin du module : entraînez-vous avec 30 questions et leur correction.{% if course.id.startswith('academy-aps62-') %} Le temps actif compte dans la durée du module.{% endif %}</span></a>
         {% endif %}
         <div class="native-navigation-actions">
           {% if previous_url %}<a class="native-button native-button--secondary" href="{{ previous_url }}">← Précédent</a>{% else %}<span></span>{% endif %}

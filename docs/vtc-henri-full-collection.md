@@ -1,9 +1,17 @@
 # Voix Henri pour toute la collection VTC
 
-État de préparation : 98 vidéos sont contrôlées (96 leçons et les synthèses A/B).
-Les synthèses C à H restent à générer après résolution de l’autorisation réseau
-vers Microsoft. Le manifeste `.pending.json` est un point de reprise, jamais
-chargé par l’application. La publication complète et ses tests finaux sont en attente.
+Collection terminée le 14 octobre 2026 : les 96 leçons et les huit synthèses
+sont présentes. Les six synthèses C à H ont été reprises depuis le cache vocal,
+puis les 103 nouveaux MP4 ont passé le contrôle complet hors ligne. Le pilote
+D.02 validé conserve exactement ses fichiers. Le manifeste final remplace le
+point de reprise `.pending.json` ; le rapport est conservé dans
+`docs/vtc-henri-validation.json`.
+
+La validation d’intégration du 14 octobre réussit les 113 tests ciblés du lecteur,
+des sous-titres, de l’accès aux médias et des progressions. Les 416 combinaisons
+de chronologie antérieure et d’état de visionnage sont conservées sur les 104
+vidéos, sans ajout de temps de formation. Les modifications récentes de `test-v2`
+ont été intégrées avant cette vérification.
 
 Cette livraison étend le principe de narration validé le 13 octobre 2026 aux
 96 leçons et aux huit synthèses des modules A à H. Le pilote D.02 reste celui

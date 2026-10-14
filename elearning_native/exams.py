@@ -1,6 +1,7 @@
 """Versioned practice exams, server-side marking and independent attempt history.
 
-Training attempts never modify course completion, video progress or active time.
+Grading never awards time or changes course/video completion. APS module exam
+pages use the course's active-time tracker independently of the attempt score.
 """
 from __future__ import annotations
 import copy
@@ -13,6 +14,16 @@ from functools import lru_cache
 from pathlib import Path
 from .academy import ROOT, curriculum_manifest
 from . import vtc, a3p, mac_aps
+
+
+def module_exam_activity_id(course):
+    """A traceable time-only activity, outside the course's graded activities."""
+    number = str(course.get('id', '')).removeprefix('academy-aps62-')
+    if (course.get('source', {}).get('type') == 'academy-aps62'
+            and re.fullmatch(r'0[1-9]|1[0-5]', number)
+            and course.get('mock_exam_id') == 'module-' + number):
+        return f'aps62-{number}-examen-blanc'
+    return ''
 
 
 @lru_cache(maxsize=64)
