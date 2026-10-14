@@ -4,6 +4,7 @@
 .connect-home-page .organisme-navigation { padding-top:3px; padding-bottom:3px; }
 .connect-home-page .organisme-navigation a { min-height:36px; padding-top:6px; padding-bottom:6px; }
 .connect-home { max-width:1340px; }
+.connect-home [role=tabpanel][hidden] { display:none; }
 .connect-home h2 em { font-style:normal; color:var(--home-orange); }
 .connect-home a { text-underline-offset:4px; }
 .connect-home .button { border-radius:12px; min-height:48px; line-height:1.5; }
