@@ -9,7 +9,7 @@ import elearning_orders as learning
 import elearning_sales as sales
 from test_manuals_shop import shop, csrf, all_data, order_form
 from test_manuals_commerce import merchant, run, retry
-from test_elearning_orders import prepare, form, latest, submit, mark_paid
+from test_elearning_orders import send_accesses, prepare, form, latest, submit, mark_paid
 from test_elearning_groups import create, save, person, quote, purchases, record
 
 
@@ -138,7 +138,9 @@ def test_existing_payment_and_learner_access_continue_during_pause(shop, merchan
     mark_paid(merchant)
     retry(order)
     order = latest(shop)
-    assert learning.entitled(order) and order["activated_at"]
+    assert learning.entitled(order) and not order.get("activated_at")
+    order = send_accesses(shop, order)
+    assert order["activated_at"]
     url = ROOT + "/commandes/" + order["id"]
     assert shop["client"].get(url).status_code == 200
     assert shop["client"].get(url + "/statut").json["active"]

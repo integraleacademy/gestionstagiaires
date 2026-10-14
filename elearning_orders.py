@@ -1,8 +1,9 @@
 """Partner e-learning orders, using the existing tenant store and merchant queue.
 
 An entitlement is never inferred from a browser return URL or a posted price.
-Only a fully paid, verified invoice (or an allowed free price snapshot) can
-activate it. Fixed-price courses never allow a free or discounted entitlement.
+Only a fully paid, verified invoice (or an allowed free price snapshot) and
+the centre's explicit dispatch request can activate and send new accesses.
+Fixed-price courses never allow a free or discounted entitlement.
 Learner records stay outside administrative trainee sessions.
 """
 from __future__ import annotations
@@ -29,7 +30,7 @@ COURSES = {
     "mac-aps": {"name": "MAC APS", "title": "Maintien et actualisation des compétences APS", "color": "#173c5b", "default_cents": 4900, "fixed_cents": 4900, "legacy_fixed_cents": (6000,)},
     "vtc": {"name": "VTC", "title": "Chauffeur VTC", "color": "#7951a8", "default_cents": 15000, "folder": "vtc"},
 }
-CUSTOMER_ENDPOINTS = {"manuals_shop.elearning_checkout", "manuals_shop.elearning_order", "manuals_shop.elearning_confirm", "manuals_shop.elearning_refresh", "manuals_shop.elearning_status", "manuals_shop.elearning_invoice"}
+CUSTOMER_ENDPOINTS = {"manuals_shop.elearning_checkout", "manuals_shop.elearning_order", "manuals_shop.elearning_confirm", "manuals_shop.elearning_refresh", "manuals_shop.elearning_status", "manuals_shop.elearning_invoice", "manuals_shop.elearning_send_accesses"}
 MAX_LEARNERS = 100
 
 
@@ -135,9 +136,15 @@ def entitled(order):
 
 def status_view(order):
     state = order.get("commerce", {})
+    sent = sum(state.get("emails", {}).get("learner_" + p["id"], {}).get("status") == "sent"
+               for p in order.get("learners", []))
+    complete = bool(order.get("learners")) and sent == len(order["learners"])
+    requested = bool(order.get("access_dispatch_requested_at"))
     return {"status": state.get("status"), "payment_status": state.get("payment_status"), "invoice_status": state.get("invoice_status"),
             "payment_url": bool(state.get("payment_url")), "payment_link_status": state.get("payment_link_status"),
-            "active": bool(order.get("activated_at")), "mail_sent": sum(m.get("status") == "sent" for k, m in state.get("emails", {}).items() if k.startswith("learner_"))}
+            "active": bool(order.get("activated_at")), "mail_sent": sent,
+            "dispatch_requested": requested, "dispatch_complete": complete,
+            "can_send": entitled(order) and not requested and not complete}
 
 
 
@@ -192,10 +199,11 @@ def access_token(host, order, person):
 
 
 def activate(host, order):
-    if not entitled(order):
+    if not entitled(order) or not order.get("access_dispatch_requested_at"):
         return False
     def update(current):
-        if current.get("commerce", {}).get("lease_token") != order["commerce"]["lease_token"] or not entitled(current):
+        if (current.get("commerce", {}).get("lease_token") != order["commerce"]["lease_token"]
+                or not entitled(current) or not current.get("access_dispatch_requested_at")):
             raise commerce.ReviewRequired("La commande ne permet pas l’activation des accès.")
         now = host._now_iso()
         for person in current["learners"]:
@@ -216,19 +224,22 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False):
     emails = copy.deepcopy(state.get("emails") or {})
     if emails.get(key, {}).get("status") == "sent":
         return True
-    if person and (not entitled(order) or not person.get("activated_at")):
+    if person and (not entitled(order) or not person.get("activated_at") or not order.get("access_dispatch_requested_at")):
         return False
     emails[key] = {"status": "sending", "attempted_at": host._now_iso()}
     commerce._save(host, order, emails=emails)
     paid = entitled(order)
-    title = "Votre formation vous attend" if person else ("Vos accès sont activés" if paid else "Votre commande e-learning")
+    title = "Votre formation vous attend" if person else ("Vos accès sont prêts à être envoyés" if paid and not order.get("access_dispatch_requested_at") else "Votre commande e-learning")
     link = base_url(host) + ("/apprendre/" + access_token(host, order, person) if person else "/admin/organisme/e-learning/commandes/" + order["id"])
     brand = learner_brand(host.load_data(run_background_tasks=False), order, host=host) if person else None
     subject = ("Votre accès personnel " if person else "Commande e-learning ") + course_label(order["course_code"]) + " · " + (brand["name"] if person else "Intégrale Academy")
     if invoice:
         subject = ("Facture acquittée " if paid else "Facture à régler ") + state.get("invoice_number", "") + " · E-learning"
     body = host.app.jinja_env.get_template("manuals/elearning_email.html").render(order=order, person=person, title=title, link=link, paid=paid, invoice=invoice, money=money, learner_brand=brand)
-    plain = (f"Bonjour {person['first_name']},\nVotre accès personnel au parcours {course_label(order['course_code'])} est activé.\n" if person else f"Commande {order['reference']} : {len(order['learners'])} accès {course_label(order['course_code'])}.\nTotal : {money(order['total_cents'])} TTC.\n" + ("Accès activés.\n" if paid else "Les accès seront activés uniquement après règlement intégral de la facture.\n"))
+    dispatch_note = ("Votre demande d’envoi des accès est enregistrée.\n" if order.get("access_dispatch_requested_at")
+                     else "Cliquez sur « Envoyer les accès e-learning aux stagiaires » dans votre commande pour déclencher l’envoi.\n" if paid
+                     else "Après règlement intégral, cliquez sur « Envoyer les accès e-learning aux stagiaires » dans votre commande.\n")
+    plain = (f"Bonjour {person['first_name']},\nVotre accès personnel au parcours {course_label(order['course_code'])} est activé.\n" if person else f"Commande {order['reference']} : {len(order['learners'])} accès {course_label(order['course_code'])}.\nTotal : {money(order['total_cents'])} TTC.\n" + dispatch_note)
     if order["course_code"] == "mac-aps":
         plain += "Ce programme numérique de préparation et de révision ne délivre pas à lui seul l’attestation réglementaire de stage MAC APS.\n"
     plain += "Ouvrir mon espace : " + link
@@ -281,7 +292,7 @@ def process_claimed(host, order):
             if not entitled(order):
                 commerce._ensure_payment_link(host, order, invoice)
                 outcome = "waiting_payment"
-        if entitled(order):
+        if entitled(order) and order.get("access_dispatch_requested_at"):
             activate(host, order)
     except commerce.PaymentPending as exc:
         outcome, error = "payment_pending", str(exc)
@@ -298,7 +309,7 @@ def process_claimed(host, order):
     if state.get("invoice_id") and state.get("invoice_status") in {"unpaid", "paid"}:
         invoice_key = "invoice_paid" if entitled(order) else "invoice_due"
         sent = send_message(host, order, invoice_key, order["centre"]["email"], invoice=True) and sent
-    if entitled(order) and order.get("activated_at"):
+    if entitled(order) and order.get("access_dispatch_requested_at") and order.get("activated_at"):
         for person in order["learners"]:
             sent = send_message(host, order, "learner_" + person["id"], person["email"], person=person) and sent
     state = order["commerce"]
@@ -306,8 +317,18 @@ def process_claimed(host, order):
     # Keep email retries durable even after a transient mail outage. Sent keys are never replayed.
     queued = tracking or not sent or outcome == "retry"
     delay = (60 if outcome in {"ready", "waiting_payment"} else 300) if tracking else min(60 * 2 ** min(state.get("attempts", 1), 6), 3600)
-    commerce._save(host, order, status=outcome, error=error or ("Un e-mail sera renvoyé automatiquement." if not sent else ""),
-                   queued=queued, next_attempt=time.time() + delay, attempts=0 if sent and tracking else state.get("attempts", 0), lease_until=0)
+    def finish(current):
+        current_state = current.setdefault("commerce", {})
+        if current_state.get("lease_token") != state.get("lease_token"):
+            raise commerce.ReviewRequired("Traitement repris par une autre exécution.")
+        # A centre may click after payment is saved while this worker is still
+        # sending the invoice. Preserve that request and wake a fresh run.
+        new_request = bool(current.get("access_dispatch_requested_at")) and not order.get("access_dispatch_requested_at")
+        current_state.update(status=outcome, error=error or ("Un e-mail sera renvoyé automatiquement." if not sent else ""),
+                             queued=queued or new_request, next_attempt=0 if new_request else time.time() + delay,
+                             attempts=0 if sent and tracking else state.get("attempts", 0), lease_until=0)
+        return {}
+    commerce._mutate(host, order["partner_id"], order["id"], finish)
 
 
 def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_worker):
@@ -415,6 +436,28 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         order = find(host.load_data(), oid)
         # No learner identities or access tokens in this polling response.
         return status_view(order)
+
+    @bp.post("/admin/organisme/e-learning/commandes/<oid>/envoyer-acces")
+    @customer
+    def elearning_send_accesses(oid):
+        check_csrf()
+        _, partner = partner_data()
+        def request_dispatch(data):
+            order = find(data, oid)
+            if not entitled(order):
+                abort(409, "L’envoi des accès est bloqué jusqu’à la confirmation du règlement intégral.")
+            delivery = status_view(order)
+            if delivery["dispatch_complete"] or delivery["dispatch_requested"]:
+                return {"complete": delivery["dispatch_complete"]}
+            order.update(access_dispatch_requested_at=host._now_iso(), access_dispatch_requested_by=session.get("user_id"))
+            # Keep any current worker's lease: it will pick up this request at
+            # completion. A double click never creates another delivery.
+            order.setdefault("commerce", {}).update(queued=True, next_attempt=0)
+            return {"complete": False}
+        result = host._atomic_update_data(request_dispatch, partner_id=partner["id"])
+        kick_worker()
+        flash("Les accès ont déjà été envoyés." if result.get("complete") else "L’envoi des accès e-learning aux stagiaires est demandé. Vous pouvez suivre chaque e-mail ci-dessous.", "success")
+        return redirect(url_for("manuals_shop.elearning_order", oid=oid), code=303)
 
     @bp.post("/admin/organisme/e-learning/commandes/<oid>/actualiser")
     @host.admin_login_required

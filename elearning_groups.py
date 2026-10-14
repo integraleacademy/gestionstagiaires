@@ -54,13 +54,17 @@ def group_view(data, group):
     for person in group.get("learners", []):
         row = copy.deepcopy(person)
         order, enrolled = reservations.get(person["id"], (None, None))
-        row.update(locked=bool(order), order_id=order["id"] if order else None,
-                   status="active" if order and learning.entitled(order) and enrolled.get("activated_at") else "waiting_payment" if order else "draft")
+        status = "draft"
+        if order:
+            status = ("active" if enrolled.get("activated_at") else "sending" if order.get("access_dispatch_requested_at") else "ready_to_send") if learning.entitled(order) else "waiting_payment"
+        row.update(locked=bool(order), order_id=order["id"] if order else None, status=status)
         people.append(row)
     pending = [p for p in people if not p["locked"]]
     result.update(learners=people, pending_learners=pending, orders=orders,
                   pending_count=len(pending), active_count=sum(p["status"] == "active" for p in people),
-                  waiting_count=sum(p["status"] == "waiting_payment" for p in people),
+                  waiting_count=sum(p["locked"] and p["status"] != "active" for p in people),
+                  dispatch_orders=[{"order": order, "delivery": learning.status_view(order)} for order in orders
+                                   if order.get("status") not in {"draft", "cancelled"} and order.get("commerce", {}).get("invoice_status") != "canceled"],
                   total_count=len(people), can_change_course=not orders,
                   deletion_pending=bool(group.get("deletion_requested_at")), deletion_error=group.get("deletion_error", ""),
                   can_delete=not group.get("deletion_requested_at") and not deletion_block_reason(orders),

@@ -150,9 +150,14 @@
     update();
   }
 
+  document.querySelectorAll('[data-el-dispatch-form]').forEach(form => form.addEventListener('submit', () => {
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true; button.textContent = 'Envoi demandé…';
+  }));
+
   const status = document.querySelector('[data-el-status]');
   if (status) {
-    const signature = value => JSON.stringify([value.status, value.payment_status, value.invoice_status, value.active, value.mail_sent, value.payment_url, value.payment_link_status]);
+    const signature = value => JSON.stringify([value.status, value.payment_status, value.invoice_status, value.active, value.mail_sent, value.payment_url, value.payment_link_status, value.can_send, value.dispatch_requested, value.dispatch_complete]);
     let previous = null;
     try { previous = status.dataset.elInitial ? signature(JSON.parse(status.dataset.elInitial)) : null; } catch (_) { /* A manual refresh remains available. */ }
     let ticks = 0;

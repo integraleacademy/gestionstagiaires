@@ -9,7 +9,7 @@ from PIL import Image
 import app as host
 import elearning_orders as learning
 from test_elearning_groups import HiddenFields, create
-from test_elearning_orders import mark_paid, submit
+from test_elearning_orders import send_accesses, mark_paid, submit
 from test_manuals_commerce import merchant, retry, run
 from test_manuals_shop import all_data, login, shop, signup
 
@@ -94,6 +94,7 @@ def test_late_current_logo_and_identity_brand_own_learners_without_changing_purc
     assert not order_by_id(shop, order["id"]).get("activated_at")
     mark_paid(merchant)
     retry(order)
+    send_accesses(shop, order)
     current = order_by_id(shop, order["id"])
     learner_messages = [mail for mail in shop["mails"] if mail[0][0] in {"camille@example.test", "alex@example.test"}]
     assert len(learner_messages) == 2
@@ -130,6 +131,7 @@ def test_centre_without_logo_never_borrows_another_tenants_logo(shop):
     brand = learning.learner_brand(data, order, host=host)
     assert brand["name"] == "Centre sans logo" and not brand.get("logo_url")
     run(order)
+    send_accesses(shop, order)
     for args, _ in shop["mails"]:
         if args[0] in {"camille@example.test", "alex@example.test"}:
             assert "Centre sans logo" in args[2] and other_brand["logo_url"] not in args[2]
@@ -183,6 +185,7 @@ def test_profile_email_replaces_legacy_contact_on_learner_mail_and_landing(shop)
     partner = partner_by_id(shop, order["partner_id"])
     assert partner["email"] == current_email and partner["contact_email"] == legacy
     run(order)
+    send_accesses(shop, order)
     learner_messages = [mail for mail in shop["mails"] if mail[0][0] in {"camille@example.test", "alex@example.test"}]
     assert len(learner_messages) == 2
     for args, kwargs in learner_messages:

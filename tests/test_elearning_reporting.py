@@ -14,7 +14,7 @@ import elearning_orders as learning
 import elearning_reporting as reporting
 from elearning_native.exams import ExamStore
 from elearning_native.store import NativeElearningStore
-from test_elearning_orders import latest, submit
+from test_elearning_orders import send_accesses, latest, submit
 from test_manuals_commerce import run
 from test_manuals_shop import all_data, login, shop, signup
 
@@ -26,6 +26,7 @@ def report_url(order, person=None):
 def activated(shop):
     order = submit(shop, free=True)
     run(order)
+    send_accesses(shop, order)
     return latest(shop)
 
 
@@ -142,6 +143,7 @@ def test_report_and_exports_are_tenant_scoped_and_require_activation(shop):
     for suffix in ("", "/attestation.pdf", "/connexions.csv"):
         assert shop["client"].get(url + suffix).status_code == 404
     run(order)
+    send_accesses(shop, order)
     order = latest(shop)
     other = host.app.test_client()
     signup(other, email="other-report@example.test")

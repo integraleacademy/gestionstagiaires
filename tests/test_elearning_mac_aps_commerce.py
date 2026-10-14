@@ -10,7 +10,7 @@ import manuals_commerce as commerce
 from elearning_native import mac_aps
 from manuals_public import TERMS_VERSION
 from test_elearning_groups import ROOT, confirm, create, person, purchases, quote, save
-from test_elearning_orders import form, latest, mark_paid, prepare
+from test_elearning_orders import send_accesses, form, latest, mark_paid, prepare
 from test_manuals_commerce import merchant, retry, run
 from test_manuals_shop import all_data, csrf, login, shop, signup
 
@@ -133,7 +133,9 @@ def test_mac_group_paid_only_activation_and_centre_branded_learner_access(shop, 
     mark_paid(merchant)
     retry(order)
     paid = latest(shop)
-    assert learning.entitled(paid) and paid["activated_at"]
+    assert learning.entitled(paid) and not paid.get("activated_at")
+    paid = send_accesses(shop, paid)
+    assert paid["activated_at"]
     virtual, person_record = learning.learner_context(all_data(shop), token)
     assert virtual["training_type"] == "MAC APS" and mac_aps.is_training(virtual)
     assert [m["course_version"] for m in virtual["aps_native_modules"]] == [mac_aps.VERSION] * 3
@@ -170,6 +172,7 @@ def test_mac_later_additions_keep_the_paid_batch_and_charge_only_new_people(shop
         run(first)
         mark_paid(merchant)
         retry(first)
+        send_accesses(shop, first)
     paid = copy.deepcopy(purchases(shop)[0])
     assert paid["unit_cents"] == paid["total_cents"] == original_price
     token = learning.access_token(host, paid, paid["learners"][0])

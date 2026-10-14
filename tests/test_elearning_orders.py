@@ -56,6 +56,15 @@ def submit(shop, *, code="aps", free=False):
     return latest(shop)
 
 
+def send_accesses(shop, order):
+    client = shop["client"]
+    url = "/admin/organisme/e-learning/commandes/" + order["id"]
+    response = client.post(url + "/envoyer-acces", data={"csrf_token": csrf(client, url)})
+    assert response.status_code == 303, response.text
+    run(order)
+    return next(o for o in all_data(shop)["manual_orders"] if o["id"] == order["id"])
+
+
 def mark_paid(merchant):
     merchant["invoice"].update(status="paid", paid_amount=copy.deepcopy(merchant["invoice"]["total_amount"]), paid_at="2026-10-08")
 
@@ -85,12 +94,15 @@ def test_group_quoted_server_side_and_idempotent(shop, merchant):
     assert c.get(url+"/statut").json["active"] is False
 
 
-def test_paid_invoice_activates_individual_emails_only_once(shop, merchant):
+def test_paid_invoice_waits_for_centre_then_sends_individual_emails_only_once(shop, merchant):
     order = submit(shop)
     run(order)
     mark_paid(merchant)
     retry(order)
     order = latest(shop)
+    assert learning.entitled(order) and not order.get("activated_at")
+    assert not any(m[0][0] in {"camille@example.test", "alex@example.test"} for m in shop["mails"])
+    order = send_accesses(shop, order)
     assert learning.entitled(order) and order["activated_at"]
     assert order["commerce"]["payment_status"] == "paid"
     assert order["commerce"]["queued"] is False
@@ -131,7 +143,8 @@ def test_free_vtc_never_calls_billing_and_pins_current_curriculum(shop, monkeypa
     order = submit(shop, code="vtc", free=True)
     monkeypatch.setattr(host,"_qonto_request",lambda *a,**k: pytest.fail("No Qonto call for free access"))
     run(order)
-    order = latest(shop)
+    assert not latest(shop).get("activated_at")
+    order = send_accesses(shop, order)
     assert order["total_cents"] == 0 and learning.entitled(order)
     manifest = json.loads((Path(learning.__file__).parent / "elearning_native/vtc/manifest.json").read_text())
     assert [(m["course_id"], m["course_version"], m["required_minutes"]) for m in order["modules"]] == [
@@ -149,6 +162,7 @@ def test_failed_learner_mail_retries_without_recreating_access(shop, merchant, m
     sender = host.brevo_send_email
     monkeypatch.setattr(host,"brevo_send_email", lambda email,*a,**k: {"ok":False} if email == "alex@example.test" else sender(email,*a,**k))
     retry(order)
+    send_accesses(shop, order)
     first = latest(shop)
     assert first["commerce"]["queued"] is True
     assert first["learners"][0]["activated_at"]
@@ -209,7 +223,7 @@ def test_admin_can_set_partner_tariff_and_gratuity(shop):
 
 
 def test_inactive_partner_or_cancelled_order_blocks_existing_token(shop):
-    order=submit(shop,free=True);run(order);order=latest(shop)
+    order=submit(shop,free=True);run(order);order=send_accesses(shop,order)
     token=learning.access_token(host,order,order["learners"][0]);data=all_data(shop)
     assert learning.learner_context(data,token)[1]
     data["manual_orders"][0]["status"]="cancelled"
@@ -228,6 +242,8 @@ def test_personal_link_opens_only_purchased_curriculum(shop, code):
     access="/apprendre/"+token
     assert learner.get(access).status_code == 404
     run(order)
+    assert learner.get(access).status_code == 404
+    send_accesses(shop,order)
     page=learner.get(access)
     assert page.status_code == 200 and person["first_name"] in page.text
     response=learner.post(access,data={"csrf_token":csrf(learner,access)})
@@ -255,7 +271,8 @@ def test_partial_payment_is_rechecked_until_fully_paid(shop, merchant):
         return {}
     host._atomic_update_data(ready,partner_id=order["partner_id"])
     run(order)
-    assert learning.entitled(latest(shop)) and latest(shop)["activated_at"]
+    assert learning.entitled(latest(shop)) and not latest(shop).get("activated_at")
+    assert send_accesses(shop,order)["activated_at"]
 
 
 def test_individual_order_and_viewer_cannot_confirm(shop):
@@ -286,6 +303,7 @@ def test_learner_email_uses_centre_identity_and_reply_to_without_platform_contac
     host._atomic_update_data(brand, partner_id=order["partner_id"])
     historical_centre = copy.deepcopy(latest(shop)["centre"])
     run(order)
+    send_accesses(shop, order)
     messages = [mail for mail in shop["mails"] if mail[0][0] in {"camille@example.test", "alex@example.test"}]
     assert len(messages) == 2
     for args, kwargs in messages:
@@ -332,6 +350,7 @@ def test_learner_sender_never_uses_unverified_partner_address_as_from(shop, monk
     order = submit(shop, free=True)
     monkeypatch.setattr(host, "ELEARNING_SENDER_EMAIL", "", raising=False)
     run(order)
+    send_accesses(shop, order)
     learner_messages = [mail for mail in shop["mails"] if mail[0][0] in {"camille@example.test", "alex@example.test"}]
     assert len(learner_messages) == 2
     for _, kwargs in learner_messages:

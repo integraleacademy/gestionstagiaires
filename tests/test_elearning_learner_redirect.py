@@ -2,13 +2,14 @@
 import app as host
 import elearning_orders as learning
 
-from test_elearning_orders import submit, run
+from test_elearning_orders import send_accesses, submit, run
 from test_manuals_shop import shop
 
 
 def test_partner_exam_without_session_returns_to_centre_access_page(shop):
     order = submit(shop, free=True)
     run(order)
+    send_accesses(shop, order)
     token = learning.access_token(host, order, order["learners"][0])
     learner = host.app.test_client()
 

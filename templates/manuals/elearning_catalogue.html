@@ -20,7 +20,7 @@
   {% if current_view == 'catalogue' %}
     {% include 'manuals/_elearning_order_catalogue.html' %}
   {% elif current_view == 'orders' %}
-    <p class="el-view-intro">Retrouvez vos commandes d’accès e-learning. Ouvrez une commande pour consulter sa facture, son règlement et l’activation des accès.</p>
+    <p class="el-view-intro">Retrouvez vos commandes d’accès e-learning. Ouvrez une commande pour consulter sa facture, son règlement et déclencher l’envoi des accès.</p>
     {% if orders %}{% include 'manuals/_elearning_history.html' %}
     {% else %}<div class="el-empty"><span class="el-empty-icon">{{ icon('card') }}</span><h2>Aucune commande e-learning pour le moment</h2><p>Les groupes en préparation sont dans « Mes groupes et stagiaires ». Vos commandes apparaîtront ici après validation des accès.</p>{% if elearning_sales_enabled %}<a class="button primary" href="{{ url_for('manuals_shop.elearning_soon',view='catalogue') }}">Commander des accès {{ icon('arrow') }}</a>{% else %}<span class="el-sales-disabled" aria-disabled="true">{{ elearning_sales_title }}</span>{% endif %}</div>{% endif %}
   {% else %}

@@ -208,7 +208,7 @@ test('individual creation hides/disables group naming, switching back restores i
   field.querySelector = selector => { assert.equal(selector, 'input'); return input; };
   const createLabel = new Element();
   const nodes = {'el-create-form': create, 'el-group-name-field': field, 'el-create-label': createLabel};
-  vm.runInNewContext(script, {document: {querySelector: () => null, getElementById: id => nodes[id] || null}, Intl});
+  vm.runInNewContext(script, {document: {querySelectorAll: () => [], querySelector: () => null, getElementById: id => nodes[id] || null}, Intl});
   assert.equal(field.hidden, true); assert.equal(input.disabled, true); assert.equal(input.required, false);
   assert.equal(createLabel.textContent, 'Créer mon accès individuel');
   mode.value = 'group'; create.dispatch('change');
@@ -237,7 +237,7 @@ function bootDashboard() {
   const dashboard = new Element();
   dashboard.querySelector = selector => nodes[selector] || null;
   dashboard.querySelectorAll = selector => selector === '[data-el-group]' ? cards : selector === '[data-el-state]' ? links : [];
-  const document = {querySelector: selector => selector === '[data-el-dashboard]' ? dashboard : null, getElementById: () => null};
+  const document = {querySelectorAll: () => [], querySelector: selector => selector === '[data-el-dashboard]' ? dashboard : null, getElementById: () => null};
   const window = new Element({location: {href: 'https://example.fr/admin/organisme/e-learning'}});
   window.history = {replaceState: (_state, _title, url) => { window.lastUrl = url; }};
   vm.runInNewContext(script, {document, window, Intl, URL}, {filename: 'elearning-orders.js'});
@@ -298,4 +298,20 @@ test('search form and clear button work without losing the selected state', () =
   assert.equal(page.cards[1].hidden, false);
   assert.equal(page.nodes['#el-no-results'].hidden, true);
   assert.equal(page.nodes['#el-clear-search'].hidden, true);
+});
+
+test('dispatch disables its submit button while preserving native POST submission', () => {
+  const form = new Element();
+  const button = new Element({textContent: 'Envoyer les accès e-learning aux stagiaires'});
+  form.querySelector = selector => selector === 'button[type="submit"]' ? button : null;
+  const document = {
+    getElementById: () => null, querySelector: () => null,
+    querySelectorAll: selector => selector === '[data-el-dispatch-form]' ? [form] : [],
+  };
+  vm.runInNewContext(script, {document, Intl});
+  assert.equal(button.disabled, false);
+  const event = form.dispatch('submit');
+  assert.equal(event.defaultPrevented, false);
+  assert.equal(button.disabled, true);
+  assert.equal(button.textContent, 'Envoi demandé…');
 });

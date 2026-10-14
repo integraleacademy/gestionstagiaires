@@ -1,0 +1,14 @@
+<div class="el-dispatch-panel" data-el-dispatch="{{ order.id }}">
+  <h3>Envoi des accès aux stagiaires</h3>
+  {% if delivery.dispatch_complete %}
+    <p role="status"><strong>{{ delivery.mail_sent }} / {{ order.learners|length }} e-mails d’accès envoyés.</strong> Les accès déjà transmis sont conservés.</p>
+  {% elif delivery.dispatch_requested %}
+    <p role="status"><strong>Envoi demandé · {{ delivery.mail_sent }} / {{ order.learners|length }} e-mails envoyés.</strong> Les envois restants sont traités automatiquement. Les e-mails déjà envoyés ne sont pas renvoyés.</p>
+  {% else %}
+    <p id="el-dispatch-help-{{ order.id }}">{% if delivery.can_send %}<strong>{{ 'Accès gratuits prêts à être envoyés.' if order.free_snapshot else 'Paiement confirmé : les accès sont prêts à être envoyés.' }}</strong> Vous choisissez quand les stagiaires reçoivent leur lien personnel.{% else %}Le bouton sera disponible après confirmation du règlement intégral de cette commande. Le paiement seul ne déclenche aucun e-mail d’accès aux stagiaires.{% endif %}</p>
+    {% if not staff|default(false) %}<form method="post" action="{{ url_for('manuals_shop.elearning_send_accesses',oid=order.id) }}" data-el-dispatch-form>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="button primary" type="submit" aria-describedby="el-dispatch-help-{{ order.id }}" {% if not delivery.can_send %}disabled{% endif %}>Envoyer les accès e-learning aux stagiaires</button>
+    </form>{% else %}<p class="small">Le centre de formation déclenche l’envoi depuis son espace organisme.</p>{% endif %}
+  {% endif %}
+</div>

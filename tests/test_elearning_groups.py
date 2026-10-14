@@ -15,7 +15,7 @@ from werkzeug.datastructures import MultiDict
 
 import app as host
 import elearning_orders as learning
-from test_elearning_orders import mark_paid, prepare
+from test_elearning_orders import send_accesses, mark_paid, prepare
 from test_manuals_commerce import merchant, retry, run
 from test_manuals_shop import all_data, csrf, login, shop, signup
 
@@ -141,7 +141,7 @@ def test_create_is_idempotent_and_individual_mode_allows_one_person_only(shop):
     assert order["total_cents"] == 5900 and len(order["learners"]) == 1
 
 
-def test_quote_does_not_charge_and_verified_full_payment_alone_activates_batch(shop, merchant):
+def test_quote_does_not_charge_and_paid_batch_waits_for_dispatch(shop, merchant):
     prepare(shop)
     client = shop["client"]
     url = create(client)
@@ -169,7 +169,8 @@ def test_quote_does_not_charge_and_verified_full_payment_alone_activates_batch(s
     assert not purchases(shop)[0].get("activated_at")
     mark_paid(merchant)
     retry(order)
-    paid = purchases(shop)[0]
+    assert learning.entitled(purchases(shop)[0]) and not purchases(shop)[0].get("activated_at")
+    paid = send_accesses(shop, order)
     assert learning.entitled(paid) and paid["activated_at"]
     for learner in paid["learners"]:
         token = learning.access_token(host, paid, learner)
@@ -216,6 +217,7 @@ def test_new_people_after_payment_are_a_separate_batch_and_keep_existing_access(
     run(first)
     mark_paid(merchant)
     retry(first)
+    send_accesses(shop, first)
     paid = copy.deepcopy(purchases(shop)[0])
     token = learning.access_token(host, paid, paid["learners"][0])
     group = record(shop, url)
@@ -290,7 +292,7 @@ def test_free_access_still_requires_final_confirmation_and_never_calls_billing(s
     assert order["free_snapshot"] is True and order["total_cents"] == 0
     assert not order.get("activated_at")
     run(order)
-    paid = purchases(shop)[0]
+    paid = send_accesses(shop, order)
     assert paid["activated_at"] and learning.entitled(paid)
     manifest = json.loads((Path(learning.__file__).parent / "elearning_native/vtc/manifest.json").read_text())
     assert [(m["course_id"], m["course_version"], m["required_minutes"]) for m in paid["modules"]] == [
@@ -711,6 +713,8 @@ def test_multiple_batches_cancel_in_sequence_and_a_late_payment_preserves_the_gr
     # roster can once again be prepared without altering the paid enrolment.
     run(paid)
     activated = next(order for order in purchases(shop) if order["id"] == paid["id"])
+    assert learning.entitled(activated) and not activated.get("activated_at")
+    activated = send_accesses(shop, activated)
     assert activated["activated_at"] and learning.entitled(activated)
     token = learning.access_token(host, activated, activated["learners"][0])
     assert learning.learner_context(all_data(shop), token)[1]["id"] == activated["learners"][0]["id"]
