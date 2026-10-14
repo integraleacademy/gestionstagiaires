@@ -66,6 +66,21 @@
 .organisme-identity__hours { font-size: 11px; color: #d4dfed; }
 .organisme-identity__address { font-style: normal; }
 .organisme-identity__address > a { margin-top: 4px; }
+.organisme-identity .organisme-identity__group {
+  margin: 18px 0 0;
+  padding: 10px 14px;
+  border-left: 2px solid #e5a453;
+  border-radius: 0 6px 6px 0;
+  background: #203b5b;
+  color: #e2eaf4;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.organisme-identity__group a {
+  color: #ffd39b;
+  font-weight: 700;
+  text-decoration: underline;
+}
 .organisme-identity__legal {
   display: flex;
   flex-wrap: wrap;
