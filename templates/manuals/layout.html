@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-navigation.css', v='20261013-1') }}">
   <script src="{{ url_for('static', filename='js/manuals-shop.js', v='20261012-experience') }}" defer></script>
 </head>
-<body{% if public %} class="public-storefront"{% endif %}>
+<body class="{% if public %}public-storefront {% endif %}{% block body_class %}{% endblock %}">
   {% if cart_completed_key %}<div hidden data-cart-complete="{{ cart_completed_key }}"></div>{% endif %}
   <a class="skip-link" href="#main-content">Aller au contenu</a>
   <header class="site-header">
@@ -59,6 +59,7 @@
   <footer class="site-footer"><span>Intégrale Academy · Des supports pour transmettre.</span><a href="mailto:clement@integraleacademy.com">clement@integraleacademy.com</a><a href="tel:+33422470768">04 22 47 07 68</a></footer>
   {% endif %}
   <nav class="legal-links" aria-label="Informations pratiques"><a href="/personnalisation-livraison">Personnalisation et livraison</a><a href="/mentions-legales">Mentions légales</a><a href="/conditions-de-vente">Conditions de vente</a><a href="/confidentialite">Confidentialité</a></nav>
+  {% block extra_scripts %}{% endblock %}
 </body>
 </html>
 
