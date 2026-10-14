@@ -52,7 +52,13 @@ class EditorialContentTests(unittest.TestCase):
                             correct, _ = _evaluate_answer(activity, {'selected': [option['id']]})
                             self.assertEqual(correct, option['is_correct'])
                     practice = activity.get('practice', {})
-                    if practice.get('revision') != REVISION:
+                    if practice.get('dossier'):
+                        # v16 adds a document case before the three retained
+                        # v15 transfer situations; keep checking those sources.
+                        practice = {**practice, 'exercises': [ex for ex in practice['exercises']
+                                    if ex['id'].startswith('v15-')]}
+                        self.assertEqual(len(practice['exercises']), 3)
+                    if practice.get('revision') != REVISION and not practice.get('dossier'):
                         continue
                     public = public_practice(practice)
                     good, bad = {}, {}

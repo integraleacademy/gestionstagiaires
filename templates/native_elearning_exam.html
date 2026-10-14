@@ -8,6 +8,7 @@
   <h2>{{ 'Examen final et correction' if final_time_context else module_context.title }}</h2>
   {% if final_time_context %}<p>Le temps actif des questions, des corrections et des nouvelles tentatives s’ajoute au <strong>temps total de votre parcours</strong>. Les durées obligatoires des 15 modules restent à effectuer intégralement.</p>{% else %}
   <p>Examen blanc et corrigé inclus dans {% if module_context.required_minutes %}les <strong>{% if module_context.required_minutes // 60 %}{{ module_context.required_minutes // 60 }} h{% endif %}{% if module_context.required_minutes % 60 %} {{ module_context.required_minutes % 60 }} min{% endif %}</strong>{% else %}la durée{% endif %} de ce module.</p>
+  {% if module_context.study_plan %}<p>Le déroulé réserve <strong>{{ module_context.study_plan.exam_minutes }} min</strong> pour les questions et l’étude des corrections. C’est un repère de travail : le compteur enregistre votre durée réelle. Lisez les explications et reprenez les notions qui vous ont posé difficulté.</p>{% endif %}
   {% endif %}
   {% if tracking_config %}
   {% macro clock(seconds) %}{% set total = seconds|int %}{{ '%02d:%02d:%02d'|format(total // 3600, (total % 3600) // 60, total % 60) }}{% endmacro %}

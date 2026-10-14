@@ -41,6 +41,7 @@ from werkzeug.exceptions import Conflict
 from .videos import activity_playback_policy, activity_videos, course_videos, video_blocker, videos_complete
 from .academy import curriculum_manifest
 from .aps_editorial import question_for_history
+from .aps_workload import summarize as summarize_aps_workload
 from . import vtc, a3p, mac_aps
 from .mac_aps_timing import completion_blocker as macaps_completion_blocker
 from .exams import ExamStore, load_exam, public_exam, grade_exam, module_exam_activity_id
@@ -227,6 +228,7 @@ def _course_access_payload(
         "module_title": str(course.get("title") or ""),
         "required_minutes": int(course.get("required_minutes") or 0),
         **({"aps_editorial_revision": course["aps_editorial_revision"]} if course.get("aps_editorial_revision") else {}),
+        **({"aps_depth_revision": course["aps_depth_revision"]} if course.get("aps_depth_revision") else {}),
         **({"vtc_media_revision": course["vtc_media_revision"]} if course.get("vtc_media_revision") else {}),
     }
 
@@ -374,6 +376,7 @@ def create_native_elearning_blueprint(
         if request.endpoint in {'native_elearning.admin_exam', 'native_elearning.admin_exam_submit',
                                 'native_elearning.learner_exam', 'native_elearning.learner_exam_submit',
                                 'native_elearning.admin_final_time', 'native_elearning.admin_final_time_export',
+                                'native_elearning.admin_aps_workload', 'native_elearning.admin_aps_workload_export',
                                 'native_elearning.admin_written_work', 'native_elearning.admin_written_work_export',
                                 'native_elearning.activity_production', 'native_elearning.vtc_production_review'}:
             response.headers['Cache-Control'] = 'private, no-store'
@@ -1022,7 +1025,8 @@ def create_native_elearning_blueprint(
     def exam_page(exam, back_url, submit_url, history=None, preview=False, course=None, tracking_config=None):
         module_context = None
         if course and module_exam_activity_id(course):
-            module_context = {'title': course['title'], 'required_minutes': course.get('required_minutes', 0)}
+            module_context = {'title': course['title'], 'required_minutes': course.get('required_minutes', 0),
+                              'study_plan': course.get('study_plan')}
         return render_template('native_elearning_exam.html', exam=public_exam(exam),
             back_url=back_url, history=history or [], preview_mode=preview,
             module_context=module_context, final_time_context=exam['id'] == 'final', tracking_config=tracking_config,
@@ -1168,7 +1172,8 @@ def create_native_elearning_blueprint(
         return render_template(
             "native_elearning_player.html", preview_mode=True,
             course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course),
-                    "version": course["version"], "counts": course["counts"], "training_label": course.get("training_label","APS")},
+                    "version": course["version"], "counts": course["counts"], "training_label": course.get("training_label","APS"),
+                    'aps_depth_revision': course.get('aps_depth_revision'), 'study_plan': course.get('study_plan')},
             activity=prepare_activity(select_vtc_activity(course, raw_activity, {}), asset_token, course_id),
             training_url=url_for('native_elearning.training_admin_catalog', course_id=course_id, version=course['version']) if course_id.startswith('academy-vtc-') else '',
             introduction=[prepare_block(block, asset_token, course_id)
@@ -1656,6 +1661,7 @@ def create_native_elearning_blueprint(
                     versions[row_version] = course
             row_course = versions[row_version]
             module = session_paths.get((row["session_id"], row["trainee_id"]))
+            row['assigned_current'] = bool(module and (not module.get('course_version') or module['course_version'] == row_version))
             if module and (not module.get("course_version") or module["course_version"] == row_version):
                 try:
                     row_course = project_course(row_course, module)
@@ -1732,6 +1738,39 @@ def create_native_elearning_blueprint(
             initial=payload,
             live_url=url_for("native_elearning.admin_live_api", course_id=course_id),
         )
+
+    def aps_workload_report():
+        reports = []
+        for module in curriculum_manifest()['modules']:
+            course = catalog().load_course(module['id'], module['version'])
+            # live_payload already scopes identities and assignments to the
+            # current centre. Never query shared learner rows in the template.
+            reports.append(summarize_aps_workload(course, live_payload(course['id'])['learners']))
+        return reports
+
+    @blueprint.get('/admin/elearning/calibrage')
+    @admin_required
+    def admin_aps_workload():
+        return render_template('admin_native_elearning_workload.html', reports=aps_workload_report())
+
+    @blueprint.get('/admin/elearning/calibrage.csv')
+    @admin_required
+    def admin_aps_workload_export():
+        output = io.StringIO(newline='')
+        writer = csv.writer(output, delimiter=';')
+        writer.writerow(['Module', 'Stagiaire', 'Session', 'Édition', 'Activités prévues (min)',
+            'Examen et correction prévus (min)', 'Total prévu (min)', 'Première fin des activités (secondes)',
+            'Temps cumulé du module (secondes)', 'Examen observé depuis la ventilation (secondes)',
+            'Temps historique non ventilé (secondes)', 'Interprétation'])
+        for report in aps_workload_report():
+            for learner in report['learners']:
+                row = [report['title'], learner['trainee_name'], learner['session_name'], learner['version'],
+                    report['plan']['activities_minutes'], report['plan']['exam_minutes'], report['plan']['total_minutes'],
+                    learner['first_seconds'] if learner['first_seconds'] is not None else '', learner['total_seconds'],
+                    learner['exam_seconds'], learner['unallocated_seconds'], learner['reason']]
+                writer.writerow(["'" + str(value) if str(value).lstrip().startswith(('=', '+', '-', '@')) else value for value in row])
+        return Response('\ufeff' + output.getvalue(), content_type='text/csv; charset=utf-8',
+            headers={'Content-Disposition': 'attachment; filename="calibrage-elearning-aps.csv"'})
 
     @blueprint.get("/api/admin/elearning/courses/<course_id>/live")
     @admin_required
@@ -2159,9 +2198,13 @@ def create_native_elearning_blueprint(
         path_url = url_for("native_elearning.learner_path", token=token)
         next_module = modules[module_index + 1] if module_index + 1 < len(modules) else None
         end_url = url_for("native_elearning.course_player", token=token, course_id=next_module["course_id"]) if next_module else path_url
+        aps_exam_next = bool(course.get('aps_depth_revision') and course.get('mock_exam_id'))
+        if aps_exam_next:
+            end_url = url_for('native_elearning.learner_exam', token=token, exam_id=course['mock_exam_id'])
         return render_template(
             "native_elearning_player.html",
-            course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course), "version": course['version'], "training_label": course.get("training_label","APS")},
+            course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course), "version": course['version'], "training_label": course.get("training_label","APS"),
+                    'aps_depth_revision': course.get('aps_depth_revision'), 'study_plan': course.get('study_plan')},
             learner_name=f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
             section_title=str(section.get("title") or ""),
             learner_brand=session_obj.get('learner_brand') or {},
@@ -2184,7 +2227,7 @@ def create_native_elearning_blueprint(
             optional_skip_url=next_url if next_required else path_url,
             portal_url=url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_space", token=token),
             path_url=path_url, end_url=end_url,
-            end_label="Module suivant" if next_module else "Retour au parcours",
+            end_label="Examen blanc et correction" if aps_exam_next else "Module suivant" if next_module else "Retour au parcours",
             module_position=module_index + 1, module_count=len(modules),
             has_next_module=bool(next_module),
             required_time_label=_format_seconds(progress["required_seconds"]),
@@ -2236,8 +2279,8 @@ def create_native_elearning_blueprint(
             abort(409, "Les vidéos ont été améliorées. Rechargez la page : votre progression enregistrée est conservée.")
         # Keep tracking/video time from open tabs, but never grade an old
         # question or workshop against a changed answer key.
-        if (course.get("aps_editorial_revision")
-                and access.get("aps_editorial_revision") != course["aps_editorial_revision"]
+        if (any(course.get(key) and access.get(key) != course[key]
+                for key in ('aps_editorial_revision', 'aps_depth_revision'))
                 and request.endpoint in {"native_elearning.activity_answer",
                     "native_elearning.activity_practice", "native_elearning.activity_complete"}):
             response = jsonify(ok=False, error="Les exercices ont été renouvelés. Rechargez la page : votre progression enregistrée est conservée.")

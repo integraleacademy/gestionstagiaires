@@ -6,13 +6,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 const source = fs.readFileSync(path.join(__dirname, "../static/js/native-elearning-player.js"), "utf8");
 
-async function fixture({ lastActivity = false, question = false, optional = false, aps = false } = {}) {
-  const initial = lastActivity ? 14398 : 0;
+async function fixture({ lastActivity = false, question = false, optional = false, aps = false, depth = false } = {}) {
+  const initial = depth ? 3600 : lastActivity ? 14398 : 0;
   const idleSeconds = aps ? 600 : 300;
   const config = { accessToken: "signed", csrfToken: "csrf", activityId: "lesson", idleSeconds, continueWhenHidden: aps,
     heartbeatSeconds: 15, startUrl: "/start", heartbeatUrl: "/heartbeat", finishUrl: "/finish",
     initialActiveSeconds: initial, initialRemainingSeconds: 14400 - initial, initialModuleComplete: false,
-    isLastActivity: lastActivity, hasNextModule: true, endLabel: "Module suivant", endUrl: "/next",
+    isLastActivity: lastActivity, hasNextModule: true, endLabel: depth ? 'Examen blanc et correction' : "Module suivant", endUrl: depth ? '/exam' : "/next", apsDepth: depth,
     activityOptional: optional, questionType: question ? 'single_choice' : '', answerUrl: '/answer' };
   const dom = new JSDOM(`<!doctype html><strong id="nativeActiveTimer"></strong>
     <div id="nativeTrackingState"><span></span></div><div id="nativeDuplicateNotice"></div>
@@ -21,6 +21,7 @@ async function fixture({ lastActivity = false, question = false, optional = fals
     ${question ? '<form id="nativeQuestionForm"><input type="radio" name="answer" value="bad" checked><input type="radio" name="answer" value="good"></form><div id="nativeAnswerFeedback"></div>' : ''}
     <div id="nativeCourseResult"><strong></strong><span></span></div>
     <strong id="nativeRemainingTime"></strong><span id="nativeDurationStatus"></span>
+    <b id="nativeDurationPercent"></b><i id="nativeDurationBar"></i><p id="nativeModuleValidation"></p>
     <div id="nativeIdleNotice" hidden><button id="nativeResumeTimer">Reprendre</button></div>
     <video class="native-course-video"></video>
     <script id="nativeElearningConfig" type="application/json">${JSON.stringify(config)}</script>`,
@@ -44,7 +45,7 @@ async function fixture({ lastActivity = false, question = false, optional = fals
       : Math.min(now / 1000, idleSeconds) + (resumedAt === null ? 0 : Math.min((now - resumedAt) / 1000, idleSeconds));
     return { active_seconds: active, remaining_seconds: Math.max(0, 14400 - active), duration_met: unlocked,
       module_complete: unlocked, status: unlocked ? "passed" : lastActivity ? "awaiting_time" : "in_progress",
-      score_percent: 100, progress_percent: lastActivity ? 100 : 0 };
+      score_percent: 100, progress_percent: lastActivity ? 100 : 0, duration_percent: Math.min(100,active/14400*100) };
   };
   window.fetch = async (url, options) => {
     const body = JSON.parse(options.body);
@@ -151,6 +152,16 @@ async function fixture({ lastActivity = false, question = false, optional = fals
     assert.equal(document.querySelector("#nativeRemainingTime").textContent, "00:00:00");
     assert.equal(document.querySelector("#nativeCourseResult strong").textContent, "Module terminé");
   } finally { locked.close(); }
+  const depth = await fixture({lastActivity:true,aps:true,depth:true});
+  try {
+    const d=depth.window.document;
+    assert.equal(d.getElementById('nativeActionButton').disabled,false,'the module exam belongs before the duration gate');
+    assert.equal(d.getElementById('nativeActionButton').textContent,'Examen blanc et correction →');
+    assert.equal(d.getElementById('nativeDurationPercent').textContent,'25 %');
+    assert.equal(d.getElementById('nativeDurationBar').style.width,'25%');
+    assert.match(d.getElementById('nativeModuleValidation').textContent,/Module à terminer/);
+    assert.match(d.querySelector('#nativeCourseResult span').textContent,/examen blanc et son corrigé/);
+  } finally {depth.close();}
   const optional = await fixture({ lastActivity: true, optional: true });
   try {
     const document = optional.window.document, button = document.getElementById('nativeActionButton');

@@ -1,6 +1,6 @@
 {% set lesson = activity.academy %}
 {% set paginated_lesson = course.id.startswith('academy-aps62-') and lesson.kind == 'lesson' %}
-<div class="aps-book" data-aps-work{% if paginated_lesson %} data-aps-lesson data-lesson-key="{{ course.id }}:{{ course.version }}:{{ activity.id }}:{{ lesson.editorial_revision|default('') }}"{% endif %}>
+<div class="aps-book" data-aps-work{% if paginated_lesson %} data-aps-lesson data-lesson-key="{{ course.id }}:{{ course.version }}:{{ activity.id }}:{{ lesson.editorial_revision|default('') }}:{{ lesson.depth_revision|default('') }}"{% endif %}>
   {% if paginated_lesson %}
   <div class="aps-lesson-progress" data-aps-lesson-progress hidden>
     <span class="aps-label">Lecture pas à pas</span>

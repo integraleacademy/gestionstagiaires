@@ -207,6 +207,7 @@ def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> 
         "status": status, "active_seconds": active_seconds,
         "required_seconds": required_seconds, "remaining_seconds": remaining_seconds,
         "duration_met": duration_met, "activities_completed": finished,
+        "duration_percent": round(min(100 if duration_met else 99.99, active_seconds / required_seconds * 100), 2) if required_seconds else 100,
         "timed_objectives": timed_objectives, "objectives_duration_met": objectives_duration_met,
         "module_complete": finished and duration_met,
         "video_progress": video_progress,

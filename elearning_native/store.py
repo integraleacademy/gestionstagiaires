@@ -159,6 +159,8 @@ class NativeElearningStore:
                     connection.execute("ALTER TABLE learner_course_progress ADD COLUMN video_progress_json TEXT NOT NULL DEFAULT '{}'")
                 if "activity_seconds_json" not in progress_columns:
                     connection.execute("ALTER TABLE learner_course_progress ADD COLUMN activity_seconds_json TEXT NOT NULL DEFAULT '{}'")
+                if "aps_workload_json" not in progress_columns:
+                    connection.execute("ALTER TABLE learner_course_progress ADD COLUMN aps_workload_json TEXT NOT NULL DEFAULT '{}'")
                 assessment.ensure_schema(connection)
             _INITIALIZED_DATABASES.add(key)
 
@@ -266,6 +268,7 @@ class NativeElearningStore:
             "assessment_summary": assessment.summary_for(assessment_diagnostics),
             "video_progress": _json_dict(row["video_progress_json"]),
             "activity_seconds": _json_dict(row["activity_seconds_json"]) if "activity_seconds_json" in row.keys() else {},
+            "aps_workload": _json_dict(row["aps_workload_json"]) if "aps_workload_json" in row.keys() else {},
             "active_seconds": math.floor(float(row["active_seconds"] or 0) * 100) / 100,
             "score_percent": round(float(row["score_percent"] or 0), 2),
             "correct_answers": correct_count,
@@ -481,6 +484,13 @@ class NativeElearningStore:
                            WHERE session_id = ? AND trainee_id = ? AND course_id = ? AND course_version = ?""",
                         (credited, now_iso, *old_key),
                     )
+                    if credited > 0 and old['current_activity_id']:
+                        prior = self._progress_row(connection, dict(zip(('session_id', 'trainee_id', 'course_id', 'course_version'), old_key)))
+                        ledger = _json_dict(prior['activity_seconds_json'])
+                        aid = str(old['current_activity_id'])
+                        ledger[aid] = float(ledger.get(aid) or 0) + credited
+                        connection.execute('UPDATE learner_course_progress SET activity_seconds_json=? WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?',
+                            (json.dumps(ledger, ensure_ascii=False), *old_key))
                     connection.execute(
                         """UPDATE tracking_sessions SET status = 'ended', ended_at = ?, was_active = 0,
                            active_until_epoch = 0, credited_seconds = credited_seconds + ? WHERE id = ?""",
@@ -649,7 +659,7 @@ class NativeElearningStore:
             # never the newly requested activity. A navigation heartbeat must not
             # transfer seconds from one MAC APS objective to the next one.
             from .mac_aps_timing import is_timed_key
-            if credited > 0 and is_timed_key(key[2], key[3]):
+            if credited > 0 and (aps_tracking or is_timed_key(key[2], key[3])):
                 previous_activity_id = str(tracking["current_activity_id"] or "")
                 if previous_activity_id:
                     ledger = _json_dict(progress["activity_seconds_json"])
@@ -1106,6 +1116,19 @@ class NativeElearningStore:
                 ),
             )
             if not already_completed:
+                # Snapshot the first end of the activities, before later review
+                # time reaches the required module floor and masks underload.
+                # No reconstruction for older completions; no seconds awarded.
+                if (key[2] in APS_PACED_COURSES and access.get('aps_depth_revision')
+                        and not _json_dict(row['aps_workload_json'])
+                        and completion['status'] in ('awaiting_time', 'passed', 'failed')):
+                    snapshot = {'revision': access['aps_depth_revision'], 'finished_at': now_iso,
+                        'active_seconds': float(row['active_seconds'] or 0),
+                        'activity_seconds': _json_dict(row['activity_seconds_json']),
+                        'workshop_revisions': {aid: value.get('practice_revision') for aid, value in answers.items()
+                                              if isinstance(value, Mapping) and value.get('practice_revision')}}
+                    connection.execute('UPDATE learner_course_progress SET aps_workload_json=? WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?',
+                        (json.dumps(snapshot, ensure_ascii=False), *key))
                 self._event(
                     connection,
                     access,

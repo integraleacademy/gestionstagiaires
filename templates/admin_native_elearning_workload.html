@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.aps-calibration{max-width:1220px;margin:auto;padding:24px 12px;color:#172033}.aps-calibration h1{font-size:30px}.aps-calibration p{line-height:1.6;max-width:950px}.aps-calibration nav{display:flex;flex-wrap:wrap;gap:16px;margin:20px 0}.aps-calibration article{background:#fff;border:1px solid #dbe3ee;border-radius:16px;padding:22px;margin:20px 0}.aps-calibration h2{font-size:21px;margin:0 0 12px}.aps-calibration .metrics{display:flex;flex-wrap:wrap;gap:16px;background:#f1f5f9;padding:16px;border-radius:10px}.aps-calibration .metrics span{flex:1;min-width:155px;font-size:13px}.aps-calibration .metrics b{display:block;font-size:21px;margin-top:6px}.aps-calibration .scroll{overflow-x:auto}.aps-calibration table{border-collapse:collapse;width:100%;margin:16px 0;font-size:13px}.aps-calibration th,.aps-calibration td{text-align:left;padding:12px;border-bottom:1px solid #e2e8f0;vertical-align:top}.aps-calibration th{background:#f8fafc}.aps-calibration small{display:block;margin-top:5px;color:#64748b}.aps-calibration summary{cursor:pointer;font-weight:700;padding:14px 0}.aps-calibration .review{color:#9a3412;background:#fff7ed;padding:10px;border-radius:8px}.aps-calibration a{color:#3730a3;text-underline-offset:3px}.aps-calibration .note{padding:16px;border-left:4px solid #6366f1;background:#eef2ff}
+</style>
+<main class="aps-calibration">
+  <a href="{{ url_for('native_elearning.admin_catalog') }}">← Modules APS</a>
+  <h1>Calibrage des durées APS</h1>
+  <p>Comparez le travail prévu avec le temps enregistré lorsque les activités sont terminées pour la première fois. Ce point de mesure reste fixe : les révisions ultérieures et l’attente de la durée minimale ne masquent pas un parcours trop rapide.</p>
+  <p class="note">Les médianes utilisent uniquement les parcours dont les nouveaux dossiers ont été réalisés et dont le temps est entièrement ventilé. Les anciens temps restent conservés, sans reconstitution. L’examen est affiché séparément et reste inclus dans le total du module. Les temps incluent la règle de pause après 10 minutes d’inactivité : ils doivent être interprétés avec les retours des apprenants.</p>
+  <nav><a href="{{ url_for('native_elearning.admin_aps_workload') }}">Actualiser</a><a href="{{ url_for('native_elearning.admin_aps_workload_export') }}">Exporter les observations CSV</a></nav>
+  <p>Pour valider la charge pédagogique, faites tester chaque module par plusieurs apprenants représentatifs, relevez leurs difficultés et ajustez les séquences. En dessous de trois observations complètes, l’échantillon reste à constituer. Un temps inférieur à 80 % du repère signale un point à examiner ; il ne constitue pas à lui seul une conclusion de conformité.</p>
+  {% for report in reports %}<article id="{{ report.course_id }}">
+    <h2>{{ report.title }}</h2>
+    <div class="metrics"><span>Durée du module<b>{{ report.plan.total_minutes }} min</b></span><span>Activités prévues<b>{{ report.plan.activities_minutes }} min</b></span><span>Examen et correction inclus<b>{{ report.plan.exam_minutes }} min</b></span><span>Médiane à la fin des activités<b>{{ report.median_label }}</b></span></div>
+    <p><strong>{{ report.status }}</strong> · {{ report.sample_count }} observation(s) complète(s) · {{ report.short_count }} sous 80 % du repère des activités.</p>
+    {% if report.review %}<p class="review">La charge observée mérite une revue : examinez les séquences ci-dessous et le retour des apprenants avant d’ajouter un travail complémentaire ciblé.</p>{% endif %}
+    <details><summary>Répartition par séquence et observations des stagiaires</summary>
+      <div class="scroll"><table><thead><tr><th>Séquence</th><th>Repère prévu</th><th>Médiane observée à la fin des activités</th></tr></thead><tbody>{% for section in report.sections %}<tr><td>{{ section.title }}</td><td>{{ section.planned_minutes }} min</td><td>{{ section.observed_label }}{% if section.review %}<small>À examiner</small>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+      {% if report.learners %}<div class="scroll"><table><thead><tr><th>Stagiaire / session</th><th>Activités / durée</th><th>Première fin des activités</th><th>Total enregistré</th><th>Dont examen ventilé</th><th>Historique non ventilé</th></tr></thead><tbody>
+      {% for learner in report.learners %}<tr><td><strong>{{ learner.trainee_name }}</strong><small>{{ learner.session_name }}</small></td><td>{{ learner.activity_percent|round|int }} % / {{ learner.duration_percent|round(0, 'floor')|int }} %<small>{{ 'Activités et durée atteintes' if learner.module_complete else 'Module à terminer' }}</small></td><td>{{ learner.first_label }}<small>{{ learner.reason }}</small></td><td>{{ learner.total_label }}</td><td>{{ learner.exam_label }}</td><td>{{ learner.unallocated_label }}<small>Inclus dans le total ; nature non reconstituée.</small></td></tr>{% endfor %}
+      </tbody></table></div>{% else %}<p>Aucun parcours démarré dans les affectations actuelles.</p>{% endif %}
+    </details>
+    <a href="{{ url_for('native_elearning.admin_preview', course_id=report.course_id) }}">Revoir le contenu</a> · <a href="{{ url_for('native_elearning.admin_live', course_id=report.course_id) }}">Suivi du module</a>
+  </article>{% endfor %}
+</main>
+{% endblock %}

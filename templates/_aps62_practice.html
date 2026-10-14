@@ -3,17 +3,18 @@
   <header class="aps-practice-intro">
     <span class="aps-label">À vous de jouer · {{ activity.practice.exercises|length }} questions</span>
     <h2>{{ activity.practice.title or 'Faites vos choix, puis vérifiez' }}</h2>
-    {% if guided %}<p><strong>Une seule question à la fois.</strong> Lisez la situation, cliquez sur une réponse, puis sur « Vérifier ma réponse ».</p><p>La correction vous explique le choix. Vous passez ensuite à la question suivante.</p>{% else %}<p>Choisissez vos réponses, puis cliquez sur « Vérifier mes réponses ». En cas d’erreur, lisez l’explication et essayez à nouveau.</p>{% endif %}
+    {% if guided %}<p><strong>Une étape à la fois.</strong> {% if activity.practice.dossier %}Lisez les pièces, comparez leurs informations, puis choisissez, classez ou ordonnez les réponses. Après chaque vérification, lisez l’explication avant de poursuivre.{% else %}Lisez la situation, choisissez une réponse, puis vérifiez. La correction explique le choix avant la question suivante.{% endif %}</p>{% else %}<p>Choisissez vos réponses, puis cliquez sur « Vérifier mes réponses ». En cas d’erreur, lisez l’explication et essayez à nouveau.</p>{% endif %}
     <div class="aps-practice-chips"><span>Aucune rédaction</span><span>Correction immédiate</span><span>Essais illimités</span></div>
-    {% if activity_completed %}<p class="aps-practice-saved">Cette activité est déjà terminée. Vous pouvez vous entraîner à nouveau librement.</p>{% endif %}
+    {% if activity_completed %}<p class="aps-practice-saved">Cette activité est déjà terminée. Votre réussite et vos réponses d’origine sont conservées. {% if activity.practice.dossier %}Ce dossier a été enrichi : vous pouvez l’étudier librement ; votre temps actif continue d’être enregistré.{% else %}Vous pouvez vous entraîner à nouveau librement.{% endif %}</p>{% endif %}
   </header>
-  {% if activity.practice.documents %}<div class="aps-evidence-grid" aria-label="Documents du dossier">
+  {% if activity.practice.documents %}<div id="apsDossierDocuments" class="aps-evidence-grid" aria-label="Documents du dossier" tabindex="-1">
   {% for document in activity.practice.documents %}<article class="aps-evidence"><span class="aps-label">Pièce {{ loop.index }} · Document pédagogique fictif</span><h3>{{ document.title }}</h3><p>{{ document.text }}</p>{% if document.rows %}<dl>{% for row in document.rows %}<dt>{{ row[0] }}</dt><dd>{{ row[1] }}</dd>{% endfor %}</dl>{% endif %}</article>{% endfor %}</div>{% endif %}
   {% if activity.practice.sequential or guided %}<p class="aps-stage-status" data-stage-status role="status"></p>{% endif %}
   <form id="apsPracticeForm">
     {% for exercise in activity.practice.exercises %}
     <fieldset class="aps-exercise" data-exercise-id="{{ exercise.id }}" data-kind="{{ exercise.kind }}"{% if guided and not loop.first %} hidden{% endif %}>
       <legend tabindex="-1"><span class="aps-exercise-number">{{ '%02d'|format(loop.index) }}</span>{{ exercise.stage if guided else exercise.prompt }}</legend>
+      {% if activity.practice.dossier %}<a class="aps-evidence-back" href="#apsDossierDocuments">Revoir les trois pièces du dossier ↑</a>{% endif %}
       {% if guided %}{% if exercise.context %}<div class="aps-guided-context">{% if lesson.image and loop.first %}<img src="{{ lesson.image }}" alt="Illustration du contexte professionnel" loading="eager">{% endif %}<div><b>{{ 'Un nouvel événement' if exercise.stage == 'La suite de l’histoire' else 'La situation' }}</b>{% for paragraph in exercise.context.split('\n\n') %}<p>{{ paragraph }}</p>{% endfor %}</div></div>{% endif %}<h3 class="aps-guided-question">{{ exercise.prompt }}</h3>{% elif exercise.context %}<p class="aps-stage-context">{{ exercise.context }}</p>{% endif %}
       {% if exercise.kind == 'single' %}
       <p class="aps-exercise-instruction">Sélectionnez une réponse.</p>

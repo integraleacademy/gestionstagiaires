@@ -118,7 +118,7 @@
       ? 'Durée de cet objectif atteinte.'
       : `Encore ${formatSeconds(objective.remaining_seconds)} d’étude active sur cet objectif. Vous pouvez reprendre ses lectures et ses activités avant de valider le questionnaire de clôture.`;
     const blocked = actionButton.dataset.mode === "navigate" && config.isLastActivity
-      && config.hasNextModule && !state.progress.module_complete;
+      && config.hasNextModule && !state.progress.module_complete && !config.apsDepth;
     const videoBlocked = requiredVideos.some((video) => !videoCompleted(video));
     actionButton.disabled = state.saving || blocked || videoBlocked || Boolean(timedBlocked);
     if (timedBlocked && !state.saving) {
@@ -142,7 +142,7 @@
     if (requiredVideos.length && !state.saving && !blocked) {
       actionButton.textContent = actionButton.dataset.mode === "navigate"
         ? `${config.isLastActivity ? (config.endLabel || 'Retour au parcours') : 'Continuer'} →`
-        : `${config.isLastActivity ? 'Terminer le module' : 'Terminer et continuer'} →`;
+        : `${config.isLastActivity ? (config.apsDepth ? 'Terminer les activités' : 'Terminer le module') : 'Terminer et continuer'} →`;
     }
     if (actionButton.dataset.mode === "navigate" && config.isLastActivity && !state.saving) {
       actionButton.textContent = blocked
@@ -462,6 +462,15 @@
     if (firstScore) firstScore.textContent = progress.assessment_summary?.first_attempt_score_percent == null ? '—' : `${Math.round(progress.assessment_summary.first_attempt_score_percent)} %`;
     if (remainingTime) remainingTime.textContent = formatSeconds(progress.remaining_seconds);
     if (durationStatus) durationStatus.textContent = progress.duration_met ? "Durée obligatoire atteinte" : "Temps actif restant";
+    const durationBar = document.getElementById('nativeDurationBar');
+    const durationPercent = document.getElementById('nativeDurationPercent');
+    const durationValue = Math.max(0, Math.min(100, Number(progress.duration_percent) || 0));
+    if (durationBar) durationBar.style.width = `${durationValue}%`;
+    if (durationPercent) durationPercent.textContent = `${Math.floor(durationValue)} %`;
+    const validation = document.getElementById('nativeModuleValidation');
+    if (validation) validation.textContent = progress.status === 'passed' ? 'Module validé'
+      : progress.status === 'failed' ? 'Résultats à reprendre avec le formateur'
+      : 'Module à terminer : activités et durée requises';
     updateAction();
     showCourseResult(progress);
   }
@@ -685,7 +694,7 @@
     if (title) title.textContent = progress.status === "awaiting_time" ? "Activités terminées · temps à compléter" : "Module terminé";
     if (detail) {
       detail.textContent = progress.status === "awaiting_time"
-        ? `Il reste ${formatSeconds(progress.remaining_seconds)} de temps actif à suivre. Reprenez les séquences depuis le sommaire pour poursuivre votre formation.`
+        ? `Il reste ${formatSeconds(progress.remaining_seconds)} de temps actif à suivre. ${config.apsDepth ? 'Poursuivez avec l’examen blanc et son corrigé, puis les dossiers approfondis du sommaire. Si vous avez tout étudié, contactez l’équipe pédagogique pour un travail complémentaire adapté.' : 'Reprenez les séquences depuis le sommaire pour poursuivre votre formation.'}`
         : progress.status === "passed"
         ? `Objectif atteint avec un score de ${score} %.`
         : `Parcours terminé avec un score de ${score} %. L’équipe pédagogique pourra vous accompagner.`;

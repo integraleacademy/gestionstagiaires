@@ -97,7 +97,7 @@
     box.append(heading, explanation);
     if (!item.correct) {
       const answer = document.createElement('p'); answer.textContent = 'La réponse à choisir : ' + item.correction.join(' ; ');
-      const instruction = document.createElement('p'); instruction.textContent = 'Cliquez maintenant sur cette réponse, puis vérifiez à nouveau.';
+      const instruction = document.createElement('p'); instruction.textContent = 'Comparez la correction aux documents, ajustez vos réponses, puis vérifiez à nouveau.';
       box.append(answer, instruction);
     }
     box.hidden = false;
@@ -106,7 +106,7 @@
     event.preventDefault();
     if (busy || check.disabled) return;
     const id = fields[index].dataset.exerciseId, value = answers()[id];
-    if (!complete(value)) { summary.textContent = 'Cliquez sur une réponse avant de vérifier.'; return; }
+    if (!complete(value)) { summary.textContent = 'Complétez toutes les réponses de cette étape avant de vérifier.'; return; }
     lock(async () => {
       const result = await request({practice_step:id, practice_answers:{[id]:value}});
       feedback(result.feedback[0]);

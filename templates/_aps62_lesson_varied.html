@@ -35,6 +35,14 @@
 </section>
 {% endfor %}
 
+{% if lesson.depth_teaching %}
+<section class="aps-editorial" data-aps-lesson-page>
+  <span class="aps-label">Approfondir le raisonnement</span><h2>{{ lesson.depth_teaching.title }}</h2>
+  {% for paragraph in lesson.depth_teaching.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}
+  <p class="aps-takeaway">Dans le dossier interactif, vous croiserez plusieurs documents, justifierez vos choix et réexaminerez votre décision lorsque les faits changent.</p>
+</section>
+{% endif %}
+
 {% if lesson.deepening %}
 <section class="aps-deepening" data-aps-lesson-group>
   <span class="aps-label">Appliquer la règle avec discernement</span>

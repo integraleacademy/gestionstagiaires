@@ -1,0 +1,12 @@
+.aps-study-plan { margin: 18px 0; padding: 14px; border: 1px solid #cbd5e1; border-radius: 12px; background: #f8fafc; color: #1e293b; font-size: 12px; }
+.aps-study-plan summary { cursor: pointer; font-weight: 800; line-height: 1.5; }
+.aps-study-plan ol { padding: 0; list-style: none; }
+.aps-study-plan li { display: flex; align-items: baseline; gap: 12px; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+.aps-study-plan li b { white-space: nowrap; color: #4338ca; }
+.aps-study-plan p { line-height: 1.6; margin-bottom: 0; }
+.aps-validation { padding: 10px; background: #eef2ff; border-radius: 8px; font-weight: 750; line-height: 1.5; }
+.aps-evidence-back { display: inline-block; margin: 8px 0 16px; color: #4338ca; font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+#apsDossierDocuments { scroll-margin-top: 24px; }
+.aps-practice-row select { max-width: 100%; }
+.native-duration-summary .native-progress-track { width: 100%; margin: 5px 0; }
+@media (max-width: 680px) { .aps-practice-row { grid-template-columns: 1fr; } }

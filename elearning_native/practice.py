@@ -97,6 +97,7 @@ def public_practice(practice):
                     public[key] = copy.deepcopy(original[key])
     elif practice.get('mode') == 'guided':
         result['mode'] = 'guided'
+        result['dossier'] = bool(practice.get('dossier'))
         # Explanations, branches and answer keys are disclosed only after a check.
         for public, original in zip(result['exercises'], practice['exercises']):
             public.pop('branches', None)
