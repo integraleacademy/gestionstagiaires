@@ -65,13 +65,13 @@ class People extends Element {
 
 const complete = (email = 'alice@example.fr', id = 'learner-1') => ({learner_id: id, last_name: 'Martin', first_name: 'Alice', email});
 
-function boot({rows = [{}], individual = false, locked = 0, price = '5900', unsaved = false, conflict = false} = {}) {
+function boot({rows = [{}], individual = false, locked = 0, price = '5900', unsaved = false, conflict = false, salesPaused = false} = {}) {
   const people = rows === null ? null : new People(rows.map(values => new Row(values)));
   const roster = new Element({dataset: {mode: individual ? 'individual' : 'group', lockedCount: String(locked), maxLearners: individual ? '1' : '100', unsaved: String(unsaved), conflict: String(conflict)}});
   roster.checkValidity = () => !people || people.children.every(row => row.inputs.every(input => input.valid()));
   roster.reportValidity = () => { roster.reported = true; };
   const course = new Element({selectedOptions: [{dataset: {price}}]});
-  const review = new Element({name: 'next', value: 'review'});
+  const review = new Element({name: 'next', value: 'review', dataset: {salesPaused: String(salesPaused)}});
   const save = new Element({name: 'next', value: 'save'});
   const add = individual ? null : new Element();
   const status = new Element();
@@ -85,6 +85,14 @@ function boot({rows = [{}], individual = false, locked = 0, price = '5900', unsa
   vm.runInNewContext(script, {document, window, Intl}, {filename: 'elearning-orders.js'});
   return {people, roster, course, review, save, add, status, nodes, window};
 }
+
+test('sales pause keeps checkout disabled when an existing roster is edited', () => {
+  const page = boot({rows: [complete()], salesPaused: true});
+  assert.equal(page.review.disabled, true);
+  page.roster.dispatch('input');
+  assert.equal(page.review.disabled, true);
+  assert.equal(page.save.disabled, false);
+});
 
 test('add creates an empty learner without duplicating identity; removing updates totals and numbering', () => {
   const page = boot({rows: [complete()]});

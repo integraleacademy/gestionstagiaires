@@ -19,6 +19,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.datastructures import MultiDict
 
 import elearning_orders as learning
+import elearning_sales
 import manuals_commerce as commerce
 
 CUSTOMER_ENDPOINTS = {"manuals_shop." + name for name in (
@@ -389,6 +390,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
 
     @bp.route("/admin/organisme/e-learning/nouveau", methods=["GET", "POST"])
     @customer
+    @elearning_sales.required(host)
     def elearning_group_create():
         data, partner = partner_data()
         values = request.form.to_dict() if request.method == "POST" else {"mode": request.args.get("mode", "group"), "course_code": request.args.get("course", "aps")}
@@ -525,6 +527,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
 
     @bp.route("/admin/organisme/e-learning/groupes/<gid>/recapitulatif", methods=["GET", "POST"])
     @customer
+    @elearning_sales.required(host)
     def elearning_group_review(gid):
         data, partner = partner_data()
         group = find(data, gid)
@@ -542,6 +545,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
 
     @bp.post("/admin/organisme/e-learning/groupes/<gid>/creer-espaces")
     @customer
+    @elearning_sales.required(host)
     def elearning_group_confirm(gid):
         check_csrf()
         data, partner = partner_data()

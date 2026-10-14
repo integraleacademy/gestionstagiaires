@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-commerce.css', v='20261012-1') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-navigation.css', v='20261014-choices') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/connect-brand.css', v='20261014') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/elearning-sales.css', v='20261014-1') }}">
   <script src="{{ url_for('static', filename='js/manuals-shop.js', v='20261012-experience') }}" defer></script>
 </head>
 <body class="{% if public %}public-storefront {% endif %}{% block body_class %}{% endblock %}">
@@ -54,7 +55,7 @@
     <a class="organisme-logout" href="{{ url_for('admin_logout') }}">Déconnexion</a>
   </nav>
   {% endif %}
-  <main id="main-content">{% for category,message in get_flashed_messages(with_categories=true) %}<div class="notice">{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</main>
+  <main id="main-content">{% for category,message in get_flashed_messages(with_categories=true) %}<div class="notice">{{ message }}</div>{% endfor %}{% if elearning_sales_notice %}{% include 'manuals/_elearning_sales_notice.html' %}{% endif %}{% block content %}{% endblock %}</main>
   {% if show_organisme_identity %}
     {% include "manuals/_organisme_identity.html" %}
   {% else %}

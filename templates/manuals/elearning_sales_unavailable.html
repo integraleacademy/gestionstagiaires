@@ -1,0 +1,11 @@
+{% extends 'manuals/layout.html' %}
+{% block title %}Ventes momentanément indisponibles{% endblock %}
+{% block content %}
+<section class="shop-wrap el-sales-unavailable">
+  <span class="eyebrow blue">E-LEARNING · MISE À JOUR EN COURS</span>
+  <h1>{{ elearning_sales_title }}</h1>
+  <p>{{ elearning_sales_message }}</p>
+  <p>Vos groupes et vos brouillons sont conservés. Vous pourrez reprendre votre commande à la réouverture des ventes.</p>
+  <div class="action-row"><a class="button primary" href="{{ url_for('manuals_shop.elearning_soon') }}">Retrouver mes accès e-learning</a><a class="button secondary" href="{{ url_for('manuals_shop.public_elearning') }}">Consulter les parcours</a></div>
+</section>
+{% endblock %}

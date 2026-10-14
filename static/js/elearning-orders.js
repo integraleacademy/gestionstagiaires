@@ -105,7 +105,7 @@
       const counter = document.getElementById('el-roster-count');
       if (counter) counter.textContent = count + ' à préparer';
       if (add) { add.disabled = list.length >= max; add.title = add.disabled ? 'Ce groupe peut contenir jusqu’à 100 stagiaires.' : ''; }
-      review.disabled = count === 0 || roster.dataset.conflict === 'true' || roster.dataset.pendingDeletion === 'true';
+      review.disabled = review.dataset.salesPaused === 'true' || count === 0 || roster.dataset.conflict === 'true' || roster.dataset.pendingDeletion === 'true';
       const seen = new Set();
       list.forEach((row, index) => {
         row.querySelector('.el-row-number').textContent = String(index + 1);

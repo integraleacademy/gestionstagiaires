@@ -14,7 +14,7 @@
   </header>
   <nav class="el-workspace-nav" aria-label="Rubriques e-learning">
     <a href="{{ url_for('manuals_shop.elearning_soon') }}" {% if current_view == 'groups' %}aria-current="page"{% endif %}>{{ icon('users') }} Mes groupes et stagiaires <span class="el-nav-count">{{ groups|length }}</span></a>
-    <a href="{{ url_for('manuals_shop.elearning_soon',view='catalogue') }}" {% if current_view == 'catalogue' %}aria-current="page"{% endif %}>{{ icon('plus') }} Commander des accès</a>
+    <a href="{{ url_for('manuals_shop.elearning_soon',view='catalogue') }}" {% if current_view == 'catalogue' %}aria-current="page"{% endif %}>{{ icon('plus') }} {{ 'Commander des accès' if elearning_sales_enabled else 'Catalogue des accès' }}</a>
     <a href="{{ url_for('manuals_shop.elearning_soon',view='orders') }}" {% if current_view == 'orders' %}aria-current="page"{% endif %}>{{ icon('card') }} Commandes et factures</a>
   </nav>
   {% if current_view == 'catalogue' %}
@@ -22,7 +22,7 @@
   {% elif current_view == 'orders' %}
     <p class="el-view-intro">Retrouvez vos commandes d’accès e-learning. Ouvrez une commande pour consulter sa facture, son règlement et l’activation des accès.</p>
     {% if orders %}{% include 'manuals/_elearning_history.html' %}
-    {% else %}<div class="el-empty"><span class="el-empty-icon">{{ icon('card') }}</span><h2>Aucune commande e-learning pour le moment</h2><p>Les groupes en préparation sont dans « Mes groupes et stagiaires ». Vos commandes apparaîtront ici après validation des accès.</p><a class="button primary" href="{{ url_for('manuals_shop.elearning_soon',view='catalogue') }}">Commander des accès {{ icon('arrow') }}</a></div>{% endif %}
+    {% else %}<div class="el-empty"><span class="el-empty-icon">{{ icon('card') }}</span><h2>Aucune commande e-learning pour le moment</h2><p>Les groupes en préparation sont dans « Mes groupes et stagiaires ». Vos commandes apparaîtront ici après validation des accès.</p>{% if elearning_sales_enabled %}<a class="button primary" href="{{ url_for('manuals_shop.elearning_soon',view='catalogue') }}">Commander des accès {{ icon('arrow') }}</a>{% else %}<span class="el-sales-disabled" aria-disabled="true">{{ elearning_sales_title }}</span>{% endif %}</div>{% endif %}
   {% else %}
   {% set counts = namespace(pending=0, waiting=0, active=0) %}{% for group in groups %}{% set counts.pending = counts.pending + group.pending_count %}{% set counts.waiting = counts.waiting + group.waiting_count %}{% set counts.active = counts.active + group.active_count %}{% endfor %}
   <nav class="el-stats" aria-label="Filtrer mes espaces e-learning">
@@ -32,7 +32,7 @@
     <a href="{{ url_for('manuals_shop.elearning_soon',state='active',q=search_query) }}#el-groups-heading" data-el-state="active" class="{{ 'is-selected' if current_state == 'active' }}" {% if current_state == 'active' %}aria-current="true"{% endif %}><span class="el-stat-icon green">{{ icon('check') }}</span><span class="el-stat-content"><strong>{{ counts.active }}</strong><span>Accès activés</span><small>Afficher le suivi →</small></span></a>
   </nav>
   <section aria-labelledby="el-groups-heading">
-    <div class="el-section-heading"><div><h2 id="el-groups-heading">Mes groupes et stagiaires</h2><p class="muted">Retrouvez vos groupes et accès individuels. Ouvrez-les pour ajouter des stagiaires, activer les accès ou consulter leur progression.</p></div><a class="button primary" href="{{ url_for('manuals_shop.elearning_soon',view='catalogue') }}">{{ icon('plus') }} Commander des accès</a></div>
+    <div class="el-section-heading"><div><h2 id="el-groups-heading">Mes groupes et stagiaires</h2><p class="muted">Retrouvez vos groupes et accès individuels. Ouvrez-les pour ajouter des stagiaires, activer les accès ou consulter leur progression.</p></div>{% if elearning_sales_enabled %}<a class="button primary" href="{{ url_for('manuals_shop.elearning_soon',view='catalogue') }}">{{ icon('plus') }} Commander des accès</a>{% else %}<span class="el-sales-disabled" aria-disabled="true">{{ elearning_sales_title }}</span>{% endif %}</div>
     {% if groups %}
     <form class="el-toolbar" action="{{ url_for('manuals_shop.elearning_soon') }}" method="get" id="el-filter-form">
       <div class="el-search-field"><label for="el-search">Rechercher</label><div class="el-search">{{ icon('search') }}<input type="search" name="q" id="el-search" placeholder="Nom d’un groupe, d’un stagiaire ou adresse e-mail" value="{{ search_query }}" autocomplete="off"><button type="button" class="el-search-clear" id="el-clear-search" aria-label="Effacer la recherche" {% if not search_query %}hidden{% endif %}>×</button></div></div>
@@ -52,7 +52,7 @@
     {% endfor %}
     </div><div class="el-empty el-filter-empty" id="el-no-results" {% if visible_count|default(groups|length) %}hidden{% endif %}><h3>Aucun résultat</h3><p>Essayez un autre nom, une adresse e-mail ou un autre état.</p><a href="{{ url_for('manuals_shop.elearning_soon') }}" class="text-link">Afficher tous les groupes et accès →</a></div>
     {% else %}
-    <div class="el-empty"><span class="el-empty-icon">{{ icon('folder') }}</span><h3>Préparez vos premiers accès e-learning</h3><p>Choisissez un parcours, puis créez un groupe ou un accès pour une seule personne. Vous pourrez compléter votre liste de stagiaires à votre rythme.</p><a class="button primary" href="{{ url_for('manuals_shop.elearning_soon',view='catalogue') }}">Choisir un parcours {{ icon('arrow') }}</a><span class="small">Aucun paiement demandé à la création du groupe.</span></div>
+    <div class="el-empty"><span class="el-empty-icon">{{ icon('folder') }}</span><h3>Préparez vos premiers accès e-learning</h3><p>Choisissez un parcours, puis créez un groupe ou un accès pour une seule personne. Vous pourrez compléter votre liste de stagiaires à votre rythme.</p>{% if elearning_sales_enabled %}<a class="button primary" href="{{ url_for('manuals_shop.elearning_soon',view='catalogue') }}">Choisir un parcours {{ icon('arrow') }}</a>{% else %}<span class="el-sales-disabled" aria-disabled="true">{{ elearning_sales_title }}</span>{% endif %}<span class="small">Aucun paiement demandé à la création du groupe.</span></div>
     {% endif %}
   </section>
   {% endif %}

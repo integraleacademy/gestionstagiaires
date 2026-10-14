@@ -9,7 +9,9 @@
         <div class="el-purchase-top"><h3>{{ course.name }}</h3><span>{{ course.duration_label }}</span></div>
         <p>{{ course.title }}</p>
         <div class="el-purchase-price"><strong>{{ 'Gratuit' if course.free else (course.unit_cents|manuals_money if course.configured else 'Sur demande') }}</strong><span>{{ 'pour votre organisme' if course.free else 'TTC par stagiaire' if course.configured else 'Contactez-nous pour votre tarif' }}</span></div>
-        {% if course.configured %}
+        {% if not elearning_sales_enabled %}
+        <button class="el-sales-disabled full" type="button" disabled>{{ elearning_sales_title }}</button>
+        {% elif course.configured %}
         <a class="button primary full" href="{{ url_for('manuals_shop.elearning_group_create',course=code) }}">{{ icon('users') }} Créer un groupe</a>
         <a class="button secondary full" href="{{ url_for('manuals_shop.elearning_group_create',course=code,mode='individual') }}">{{ icon('user') }} Pour une seule personne</a>
         {% else %}

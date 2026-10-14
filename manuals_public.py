@@ -8,6 +8,7 @@ from flask import Response, abort, request, session, url_for
 from manuals_catalogue import CATALOGUE
 from manuals_support_previews import SUPPORT_PREVIEWS
 import elearning_orders
+import elearning_sales
 
 TERMS_VERSION = '2026-10-12'
 # Published versions are immutable: append future versions, keep the old file.
@@ -47,7 +48,14 @@ def register_routes(host, bp, *, page):
         if request.endpoint in {'manuals_shop.order_payment', 'manuals_shop.order_detail'} and session.get('manuals_cart_completed') == (request.view_args or {}).get('order_id'):
             session.pop('manuals_cart_completed', None)
             completed = str(session.get('partner_id', '')) + ':' + str(session.get('user_id', ''))
-        return {'storefront_staff': bool(session.get('admin_logged_in') and host._is_super_admin_session()),
+        sales_enabled = elearning_sales.enabled(host)
+        sales_page = request.endpoint in {'home', 'manuals_shop.home', 'manuals_shop.public_elearning', 'manuals_shop.public_course'} or (
+            (request.endpoint or '').startswith('manuals_shop.elearning_') and request.endpoint not in
+            {'manuals_shop.elearning_admin', 'manuals_shop.elearning_access'})
+        return {'elearning_sales_enabled': sales_enabled,
+                'elearning_sales_notice': sales_page and not sales_enabled,
+                'elearning_sales_title': elearning_sales.TITLE, 'elearning_sales_message': elearning_sales.MESSAGE,
+                'storefront_staff': bool(session.get('admin_logged_in') and host._is_super_admin_session()),
                 'storefront_customer': bool(session.get('admin_logged_in') and host._is_external_partner_session()),
                 'cart_completed_key':completed, 'terms_version': TERMS_VERSION, 'canonical_url': public_origin() + request.path,
                 'public_origin': public_origin(), 'page_indexable': indexable() and request.endpoint in CACHEABLE}
@@ -69,6 +77,9 @@ def register_routes(host, bp, *, page):
         if request.endpoint in CACHEABLE and request.method in {'GET','HEAD'} and response.status_code == 200:
             response.headers['Cache-Control'] = 'private, max-age=120' if not session.get('admin_logged_in') else 'no-store'
             response.vary.add('Cookie')
+        if request.endpoint in {'home', 'manuals_shop.public_elearning', 'manuals_shop.public_course'}:
+            # A sales pause must be visible on the next request, without a stale catalogue.
+            response.headers['Cache-Control'] = 'no-store'
         return response
 
     @bp.get('/supports-formateurs')

@@ -22,6 +22,7 @@ from pathlib import Path
 from flask import abort, flash, redirect, request, session, url_for
 
 import manuals_commerce as commerce
+import elearning_sales
 
 COURSES = {
     "aps": {"name": "APS", "title": "Agent de prévention et de sécurité", "color": "#2468b3", "default_cents": 5900, "folder": "aps62"},
@@ -304,6 +305,10 @@ def process_claimed(host, order):
 
 
 def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_worker):
+    @bp.errorhandler(elearning_sales.SalesUnavailable)
+    def sales_unavailable(error):
+        return page("elearning_sales_unavailable.html", elearning_sales_enabled=False, elearning_sales_notice=False), 409
+
     def find(data, oid):
         order = next((o for o in data.get("manual_orders", []) if o.get("id") == oid and is_order(o)), None)
         if not order or (not host._is_super_admin_session() and order["partner_id"] != host._current_partner_id()):
@@ -317,6 +322,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
 
     @bp.post("/admin/organisme/e-learning/recapitulatif")
     @customer
+    @elearning_sales.required(host)
     def elearning_checkout():
         check_csrf()
         data, partner = partner_data()
@@ -373,6 +379,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
 
     @bp.post("/admin/organisme/e-learning/commandes/<oid>/confirmer")
     @customer
+    @elearning_sales.required(host)
     def elearning_confirm(oid):
         check_csrf()
         if request.form.get("confirm") != "yes":
@@ -435,7 +442,15 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
     @host.require_super_admin
     def elearning_admin():
         if host._is_partner_data_scope_session():
-            abort(403, "Quittez l’assistance d’un organisme avant de modifier les tarifs.")
+            abort(403, "Quittez l’assistance d’un organisme avant de modifier les ventes ou les tarifs.")
+        if request.method == "POST":
+            check_csrf()
+            if request.form.get("action") == "sales_settings":
+                sales_enabled = request.form.get("sales_enabled") == "yes"
+                elearning_sales.save(host, sales_enabled, session.get("user_id") or session.get("admin_user"))
+                flash("Les ventes d’accès e-learning sont activées." if sales_enabled else
+                      "Les ventes d’accès e-learning sont suspendues. Le message de mise à jour est affiché dans la boutique.", "success")
+                return redirect(url_for("manuals_shop.elearning_admin"), code=303)
         data = host.load_data()
         pid = request.values.get("partner_id", "")
         selected = host._partner_or_404(data, pid) if pid else None
