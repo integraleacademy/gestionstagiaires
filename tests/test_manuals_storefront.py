@@ -80,7 +80,7 @@ def test_only_existing_specimens_and_previews_are_advertised(shop):
             assert f'Feuilleter {book["specimen_pages"]} pages' in page.text
         else:
             assert 'Télécharger l’extrait' not in page.text
-            assert 'brochure-manuels-2026.pdf#page=' + str(book['brochure_page']) in page.text
+            assert 'brochure-manuels-2026.pdf?v=20261014#page=' + str(book['brochure_page']) in page.text
         assert ('id="apercus"' in page.text) == bool(book['preview_labels'])
 
 

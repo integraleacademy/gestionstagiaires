@@ -11,7 +11,7 @@
     <div class="manual-presentation-copy">
       <h3>La couverture, les thèmes et les tarifs.</h3>
       <p>Retrouvez la présentation de ce titre dans notre brochure et découvrez les grands axes du manuel.</p>
-      <a class="button secondary" href="{{ url_for('static', filename='manuals/brochure-manuels-2026.pdf') }}#page={{ book.brochure_page }}" target="_blank" rel="noopener" aria-label="Ouvrir la brochure à la page {{ book.brochure_page }} (nouvel onglet)">Ouvrir la brochure <span aria-hidden="true">↗</span></a>
+      <a class="button secondary" href="{{ url_for('static', filename='manuals/brochure-manuels-2026.pdf', v='20261014') }}#page={{ book.brochure_page }}" target="_blank" rel="noopener" aria-label="Ouvrir la brochure à la page {{ book.brochure_page }} (nouvel onglet)">Ouvrir la brochure <span aria-hidden="true">↗</span></a>
       <div class="manual-excerpt-request"><strong>Vous souhaitez feuilleter l’intérieur ?</strong>Les pages intérieures de ce titre ne sont pas encore consultables en ligne.<br><a href="mailto:clement@integraleacademy.com?subject=Extrait%20manuel%20{{ book.name|urlencode }}">Demander un extrait du manuel →</a></div>
     </div>
   </div>

@@ -40,7 +40,7 @@ from manuals_catalogue import CATALOGUE, CATEGORIES
 
 STATUSES = {"received": "Reçue", "confirmed": "Confirmée", "production": "En préparation", "shipped": "Expédiée", "cancelled": "Annulée"}
 PUBLIC_ENDPOINTS = {"home", "manuals_shop.public_presentation", "manuals_shop.public_manual_detail", "manuals_shop.register_account", "manuals_shop.registration_complete", "manuals_shop.resend_welcome"}
-CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.elearning_soon", "manuals_shop.presentation", "manuals_shop.manual_detail", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo", "manuals_shop.order_payment", "manuals_shop.order_payment_status"}
+CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.order_options", "manuals_shop.orders_history", "manuals_shop.elearning_soon", "manuals_shop.presentation", "manuals_shop.manual_detail", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo", "manuals_shop.order_payment", "manuals_shop.order_payment_status"}
 PUBLIC_ENDPOINTS |= manuals_public.PUBLIC_ENDPOINTS | manuals_accounts.PUBLIC_ENDPOINTS | organisme_profile.PUBLIC_ENDPOINTS | elearning_demo.PUBLIC_ENDPOINTS | mac_aps_demo.PUBLIC_ENDPOINTS
 CUSTOMER_ENDPOINTS |= manuals_metrics.CUSTOMER_ENDPOINTS | manuals_fulfillment.CUSTOMER_ENDPOINTS | elearning_orders.CUSTOMER_ENDPOINTS | elearning_groups.CUSTOMER_ENDPOINTS | elearning_reporting.CUSTOMER_ENDPOINTS | organisme_profile.CUSTOMER_ENDPOINTS
 CUSTOMER_ENDPOINTS |= {'native_module_signatures.' + name for name in (
@@ -335,6 +335,28 @@ def register(host):
         data, partner = partner_data()
         orders = sorted((o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft" and not elearning_orders.is_record(o)), key=lambda o: o.get("submitted_at", ""), reverse=True)
         return page("home.html", partner=partner, orders=orders, order_count=len(orders), elearning_prices=elearning_orders.prices(partner), books=CATALOGUE)
+
+    @bp.get("/admin/organisme/commander")
+    @customer
+    def order_options():
+        _, partner = partner_data()
+        return page("order_options.html", partner=partner, books=CATALOGUE,
+                    elearning_prices=elearning_orders.prices(partner))
+
+    @bp.get("/admin/organisme/commandes")
+    @customer
+    def orders_history():
+        data, partner = partner_data()
+        purchases = sorted(
+            (order for order in data.get("manual_orders", [])
+             if order.get("partner_id") == partner["id"] and order.get("status") != "draft"
+             and order.get("order_type") != "elearning_group"),
+            key=lambda order: order.get("submitted_at") or order.get("created_at") or "",
+            reverse=True,
+        )
+        return page("orders_history.html", partner=partner,
+                    orders=[order for order in purchases if not elearning_orders.is_record(order)],
+                    elearning_purchases=[order for order in purchases if elearning_orders.is_order(order)])
 
     @bp.get("/admin/organisme/e-learning")
     @customer

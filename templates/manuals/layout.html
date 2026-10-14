@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="fr">
-{% set show_organisme_identity = not public and not staff and request.endpoint != "manuals_shop.elearning_access" %}
+{% set show_organisme_identity = request.endpoint != "manuals_shop.elearning_access" %}
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="{% block description %}Manuels de formation personnalisés, supports PowerPoint sur clé USB et accès e-learning pour les organismes de formation. Découvrez la collection Intégrale Academy.{% endblock %}">
@@ -17,14 +17,15 @@
   <script src="{{ url_for('static', filename='js/manuals-catalogue.js', v='20261012-experience') }}" defer></script>
   {% block extra_styles %}{% endblock %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-commerce.css', v='20261012-1') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-navigation.css', v='20261013-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-navigation.css', v='20261014-choices') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/connect-brand.css', v='20261014') }}">
   <script src="{{ url_for('static', filename='js/manuals-shop.js', v='20261012-experience') }}" defer></script>
 </head>
 <body class="{% if public %}public-storefront {% endif %}{% block body_class %}{% endblock %}">
   {% if cart_completed_key %}<div hidden data-cart-complete="{{ cart_completed_key }}"></div>{% endif %}
   <a class="skip-link" href="#main-content">Aller au contenu</a>
   <header class="site-header">
-    <a class="logo" href="{{ url_for('home') }}"><img src="{{ url_for('static', filename='logoic.webp') }}" alt="Intégrale Connect"></a>
+    {% include 'manuals/_connect_brand.html' %}
     <span class="header-label">L’espace des organismes de formation</span>
     <button class="navigation-toggle" data-navigation-toggle type="button" aria-controls="primary-navigation" aria-expanded="false" hidden>Menu</button>
     <nav id="primary-navigation" aria-label="Navigation principale">
@@ -46,7 +47,8 @@
     {% else %}
     <a href="{{ url_for('manuals_shop.home') }}" {% if request.endpoint == 'manuals_shop.home' %}aria-current="page"{% endif %}>Vue d’ensemble</a>
     <a href="{{ url_for('manuals_shop.elearning_soon') }}" {% if request.endpoint and request.endpoint.startswith('manuals_shop.elearning_') and request.endpoint != 'manuals_shop.elearning_demo' %}aria-current="page"{% endif %}>Mes accès e-learning</a>
-    <a href="{{ url_for('manuals_shop.catalogue') }}" {% if request.endpoint in ['manuals_shop.catalogue','manuals_shop.checkout','manuals_shop.order_detail','manuals_shop.order_payment'] %}aria-current="page"{% endif %}>Commandes Manuels et Clés USB</a>
+    <a href="{{ url_for('manuals_shop.order_options') }}" {% if request.endpoint in ['manuals_shop.order_options','manuals_shop.catalogue','manuals_shop.checkout'] %}aria-current="page"{% endif %}>Commandes Manuels et Clés USB</a>
+    <a href="{{ url_for('manuals_shop.orders_history') }}" {% if request.endpoint in ['manuals_shop.orders_history','manuals_shop.order_detail','manuals_shop.order_payment'] %}aria-current="page"{% endif %}>Mes commandes</a>
     <a href="{{ url_for('manuals_shop.organisme_profile') }}" {% if request.endpoint == 'manuals_shop.organisme_profile' %}aria-current="page"{% endif %}>Mon organisme</a>
     {% endif %}
     <a class="organisme-logout" href="{{ url_for('admin_logout') }}">Déconnexion</a>

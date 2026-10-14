@@ -1,0 +1,13 @@
+{% extends 'manuals/layout.html' %}
+{% block title %}Mes commandes et factures{% endblock %}
+{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/elearning-orders.css', v='20261014-history') }}">{% endblock %}
+{% block content %}
+<div class="shop-wrap purchase-history">
+  <section class="purchase-history-heading">
+    <div><span class="eyebrow blue">MON ESPACE ORGANISME</span><h1>Mes commandes et factures</h1><p class="muted">Retrouvez vos achats, leur suivi et vos documents de facturation.</p></div>
+    <a class="button primary" href="{{ url_for('manuals_shop.order_options') }}">Passer une commande <span aria-hidden="true">→</span></a>
+  </section>
+  {% with order_history_title='Manuels et Clés USB' %}{% include 'manuals/_order_history.html' %}{% endwith %}
+  {% with orders=elearning_purchases %}{% include 'manuals/_elearning_history.html' %}{% endwith %}
+</div>
+{% endblock %}

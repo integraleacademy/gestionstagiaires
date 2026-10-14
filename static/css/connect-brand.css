@@ -1,0 +1,18 @@
+.connect-brand,body .site-header .logo.connect-brand{display:inline-flex;align-items:center;gap:13px;flex-shrink:0;max-width:none;text-decoration:none;color:#182c48;line-height:1}
+.connect-brand__mark{--connect-mark-size:50px;display:block;position:relative;flex-shrink:0;overflow:hidden;width:var(--connect-mark-size);height:var(--connect-mark-size);border-radius:12px}
+.connect-brand .connect-brand__mark img{position:absolute;display:block;width:calc(var(--connect-mark-size)*3.84)!important;height:calc(var(--connect-mark-size)*1.44)!important;max-width:none!important;max-height:none!important;left:calc(var(--connect-mark-size)*-.17);top:calc(var(--connect-mark-size)*-.22);object-fit:fill}
+.connect-brand__name{font-family:Manrope,Arial,sans-serif;font-size:20px;font-weight:850;letter-spacing:.035em;text-transform:uppercase;white-space:nowrap;line-height:1.2}
+.connect-brand__name>span{color:#db6500}
+.login-brand .connect-brand{margin-bottom:28px}
+.purchase-options-intro{max-width:780px;margin:10px 0 34px}
+.purchase-options-intro h1{margin-bottom:16px}
+.purchase-options-intro p{max-width:650px}
+.purchase-history-link{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-weight:700;text-decoration:none}
+.purchase-history-heading{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:32px}
+.purchase-history-heading h1{margin:0 0 12px}
+.purchase-history-heading p{margin:0}
+.purchase-history .orders-section{margin-top:32px}
+.purchase-history .el-history{margin-top:32px}
+@media(max-width:1050px){.connect-brand__name{font-size:17px}.connect-brand__mark{--connect-mark-size:44px}.connect-brand,body .site-header .logo.connect-brand{gap:10px}}
+@media(max-width:700px){.connect-brand__name{font-size:15px;letter-spacing:.02em}.connect-brand__mark{--connect-mark-size:38px;border-radius:9px}.connect-brand,body .site-header .logo.connect-brand{gap:9px}.purchase-options-intro h1,.purchase-history-heading h1{font-size:32px}.purchase-history-heading{align-items:flex-start;flex-direction:column;gap:18px}.purchase-history-heading .button{width:100%}}
+@media(max-width:360px){.connect-brand__name{font-size:14px}.connect-brand__mark{--connect-mark-size:36px}body .site-header{padding-left:16px;padding-right:16px;gap:10px}}

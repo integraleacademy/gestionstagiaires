@@ -1,0 +1,13 @@
+{% extends 'manuals/layout.html' %}
+{% block title %}Choisir mes supports{% endblock %}
+{% block content %}
+<div class="shop-wrap portal-wrap">
+  <section class="purchase-options-intro" aria-labelledby="purchase-options-title">
+    <span class="eyebrow blue">VOS PROCHAINES FORMATIONS</span>
+    <h1 id="purchase-options-title">Que souhaitez-vous commander ?</h1>
+    <p class="muted">Des manuels pour vos stagiaires, des clés USB pour vos formateurs ou des accès e-learning : choisissez ce dont votre organisme a besoin.</p>
+    <a class="purchase-history-link" href="{{ url_for('manuals_shop.orders_history') }}">Voir mes commandes et mes factures <span aria-hidden="true">→</span></a>
+  </section>
+  {% include 'manuals/_support_choices.html' %}
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 <section class="orders-section" id="mes-commandes">
   <span class="eyebrow blue">VOTRE HISTORIQUE</span>
-  <h2>Mes commandes et factures</h2>
+  <h2>{{ order_history_title|default('Mes commandes et factures') }}</h2>
   <p class="muted">Réglez vos commandes en ligne et retrouvez vos factures après confirmation du paiement.</p>
   {% if orders %}
   <div class="table-scroll"><table>
