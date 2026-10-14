@@ -2,7 +2,7 @@
 {% set is_mac = course and course.code == 'mac-aps' %}
 {% block title %}{{ 'E-learning ' ~ course.name if course else 'Parcours e-learning pour les organismes de formation' }}{% endblock %}
 {% block description %}{{ (course.title ~ ' : programme, durée pédagogique et accès pour vos stagiaires.') if course else 'Découvrez les parcours e-learning disponibles, leur programme et le suivi de progression pour votre organisme.' }}{% endblock %}
-{% block extra_styles %}{% if not course %}<link rel="stylesheet" href="{{ url_for('static', filename='css/learning-catalogue.css', v='20261013-2') }}">{% endif %}<link rel="stylesheet" href="{{ url_for('static', filename='css/course-showcase.css', v='20261012-design-1') }}"><script src="{{ url_for('static', filename='js/course-showcase.js', v='20261012-design-1') }}" defer></script>{% endblock %}
+{% block extra_styles %}{% if not course %}<link rel="stylesheet" href="{{ url_for('static', filename='css/learning-catalogue.css', v='20261014-1') }}">{% endif %}<link rel="stylesheet" href="{{ url_for('static', filename='css/course-showcase.css', v='20261012-design-1') }}"><script src="{{ url_for('static', filename='js/course-showcase.js', v='20261012-design-1') }}" defer></script>{% endblock %}
 {% block content %}
 {% if course %}{% include 'manuals/_course_showcase.html' %}{% else %}
 {% include 'manuals/_learning_catalogue.html' %}

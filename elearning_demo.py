@@ -1,6 +1,6 @@
 """Public APS specimen: deterministic fictional data, no orders or tracking writes.
 
-Only one explicitly selected lesson and its two illustrations are public. The
+Only one explicitly selected lesson, its video and two illustrations are public. The
 normal native learner access, course assets and answer banks remain protected.
 """
 from __future__ import annotations
@@ -12,10 +12,16 @@ from elearning_native.academy import bundled_asset, curriculum_manifest, load_bu
 
 
 PUBLIC_ENDPOINTS = {"manuals_shop." + name for name in (
-    "elearning_demo", "elearning_demo_lesson", "elearning_demo_asset", "elearning_demo_certificate",
+    "elearning_demo", "elearning_demo_lesson", "elearning_demo_asset", "elearning_demo_media", "elearning_demo_certificate",
 )}
 SAMPLE_COURSE = "academy-aps62-01"
 SAMPLE_ASSETS = {"scene": "media/aps62/v2/module-01.webp", "schema": "media/aps62/repere-02.01.webp"}
+# Only this APS lesson is offered as a public video preview, never arbitrary assets.
+SAMPLE_MEDIA = {
+    "video": ("media/aps62/v13/aps62-01-01.mp4", "video/mp4"),
+    "affiche": ("media/aps62/v9/aps62-01-01.jpg", "image/jpeg"),
+    "sous-titres": ("media/aps62/v13/aps62-01-01.vtt", "text/vtt"),
+}
 PERSON = {"id": "specimen-person", "first_name": "Camille", "last_name": "Martin", "email": "camille.martin@example.test"}
 PARTNER = {"name": "Centre de formation exemple"}
 ORDER = {"id": "specimen-access", "course_code": "aps", "group_name": "Groupe APS · Démonstration"}
@@ -95,9 +101,11 @@ def sample_lesson():
     course = load_bundled_course(SAMPLE_COURSE)
     academy = course["sections"][0]["activities"][0]["academy"]
     # Deliberate field allowlist: no full course, assessment keys, or hidden banks.
-    return {"title": academy["title"], "case": academy["case"], "reason": academy["reason"],
-            "decision": academy["decision"], "pitfall": academy["pitfall"],
-            "paragraphs": academy["lessons"][0]["paragraphs"], "flow": academy["flow"],
+    return {"title": academy["title"], "intro": academy["intro"], "reason": academy["reason"],
+            # The public exercise has its own fixed prompt, independent of private activity banks.
+            "decision": "Expliquer les limites de la mission, rester au poste et prévenir le responsable.",
+            "pitfall": "Suivre la personne dans la rue parce que le client le demande.",
+            "paragraphs": academy["lessons"][0]["paragraphs"],
             "visual_board": academy["visual_board"], "image_alt": academy.get("image_alt", "Situation professionnelle APS")}
 
 
@@ -135,6 +143,17 @@ def register_routes(host, bp):
         if path is None:
             abort(404)
         return response(send_file(path, mimetype="image/webp", conditional=True))
+
+    @bp.get("/e-learning/demo/aps/media/<name>")
+    def elearning_demo_media(name):
+        if name not in SAMPLE_MEDIA:
+            abort(404)
+        filename, mimetype = SAMPLE_MEDIA[name]
+        course = load_bundled_course(SAMPLE_COURSE)
+        path = bundled_asset(SAMPLE_COURSE, course["version"], filename)
+        if path is None:
+            abort(404)
+        return response(send_file(path, mimetype=mimetype, conditional=True))
 
     @bp.get("/e-learning/demo/aps/attestation.pdf")
     def elearning_demo_certificate():

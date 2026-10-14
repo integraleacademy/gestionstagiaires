@@ -68,6 +68,42 @@ def test_public_query_and_asset_allowlists_do_not_expose_paid_catalogue(shop, mo
     assert not (Path(host.PERSIST_DIR) / "native_elearning" / "tracking.sqlite3").exists()
 
 
+def test_public_video_is_allowlisted_seekable_and_does_not_grant_access(shop, monkeypatch, tmp_path):
+    before = all_data(shop)
+    client = shop["client"]
+    sample = tmp_path / "preview.mp4"
+    sample.write_bytes(b"APS-preview-bytes")
+    requested = []
+
+    def asset(course, version, name):
+        requested.append((course, name))
+        return sample
+
+    monkeypatch.setattr(demo, "bundled_asset", asset)
+    for name, (_, mimetype) in demo.SAMPLE_MEDIA.items():
+        response = client.get(BASE + "/media/" + name)
+        assert response.status_code == 200
+        assert response.mimetype == mimetype
+        response.close()
+    partial = client.get(BASE + "/media/video", headers={"Range": "bytes=0-3"})
+    assert partial.status_code == 206 and partial.data == b"APS-"
+    assert partial.headers["Content-Range"] == "bytes 0-3/17"
+    assert client.head(BASE + "/media/video").status_code == 200
+    assert {course for course, _ in requested} == {demo.SAMPLE_COURSE}
+    assert {name for _, name in requested} == {item[0] for item in demo.SAMPLE_MEDIA.values()}
+
+    for name in ("other", "aps62-01-02.mp4", "..%2Fmanifest.json"):
+        assert client.get(BASE + "/media/" + name).status_code == 404
+    assert client.post(BASE + "/media/video").status_code == 405
+    assert client.get("/elearning/assets/academy-aps62-01/media/aps62/v13/aps62-01-02.mp4").status_code in {302, 401, 403, 404}
+    assert all_data(shop) == before
+    with client.session_transaction() as session:
+        assert not any(key.startswith("public_auth_") for key in session)
+    assert not (Path(host.PERSIST_DIR) / "native_elearning" / "tracking.sqlite3").exists()
+    monkeypatch.setattr(demo, "bundled_asset", lambda *args: None)
+    assert client.get(BASE + "/media/video").status_code == 404
+
+
 def test_specimen_pdf_cannot_be_confused_with_real_attestation(shop):
     before = all_data(shop)
     response = shop["client"].get(BASE + "/attestation.pdf?name=Vraie%20personne&progress=100")

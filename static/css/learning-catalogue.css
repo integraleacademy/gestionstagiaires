@@ -7,3 +7,15 @@
 .el-course-price { min-height: 101px; }
 .el-course-price strong small { display: inline; }
 .el-catalogue-note a { color: var(--el-ink); }
+.el-availability-list { display:flex; flex-wrap:wrap; gap:8px; list-style:none; padding:0; margin:25px 0 0; }
+.el-availability-list li { display:flex; gap:8px; align-items:center; border:1px solid #ccded4; background:#edf5ef; color:#285943; border-radius:7px; padding:8px 10px; font-size:11px; }
+.el-availability-list li>span { font-size:10px; }
+.el-availability-list li.el-availability-soon { border-color:#ded5c3; background:#f5f0e7; color:#75603b; }
+.el-course-status { align-self:flex-start; padding:6px 10px; margin:0 0 18px; border-radius:20px; background:#edf5ef; color:#285943; font-size:11px; font-weight:750; }
+.el-coming { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:22px; padding:25px 28px; margin-top:24px; border:1px dashed #b9c8ce; border-radius:15px; background:#fafbf9; }
+.el-coming-mark { display:flex; justify-content:center; align-items:center; width:56px; height:56px; border-radius:50%; background:#e8eeea; color:#5c7467; font-size:18px; font-weight:750; }
+.el-coming .el-kicker { margin:0 0 7px; font-size:9px!important; }
+.el-coming h3 { margin:0 0 5px; font-size:24px; letter-spacing:-.6px; }
+.el-coming p:not(.el-kicker) { margin:0; color:var(--el-muted); font-size:12px; }
+.el-coming-status { padding:9px 13px; border-radius:20px; background:#eee6d7; color:#715d36; font-size:11px; font-weight:700; }
+@media(max-width:760px){.el-coming{grid-template-columns:auto 1fr;padding:22px;gap:16px}.el-coming-status{grid-column:2;justify-self:start}.el-coming-mark{width:44px;height:44px}.el-availability-list{gap:7px}.el-availability-list li{font-size:12px}}
