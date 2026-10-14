@@ -55,12 +55,12 @@ test('APS choices shuffle by stable ID and preserve their positions when a draft
  reopened.close();
 });
 
-test('The module timer continues through exam correction and stops when leaving the page', async()=>{
+test('The APS module timer includes correction and background tabs, and saves on navigation', async()=>{
   const f=fixture(),w=f.window,d=w.document;
   f.resolve();
   const tracking={activityId:'aps62-01-examen-blanc',accessToken:'module-access',csrfToken:'csrf',
     startUrl:'/time/start',heartbeatUrl:'/time/heartbeat',finishUrl:'/time/finish',
-    initialActiveSeconds:12600,initialRemainingSeconds:1800,heartbeatSeconds:15,idleSeconds:300};
+    initialActiveSeconds:12600,initialRemainingSeconds:1800,heartbeatSeconds:15,idleSeconds:600,continueWhenHidden:true};
   const panel=d.createElement('section');
   panel.innerHTML='<strong id="nativeActiveTimer"></strong><strong id="nativeRemainingTime"></strong><span id="nativeDurationStatus"></span><div id="nativeTrackingState"><span></span></div>';
   d.body.prepend(panel);
@@ -75,8 +75,8 @@ test('The module timer continues through exam correction and stops when leaving 
   w.fetch=async(url,options)=>{
     if(!url.startsWith('/time/'))return examFetch(url,options);
     const body=JSON.parse(options.body);calls.push({url,body,keepalive:options.keepalive});
-    if(active)seconds+=Math.min(20,(now-last)/1000);
-    active=url==='/time/heartbeat'&&body.visible&&body.focused&&body.recent_activity;
+    if(active)seconds+=Math.min(600,(now-last)/1000);
+    active=url==='/time/heartbeat'&&body.recent_activity&&body.interaction_age_seconds<600;
     last=now;
     return{ok:true,json:async()=>({ok:true,tracking_session_id:'exam-session',active,
       progress:{active_seconds:seconds,remaining_seconds:14400-seconds,module_complete:false}})};
@@ -98,10 +98,11 @@ test('The module timer continues through exam correction and stops when leaving 
     assert.equal(d.getElementById('nativeRemainingTime').textContent,'00:29:45');
     visible=false;d.dispatchEvent(new w.Event('visibilitychange'));await settle();
     now=45000;await heartbeat();
-    assert.equal(d.getElementById('nativeActiveTimer').textContent,'03:30:15');
+    assert.equal(d.getElementById('nativeActiveTimer').textContent,'03:30:45');
+    assert.equal(d.getElementById('nativeTrackingState').dataset.state,'active');
     visible=true;w.dispatchEvent(new w.Event('focus'));await settle();
     now=60000;await heartbeat();
-    assert.equal(d.getElementById('nativeActiveTimer').textContent,'03:30:30');
+    assert.equal(d.getElementById('nativeActiveTimer').textContent,'03:31:00');
     w.dispatchEvent(new w.Event('pagehide'));await settle();
     assert.equal(calls.at(-1).url,'/time/finish');
     assert.equal(calls.at(-1).keepalive,true);

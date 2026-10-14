@@ -31,6 +31,8 @@
   const durationStatus = document.getElementById("nativeDurationStatus");
   const idleNotice = document.getElementById("nativeIdleNotice");
   const idleMilliseconds = Number(config.idleSeconds || 300) * 1000;
+  const continueWhenHidden = config.continueWhenHidden === true;
+  const idleLabel = `Pause · inactif depuis ${Math.round(idleMilliseconds / 60000)} min`;
 
   const state = {
     trackingSessionId: "",
@@ -45,6 +47,7 @@
     baseSeconds: Number(config.initialActiveSeconds || 0),
     displayAnchor: Date.now(),
     lastInteraction: Date.now(),
+    lastMediaActivity: 0,
     toastTimeout: 0,
     saving: false,
     pendingAnswer: null,
@@ -79,10 +82,16 @@
     return [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
   }
 
+  function lastActivityAt() {
+    // APS viewing receipts are real learning activity too. Keep a separate
+    // timestamp instead of manufacturing mouse/keyboard interactions.
+    return continueWhenHidden ? Math.max(state.lastInteraction, state.lastMediaActivity) : state.lastInteraction;
+  }
+
   function displayedSeconds() {
     const extra = state.serverActive ? Math.max(0, Math.min(
       Date.now() - state.displayAnchor, 20000,
-      confirmedPlayback() ? 20000 : state.lastInteraction + idleMilliseconds - state.displayAnchor
+      confirmedPlayback() ? 20000 : lastActivityAt() + idleMilliseconds - state.displayAnchor
     ) / 1000) : 0;
     return state.baseSeconds + extra;
   }
@@ -185,7 +194,7 @@
   }
 
   function activitySignals() {
-    const age = Math.max(0, (Date.now() - state.lastInteraction) / 1000);
+    const age = Math.max(0, (Date.now() - lastActivityAt()) / 1000);
     const recent = age < idleMilliseconds / 1000;
     const mediaPlaying = videos.some((video) => !video.paused && !video.ended && video.readyState >= 2);
     return {
@@ -468,6 +477,7 @@
         ...activitySignals(),
         videos: videoSignals(),
       });
+      if (state.stopped) return;
       applyProgress(result.progress);
       for (const video of requiredVideos) {
         const position = result.video_resync?.[video.dataset.requiredVideo];
@@ -480,9 +490,10 @@
         }
       }
       state.serverMediaActive = Boolean(result.media_active);
+      if (state.serverMediaActive && continueWhenHidden) state.lastMediaActivity = Date.now();
       state.playbackAvailable = !result.duplicate;
       state.lastReceipt = Date.now();
-      state.serverActive = Boolean(result.active) && document.visibilityState === "visible" && document.hasFocus()
+      state.serverActive = Boolean(result.active) && (continueWhenHidden || (document.visibilityState === "visible" && document.hasFocus()))
         && (activitySignals().recent_activity || confirmedPlayback());
       state.displayAnchor = Date.now();
       if (result.duplicate) {
@@ -493,7 +504,7 @@
         if (duplicateNotice) duplicateNotice.classList.remove("is-visible");
         setTrackingState(
           state.serverActive ? "active" : "paused",
-          state.serverActive ? "Chrono actif" : (activitySignals().recent_activity ? "Chrono en pause" : "Pause · inactif depuis 5 min")
+          state.serverActive ? "Chrono actif" : (activitySignals().recent_activity ? "Chrono en pause" : idleLabel)
         );
       }
       scheduleIdlePause();
@@ -549,7 +560,7 @@
   let idleTimeout = 0;
   function scheduleIdlePause() {
     window.clearTimeout(idleTimeout);
-    const remaining = state.lastInteraction + idleMilliseconds - Date.now();
+    const remaining = lastActivityAt() + idleMilliseconds - Date.now();
     if (remaining <= 0 && (confirmedPlayback() || learningPauseActive())) {
       state.idlePaused = false;
       if (idleNotice) idleNotice.hidden = true;
@@ -564,13 +575,13 @@
       state.idlePaused = true;
       pauseRequiredVideos();
       pauseDisplay();
-      setTrackingState("paused", "Pause · inactif depuis 5 min");
+      setTrackingState("paused", idleLabel);
       if (idleNotice) idleNotice.hidden = false;
       sendHeartbeat();
     }, Math.max(0, remaining));
   }
   function markActivity() {
-    const wasIdle = Date.now() - state.lastInteraction >= idleMilliseconds;
+    const wasIdle = Date.now() - lastActivityAt() >= idleMilliseconds;
     if (wasIdle) pauseDisplay();
     state.lastInteraction = Date.now();
     state.idlePaused = false;
@@ -586,9 +597,16 @@
     window.addEventListener(eventName, markActivity, { passive: true });
   });
   window.addEventListener("focus", () => { markActivity(); sendHeartbeat(); });
-  window.addEventListener("blur", () => { pauseRequiredVideos(); pauseDisplay(); sendHeartbeat(); });
+  window.addEventListener("blur", () => {
+    pauseRequiredVideos();
+    if (!continueWhenHidden) pauseDisplay();
+    sendHeartbeat();
+  });
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState !== "visible") { pauseRequiredVideos(); pauseDisplay(); }
+    if (document.visibilityState !== "visible") {
+      pauseRequiredVideos();
+      if (!continueWhenHidden) pauseDisplay();
+    }
     sendHeartbeat();
   });
   document.getElementById("nativeResumeTimer")?.addEventListener("click", () => { markActivity(); sendHeartbeat(); });

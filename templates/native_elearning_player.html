@@ -280,7 +280,7 @@
           {% endif %}
         </div>
         {% if not preview_mode %}
-        <p class="native-tracking-explainer">Le temps réellement passé est enregistré pendant la lecture d’une vidéo obligatoire, au rythme proposé par le lecteur, tant que cette page reste visible et active. Vous pouvez regarder la vidéo sans bouger la souris. Une pause, un chargement ou une lecture arrêtée rétablit la règle habituelle : après 5 minutes sans interaction, le chrono se met en pause. Quitter la page arrête la lecture et le suivi. {% if course.training_label == 'VTC' %}Tous vos modules restent accessibles. Pour terminer un module, réalisez ses activités obligatoires et sa durée obligatoire. Les ateliers facultatifs peuvent être passés ; leur temps réellement effectué est comptabilisé.{% else %}Pour ouvrir le module suivant, terminez les activités et la durée obligatoire.{% endif %}</p>
+        <p class="native-tracking-explainer">{% if continue_when_hidden %}Le temps des cours, exercices, examens blancs de module et corrigés est enregistré dans le même compteur. Changer de page dans le module ou passer sur un autre onglet ne coupe pas le chrono. Il se met en pause après 10 minutes sans interaction ni lecture vidéo suivie. Revenez sur le cours et reprenez votre travail pour relancer le suivi. Les vidéos se mettent en pause lorsqu’elles ne sont plus visibles ; leur progression reste enregistrée. Pour ouvrir le module suivant, terminez les activités et la durée obligatoire.{% else %}Le temps réellement passé est enregistré pendant la lecture d’une vidéo obligatoire, au rythme proposé par le lecteur, tant que cette page reste visible et active. Vous pouvez regarder la vidéo sans bouger la souris. Une pause, un chargement ou une lecture arrêtée rétablit la règle habituelle : après 5 minutes sans interaction, le chrono se met en pause. Quitter la page arrête la lecture et le suivi. {% if course.training_label == 'VTC' %}Tous vos modules restent accessibles. Pour terminer un module, réalisez ses activités obligatoires et sa durée obligatoire. Les ateliers facultatifs peuvent être passés ; leur temps réellement effectué est comptabilisé.{% else %}Pour ouvrir le module suivant, terminez les activités et la durée obligatoire.{% endif %}{% endif %}</p>
         {% endif %}
       </div>
     </main>
@@ -297,7 +297,7 @@
   </div>
   <div class="native-toast" id="nativeToast" role="status" aria-live="polite"></div>
   <div class="native-idle-notice" id="nativeIdleNotice" role="status" hidden>
-    <strong>Chrono en pause</strong><span>Aucune lecture vidéo suivie et 5 minutes sans interaction. Votre progression est conservée.</span>
+    <strong>Chrono en pause</strong><span>Aucune lecture vidéo suivie et {{ idle_seconds // 60 }} minutes sans interaction. Votre progression est conservée.</span>
     <button class="native-button native-button--primary" id="nativeResumeTimer" type="button">Reprendre le chrono</button>
   </div>
 
@@ -325,6 +325,7 @@
     'practiceUrl': url_for('native_elearning.activity_practice', activity_id=activity.id),
     'heartbeatSeconds': heartbeat_seconds,
     'idleSeconds': idle_seconds,
+    'continueWhenHidden': continue_when_hidden,
     'initialActiveSeconds': progress.active_seconds,
     'initialProgressPercent': progress.progress_percent,
     'initialScorePercent': progress.score_percent,
@@ -335,7 +336,7 @@
     'initialTimedObjectives': progress.get('timed_objectives', [])
   }|tojson }}</script>
   <script src="{{ url_for('static', filename='js/native-video-pacing.js', v='20261013-vtc-normal-speed') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261013-vtc-normal-speed' if course.training_label == 'VTC' else '20261012-macaps-v2') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261014-aps-idle10' if continue_when_hidden else '20261013-vtc-normal-speed' if course.training_label == 'VTC' else '20261012-macaps-v2') }}" defer></script>
   {% endif %}
 {% if course.training_label == 'VTC' %}<script src="{{ url_for('static', filename='js/vtc-video-companion.js', v='20261013-vtc-normal-speed') }}" defer></script>{% endif %}
 {% if course.training_label == 'MAC APS' %}<script src="{{ url_for('static', filename='js/mac-aps-elearning.js', v='20261012-1') }}" defer></script>{% endif %}

@@ -1,5 +1,6 @@
 """Long viewing receipts extend presence; flags, pauses and duplicate tabs do not."""
 import unittest
+from elearning_native.store import idle_timeout_seconds
 
 from tests import test_native_elearning as tracking_tests
 
@@ -8,8 +9,8 @@ class LongViewingPresenceTests(unittest.TestCase):
     setUp = tracking_tests.NativeTrackingTests.setUp
     tearDown = tracking_tests.NativeTrackingTests.tearDown
 
-    def start(self, access=None, when=1000):
-        return self.store.start_tracking(access or self.access, tab_id='video-tab',
+    def start(self, access=None, when=1000, tab='video-tab'):
+        return self.store.start_tracking(access or self.access, tab_id=tab,
             activity_id='lesson-1', now_epoch=when)['tracking_session_id']
 
     def ping(self, tracking, elapsed, position, *, access=None, age=None, playing=True,
@@ -17,7 +18,8 @@ class LongViewingPresenceTests(unittest.TestCase):
         age = elapsed if age is None else age
         return self.store.heartbeat(access or self.access, tracking,
             activity_id='lesson-1', now_epoch=1000 + elapsed, visible=visible, focused=focused,
-            recent_activity=age < 300, media_playing=True, interaction_age_seconds=age,
+            recent_activity=age < idle_timeout_seconds((access or self.access)['course_id']),
+            media_playing=True, interaction_age_seconds=age,
             video_requirements={'lesson-video': duration},
             video_samples=[dict(id='lesson-video', position=position, playing=playing, ended=ended, rate=rate)])
 
@@ -102,7 +104,7 @@ class LongViewingPresenceTests(unittest.TestCase):
         self.assertEqual(review['progress']['active_seconds'], 20)
         self.assertTrue(review['progress']['video_progress']['lesson-1']['lesson-video']['completed'])
 
-    def test_slow_long_viewing_counts_elapsed_time_once_and_stops_when_buffering(self):
+    def test_aps_slow_viewing_counts_once_and_buffering_uses_the_ten_minute_deadline(self):
         self.access = {**self.access, 'course_id': 'academy-aps62-01', 'course_version': '20261010-aps62-v10'}
         for rate in (.85, .9):
             with self.subTest(rate=rate):
@@ -116,10 +118,16 @@ class LongViewingPresenceTests(unittest.TestCase):
                     self.assertAlmostEqual(result['progress']['video_progress']['lesson-1']['lesson-video']['watched_seconds'],
                                            elapsed * rate, places=3)
                     self.assertFalse(result['video_resync'])
-                stopped = self.ping(tracking, 644, 640 * rate, rate=rate, access=access)
+                # The client tracks the last server-confirmed viewing receipt
+                # separately from pointer activity. Buffering adds no viewing.
+                paused = self.ping(tracking, 644, 640 * rate, age=4, rate=rate, access=access)
+                self.assertTrue(paused['active'])
+                self.assertFalse(paused['media_active'])
+                self.assertEqual(paused['progress']['active_seconds'], 644)
+                stopped = self.ping(tracking, 1241, 640 * rate, age=601, rate=rate, access=access)
                 self.assertFalse(stopped['active'])
-                self.assertEqual(stopped['credited_seconds'], 0)
-                self.assertEqual(stopped['progress']['active_seconds'], 640)
+                self.assertEqual(stopped['progress']['active_seconds'], 1240)
+                self.assertAlmostEqual(stopped['progress']['video_progress']['lesson-1']['lesson-video']['watched_seconds'], 640 * rate)
 
     def test_slow_jitter_preserves_wall_time_and_watched_prefix(self):
         self.access = {**self.access, 'course_id': 'academy-aps62-01', 'course_version': '20261010-aps62-v10'}
@@ -131,7 +139,7 @@ class LongViewingPresenceTests(unittest.TestCase):
                 for elapsed, played in [(4.35, 4), (8, 8), (12.35, 12), (16, 16)]:
                     result = self.ping(tracking, elapsed, played * rate, age=299 + elapsed, rate=rate, access=access)
                     self.assertFalse(result['video_resync'])
-                    self.assertAlmostEqual(result['progress']['active_seconds'], played, places=2)
+                    self.assertAlmostEqual(result['progress']['active_seconds'], elapsed, places=2)
                     self.assertAlmostEqual(result['progress']['video_progress']['lesson-1']['lesson-video']['watched_seconds'],
                                            played * rate, places=3)
 
@@ -154,7 +162,7 @@ class LongViewingPresenceTests(unittest.TestCase):
             self.assertAlmostEqual(result['progress']['video_progress']['lesson-1']['lesson-video']['watched_seconds'],
                                    position, places=3)
 
-    def test_hidden_blurred_fast_and_duplicate_slow_receipts_do_not_extend_presence(self):
+    def test_aps_background_time_never_validates_hidden_fast_or_duplicate_video(self):
         self.access = {**self.access, 'course_id': 'academy-aps62-01', 'course_version': '20261010-aps62-v10'}
         for case in ('hidden', 'blurred', 'fast', 'duplicate'):
             with self.subTest(case=case):
@@ -167,12 +175,14 @@ class LongViewingPresenceTests(unittest.TestCase):
                 if case == 'blurred': args['focused'] = False
                 if case == 'fast': args['rate'] = 2
                 if case == 'duplicate':
-                    tracking = self.start(access, when=1004)
+                    tracking = self.start(access, when=1004, tab='other-tab')
                     self.assertTrue(self.ping(tracking, 4, 3.4, access=access, age=0, rate=.85)['duplicate'])
                 result = self.ping(tracking, 8, 6.8, **args)
                 self.assertFalse(result['media_active'])
-                self.assertEqual(result['credited_seconds'], 0)
-                self.assertEqual(result['progress']['active_seconds'], 4)
+                self.assertEqual(result['credited_seconds'], 0 if case == 'duplicate' else 4)
+                self.assertEqual(result['progress']['active_seconds'], 4 if case == 'duplicate' else 8)
+                self.assertAlmostEqual(result['progress']['video_progress']['lesson-1']['lesson-video']['watched_seconds'], 3.4)
+                self.assertFalse(result['progress']['video_progress']['lesson-1']['lesson-video']['completed'])
 
 
 if __name__ == '__main__':

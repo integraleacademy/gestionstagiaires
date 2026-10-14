@@ -7,8 +7,21 @@ Seuls le résultat et la date de remise étaient enregistrés dans
 Chaque page utilise désormais le lecteur de suivi existant avec un accès signé
 limité à l'examen de son module affecté. Les questions, la lecture du corrigé et
 les nouvelles tentatives alimentent le même `active_seconds` que les cours.
-Les pauses d'inactivité, la visibilité, la fermeture de page et la protection
-contre les onglets concurrents restent contrôlées par le serveur habituel.
+La pause d'inactivité et la protection contre les onglets concurrents restent
+contrôlées par le serveur. Le réglage APS est désormais de **10 minutes**.
+Changer d'onglet ou perdre le focus ne suspend plus le compteur. Les retards
+de heartbeat des onglets en arrière-plan sont comptés jusqu'à la dernière
+échéance d'inactivité confirmée, jamais au-delà. Un reçu de lecture vidéo
+valide constitue aussi une activité ; une vidéo masquée ne gagne aucune
+progression de lecture et se met en pause.
+
+Lors d'une navigation dans le même onglet (activité, examen ou autre module),
+le serveur clôture la session précédente et conserve ses dernières secondes
+dans le module d'origine avant d'ouvrir le nouveau suivi. Cela fonctionne même
+si la requête de fermeture précédente est retardée ou perdue. Ses éventuelles
+requêtes tardives ne comptent rien de plus. La fermeture du lecteur arrête le
+suivi ; la page de présentation du parcours n'est pas chronométrée. Les autres
+formations conservent leur propre délai de 5 minutes et leurs règles de focus.
 
 Le budget reste inchangé : pour APS 01, 3 h 30 de cours et 30 minutes actives
 d'examen atteignent les 4 heures. Le parcours, le lecteur, le suivi administratif
@@ -35,7 +48,9 @@ NODE_PATH=/path/to/node_modules node --test tests/test_native_elearning_exam_ui.
 ```
 
 La suite couvre les 15 modules, les anciennes éditions disponibles, le passage
-de 3 h 30 à 4 h, la reprise, les pauses, les requêtes répétées, les onglets
-concurrents, le maintien du suivi sur le corrigé, les droits d'accès, les aperçus
-et la conservation des réponses, vidéos et résultats. Les tests utilisent des
+de 3 h 30 à 4 h, le décompte à 9 min 59 puis la pause à 10 min, la reprise,
+les heartbeats retardés, la navigation avant réception de la fermeture, les
+requêtes répétées, les onglets concurrents, le maintien du suivi sur le corrigé,
+les exports, les droits d'accès, les aperçus et la conservation des réponses,
+vidéos et résultats. Les tests utilisent des
 apprenants fictifs et une base temporaire, sans modifier de dossier stagiaire.

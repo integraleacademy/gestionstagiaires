@@ -63,7 +63,7 @@ from .importer import (
     CourseImportError,
     sanitize_course_html,
 )
-from .store import IDLE_TIMEOUT_SECONDS, NativeElearningStore, TrackingError
+from .store import APS_PACED_COURSES, NativeElearningStore, TrackingError, idle_timeout_seconds
 from .paths import (
     allows_free_module_navigation, assigned_modules, course_outline, path_revision, project_course,
     project_progress, required_activity_order, validate_modules,
@@ -76,7 +76,6 @@ except ImportError:  # pragma: no cover - Windows development fallback
 
 
 ACCESS_TOKEN_TTL_SECONDS = 12 * 60 * 60
-CLIENT_IDLE_SECONDS = int(IDLE_TIMEOUT_SECONDS)
 CLIENT_HEARTBEAT_SECONDS = 15
 UPLOAD_CHUNK_BYTES = 5 * 1024 * 1024
 UPLOAD_TTL_SECONDS = 6 * 60 * 60
@@ -1090,7 +1089,9 @@ def create_native_elearning_blueprint(
                 'startUrl': url_for('native_elearning.tracking_start'),
                 'heartbeatUrl': url_for('native_elearning.tracking_heartbeat'),
                 'finishUrl': url_for('native_elearning.tracking_finish'),
-                'heartbeatSeconds': CLIENT_HEARTBEAT_SECONDS, 'idleSeconds': CLIENT_IDLE_SECONDS,
+                'heartbeatSeconds': CLIENT_HEARTBEAT_SECONDS,
+                'idleSeconds': int(idle_timeout_seconds(course['id'])),
+                'continueWhenHidden': course['id'] in APS_PACED_COURSES,
                 'initialActiveSeconds': progress['active_seconds'],
                 'initialRemainingSeconds': progress['remaining_seconds'],
                 'initialModuleComplete': progress['module_complete'],
@@ -1870,6 +1871,7 @@ def create_native_elearning_blueprint(
             training_label=training_label,
             macaps_v2=macaps_v2, macaps_full_path=macaps_full_path, macaps_complements=macaps_complements,
             free_module_navigation=free_module_navigation,
+            aps_tracking=any(m.get('course') and m['course']['id'] in APS_PACED_COURSES for m in modules),
             hero_illustration_url=url_for("static", filename="images/mac-aps-cover.webp") if training_label == "MAC APS" else url_for("static", filename="images/learner-welcome-vtc.webp") if training_label == "VTC" else (
                 url_for("static", filename="images/learner-welcome-aps.webp") if any(
                     m["course"] and str(m["course"].get("id") or "").startswith("academy-aps62-") for m in modules
@@ -2100,7 +2102,8 @@ def create_native_elearning_blueprint(
             access_token=access_token,
             production_ai_config=production_ai_config(course, requested_id, access_token=access_token) if raw_activity.get('production') and not is_vtc_production(course, raw_activity) else None,
             heartbeat_seconds=CLIENT_HEARTBEAT_SECONDS,
-            idle_seconds=CLIENT_IDLE_SECONDS,
+            idle_seconds=int(idle_timeout_seconds(course['id'])),
+            continue_when_hidden=course['id'] in APS_PACED_COURSES,
             is_last_activity=not next_required,
             exam_url=url_for('native_elearning.learner_exam',token=token,exam_id=course['mock_exam_id']) if course.get('mock_exam_id') else '',
         )

@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from elearning_native.academy import curriculum_manifest, load_bundled_course
 from elearning_native.exams import module_exam_activity_id
+from elearning_native.store import NativeElearningStore
 from elearning_native.videos import course_videos
 from tests import test_native_elearning_exams as exams
 from tests import test_native_elearning_web as web
@@ -62,6 +63,8 @@ class APSExamTimeTests(unittest.TestCase):
                 self.assertIn('Examen blanc et corrigé inclus', page.text)
                 self.assertIn('native-elearning-player.js', page.text)
                 self.assertEqual(cfg['activityId'], f'aps62-{number:02d}-examen-blanc')
+                self.assertEqual(cfg['idleSeconds'], 600)
+                self.assertTrue(cfg['continueWhenHidden'])
                 tracking = self.tracking(cfg, now)
                 self.ping(cfg, tracking, now)
                 result = self.ping(cfg, tracking, now + 15)
@@ -141,6 +144,10 @@ class APSExamTimeTests(unittest.TestCase):
         row = report.json['learners'][0]
         self.assertEqual(row['activity_title'], 'Examen blanc du module · questions et corrigé')
         self.assertEqual(row['active_time_label'], '04:00:00')
+        exported = self.client.get('/admin/elearning/courses/academy-aps62-01/export.csv')
+        self.assertEqual(exported.status_code, 200)
+        self.assertIn('04:00:00', exported.text)
+        self.assertIn('14400', exported.text)
 
     def test_exam_and_course_cannot_double_count_even_in_two_tabs(self):
         cfg, _, _ = self.assign()
@@ -158,21 +165,91 @@ class APSExamTimeTests(unittest.TestCase):
         self.ping(cfg, exam, now + 15)
         self.assertEqual(self.ping(cfg, exam, now + 30)['progress']['active_seconds'], 30)
 
-    def test_hidden_idle_and_replayed_heartbeats_do_not_add_exam_time(self):
+    def test_background_time_continues_until_ten_minutes_and_never_counts_twice(self):
         cfg, _, _ = self.assign()
         now = time.time()
         tracking = self.tracking(cfg, now)
         self.ping(cfg, tracking, now)
         self.assertEqual(self.ping(cfg, tracking, now + 15)['credited_seconds'], 15)
         self.assertEqual(self.ping(cfg, tracking, now + 15)['credited_seconds'], 0)
-        self.ping(cfg, tracking, now + 15, visible=False, focused=False)
-        paused = self.ping(cfg, tracking, now + 75, visible=False, focused=False)
-        self.assertEqual(paused['progress']['active_seconds'], 15)
-        self.ping(cfg, tracking, now + 75, interaction_age_seconds=295)
-        idle = self.ping(cfg, tracking, now + 90, interaction_age_seconds=310, recent_activity=False)
+        hidden = dict(visible=False, focused=False)
+        self.ping(cfg, tracking, now + 15, interaction_age_seconds=15, **hidden)
+        background = self.ping(cfg, tracking, now + 75, interaction_age_seconds=75, **hidden)
+        self.assertTrue(background['active'])
+        self.assertEqual(background['progress']['active_seconds'], 75)
+        before = self.ping(cfg, tracking, now + 599, interaction_age_seconds=599, **hidden)
+        self.assertTrue(before['active'])
+        self.assertEqual(before['progress']['active_seconds'], 599)
+        idle = self.ping(cfg, tracking, now + 601, interaction_age_seconds=601, recent_activity=False, **hidden)
         self.assertFalse(idle['active'])
-        self.assertEqual(idle['credited_seconds'], 5)
-        self.assertEqual(self.ping(cfg, tracking, now + 105, interaction_age_seconds=325, recent_activity=False)['credited_seconds'], 0)
+        self.assertEqual(idle['credited_seconds'], 1)
+        self.assertEqual(idle['progress']['active_seconds'], 600)
+        self.assertEqual(self.ping(cfg, tracking, now + 1200, interaction_age_seconds=1200, recent_activity=False)['credited_seconds'], 0)
+        resumed = self.ping(cfg, tracking, now + 1200, interaction_age_seconds=0)
+        self.assertTrue(resumed['active'])
+        self.assertEqual(resumed['credited_seconds'], 0)
+        self.assertEqual(self.ping(cfg, tracking, now + 1215, interaction_age_seconds=15)['progress']['active_seconds'], 615)
+
+    def test_navigation_credits_the_last_seconds_even_if_finish_is_late_or_lost(self):
+        cfg, _, _ = self.assign()
+        course_cfg = self._player_config(self.client.get('/espace/public-token/elearning/academy-aps62-01'))
+        self.assertEqual(course_cfg['idleSeconds'], 600)
+        self.assertTrue(course_cfg['continueWhenHidden'])
+        now = time.time()
+        lesson = self.tracking(course_cfg, now, tab='same-tab')
+        self.ping(course_cfg, lesson, now)
+        # The new page arrives before the old page's pagehide request.
+        exam = self.tracking(cfg, now + 8, tab='same-tab')
+        continued = self.ping(cfg, exam, now + 8)
+        self.assertFalse(continued['duplicate'])
+        self.assertTrue(continued['active'])
+        self.assertEqual(continued['progress']['active_seconds'], 8)
+        self.assertEqual(self.ping(course_cfg, lesson, now + 10)['credited_seconds'], 0)
+        with patch('elearning_native.store.time.time', return_value=now + 12):
+            late = self._api_post(course_cfg['finishUrl'], course_cfg, tracking_session_id=lesson,
+                                  activity_id=course_cfg['activityId'])
+        self.assertEqual(late.json['credited_seconds'], 0)
+        self.assertEqual(self.ping(cfg, exam, now + 23)['progress']['active_seconds'], 23)
+        # A refresh transfers the same budget without waiting 45 seconds.
+        refreshed = self.tracking(cfg, now + 25, tab='same-tab')
+        result = self.ping(cfg, refreshed, now + 25)
+        self.assertTrue(result['active'])
+        self.assertEqual(result['progress']['active_seconds'], 25)
+        self.assertEqual(self.ping(cfg, exam, now + 40)['credited_seconds'], 0)
+        self.assertEqual(self.ping(cfg, refreshed, now + 40)['progress']['active_seconds'], 40)
+
+    def test_long_suspension_and_navigation_do_not_credit_beyond_the_idle_deadline(self):
+        cfg, _, _ = self.assign()
+        now = time.time()
+        first = self.tracking(cfg, now, tab='same-tab')
+        self.ping(cfg, first, now)
+        second = self.tracking(cfg, now + 3600, tab='same-tab')
+        result = self.ping(cfg, second, now + 3600)
+        self.assertTrue(result['active'])
+        self.assertEqual(result['progress']['active_seconds'], 600)
+        self.assertEqual(self.ping(cfg, first, now + 3601)['credited_seconds'], 0)
+
+    def test_navigation_to_another_module_keeps_each_modules_own_seconds(self):
+        store = NativeElearningStore(self.database)
+        first_access = dict(session_id='navigation', trainee_id='learner', course_id='academy-aps62-01', course_version='v1')
+        second_access = {**first_access, 'course_id': 'academy-aps62-02'}
+        def start(access, when, tab='same-tab'):
+            return store.start_tracking(access, tab_id=tab, activity_id='lesson', now_epoch=when)['tracking_session_id']
+        def ping(access, tracking, when):
+            return store.heartbeat(access, tracking, activity_id='lesson', now_epoch=when,
+                visible=True, focused=True, recent_activity=True, media_playing=False, interaction_age_seconds=0)
+        first = start(first_access, 1000)
+        ping(first_access, first, 1000)
+        second = start(second_access, 1012)
+        self.assertTrue(ping(second_access, second, 1012)['active'])
+        self.assertEqual(ping(second_access, second, 1027)['progress']['active_seconds'], 15)
+        old = ping(first_access, first, 1028)
+        self.assertTrue(old['ended'])
+        self.assertEqual(old['progress']['active_seconds'], 12)
+        duplicate = start(first_access, 1028, tab='other-tab')
+        self.assertTrue(ping(first_access, duplicate, 1028)['duplicate'])
+        self.assertEqual(ping(first_access, duplicate, 1042)['credited_seconds'], 0)
+        self.assertEqual(ping(second_access, second, 1042)['progress']['active_seconds'], 30)
 
     def test_exam_access_is_scoped_and_assignment_revocation_is_respected(self):
         cfg, _, _ = self.assign()

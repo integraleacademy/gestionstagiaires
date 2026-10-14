@@ -20,8 +20,13 @@ from . import assessment
 HEARTBEAT_MAX_CREDIT_SECONDS = 20.0
 ACTIVE_SESSION_STALE_SECONDS = 45.0
 IDLE_TIMEOUT_SECONDS = 300.0
+APS_IDLE_TIMEOUT_SECONDS = 600.0
 VIDEO_PLAYBACK_RATES = frozenset((0.85, 0.9, 1.0))
 APS_PACED_COURSES = frozenset(f"academy-aps62-{number:02d}" for number in range(1, 16))
+
+
+def idle_timeout_seconds(course_id: str) -> float:
+    return APS_IDLE_TIMEOUT_SECONDS if course_id in APS_PACED_COURSES else IDLE_TIMEOUT_SECONDS
 
 _INITIALIZE_LOCK = threading.Lock()
 _INITIALIZED_DATABASES: set[str] = set()
@@ -448,6 +453,40 @@ class NativeElearningStore:
                 now_iso=now_iso,
                 current_activity_id=activity_id,
             )
+            if course_id in APS_PACED_COURSES:
+                # Navigation can reach this endpoint before the previous page's
+                # keepalive finish, or without that finish reaching us at all.
+                # Settle and release this tab atomically before opening its next
+                # page. A delayed finish/heartbeat then cannot credit it twice.
+                previous = connection.execute(
+                    """SELECT t.* FROM tracking_sessions t
+                       JOIN learner_course_progress p ON p.active_tracking_session_id = t.id
+                       WHERE t.session_id = ? AND t.trainee_id = ? AND t.tab_id = ?
+                         AND t.status = 'open'""",
+                    (session_id, trainee_id, str(tab_id)[:128]),
+                ).fetchall()
+                for old in previous:
+                    if old['course_id'] not in APS_PACED_COURSES:
+                        continue
+                    old_key = tuple(old[name] for name in ('session_id', 'trainee_id', 'course_id', 'course_version'))
+                    credited = min(
+                        max(0.0, epoch - old['last_seen_epoch']), APS_IDLE_TIMEOUT_SECONDS,
+                        max(0.0, old['active_until_epoch'] - old['last_seen_epoch']),
+                    ) if old['was_active'] else 0.0
+                    connection.execute(
+                        """UPDATE learner_course_progress SET active_seconds = active_seconds + ?,
+                           active_tracking_session_id = NULL, active_tracking_seen_epoch = NULL, updated_at = ?
+                           WHERE session_id = ? AND trainee_id = ? AND course_id = ? AND course_version = ?""",
+                        (credited, now_iso, *old_key),
+                    )
+                    connection.execute(
+                        """UPDATE tracking_sessions SET status = 'ended', ended_at = ?, was_active = 0,
+                           active_until_epoch = 0, credited_seconds = credited_seconds + ? WHERE id = ?""",
+                        (now_iso, credited, old['id']),
+                    )
+                    self._event(connection, dict(zip(('session_id', 'trainee_id', 'course_id', 'course_version'), old_key)),
+                        'session_finished', tracking_session_id=old['id'], activity_id=old['current_activity_id'],
+                        at=now_iso, credited_seconds=credited, details={'reason': 'navigation'})
             connection.execute(
                 """
                 INSERT INTO tracking_sessions (
@@ -512,8 +551,10 @@ class NativeElearningStore:
             raise TrackingError("Durée d’inactivité invalide. Rechargez la page.")
         # A media_playing flag alone never establishes presence. Required-video
         # receipts must advance at an allowed rate between server-timed heartbeats.
-        interactive_active = bool(visible and focused and recent_activity and age < IDLE_TIMEOUT_SECONDS)
         key = self._key_values(access)
+        aps_tracking = key[2] in APS_PACED_COURSES
+        idle_seconds = idle_timeout_seconds(key[2])
+        interactive_active = bool((aps_tracking or (visible and focused)) and recent_activity and age < idle_seconds)
         playback = (video_playback_policy or {}) if vtc_pacing_enabled(key[2], key[3]) else {}
         if key[2] in APS_PACED_COURSES or mac_aps_pacing_enabled(key[2], key[3]):
             # Reviewed APS/MAC APS speeds are authorized by the authenticated module,
@@ -573,9 +614,15 @@ class NativeElearningStore:
                 # Interactive time stops at the previously recorded deadline.
                 # Continuing video time needs separate advancing-media evidence.
                 until_idle = max(0.0, float(tracking["active_until_epoch"]) - float(tracking["last_seen_epoch"]))
-                credited = min(delta, HEARTBEAT_MAX_CREDIT_SECONDS, until_idle)
+                # Background tabs may deliver heartbeats only once a minute.
+                # APS keeps its existing lease until the last real activity's
+                # ten-minute deadline; delayed requests never extend that lease.
+                credit_limit = idle_seconds if aps_tracking else HEARTBEAT_MAX_CREDIT_SECONDS
+                credited = min(delta, credit_limit, until_idle)
                 if not duplicate:
                     credited = max(credited, media_credit)
+                if aps_tracking:
+                    credited = min(delta, credited)
 
             accepted_active = bool(requested_active and not duplicate)
             next_owner_id: Optional[str] = owner_id or None
@@ -625,7 +672,7 @@ class NativeElearningStore:
                     int(accepted_active),
                     int(duplicate),
                     credited,
-                    epoch + max(0.0, IDLE_TIMEOUT_SECONDS - age) if accepted_active else 0,
+                    epoch + max(0.0, idle_seconds - (0 if aps_tracking and media_active else age)) if accepted_active else 0,
                     tracking_session_id,
                 ),
             )

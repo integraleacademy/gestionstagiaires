@@ -6,9 +6,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const source = fs.readFileSync(path.join(__dirname, "../static/js/native-elearning-player.js"), "utf8");
 
-async function fixture({ lastActivity = false, question = false, optional = false } = {}) {
+async function fixture({ lastActivity = false, question = false, optional = false, aps = false } = {}) {
   const initial = lastActivity ? 14398 : 0;
-  const config = { accessToken: "signed", csrfToken: "csrf", activityId: "lesson", idleSeconds: 300,
+  const idleSeconds = aps ? 600 : 300;
+  const config = { accessToken: "signed", csrfToken: "csrf", activityId: "lesson", idleSeconds, continueWhenHidden: aps,
     heartbeatSeconds: 15, startUrl: "/start", heartbeatUrl: "/heartbeat", finishUrl: "/finish",
     initialActiveSeconds: initial, initialRemainingSeconds: 14400 - initial, initialModuleComplete: false,
     isLastActivity: lastActivity, hasNextModule: true, endLabel: "Module suivant", endUrl: "/next",
@@ -40,7 +41,7 @@ async function fixture({ lastActivity = false, question = false, optional = fals
   }
   const progress = () => {
     const active = lastActivity ? (unlocked ? 14400 : initial)
-      : Math.min(now / 1000, 300) + (resumedAt === null ? 0 : Math.min((now - resumedAt) / 1000, 300));
+      : Math.min(now / 1000, idleSeconds) + (resumedAt === null ? 0 : Math.min((now - resumedAt) / 1000, idleSeconds));
     return { active_seconds: active, remaining_seconds: Math.max(0, 14400 - active), duration_met: unlocked,
       module_complete: unlocked, status: unlocked ? "passed" : lastActivity ? "awaiting_time" : "in_progress",
       score_percent: 100, progress_percent: lastActivity ? 100 : 0 };
@@ -54,7 +55,7 @@ async function fixture({ lastActivity = false, question = false, optional = fals
     }
     if (url === "/heartbeat") lastSignal = body;
     return { ok: true, json: async () => ({ ok: true, tracking_session_id: "tracking",
-      active: url === "/heartbeat" && body.interaction_age_seconds < 300, progress: progress() }) };
+      active: url === "/heartbeat" && body.interaction_age_seconds < idleSeconds, progress: progress() }) };
   };
   const settle = async () => { for (let i = 0; i < 15; i++) await Promise.resolve(); };
   window.eval(source);
@@ -103,6 +104,36 @@ async function fixture({ lastActivity = false, question = false, optional = fals
     await timer.advance(15000);
     assert.equal(document.querySelector("#nativeActiveTimer").textContent, "00:05:15");
   } finally { timer.close(); }
+
+  const aps = await fixture({ aps: true });
+  try {
+    const d = aps.window.document;
+    await aps.advance(60000);
+    Object.defineProperty(d, "visibilityState", { value: "hidden", configurable: true });
+    d.hasFocus = () => false;
+    aps.window.dispatchEvent(new aps.window.Event("blur"));
+    d.dispatchEvent(new aps.window.Event("visibilitychange"));
+    await aps.settle();
+    assert.equal(d.querySelector("#nativeTrackingState").dataset.state, "active");
+    await aps.advance(539000);
+    assert.equal(d.querySelector("#nativeActiveTimer").textContent, "00:09:59");
+    assert.equal(d.querySelector("#nativeIdleNotice").hidden, true);
+    await aps.advance(1000);
+    assert.equal(d.querySelector("#nativeActiveTimer").textContent, "00:10:00");
+    assert.equal(d.querySelector("#nativeIdleNotice").hidden, false);
+    assert.match(d.querySelector("#nativeTrackingState").textContent, /10 min/);
+    assert.equal(aps.signal().recent_activity, false);
+    await aps.advance(60000);
+    assert.equal(d.querySelector("#nativeActiveTimer").textContent, "00:10:00");
+    Object.defineProperty(d, "visibilityState", { value: "visible", configurable: true });
+    d.hasFocus = () => true;
+    aps.resume();
+    aps.window.dispatchEvent(new aps.window.Event("focus"));
+    await aps.settle();
+    await aps.advance(15000);
+    assert.equal(d.querySelector("#nativeActiveTimer").textContent, "00:10:15");
+    assert.equal(d.querySelector("#nativeIdleNotice").hidden, true);
+  } finally { aps.close(); }
 
   const locked = await fixture({ lastActivity: true });
   try {
