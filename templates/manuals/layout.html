@@ -46,7 +46,7 @@
     {% else %}
     <a href="{{ url_for('manuals_shop.home') }}" {% if request.endpoint == 'manuals_shop.home' %}aria-current="page"{% endif %}>Vue d’ensemble</a>
     <a href="{{ url_for('manuals_shop.elearning_soon') }}" {% if request.endpoint and request.endpoint.startswith('manuals_shop.elearning_') and request.endpoint != 'manuals_shop.elearning_demo' %}aria-current="page"{% endif %}>Mes accès e-learning</a>
-    <a href="{{ url_for('manuals_shop.home', _anchor='mes-commandes') }}">Commandes Manuels et Clés USB</a>
+    <a href="{{ url_for('manuals_shop.catalogue') }}" {% if request.endpoint in ['manuals_shop.catalogue','manuals_shop.checkout','manuals_shop.order_detail','manuals_shop.order_payment'] %}aria-current="page"{% endif %}>Commandes Manuels et Clés USB</a>
     <a href="{{ url_for('manuals_shop.organisme_profile') }}" {% if request.endpoint == 'manuals_shop.organisme_profile' %}aria-current="page"{% endif %}>Mon organisme</a>
     {% endif %}
     <a class="organisme-logout" href="{{ url_for('admin_logout') }}">Déconnexion</a>
