@@ -229,6 +229,7 @@ def _course_access_payload(
         "required_minutes": int(course.get("required_minutes") or 0),
         **({"aps_editorial_revision": course["aps_editorial_revision"]} if course.get("aps_editorial_revision") else {}),
         **({"aps_depth_revision": course["aps_depth_revision"]} if course.get("aps_depth_revision") else {}),
+        **({"aps_reading_revision": course["aps_reading_revision"]} if course.get("aps_reading_revision") else {}),
         **({"vtc_media_revision": course["vtc_media_revision"]} if course.get("vtc_media_revision") else {}),
     }
 
@@ -1173,7 +1174,7 @@ def create_native_elearning_blueprint(
             "native_elearning_player.html", preview_mode=True,
             course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course),
                     "version": course["version"], "counts": course["counts"], "training_label": course.get("training_label","APS"),
-                    'aps_depth_revision': course.get('aps_depth_revision'), 'study_plan': course.get('study_plan')},
+                    'aps_depth_revision': course.get('aps_depth_revision'), 'aps_reading_revision': course.get('aps_reading_revision'), 'study_plan': course.get('study_plan')},
             activity=prepare_activity(select_vtc_activity(course, raw_activity, {}), asset_token, course_id),
             training_url=url_for('native_elearning.training_admin_catalog', course_id=course_id, version=course['version']) if course_id.startswith('academy-vtc-') else '',
             introduction=[prepare_block(block, asset_token, course_id)
@@ -2204,7 +2205,7 @@ def create_native_elearning_blueprint(
         return render_template(
             "native_elearning_player.html",
             course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course), "version": course['version'], "training_label": course.get("training_label","APS"),
-                    'aps_depth_revision': course.get('aps_depth_revision'), 'study_plan': course.get('study_plan')},
+                    'aps_depth_revision': course.get('aps_depth_revision'), 'aps_reading_revision': course.get('aps_reading_revision'), 'study_plan': course.get('study_plan')},
             learner_name=f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
             section_title=str(section.get("title") or ""),
             learner_brand=session_obj.get('learner_brand') or {},
@@ -2280,7 +2281,7 @@ def create_native_elearning_blueprint(
         # Keep tracking/video time from open tabs, but never grade an old
         # question or workshop against a changed answer key.
         if (any(course.get(key) and access.get(key) != course[key]
-                for key in ('aps_editorial_revision', 'aps_depth_revision'))
+                for key in ('aps_editorial_revision', 'aps_depth_revision', 'aps_reading_revision'))
                 and request.endpoint in {"native_elearning.activity_answer",
                     "native_elearning.activity_practice", "native_elearning.activity_complete"}):
             response = jsonify(ok=False, error="Les exercices ont été renouvelés. Rechargez la page : votre progression enregistrée est conservée.")
@@ -2546,6 +2547,11 @@ def create_native_elearning_blueprint(
                     return jsonify({'ok': False, 'error': f'Rédigez votre travail ({minimum} à {maximum} caractères) avant de continuer.'}), 400
                 answer = {'reflection': reflection.strip(), 'review_status': 'to_review',
                           'submitted_at': dt.datetime.now(dt.timezone.utc).isoformat().replace('+00:00', 'Z')}
+        elif (activity.get('academy', {}).get('reading_revision')
+                and activity_id not in current.get('completed_activity_ids', [])):
+            # A historical reading completion must never be relabelled as the
+            # enriched lesson. This metadata awards neither score nor seconds.
+            answer = {'reading_revision': activity['academy']['reading_revision']}
         try:
             result = store().complete_activity(
                 access, activity_id, activity_order=order, scored_activity_ids=scored_ids,

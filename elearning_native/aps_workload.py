@@ -15,6 +15,8 @@ def clock(seconds):
 def summarize(course, records):
     workshops = {a['id'] for s in course['sections'] for a in s['activities']
                  if a.get('academy', {}).get('kind') == 'workshop'}
+    readings = {a['id'] for s in course['sections'] for a in s['activities']
+                if a.get('academy', {}).get('reading_revision')}
     exam_id = module_exam_activity_id(course)
     learners, samples = [], []
     for record in records:
@@ -32,12 +34,15 @@ def summarize(course, records):
             at_finish = float(snapshot.get('active_seconds') or 0)
             complete_ledger = abs(sum(float(v) for v in observed.values()) - at_finish) <= 1
             current_work = all(snapshot.get('workshop_revisions', {}).get(aid) == REVISION for aid in workshops)
-            if complete_ledger and current_work and record.get('required_seconds') == course['required_minutes'] * 60:
+            current_reading = all(snapshot.get('reading_revisions', {}).get(aid) == REVISION for aid in readings)
+            if complete_ledger and current_work and current_reading and record.get('required_seconds') == course['required_minutes'] * 60:
                 measured = max(0, at_finish - float(observed.get(exam_id) or 0))
                 samples.append({'seconds': measured, 'ledger': observed})
                 reason = 'Nouvelle charge observée à la première fin des activités'
             else:
-                reason = 'Historique partiel ou exercices de plusieurs révisions : exclu de la médiane'
+                reason = 'Historique partiel ou cours et exercices de plusieurs révisions : exclu de la médiane'
+        elif snapshot.get('revision'):
+            reason = 'Première fin enregistrée sous une révision antérieure : exclue de la médiane actuelle'
         elif record.get('activities_completed'):
             reason = 'Activités terminées avant la mesure : aucun temps reconstitué'
         learners.append({'trainee_name': record.get('trainee_name') or 'Stagiaire',

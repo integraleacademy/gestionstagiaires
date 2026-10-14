@@ -14,6 +14,7 @@ from .aps_illustrations import illustrate_course
 from .aps_media import restore_course_voice
 from .aps_editorial import refine_course
 from .aps_depth import deepen_course
+from .aps_lessons import enrich_course
 
 ROOT = Path(__file__).parent / 'aps62'
 DELIVERY_REVISION = '20261012-aps-sans-production-personnelle'
@@ -89,6 +90,9 @@ def curriculum_manifest():
     manifest['visual_learning']['practical_productions'] = 0
     manifest['worked_example_count'] = sum(course['counts']['worked_examples'] for course in courses)
     manifest['delivery_revision'] = DELIVERY_REVISION
+    manifest['reading_page_count'] = sum(course['counts']['reading_pages'] for course in courses)
+    manifest['reading_comparison_count'] = sum(course['counts']['reading_comparisons'] for course in courses)
+    manifest['reading_example_count'] = sum(course['counts']['reading_examples'] for course in courses)
     return manifest
 
 
@@ -100,7 +104,7 @@ def curriculum_ids():
 def _course(course_id, version):
     course = _without_personal_productions(adapt_course(json.loads(
         (ROOT / 'courses' / course_id / (version + '.json')).read_text(encoding='utf-8'))))
-    return deepen_course(illustrate_course(restore_course_voice(refine_course(course))))
+    return deepen_course(enrich_course(illustrate_course(restore_course_voice(refine_course(course)))))
 
 
 def load_bundled_course(course_id, version=None):

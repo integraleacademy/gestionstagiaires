@@ -1125,6 +1125,8 @@ class NativeElearningStore:
                     snapshot = {'revision': access['aps_depth_revision'], 'finished_at': now_iso,
                         'active_seconds': float(row['active_seconds'] or 0),
                         'activity_seconds': _json_dict(row['activity_seconds_json']),
+                        'reading_revisions': {aid: value.get('reading_revision') for aid, value in answers.items()
+                                              if isinstance(value, Mapping) and value.get('reading_revision')},
                         'workshop_revisions': {aid: value.get('practice_revision') for aid, value in answers.items()
                                               if isinstance(value, Mapping) and value.get('practice_revision')}}
                     connection.execute('UPDATE learner_course_progress SET aps_workload_json=? WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?',
@@ -1132,7 +1134,7 @@ class NativeElearningStore:
                 self._event(
                     connection,
                     access,
-                    "answer_submitted" if answer is not None else "content_completed",
+                    "answer_submitted" if answer is not None and not answer.get('reading_revision') else "content_completed",
                     activity_id=activity_id,
                     at=now_iso,
                     details={"correct": answer.get("correct") if answer else None},

@@ -31,8 +31,14 @@ class APSDeliveryTests(unittest.TestCase):
                     self.assertFalse(any(a.get('production') for a in activities(delivered)))
                     self.assertEqual(delivered['required_minutes'], source['required_minutes'])
                     self.assertEqual(delivered['planned_minutes'], source['planned_minutes'])
-                    self.assertEqual([sum(a.get('planned_minutes', 0) for a in s['activities']) for s in delivered['sections']],
-                                     [sum(a.get('planned_minutes', 0) for a in s['activities']) for s in source['sections']])
+                    # Current delivery reserves the mock exam inside the same
+                    # module budget; archived per-activity estimates predate it.
+                    if delivered.get('study_plan'):
+                        self.assertEqual(sum(a['planned_minutes'] for a in activities(delivered))
+                                         + delivered['study_plan']['exam_minutes'], source['planned_minutes'])
+                    else:
+                        self.assertEqual([sum(a.get('planned_minutes', 0) for a in s['activities']) for s in delivered['sections']],
+                                         [sum(a.get('planned_minutes', 0) for a in s['activities']) for s in source['sections']])
                     # The independent voice repair has a reviewed timeline map;
                     # retiring writing must not add/remove any required video.
                     self.assertEqual(course_videos(delivered), course_videos(restore_course_voice(copy.deepcopy(source))))

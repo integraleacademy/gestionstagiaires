@@ -88,20 +88,23 @@ class DepthContentTests(unittest.TestCase):
     def test_calibration_excludes_partial_history_and_keeps_first_finish_snapshot(self):
         course = load_bundled_course('academy-aps62-01')
         revisions = {a['id']: REVISION for a in activities(course) if a.get('academy', {}).get('kind') == 'workshop'}
+        readings = {a['id']: REVISION for a in activities(course) if a.get('academy', {}).get('reading_revision')}
         row = {'assigned_current': True, 'required_seconds': 14400, 'active_seconds': 14400,
             'activity_seconds': {'aps62-01-01-comprendre': 12300, 'aps62-01-examen-blanc': 2100},
             'aps_workload': {'revision': REVISION, 'active_seconds': 3600,
-                'activity_seconds': {'aps62-01-01-comprendre': 3600}, 'workshop_revisions': revisions}}
+                'activity_seconds': {'aps62-01-01-comprendre': 3600}, 'workshop_revisions': revisions,
+                'reading_revisions': readings}}
         report = summarize(course, [row])
         self.assertEqual(report['median_label'], '01:00:00')
         self.assertEqual(report['learners'][0]['total_label'], '04:00:00')
         self.assertEqual(report['learners'][0]['exam_label'], '00:35:00')
         self.assertTrue(report['review'])
         self.assertEqual(report['sample_count'], 1)
-        for change in ('missing_time', 'old_workshop', 'not_assigned', 'partial_module'):
+        for change in ('missing_time', 'old_workshop', 'old_reading', 'not_assigned', 'partial_module'):
             partial = copy.deepcopy(row)
             if change == 'missing_time': partial['aps_workload']['active_seconds'] += 50
             if change == 'old_workshop': partial['aps_workload']['workshop_revisions'].pop(next(iter(revisions)))
+            if change == 'old_reading': partial['aps_workload']['reading_revisions'].pop(next(iter(readings)))
             if change == 'not_assigned': partial['assigned_current'] = False
             if change == 'partial_module': partial['required_seconds'] = 600
             self.assertEqual(summarize(course, [partial])['sample_count'], 0)
@@ -126,11 +129,12 @@ class DepthTrackingTests(unittest.TestCase):
             self.assertEqual(progress['activity_seconds'], {'lesson': 65, 'workshop': 35})
             self.assertEqual(progress['active_seconds'], 100)
             tracker.complete_activity(access, 'lesson', activity_order=['lesson', 'workshop'], scored_activity_ids=[],
-                mastery_score=80, required_seconds=14400)
+                mastery_score=80, required_seconds=14400, answer={'reading_revision': REVISION})
             tracker.complete_activity(access, 'workshop', activity_order=['lesson', 'workshop'], scored_activity_ids=[],
                 mastery_score=80, required_seconds=14400, answer={'practice_revision': REVISION})
             before = tracker.learner_progress('test-session', 'test-learner')[0]
             self.assertEqual(before['aps_workload']['active_seconds'], 100)
+            self.assertEqual(before['aps_workload']['reading_revisions'], {'lesson': REVISION})
             ping(second, 'workshop', 2000, 900)
             after = tracker.learner_progress('test-session', 'test-learner')[0]
             self.assertEqual(after['active_seconds'], 700)

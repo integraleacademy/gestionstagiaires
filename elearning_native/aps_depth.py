@@ -12,9 +12,9 @@ import math
 import random
 
 from .aps_depth_content import CASES
+from .aps_lessons import REVISION
 from .videos import activity_videos
 
-REVISION = '20261014-aps-dossiers-v16'
 EXAM_MINUTES = {60: 20, 120: 25, 180: 30, 240: 35, 300: 35, 420: 40}
 
 
@@ -59,7 +59,7 @@ def _budget(course):
     remaining = total - exam - sum(fixed.values())
     if remaining < len(flexible):
         raise ValueError('APS study budget cannot contain the required activities')
-    weights = [({'lesson': 14, 'workshop': 30, 'transfer': 7, 'documents': 10,
+    weights = [({'lesson': 28, 'workshop': 24, 'transfer': 7, 'documents': 10,
                  'journal': 10, 'recap': 1}.get(a.get('academy', {}).get('kind'), 2)) for a in flexible]
     distributable = remaining - len(flexible)
     fractions = [distributable * weight / sum(weights) for weight in weights]

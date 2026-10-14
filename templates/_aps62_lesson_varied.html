@@ -17,9 +17,11 @@
   {% if lesson.illustrations %}{{ scene(lesson.illustrations.action) }}{% endif %}
   {% for paragraph in lesson.intro %}<p>{{ paragraph }}</p>{% endfor %}
   <div class="aps-objectives"><span class="aps-label">À l’issue de ce dossier</span><ul>{% for objective in lesson.objectives %}<li>{{ objective }}</li>{% endfor %}</ul></div>
-  <p>Étudiez les repères du cours, puis observez leur application dans la vidéo. Les exercices vous proposeront d’autres situations pour prendre vos propres décisions.</p>
+  <p>Étudiez les explications, les tableaux et les exemples commentés, puis observez leur application dans la vidéo. Les exercices vous proposeront d’autres situations avec des réponses à sélectionner. Aucun texte à rédiger.</p>
   {% if lesson.pacing %}<details class="aps-transcript"><summary>Organisation et temps de travail indicatifs</summary><div class="aps-route">{% for item in lesson.pacing %}<span><b>{{ item.minutes }} min</b> {{ item.label }}</span>{% endfor %}</div>{% if lesson.pacing_note %}<p class="aps-small">{{ lesson.pacing_note }}</p>{% endif %}</details>{% endif %}
 </section>
+
+{% include '_aps62_course_reading.html' %}
 
 {% if lesson.visual_board %}<section class="aps-visual-board" data-aps-lesson-page><span class="aps-label">Le module en un regard</span><h2>{{ lesson.visual_board.title }}</h2><div class="aps-board-grid">{% for step in lesson.visual_board.steps %}<article><span class="aps-board-number">{{ '%02d'|format(loop.index) }}</span><h3>{{ step.label }}</h3><p>{{ step.text }}</p></article>{% endfor %}</div></section>{% endif %}
 
@@ -39,7 +41,7 @@
 <section class="aps-editorial" data-aps-lesson-page>
   <span class="aps-label">Approfondir le raisonnement</span><h2>{{ lesson.depth_teaching.title }}</h2>
   {% for paragraph in lesson.depth_teaching.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}
-  <p class="aps-takeaway">Dans le dossier interactif, vous croiserez plusieurs documents, justifierez vos choix et réexaminerez votre décision lorsque les faits changent.</p>
+  <p class="aps-takeaway">Dans le dossier interactif, vous croiserez plusieurs documents, sélectionnerez les réponses adaptées et réexaminerez votre décision lorsque les faits changent. Chaque choix est accompagné d’une explication.</p>
 </section>
 {% endif %}
 
