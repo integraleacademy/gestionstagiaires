@@ -230,14 +230,23 @@ def background(row, scene, index):
     return im
 
 
-async def synthesize(segment, slots, locks):
+async def synthesize(segment, slots, locks, *, voice_map=None, rate_map=None, pitch_map=None, cache_dir=None):
     import edge_tts
+    voice_map = VOICES if voice_map is None else voice_map
+    rate_map = RATES if rate_map is None else rate_map
+    cache_dir = SPEECH_CACHE if cache_dir is None else cache_dir
     text = segment['text'].strip().replace('/', ', ').replace('=', ' ')
     if not canonical(text):
         return None
     lang = segment['lang']
-    key = digest(json_bytes(dict(voice=VOICES[lang], rate=RATES[lang], text=text)))
-    target = SPEECH_CACHE/(key+'.mp3')
+    pitch = (pitch_map or {}).get(lang, '+0Hz')
+    settings = dict(voice=voice_map[lang], rate=rate_map[lang], pitch=pitch)
+    cache_key = dict(voice=settings['voice'], rate=settings['rate'], text=text)
+    # Preserve existing neutral-pitch caches; distinct directions need distinct takes.
+    if pitch != '+0Hz':
+        cache_key['pitch'] = pitch
+    key = digest(json_bytes(cache_key))
+    target = cache_dir/(key+'.mp3')
     timing = target.with_suffix('.json')
     async with locks.setdefault(key, asyncio.Lock()), slots:
         if not (target.is_file() and timing.is_file()):
@@ -246,8 +255,8 @@ async def synthesize(segment, slots, locks):
                     words = []
                     async def collect():
                         with target.with_suffix('.partial').open('wb') as audio:
-                            async for chunk in edge_tts.Communicate(text, voice=VOICES[lang],
-                                    rate=RATES[lang], boundary='WordBoundary').stream():
+                            async for chunk in edge_tts.Communicate(text, **settings,
+                                    boundary='WordBoundary').stream():
                                 if chunk['type'] == 'audio':
                                     audio.write(chunk['data'])
                                 elif chunk['type'] == 'WordBoundary':
@@ -265,10 +274,11 @@ async def synthesize(segment, slots, locks):
         assert canonical(text) == ''.join(canonical(w['text']) for w in words)
     trim_start = max(0, words[0]['offset']/1e7-.10)
     end = min(duration(target), (words[-1]['offset']+words[-1]['duration'])/1e7+.18)
-    return dict(segment, audio=target, words=words, trim_start=trim_start, seconds=end-trim_start)
+    return dict(segment, audio=target, words=words, trim_start=trim_start,
+                seconds=end-trim_start, speech_settings=settings)
 
 
-def assemble_scene(scene, pieces, folder, index):
+def assemble_scene(scene, pieces, folder, index, *, playback_rate=.85):
     pieces = [piece for piece in pieces if piece]
     pcm, words, offset, segments = [], [], 0., []
     for n, piece in enumerate(pieces):
@@ -283,10 +293,19 @@ def assemble_scene(scene, pieces, folder, index):
         pcm.append(raw)
         segment_start = offset
         offset += len(raw)/(SAMPLE_RATE*2)
-        segments.append(dict(lang=piece['lang'],text=piece['text'],start_seconds=segment_start,end_seconds=offset))
+        segment = dict(lang=piece['lang'],text=piece['text'],start_seconds=segment_start,end_seconds=offset)
+        if 'speech_settings' in piece:
+            segment['speech_settings'] = piece['speech_settings']
+        segments.append(segment)
         if n < len(pieces)-1:
-            gap = round(.12*SAMPLE_RATE)*2
+            # Authored joins are additional silence, never time stretching or
+            # trimming inside spoken words. Ordinary course renders keep .12s.
+            gap_seconds = piece.get('gap_after_seconds', .12)
+            if not isinstance(gap_seconds, (int, float)) or not 0 <= gap_seconds <= 2:
+                raise ValueError('Invalid narration join silence')
+            gap = round(gap_seconds*SAMPLE_RATE)*2
             pcm.append(b'\0'*gap)
+            segment['join_silence_seconds'] = gap/(SAMPLE_RATE*2)
             offset += gap/(SAMPLE_RATE*2)
     speech_end = (words[-1]['offset']+words[-1]['duration'])/1e7
     # Round upward to a frame boundary, adding time only to the silent tail.
@@ -298,7 +317,7 @@ def assemble_scene(scene, pieces, folder, index):
         stream.writeframes(raw)
     atomic_json(folder/f'words-{index:02}.json',words)
     assert seconds-offset >= TAIL_SILENCE-.00001
-    return dict(path=target, seconds=seconds, words=words, cues=make_cues(scene_text(scene), words, seconds),
+    return dict(path=target, seconds=seconds, words=words, cues=make_cues(scene_text(scene), words, seconds, playback_rate=playback_rate),
                 speech_end=speech_end, silence_start=offset, silence_end=seconds,segments=segments)
 
 
@@ -330,12 +349,18 @@ def ass_text(lines):
     return r'\N'.join(lines).replace('{','｛').replace('}','｝')
 
 
-def render(row, spoken, signature):
+def render(row, spoken, signature, *, output_dir=None, work_dir=None,
+           media_prefix='media/vtc/v11', voice_map=None, rate_map=None,
+           revision=11, playback_rate=.85):
+    output_dir = ASSETS if output_dir is None else output_dir
+    work_dir = WORK if work_dir is None else work_dir
+    voice_map = VOICES if voice_map is None else voice_map
+    rate_map = RATES if rate_map is None else rate_map
     ref = row['ref']
     slug = ref.lower().replace('.', '-')
-    folder = WORK/ref
+    folder = work_dir/ref
     folder.mkdir(parents=True, exist_ok=True)
-    audio = [assemble_scene(scene, pieces, folder, i)
+    audio = [assemble_scene(scene, pieces, folder, i, playback_rate=playback_rate)
              for i,(scene,pieces) in enumerate(zip(row['scenes'], spoken))]
     frames, events, cues, chapters, pauses, scene_data = [], [], [], [], [], []
     offset = 0.
@@ -387,7 +412,7 @@ def render(row, spoken, signature):
                             (layout['label_size'],),PURPLE,True)
                 raster_text(d, point['text'],(layout['x'],layout['body_y']),layout['width'],20,
                             (layout['body_size'],))
-            poster.save(ASSETS/f'lesson-{slug}.jpg',quality=88)
+            poster.save(output_dir/f'lesson-{slug}.jpg',quality=88)
         offset = end
     frames.append(f"file '{path}'")
     (folder/'frames.txt').write_text('\n'.join(frames)+'\n')
@@ -396,7 +421,7 @@ def render(row, spoken, signature):
     ass.write_text(ASS_HEADER+''.join(events))
     merged = folder/'narration.wav'
     ffmpeg(['-f','concat','-safe','0','-i',folder/'audio.txt','-c:a','pcm_s16le',merged])
-    target = ASSETS/f'lesson-{slug}.mp4'
+    target = output_dir/f'lesson-{slug}.mp4'
     temporary = folder/'complete.mp4'
     ffmpeg(['-f','concat','-safe','0','-i',folder/'frames.txt','-i',merged,'-t',f'{offset:.6f}',
             '-vf',f'fps={FPS},ass={ass}:fontsdir={FONT.parent},format=yuv420p',
@@ -405,17 +430,17 @@ def render(row, spoken, signature):
     actual = duration(temporary)
     assert abs(actual-offset) < .08, (ref, actual, offset)
     temporary.replace(target)
-    vtt_path = ASSETS/f'lesson-{slug}.vtt'
+    vtt_path = output_dir/f'lesson-{slug}.vtt'
     vtt_path.write_text('WEBVTT\n\n'+''.join(f"{timestamp(c['start'])} --> {timestamp(c['end'])}\n{c['text']}\n\n" for c in cues))
-    result = dict(src=f'media/vtc/v11/lesson-{slug}.mp4', poster=f'media/vtc/v11/lesson-{slug}.jpg',
-                  captions=f'media/vtc/v11/lesson-{slug}.vtt',duration_seconds=actual,narration_seconds=round(offset,3),
+    result = dict(src=f'{media_prefix}/lesson-{slug}.mp4', poster=f'{media_prefix}/lesson-{slug}.jpg',
+                  captions=f'{media_prefix}/lesson-{slug}.vtt',duration_seconds=actual,narration_seconds=round(offset,3),
                   transcript='\n\n'.join(scene_text(scene) for scene in row['scenes']),
-                  title=row['title'], lesson_ref=ref, objective=row['objective'], voice=VOICES, rate=RATES,
+                  title=row['title'], lesson_ref=ref, objective=row['objective'], voice=voice_map, rate=rate_map,
                   audio=True,burned_captions=True,course_only=True,animated=True,chapters=chapters,
-                  content_sha256=signature,source_sha256=row['source_sha256'],render_revision=11,
-                  source_code_sha256=code_signature(),source_authoring_sha256=digest(json_bytes(row)),default_playback_rate=.85,allowed_playback_rates=[.85,1],
+                  content_sha256=signature,source_sha256=row['source_sha256'],render_revision=revision,
+                  source_code_sha256=code_signature(),source_authoring_sha256=digest(json_bytes(row)),default_playback_rate=playback_rate,allowed_playback_rates=[playback_rate,1] if playback_rate != 1 else [1],
                   learning_pauses=pauses,scenes=scene_data,
-                  media_sha256=file_sha(target),poster_sha256=file_sha(ASSETS/f'lesson-{slug}.jpg'),
+                  media_sha256=file_sha(target),poster_sha256=file_sha(output_dir/f'lesson-{slug}.jpg'),
                   captions_sha256=file_sha(vtt_path),audio_provenance=audio_fingerprint(target))
     result.update(previous_src=row['previous_src'],previous_duration_seconds=row['previous_duration_seconds'],
                   previous_chapters=row['previous_chapters'],previous_media_sha256=row['previous_media_sha256'],
