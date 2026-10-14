@@ -26,7 +26,7 @@ import elearning_sales
 
 COURSES = {
     "aps": {"name": "APS", "title": "Agent de prévention et de sécurité", "color": "#2468b3", "default_cents": 5900, "folder": "aps62"},
-    "mac-aps": {"name": "MAC APS", "title": "Maintien et actualisation des compétences APS", "color": "#173c5b", "default_cents": 6000, "fixed_cents": 6000},
+    "mac-aps": {"name": "MAC APS", "title": "Maintien et actualisation des compétences APS", "color": "#173c5b", "default_cents": 4900, "fixed_cents": 4900, "legacy_fixed_cents": (6000,)},
     "vtc": {"name": "VTC", "title": "Chauffeur VTC", "color": "#7951a8", "default_cents": 15000, "folder": "vtc"},
 }
 CUSTOMER_ENDPOINTS = {"manuals_shop.elearning_checkout", "manuals_shop.elearning_order", "manuals_shop.elearning_confirm", "manuals_shop.elearning_refresh", "manuals_shop.elearning_status", "manuals_shop.elearning_invoice"}
@@ -116,10 +116,16 @@ def entitled(order):
     state = order.get("commerce") or {}
     if not is_order(order) or order.get("status") in {"draft", "cancelled"} or order.get("cancellation_requested_at"):
         return False
-    fixed = COURSES.get(order.get("course_code"), {}).get("fixed_cents")
-    if fixed is not None and (order.get("free_snapshot") is not False or order.get("unit_cents") != fixed
-                              or not order.get("learners") or order.get("total_cents") != fixed * len(order["learners"])):
-        return False
+    course = COURSES.get(order.get("course_code"), {})
+    fixed = course.get("fixed_cents")
+    if fixed is not None:
+        # Confirmed purchases keep their original price and full-payment requirement.
+        # Only explicitly supported historical tariffs are accepted; new orders use fixed_cents.
+        unit = order.get("unit_cents")
+        if (order.get("free_snapshot") is not False or type(unit) is not int
+                or unit not in (fixed, *course.get("legacy_fixed_cents", ()))
+                or not order.get("learners") or order.get("total_cents") != unit * len(order["learners"])):
+            return False
     if order.get("free_snapshot") is True and order.get("total_cents") == 0:
         return True
     return bool(order.get("total_cents", 0) > 0 and state.get("invoice_id") and state.get("invoice_status") == "paid"
