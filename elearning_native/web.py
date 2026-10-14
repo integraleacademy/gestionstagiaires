@@ -43,7 +43,7 @@ from .academy import curriculum_manifest
 from .aps_editorial import question_for_history
 from . import vtc, a3p, mac_aps
 from .mac_aps_timing import completion_blocker as macaps_completion_blocker
-from .exams import ExamStore, load_exam, public_exam, grade_exam
+from .exams import ExamStore, load_exam, public_exam, grade_exam, module_exam_activity_id
 from .practice import public_practice, grade_practice
 from .production import public_production, production_feedback, normalize_production, normalize_self_review
 from .production_ai import ProductionAIService, ProductionAIError, build_course_references, read_analyses
@@ -942,6 +942,7 @@ def create_native_elearning_blueprint(
             abort(404)
 
     def exam_for_learner(token, exam_id):
+        course = None
         if re.fullmatch(r'module-(0[1-9]|1[0-5])', exam_id):
             session_obj, trainee, course = learner_context(token, 'academy-aps62-' + exam_id[-2:])
             if course.get('mock_exam_id') != exam_id:
@@ -999,12 +1000,17 @@ def create_native_elearning_blueprint(
             abort(404)
         if not exam:
             abort(404)
-        return session_obj, trainee, exam, back_url
+        return session_obj, trainee, exam, back_url, course
 
-    def exam_page(exam, back_url, submit_url, history=None, preview=False):
+    def exam_page(exam, back_url, submit_url, history=None, preview=False, course=None, tracking_config=None):
+        module_context = None
+        if course and module_exam_activity_id(course):
+            module_context = {'title': course['title'], 'required_minutes': course.get('required_minutes', 0)}
         return render_template('native_elearning_exam.html', exam=public_exam(exam),
             back_url=back_url, history=history or [], preview_mode=preview,
+            module_context=module_context, tracking_config=tracking_config,
             exam_config={'exam':public_exam(exam), 'submitUrl':submit_url,
+                         'moduleUrl': back_url if module_context else '',
                          'csrfToken':_csrf_token(), 'attemptId':secrets.token_hex(16), 'preview':preview})
 
     def mark_exam(exam):
@@ -1044,8 +1050,11 @@ def create_native_elearning_blueprint(
         exam = load_exam(exam_id, request.args.get('version') or (mac_aps.VERSION if exam_id.startswith('macaps-') else a3p.VERSION if exam_id.startswith('a3p-') else vtc.curriculum_manifest()['version'] if exam_id.startswith('vtc-') else curriculum_manifest()['version']))
         if not exam:
             abort(404)
-        return exam_page(exam, url_for('native_elearning.admin_macaps_catalog' if exam_id.startswith('macaps-') else 'native_elearning.admin_a3p_catalog' if exam_id.startswith('a3p-') else 'native_elearning.admin_vtc_catalog' if exam_id.startswith('vtc-') else 'native_elearning.admin_catalog'),
-            url_for('native_elearning.admin_exam_submit', exam_id=exam_id, version=exam['version']), preview=True)
+        course = catalog().load_course('academy-aps62-' + exam_id[-2:], exam['version']) if re.fullmatch(r'module-(0[1-9]|1[0-5])', exam_id) else None
+        back_url = (url_for('native_elearning.admin_preview', course_id=course['id'], version=course['version']) if course else
+            url_for('native_elearning.admin_macaps_catalog' if exam_id.startswith('macaps-') else 'native_elearning.admin_a3p_catalog' if exam_id.startswith('a3p-') else 'native_elearning.admin_vtc_catalog' if exam_id.startswith('vtc-') else 'native_elearning.admin_catalog'))
+        return exam_page(exam, back_url,
+            url_for('native_elearning.admin_exam_submit', exam_id=exam_id, version=exam['version']), preview=True, course=course)
 
     @blueprint.post('/api/admin/elearning/exams/<exam_id>')
     @admin_required
@@ -1063,14 +1072,36 @@ def create_native_elearning_blueprint(
     def learner_exam(token,exam_id):
         if not public_is_authed(token):
             return redirect(url_for('manuals_shop.elearning_access' if token.startswith('el_') else 'public_trainee_login',token=token))
-        session_obj, trainee, exam, back_url = exam_for_learner(token,exam_id)
+        session_obj, trainee, exam, back_url, course = exam_for_learner(token,exam_id)
         history = ExamStore(root()/'tracking.sqlite3').history(session_obj['id'],trainee.get('id') or trainee.get('trainee_id'),exam)
-        return exam_page(exam, back_url, url_for('native_elearning.learner_exam_submit',token=token,exam_id=exam_id), history)
+        tracking_config = None
+        if course and module_exam_activity_id(course):
+            access = _course_access_payload(session_obj, trainee, course, public_token=token)
+            # A signed exam context can only track this module's exam; it can
+            # neither complete lessons nor bypass their navigation/video gates.
+            access['exam_id'] = exam_id
+            rows = store().learner_progress(access['session_id'], access['trainee_id'])
+            raw = next((row for row in rows if (row['course_id'], row['course_version']) ==
+                        (course['id'], course['version'])), {})
+            progress = project_progress(raw, course)
+            tracking_config = {
+                'accessToken': _sign_access(access), 'csrfToken': _csrf_token(),
+                'activityId': module_exam_activity_id(course),
+                'startUrl': url_for('native_elearning.tracking_start'),
+                'heartbeatUrl': url_for('native_elearning.tracking_heartbeat'),
+                'finishUrl': url_for('native_elearning.tracking_finish'),
+                'heartbeatSeconds': CLIENT_HEARTBEAT_SECONDS, 'idleSeconds': CLIENT_IDLE_SECONDS,
+                'initialActiveSeconds': progress['active_seconds'],
+                'initialRemainingSeconds': progress['remaining_seconds'],
+                'initialModuleComplete': progress['module_complete'],
+            }
+        return exam_page(exam, back_url, url_for('native_elearning.learner_exam_submit',token=token,exam_id=exam_id),
+                         history, course=course, tracking_config=tracking_config)
 
     @blueprint.post('/api/espace/<token>/elearning/exams/<exam_id>')
     def learner_exam_submit(token,exam_id):
         _require_csrf()
-        session_obj, trainee, exam, _ = exam_for_learner(token,exam_id)
+        session_obj, trainee, exam, _, _course = exam_for_learner(token,exam_id)
         try:
             payload,result = mark_exam(exam)
             result = ExamStore(root()/'tracking.sqlite3').save(session_obj['id'],trainee.get('id') or trainee.get('trainee_id'),exam,payload.get('attempt_id'),result)
@@ -1549,6 +1580,8 @@ def create_native_elearning_blueprint(
                 str(activity.get("id")): str(activity.get("title") or "")
                 for _, activity in _activity_pairs(row_course)
             }
+            if module_exam_activity_id(row_course):
+                activity_titles[module_exam_activity_id(row_course)] = 'Examen blanc du module · questions et corrigé'
             row.update(identities.get((row["session_id"], row["trainee_id"]), {}))
             row["trainee_name"] = row.get("trainee_name") or row["trainee_id"]
             row["session_name"] = row.get("session_name") or row["session_id"]
@@ -2094,6 +2127,14 @@ def create_native_elearning_blueprint(
             abort(400)
         access = _verify_access(payload.get("access_token"))
         course = course_for_access(access)
+        if access.get('exam_id'):
+            exam_activity = module_exam_activity_id(course)
+            if (not exam_activity or access['exam_id'] != course.get('mock_exam_id')
+                    or request.endpoint not in {'native_elearning.tracking_start',
+                        'native_elearning.tracking_heartbeat', 'native_elearning.tracking_finish'}
+                    or payload.get('activity_id') != exam_activity):
+                abort(403, 'Ce suivi est réservé à l’examen blanc de ce module.')
+            return access, course, [exam_activity], _scored_activity_ids(course)
         # An old tab may still close its tracking session on reload. Finishing
         # records no media sample and releases its active-tab slot normally.
         if (request.endpoint != "native_elearning.tracking_finish" and course.get("vtc_media_revision")
@@ -2118,7 +2159,7 @@ def create_native_elearning_blueprint(
         activity_id = str(payload.get("activity_id") or "")
         if activity_id not in order:
             return jsonify({"ok": False, "error": "Activité inconnue."}), 400
-        if not can_complete(_course, current_progress(access, _course), activity_id):
+        if not access.get('exam_id') and not can_complete(_course, current_progress(access, _course), activity_id):
             return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente et ses vidéos."}), 409
         try:
             started = store().start_tracking(
@@ -2138,7 +2179,7 @@ def create_native_elearning_blueprint(
         activity_id = str(payload.get("activity_id") or "")
         if activity_id not in order:
             return jsonify({"ok": False, "error": "Activité inconnue."}), 400
-        if not can_complete(_course, current_progress(access, _course), activity_id):
+        if not access.get('exam_id') and not can_complete(_course, current_progress(access, _course), activity_id):
             return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente et ses vidéos."}), 409
         if payload.get("interaction_age_seconds") is None:
             return jsonify({"ok": False, "error": "Rechargez le lecteur pour activer le suivi d’inactivité."}), 409
