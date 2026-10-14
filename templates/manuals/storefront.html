@@ -2,7 +2,7 @@
 {% from 'manuals/_showcase_macros.html' import icon %}
 {% block title %}Manuels, supports formateurs et e-learning{% endblock %}
 {% block body_class %}connect-home-page{% endblock %}
-{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/connect-home.css', v='20261014-1') }}">{% endblock %}
+{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/connect-home.css', v='20261014-2') }}">{% endblock %}
 {% block extra_scripts %}<script src="{{ url_for('static', filename='js/connect-home.js', v='20261014-1') }}" defer></script>{% endblock %}
 {% block content %}
 <div class="store-wrap connect-home">
@@ -10,7 +10,7 @@
     <div class="store-hero-copy">
       <span class="store-kicker"><span class="home-dot" aria-hidden="true"></span> POUR LES CENTRES DE FORMATION</span>
       <h1 id="home-title">Vos formations.<br>Nos supports.<br><em>Votre signature.</em></h1>
-      <p>Des manuels à votre image, des PowerPoint prêts à projeter et des parcours e-learning. Tout pour accompagner vos stagiaires, du premier cours aux révisions.</p>
+      <p><strong>Manuels de formation</strong>, <strong>e-learning / cours en ligne</strong> et <strong>supports PowerPoint formateurs sur clés USB</strong> : trois solutions pour équiper votre centre et accompagner vos stagiaires.</p>
       <div class="store-actions home-main-actions"><a class="button primary" href="#offres">Découvrir nos supports <span aria-hidden="true">↓</span></a><a class="button secondary" href="{{ url_for('manuals_shop.elearning_demo') }}">Tester le e-learning <span aria-hidden="true">↗</span></a></div>
       <a class="home-brochure" href="{{ url_for('static', filename='manuals/brochure-manuels-2026.pdf', v='20261014') }}" target="_blank" rel="noopener">Consulter la brochure <span aria-hidden="true">↗</span></a>
       <div class="store-signature"><span aria-hidden="true">✓</span> Conçu par un centre de formation,<br>pour les centres de formation.</div>
@@ -23,26 +23,29 @@
         <div class="home-tablet"><span>Le parcours de votre stagiaire</span><img src="{{ url_for('static', filename='images/connect-home/learner-demo.jpg') }}" alt="Aperçu réel de la démonstration APS : cours et progression de Camille Martin, stagiaire fictif" width="1348" height="926"></div>
         <div class="home-usb" aria-label="Clé USB Intégrale Connect"><span aria-hidden="true"></span><b>iC<span>SUPPORTS FORMATEURS</span></b></div>
       </div>
-      <div class="home-studio-footer"><span>{{ icon('book') }} Manuels</span><span>{{ icon('screen') }} PowerPoint</span><span>{{ icon('logo') }} E-learning</span></div>
+      <div class="home-studio-footer"><span>{{ icon('book') }} Manuels papier</span><span>{{ icon('logo') }} Cours en ligne</span><span>{{ icon('screen') }} PowerPoint sur clés USB</span></div>
     </div>
   </section>
 
   <div class="store-domains home-domains" aria-label="Nos domaines de formation">{% for code, label in categories %}<a href="{{ url_for('manuals_shop.public_presentation', categorie=code) }}#collection">{{ label }} <span aria-hidden="true">↗</span></a>{% endfor %}</div>
 
   <section class="store-section home-reveal" id="offres" aria-labelledby="offers-title">
-    <div class="store-section-heading"><div><span class="store-kicker">TROIS FAÇONS D’ACCOMPAGNER VOS FORMATIONS</span><h2 id="offers-title">À lire. À projeter.<br><em>À explorer.</em></h2></div><p>Découvrez les supports tels que vos stagiaires et vos formateurs les utiliseront.</p></div>
+    <div class="store-section-heading"><div><span class="store-kicker">LES TROIS OFFRES INTÉGRALE CONNECT</span><h2 id="offers-title">Trois solutions pour<br><em>vos formations.</em></h2></div><p>Des livres à remettre aux stagiaires, des cours à suivre en ligne et des PowerPoint sur clés USB pour les formateurs.</p></div>
     <div class="home-offers">
-      <article class="home-offer">
-        <a class="home-offer-visual home-pages" href="{{ url_for('static', filename='manuals/specimens/aps-20-pages.pdf') }}" target="_blank" rel="noopener" aria-label="Feuilleter 20 pages du manuel APS, PDF dans un nouvel onglet"><img src="{{ url_for('static', filename='manuals/previews/aps-1.webp') }}" alt="Première page d’extrait du manuel APS" width="875" height="1241" loading="lazy"><img src="{{ url_for('static', filename='manuals/previews/aps-2.webp') }}" alt="Extrait illustré du manuel APS : préparer un itinéraire de ronde" width="875" height="1241" loading="lazy"><span class="home-preview-tag">Ouvrez le livre ↗</span></a>
-        <div class="home-offer-copy"><span class="store-offer-number">01 / POUR VOS STAGIAIRES</span><h3>Des manuels<br>qui donnent envie.</h3><p>{{ books|length }} titres illustrés pour comprendre, suivre les cours et conserver les bons repères. Avec votre logo sur la couverture.</p><div class="home-offer-price">Dès {{ (books|map(attribute='bulk_price')|min)|manuals_money }} <small>TTC / exemplaire</small><span>Dès 100 exemplaires sur une sélection de titres</span></div><a class="home-card-action" href="{{ url_for('static', filename='manuals/specimens/aps-20-pages.pdf') }}" target="_blank" rel="noopener">Feuilleter un manuel <span aria-hidden="true">↗</span></a><a class="home-card-secondary" href="{{ url_for('manuals_shop.public_presentation') }}">Toute la collection et les tarifs →</a></div>
+      <article class="home-offer" aria-labelledby="offer-manuals-title">
+        <div class="home-offer-heading"><span class="store-offer-number">01 / POUR VOS STAGIAIRES</span><h3 id="offer-manuals-title">Manuels<br>de formation</h3><p>Des livres papier, avec votre logo</p></div>
+        <a class="home-offer-visual home-covers" href="{{ url_for('manuals_shop.public_presentation') }}" aria-label="Découvrir les manuels de formation papier"><img src="{{ url_for('static', filename='manuals/aps.webp') }}" alt="Couverture du manuel de formation APS" width="639" height="906" loading="lazy"><img src="{{ url_for('static', filename='manuals/ssiap1.webp') }}" alt="Couverture du manuel de formation SSIAP 1" width="639" height="906" loading="lazy"><span class="home-preview-tag">{{ books|length }} manuels illustrés · format papier</span></a>
+        <div class="home-offer-copy"><p>Des <strong>manuels papier à remettre à vos stagiaires</strong> pour suivre les cours et réviser. {{ books|length }} titres illustrés, personnalisés avec le logo de votre centre.</p><div class="home-offer-price">Dès {{ (books|map(attribute='bulk_price')|min)|manuals_money }} <small>TTC / exemplaire</small><span>Dès 100 exemplaires sur une sélection de titres</span></div><a class="home-card-action" href="{{ url_for('manuals_shop.public_presentation') }}">Découvrir les manuels <span aria-hidden="true">↗</span></a><a class="home-card-secondary" href="{{ url_for('static', filename='manuals/specimens/aps-20-pages.pdf') }}" target="_blank" rel="noopener">Feuilleter un manuel — 20 pages (PDF) ↗</a></div>
       </article>
-      <article class="home-offer">
-        <a class="home-offer-visual home-slides" href="{{ url_for('manuals_shop.usb_detail', code='aps') }}#apercus" aria-label="Voir les extraits du PowerPoint APS"><div class="home-slide-frame"><img src="{{ url_for('static', filename='manuals/powerpoint-previews/aps-1.webp') }}" alt="Vraie diapositive du support APS : refus d’accès et dialogue" width="1440" height="810" loading="lazy"></div><div class="home-small-usb" aria-hidden="true">iC <span>CLÉ USB</span></div><span class="home-preview-tag">Un vrai extrait de cours ↗</span></a>
-        <div class="home-offer-copy"><span class="store-offer-number">02 / POUR VOS FORMATEURS</span><h3>Des cours prêts<br>à prendre vie.</h3><p>Des PowerPoint illustrés pour animer vos séances et expliquer les situations métier, en complément des manuels.</p><div class="home-offer-price">99 € ou 199 € <small>TTC / formation</small><span>Clé USB et livraison incluses · Achat unique</span></div><a class="home-card-action" href="{{ url_for('manuals_shop.usb_detail', code='aps') }}#apercus">Voir un extrait <span aria-hidden="true">↗</span></a><a class="home-card-secondary" href="{{ url_for('manuals_shop.usb_catalogue') }}">Tous les supports formateurs →</a></div>
+      <article class="home-offer" aria-labelledby="offer-elearning-title">
+        <div class="home-offer-heading"><span class="store-offer-number">02 / POUR VOS STAGIAIRES</span><h3 id="offer-elearning-title">E-learning<br>Cours en ligne</h3><p>Des parcours accessibles à distance</p></div>
+        <a class="home-offer-visual home-course" href="{{ url_for('manuals_shop.elearning_demo') }}" aria-label="Essayer les cours en ligne avec la démonstration APS"><div class="home-course-frame"><img src="{{ url_for('static', filename='images/connect-home/learner-demo.jpg') }}" alt="Espace de cours en ligne APS : leçons et progression du stagiaire" width="1348" height="926" loading="lazy"></div><span class="home-preview-tag">Cours · vidéos · exercices · évaluations</span></a>
+        <div class="home-offer-copy"><p>Des <strong>cours en ligne dans un espace personnel</strong> : vidéos, activités et évaluations pour apprendre et réviser. Votre centre suit la progression de chaque stagiaire.</p><div class="home-offer-price">{% for code, course in courses.items() %}{{ course.name }}{% if not loop.last %} · {% endif %}{% endfor %}<span>Accès individuels ou en groupe</span></div><a class="home-card-action" href="{{ url_for('manuals_shop.public_elearning') }}">Découvrir les cours en ligne <span aria-hidden="true">↗</span></a><a class="home-card-secondary" href="{{ url_for('manuals_shop.elearning_demo') }}">Essayer une démonstration →</a></div>
       </article>
-      <article class="home-offer">
-        <a class="home-offer-visual home-course" href="{{ url_for('manuals_shop.elearning_demo') }}" aria-label="Essayer la démonstration e-learning APS"><div class="home-course-frame"><img src="{{ url_for('static', filename='images/connect-home/learner-demo.jpg') }}" alt="Démonstration du parcours APS avec ses cours et sa progression" width="1348" height="926" loading="lazy"></div><span class="home-preview-tag">Explorez le parcours ↗</span></a>
-        <div class="home-offer-copy"><span class="store-offer-number">03 / POUR APPRENDRE À DISTANCE</span><h3>Un parcours.<br>Des progrès visibles.</h3><p>Des cours, des activités et des évaluations dans un espace personnel, avec un suivi accessible à votre centre.</p><div class="home-offer-price">{% for code, course in courses.items() %}{{ course.name }}{% if not loop.last %} · {% endif %}{% endfor %}<span>Accès individuels ou en groupe</span></div><a class="home-card-action" href="{{ url_for('manuals_shop.elearning_demo') }}">Essayer une démonstration <span aria-hidden="true">↗</span></a><a class="home-card-secondary" href="{{ url_for('manuals_shop.public_elearning') }}">Les parcours et leurs tarifs →</a></div>
+      <article class="home-offer" aria-labelledby="offer-usb-title">
+        <div class="home-offer-heading"><span class="store-offer-number">03 / POUR VOS FORMATEURS</span><h3 id="offer-usb-title">Supports<br>PowerPoint</h3><p>Pour les formateurs · sur clés USB</p></div>
+        <a class="home-offer-visual home-usb-photo" href="{{ url_for('manuals_shop.usb_catalogue') }}" aria-label="Découvrir les supports PowerPoint formateurs sur clés USB"><img src="{{ url_for('static', filename='manuals/previews/supports-formateurs.webp') }}" alt="Grande clé USB SSIAP 1 contenant le support PowerPoint formateur, devant un ordinateur" width="1536" height="1024" loading="lazy"><span class="home-preview-tag">Clé USB avec les fichiers PowerPoint</span></a>
+        <div class="home-offer-copy"><p>Des <strong>fichiers PowerPoint livrés sur clé USB</strong>, à ouvrir sur votre ordinateur et à projeter pendant vos cours. Des supports illustrés pour animer vos séances.</p><div class="home-offer-price">99 € ou 199 € <small>TTC / formation</small><span>Clé USB et livraison incluses · Achat unique</span></div><a class="home-card-action" href="{{ url_for('manuals_shop.usb_catalogue') }}">Découvrir les clés USB <span aria-hidden="true">↗</span></a><a class="home-card-secondary" href="{{ url_for('manuals_shop.usb_detail', code='aps') }}#apercus">Voir un extrait du PowerPoint →</a></div>
       </article>
     </div>
   </section>
@@ -92,8 +95,6 @@
     </div>
     <div class="home-learning-bottom"><div class="store-course-tags">{% for code, course in courses.items() %}<a href="{{ url_for('manuals_shop.public_course',code=code) }}">{{ course.name }} ↗</a>{% endfor %}</div><a class="store-light-link" href="{{ url_for('manuals_shop.elearning_soon') if session.get('admin_logged_in') else url_for('admin_login', next=url_for('manuals_shop.elearning_soon')) }}">Commander des accès →</a></div>
   </section>
-
-  {% include 'manuals/_mac_aps_offer.html' %}
 
   <section class="home-team home-reveal" aria-labelledby="team-title">
     <div class="home-founder"><div class="home-founder-portrait"><img src="{{ url_for('static', filename='images/connect-home/clement-memoji.png') }}" alt="Memoji de Clément Vaillant" width="1254" height="1254" loading="lazy"></div><strong>Clément Vaillant</strong><span>Directeur général Intégrale Academy</span><span class="home-founder-badge">Centre de formation depuis 2018</span></div>

@@ -5,7 +5,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="{% block description %}Manuels de formation personnalisés, supports PowerPoint sur clé USB et accès e-learning pour les organismes de formation. Découvrez la collection Intégrale Academy.{% endblock %}">
   <title>{% block title %}Espace organisme{% endblock %} · Intégrale Connect</title>
-  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  {% include 'manuals/_connect_favicon.html' %}
   <meta name="robots" content="{{ 'index, follow' if page_indexable else 'noindex, follow' }}">
   {% if public %}<link rel="canonical" href="{{ canonical_url }}"><meta property="og:type" content="website"><meta property="og:locale" content="fr_FR"><meta property="og:site_name" content="Intégrale Connect"><meta property="og:title" content="{{ self.title() }} · Intégrale Connect"><meta property="og:description" content="{{ self.description() }}"><meta property="og:url" content="{{ canonical_url }}"><meta property="og:image" content="{{ public_origin }}{{ url_for('static', filename='manuals/previews/supports-formateurs.webp') }}"><meta name="twitter:card" content="summary_large_image">{% endif %}
   {% block structured_data %}{% endblock %}

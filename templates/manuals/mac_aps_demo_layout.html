@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
-  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  {% include 'manuals/_connect_favicon.html' %}
   <title>{% block title %}Découvrir l’e-learning MAC APS{% endblock %} · Démonstration</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/elearning-demo.css', v='20261010-1') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-demo.css', v='20261012-1') }}">
