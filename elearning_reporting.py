@@ -21,6 +21,7 @@ import elearning_orders as learning
 from elearning_native.importer import CourseCatalog, CourseImportError
 from elearning_native.paths import project_course, project_progress, required_activity_order
 from elearning_native.store import NativeElearningStore
+from elearning_native.aps_final_time import final_time
 from elearning_native.vtc_105_migration import read_transition_session, lineage_versions
 from elearning_native.vtc_cma import learner_attempt_summaries
 from elearning_native.module_signatures import MAC_APS_NOTICE
@@ -233,6 +234,18 @@ class ProgressReader:
                                                "total": len(required_rows),
                                                "optional_activity_count": len(rows) - len(required_rows)})
             target_modules.append(module)
+        module_active = active
+        aps_final = final_time(session_view.get('aps_native_modules', []), raw_rows) if order['course_code'] == 'aps' else None
+        if aps_final:
+            active += aps_final['active_seconds']
+            aps_final['active_time_label'] = time_label(aps_final['active_seconds'])
+            final_tracking_key = (aps_final['course_id'], aps_final['version'])
+            course_titles[final_tracking_key] = aps_final['title']
+            course_scopes[final_tracking_key] = 'principal'
+            if aps_final.get('started_at'):
+                starts.append(aps_final['started_at'])
+            if aps_final.get('updated_at'):
+                updates.append(aps_final['updated_at'])
         versions = {m["version"] for m in modules if m["available"]}
         if len(versions) == 1:
             final_id = "macaps-final" if is_mac_aps else "vtc-final" if order["course_code"] == "vtc" else "final"
@@ -255,6 +268,8 @@ class ProgressReader:
                   "optional_activity_count": optional_total,
                   "progress_percent": round(completed / total * 100, 1) if total and available else None,
                   "active_seconds": round(active, 2), "active_time_label": time_label(active),
+                  "module_active_seconds": round(module_active, 2), "module_active_time_label": time_label(module_active),
+                  "final_exam_time": aps_final,
                   "required_seconds": required, "required_time_label": time_label(required), "complete": complete,
                   "status_label": "Parcours terminé" if complete else "Suivi partiellement indisponible" if not available else "En cours" if starts else "Non commencé",
                   "started_at_label": date_label(min(starts)) if starts else "Pas encore commencé",
@@ -434,7 +449,7 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
                       p(MAC_APS_NOTICE, "small"), Spacer(1, 3 * mm)])
     metrics = [[p("TEMPS ACTIF ENREGISTRÉ", "small"), p("MODULES TERMINÉS", "small")],
                [p(report["active_time_label"], "heading"), p(f"{report['completed_modules']} / {report['total_modules']}", "heading")],
-               [p("DURÉE PRÉVUE DU PARCOURS", "small"),
+               [p("DURÉE PRÉVUE DES MODULES" if report.get('final_exam_time') else "DURÉE PRÉVUE DU PARCOURS", "small"),
                 p("ACTIVITÉS OBLIGATOIRES TERMINÉES" if report.get("optional_activity_count") else "ACTIVITÉS TERMINÉES", "small")],
                [p(report["required_time_label"], "body"), p(f"{report['completed_activities']} / {report['total_activities']}" if report["available"] else "Données partielles", "body")]]
     box = Table(metrics, colWidths=[87 * mm, 87 * mm])
@@ -446,7 +461,11 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
                   p(("Le temps indiqué est le temps actif comptabilisé par la plateforme. La durée cible n'est pas acquise automatiquement. L'état terminé décrit les conditions pédagogiques de cette édition du parcours numérique."
                      if is_mac_aps else "Le temps indiqué correspond exclusivement au temps actif comptabilisé par la plateforme. La durée prévue n’est pas une durée automatiquement acquise. Un module est terminé lorsque les activités obligatoires et le temps de suivi requis sont accomplis."), "small"),
                   Spacer(1, 5 * mm)])
-    headers = ("MODULE / ÉDITION", "ACTIVITÉS", "TEMPS ACTIF", "DURÉE CIBLE", "ÉTAT") if is_mac_aps else ("MODULE", "PROGRESSION", "TEMPS ACTIF", "ÉTAT")
+    if report.get('final_exam_time'):
+        story.extend([p("Temps des modules : " + report['module_active_time_label'] +
+                        " · Examen final et corrigé : " + report['final_exam_time']['active_time_label'], 'small'),
+                      p("Le temps de l'examen blanc final est ajouté au total enregistré. Il ne remplace aucune durée obligatoire des modules.", 'small')])
+    headers = ("MODULE / ÉDITION", "ACTIVITÉS", "TEMPS ACTIF", "DURÉE CIBLE", "ÉTAT") if is_mac_aps else ("MODULE / EXAMEN" if report.get('final_exam_time') else "MODULE", "PROGRESSION", "TEMPS ACTIF", "ÉTAT")
     table_rows = [[p(value, "th") for value in headers]]
     for module in report["modules"]:
         row = [p(module["title"] + ("\n" + (module.get("version") or "Édition inconnue") if is_mac_aps else ""), "cell"),
@@ -456,6 +475,9 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
             row.append(p(module.get("required_time_label", "Non renseignée"), "cell"))
         row.append(p(module["status_label"], "cell"))
         table_rows.append(row)
+    if report.get('final_exam_time'):
+        table_rows.append([p(report['final_exam_time']['title'], 'cell'), p('Sans objet', 'cell'),
+                           p(report['final_exam_time']['active_time_label'], 'cell'), p('Temps additionnel enregistré', 'cell')])
     widths = [56, 23, 33, 33, 29] if is_mac_aps else [67, 31, 36, 40]
     table = Table(table_rows, colWidths=[w * mm for w in widths], repeatRows=1, hAlign="LEFT")
     table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#173858")),

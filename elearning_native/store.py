@@ -15,6 +15,7 @@ from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Seque
 from .videos import videos_complete, vtc_pacing_enabled, mac_aps_pacing_enabled
 from .video_compatibility import compatible_record
 from . import assessment
+from .aps_final_time import FINAL_COURSE_ID
 
 
 HEARTBEAT_MAX_CREDIT_SECONDS = 20.0
@@ -23,10 +24,11 @@ IDLE_TIMEOUT_SECONDS = 300.0
 APS_IDLE_TIMEOUT_SECONDS = 600.0
 VIDEO_PLAYBACK_RATES = frozenset((0.85, 0.9, 1.0))
 APS_PACED_COURSES = frozenset(f"academy-aps62-{number:02d}" for number in range(1, 16))
+APS_TRACKED_COURSES = APS_PACED_COURSES | {FINAL_COURSE_ID}
 
 
 def idle_timeout_seconds(course_id: str) -> float:
-    return APS_IDLE_TIMEOUT_SECONDS if course_id in APS_PACED_COURSES else IDLE_TIMEOUT_SECONDS
+    return APS_IDLE_TIMEOUT_SECONDS if course_id in APS_TRACKED_COURSES else IDLE_TIMEOUT_SECONDS
 
 _INITIALIZE_LOCK = threading.Lock()
 _INITIALIZED_DATABASES: set[str] = set()
@@ -453,7 +455,7 @@ class NativeElearningStore:
                 now_iso=now_iso,
                 current_activity_id=activity_id,
             )
-            if course_id in APS_PACED_COURSES:
+            if course_id in APS_TRACKED_COURSES:
                 # Navigation can reach this endpoint before the previous page's
                 # keepalive finish, or without that finish reaching us at all.
                 # Settle and release this tab atomically before opening its next
@@ -466,7 +468,7 @@ class NativeElearningStore:
                     (session_id, trainee_id, str(tab_id)[:128]),
                 ).fetchall()
                 for old in previous:
-                    if old['course_id'] not in APS_PACED_COURSES:
+                    if old['course_id'] not in APS_TRACKED_COURSES:
                         continue
                     old_key = tuple(old[name] for name in ('session_id', 'trainee_id', 'course_id', 'course_version'))
                     credited = min(
@@ -552,7 +554,7 @@ class NativeElearningStore:
         # A media_playing flag alone never establishes presence. Required-video
         # receipts must advance at an allowed rate between server-timed heartbeats.
         key = self._key_values(access)
-        aps_tracking = key[2] in APS_PACED_COURSES
+        aps_tracking = key[2] in APS_TRACKED_COURSES
         idle_seconds = idle_timeout_seconds(key[2])
         interactive_active = bool((aps_tracking or (visible and focused)) and recent_activity and age < idle_seconds)
         playback = (video_playback_policy or {}) if vtc_pacing_enabled(key[2], key[3]) else {}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.aps-final-followup{max-width:1240px;margin:0 auto;padding:20px 0 44px;color:#172033}.aps-final-followup h1{font-size:30px;margin:14px 0}.aps-final-followup p{color:#64748b;max-width:850px}.aps-final-actions{display:flex;gap:12px;flex-wrap:wrap;margin:24px 0}.aps-final-actions a{display:inline-flex;padding:11px 16px;border:1px solid #dbe3ee;border-radius:10px;background:#fff;color:#173858;text-decoration:none;font-weight:700}.aps-final-table{overflow-x:auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px}.aps-final-table table{width:100%;min-width:780px;border-collapse:collapse}.aps-final-table th,.aps-final-table td{text-align:left;padding:16px;border-bottom:1px solid #edf2f7}.aps-final-table th{background:#f3f6fa;color:#526579;font-size:12px}.aps-final-table td{font-size:14px;font-variant-numeric:tabular-nums}.aps-final-table small{display:block;color:#64748b;margin-top:5px}.aps-final-total{font-weight:800;color:#173858}.aps-final-empty{padding:30px}
+</style>
+<main class="aps-final-followup">
+  <a href="{{ url_for('native_elearning.admin_catalog') }}">← Retour aux modules APS</a>
+  <h1>Temps de l’examen blanc final APS</h1>
+  <p>Le temps réel des questions, des corrections et des nouvelles tentatives s’ajoute au total du parcours. Il ne remplace aucune durée obligatoire des modules. Le compteur se met en pause après 10 minutes d’inactivité.</p>
+  <div class="aps-final-actions"><a href="{{ url_for('native_elearning.admin_final_time') }}">Actualiser le suivi</a><a href="{{ url_for('native_elearning.admin_final_time_export') }}">Exporter le relevé CSV</a></div>
+  {% if learners %}<div class="aps-final-table"><table><thead><tr><th>Stagiaire / session</th><th>Temps des modules</th><th>Examen final et corrigé</th><th>Total du parcours</th><th>Dernière activité (UTC)</th></tr></thead><tbody>
+  {% for learner in learners %}<tr><td><strong>{{ learner.trainee_name }}</strong><small>{{ learner.session_name }}</small><small>Édition {{ learner.version }}</small></td><td>{{ learner.module_time_label }}</td><td>{{ learner.final_time_label }}{% if learner.live %}<small>En cours de suivi</small>{% endif %}</td><td class="aps-final-total">{{ learner.total_time_label }}</td><td>{{ learner.updated_at[:19]|replace('T',' à ') }}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<div class="aps-final-table aps-final-empty"><strong>Aucun temps d’examen final enregistré.</strong><p>Les stagiaires apparaîtront ici dès qu’ils démarreront le suivi de leur examen final. Les anciennes tentatives sans chronométrage n’ajoutent aucune durée.</p></div>{% endif %}
+</main>
+{% endblock %}

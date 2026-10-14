@@ -5,9 +5,9 @@ const fs=require('node:fs');
 const path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../static/js/aps62-exam.js'),'utf8');
 
-function fixture(draft=null, randomValue=null) {
+function fixture(draft=null, randomValue=null, examId='module-01') {
   const questions=[1,2,3].map(n=>({id:`q${n}`,prompt:`Question ${n}`,options:[{id:'1',text:'Une option'},{id:'2',text:'Une autre option'},{id:'3',text:'<script>non exécuté</script>'},{id:'4',text:'Quatrième choix'}]}));
-  const config={exam:{id:'module-01',version:'v2',title:'Test',pass_percent:75,questions},attemptId:'a'.repeat(32),submitUrl:'/submit',csrfToken:'csrf',preview:false};
+  const config={exam:{id:examId,version:'v2',title:'Test',pass_percent:75,questions},attemptId:'a'.repeat(32),submitUrl:'/submit',csrfToken:'csrf',preview:false};
   const dom=new JSDOM(`<main><div id="examWorkspace"><span id="examAnswered"></span><progress id="examProgress"></progress><nav id="examGrid"></nav><button id="examReview"></button><span id="examPosition"></span><form id="examForm"><fieldset id="examQuestion"></fieldset><button type="button" id="examPrevious"></button><button type="button" id="examNext"></button><p id="examError" hidden></p><button id="examSubmit"></button></form><p id="examDraft"></p></div><section id="examResult" hidden tabindex="-1"></section><script type="application/json" id="apsExamConfig">${JSON.stringify(config).replace(/</g,"\\u003c")}</script></main>`,{url:'https://test.invalid/exam',runScripts:'outside-only'});
   const {window}=dom,requests=[];let fail=true;
   window.fetch=async(url,opts)=>{requests.push({url,...opts});if(fail)throw new Error('Connexion perdue');return{ok:true,headers:{get:()=> 'application/json'},json:async()=>({ok:true,result:{score:2,total:3,percent:66.7,passed:false,pass_percent:75,corrections:questions.map((q,i)=>({...q,selected:'1',answer:i===0?'2':'1',correct:i!==0,explanation:'Explication du choix.',module:'Module 01',sources:[['Source','https://example.org/'],'Manuel VTC — référence texte',{title:'Source objet',url:'https://example.org/reference'}],lesson_links:[{ref:'A.01',url:'/cours-a'}]}))}})};};
@@ -55,17 +55,19 @@ test('APS choices shuffle by stable ID and preserve their positions when a draft
  reopened.close();
 });
 
-test('The APS module timer includes correction and background tabs, and saves on navigation', async()=>{
-  const f=fixture(),w=f.window,d=w.document;
+for (const final of [false, true]) test(`The APS ${final ? 'final exam' : 'module'} timer includes correction and background tabs, and saves on navigation`, async()=>{
+  const f=fixture(null,null,final?'final':'module-01'),w=f.window,d=w.document;
+  const initial=final?0:12600, activity=final?'aps62-final-examen-blanc':'aps62-01-examen-blanc';
   f.resolve();
-  const tracking={activityId:'aps62-01-examen-blanc',accessToken:'module-access',csrfToken:'csrf',
+  const tracking={activityId:activity,accessToken:'exam-access',csrfToken:'csrf',
     startUrl:'/time/start',heartbeatUrl:'/time/heartbeat',finishUrl:'/time/finish',
-    initialActiveSeconds:12600,initialRemainingSeconds:1800,heartbeatSeconds:15,idleSeconds:600,continueWhenHidden:true};
+    initialActiveSeconds:initial,initialRemainingSeconds:final?0:1800,heartbeatSeconds:15,idleSeconds:600,continueWhenHidden:true};
   const panel=d.createElement('section');
   panel.innerHTML='<strong id="nativeActiveTimer"></strong><strong id="nativeRemainingTime"></strong><span id="nativeDurationStatus"></span><div id="nativeTrackingState"><span></span></div>';
   d.body.prepend(panel);
   const cfg=d.createElement('script');cfg.id='nativeElearningConfig';cfg.type='application/json';cfg.textContent=JSON.stringify(tracking);d.body.append(cfg);
-  let now=0,seconds=12600,last=0,active=false,visible=true;
+  if(final)panel.querySelector('#nativeRemainingTime').remove();
+  let now=0,seconds=initial,last=0,active=false,visible=true;
   const calls=[],intervals=[];
   w.Date.now=()=>now;
   w.setInterval=(fn,delay)=>{intervals.push({fn,delay});return intervals.length;};
@@ -86,23 +88,23 @@ test('The APS module timer includes correction and background tabs, and saves on
     w.eval(fs.readFileSync(path.join(__dirname,'../static/js/native-elearning-player.js'),'utf8'));
     await settle();
     assert.equal(calls[0].url,'/time/start');
-    assert.equal(calls[0].body.activity_id,'aps62-01-examen-blanc');
-    assert.equal(d.getElementById('nativeActiveTimer').textContent,'03:30:00');
+    assert.equal(calls[0].body.activity_id,activity);
+    assert.equal(d.getElementById('nativeActiveTimer').textContent,final?'00:00:00':'03:30:00');
     for(let i=0;i<3;i++){d.querySelector('input[value="1"]').click();if(i<2)d.getElementById('examNext').click();}
     d.getElementById('examForm').dispatchEvent(new w.Event('submit',{cancelable:true}));
     await settle();
     assert.equal(d.getElementById('examResult').hidden,false);
     const heartbeat=intervals.find(i=>i.delay===15000).fn;
     now=15000;await heartbeat();
-    assert.equal(d.getElementById('nativeActiveTimer').textContent,'03:30:15');
-    assert.equal(d.getElementById('nativeRemainingTime').textContent,'00:29:45');
+    assert.equal(d.getElementById('nativeActiveTimer').textContent,final?'00:00:15':'03:30:15');
+    if(!final)assert.equal(d.getElementById('nativeRemainingTime').textContent,'00:29:45');
     visible=false;d.dispatchEvent(new w.Event('visibilitychange'));await settle();
     now=45000;await heartbeat();
-    assert.equal(d.getElementById('nativeActiveTimer').textContent,'03:30:45');
+    assert.equal(d.getElementById('nativeActiveTimer').textContent,final?'00:00:45':'03:30:45');
     assert.equal(d.getElementById('nativeTrackingState').dataset.state,'active');
     visible=true;w.dispatchEvent(new w.Event('focus'));await settle();
     now=60000;await heartbeat();
-    assert.equal(d.getElementById('nativeActiveTimer').textContent,'03:31:00');
+    assert.equal(d.getElementById('nativeActiveTimer').textContent,final?'00:01:00':'03:31:00');
     w.dispatchEvent(new w.Event('pagehide'));await settle();
     assert.equal(calls.at(-1).url,'/time/finish');
     assert.equal(calls.at(-1).keepalive,true);

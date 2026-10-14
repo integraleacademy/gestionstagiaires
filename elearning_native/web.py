@@ -44,6 +44,7 @@ from .aps_editorial import question_for_history
 from . import vtc, a3p, mac_aps
 from .mac_aps_timing import completion_blocker as macaps_completion_blocker
 from .exams import ExamStore, load_exam, public_exam, grade_exam, module_exam_activity_id
+from .aps_final_time import FINAL_COURSE_ID, FINAL_ACTIVITY_ID, final_time, tracking_course
 from .practice import public_practice, grade_practice
 from .production import public_production, production_feedback, normalize_production, normalize_self_review
 from .production_ai import ProductionAIService, ProductionAIError, build_course_references, read_analyses
@@ -63,7 +64,7 @@ from .importer import (
     CourseImportError,
     sanitize_course_html,
 )
-from .store import APS_PACED_COURSES, NativeElearningStore, TrackingError, idle_timeout_seconds
+from .store import APS_PACED_COURSES, APS_TRACKED_COURSES, NativeElearningStore, TrackingError, idle_timeout_seconds
 from .paths import (
     allows_free_module_navigation, assigned_modules, course_outline, path_revision, project_course,
     project_progress, required_activity_order, validate_modules,
@@ -372,6 +373,7 @@ def create_native_elearning_blueprint(
             response.headers['Cache-Control'] = 'private, no-store'
         if request.endpoint in {'native_elearning.admin_exam', 'native_elearning.admin_exam_submit',
                                 'native_elearning.learner_exam', 'native_elearning.learner_exam_submit',
+                                'native_elearning.admin_final_time', 'native_elearning.admin_final_time_export',
                                 'native_elearning.admin_written_work', 'native_elearning.admin_written_work_export',
                                 'native_elearning.activity_production', 'native_elearning.vtc_production_review'}:
             response.headers['Cache-Control'] = 'private, no-store'
@@ -526,6 +528,20 @@ def create_native_elearning_blueprint(
         return session_obj, trainee, course
 
     def course_for_access(access: Mapping[str, Any]) -> Dict[str, Any]:
+        if access.get('course_id') == FINAL_COURSE_ID:
+            if access.get('exam_id') != 'final':
+                abort(403)
+            # Recheck learner entitlement, full-module completion and edition.
+            # The final is never an assignable course or a shortcut to lessons.
+            session_obj, trainee, _exam, _back_url, course = exam_for_learner(
+                str(access.get('public_token') or ''), 'final')
+            if (str(session_obj.get('id')) != str(access.get('session_id'))
+                    or str(trainee.get('id') or trainee.get('trainee_id')) != str(access.get('trainee_id'))
+                    or course['version'] != access.get('course_version')):
+                abort(403)
+            if access.get('path_revision') != path_revision(session_obj):
+                abort(409, 'Le parcours a été modifié. Rechargez la page.')
+            return course
         cache_key = (str(root()), *(str(access.get(field) or "") for field in (
             "session_id", "trainee_id", "course_id", "course_version", "path_revision", "nonce", "issued_at",
         )), bool(session.get("admin_logged_in")))
@@ -999,6 +1015,8 @@ def create_native_elearning_blueprint(
             abort(404)
         if not exam:
             abort(404)
+        if exam_id == 'final':
+            course = tracking_course(exam['version'])
         return session_obj, trainee, exam, back_url, course
 
     def exam_page(exam, back_url, submit_url, history=None, preview=False, course=None, tracking_config=None):
@@ -1007,7 +1025,7 @@ def create_native_elearning_blueprint(
             module_context = {'title': course['title'], 'required_minutes': course.get('required_minutes', 0)}
         return render_template('native_elearning_exam.html', exam=public_exam(exam),
             back_url=back_url, history=history or [], preview_mode=preview,
-            module_context=module_context, tracking_config=tracking_config,
+            module_context=module_context, final_time_context=exam['id'] == 'final', tracking_config=tracking_config,
             exam_config={'exam':public_exam(exam), 'submitUrl':submit_url,
                          'moduleUrl': back_url if module_context else '',
                          'csrfToken':_csrf_token(), 'attemptId':secrets.token_hex(16), 'preview':preview})
@@ -1074,9 +1092,9 @@ def create_native_elearning_blueprint(
         session_obj, trainee, exam, back_url, course = exam_for_learner(token,exam_id)
         history = ExamStore(root()/'tracking.sqlite3').history(session_obj['id'],trainee.get('id') or trainee.get('trainee_id'),exam)
         tracking_config = None
-        if course and module_exam_activity_id(course):
+        if course and (module_exam_activity_id(course) or course['id'] == FINAL_COURSE_ID):
             access = _course_access_payload(session_obj, trainee, course, public_token=token)
-            # A signed exam context can only track this module's exam; it can
+            # A signed exam context can only track its own exam; it can
             # neither complete lessons nor bypass their navigation/video gates.
             access['exam_id'] = exam_id
             rows = store().learner_progress(access['session_id'], access['trainee_id'])
@@ -1085,13 +1103,13 @@ def create_native_elearning_blueprint(
             progress = project_progress(raw, course)
             tracking_config = {
                 'accessToken': _sign_access(access), 'csrfToken': _csrf_token(),
-                'activityId': module_exam_activity_id(course),
+                'activityId': FINAL_ACTIVITY_ID if course['id'] == FINAL_COURSE_ID else module_exam_activity_id(course),
                 'startUrl': url_for('native_elearning.tracking_start'),
                 'heartbeatUrl': url_for('native_elearning.tracking_heartbeat'),
                 'finishUrl': url_for('native_elearning.tracking_finish'),
                 'heartbeatSeconds': CLIENT_HEARTBEAT_SECONDS,
                 'idleSeconds': int(idle_timeout_seconds(course['id'])),
-                'continueWhenHidden': course['id'] in APS_PACED_COURSES,
+                'continueWhenHidden': course['id'] in APS_TRACKED_COURSES,
                 'initialActiveSeconds': progress['active_seconds'],
                 'initialRemainingSeconds': progress['remaining_seconds'],
                 'initialModuleComplete': progress['module_complete'],
@@ -1500,6 +1518,73 @@ def create_native_elearning_blueprint(
         save_data(data)
         return redirect(url_for("native_elearning.admin_catalog"))
 
+    def final_time_report():
+        # Authorize identities using the same tenant-scoped data as module reports.
+        data = load_data()
+        sessions = list(data.get('sessions') or [])
+        for order in data.get('manual_orders') or []:
+            if (isinstance(order, dict) and order.get('order_type') == 'elearning'
+                    and order.get('course_code') == 'aps' and order.get('id')):
+                sessions.append({'id': 'el-' + str(order['id']),
+                    'name': order.get('group_name') or order.get('reference') or 'Accès individuel APS',
+                    'training_type': 'APS', 'aps_native_modules': order.get('modules') or [],
+                    'trainees': order.get('learners') or []})
+        owners = {}
+        for session_obj in sessions:
+            if not isinstance(session_obj, dict):
+                continue
+            for trainee in session_trainees(session_obj):
+                owner = (str(session_obj.get('id') or ''), str(trainee.get('id') or trainee.get('trainee_id') or ''))
+                if all(owner):
+                    owners[owner] = (session_obj, trainee)
+        rows = []
+        tracker = store()
+        for recorded in tracker.live_progress(FINAL_COURSE_ID):
+            owner = (recorded['session_id'], recorded['trainee_id'])
+            if owner not in owners:
+                continue
+            session_obj, trainee = owners[owner]
+            try:
+                assignments = assigned_modules(effective_learner_session(session_obj, trainee))
+            except CourseImportError:
+                continue
+            final = final_time(assignments, [recorded])
+            if not final or final['version'] != recorded['course_version']:
+                continue
+            keys = {(item['course_id'], item.get('course_version')) for item in assignments}
+            module_seconds = sum(float(item.get('active_seconds') or 0)
+                for item in tracker.learner_progress(*owner)
+                if (item['course_id'], item['course_version']) in keys)
+            rows.append({'trainee_name': f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip() or owner[1],
+                'session_name': session_obj.get('name') or owner[0], 'version': final['version'],
+                'module_seconds': module_seconds, 'final_seconds': final['active_seconds'],
+                'total_seconds': module_seconds + final['active_seconds'],
+                'module_time_label': _format_seconds(module_seconds),
+                'final_time_label': _format_seconds(final['active_seconds']),
+                'total_time_label': _format_seconds(module_seconds + final['active_seconds']),
+                'live': recorded.get('live'), 'updated_at': recorded.get('updated_at') or ''})
+        return rows
+
+    @blueprint.get('/admin/elearning/exams/final/time')
+    @admin_required
+    def admin_final_time():
+        return render_template('admin_native_elearning_final_time.html', learners=final_time_report())
+
+    @blueprint.get('/admin/elearning/exams/final/time.csv')
+    @admin_required
+    def admin_final_time_export():
+        output = io.StringIO(newline='')
+        writer = csv.writer(output, delimiter=';')
+        writer.writerow(['Stagiaire', 'Session', 'Édition', 'Temps des modules', 'Examen final et corrigé',
+                         'Temps total du parcours', 'Modules (secondes)', 'Examen final (secondes)',
+                         'Total (secondes)', 'Dernière activité (UTC)'])
+        for row in final_time_report():
+            values = [row[key] for key in ('trainee_name', 'session_name', 'version', 'module_time_label',
+                'final_time_label', 'total_time_label', 'module_seconds', 'final_seconds', 'total_seconds', 'updated_at')]
+            writer.writerow(["'" + str(value) if str(value).lstrip().startswith(('=', '+', '-', '@')) else value for value in values])
+        return Response('\ufeff' + output.getvalue(), content_type='text/csv; charset=utf-8',
+            headers={'Content-Disposition': 'attachment; filename="suivi-examen-final-aps.csv"'})
+
     def live_payload(course_id: str, *, include_work: bool = False, include_attempts: bool = False) -> Dict[str, Any]:
         try:
             course = catalog().load_course(course_id)
@@ -1857,6 +1942,11 @@ def create_native_elearning_blueprint(
         final_available = bool(matched_manifest and len({m['course']['version'] for m in exam_modules}) == 1)
         final_ready = final_available and all(m.get('complete') and set(m['course']['activity_order']) ==
             set(project_course(catalog().load_course(m['course']['id'],m['course']['version']), {'required_minutes': m['course']['required_minutes']})['activity_order']) for m in exam_modules)
+        aps_final = final_time(assigned_modules(session_obj), raw_progress)
+        modules_time_label = _format_seconds(seconds)
+        if aps_final:
+            seconds += aps_final['active_seconds']
+            aps_final['time_label'] = _format_seconds(aps_final['active_seconds'])
         training_label = _training_label(session_obj)
         macaps_v2 = any(m['course'] and m['course']['id'] in mac_aps.curriculum_ids()
             and m['course']['version'] == mac_aps.VERSION for m in modules)
@@ -1883,6 +1973,7 @@ def create_native_elearning_blueprint(
             total_activities=total, completed_activities=completed, completed_modules=finished,
             progress_percent=round(completed / total * 100) if total else 0,
             active_time_label=_format_seconds(seconds), resume_url=resume_url,
+            aps_final_time=aps_final, modules_time_label=modules_time_label,
             programme_time_label=_format_seconds(sum(m['course'].get('required_minutes', 0) * 60 for m in modules if m.get('course'))),
             cma_url=url_for('native_elearning.cma_learner_home', token=token) if {f'academy-vtc-{letter}' for letter in 'abcdefg'}.issubset({m['course']['id'] for m in modules if m.get('course')}) else '',
             portal_url=url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_space", token=token),
@@ -2131,12 +2222,12 @@ def create_native_elearning_blueprint(
         access = _verify_access(payload.get("access_token"))
         course = course_for_access(access)
         if access.get('exam_id'):
-            exam_activity = module_exam_activity_id(course)
+            exam_activity = FINAL_ACTIVITY_ID if course['id'] == FINAL_COURSE_ID else module_exam_activity_id(course)
             if (not exam_activity or access['exam_id'] != course.get('mock_exam_id')
                     or request.endpoint not in {'native_elearning.tracking_start',
                         'native_elearning.tracking_heartbeat', 'native_elearning.tracking_finish'}
                     or payload.get('activity_id') != exam_activity):
-                abort(403, 'Ce suivi est réservé à l’examen blanc de ce module.')
+                abort(403, 'Ce suivi est réservé à cet examen blanc.')
             return access, course, [exam_activity], _scored_activity_ids(course)
         # An old tab may still close its tracking session on reload. Finishing
         # records no media sample and releases its active-tab slot normally.

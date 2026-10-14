@@ -32,8 +32,31 @@ tentatives d'examen. Aucune soumission n'attribue de durée forfaitaire.
 
 La correction s'applique aux éditions APS déjà affectées qui possèdent ces
 examens, sans migration ni nouvelle exigence de validation. L'aperçu
-administrateur n'enregistre aucun temps. Les examens VTC, A3P, MAC APS et
-l'examen final transversal conservent leur fonctionnement.
+administrateur n'enregistre aucun temps. Les examens VTC, A3P et MAC APS
+conservent leur fonctionnement.
+
+## Examen blanc final et durée globale
+
+L'examen final APS, ses corrections et ses nouvelles tentatives utilisent aussi
+le suivi actif, avec un contexte séparé `academy-aps62-final` et l'activité
+`aps62-final-examen-blanc`. Ce contexte n'est ni un seizième module à affecter,
+ni un crédit appliqué aux quinze modules. Les durées obligatoires et les
+conditions d'accès à l'examen final sont conservées : tous les modules complets
+de la même édition et leurs durées doivent d'abord être terminés.
+
+Le temps réel de l'examen s'ajoute au total du parcours. Ainsi, 62 h effectivement
+enregistrées dans les modules et 1 h 30 dans l'examen donnent un total de 63 h 30.
+Le parcours élève, les suivis des organismes (y compris les listes de groupes),
+le relevé de connexions CSV et l'attestation PDF incluent cette durée une seule
+fois. Le PDF détaille séparément les modules et l'examen. Un suivi administrateur
+dédié, accessible depuis le catalogue APS, présente les trois valeurs et un
+export CSV : `/admin/elearning/exams/final/time`.
+
+La même protection contre les doublons et le même délai de 10 minutes
+s'appliquent. Une navigation vers un cours clôture le suivi de l'examen et
+conserve ses dernières secondes, sans les transférer au module. Les accès sont
+signés, réservés au suivi de cet examen et revérifiés côté serveur. Les relevés
+restent limités à l'organisme, au stagiaire et à l'édition affectée.
 
 Les anciens temps d'examen ne peuvent pas être reconstitués de façon fiable :
 aucun début, intervalle actif ni durée n'était enregistré. L'historique existant
@@ -43,7 +66,8 @@ suivi nouvellement ajouté.
 ## Vérification ciblée
 
 ```bash
-python -m pytest -q tests/test_aps_exam_time.py tests/test_native_elearning_exams.py tests/test_native_elearning.py -k 'APSExamTimeTests or ExamWebTests or NativeTrackingTests or test_questions_balance_and_grading or test_retakes_idempotence_and_isolation'
+python -m pytest -q tests/test_aps_final_time.py tests/test_aps_exam_time.py tests/test_native_elearning_exams.py tests/test_native_elearning.py tests/test_native_elearning_video_presence.py -k 'APSFinalTimeTests or APSExamTimeTests or ExamWebTests or NativeTrackingTests or LongViewingPresenceTests or test_questions_balance_and_grading or test_retakes_idempotence_and_isolation'
+python -m pytest -q tests/test_elearning_reporting.py tests/test_elearning_certificate_connections.py tests/test_native_elearning_tenant_exports.py
 NODE_PATH=/path/to/node_modules node --test tests/test_native_elearning_exam_ui.cjs tests/test_native_elearning_player_ui.cjs
 ```
 
