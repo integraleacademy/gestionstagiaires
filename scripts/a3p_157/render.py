@@ -22,6 +22,7 @@ BOLD = ROOT/'scripts/academy_videos/assets/Manrope-800.ttf'
 DEST = RES/'assets/media/a3p/v4'
 WORK = Path(os.environ.get('A3P_MEDIA_WORK', '/tmp/a3p157-media'))
 VOICE, RATE = 'fr-FR-HenriNeural', '-2%'
+_speech_locks = {}
 
 
 def run(args):
@@ -80,6 +81,14 @@ def frame(row, scene, number, total):
 
 
 async def speech(value, semaphore):
+    # Several lessons share a source paragraph. Serialize identical requests so
+    # their cache files cannot race while different narration is synthesized.
+    lock = _speech_locks.setdefault(value, asyncio.Lock())
+    async with lock:
+        return await _speech(value, semaphore)
+
+
+async def _speech(value, semaphore):
     import edge_tts
     key = hashlib.sha256((VOICE+RATE+value).encode()).hexdigest()
     folder = WORK/'speech'; folder.mkdir(parents=True,exist_ok=True)
@@ -163,7 +172,9 @@ async def main():
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         async def one(row,scenes):
             result=DEST/(row['id']+'.json')
-            if result.is_file() and json.loads(result.read_text())['source_sha256']==signature(row,scenes):
+            if (result.is_file() and (DEST/(row['id']+'.mp4')).is_file()
+                    and (DEST/(row['id']+'.vtt')).is_file()
+                    and json.loads(result.read_text())['source_sha256']==signature(row,scenes)):
                 print('CACHED',row['id'],flush=True);return
             voices=await asyncio.gather(*(speech(scene['text'],speech_slots) for scene in scenes))
             async with render_slots:

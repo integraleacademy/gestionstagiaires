@@ -1,0 +1,111 @@
+name: A3P 157h30 - produire les 160 capsules
+on:
+  push:
+    branches: [codex/a3p-157h30-20261015]
+    paths: [.github/workflows/a3p157-produce.yml]
+permissions: {}
+concurrency:
+  group: a3p157-production
+  cancel-in-progress: false
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        shard: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/a3p_157/
+            /scripts/aps62_v5/captions.py
+            /scripts/academy_videos/assets/
+            /elearning_native/*.py
+            /elearning_native/*.json
+            /elearning_native/a3p_resources/*.json
+            /elearning_native/a3p_resources/v4/
+            /elearning_native/a3p_resources/assets/media/a3p/v1/*.json
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Installer le pipeline valide
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          python -m pip install --disable-pip-version-check edge-tts==7.3.1 Pillow==12.3.0 Jinja2==3.1.6
+      - name: Reprendre les exports termines lors d'une tentative precedente
+        if: github.run_attempt > 1
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: a3p157-${{ matrix.shard }}
+          path: elearning_native/a3p_resources/assets/media/a3p/v4
+          run-id: ${{ github.run_id }}
+          github-token: ${{ github.token }}
+      - name: Produire dix capsules et les decoder integralement
+        env:
+          A3P_SHARD: ${{ matrix.shard }}
+        run: python -m scripts.a3p_157.render --shards 16 --shard "$A3P_SHARD"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: a3p157-${{ matrix.shard }}
+          path: elearning_native/a3p_resources/assets/media/a3p/v4
+          if-no-files-found: warn
+          overwrite: true
+          compression-level: 0
+          retention-days: 7
+  publish:
+    needs: render
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: codex/a3p-157h30-20261015
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/a3p_157/
+            /scripts/aps62_v5/captions.py
+            /scripts/academy_videos/assets/
+            /elearning_native/*.py
+            /elearning_native/*.json
+            /elearning_native/a3p_resources/*.json
+            /elearning_native/a3p_resources/v4/
+            /elearning_native/a3p_resources/assets/media/a3p/v1/*.json
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: a3p157-*
+          path: elearning_native/a3p_resources/assets/media/a3p/v4
+          merge-multiple: true
+          run-id: ${{ github.run_id }}
+          github-token: ${{ github.token }}
+      - name: Verifier les 160 sources, empreintes et durees reelles
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          python -m pip install --disable-pip-version-check Pillow==12.3.0 Jinja2==3.1.6
+          python -m scripts.a3p_157.verify
+      - name: Publier uniquement les medias verifies sur la branche de preparation
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --sparse -- elearning_native/a3p_resources/assets/media/a3p/v4 elearning_native/a3p_resources/v4/media_manifest.json
+          git diff --cached --check
+          git commit -m 'Ajouter 160 videos A3P Henri avec sous-titres et durees mesurees'
+          git push origin HEAD:refs/heads/codex/a3p-157h30-20261015
