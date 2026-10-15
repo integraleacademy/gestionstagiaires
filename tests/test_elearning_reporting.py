@@ -164,7 +164,7 @@ def test_programme_download_serves_connect_pdf_without_changing_progress(shop):
     root = Path(host.PERSIST_DIR) / "native_elearning"
     page = shop["client"].get(report_url(order))
     assert "Documents à télécharger" in page.text
-    assert report_url(order) + "/programme.pdf" in page.text
+    assert report_url(order) + "/programme.pdf" not in page.text
     response = shop["client"].get(report_url(order) + "/programme.pdf")
     assert response.status_code == 200 and response.mimetype == "application/pdf"
     assert response.data == reporting.PROGRAMMES["aps"]["path"].read_bytes()

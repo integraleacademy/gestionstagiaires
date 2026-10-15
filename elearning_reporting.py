@@ -32,7 +32,7 @@ from elearning_native.module_signatures import MAC_APS_NOTICE
 
 CUSTOMER_ENDPOINTS = {"manuals_shop." + name for name in (
     "elearning_progress", "elearning_progress_certificate", "elearning_progress_connections",
-    "elearning_progress_programme",
+    "elearning_progress_programme", "elearning_progress_exam_copy",
 )}
 STATUS_LABELS = {"not_started": "Non commencé", "in_progress": "En cours",
                  "awaiting_time": "Temps de suivi à compléter", "passed": "Terminé",
@@ -254,17 +254,20 @@ class ProgressReader:
                 starts.append(aps_final['started_at'])
             if aps_final.get('updated_at'):
                 updates.append(aps_final['updated_at'])
-        versions = {m["version"] for m in modules if m["available"]}
+        versions = {m["version"] for m in modules if m["version"]}
         if len(versions) == 1:
             final_id = "macaps-final" if is_mac_aps else "vtc-final" if order["course_code"] == "vtc" else "final"
-            final_key = (final_id, next(iter(versions)))
-            exam_keys.add(final_key)
-            exam_scopes[final_key] = "principal"
-            if is_mac_aps:
-                exam_titles[final_key] = "Examen blanc final MAC APS"
-            exam_catalogue[final_key] = {"id": final_id, "version": final_key[1],
-                "title": "Examen blanc final " + course_label,
-                "active_seconds": recorded_seconds(by_key.get((aps_final['course_id'], aps_final['version']), {}).get('active_seconds')) if aps_final else None}
+            # Keep final attempts from a proven VTC predecessor edition, just
+            # like module attempts; never include unrelated curriculum versions.
+            final_versions = set.intersection(*(set(lineage_versions(session_view, m["course_id"])) for m in modules))
+            for final_version in sorted(final_versions - {""}):
+                final_key = (final_id, final_version)
+                exam_keys.add(final_key)
+                exam_scopes[final_key] = "principal"
+                exam_titles[final_key] = "Examen blanc final " + course_label
+                exam_catalogue[final_key] = {"id": final_id, "version": final_key[1],
+                    "title": exam_titles[final_key], "is_final": True,
+                    "active_seconds": recorded_seconds(by_key.get((aps_final['course_id'], final_version), {}).get('active_seconds')) if aps_final else None}
         complete = bool(modules) and finished == len(modules)
         available = bool(modules) and all(m["available"] for m in modules)
         report = {"available": available, "modules": modules, "completed_modules": finished, "total_modules": len(modules),
@@ -287,7 +290,9 @@ class ProgressReader:
                   "updated_at_label": date_label(max(updates)) if updates else "Aucune activité enregistrée",
                   "generated_at_label": date_label(dt.datetime.now(dt.timezone.utc).isoformat()),
                   "connections": [], "complement_connections": [], "exams": [], "complement_exams": [], "cma_attempts": [],
-                  "exam_catalogue": list(exam_catalogue.values())}
+                  "exam_catalogue": list(exam_catalogue.values()),
+                  "final_exams": [dict(entry, submitted=False) for entry in exam_catalogue.values()
+                                  if entry.get("is_final") and entry["version"] in versions]}
         if detailed:
             if order['course_code'] == 'vtc':
                 report['cma_attempts'] = learner_attempt_summaries(self.database_path, session_id, learner_id)
@@ -317,8 +322,25 @@ class ProgressReader:
                 destination = "complement_exams" if exam_scopes.get(exam_key) == "complement" else "exams"
                 report[destination].append({**row, "id": attempt["exam_id"], "version": attempt["version"],
                     "title": title, "attempt_id": attempt["attempt_id"], "submitted_at": attempt["submitted_at"],
+                    "is_final": bool(exam_catalogue.get(exam_key, {}).get("is_final")),
                     "pass_percent": result.get("pass_percent"), "date_label": date_label(attempt["submitted_at"])})
+                for final in report["final_exams"]:
+                    if (final["id"], final["version"]) == exam_key:
+                        final["submitted"] = True
         return report
+
+    def exam_attempt(self, order, person, exam_id, version, attempt_id):
+        """Authorize the purchased exam edition before reading a saved copy."""
+        from elearning_exam_pdf import read_stored_attempt
+
+        report = self.report(order, person, detailed=False)
+        exam = next((item for item in report["exam_catalogue"]
+                     if (item["id"], item["version"]) == (exam_id, version)), None)
+        if exam is None:
+            return None
+        attempt = read_stored_attempt(self.database_path, "el-" + order["id"], person["id"],
+                                      exam_id, version, attempt_id)
+        return {**attempt, "title": exam["title"]} if attempt else None
 
     def assessment_attempts(self, access, course):
         """Return the purchased module's recorded checks without creating a DB."""
@@ -724,7 +746,24 @@ def register_routes(host, bp, *, page, customer, partner_data):
         partner, order, person, group = context(oid, learner_id)
         report = ProgressReader(host).report(order, person)
         return page("elearning_progress.html", partner=partner, order=order, person=person, group=group, report=report,
-                    course=learning.COURSES[order["course_code"]], programme=PROGRAMMES.get(order["course_code"]))
+                    course=learning.COURSES[order["course_code"]])
+
+    @bp.get(base + "/examens/<exam_id>/<version>/<attempt_id>.pdf")
+    @customer
+    def elearning_progress_exam_copy(oid, learner_id, exam_id, version, attempt_id):
+        from elearning_exam_pdf import exam_attempt_pdf
+        from organisme_profile import logo_path
+
+        partner, order, person, _ = context(oid, learner_id)
+        attempt = ProgressReader(host).exam_attempt(order, person, exam_id, version, attempt_id)
+        if attempt is None:
+            abort(404)
+        filename = secure_filename(f"copie-examen-{exam_id}-{person.get('last_name', '')}-{person.get('first_name', '')}-{attempt_id}.pdf")
+        return Response(exam_attempt_pdf(attempt, partner, order, person, logo_path=logo_path(host, partner)),
+                        mimetype="application/pdf", headers={
+                            "Content-Disposition": f'attachment; filename="{filename}"',
+                            "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+                            "Referrer-Policy": "no-referrer"})
 
     @bp.get(base + "/programme.pdf")
     @customer
