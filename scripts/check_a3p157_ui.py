@@ -37,7 +37,9 @@ try:
    page.wait_for_function('document.querySelector("video").duration > 300')
    page.locator('video').evaluate('(v)=>{v.currentTime=98}')
    page.wait_for_timeout(700);page.screenshot(path=str(root/f'{label}-video.png'))
-   page.goto(base+lesson['id']);page.locator('.a3p-reading').first.wait_for()
+   page.goto(base+lesson['id'])
+   page.locator('[data-aps-lesson-next]').click()
+   page.locator('.a3p-reading').first.wait_for()
    page.screenshot(path=str(root/f'{label}-course.png'))
    assert page.locator('.a3p-nav-chapter[open]').count()==1
    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 2')

@@ -5,6 +5,7 @@ on:
     paths:
       - elearning_native/a3p_resources/v4/media_manifest.json
       - .github/workflows/a3p157-review.yml
+      - scripts/check_a3p157_ui.py
 permissions: {}
 jobs:
   review:
