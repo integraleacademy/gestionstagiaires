@@ -31,6 +31,8 @@ def audit_course(course):
     missing = sum(not a.get('planned_minutes') for a in mandatory)
     planned = sum(a.get('planned_minutes', 0) for a in activities)
     optional = sum(a.get('planned_minutes', 0) for a in activities if a.get('optional'))
+    calibration = course.get('calibration') or {}
+    gap = max(0, required - planned) if calibration else None
     questions = sum(len(a.get('answer_groups') or [None]) for a in mandatory if a.get('scored'))
     interactive_items = sum(len(a.get('practice', {}).get('exercises', [])) for a in mandatory)
     issues = []
@@ -41,13 +43,20 @@ def audit_course(course):
         issues.append('Les lectures minimales et vidéos dépassent déjà la durée du module : revoir la répartition avant validation pédagogique.')
     if optional:
         issues.append(f'{optional} minutes du budget concernent des ateliers facultatifs : mesurer aussi le parcours sans ces ateliers.')
+    if calibration:
+        issues.append('Estimation éditoriale, sans essai apprenant : les durées détaillées ne sont pas des temps mesurés ni des heures acquises.')
+        if gap:
+            issues.append(f'Écart de contenu estimé : {gap} minutes entre les activités disponibles ({planned} min) et le volume du module ({required} min). Prévoir du contenu supplémentaire et des essais ; ne pas combler cet écart par des attentes artificielles.')
     sections = []
     for section in course['sections']:
         selected = [a for a in section['activities'] if not a.get('optional')]
         section_pages = [p for a in selected for p in pages_by_id.get(a['id'], []) if not p.get('media')]
         sections.append({'title': section['title'], 'planned_minutes': section.get('planned_minutes'),
                          'reading_minutes': sum(p['required_seconds'] for p in section_pages) / 60,
-                         'pages': len(section_pages)})
+                         'pages': len(section_pages),
+                         'activities': [{'title': a['title'], 'minutes': a.get('planned_minutes'),
+                                         'decisions': len(a.get('practice', {}).get('exercises', []))}
+                                        for a in selected]})
     return {'id': course['id'], 'version': course['version'], 'title': course['title'],
             'training': course.get('training_label', 'APS'), 'required_minutes': required,
             'lessons': len(readings), 'pages': len(pages), 'words': words,
@@ -56,7 +65,8 @@ def audit_course(course):
             'questions': questions, 'interactive_items': interactive_items,
             'activities': len(mandatory), 'planned_minutes': planned,
             'optional_minutes': optional, 'missing_plans': missing, 'issues': issues,
-            'priority': 'Enrichissement et calibrage nécessaires' if missing else 'Essais apprenants à réaliser',
+            'calibration': calibration, 'gap_minutes': gap,
+            'priority': 'Enrichissement et calibrage nécessaires' if missing or gap else 'Essais apprenants à réaliser',
             'sections': sections}
 
 

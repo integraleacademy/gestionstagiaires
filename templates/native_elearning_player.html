@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261011-vtc-readable-video') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261015-aps-reading-125') }}">
   {% if course.training_label == 'MAC APS' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-elearning.css', v='20261012-2') }}">{% endif %}
-  {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261010-2') }}">{% endif %}
+  {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261015-3') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
   {% if course.aps_reading_revision or course.aps_depth_revision %}<link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-depth.css', v=course.aps_reading_revision or course.aps_depth_revision) }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261007-visuals') }}">
@@ -200,7 +200,7 @@
         <article class="native-activity" data-activity-id="{{ activity.id }}" data-activity-type="{{ activity.type }}">
           <header class="native-activity__header">
             <span class="native-kicker">{{ 'Atelier facultatif' if activity.optional else 'Questionnaire de fin d’objectif' if activity.macaps and activity.macaps.is_objective_assessment else 'Questionnaire du chapitre' if (activity.a3p or activity.macaps) and activity.scored else 'Question évaluée' if activity.scored else 'Production personnelle' if activity.production else 'Atelier interactif' if activity.practice else 'Cours' }}</span>
-            {% if activity.planned_minutes %}<span class="aps-minute-badge">{{ activity.planned_minutes }} {{ 'min conseillées' if activity.optional else 'min de travail guidé' }}</span>{% endif %}
+            {% if activity.planned_minutes %}<span class="aps-minute-badge">{{ activity.planned_minutes }} {{ 'min estimées' if activity.duration_estimated else 'min conseillées' if activity.optional else 'min de travail guidé' }}</span>{% endif %}
             <h1>{{ activity.title }}</h1>
           </header>
 

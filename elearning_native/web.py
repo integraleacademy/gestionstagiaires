@@ -2094,7 +2094,7 @@ def create_native_elearning_blueprint(
 
     def a3p_resource_context(token: str, course_id: str):
         session_obj, trainee, assigned = learner_context(token, course_id)
-        if assigned.get("training_label") != "A3P" or assigned["version"] != a3p.VERSION:
+        if assigned.get("training_label") != "A3P" or assigned["version"] not in (a3p.previous.VERSION, a3p.VERSION):
             abort(404)
         course = catalog().load_course(course_id, assigned["version"])
         sections = [section for section in course["sections"] if section.get("delivery") != "distance"]

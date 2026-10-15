@@ -1,0 +1,593 @@
+{
+  "06.22": [
+    {
+      "title": "Le lieu d’accueil n’est pas encore ouvert",
+      "teaching": [
+        {
+          "title": "La destination fait partie de la décision",
+          "text": "Un déplacement n’est pas achevé lorsque le groupe quitte le lieu initial. La destination doit permettre la continuité prévue : accès autorisé, accueil confirmé, moyens adaptés et interlocuteur disponible. Une adresse connue ne remplit pas automatiquement ces conditions. Il faut également vérifier le créneau : un lieu ouvert le jour peut être fermé lors d’une arrivée tardive. La décision compare donc l’ensemble de la chaîne, pas seulement le trajet."
+        },
+        {
+          "title": "Traiter une condition manquante",
+          "text": "Une condition non confirmée doit être attribuée à un responsable de vérification. Pendant ce travail, le décideur conserve un état précis des options. Une solution peut être retenue sous réserve, mais cette réserve ne doit pas disparaître dans les messages transmis à l’équipe. Avant l’exécution, vérifiez que la condition est levée ou que le responsable a choisi une autre organisation adaptée à la situation actuelle."
+        }
+      ],
+      "documents": [
+        {
+          "title": "Point de départ",
+          "text": "Le groupe se trouve dans un espace intérieur autorisé. Le responsable du site confirme qu’il peut y rester pendant les vérifications. Aucun danger n’y est observé."
+        },
+        {
+          "title": "Lieu proposé",
+          "text": "Un hôtel partenaire accepte habituellement les arrivées jusqu’à 23 heures. L’arrivée envisagée serait à 23 h 25. Le réceptionniste de nuit n’a pas encore confirmé l’accès."
+        },
+        {
+          "title": "Autre option",
+          "text": "Un second lieu est accessible et son responsable répond. Il peut accueillir le groupe dès maintenant, mais le trajet est plus long de quinze minutes."
+        }
+      ],
+      "decisions": [
+        {
+          "prompt": "Quelle condition manque pour le premier lieu ?",
+          "correct": "La confirmation d’un accès à l’heure réelle d’arrivée.",
+          "alternatives": [
+            "Le nom de l’hôtel.",
+            "La connaissance d’un trajet."
+          ],
+          "explanation": "L’accueil habituel ne couvre pas automatiquement un horaire tardif."
+        },
+        {
+          "prompt": "Quel avantage documenté possède le second lieu ?",
+          "correct": "Un accueil confirmé dans le créneau utile.",
+          "alternatives": [
+            "Un trajet forcément plus court.",
+            "Une absence garantie de tout risque."
+          ],
+          "explanation": "La disponibilité est confirmée, mais les autres effets restent à comparer."
+        },
+        {
+          "prompt": "Quelle information donner au décideur ?",
+          "correct": "Comparer durée du trajet, confirmation d’accueil et possibilité d’attente actuelle.",
+          "alternatives": [
+            "Présenter les deux lieux comme équivalents.",
+            "Choisir seulement le trajet le plus court."
+          ],
+          "explanation": "Le choix doit intégrer l’ensemble de la chaîne et la situation présente."
+        },
+        {
+          "prompt": "Que signifie « hôtel demandé » ?",
+          "correct": "Une démarche engagée qui n’est pas encore une réservation ou un accueil confirmé.",
+          "alternatives": [
+            "Une garantie d’ouverture.",
+            "Une autorisation de forcer l’accès."
+          ],
+          "explanation": "Le statut de la démarche doit rester exact."
+        }
+      ]
+    },
+    {
+      "title": "La capacité du véhicule et le groupe réel",
+      "teaching": [
+        {
+          "title": "Compter les personnes effectivement concernées",
+          "text": "Le nombre de personnes peut changer en cours de mission : accompagnant supplémentaire, interprète, personne nécessitant une assistance. La capacité annoncée d’un moyen doit être comparée au groupe réel, avec les équipements et les conditions d’usage. Un siège théorique ne suffit pas si les règles de transport ou les besoins d’accessibilité ne sont pas respectés. Cette vérification doit intervenir avant de présenter le moyen comme disponible pour tous."
+        },
+        {
+          "title": "Éviter une séparation improvisée",
+          "text": "Si un moyen est insuffisant, le responsable examine une organisation alternative et les conséquences sur les liaisons, les rôles et les points de rencontre. Une séparation peut créer une rupture de continuité si elle n’est pas préparée. L’exercice ne prescrit pas une manœuvre ; il demande de repérer les conditions à vérifier et les décisions à ne pas laisser implicites."
+        }
+      ],
+      "documents": [
+        {
+          "title": "Groupe",
+          "text": "Le groupe comprend le client, un accompagnant et deux agents, soit quatre passagers en plus du conducteur. L’accompagnant utilise un équipement d’aide à la mobilité."
+        },
+        {
+          "title": "Moyen proposé",
+          "text": "Le véhicule de remplacement ne peut accueillir que trois passagers dans les conditions autorisées. Son coffre ne permet pas d’emporter l’équipement sans gêner l’usage prévu."
+        },
+        {
+          "title": "Possibilités",
+          "text": "Le transporteur peut rechercher un véhicule adapté. Le responsable du site confirme une attente temporaire possible dans l’espace actuel."
+        }
+      ],
+      "decisions": [
+        {
+          "prompt": "Le véhicule convient-il au groupe complet ?",
+          "correct": "Non, sa capacité autorisée est inférieure au nombre de passagers.",
+          "alternatives": [
+            "Oui, il suffit de compter seulement le client.",
+            "Oui, un trajet court permet de dépasser la capacité."
+          ],
+          "explanation": "La capacité doit être comparée à toutes les personnes réellement transportées."
+        },
+        {
+          "prompt": "Quel autre point rend l’option inadaptée ?",
+          "correct": "L’emport de l’équipement d’aide à la mobilité.",
+          "alternatives": [
+            "La marque du véhicule.",
+            "La couleur des sièges."
+          ],
+          "explanation": "L’accessibilité inclut les équipements nécessaires à la personne."
+        },
+        {
+          "prompt": "Quelle suite est documentée ?",
+          "correct": "Demander un moyen adapté tout en maintenant l’attente autorisée.",
+          "alternatives": [
+            "Séparer le groupe sans décision.",
+            "Confirmer un transport de quatre passagers dans trois places."
+          ],
+          "explanation": "Une solution de continuité existe pendant la recherche."
+        },
+        {
+          "prompt": "Si une séparation est envisagée, que faut-il examiner ?",
+          "correct": "Les fonctions, liaisons et conditions de regroupement avant validation.",
+          "alternatives": [
+            "Uniquement le prix de deux courses.",
+            "Aucune conséquence particulière."
+          ],
+          "explanation": "La séparation modifie l’organisation de protection et doit être préparée."
+        }
+      ]
+    },
+    {
+      "title": "La consigne change après la vérification",
+      "teaching": [
+        {
+          "title": "Une confirmation a une durée de validité",
+          "text": "Une vérification reste liée à un contexte. Des travaux, un incident, une décision du site ou une instruction d’autorité peuvent rendre une option indisponible après sa préparation. La qualité de l’organisation repose sur sa capacité à recevoir ces changements. Le responsable doit identifier les informations qui annulent une condition d’exécution et les diffuser rapidement."
+        },
+        {
+          "title": "Remplacer explicitement l’ancienne décision",
+          "text": "Une nouvelle consigne doit préciser ce qu’elle remplace et ce qui demeure applicable. Sinon, chaque acteur peut conserver une version différente. Vérifiez en priorité les personnes déjà engagées dans l’action : conducteur, interlocuteur de site et équipe accompagnante. Conservez la trace du changement et de sa source pour le débriefing, sans présenter la première décision comme une erreur si elle était adaptée aux informations alors connues."
+        }
+      ],
+      "documents": [
+        {
+          "title": "Vérification initiale",
+          "text": "À 18 h 10, le site confirme l’usage du passage Nord pour un départ à 18 h 30. Le chauffeur reçoit cette instruction."
+        },
+        {
+          "title": "Nouvelle consigne",
+          "text": "À 18 h 20, le responsable du site annonce la fermeture du passage Nord à la demande des autorités. Il demande de rester dans l’espace désigné en attendant une nouvelle solution."
+        },
+        {
+          "title": "Diffusion",
+          "text": "L’agent B reçoit l’information. A et le chauffeur n’ont pas encore été informés et s’apprêtent à appliquer la première instruction."
+        }
+      ],
+      "decisions": [
+        {
+          "prompt": "Quel élément annule la condition initiale ?",
+          "correct": "La fermeture annoncée du passage Nord.",
+          "alternatives": [
+            "L’existence de la confirmation de 18 h 10.",
+            "Le simple fait qu’il soit 18 h 20."
+          ],
+          "explanation": "Une nouvelle information peut rendre une option auparavant valable indisponible."
+        },
+        {
+          "prompt": "Qui doit être informé en priorité ?",
+          "correct": "Les acteurs sur le point d’exécuter l’ancienne consigne.",
+          "alternatives": [
+            "Seulement le service comptable.",
+            "Aucun destinataire, la porte fermée suffira."
+          ],
+          "explanation": "La diffusion doit précéder l’action incompatible."
+        },
+        {
+          "prompt": "Quelle formulation est claire ?",
+          "correct": "« La consigne Nord est suspendue ; restez dans l’espace désigné en attente d’une nouvelle décision. »",
+          "alternatives": [
+            "« Il y a un changement quelque part. »",
+            "« Faites comme vous pouvez. »"
+          ],
+          "explanation": "Une consigne de remplacement identifie l’ancienne option et la conduite provisoire."
+        },
+        {
+          "prompt": "Comment analyser la décision initiale au débriefing ?",
+          "correct": "Avec les informations disponibles à 18 h 10 puis l’évolution reçue.",
+          "alternatives": [
+            "Comme nécessairement fautive puisqu’elle a changé.",
+            "En effaçant sa trace."
+          ],
+          "explanation": "Le retour d’expérience doit respecter la chronologie de l’information."
+        }
+      ]
+    },
+    {
+      "title": "Une liaison indisponible au moment critique",
+      "teaching": [
+        {
+          "title": "Prévoir l’échec d’un moyen",
+          "text": "Une organisation ne doit pas dépendre d’un seul canal sans solution de secours. Le briefing précise le moyen alternatif, les contacts et les conditions de bascule. Il faut tester ce qui peut l’être dans le contexte réel. Un téléphone chargé mais sans réseau au lieu d’usage n’offre pas la disponibilité attendue. La solution de secours doit également respecter la confidentialité et les contraintes de l’environnement."
+        },
+        {
+          "title": "Ne pas interpréter le silence",
+          "text": "L’absence de réponse peut résulter d’une panne, d’une occupation ou d’une non-réception. Elle ne prouve pas que le destinataire exécute la consigne. Le responsable doit savoir quels points sont confirmés et quels points restent ouverts. La décision peut devoir être différée ou adaptée selon la situation. Une communication restaurée appelle une remise à niveau des informations, pas une simple reprise comme si aucun changement n’était intervenu."
+        }
+      ],
+      "documents": [
+        {
+          "title": "Consigne",
+          "text": "Le départ dépend d’une confirmation du chauffeur au nouveau point. La radio principale ne fonctionne plus dans la zone où se trouve l’équipe."
+        },
+        {
+          "title": "Secours prévu",
+          "text": "Le briefing prévoit un téléphone professionnel et un contact du site pouvant relayer la demande. Le téléphone est disponible ; le réseau fonctionne."
+        },
+        {
+          "title": "Situation",
+          "text": "Le chauffeur n’a pas confirmé sa présence. Le groupe peut rester temporairement dans l’espace actuel, selon le responsable du site."
+        }
+      ],
+      "decisions": [
+        {
+          "prompt": "Que prouve le silence radio ?",
+          "correct": "Une absence de confirmation, sans certitude sur sa cause.",
+          "alternatives": [
+            "Que le chauffeur est déjà en place.",
+            "Que le chauffeur refuse la mission."
+          ],
+          "explanation": "Le silence ne doit pas être transformé en conclusion non vérifiée."
+        },
+        {
+          "prompt": "Quelle première solution est prévue ?",
+          "correct": "Basculer sur le téléphone professionnel et le relais désigné si nécessaire.",
+          "alternatives": [
+            "Publier la position du groupe sur un réseau public.",
+            "Envoyer le client vérifier seul."
+          ],
+          "explanation": "La solution de secours doit être connue et disponible."
+        },
+        {
+          "prompt": "Quel point conditionne toujours le départ ?",
+          "correct": "La confirmation de la prise en charge selon la décision retenue.",
+          "alternatives": [
+            "Le nombre d’appels tentés.",
+            "Le fait que la radio ait déjà fonctionné le matin."
+          ],
+          "explanation": "Le nombre de tentatives ne remplace pas la confirmation attendue."
+        },
+        {
+          "prompt": "Après rétablissement, que vérifier ?",
+          "correct": "Que chacun possède la même consigne actualisée.",
+          "alternatives": [
+            "Seulement la batterie de la radio.",
+            "Que personne ne parle de la panne."
+          ],
+          "explanation": "Une interruption peut avoir laissé des versions différentes de la situation."
+        }
+      ]
+    },
+    {
+      "title": "L’arrivée et le transfert de responsabilité",
+      "teaching": [
+        {
+          "title": "Vérifier le résultat, pas seulement le départ",
+          "text": "Le résultat attendu comprend l’arrivée des personnes, l’accès au lieu et la prise en charge prévue. Une équipe peut avoir quitté le premier site sans avoir encore achevé ces étapes. Le compte rendu doit indiquer l’état réel. Les besoins de secours ou d’assistance apparus pendant le trajet doivent être transmis au relais approprié, avec les seules informations utiles."
+        },
+        {
+          "title": "Clôturer les points ouverts",
+          "text": "Après la transition, vérifiez les personnes, les moyens, les informations et les démarches restant à traiter. Confirmez qui assure désormais la fonction de protection et selon quelle consigne. La clôture d’une phase ne supprime pas les obligations de traçabilité ou de confidentialité. Un retour d’expérience ultérieur examine les écarts et les mesures d’amélioration sans retarder une prise en charge immédiate nécessaire."
+        }
+      ],
+      "documents": [
+        {
+          "title": "Arrivée",
+          "text": "Le véhicule arrive au lieu d’accueil. Le groupe est complet, mais l’interlocuteur annoncé n’est pas encore présent. La réception autorise une attente dans un espace identifié."
+        },
+        {
+          "title": "Relève",
+          "text": "La nouvelle équipe annonce un retard de dix minutes. Elle n’a pas reçu la dernière modification de programme."
+        },
+        {
+          "title": "Besoin",
+          "text": "Un accompagnant signale un malaise. Le responsable peut faire appeler les secours et organiser le guidage selon les consignes reçues."
+        }
+      ],
+      "decisions": [
+        {
+          "prompt": "Quel statut donner à la phase ?",
+          "correct": "Arrivée effectuée, relais de protection pas encore confirmé.",
+          "alternatives": [
+            "Mission entièrement clôturée.",
+            "Relève réalisée dès l’arrêt du véhicule."
+          ],
+          "explanation": "L’arrivée géographique et le transfert sont deux étapes différentes."
+        },
+        {
+          "prompt": "Quelle priorité apparaît ?",
+          "correct": "Faire traiter le malaise par le circuit de secours et maintenir la continuité.",
+          "alternatives": [
+            "Attendre le débriefing du lendemain.",
+            "Quitter le lieu avant la relève."
+          ],
+          "explanation": "Les besoins immédiats doivent être pris en compte pendant le transfert."
+        },
+        {
+          "prompt": "Que doit recevoir la nouvelle équipe ?",
+          "correct": "Le programme actualisé et les points encore ouverts.",
+          "alternatives": [
+            "Seulement le dossier initial.",
+            "Toutes les données privées sans tri."
+          ],
+          "explanation": "Le relais doit recevoir un état actuel utile."
+        },
+        {
+          "prompt": "Quelle preuve de clôture est pertinente ?",
+          "correct": "Une reprise confirmée et les actions restantes attribuées.",
+          "alternatives": [
+            "Un message envoyé sans réponse.",
+            "L’heure prévue au planning initial."
+          ],
+          "explanation": "La clôture s’appuie sur un résultat effectif."
+        }
+      ]
+    }
+  ],
+  "08.08": [
+    {
+      "title": "Trois options, une seule cohérente",
+      "teaching": [
+        {
+          "title": "Comparer des conditions simultanées",
+          "text": "Une option de secours doit satisfaire ses conditions au même moment. L’accès, le véhicule et l’accueil peuvent être disponibles séparément sans former une solution utilisable ensemble. Un tableau simple aide à repérer ces incohérences. Il doit distinguer les confirmations des hypothèses et conserver leur heure. La comparaison n’a pas pour but de remplir une grille, mais d’identifier ce qui permet réellement une continuité."
+        },
+        {
+          "title": "Formuler une recommandation limitée",
+          "text": "Une recommandation expose les critères, le choix proposé et ses limites. Elle ne présente pas l’option retenue comme exempte de tout risque. Si une confirmation manque, le décideur doit savoir qui la recherche et jusqu’à quand. Une nouvelle information peut conduire à changer de choix. La bonne organisation permet cette révision sans perdre la cohérence des messages adressés aux acteurs."
+        }
+      ],
+      "documents": [
+        {
+          "title": "Option A",
+          "text": "Véhicule confirmé à 18 h 20. Accès ouvert jusqu’à 18 h 10. Aucun prolongement d’ouverture obtenu."
+        },
+        {
+          "title": "Option B",
+          "text": "Accès ouvert jusqu’à 19 heures. Véhicule seulement demandé. Lieu d’accueil confirmé à partir de 18 h 30."
+        },
+        {
+          "title": "Option C",
+          "text": "Véhicule confirmé à 18 h 25, accès ouvert jusqu’à 19 heures et accueil confirmé à partir de 18 h 20. Le responsable valide l’usage du point."
+        }
+      ],
+      "decisions": [
+        {
+          "prompt": "Quelle option possède toutes les confirmations temporelles décrites ?",
+          "correct": "L’option C.",
+          "alternatives": [
+            "L’option A.",
+            "L’option B."
+          ],
+          "explanation": "Les conditions de C sont compatibles dans le créneau considéré."
+        },
+        {
+          "prompt": "Quelle faiblesse invalide A à ce stade ?",
+          "correct": "Le véhicule arrive après la fermeture prévue de l’accès.",
+          "alternatives": [
+            "L’accueil est trop tardif.",
+            "La couleur du véhicule est inconnue."
+          ],
+          "explanation": "Le dossier précise une incompatibilité horaire non résolue."
+        },
+        {
+          "prompt": "Quelle vérification manque pour B ?",
+          "correct": "La confirmation du véhicule.",
+          "alternatives": [
+            "L’existence d’un accès ouvert.",
+            "L’horaire d’ouverture du lieu d’accueil."
+          ],
+          "explanation": "Une demande de véhicule n’est pas une disponibilité confirmée."
+        },
+        {
+          "prompt": "Quelle conclusion reste exacte pour C ?",
+          "correct": "Elle est la plus cohérente selon les éléments fournis et doit rester suivie.",
+          "alternatives": [
+            "Elle garantit qu’aucun changement ne surviendra.",
+            "Elle autorise toutes les initiatives sans relais."
+          ],
+          "explanation": "Le choix repose sur un état de situation révisable."
+        }
+      ]
+    },
+    {
+      "title": "Quand deux fonctions tombent en panne",
+      "teaching": [
+        {
+          "title": "Distinguer panne matérielle et perte de fonction",
+          "text": "La panne d’un appareil ne signifie pas toujours la perte complète d’une fonction si un autre moyen existe. Inversement, plusieurs appareils peuvent dépendre du même réseau et tomber ensemble. Identifiez la dépendance commune et les moyens réellement indépendants. Le plan de secours doit porter sur le résultat attendu, comme joindre un interlocuteur ou retrouver une consigne, plutôt que sur le remplacement automatique d’un objet."
+        },
+        {
+          "title": "Prioriser les actions de rétablissement",
+          "text": "Pendant la dégradation, choisissez les vérifications qui restaurent le plus directement une fonction essentielle. Évitez que toute l’équipe cherche le même câble pendant que personne ne maintient le contact avec le site. Attribuez les tâches et partagez le statut des moyens. Une fois le service rétabli, vérifiez les éventuelles informations manquées et la cohérence des versions."
+        }
+      ],
+      "documents": [
+        {
+          "title": "Incident",
+          "text": "Le téléphone et la tablette de l’agent ne reçoivent plus de données. Ils utilisent le même partage de connexion. Le plan de mission ne s’ouvre plus en ligne."
+        },
+        {
+          "title": "Moyens indépendants",
+          "text": "Un téléphone du responsable utilise une autre connexion. Une copie autorisée et datée du plan est disponible hors ligne. La radio fonctionne dans la zone actuelle."
+        },
+        {
+          "title": "Organisation",
+          "text": "Le client attend une confirmation du lieu suivant. Le site est joignable par téléphone et la vérification peut être confiée à un seul équipier."
+        }
+      ],
+      "decisions": [
+        {
+          "prompt": "Quelle dépendance commune explique les deux difficultés ?",
+          "correct": "Le même partage de connexion.",
+          "alternatives": [
+            "Deux pannes mécaniques nécessairement distinctes.",
+            "L’absence de tout moyen de communication."
+          ],
+          "explanation": "Le téléphone et la tablette peuvent perdre ensemble un service partagé."
+        },
+        {
+          "prompt": "Quel moyen permet de consulter le plan ?",
+          "correct": "La copie hors ligne autorisée après contrôle de sa version.",
+          "alternatives": [
+            "Une carte ancienne sans référence.",
+            "Le souvenir approximatif d’un invité."
+          ],
+          "explanation": "Une solution de secours doit rester fiable et identifiable."
+        },
+        {
+          "prompt": "Comment répartir le travail ?",
+          "correct": "Confier la confirmation du site à un équipier tout en conservant les autres fonctions.",
+          "alternatives": [
+            "Faire rechercher le réseau par toute l’équipe.",
+            "Interrompre tout contact jusqu’au rétablissement complet."
+          ],
+          "explanation": "La priorité est la continuité des fonctions essentielles."
+        },
+        {
+          "prompt": "Après rétablissement, que contrôler ?",
+          "correct": "Les messages manqués et la version de la consigne.",
+          "alternatives": [
+            "Uniquement l’icône du réseau.",
+            "Que personne n’a signalé la panne."
+          ],
+          "explanation": "Le retour du moyen ne garantit pas une information commune à jour."
+        }
+      ]
+    }
+  ],
+  "08.10": [
+    {
+      "title": "La fausse demande de document",
+      "teaching": [
+        {
+          "title": "Vérifier la personne et le besoin",
+          "text": "Une demande de programme, de pièce d’identité ou de liste de contacts peut paraître légitime lorsqu’elle utilise le nom d’un partenaire connu. Vérifiez l’auteur par un canal de référence et examinez le besoin exact. Le fait qu’une donnée soit déjà dans le dossier ne justifie pas sa transmission. Un message qui insiste sur l’urgence et le secret doit conduire à une vérification, pas à un abandon des règles."
+        },
+        {
+          "title": "Préserver une trace utile",
+          "text": "En cas de demande suspecte, conservez les éléments selon la procédure et informez le responsable. Évitez de répondre avec des détails qui confirment le programme ou l’identité des accompagnants. Les suites éventuelles relèvent des interlocuteurs compétents. Si un envoi a déjà eu lieu, signalez précisément ce qui a été transmis pour permettre une limitation de l’exposition et une analyse adaptée."
+        }
+      ],
+      "documents": [
+        {
+          "title": "Courriel",
+          "text": "Un message imitant le transporteur demande le programme complet et les copies de documents de tous les accompagnants. L’adresse de réponse diffère du domaine habituel."
+        },
+        {
+          "title": "Confirmation",
+          "text": "Le transporteur, joint au numéro du contrat, indique avoir seulement besoin du nombre de passagers et du créneau. Il n’a pas envoyé le courriel."
+        },
+        {
+          "title": "État",
+          "text": "Aucun document n’a été transmis. Le responsable peut conserver le message et organiser le signalement dans le circuit prévu."
+        }
+      ],
+      "decisions": [
+        {
+          "prompt": "Quel élément éclaire le caractère suspect ?",
+          "correct": "Le transporteur confirme ne pas avoir envoyé la demande.",
+          "alternatives": [
+            "La seule présence du mot urgent.",
+            "Le nombre de personnes dans le groupe."
+          ],
+          "explanation": "La vérification indépendante apporte ici une information déterminante."
+        },
+        {
+          "prompt": "Quelles données répondent au besoin confirmé ?",
+          "correct": "Le nombre de passagers et le créneau, par le canal autorisé.",
+          "alternatives": [
+            "Toutes les copies de documents.",
+            "Le programme privé complet."
+          ],
+          "explanation": "La transmission se limite au besoin vérifié."
+        },
+        {
+          "prompt": "Que faire du message imité ?",
+          "correct": "Le conserver et le signaler selon la procédure.",
+          "alternatives": [
+            "Le modifier pour le rendre plus convaincant.",
+            "Répondre avec le dossier complet."
+          ],
+          "explanation": "La trace doit rester exploitable et ne pas aggraver l’exposition."
+        },
+        {
+          "prompt": "Que permet l’absence d’envoi ?",
+          "correct": "De signaler qu’aucun document n’a été transmis à ce stade.",
+          "alternatives": [
+            "De conclure qu’aucune vigilance future n’est nécessaire.",
+            "De supprimer toute trace sans règle."
+          ],
+          "explanation": "L’état actuel doit être décrit sans généralisation."
+        }
+      ]
+    },
+    {
+      "title": "Un signalement grave reçu indirectement",
+      "teaching": [
+        {
+          "title": "Qualifier la source sans minimiser",
+          "text": "Une information grave peut être rapportée par un témoin indirect. Elle mérite d’être traitée, mais son statut doit rester visible. Identifiez qui a observé, qui transmet et ce qui est réellement connu. Les informations manquantes sont recherchées par les circuits compétents, sans demander à l’équipe de mener une enquête dangereuse. La protection de la personne et la transmission d’une alerte utile restent les priorités."
+        },
+        {
+          "title": "Éviter les initiatives qui augmentent l’exposition",
+          "text": "Une rumeur peut pousser à partir précipitamment vers un lieu désigné par un inconnu ou à publier des informations sensibles. Ces réactions peuvent aggraver la situation. Le responsable conserve une vue d’ensemble, utilise les contacts fiables et suit les instructions des autorités lorsqu’elles interviennent. Les messages à l’équipe doivent être factuels et limités au besoin, avec des mises à jour lorsqu’une vérification aboutit."
+        }
+      ],
+      "documents": [
+        {
+          "title": "Appel reçu",
+          "text": "Un interlocuteur inconnu affirme qu’un proche du client serait retenu ailleurs. Il exige que le client se rende seul à une adresse. Il refuse de donner une source vérifiable."
+        },
+        {
+          "title": "Situation actuelle",
+          "text": "Le client est accompagné dans un lieu où aucun danger immédiat n’est constaté. Le responsable dispose des contacts habituels de la famille et peut joindre les autorités compétentes."
+        },
+        {
+          "title": "Demande interne",
+          "text": "Un équipier propose d’aller seul à l’adresse pour vérifier. Le responsable n’a validé aucune démarche de ce type."
+        }
+      ],
+      "decisions": [
+        {
+          "prompt": "Quel statut donner à l’appel ?",
+          "correct": "Un signalement grave non confirmé avec des exigences suspectes.",
+          "alternatives": [
+            "Une preuve complète de tous les faits annoncés.",
+            "Une plaisanterie certaine à ignorer."
+          ],
+          "explanation": "La gravité et l’incertitude doivent être traitées ensemble."
+        },
+        {
+          "prompt": "Quelle suite préserve le cadre professionnel ?",
+          "correct": "Maintenir la protection et saisir les responsables et autorités compétents.",
+          "alternatives": [
+            "Envoyer le client seul à l’adresse.",
+            "Improviser une opération de récupération."
+          ],
+          "explanation": "Les initiatives non coordonnées peuvent augmenter le danger."
+        },
+        {
+          "prompt": "Comment vérifier les contacts familiaux ?",
+          "correct": "Par les coordonnées de référence déjà connues.",
+          "alternatives": [
+            "Uniquement par le numéro imposé par l’appelant.",
+            "En publiant la situation sur Internet."
+          ],
+          "explanation": "Une vérification indépendante évite de dépendre de l’auteur de la demande."
+        },
+        {
+          "prompt": "Que transmettre à l’équipe ?",
+          "correct": "Les faits utiles, les limites de connaissance et les consignes validées.",
+          "alternatives": [
+            "Une rumeur présentée comme certitude.",
+            "Le programme privé diffusé à tous."
+          ],
+          "explanation": "Une situation commune exige des informations qualifiées."
+        }
+      ]
+    }
+  ]
+}

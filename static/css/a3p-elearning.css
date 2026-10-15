@@ -8,3 +8,13 @@
 @media(max-width:800px){.a3p-learning-route{grid-template-columns:repeat(2,minmax(0,1fr))}.a3p-learning-route li{padding:13px;gap:9px}}@media(max-width:420px){.a3p-learning-route small{font-size:10px}.a3p-learning-route b{font-size:21px}.a3p-learning-route span{font-size:12px}.a3p-grouped-quiz select{font-size:12px}}
 
 .a3p-course .native-course-nav li.is-current a{background:#e7f2e9;color:#19553a}.a3p-course .aps-exam-link{background:#edf6ef;border-color:#c7dece;color:#1a563a}
+
+/* Shared click-only practice, in the A3P palette. */
+.a3p-course .aps-practice-intro,.a3p-course .aps-guided-context{background:#eef6f2;border-color:#cee2d8}
+.a3p-course .aps-practice-chips span,.a3p-course .aps-guided-context b,.a3p-course .aps-guided-question,.a3p-course .aps-stage-status{color:#135846}
+.a3p-course .aps-exercise-number,.a3p-course .aps-practice-check,.a3p-course .aps-guided-next{background:#135846;border-color:#135846}
+.a3p-course .aps-practice-options label:has(input:checked){border-color:#135846;background:#edf8f2;box-shadow:0 0 0 1px #135846}
+.a3p-course .aps-guided input[type=radio]{accent-color:#135846}
+.a3p-course .aps-guided .aps-stage-status{background:#e5f2eb;color:#135846}
+.a3p-calibration-note{margin:26px 0;padding:24px;background:#fff7e8;border:1px solid #e6c48b;border-radius:18px;color:#5c421a}
+.a3p-calibration-note h3{margin:0 0 12px}.a3p-calibration-note p{line-height:1.65;margin:12px 0}

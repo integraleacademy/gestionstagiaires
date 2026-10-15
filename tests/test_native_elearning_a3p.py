@@ -12,6 +12,7 @@ from elearning_native import a3p
 from elearning_native.exams import load_exam, public_exam, grade_exam
 from elearning_native.importer import CourseCatalog, CourseImportError
 from elearning_native.paths import project_course, validate_modules, path_revision, course_outline, project_progress
+from elearning_native.store import NativeElearningStore
 from elearning_native.web import _evaluate_answer, TrackingError
 from tests import test_native_elearning_web as fixtures
 
@@ -178,10 +179,15 @@ class A3PWebTests(unittest.TestCase):
 
     def test_wrong_quiz_cannot_unlock_next_fraction_or_credit_time(self):
         c=self.assign();self._public_login()
+        # Reading completion is covered by the timing tests; isolate the quiz gate here.
+        store=NativeElearningStore(self.persist_dir/'native_elearning/tracking.sqlite3')
+        access={'session_id':'session-aps','trainee_id':'trainee-1','course_id':c['id'],'course_version':c['version']}
+        store.complete_activity(access,'a3p-02-01-cours',activity_order=c['activity_order'],scored_activity_ids=[],mastery_score=80)
         response=self.client.get('/espace/public-token/elearning/academy-a3p-02');config=self._player_config(response)
-        for aid in ('a3p-02-01-cours','a3p-02-01-application'):
-            r=self._api_post('/api/elearning/v1/activities/'+aid+'/complete',config)
-            self.assertEqual(r.status_code,200)
+        application=c['sections'][0]['activities'][1]
+        answers={ex['id']:ex['answer'] for ex in application['practice']['exercises']}
+        r=self._api_post('/api/elearning/v1/activities/'+application['id']+'/complete',config,practice_answers=answers)
+        self.assertEqual(r.status_code,200)
         q=c['sections'][0]['activities'][2]
         blocked=self._api_post('/api/elearning/v1/activities/a3p-02-02-cours/complete',config)
         self.assertEqual(blocked.status_code,409)

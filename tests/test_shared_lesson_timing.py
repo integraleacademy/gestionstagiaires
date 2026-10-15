@@ -38,7 +38,7 @@ def test_video_page_requires_confirmed_viewing_before_next_page():
 
 
 def test_audit_exposes_a3p_content_gap_and_excludes_presentiel():
-    course = a3p.load_bundled_course('academy-a3p-06')
+    course = a3p.load_bundled_course('academy-a3p-06', a3p.previous.VERSION)
     course = project_course(course, {'required_minutes': course['required_minutes']})
     report = audit_course(course)
     assert report['required_minutes'] == 3720
