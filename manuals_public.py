@@ -9,11 +9,12 @@ from manuals_catalogue import CATALOGUE
 from manuals_support_previews import SUPPORT_PREVIEWS
 import elearning_orders
 import elearning_sales
+from elearning_programmes import PROGRAMMES, programme_download
 
 TERMS_VERSION = '2026-10-12'
 # Published versions are immutable: append future versions, keep the old file.
 TERMS_TEMPLATES = {TERMS_VERSION: 'manuals/legal/conditions_2026-10-12.html'}
-PUBLIC_ENDPOINTS = {'manuals_shop.usb_catalogue', 'manuals_shop.usb_detail', 'manuals_shop.public_elearning', 'manuals_shop.public_course', 'manuals_shop.legal_page', 'manuals_shop.robots', 'manuals_shop.sitemap', 'manuals_shop.favicon'}
+PUBLIC_ENDPOINTS = {'manuals_shop.usb_catalogue', 'manuals_shop.usb_detail', 'manuals_shop.public_elearning', 'manuals_shop.public_course', 'manuals_shop.public_course_programme', 'manuals_shop.legal_page', 'manuals_shop.robots', 'manuals_shop.sitemap', 'manuals_shop.favicon'}
 CACHEABLE = PUBLIC_ENDPOINTS | {'home', 'manuals_shop.public_presentation', 'manuals_shop.public_manual_detail'}
 
 
@@ -102,7 +103,12 @@ def register_routes(host, bp, *, page):
         courses = elearning_orders.prices({})
         if code not in courses:
             abort(404)
-        return page('learning_public.html', public=True, staff=False, courses=courses, course=courses[code], modules=elearning_orders.curriculum(code))
+        return page('learning_public.html', public=True, staff=False, courses=courses, course=courses[code],
+                    modules=elearning_orders.curriculum(code), programme=PROGRAMMES.get(code))
+
+    @bp.get('/e-learning/<code>/programme.pdf')
+    def public_course_programme(code):
+        return programme_download(code)
 
     @bp.get('/mentions-legales')
     @bp.get('/confidentialite')

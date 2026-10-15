@@ -8,3 +8,7 @@
 
 .cs-demo-video{width:100%;display:block;aspect-ratio:16/9;background:#102334;border:0}
 .course-vtc .cs-gallery-side .cs-zoom>img{aspect-ratio:4/3;object-position:center top}
+.cs-button-outline{background:transparent;color:var(--cs-accent)!important;border:1px solid var(--cs-accent)}
+.cs-programme-download{margin-top:24px;padding:22px;background:var(--cs-tint);border-radius:12px}
+.cs-programme-download h3{margin:0 0 10px;font-size:19px;line-height:1.35}
+.cs-programme-download p{margin:0 0 18px}
