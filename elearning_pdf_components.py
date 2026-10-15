@@ -23,10 +23,10 @@ def seconds_value(record, key, label_key):
         except (TypeError, ValueError):
             return None
     label = str(record.get(label_key) or "")
-    match = re.fullmatch(r"\s*(\d+)\s*h\s*(\d+)\s*min\s*(\d+(?:[.,]\d+)?)\s*s\s*", label)
+    match = re.fullmatch(r"\s*(\d+)\s*h\s*(\d+)\s*min(?:\s*(\d+(?:[.,]\d+)?)\s*s)?\s*", label)
     if match:
         hours, minutes, seconds = match.groups()
-        return int(hours) * 3600 + int(minutes) * 60 + float(seconds.replace(",", "."))
+        return int(hours) * 3600 + int(minutes) * 60 + float((seconds or "0").replace(",", "."))
     return None
 
 

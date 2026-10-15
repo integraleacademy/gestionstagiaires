@@ -473,7 +473,7 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
         activity_label = (f"{module['completed_activities']} / {module['total_activities']}"
                           if "completed_activities" in module and "total_activities" in module
                           else f"{module.get('progress_percent', 0):g} %")
-        completed_module = bool(module.get("available") and module.get("module_complete") and module.get("status") == "passed")
+        completed_module = bool(module.get("available") and module.get("module_complete") and module.get("status") in {"passed", "complete"})
         state = (CompletionBadge(font=bold_font, width=26 * mm) if completed_module else
                  p("Activités à terminer" if module.get("status") == "in_progress" and module_duration(module)["fraction"] == 1 else
                    "Temps à compléter" if module.get("status") == "awaiting_time" else module["status_label"], "cell"))

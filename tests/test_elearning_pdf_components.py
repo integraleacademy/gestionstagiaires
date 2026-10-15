@@ -55,6 +55,7 @@ def test_invalid_recorded_time_is_not_presented_as_completed(invalid):
     assert value['fraction'] is None and not value['known']
 
 
-def test_legacy_demo_labels_remain_readable_without_guessing_a_duration():
-    value = module_duration({'active_time_label': '03 h 00 min 00 s', 'required_time_label': '04 h 00 min 00 s', 'available': True})
+@pytest.mark.parametrize('suffix', [' 00 s', ''])
+def test_legacy_demo_labels_remain_readable_without_guessing_a_duration(suffix):
+    value = module_duration({'active_time_label': '03 h 00 min' + suffix, 'required_time_label': '04 h 00 min' + suffix, 'available': True})
     assert value['fraction'] == .75
