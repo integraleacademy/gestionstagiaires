@@ -17,6 +17,7 @@
   scroll-margin-top: 24px;
 }
 .cs-faq-panel, .cs-faq-panel * { box-sizing: border-box; }
+.cs-faq-panel + .cs-scope { margin-top: 32px; }
 .cs-faq-theme-orange {
   --faq-accent: #b54b25;
   --faq-bright: #d78042;
