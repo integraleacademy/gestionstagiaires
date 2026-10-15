@@ -149,7 +149,7 @@ def test_preview_is_free_and_audit_is_admin_only(case):
     audit_catalog.cache_clear()
     response = case.client.get(audit_url)
     assert response.status_code == 200
-    assert 'Enrichissement et calibrage nécessaires' in response.text
+    assert 'Essais apprenants à réaliser' in response.text
     assert '157 h 30 prévues' in response.text
     assert len(audit_catalog()) == 34
     assert not (case.persist_dir / 'native_elearning/tracking.sqlite3').exists()
