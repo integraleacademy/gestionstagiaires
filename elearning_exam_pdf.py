@@ -88,6 +88,7 @@ def exam_attempt_pdf(attempt, partner, order, person, *, logo_path=None):
             pdfmetrics.registerFont(TTFont(regular, str(font_root / "DejaVuSans.ttf")))
             pdfmetrics.registerFont(TTFont(bold, str(font_root / "DejaVuSans-Bold.ttf")))
     navy, muted = colors.HexColor("#193958"), colors.HexColor("#60758a")
+    green, red = colors.HexColor("#167047"), colors.HexColor("#b42332")
     styles = {
         "body": ParagraphStyle("body", fontName=regular, fontSize=9, leading=13, textColor=navy, spaceAfter=5),
         "small": ParagraphStyle("small", fontName=regular, fontSize=7.5, leading=11, textColor=muted, spaceAfter=3),
@@ -95,6 +96,15 @@ def exam_attempt_pdf(attempt, partner, order, person, *, logo_path=None):
         "heading": ParagraphStyle("heading", fontName=bold, fontSize=10, leading=14, textColor=navy, spaceAfter=6, keepWithNext=True),
         "option": ParagraphStyle("option", fontName=regular, fontSize=8.5, leading=12, textColor=navy, leftIndent=10, spaceAfter=4),
         "selected": ParagraphStyle("selected", fontName=bold, fontSize=8.5, leading=12, textColor=navy, leftIndent=10, spaceAfter=5),
+        "answer_correct": ParagraphStyle("answer_correct", fontName=bold, fontSize=8.5, leading=12,
+            textColor=green, backColor=colors.HexColor("#edf8f1"), borderColor=colors.HexColor("#bfe3ce"),
+            borderWidth=.5, borderRadius=4, borderPadding=6, leftIndent=10, spaceBefore=5, spaceAfter=10),
+        "answer_incorrect": ParagraphStyle("answer_incorrect", fontName=bold, fontSize=8.5, leading=12,
+            textColor=red, backColor=colors.HexColor("#fff0f0"), borderColor=colors.HexColor("#f1c5ca"),
+            borderWidth=.5, borderRadius=4, borderPadding=6, leftIndent=10, spaceBefore=5, spaceAfter=10),
+        "success": ParagraphStyle("success", fontName=bold, fontSize=9, leading=13, textColor=green, spaceAfter=5),
+        "error": ParagraphStyle("error", fontName=bold, fontSize=9, leading=13, textColor=red, spaceAfter=5),
+        "expected": ParagraphStyle("expected", fontName=regular, fontSize=7.5, leading=11, textColor=green, spaceAfter=3),
     }
     def p(value, style="body"):
         return Paragraph(escape(str(value)).replace("\n", "<br/>"), styles[style])
@@ -127,10 +137,12 @@ def exam_attempt_pdf(attempt, partner, order, person, *, logo_path=None):
     story += [Spacer(1, 4 * mm), p("Copie d’examen blanc", "title"), p(title, "heading")]
     passed = result.get("passed")
     outcome = "Objectif atteint" if passed is True else "À retravailler" if passed is False else "Résultat non enregistré"
+    outcome_mark = "✓ " if passed is True else "✕ " if passed is False else ""
+    outcome_style = "success" if passed is True else "error" if passed is False else "body"
     percent = number_label(result.get("percent")) + " %" if recorded_seconds(result.get("percent")) is not None else "Non enregistré"
     identity = Table([
         [[p("STAGIAIRE", "small"), p(name, "heading"), p(person.get("email") or "", "small")],
-         [p("RÉSULTAT ENREGISTRÉ", "small"), p(f"{number_label(result.get('score'))} / {number_label(result.get('total'))} · {percent}", "heading"), p(outcome, "body")]],
+         [p("RÉSULTAT ENREGISTRÉ", "small"), p(f"{number_label(result.get('score'))} / {number_label(result.get('total'))} · {percent}", "heading"), p(outcome_mark + outcome, outcome_style)]],
         [[p("Formation : " + label), p("Soumis le " + _date(attempt.get("submitted_at")) + " (Paris)", "small")],
          [p("Seuil : " + number_label(result.get("pass_percent")) + " %" if recorded_seconds(result.get("pass_percent")) is not None else "Seuil non enregistré", "small"),
           p("Durée de la tentative : non enregistrée", "small")]],
@@ -155,6 +167,7 @@ def exam_attempt_pdf(attempt, partner, order, person, *, logo_path=None):
             question_block.append(p(question["module"], "small"))
         options = question.get("options")
         options = [option for option in options if isinstance(option, dict)] if isinstance(options, list) else []
+        correct = question.get("correct")
         labels = {}
         for position, option in enumerate(options, 1):
             key = option.get("id")
@@ -162,15 +175,24 @@ def exam_attempt_pdf(attempt, partner, order, person, *, logo_path=None):
             if key is not None:
                 labels[str(key)] = option_label
             selected = key is not None and key == question.get("selected")
-            question_block.append(p(option_label + (" — Réponse du stagiaire" if selected else ""), "selected" if selected else "option"))
+            expected_option = key is not None and key == question.get("answer")
+            style = "selected" if selected else "option"
+            mark = ""
+            if selected and correct is False:
+                style, mark = "answer_incorrect", "✕ "
+            elif (selected and correct is True) or (not selected and expected_option):
+                style, mark = "answer_correct", "✓ "
+            suffix = " — Réponse du stagiaire" if selected else " — Bonne réponse" if expected_option else ""
+            question_block.append(p(mark + option_label + suffix, style))
         selected = labels.get(str(question.get("selected"))) if question.get("selected") is not None else None
         if not selected:
             question_block.append(p("Réponse du stagiaire : non enregistrée", "small"))
-        correct = question.get("correct")
         status = "Réponse correcte" if correct is True else "Réponse incorrecte" if correct is False else "Correction non enregistrée"
-        question_block.append(p(status, "body"))
+        status_mark = "✓ " if correct is True else "✕ " if correct is False else ""
+        status_style = "success" if correct is True else "error" if correct is False else "body"
+        question_block.append(p(status_mark + status, status_style))
         expected = labels.get(str(question.get("answer"))) if question.get("answer") is not None else None
-        question_block.append(p("Réponse attendue : " + (expected or "non enregistrée"), "small"))
+        question_block.append(p("Réponse attendue : " + (expected or "non enregistrée"), "expected" if expected else "small"))
         if question.get("explanation"):
             question_block.append(p("Corrigé : " + _text(question["explanation"]), "small"))
         question_block.append(Spacer(1, 3 * mm))

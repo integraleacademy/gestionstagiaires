@@ -761,7 +761,7 @@ def register_routes(host, bp, *, page, customer, partner_data):
         filename = secure_filename(f"copie-examen-{exam_id}-{person.get('last_name', '')}-{person.get('first_name', '')}-{attempt_id}.pdf")
         return Response(exam_attempt_pdf(attempt, partner, order, person, logo_path=logo_path(host, partner)),
                         mimetype="application/pdf", headers={
-                            "Content-Disposition": f'attachment; filename="{filename}"',
+                            "Content-Disposition": f'inline; filename="{filename}"',
                             "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
                             "Referrer-Policy": "no-referrer"})
 
@@ -781,7 +781,9 @@ def register_routes(host, bp, *, page, customer, partner_data):
         prefix = "releve-suivi-mac-aps" if order["course_code"] == "mac-aps" else "attestation-suivi"
         filename = secure_filename(f"{prefix}-{person.get('last_name', '')}-{person.get('first_name', '')}.pdf")
         return Response(certificate_pdf(report, partner, order, person, logo_path=logo_path(host, partner)), mimetype="application/pdf",
-                        headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+                        headers={"Content-Disposition": f'inline; filename="{filename}"',
+                                 "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+                                 "Referrer-Policy": "no-referrer"})
 
     @bp.get(base + "/connexions.csv")
     @customer

@@ -138,7 +138,7 @@ def test_copy_download_contains_saved_questions_selected_answers_grade_and_ident
     assert "no-store" in response.headers["Cache-Control"]
     assert response.headers["X-Content-Type-Options"] == "nosniff"
     assert response.headers["Referrer-Policy"] == "no-referrer"
-    assert response.headers["Content-Disposition"].startswith("attachment;")
+    assert response.headers["Content-Disposition"].startswith("inline;")
     assert dump(fixture.path) == before
 
 
