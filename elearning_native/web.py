@@ -42,6 +42,7 @@ from .videos import activity_playback_policy, activity_videos, course_videos, vi
 from .academy import curriculum_manifest
 from .aps_editorial import question_for_history
 from .aps_workload import summarize as summarize_aps_workload
+from .lesson_timing import lesson_pages
 from . import vtc, a3p, mac_aps
 from .mac_aps_timing import completion_blocker as macaps_completion_blocker
 from .exams import ExamStore, load_exam, public_exam, grade_exam, module_exam_activity_id
@@ -2220,6 +2221,7 @@ def create_native_elearning_blueprint(
             activity_position=index + 1,
             activity_count=len(order),
             activity_completed=requested_id in completed,
+            lesson_timing_pages=lesson_pages(course, raw_activity),
             answer_explanation=str(raw_activity.get('explanation') or '') if requested_id in completed else '',
             required_videos=activity_videos(raw_activity),
             videos_completed=videos_complete(progress.get("video_progress", {}).get(requested_id, {}), activity_videos(raw_activity)),
@@ -2321,6 +2323,10 @@ def create_native_elearning_blueprint(
             return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente et ses vidéos."}), 409
         if payload.get("interaction_age_seconds") is None:
             return jsonify({"ok": False, "error": "Rechargez le lecteur pour activer le suivi d’inactivité."}), 409
+        reading_pages = lesson_pages(_course, next((item for _, item in _activity_pairs(_course)
+                                                  if item.get('id') == activity_id), {}))
+        if reading_pages and not payload.get('lesson_page_id'):
+            return jsonify(ok=False, error='Le cours a été mis à jour. Rechargez la page pour activer le temps de lecture.'), 409
         try:
             result = store().heartbeat(
                 access,
@@ -2334,6 +2340,8 @@ def create_native_elearning_blueprint(
                 video_requirements=course_videos(_course).get(activity_id, {}),
                 video_playback_policy=activity_playback_policy(_course, activity_id),
                 video_samples=payload.get("videos"),
+                lesson_pages=reading_pages,
+                lesson_page_id=str(payload.get('lesson_page_id') or ''),
             )
             result["progress"] = current_progress(access, _course)
         except TrackingError as exc:
@@ -2560,6 +2568,7 @@ def create_native_elearning_blueprint(
                 required_seconds=int(course.get("required_minutes") or 0) * 60,
                 video_requirements=course_videos(course),
                 answer=answer,
+                lesson_requirements=lesson_pages(course, activity),
             )
         except TrackingError as exc:
             return jsonify({"ok": False, "error": str(exc)}), 409

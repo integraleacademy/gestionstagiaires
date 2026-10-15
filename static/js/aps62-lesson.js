@@ -36,6 +36,7 @@
   const bar = root.querySelector('[data-aps-lesson-bar]');
   const previous = root.querySelector('[data-aps-lesson-previous]');
   const next = root.querySelector('[data-aps-lesson-next]');
+  const timing = window.nativeLessonTiming || null;
   const completion = root.querySelector('[data-aps-lesson-completion]');
   const activityNavigation = document.querySelector('.native-navigation-actions');
   const activityAction = document.getElementById('nativeActionButton')
@@ -51,6 +52,13 @@
   root.classList.add('is-paginated');
   navigation.hidden = false;
   progress.hidden = false;
+
+  const timingNotice = timing ? document.createElement('p') : null;
+  if (timingNotice) {
+    timingNotice.className = 'aps-lesson-timing';
+    timingNotice.setAttribute('data-aps-lesson-timing', '');
+    progress.append(timingNotice);
+  }
 
   const videoPage = pages.findIndex(page => page.querySelector('video'));
   let videoShortcut = null;
@@ -83,6 +91,7 @@
   }
 
   function show(index, focus = false) {
+    if (timing) index = Math.min(index, timing.firstPending());
     current = Math.max(0, Math.min(pages.length - 1, index));
     const selected = pages[current];
     pages.forEach(page => {
@@ -106,6 +115,7 @@
     const last = current === pages.length - 1;
     next.hidden = last;
     completion.hidden = !last;
+    if (timing) { timing.select(current); renderTiming(); }
     if (videoShortcut) videoShortcut.hidden = current === videoPage;
     try { sessionStorage.setItem(storageKey, String(current)); } catch (_error) { /* Reading works without storage. */ }
     if (focus) {
@@ -114,15 +124,35 @@
     }
   }
 
-  let initial = 0;
+  function renderTiming() {
+    if (!timing || !timingNotice) return;
+    if (timing.pages.length !== pages.length) {
+      next.disabled = true;
+      completion.hidden = true;
+      timingNotice.textContent = 'Le cours a été mis à jour. Rechargez la page pour poursuivre.';
+      return;
+    }
+    const ready = timing.ready(current);
+    const seconds = timing.remaining(current);
+    const clock = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+    next.disabled = !ready;
+    next.textContent = ready ? 'Suivant →' : seconds ? `Suivant dans ${clock}` : 'Enregistrement…';
+    timingNotice.dataset.ready = String(ready);
+    timingNotice.textContent = ready ? 'Temps de lecture validé · Vous pouvez poursuivre ou relire cette page.'
+      : `Temps de lecture : ${timing.pages[current].required_seconds / 60} min minimum · ${clock} restantes${document.visibilityState !== 'visible' || !document.hasFocus() ? ' · En pause' : ''}`;
+  }
+  document.addEventListener('native-lesson-timing', renderTiming);
+
+  let initial = timing ? Math.min(timing.firstPending(), pages.length - 1) : 0;
   try {
-    const saved = Number(sessionStorage.getItem(storageKey));
-    if (Number.isInteger(saved) && saved >= 0 && saved < pages.length) initial = saved;
+    const raw = sessionStorage.getItem(storageKey);
+    const saved = Number(raw);
+    if (raw !== null && Number.isInteger(saved) && saved >= 0 && saved < pages.length) initial = saved;
   } catch (_error) { /* Reading works without storage. */ }
   const anchor = anchoredPage();
   show(anchor >= 0 ? anchor : initial, anchor >= 0);
   previous.addEventListener('click', () => show(current - 1, true));
-  next.addEventListener('click', () => show(current + 1, true));
+  next.addEventListener('click', () => { if (!timing || timing.ready(current)) show(current + 1, true); });
   root.addEventListener('click', event => {
     if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     const link = event.target.closest('a[href^="#"]');

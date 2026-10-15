@@ -16,6 +16,7 @@ from .videos import videos_complete, vtc_pacing_enabled, mac_aps_pacing_enabled
 from .video_compatibility import compatible_record
 from . import assessment
 from .aps_final_time import FINAL_COURSE_ID
+from .lesson_timing import first_pending, remaining_seconds as lesson_remaining_seconds
 
 
 HEARTBEAT_MAX_CREDIT_SECONDS = 20.0
@@ -154,6 +155,10 @@ class NativeElearningStore:
                     connection.execute("ALTER TABLE tracking_sessions ADD COLUMN active_until_epoch REAL NOT NULL DEFAULT 0")
                 if "video_samples_json" not in columns:
                     connection.execute("ALTER TABLE tracking_sessions ADD COLUMN video_samples_json TEXT NOT NULL DEFAULT '{}'")
+                if "lesson_page_id" not in columns:
+                    connection.execute("ALTER TABLE tracking_sessions ADD COLUMN lesson_page_id TEXT NOT NULL DEFAULT ''")
+                if "lesson_active_until_epoch" not in columns:
+                    connection.execute("ALTER TABLE tracking_sessions ADD COLUMN lesson_active_until_epoch REAL NOT NULL DEFAULT 0")
                 progress_columns = {row["name"] for row in connection.execute("PRAGMA table_info(learner_course_progress)")}
                 if "video_progress_json" not in progress_columns:
                     connection.execute("ALTER TABLE learner_course_progress ADD COLUMN video_progress_json TEXT NOT NULL DEFAULT '{}'")
@@ -161,6 +166,8 @@ class NativeElearningStore:
                     connection.execute("ALTER TABLE learner_course_progress ADD COLUMN activity_seconds_json TEXT NOT NULL DEFAULT '{}'")
                 if "aps_workload_json" not in progress_columns:
                     connection.execute("ALTER TABLE learner_course_progress ADD COLUMN aps_workload_json TEXT NOT NULL DEFAULT '{}'")
+                if "lesson_seconds_json" not in progress_columns:
+                    connection.execute("ALTER TABLE learner_course_progress ADD COLUMN lesson_seconds_json TEXT NOT NULL DEFAULT '{}'")
                 assessment.ensure_schema(connection)
             _INITIALIZED_DATABASES.add(key)
 
@@ -268,6 +275,7 @@ class NativeElearningStore:
             "assessment_summary": assessment.summary_for(assessment_diagnostics),
             "video_progress": _json_dict(row["video_progress_json"]),
             "activity_seconds": _json_dict(row["activity_seconds_json"]) if "activity_seconds_json" in row.keys() else {},
+            "lesson_seconds": _json_dict(row["lesson_seconds_json"]),
             "aps_workload": _json_dict(row["aps_workload_json"]) if "aps_workload_json" in row.keys() else {},
             "active_seconds": math.floor(float(row["active_seconds"] or 0) * 100) / 100,
             "score_percent": round(float(row["score_percent"] or 0), 2),
@@ -437,6 +445,26 @@ class NativeElearningStore:
                 required_activity_ids=required_activity_ids,
             )
 
+    @staticmethod
+    def _settle_lesson(connection, access, tracking, progress, credited):
+        """Attribute existing server time to the previously visible reading page.
+
+        This is a breakdown of credited time, never additional module credit.
+        A missing/late request cannot grant more than one short presence lease.
+        """
+        ledger = _json_dict(progress['lesson_seconds_json'])
+        page_id = tracking['lesson_page_id']
+        seconds = min(credited, HEARTBEAT_MAX_CREDIT_SECONDS,
+                      max(0, tracking['lesson_active_until_epoch'] - tracking['last_seen_epoch']))
+        if page_id and seconds > 0:
+            activity_id = tracking['current_activity_id']
+            pages = ledger.setdefault(activity_id, {})
+            pages[page_id] = round(float(pages.get(page_id) or 0) + seconds, 3)
+            connection.execute('UPDATE learner_course_progress SET lesson_seconds_json=? '
+                               'WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?',
+                               (json.dumps(ledger), *NativeElearningStore._key_values(access)))
+        return ledger
+
     def start_tracking(
         self,
         access: Mapping[str, Any],
@@ -486,6 +514,7 @@ class NativeElearningStore:
                     )
                     if credited > 0 and old['current_activity_id']:
                         prior = self._progress_row(connection, dict(zip(('session_id', 'trainee_id', 'course_id', 'course_version'), old_key)))
+                        self._settle_lesson(connection, dict(zip(('session_id', 'trainee_id', 'course_id', 'course_version'), old_key)), old, prior, credited)
                         ledger = _json_dict(prior['activity_seconds_json'])
                         aid = str(old['current_activity_id'])
                         ledger[aid] = float(ledger.get(aid) or 0) + credited
@@ -555,6 +584,8 @@ class NativeElearningStore:
         video_requirements: Optional[Mapping[str, float]] = None,
         video_samples: Any = None,
         video_playback_policy: Optional[Mapping[str, Mapping[str, Any]]] = None,
+        lesson_pages: Sequence[Mapping[str, Any]] = (),
+        lesson_page_id: str = '',
     ) -> Dict[str, Any]:
         epoch = float(now_epoch if now_epoch is not None else time.time())
         now_iso = _utc_iso(epoch)
@@ -637,6 +668,16 @@ class NativeElearningStore:
                     credited = min(delta, credited)
 
             accepted_active = bool(requested_active and not duplicate)
+            lesson_ledger = self._settle_lesson(connection, access, tracking, progress, credited)
+            if lesson_page_id:
+                page_ids = [page['id'] for page in lesson_pages]
+                if lesson_page_id not in page_ids:
+                    raise TrackingError('Page de lecture inconnue. Rechargez le cours.')
+                if (activity_id not in _json_list(progress['completed_json'])
+                        and page_ids.index(lesson_page_id) > first_pending(lesson_pages, lesson_ledger.get(activity_id, {}))):
+                    raise TrackingError('Terminez le temps de lecture de la page précédente.')
+            lesson_active = bool(lesson_page_id and accepted_active and visible and focused
+                                 and recent_activity and age < idle_seconds)
             next_owner_id: Optional[str] = owner_id or None
             next_owner_seen: Optional[float] = owner_seen or None
             if accepted_active:
@@ -706,6 +747,9 @@ class NativeElearningStore:
                     *key,
                 ),
             )
+            connection.execute('UPDATE tracking_sessions SET lesson_page_id=?, lesson_active_until_epoch=? WHERE id=?',
+                               (lesson_page_id, epoch + min(HEARTBEAT_MAX_CREDIT_SECONDS, idle_seconds - age)
+                                if lesson_active else 0, tracking_session_id))
 
             if accepted_active and not previous_active:
                 self._event(
@@ -761,6 +805,8 @@ class NativeElearningStore:
                 "duplicate": duplicate,
                 "active": accepted_active,
                 "media_active": bool(accepted_active and media_active),
+                "lesson_active": lesson_active,
+                "lesson_page_id": lesson_page_id,
                 "credited_seconds": round(credited, 2),
                 "server_time": now_iso,
                 "video_resync": video_resync,
@@ -1042,6 +1088,7 @@ class NativeElearningStore:
         answer: Optional[Mapping[str, Any]] = None,
         video_requirements: Optional[Mapping[str, Mapping[str, float]]] = None,
         assessment_attempt: Optional[Mapping[str, Any]] = None,
+        lesson_requirements: Sequence[Mapping[str, Any]] = (),
     ) -> Dict[str, Any]:
         if activity_id not in activity_order:
             raise TrackingError("Activité inconnue.")
@@ -1061,6 +1108,9 @@ class NativeElearningStore:
             completed = [str(value) for value in _json_list(row["completed_json"])]
             answers = _json_dict(row["answers_json"])
             already_completed = activity_id in completed
+            if (not already_completed and lesson_remaining_seconds(
+                    lesson_requirements, _json_dict(row['lesson_seconds_json']).get(activity_id, {})) > 0):
+                raise TrackingError('Terminez le temps de lecture de chaque page avant de valider ce cours.')
             if (not already_completed and key[2].startswith("academy-vtc-")
                     and answer is not None and answer.get("production_ai_hash")):
                 # VTC feedback was checked before entering this transaction. A

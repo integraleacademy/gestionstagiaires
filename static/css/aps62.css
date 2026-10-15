@@ -51,6 +51,9 @@
 .aps-lesson-track i{display:block;height:100%;background:var(--aps-blue);border-radius:inherit}
 .aps-lesson-navigation{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;border-top:1px solid var(--aps-line);padding-top:22px;margin-top:28px}
 .aps-lesson-count{color:var(--aps-muted);font-size:12px}
+.aps-lesson-progress .aps-lesson-timing{margin:12px 0 0;padding:12px 16px;border-radius:12px;background:#eef2ff;color:#394782;font-size:13px;line-height:1.5;font-weight:600}
+.aps-lesson-progress .aps-lesson-timing[data-ready="true"]{background:#eff8f3;color:#276344}
+.aps-lesson-navigation [data-aps-lesson-next]:disabled{background:#e8ecf4;color:#65708a;box-shadow:none;opacity:1}
 .aps-lesson-navigation>[data-aps-lesson-next],.aps-lesson-navigation>[data-aps-lesson-completion]{margin-left:auto}
 .aps-lesson-navigation .native-button{width:auto;min-height:48px}
 .aps-lesson-navigation .native-button:disabled{cursor:default}

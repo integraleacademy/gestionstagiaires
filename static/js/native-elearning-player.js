@@ -59,6 +59,50 @@
     },
   };
 
+  // Page progress is confirmed by the same server session as module time.
+  // Interpolation only animates the countdown; it never unlocks a page.
+  const lessonPlan = config.lessonPages || [];
+  const lessonTiming = lessonPlan.length ? {
+    pages: lessonPlan,
+    seconds: config.initialLessonSeconds || {},
+    completed: Boolean(config.activityCompleted),
+    pageId: '', active: false, receivedAt: 0,
+    ready(index) {
+      return this.completed || Number(this.seconds[this.pages[index]?.id] || 0) >= Number(this.pages[index]?.required_seconds || 0);
+    },
+    firstPending() { const index = this.pages.findIndex((_page, i) => !this.ready(i)); return index < 0 ? this.pages.length : index; },
+    allReady() { return this.firstPending() === this.pages.length; },
+    remaining(index) {
+      if (this.ready(index)) return 0;
+      const page = this.pages[index];
+      const elapsed = this.active && this.pageId === page.id && document.visibilityState === 'visible' && document.hasFocus()
+        ? Math.max(0, Math.min((performance.now() - this.receivedAt) / 1000, 20,
+          (lastActivityAt() + idleMilliseconds - Date.now()) / 1000)) : 0;
+      return Math.max(0, Math.ceil(page.required_seconds - Number(this.seconds[page.id] || 0) - elapsed));
+    },
+    select(index) {
+      const id = this.pages[index]?.id || '';
+      if (id === this.pageId) return;
+      this.pageId = id;
+      this.active = false;
+      sendHeartbeat();
+    },
+    apply(progress) {
+      this.seconds = progress?.lesson_seconds?.[config.activityId] || this.seconds;
+      this.completed = this.completed || (progress?.completed_activity_ids || []).includes(config.activityId);
+    },
+    receipt(result, sentPageId) {
+      this.active = Boolean(result.lesson_active) && sentPageId === this.pageId && !state.stopped;
+      this.receivedAt = performance.now();
+      this.notify();
+    },
+    notify() { document.dispatchEvent(new CustomEvent('native-lesson-timing')); },
+  } : null;
+  if (lessonTiming) {
+    lessonTiming.pageId = lessonPlan[Math.min(lessonTiming.firstPending(), lessonPlan.length - 1)].id;
+    window.nativeLessonTiming = lessonTiming;
+  }
+
   function makeId() {
     if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") {
       return globalThis.crypto.randomUUID();
@@ -98,6 +142,7 @@
 
   function renderTimer() {
     if (timer) timer.textContent = formatSeconds(displayedSeconds());
+    if (lessonTiming) { updateAction(); lessonTiming.notify(); }
   }
 
   function pauseDisplay() {
@@ -120,7 +165,19 @@
     const blocked = actionButton.dataset.mode === "navigate" && config.isLastActivity
       && config.hasNextModule && !state.progress.module_complete && !config.apsDepth;
     const videoBlocked = requiredVideos.some((video) => !videoCompleted(video));
-    actionButton.disabled = state.saving || blocked || videoBlocked || Boolean(timedBlocked);
+    const readingBlocked = lessonTiming && !lessonTiming.allReady();
+    actionButton.disabled = state.saving || blocked || videoBlocked || Boolean(timedBlocked) || Boolean(readingBlocked);
+    if (readingBlocked && !state.saving) {
+      actionButton.dataset.readingBlocked = 'true';
+      const index = lessonTiming.firstPending();
+      const remaining = lessonTiming.remaining(index);
+      actionButton.textContent = remaining ? `Encore ${formatSeconds(remaining).slice(3)} de lecture` : 'Enregistrement du temps…';
+      return;
+    }
+    if (actionButton.dataset.readingBlocked === 'true' && !state.saving) {
+      delete actionButton.dataset.readingBlocked;
+      actionButton.textContent = actionButton.dataset.mode === 'navigate' ? 'Continuer →' : 'Terminer et continuer →';
+    }
     if (timedBlocked && !state.saving) {
       actionButton.dataset.timingBlocked = 'true';
       actionButton.textContent = `Encore ${formatSeconds(objective.remaining_seconds)} sur cet objectif`;
@@ -445,6 +502,7 @@
   }
 
   function applyProgress(progress) {
+    lessonTiming?.apply(progress);
     if (!progress) return;
     state.progress = progress;
     renderVideoProgress();
@@ -479,15 +537,18 @@
     if (!state.trackingSessionId || state.stopped) return;
     if (state.heartbeatRunning) { state.heartbeatQueued = true; return; }
     state.heartbeatRunning = true;
+    const sentLessonPageId = lessonTiming?.pageId || '';
     try {
       const result = await postJson(config.heartbeatUrl, {
         tracking_session_id: state.trackingSessionId,
         activity_id: config.activityId,
+        lesson_page_id: sentLessonPageId,
         ...activitySignals(),
         videos: videoSignals(),
       });
       if (state.stopped) return;
       applyProgress(result.progress);
+      lessonTiming?.receipt(result, sentLessonPageId);
       for (const video of requiredVideos) {
         const position = result.video_resync?.[video.dataset.requiredVideo];
         if (Number.isFinite(position)) {
@@ -518,6 +579,7 @@
       }
       scheduleIdlePause();
     } catch (error) {
+      if (lessonTiming) lessonTiming.active = false;
       pauseRequiredVideos(true);
       state.playbackAvailable = false;
       state.serverActive = false;
@@ -555,6 +617,7 @@
   function finishTracking() {
     if (!state.trackingSessionId || state.stopped) return;
     state.stopped = true;
+    if (lessonTiming) lessonTiming.active = false;
     state.playbackAvailable = false;
     pauseRequiredVideos();
     state.serverActive = false;
@@ -607,11 +670,13 @@
   });
   window.addEventListener("focus", () => { markActivity(); sendHeartbeat(); });
   window.addEventListener("blur", () => {
+    if (lessonTiming) lessonTiming.active = false;
     pauseRequiredVideos();
     if (!continueWhenHidden) pauseDisplay();
     sendHeartbeat();
   });
   document.addEventListener("visibilitychange", () => {
+    if (lessonTiming) lessonTiming.active = false;
     if (document.visibilityState !== "visible") {
       pauseRequiredVideos();
       if (!continueWhenHidden) pauseDisplay();
@@ -818,7 +883,7 @@
   scheduleIdlePause();
   startTracking();
   window.setInterval(renderTimer, 1000);
-  window.setInterval(sendHeartbeat, requiredVideos.length ? 4000 : Math.max(5, Number(config.heartbeatSeconds || 15)) * 1000);
+  window.setInterval(sendHeartbeat, requiredVideos.length ? 4000 : lessonTiming ? 5000 : Math.max(5, Number(config.heartbeatSeconds || 15)) * 1000);
   window.addEventListener("pagehide", finishTracking);
   window.addEventListener("pageshow", (event) => { if (event.persisted && state.stopped) startTracking(); });
 })();

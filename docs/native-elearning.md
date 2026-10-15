@@ -146,3 +146,24 @@ L’importeur n’exécute aucun JavaScript contenu dans le ZIP. Il retire scrip
 Les deux versions APS relues disposent de 17 vidéos Academy obligatoires : 8 pour le cadre légal, 9 pour le cadre pénal. Chaque vidéo apparaît dans la troisième activité de contenu, avant la question de sa séquence. L'aperçu administrateur reste libre ; le parcours stagiaire impose le visionnage intégral de chaque vidéo et conserve la progression côté serveur. Le catalogue et la navigation signalent les vidéos.
 
 Le manifeste `elearning_native/video_series.json` complète la première capsule déjà intégrée. Chaque association est liée à un cours, une version et une activité. Les sources de production et les références pédagogiques figurent dans `scripts/academy_videos/`.
+
+
+## Lecture APS : durées minimales par page
+
+Le lecteur APS applique des paliers de 1 minute (rappels et synthèses), 2 minutes
+(explications) et 5 minutes (cas commentés et documents détaillés). La politique
+`elearning_native/lesson_timing.py` décrit les pages dans l’ordre du lecteur ;
+les tests vérifient cette correspondance pour les 62 leçons.
+
+Le bouton Suivant affiche un compte à rebours et se débloque uniquement après
+confirmation du serveur. Les sauts par ancre et la validation directe sont
+soumis aux mêmes durées. L’aperçu administrateur reste libre. Les activités
+déjà terminées ne sont pas remises à zéro et les pages déjà étudiées restent
+consultables sans nouvelle attente.
+
+Les secondes par page sont conservées dans `lesson_seconds_json`, par
+apprenant, module, version et activité. Elles ventilent le temps réellement
+enregistré sans ajouter de secondes au total du module. Le compteur de lecture
+exige un onglet visible, au premier plan et non inactif ; il ne reçoit aucun
+crédit supplémentaire en cas de double onglet. La reprise conserve les secondes
+validées, sans reconstituer artificiellement un historique antérieur.
