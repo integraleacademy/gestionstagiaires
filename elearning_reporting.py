@@ -14,7 +14,7 @@ from pathlib import Path
 from xml.sax.saxutils import escape
 from zoneinfo import ZoneInfo
 
-from flask import Response, abort, url_for
+from flask import Response, abort, send_file, url_for
 from werkzeug.utils import secure_filename
 
 import elearning_orders as learning
@@ -29,7 +29,16 @@ from elearning_native.module_signatures import MAC_APS_NOTICE
 
 CUSTOMER_ENDPOINTS = {"manuals_shop." + name for name in (
     "elearning_progress", "elearning_progress_certificate", "elearning_progress_connections",
+    "elearning_progress_programme",
 )}
+PROGRAMMES = {
+    "aps": {
+        "path": Path(__file__).resolve().parent / "documents" / "elearning" / "programme-aps-62h-integrale-connect.pdf",
+        "filename": "Programme_E-learning_APS_62h_Integrale_Connect.pdf",
+        "title": "Programme APS · 62 h",
+        "description": "Le détail des 15 modules et des 62 séquences, les correspondances ADEF et les heures à prévoir en ligne et en présentiel.",
+    },
+}
 STATUS_LABELS = {"not_started": "Non commencé", "in_progress": "En cours",
                  "awaiting_time": "Temps de suivi à compléter", "passed": "Terminé",
                  "failed": "Terminé · résultats à revoir", "unavailable": "Suivi indisponible"}
@@ -688,7 +697,17 @@ def register_routes(host, bp, *, page, customer, partner_data):
         partner, order, person, group = context(oid, learner_id)
         report = ProgressReader(host).report(order, person)
         return page("elearning_progress.html", partner=partner, order=order, person=person, group=group, report=report,
-                    course=learning.COURSES[order["course_code"]])
+                    course=learning.COURSES[order["course_code"]], programme=PROGRAMMES.get(order["course_code"]))
+
+    @bp.get(base + "/programme.pdf")
+    @customer
+    def elearning_progress_programme(oid, learner_id):
+        _, order, _, _ = context(oid, learner_id)
+        programme = PROGRAMMES.get(order["course_code"])
+        if not programme or not programme["path"].is_file():
+            abort(404)
+        return send_file(programme["path"], mimetype="application/pdf", as_attachment=True,
+                         download_name=programme["filename"], max_age=0)
 
     @bp.get(base + "/attestation.pdf")
     @customer

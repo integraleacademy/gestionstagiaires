@@ -140,7 +140,7 @@ def test_full_completion_uses_actual_time_and_missing_snapshot_cannot_fall_back(
 def test_report_and_exports_are_tenant_scoped_and_require_activation(shop):
     order = submit(shop, free=True)
     url = report_url(order)
-    for suffix in ("", "/attestation.pdf", "/connexions.csv"):
+    for suffix in ("", "/attestation.pdf", "/connexions.csv", "/programme.pdf"):
         assert shop["client"].get(url + suffix).status_code == 404
     run(order)
     send_accesses(shop, order)
@@ -149,7 +149,7 @@ def test_report_and_exports_are_tenant_scoped_and_require_activation(shop):
     signup(other, email="other-report@example.test")
     login(other, email="other-report@example.test")
     anonymous = host.app.test_client()
-    for suffix in ("", "/attestation.pdf", "/connexions.csv"):
+    for suffix in ("", "/attestation.pdf", "/connexions.csv", "/programme.pdf"):
         assert other.get(url + suffix).status_code == 404
         assert anonymous.get(url + suffix).status_code == 302
         assert shop["client"].get(url.replace(order["learners"][0]["id"], "wrong-person") + suffix).status_code == 404
@@ -157,6 +157,44 @@ def test_report_and_exports_are_tenant_scoped_and_require_activation(shop):
         assert own.status_code == 200
         assert "no-store" in own.headers["Cache-Control"]
         assert own.headers["Referrer-Policy"] == "no-referrer"
+
+
+def test_programme_download_serves_connect_pdf_without_changing_progress(shop):
+    order = activated(shop)
+    root = Path(host.PERSIST_DIR) / "native_elearning"
+    page = shop["client"].get(report_url(order))
+    assert "Documents à télécharger" in page.text
+    assert report_url(order) + "/programme.pdf" in page.text
+    response = shop["client"].get(report_url(order) + "/programme.pdf")
+    assert response.status_code == 200 and response.mimetype == "application/pdf"
+    assert response.data == reporting.PROGRAMMES["aps"]["path"].read_bytes()
+    assert 'attachment; filename=Programme_E-learning_APS_62h_Integrale_Connect.pdf' in response.headers["Content-Disposition"]
+    pdf = PdfReader(io.BytesIO(response.data))
+    assert len(pdf.pages) == 28
+    assert "INTÉGRALE CONNECT" in pdf.pages[0].extract_text()
+    assert "Construisez votre planning" in pdf.pages[7].extract_text()
+    assert not (root / "tracking.sqlite3").exists()
+
+
+@pytest.mark.parametrize("course_code", ["vtc", "mac-aps"])
+def test_aps_programme_is_not_offered_for_other_courses(shop, course_code):
+    order, _ = seed_course(activated(shop))
+    def change_course(data):
+        stored = next(o for o in data["manual_orders"] if o["id"] == order["id"])
+        stored["course_code"] = course_code
+        if course_code == "mac-aps":
+            # A MAC APS fixture must retain its fixed-price paid entitlement.
+            unit = learning.COURSES[course_code]["fixed_cents"]
+            total = unit * len(stored["learners"])
+            stored.update(free_snapshot=False, unit_cents=unit, total_cents=total)
+            stored["commerce"].update(invoice_id="specimen-paid-invoice", invoice_status="paid",
+                                      payment_status="paid", paid_cents=total, remaining_cents=0)
+    host._atomic_update_data(change_course, partner_id=order["partner_id"])
+    page = shop["client"].get(report_url(order))
+    assert page.status_code == 200
+    assert "/programme.pdf" not in page.text
+    assert "Télécharger le relevé CSV" in page.text
+    assert shop["client"].get(report_url(order) + "/programme.pdf").status_code == 404
 
 
 def test_csv_prevents_spreadsheet_formula_execution(shop):
