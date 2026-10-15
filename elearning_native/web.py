@@ -1066,7 +1066,8 @@ def create_native_elearning_blueprint(
                     activity = 'vtc-' + ref.lower().replace('.', '-') + '-cours'
                 else:
                     continue
-                url = (url_for('native_elearning.course_player',token=token,course_id=cid,activity=activity)
+                complementary_a3p = exam['id'].startswith('a3p-') and exam['version'] == a3p.VERSION and not any(row['ref'] == ref for row in a3p.current.programme())
+                url = (url_for('native_elearning.a3p_resources' if complementary_a3p else 'native_elearning.course_player',token=token,course_id=cid,activity=activity)
                        if token else url_for('native_elearning.admin_preview',course_id=cid,version=exam['version'],activity=activity))
                 links.append({'ref': ref, 'url': url})
             correction['lesson_links'] = links

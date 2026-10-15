@@ -97,7 +97,12 @@ class A3PContentTests(unittest.TestCase):
 
 
 class A3PWebTests(unittest.TestCase):
-    setUp=fixtures.NativeElearningWebTests.setUp
+    def setUp(self):
+        fixtures.NativeElearningWebTests.setUp(self)
+        from tests.shared_reader_fixtures import published_media_inventory
+        inventory=published_media_inventory()
+        inventory.__enter__()
+        self.addCleanup(inventory.__exit__,None,None,None)
     tearDown=fixtures.NativeElearningWebTests.tearDown
     _admin_login=fixtures.NativeElearningWebTests._admin_login
     _public_login=fixtures.NativeElearningWebTests._public_login
@@ -141,7 +146,7 @@ class A3PWebTests(unittest.TestCase):
         r=self.client.post(config['answerUrl'],json=answer,headers={'X-Elearning-CSRF':self.csrf()});self.assertTrue(r.json['correct'])
         self.assertEqual(r.json['explanation'],q['explanation'])
         exam=load_exam('a3p-final',a3p.VERSION)
-        r=self.client.post('/api/admin/elearning/exams/a3p-final',json={'version':a3p.VERSION,'answers':{q['id']:q['answer'] for q in exam['questions']}},headers={'X-Elearning-CSRF':self.csrf()})
+        r=self.client.post('/api/admin/elearning/exams/a3p-final?version='+a3p.VERSION,json={'version':a3p.VERSION,'answers':{q['id']:q['answer'] for q in exam['questions']}},headers={'X-Elearning-CSRF':self.csrf()})
         self.assertEqual(r.status_code,200);self.assertEqual(r.json['result']['score'],100)
         self.assertTrue(all(c['lesson_links'] for c in r.json['result']['corrections']))
 

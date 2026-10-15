@@ -142,7 +142,7 @@ def test_preview_is_free_and_audit_is_admin_only(case):
     case._admin_login()
     for cid in ('academy-macaps-02', 'academy-a3p-02', 'academy-vtc-a'):
         with patch('elearning_native.web.NativeElearningStore', side_effect=AssertionError('Preview must not track')):
-            page = case.client.get('/admin/elearning/courses/' + cid + '/preview')
+            page = case.client.get('/admin/elearning/courses/' + cid + '/preview', query_string={'activity':'a3p-v4-ii-01-01-cours'} if cid.startswith('academy-a3p-') else {})
         assert page.status_code == 200
         assert 'nativeElearningConfig' not in page.text
         assert 'data-aps-lesson-page' in page.text
