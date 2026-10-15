@@ -30,7 +30,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ffmpeg
-          python -m pip install --disable-pip-version-check edge-tts==7.2.8 Pillow==12.3.0 Jinja2==3.1.6
+          python -m pip install --disable-pip-version-check edge-tts==7.3.1 Pillow==12.3.0 Jinja2==3.1.6
       - name: Produire deux nouvelles capsules et verifier tout leur contenu audiovisuel
         run: python -m scripts.a3p_157.render --limit 2
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
