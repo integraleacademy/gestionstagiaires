@@ -23,6 +23,8 @@ from elearning_native.importer import CourseCatalog, CourseImportError
 from elearning_native.paths import project_course, project_progress, required_activity_order
 from elearning_native.store import NativeElearningStore
 from elearning_native.aps_final_time import final_time
+from elearning_native.exams import module_exam_activity_id
+from elearning_exam_reporting import activity_exam_seconds, recorded_seconds
 from elearning_native.vtc_105_migration import read_transition_session, lineage_versions
 from elearning_native.vtc_cma import learner_attempt_summaries
 from elearning_native.module_signatures import MAC_APS_NOTICE
@@ -83,8 +85,8 @@ class ProgressReader:
             "connections": """SELECT course_id, course_version, created_at, last_seen_at,
                 ended_at, credited_seconds, status FROM tracking_sessions
                 WHERE session_id = ? AND trainee_id = ? ORDER BY created_at DESC, id DESC""",
-            "exams": """SELECT exam_id, version, submitted_at, result_json FROM aps_exam_attempts
-                WHERE session_id = ? AND trainee_id = ? ORDER BY submitted_at DESC""",
+            "exams": """SELECT exam_id, version, attempt_id, submitted_at, result_json FROM aps_exam_attempts
+                WHERE session_id = ? AND trainee_id = ? ORDER BY submitted_at DESC, attempt_id DESC""",
         }
         table_name = {"progress": "learner_course_progress", "connections": "tracking_sessions", "exams": "aps_exam_attempts"}[table]
         with sqlite3.connect(self.database_path.as_uri() + "?mode=ro", uri=True, timeout=15) as db:
@@ -111,6 +113,7 @@ class ProgressReader:
         raw_rows = self.rows("progress", session_id, learner_id)
         by_key = {(r["course_id"], r["course_version"]): r for r in raw_rows}
         modules, complement_modules, exam_keys, course_titles, course_scopes, exam_scopes, exam_titles = [], [], set(), {}, {}, {}, {}
+        exam_catalogue = {}
         total = completed = active = required = finished = optional_total = 0
         starts, updates = [], []
         for assignment in session_view.get('aps_native_modules', []):
@@ -200,8 +203,11 @@ class ProgressReader:
                     exam_key = (course["mock_exam_id"], historical_version)
                     exam_keys.add(exam_key)
                     exam_scopes[exam_key] = scope
-                    if is_mac_aps:
-                        exam_titles[exam_key] = "Examen blanc MAC APS - " + course["title"]
+                    exam_titles[exam_key] = ("Examen blanc MAC APS - " if is_mac_aps else "Examen blanc - ") + course["title"]
+                    if not complementary:
+                        exam_catalogue[exam_key] = {"id": exam_key[0], "version": exam_key[1],
+                            "title": course["title"],
+                            "active_seconds": activity_exam_seconds(by_key.get((course['id'], historical_version), {}), module_exam_activity_id(course))}
             if detailed:
                 for section in course["sections"]:
                     rows = []
@@ -256,6 +262,9 @@ class ProgressReader:
             exam_scopes[final_key] = "principal"
             if is_mac_aps:
                 exam_titles[final_key] = "Examen blanc final MAC APS"
+            exam_catalogue[final_key] = {"id": final_id, "version": final_key[1],
+                "title": "Examen blanc final " + course_label,
+                "active_seconds": recorded_seconds(by_key.get((aps_final['course_id'], aps_final['version']), {}).get('active_seconds')) if aps_final else None}
         complete = bool(modules) and finished == len(modules)
         available = bool(modules) and all(m["available"] for m in modules)
         report = {"available": available, "modules": modules, "completed_modules": finished, "total_modules": len(modules),
@@ -277,7 +286,8 @@ class ProgressReader:
                   "started_at_label": date_label(min(starts)) if starts else "Pas encore commencé",
                   "updated_at_label": date_label(max(updates)) if updates else "Aucune activité enregistrée",
                   "generated_at_label": date_label(dt.datetime.now(dt.timezone.utc).isoformat()),
-                  "connections": [], "complement_connections": [], "exams": [], "complement_exams": [], "cma_attempts": []}
+                  "connections": [], "complement_connections": [], "exams": [], "complement_exams": [], "cma_attempts": [],
+                  "exam_catalogue": list(exam_catalogue.values())}
         if detailed:
             if order['course_code'] == 'vtc':
                 report['cma_attempts'] = learner_attempt_summaries(self.database_path, session_id, learner_id)
@@ -306,7 +316,8 @@ class ProgressReader:
                 title = exam_titles.get(exam_key) or ("Examen blanc final" if attempt["exam_id"] in {"final", "vtc-final"} else "Examen blanc " + attempt["exam_id"].replace("vtc-", "").replace("module-", "module "))
                 destination = "complement_exams" if exam_scopes.get(exam_key) == "complement" else "exams"
                 report[destination].append({**row, "id": attempt["exam_id"], "version": attempt["version"],
-                    "title": title, "date_label": date_label(attempt["submitted_at"])})
+                    "title": title, "attempt_id": attempt["attempt_id"], "submitted_at": attempt["submitted_at"],
+                    "pass_percent": result.get("pass_percent"), "date_label": date_label(attempt["submitted_at"])})
         return report
 
     def assessment_attempts(self, access, course):
@@ -355,6 +366,8 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
     from reportlab.lib.units import mm
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak, LongTable, HRFlowable, CondPageBreak
     from elearning_pdf_components import CompletionBadge, TimeProgress, module_duration, report_duration
+    from elearning_pdf_components import compact_duration
+    from elearning_exam_reporting import exam_groups, number_label
 
     output = io.BytesIO()
     centre_name = str(partner.get("name") or partner.get("centre") or "Organisme de formation").strip()
@@ -449,6 +462,7 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
         story.extend([p("Édition(s) suivie(s) : " + (", ".join(versions) or "Non renseignée"), "small"),
                       p(MAC_APS_NOTICE, "small"), Spacer(1, 3 * mm)])
     duration = report_duration(report)
+    exams = exam_groups(report)
     metrics = [[
         [p("TEMPS SUIVI / DURÉE PRÉVUE", "small"),
          TimeProgress(duration, width=96 * mm, font=regular_font, bold=bold_font, large=True)],
@@ -462,11 +476,9 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
     story.extend([box, Spacer(1, 3 * mm),
                   p("Temps actif enregistré : " + report["active_time_label"] + " · Durée prévue : " + report["required_time_label"], "small"),
                   p(f"Première activité : {report['started_at_label']} · Dernière activité : {report['updated_at_label']}", "small"),
-                  p("La barre mesure les durées suivies. Le temps en plus sur un module ne remplace pas celui d'un autre. La coche confirme que les activités et la durée du module sont terminées.", "small"),
                   Spacer(1, 3 * mm)])
-    if report.get('final_exam_time'):
-        story.append(p("Examen blanc final et corrigé : " + report['final_exam_time']['active_time_label'] +
-                       " en supplément. Ce temps reste hors de la barre d'avancement des modules.", 'small'))
+    if not exams and not report.get("cma_attempts"):
+        story.append(p("Examens blancs : aucune tentative ni durée enregistrée.", "small"))
     headers = ("MODULE / ÉDITION" if is_mac_aps else "MODULE", "TEMPS SUIVI / " + ("CIBLE" if is_mac_aps else "REQUIS"), "ACTIVITÉS", "ÉTAT")
     table_rows = [[p(value, "th") for value in headers]]
     for module in report["modules"]:
@@ -492,14 +504,14 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
     # References and legal notes are printed with the integral connection annex
     # below, so a duplicate block cannot create a nearly empty summary page.
 
-    def detail_table(rows, widths):
+    def detail_table(rows, widths, padding=7):
         value = LongTable(rows, colWidths=[width * mm for width in widths], repeatRows=1, hAlign="LEFT")
         value.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#173858")),
             ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f3f6fa")]),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-            ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+            ("TOPPADDING", (0, 0), (-1, -1), padding), ("BOTTOMPADDING", (0, 0), (-1, -1), padding),
         ]))
         return value
 
@@ -534,17 +546,42 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
                       p("Premier essai : activités réussies dès la première réponse parmi les activités déjà essayées. "
                         "Score global après reprises : activités actuellement réussies parmi toutes les activités évaluables du module, "
                         "y compris celles restant à réaliser. Les deux pourcentages ont donc des bases différentes lorsque le module est en cours.", "small"),
-                      detail_table(quiz_rows, [71, 32, 35, 36]),
-                      Spacer(1, 5 * mm), p("Examens blancs soumis", "heading")])
-        if report.get("exams"):
-            exam_rows = [[p(value, "th") for value in ("EXAMEN / ÉDITION", "DATE", "SCORE", "RÉSULTAT")]]
-            for exam in report["exams"]:
-                exam_rows.append([p(exam["title"] + "\n" + (exam.get("version") or "Édition non renseignée"), "cell"),
-                                  p(exam["date_label"], "cell"), p(f"{exam['percent']:g} %\n{exam['score']} / {exam['total']}", "cell"),
-                                  p("Objectif pédagogique atteint" if exam["passed"] else "À retravailler", "cell")])
-            story.append(detail_table(exam_rows, [70, 38, 28, 38]))
-        else:
-            story.append(p("Aucun examen blanc n'a encore été soumis pour cette édition du parcours."))
+                      detail_table(quiz_rows, [71, 32, 35, 36])])
+
+    if exams or report.get("cma_attempts"):
+        exam_identity = f"Organisme : {centre_name}\nStagiaire : {name} · {person.get('email', '')}"
+        story.extend([PageBreak(), p("Relevé des examens blancs", "title"), p(exam_identity, "small"), Spacer(1, 3 * mm)])
+        if exams:
+            story.append(p("Temps actif cumulé par examen, questions et corrigé compris.", "small"))
+            rows = [[p(value, "th") for value in ("EXAMEN / DERNIÈRE TENTATIVE", "TEMPS ACTIF CUMULÉ", "ESSAIS", "DERNIÈRE NOTE", "RÉSULTAT")]]
+            for exam in exams:
+                latest = exam["latest"]
+                title = exam["title"] + ("\nÉdition : " + exam["version"] if is_mac_aps and exam["version"] else "")
+                rows.append([p(title + "\n" + latest["date_label"], "cell"),
+                    p(compact_duration(exam["active_seconds"]) if exam["active_seconds"] is not None else "Non enregistré", "cell"),
+                    p(len(exam["attempts"]), "cell"), p(latest["score_label"], "cell"), p(latest["result_label"], "cell")])
+            story.append(detail_table(rows, [62, 30, 16, 32, 34], padding=5))
+            repeated = [exam for exam in exams if len(exam["attempts"]) > 1]
+            if repeated:
+                story.extend([Spacer(1, 5 * mm), CondPageBreak(65), p("Historique des examens repassés", "heading")])
+                rows = [[p(value, "th") for value in ("EXAMEN", "ESSAI", "DATE", "NOTE", "SEUIL", "RÉSULTAT")]]
+                for exam in repeated:
+                    for attempt in exam["attempts"]:
+                        rows.append([p(exam["title"], "cell"), p(attempt["number"], "cell"), p(attempt["date_label"], "cell"),
+                                     p(attempt["score_label"], "cell"), p(attempt["pass_label"], "cell"), p(attempt["result_label"], "cell")])
+                story.append(detail_table(rows, [47, 13, 34, 28, 20, 32], padding=5))
+        if report.get("cma_attempts"):
+            story.extend([Spacer(1, 4 * mm), CondPageBreak(65), p("Examens blancs CMA VTC", "heading")])
+            rows = [[p(value, "th") for value in ("DATE DE DÉBUT", "TEMPS D’EXAMEN", "ÉPREUVES REMISES", "MOYENNE", "RÉSULTAT")]]
+            for attempt in reversed(report["cma_attempts"]):
+                result = ("Réussi" if attempt.get("passed") is True else "À retravailler" if attempt.get("passed") is False else
+                          "Données indisponibles" if attempt.get("status") == "unavailable" else "En cours / correction en attente")
+                average = attempt.get("weighted_average")
+                rows.append([p(date_label(attempt.get("created_at")), "cell"),
+                    p(compact_duration(attempt.get("exam_seconds")) if attempt.get("status") != "unavailable" else "Non enregistré", "cell"),
+                    p(f"{attempt.get('submitted_subjects', 0)} / {len(attempt.get('subjects') or [])}" if attempt.get("status") != "unavailable" else "Indisponible", "cell"),
+                    p(number_label(average) + " / 20" if average is not None else "En attente", "cell"), p(result, "cell")])
+            story.append(detail_table(rows, [35, 30, 30, 30, 49]))
 
     # Keep the integral connection evidence in the same PDF as the attestation.
     # Table headers identify the centre and learner again on every annex page.

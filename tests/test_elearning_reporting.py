@@ -283,6 +283,42 @@ def test_sample_certificate_is_marked_fictional_on_every_page():
     assert "Ce spécimen ne prouve aucun suivi" in text and "n’atteste d’aucune formation suivie" in text
 
 
+def test_certificate_lists_exam_time_latest_score_and_retakes_without_old_explanations():
+    report, partner, order, person = certificate_fixture()
+    report['final_exam_time'] = {'active_time_label': '00 h 00 min 00 s'}
+    report['exam_catalogue'] = [{'id': 'module-01', 'version': 'v1', 'title': 'Cadre légal', 'active_seconds': 1400}]
+    report['exams'] = [
+        {'id': 'module-01', 'version': 'v1', 'score': 27, 'total': 30, 'percent': 90, 'passed': True, 'pass_percent': 80, 'date_label': '15/10/2026 à 09:00'},
+        {'id': 'module-01', 'version': 'v1', 'score': 18, 'total': 30, 'percent': 60, 'passed': False, 'pass_percent': 80, 'date_label': '14/10/2026 à 09:00'}]
+    data = reporting.certificate_pdf(report, partner, order, person)
+    text = '\n'.join(page.extract_text() for page in PdfReader(io.BytesIO(data)).pages)
+    for value in ('Relevé des examens blancs', 'Cadre légal', '23 min 20 s', '27 / 30', '90 %', '18 / 30', '60 %', '80 %', 'Réussi', 'À retravailler', 'Historique des examens repassés'):
+        assert value in text
+    assert 'La barre mesure les durées suivies' not in text
+    assert 'Ce temps reste hors de la barre' not in text
+    assert 'Examen blanc final et corrigé :' not in text
+
+
+def test_certificate_does_not_invent_an_unrecorded_exam_duration():
+    report, partner, order, person = certificate_fixture()
+    report['exams'] = [{'id': 'module-01', 'version': 'v1', 'title': 'Cadre légal', 'score': 23, 'total': 30, 'percent': 76.7, 'passed': False}]
+    data = reporting.certificate_pdf(report, partner, order, person)
+    text = '\n'.join(page.extract_text() for page in PdfReader(io.BytesIO(data)).pages)
+    assert 'Non enregistré' in text and '23 / 30' in text and '76,7 %' in text
+
+
+def test_certificate_includes_cma_exam_time_and_pending_grades():
+    report, partner, order, person = certificate_fixture()
+    order['course_code'] = 'vtc'
+    report['cma_attempts'] = [
+        {'created_at': '2026-10-15T07:00:00Z', 'exam_seconds': 2700, 'subjects': [{}] * 7, 'submitted_subjects': 7, 'weighted_average': None, 'passed': None, 'status': 'submitted'},
+        {'created_at': '2026-10-14T07:00:00Z', 'exam_seconds': 3600, 'subjects': [{}] * 7, 'submitted_subjects': 7, 'weighted_average': 16.5, 'passed': True, 'status': 'submitted'}]
+    data = reporting.certificate_pdf(report, partner, order, person)
+    text = '\n'.join(page.extract_text() for page in PdfReader(io.BytesIO(data)).pages)
+    for value in ('Examens blancs CMA VTC', '45 min', '1 h', '16,5 / 20', '7 / 7', 'Réussi', 'correction en attente', '15/10/2026 à 09:00'):
+        assert value in text
+
+
 def test_customer_certificate_resolves_current_own_profile_and_ignores_logo_query(shop, monkeypatch):
     import organisme_profile
 
@@ -306,3 +342,4 @@ def test_customer_certificate_resolves_current_own_profile_and_ignores_logo_quer
     assert "Mon Centre Actuel" in text and "9 rue du Centre" in text and "01 00 00 00 09" in text
     assert "SPECIMEN" not in text and "Intégrale Academy" not in text
     assert document.pages[0]["/Resources"]["/XObject"]
+
