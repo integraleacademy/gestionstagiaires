@@ -31,7 +31,6 @@
         <a class="button secondary" href="{{ url_for('manuals_shop.elearning_progress_connections',oid=order.id,learner_id=person.id) }}">{{ icon('file') }} Télécharger le relevé CSV</a>
       </article>
     </div>
-    {% if config.get('NATIVE_MODULE_SIGNATURES_ENABLED') and order.course_code|lower in ('aps', 'mac-aps') %}<p><a class="button secondary" href="{{ url_for('native_module_signatures.order_modules',oid=order.id,trainee_id=person.id) }}">Tableaux de suivi et signatures par module</a></p>{% endif %}
   </section>
   <nav class="el-report-nav" aria-label="Rubriques du suivi"><a href="#modules">Modules et activités</a><a href="#resultats">Examens blancs</a>{% if order.course_code == 'vtc' %}<a href="#simulation-cma">Examen en conditions réelles</a>{% endif %}<a href="#connexions">Historique des connexions</a></nav>
   <section data-el-live-region="modules" id="modules" class="el-report-section"><h2>Progression par module</h2><p class="muted">Le pourcentage reflète les activités{{ ' obligatoires' if is_vtc else '' }} terminées.{% if is_vtc %} Les productions personnelles sont facultatives et leur absence ne bloque pas la validation.{% endif %} La validation d’un module exige aussi que sa durée obligatoire soit atteinte.{% if is_mac_aps %} Les temps cibles de chaque objectif sont vérifiés séparément. Les compléments restent hors du parcours principal.{% endif %}</p>
