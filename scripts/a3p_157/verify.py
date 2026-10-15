@@ -18,7 +18,9 @@ def main():
         assert abs(actual-meta['duration_seconds'])<.1 and actual>=300
         assert meta['narration_seconds']>=295 and meta['voice']=='fr-FR-HenriNeural'
         assert meta['burned_captions'] and meta['required']
-        assert folder.joinpath(row['id']+'.vtt').read_text().startswith('WEBVTT\n')
+        subtitles=folder.joinpath(row['id']+'.vtt')
+        assert subtitles.read_text().startswith('WEBVTT\n')
+        subtitles.write_text(subtitles.read_text().rstrip()+'\n')
         assert actual/60<row['minutes']-12
         result[row['id']]=meta
     RES.joinpath('v4/media_manifest.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')

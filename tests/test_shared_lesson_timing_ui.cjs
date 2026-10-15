@@ -10,8 +10,8 @@ const fixtures = JSON.parse(execFileSync(process.env.APS_TEST_PYTHON || 'python'
 const script = fs.readFileSync(path.join(root, 'static/js/aps62-lesson.js'), 'utf8');
 const shell = html => `<div data-aps-lesson data-lesson-key="test"><div data-aps-lesson-progress hidden><strong data-aps-lesson-status></strong><div><i data-aps-lesson-bar></i></div></div>${html}<nav data-aps-lesson-navigation hidden><button data-aps-lesson-previous></button><span data-aps-lesson-count></span><button data-aps-lesson-next>Suivant</button><div data-aps-lesson-completion hidden></div></nav></div><div class="native-navigation-actions"><button id="nativeActionButton">Terminer</button></div>`;
 
-test('all 219 MAC APS, A3P and VTC lessons match the server plan after real DOM pagination', () => {
-  assert.equal(fixtures.length, 219);
+test('all 322 MAC APS, A3P and VTC lessons match the server plan after real DOM pagination', () => {
+  assert.equal(fixtures.length, 322);
   for (const row of fixtures) {
     const dom = new JSDOM(shell(row.html), {url:'https://test.invalid/reader', runScripts:'outside-only'});
     dom.window.HTMLElement.prototype.scrollIntoView = function() {};
