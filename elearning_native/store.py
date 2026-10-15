@@ -674,7 +674,8 @@ class NativeElearningStore:
                 if lesson_page_id not in page_ids:
                     raise TrackingError('Page de lecture inconnue. Rechargez le cours.')
                 if (activity_id not in _json_list(progress['completed_json'])
-                        and page_ids.index(lesson_page_id) > first_pending(lesson_pages, lesson_ledger.get(activity_id, {}))):
+                        and page_ids.index(lesson_page_id) > first_pending(lesson_pages, lesson_ledger.get(activity_id, {}),
+                            _json_dict(progress['video_progress_json']).get(activity_id, {}))):
                     raise TrackingError('Terminez le temps de lecture de la page précédente.')
             lesson_active = bool(lesson_page_id and accepted_active and visible and focused
                                  and recent_activity and age < idle_seconds)

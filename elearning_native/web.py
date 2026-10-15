@@ -1755,6 +1755,12 @@ def create_native_elearning_blueprint(
     def admin_aps_workload():
         return render_template('admin_native_elearning_workload.html', reports=aps_workload_report())
 
+    @blueprint.get('/admin/elearning/calibrage/contenus')
+    @admin_required
+    def admin_content_audit():
+        from .content_audit import audit_catalog
+        return render_template('admin_native_elearning_content_audit.html', reports=audit_catalog())
+
     @blueprint.get('/admin/elearning/calibrage.csv')
     @admin_required
     def admin_aps_workload_export():

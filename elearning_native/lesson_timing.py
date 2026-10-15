@@ -1,4 +1,4 @@
-"""Minimum reading times for the APS reader, independent of module time credit.
+"""Minimum reading times for all native readers, independent of module credit.
 
 The order mirrors the reading templates. IDs identify content, not a browser
 index. Existing completed activities remain exempt; old time is never invented.
@@ -6,6 +6,8 @@ index. Existing completed activities remain exempt; old time is never invented.
 from __future__ import annotations
 
 import re
+
+from .reading_layout import reading_pages
 
 
 def _words(value):
@@ -18,6 +20,8 @@ def _words(value):
 
 
 def lesson_pages(course, activity):
+    if course.get('id', '').startswith(('academy-macaps-', 'academy-a3p-', 'academy-vtc-')):
+        return reading_pages(activity)
     lesson = activity.get('academy', {})
     if (not course.get('id', '').startswith('academy-aps62-')
             or lesson.get('kind') != 'lesson' or not lesson.get('editorial_revision')):
@@ -55,9 +59,11 @@ def lesson_pages(course, activity):
     return pages
 
 
-def first_pending(pages, seconds):
+def first_pending(pages, seconds, videos=None):
     return next((index for index, page in enumerate(pages)
-                 if float(seconds.get(page['id']) or 0) < page['required_seconds']), len(pages))
+                 if float(seconds.get(page['id']) or 0) < page['required_seconds']
+                 or (videos is not None and page.get('video_id')
+                     and not videos.get(page['video_id'], {}).get('completed'))), len(pages))
 
 
 def remaining_seconds(pages, seconds):

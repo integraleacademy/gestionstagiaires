@@ -45,7 +45,7 @@
       || !previous || !next || !completion || !activityAction) return;
 
   // Reuse the existing completion control and its tracking/validation handlers.
-  // Turning a reading page never completes an activity or sends a request.
+  // Turning a reading page never completes an activity or grants study time.
   completion.append(activityAction);
   activityNavigation.hidden = true;
   activityNavigation.classList.add('aps-lesson-original-navigation');
@@ -133,6 +133,16 @@
       return;
     }
     const ready = timing.ready(current);
+    const page = timing.pages[current];
+    if (page.media) {
+      next.disabled = !ready;
+      next.textContent = ready ? 'Suivant →' : 'Terminez la vidéo pour poursuivre';
+      timingNotice.dataset.ready = String(ready);
+      timingNotice.textContent = page.video_id
+        ? (ready ? 'Visionnage validé · Vous pouvez poursuivre.' : 'Visionnez la vidéo jusqu’au bout pour passer à la lecture.')
+        : 'Vidéo complémentaire · Vous pouvez la consulter puis poursuivre la lecture.';
+      return;
+    }
     const seconds = timing.remaining(current);
     const clock = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
     next.disabled = !ready;

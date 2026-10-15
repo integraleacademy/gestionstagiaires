@@ -14,6 +14,8 @@
     <div style="display:flex;flex-wrap:wrap;gap:10px">{% if config.get('NATIVE_MODULE_SIGNATURES_ENABLED') %}<a class="nel-button" href="{{ url_for('native_module_signatures.index') }}">Tableaux de suivi à signer</a>{% endif %}<a class="nel-button" href="{{ url_for('admin_sessions') }}">← Sessions</a></div>
   </header>
 
+  <p><a class="nel-button" href="{{ url_for('native_elearning.admin_content_audit') }}">Vérifier les contenus et les durées · tous les parcours →</a></p>
+
   {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="nel-flash nel-flash--{{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261012-tabs') }}">
   <nav class="curriculum-tabs" aria-label="Choisir une formation"><a href="{{ url_for('native_elearning.admin_catalog') }}"{% if selected_curriculum == 'aps' %} aria-current="page"{% endif %}>Sécurité privée · APS</a><a href="{{ url_for('native_elearning.admin_vtc_catalog') }}"{% if selected_curriculum == 'vtc' %} aria-current="page"{% endif %}>Chauffeur · VTC</a><a href="{{ url_for('native_elearning.admin_a3p_catalog') }}"{% if selected_curriculum == 'a3p' %} aria-current="page"{% endif %}>Protection des personnes · A3P</a><a href="{{ url_for('native_elearning.admin_macaps_catalog') }}"{% if selected_curriculum == 'macaps' %} aria-current="page"{% endif %}>Actualisation · MAC APS</a></nav>

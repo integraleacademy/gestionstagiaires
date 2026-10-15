@@ -65,10 +65,13 @@
   const lessonTiming = lessonPlan.length ? {
     pages: lessonPlan,
     seconds: config.initialLessonSeconds || {},
+    videos: config.initialVideoProgress?.[config.activityId] || {},
     completed: Boolean(config.activityCompleted),
     pageId: '', active: false, receivedAt: 0,
     ready(index) {
-      return this.completed || Number(this.seconds[this.pages[index]?.id] || 0) >= Number(this.pages[index]?.required_seconds || 0);
+      const page = this.pages[index];
+      return this.completed || (Number(this.seconds[page?.id] || 0) >= Number(page?.required_seconds || 0)
+        && (!page?.video_id || Boolean(this.videos[page.video_id]?.completed)));
     },
     firstPending() { const index = this.pages.findIndex((_page, i) => !this.ready(i)); return index < 0 ? this.pages.length : index; },
     allReady() { return this.firstPending() === this.pages.length; },
@@ -89,6 +92,7 @@
     },
     apply(progress) {
       this.seconds = progress?.lesson_seconds?.[config.activityId] || this.seconds;
+      this.videos = progress?.video_progress?.[config.activityId] || this.videos;
       this.completed = this.completed || (progress?.completed_activity_ids || []).includes(config.activityId);
     },
     receipt(result, sentPageId) {
@@ -171,7 +175,8 @@
       actionButton.dataset.readingBlocked = 'true';
       const index = lessonTiming.firstPending();
       const remaining = lessonTiming.remaining(index);
-      actionButton.textContent = remaining ? `Encore ${formatSeconds(remaining).slice(3)} de lecture` : 'Enregistrement du temps…';
+      actionButton.textContent = lessonTiming.pages[index]?.video_id ? 'Regardez la vidéo jusqu’à la fin'
+        : remaining ? `Encore ${formatSeconds(remaining).slice(3)} de lecture` : 'Enregistrement du temps…';
       return;
     }
     if (actionButton.dataset.readingBlocked === 'true' && !state.saving) {

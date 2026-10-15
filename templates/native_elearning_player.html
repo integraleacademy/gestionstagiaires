@@ -343,12 +343,12 @@
     'initialTimedObjectives': progress.get('timed_objectives', [])
   }|tojson }}</script>
   <script src="{{ url_for('static', filename='js/native-video-pacing.js', v='20261013-vtc-normal-speed') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261015-aps-reading-125') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261015-all-reading-125') }}" defer></script>
   {% endif %}
 {% if course.training_label == 'VTC' %}<script src="{{ url_for('static', filename='js/vtc-video-companion.js', v='20261013-vtc-normal-speed') }}" defer></script>{% endif %}
 {% if course.training_label == 'MAC APS' %}<script src="{{ url_for('static', filename='js/mac-aps-elearning.js', v='20261012-1') }}" defer></script>{% endif %}
 <script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-2') }}" defer></script>
-{% if paged_reading or (course.id.startswith('academy-aps62-') and activity.get('academy', {}).get('kind') == 'lesson') %}<script src="{{ url_for('static', filename='js/aps62-lesson.js', v='20261015-aps-reading-125') }}" defer></script>{% endif %}
+{% if paged_reading or (course.id.startswith('academy-aps62-') and activity.get('academy', {}).get('kind') == 'lesson') %}<script src="{{ url_for('static', filename='js/aps62-lesson.js', v='20261015-all-reading-125') }}" defer></script>{% endif %}
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261012-assessments') }}" defer></script>
 {% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261014-aps-dossiers-v16') }}" defer></script>{% endif %}
