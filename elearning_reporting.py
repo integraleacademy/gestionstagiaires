@@ -137,10 +137,10 @@ class ProgressReader:
                 course = self.course(assignment)
             except (CourseImportError, OSError):
                 recorded = by_key.get(assigned_key, {})
-                recorded_seconds = max(0, float(recorded.get("active_seconds") or 0))
+                recorded_active_seconds = max(0, float(recorded.get("active_seconds") or 0))
                 if not complementary:
-                    active += recorded_seconds
-                module.update(active_seconds=recorded_seconds, active_time_label=time_label(recorded_seconds))
+                    active += recorded_active_seconds
+                module.update(active_seconds=recorded_active_seconds, active_time_label=time_label(recorded_active_seconds))
                 if recorded.get("started_at") and not complementary:
                     starts.append(recorded["started_at"])
                 if recorded.get("updated_at") and not complementary:
