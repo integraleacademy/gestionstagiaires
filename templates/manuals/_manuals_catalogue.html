@@ -1,3 +1,4 @@
+{% from 'manuals/_faq_macros.html' import faq_panel, faq_item with context %}
 <div class="mc-catalogue">
   <div class="mc-shell">
     <nav class="mc-breadcrumb" aria-label="Fil d’Ariane"><a href="{{ url_for('home') }}">Accueil</a><span aria-hidden="true">/</span><span aria-current="page">Manuels de formation</span></nav>
@@ -22,12 +23,24 @@
     <ol class="mc-steps"><li><span>01</span><h3>Choisissez vos titres</h3><p>Préparez votre commande dès 50 exemplaires par titre. Le tarif diminue à partir de 100 exemplaires.</p></li><li><span>02</span><h3>Validez votre couverture</h3><p>Transmettez votre logo, puis vérifiez le bon à tirer avant de donner votre accord pour l’impression.</p></li><li><span>03</span><h3>Suivez votre commande</h3><p>Comptez environ 10 à 15 jours après règlement et validation du bon à tirer. Retrouvez la préparation et l’expédition dans votre espace organisme.</p></li></ol>
   </div></section>
 
-  <section class="mc-section mc-faq" aria-labelledby="mc-faq-title"><div class="mc-shell mc-split"><div><p class="mc-kicker">LES RÉPONSES UTILES</p><h2 id="mc-faq-title">Préparer votre<br>prochaine commande.</h2><p class="mc-muted">Une date de session à respecter ? Indiquez-la à notre équipe avant de commander pour faire confirmer le délai.</p><a class="mc-link" href="mailto:clement@integraleacademy.com?subject=Commande%20de%20manuels%20et%20date%20de%20session">Échanger avec notre équipe →</a></div><div class="mc-faq-list">
-    <details><summary>Comment découvrir l’intérieur des manuels ?</summary><p>Chaque fiche présente des pages illustrées et un PDF d’aperçu. Les extraits comprennent 15 à 20 pages sélectionnées lorsqu’un manuel complet est disponible. SSIAP 3 et les recyclages SSIAP 2 et 3 disposent actuellement de trois pages d’exemple.</p></details>
-    <details><summary>Votre logo et le bon à tirer</summary><p>La couverture de chaque manuel est personnalisée avec votre logo. Transmettez-le lors de la commande ou depuis son suivi, puis validez le bon à tirer avant l’impression.</p><a class="mc-link" href="/personnalisation-livraison">Personnalisation et livraison →</a></details>
-    <details><summary>Quel délai prévoir pour la livraison ?</summary><p>Comptez environ 10 à 15 jours après règlement et validation du bon à tirer. La livraison est incluse. Pour une échéance précise, faites confirmer la faisabilité avant de commander.</p></details>
-    <details><summary>Les supports PowerPoint sont-ils inclus ?</summary><p>Les supports formateurs sur clé USB sont vendus séparément, à 99 € ou 199 € TTC selon la formation, sans abonnement.</p><a class="mc-link" href="/supports-formateurs">Voir les supports et leurs aperçus →</a></details>
-    <details id="sur-mesure"><summary>Un manuel pour une autre formation</summary><p>Notre équipe peut étudier un support adapté à votre programme, à votre public et à votre organisme. Indiquez les quantités envisagées et la date de votre prochaine session.</p><a class="mc-link" href="mailto:clement@integraleacademy.com?subject=Projet%20de%20manuel%20sur%20mesure">Présenter mon projet →</a></details>
-  </div></div></section>
+  <div class="mc-shell">
+  {% call faq_panel("faq", "mc-faq-title", "FAQ MANUELS", "Préparer votre prochaine commande.", "Une date de session à respecter ? Indiquez-la à notre équipe avant de commander pour faire confirmer le délai.", "orange") %}
+  {% call faq_item(1, "Comment découvrir l’intérieur des manuels ?") %}
+  <p>Chaque fiche présente des pages illustrées et un PDF d’aperçu. Les extraits comprennent 15 à 20 pages sélectionnées lorsqu’un manuel complet est disponible. SSIAP 3 et les recyclages SSIAP 2 et 3 disposent actuellement de trois pages d’exemple.</p>
+  {% endcall %}
+  {% call faq_item(2, "Votre logo et le bon à tirer") %}
+  <p>La couverture de chaque manuel est personnalisée avec votre logo. Transmettez-le lors de la commande ou depuis son suivi, puis validez le bon à tirer avant l’impression.</p><a class="mc-link" href="/personnalisation-livraison">Personnalisation et livraison →</a>
+  {% endcall %}
+  {% call faq_item(3, "Quel délai prévoir pour la livraison ?") %}
+  <p>Comptez environ 10 à 15 jours après règlement et validation du bon à tirer. La livraison est incluse. Pour une échéance précise, faites confirmer la faisabilité avant de commander.</p>
+  {% endcall %}
+  {% call faq_item(4, "Les supports PowerPoint sont-ils inclus ?") %}
+  <p>Les supports formateurs sur clé USB sont vendus séparément, à 99 € ou 199 € TTC selon la formation, sans abonnement.</p><a class="mc-link" href="/supports-formateurs">Voir les supports et leurs aperçus →</a>
+  {% endcall %}
+  {% call faq_item(5, "Un manuel pour une autre formation", id="sur-mesure") %}
+  <p>Notre équipe peut étudier un support adapté à votre programme, à votre public et à votre organisme. Indiquez les quantités envisagées et la date de votre prochaine session.</p><a class="mc-link" href="mailto:clement@integraleacademy.com?subject=Projet%20de%20manuel%20sur%20mesure">Présenter mon projet →</a>
+  {% endcall %}
+  {% endcall %}
+  </div>
   <div class="mc-shell"><section class="mc-final"><div><p class="mc-kicker">VOTRE PROCHAINE SESSION SE PRÉPARE ICI</p><h2>Un support à conserver.<br>Des repères à retrouver.</h2></div><a class="mc-button" href="{{ url_for('manuals_shop.catalogue') }}">Préparer ma commande <span aria-hidden="true">→</span></a></section></div>
 </div>

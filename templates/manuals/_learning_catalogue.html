@@ -1,3 +1,4 @@
+{% from 'manuals/_faq_macros.html' import faq_panel, faq_item with context %}
 {% set course_visuals = {
  'aps': {'image':'images/aps62-cover.webp','category':'SÉCURITÉ PRIVÉE','description':'Acquérir les repères du métier : cadre juridique, prévention, surveillance et situations professionnelles.','topics':['Cadre juridique','Missions de sécurité','Mises en situation'],'demo':'manuals_shop.elearning_demo'},
  'mac-aps': {'image':'images/mac-aps-cover.webp','category':'ACTUALISATION DES COMPÉTENCES','description':'Réactiver les connaissances essentielles et travailler les décisions du quotidien à partir de cas concrets.','topics':['Principes de la République','Gestion des conflits','Prévention des risques'],'demo':'manuals_shop.mac_aps_demo'},
@@ -51,7 +52,25 @@
   <div class="el-section-head"><div><p class="el-kicker">POUR VOTRE PROCHAINE SESSION</p><h2 id="el-start-title">Du choix du parcours<br>aux premiers apprentissages.</h2></div><a class="el-link" href="{{ url_for('manuals_shop.register_account') }}">Créer mon espace organisme →</a></div>
   <ol class="el-start-steps"><li><span>01</span><h3>Choisissez le parcours</h3><p>Consultez le programme et découvrez les contenus grâce aux aperçus.</p></li><li><span>02</span><h3>Préparez les accès</h3><p>Depuis votre espace organisme, renseignez les stagiaires et validez votre commande.</p></li><li><span>03</span><h3>Accompagnez la progression</h3><p>Après paiement, cliquez sur « Envoyer les accès e-learning aux stagiaires ». Le suivi devient disponible à l’ouverture des accès.</p></li></ol>
  </div></section>
- <section class="el-section el-faq" aria-labelledby="el-faq-title"><div class="el-shell el-split"><div><p class="el-kicker">LES QUESTIONS UTILES</p><h2 id="el-faq-title">Tout pour<br>bien commencer.</h2><p class="el-muted">Un besoin particulier pour votre organisme ? Notre équipe vous accompagne.</p><a class="el-link" href="mailto:clement@integraleacademy.com?subject=Parcours%20e-learning">Parlons de votre projet →</a></div><div class="el-faq-list"><details><summary>Puis-je découvrir les contenus avant de commander ?</summary><p>Oui. Les démonstrations APS et MAC APS sont accessibles sans inscription. La page VTC présente également des illustrations et des aperçus du parcours.</p></details><details><summary>Comment les stagiaires accèdent-ils aux cours ?</summary><p>Chaque stagiaire dispose d’un accès personnel. Après paiement intégral, le centre déclenche l’envoi des liens personnels depuis son espace organisme. Un navigateur récent et une connexion Internet sont nécessaires.</p></details><details><summary>Le parcours remplace-t-il toute la formation ?</summary><p>Il s’agit d’un accès à des contenus pédagogiques numériques. L’organisme organise l’accompagnement et les autres séquences de formation. L’achat ne vaut ni inscription à un examen, ni certification, ni autorisation d’exercer.</p></details><details><summary>Puis-je commander pour un groupe ?</summary><p>Oui. Vous pouvez préparer des accès individuels ou en groupe depuis l’espace organisme. Les prix et modalités applicables sont présentés avant la confirmation de votre commande.</p></details><details id="duree-acces"><summary>Combien de temps les accès restent-ils ouverts ?</summary><p>Les heures affichées décrivent le volume pédagogique du parcours, pas sa période de disponibilité. La période d’accès et sa date de fin sont à convenir avec notre équipe avant la commande. Indiquez les dates de votre session pour faire confirmer les modalités adaptées à votre groupe.</p></details></div></div></section>
+ <div class="el-shell">
+  {% call faq_panel("faq", "el-faq-title", "FAQ E-LEARNING", "Tout pour bien commencer.", "Un besoin particulier pour votre organisme ? Notre équipe vous accompagne.", "orange") %}
+  {% call faq_item(1, "Puis-je découvrir les contenus avant de commander ?") %}
+  <p>Oui. Les démonstrations APS et MAC APS sont accessibles sans inscription. La page VTC présente également des illustrations et des aperçus du parcours.</p>
+  {% endcall %}
+  {% call faq_item(2, "Comment les stagiaires accèdent-ils aux cours ?") %}
+  <p>Chaque stagiaire dispose d’un accès personnel. Après paiement intégral, le centre déclenche l’envoi des liens personnels depuis son espace organisme. Un navigateur récent et une connexion Internet sont nécessaires.</p>
+  {% endcall %}
+  {% call faq_item(3, "Le parcours remplace-t-il toute la formation ?") %}
+  <p>Il s’agit d’un accès à des contenus pédagogiques numériques. L’organisme organise l’accompagnement et les autres séquences de formation. L’achat ne vaut ni inscription à un examen, ni certification, ni autorisation d’exercer.</p>
+  {% endcall %}
+  {% call faq_item(4, "Puis-je commander pour un groupe ?") %}
+  <p>Oui. Vous pouvez préparer des accès individuels ou en groupe depuis l’espace organisme. Les prix et modalités applicables sont présentés avant la confirmation de votre commande.</p>
+  {% endcall %}
+  {% call faq_item(5, "Combien de temps les accès restent-ils ouverts ?", id="duree-acces") %}
+  <p>Les heures affichées décrivent le volume pédagogique du parcours, pas sa période de disponibilité. La période d’accès et sa date de fin sont à convenir avec notre équipe avant la commande. Indiquez les dates de votre session pour faire confirmer les modalités adaptées à votre groupe.</p>
+  {% endcall %}
+  {% endcall %}
+  </div>
  <div class="el-shell"><section class="el-final"><div><p class="el-kicker">DÉCOUVREZ CE QUE VOS STAGIAIRES VONT VIVRE</p><h2>Le meilleur aperçu ?<br>Essayer le parcours.</h2></div><a class="el-button" href="{{ url_for('manuals_shop.elearning_demo') }}">Ouvrir la démonstration APS ↗</a></section></div>
  <dialog class="cs-lightbox" aria-label="Aperçu agrandi du suivi"><form method="dialog"><button type="submit" aria-label="Fermer l’aperçu">Fermer ×</button></form><img alt=""><p></p></dialog>
 </div>

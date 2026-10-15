@@ -1,3 +1,4 @@
+{% from 'manuals/_faq_macros.html' import faq_panel, faq_item with context %}
 {% set lowest_price = books|map(attribute='usb_price')|min %}
 <div class="sf-shell">
   <nav class="sf-breadcrumb" aria-label="Fil d’Ariane"><a href="{{ url_for('home') }}">Accueil</a><span aria-hidden="true">/</span><span aria-current="page">Supports formateurs</span></nav>
@@ -66,17 +67,30 @@
   <div><p class="sf-kicker">LE BON DUO POUR VOS SESSIONS</p><h2 id="sf-pairing-title">Le PowerPoint pour expliquer.<br>Le manuel pour retrouver.</h2><p class="sf-muted">Côté formateur, un support à projeter. Côté stagiaire, un livre pour suivre le cours, prendre ses repères et réviser après la séance.</p><p class="sf-muted">Complétez vos supports avec les manuels de la collection, dont la couverture est personnalisée avec le logo de votre organisme.</p><a class="sf-link" href="{{ url_for('manuals_shop.public_presentation') }}">Découvrir les manuels et leurs extraits →</a><p class="sf-note">Les manuels sont proposés séparément, dès 50 exemplaires par titre.</p></div>
 </div></section>
 
-<section class="sf-section sf-faq" aria-labelledby="sf-faq-title"><div class="sf-shell sf-split">
-  <div><p class="sf-kicker">LES RÉPONSES UTILES</p><h2 id="sf-faq-title">Avant votre<br>première séance.</h2><p class="sf-muted">Une question sur une référence ou votre équipement ? Nous vous aidons à préparer votre commande.</p><a class="sf-link" href="mailto:clement@integraleacademy.com?subject=Question%20supports%20formateurs">Échanger avec notre équipe →</a></div>
-  <div class="sf-faq-list">
-    <details><summary>Que comprend le prix du support ?</summary><p>Le PowerPoint de la formation choisie, fourni sur clé USB, et la livraison. Les tarifs sont de 99 € ou 199 € TTC selon la référence. Les manuels stagiaires sont vendus séparément.</p></details>
-    <details><summary>Quel matériel faut-il prévoir ?</summary><p>Un ordinateur équipé de PowerPoint ou d’un lecteur compatible, ainsi qu’un port USB. Pour une séance collective, prévoyez également un écran ou un vidéoprojecteur. La compatibilité avec un autre logiciel dépend des fonctions utilisées : contactez-nous en cas de doute.</p></details>
-    <details><summary>Puis-je voir des diapositives avant de commander ?</summary><p>Oui. Chaque formation dispose de trois aperçus sur cette page et sur sa fiche. Les extraits APS et SSIAP 1 proviennent des PowerPoint. Les autres aperçus sont des diapositives de présentation créées à partir des manuels : la mise en page du support livré peut différer.</p><a class="sf-link" href="#apercus">Voir les aperçus →</a></details>
-    <details><summary>Quand recevrai-je ma clé USB ?</summary><p>Comptez environ 1 semaine après paiement pour recevoir votre clé USB. La livraison est incluse dans le prix. Pour une date impérative, contactez-nous avant de commander.</p></details>
-    <details><summary>Y a-t-il un abonnement ou des mises à jour automatiques ?</summary><p>Il s’agit d’un achat unique portant sur la version livrée. Aucun abonnement ni service de mise à jour automatique n’est facturé.</p></details>
-    <details><summary>Puis-je diffuser ou adapter les fichiers ?</summary><p>La licence couvre l’usage pédagogique par votre organisme. La revente et la diffusion publique des fichiers ne sont pas autorisées. Une adaptation ou une utilisation sur une plateforme tierce doit être convenue avec notre équipe.</p></details>
-    <details><summary>Comment commander plusieurs références ?</summary><p>Depuis la fiche d’un support, cliquez sur « Commander ce support ». Connectez-vous à votre espace organisme, sélectionnez vos références et vos quantités, puis préparez votre commande.</p></details>
+<div class="sf-shell">
+  {% call faq_panel("faq", "sf-faq-title", "FAQ SUPPORTS FORMATEURS", "Avant votre première séance.", "Une question sur une référence ou votre équipement ? Nous vous aidons à préparer votre commande.", "orange") %}
+  {% call faq_item(1, "Que comprend le prix du support ?") %}
+  <p>Le PowerPoint de la formation choisie, fourni sur clé USB, et la livraison. Les tarifs sont de 99 € ou 199 € TTC selon la référence. Les manuels stagiaires sont vendus séparément.</p>
+  {% endcall %}
+  {% call faq_item(2, "Quel matériel faut-il prévoir ?") %}
+  <p>Un ordinateur équipé de PowerPoint ou d’un lecteur compatible, ainsi qu’un port USB. Pour une séance collective, prévoyez également un écran ou un vidéoprojecteur. La compatibilité avec un autre logiciel dépend des fonctions utilisées : contactez-nous en cas de doute.</p>
+  {% endcall %}
+  {% call faq_item(3, "Puis-je voir des diapositives avant de commander ?") %}
+  <p>Oui. Chaque formation dispose de trois aperçus sur cette page et sur sa fiche. Les extraits APS et SSIAP 1 proviennent des PowerPoint. Les autres aperçus sont des diapositives de présentation créées à partir des manuels : la mise en page du support livré peut différer.</p><a class="sf-link" href="#apercus">Voir les aperçus →</a>
+  {% endcall %}
+  {% call faq_item(4, "Quand recevrai-je ma clé USB ?") %}
+  <p>Comptez environ 1 semaine après paiement pour recevoir votre clé USB. La livraison est incluse dans le prix. Pour une date impérative, contactez-nous avant de commander.</p>
+  {% endcall %}
+  {% call faq_item(5, "Y a-t-il un abonnement ou des mises à jour automatiques ?") %}
+  <p>Il s’agit d’un achat unique portant sur la version livrée. Aucun abonnement ni service de mise à jour automatique n’est facturé.</p>
+  {% endcall %}
+  {% call faq_item(6, "Puis-je diffuser ou adapter les fichiers ?") %}
+  <p>La licence couvre l’usage pédagogique par votre organisme. La revente et la diffusion publique des fichiers ne sont pas autorisées. Une adaptation ou une utilisation sur une plateforme tierce doit être convenue avec notre équipe.</p>
+  {% endcall %}
+  {% call faq_item(7, "Comment commander plusieurs références ?") %}
+  <p>Depuis la fiche d’un support, cliquez sur « Commander ce support ». Connectez-vous à votre espace organisme, sélectionnez vos références et vos quantités, puis préparez votre commande.</p>
+  {% endcall %}
+  {% endcall %}
   </div>
-</div></section>
 
 <div class="sf-shell sf-final"><div><p class="sf-kicker">VOTRE PROCHAINE SESSION SE PRÉPARE ICI</p><h2>Donnez un support<br>à votre savoir-faire.</h2></div><a class="sf-button" href="#collection">Trouver mon support <span aria-hidden="true">↑</span></a></div>

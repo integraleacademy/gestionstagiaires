@@ -1,11 +1,48 @@
-/* APS FAQ: the same numbered card layout as the Academy formation page. */
+/* Shared FAQ cards, with a palette matching each public page. */
 .cs-faq-panel {
+  --faq-accent: #216098;
+  --faq-bright: #2197d1;
+  --faq-dark: #174b78;
+  --faq-tint: #edf5ff;
+  --faq-end: #e1edfa;
+  --faq-line: #d4e3f1;
+  --faq-hover: #8db5d8;
+  --faq-ink: #17334b;
+  color: var(--faq-ink);
   margin-top: 70px;
   padding: 42px 32px;
-  border: 1px solid #dfebf5;
+  border: 1px solid var(--faq-line);
   border-radius: 28px;
-  background: linear-gradient(135deg, #edf5ff 0%, #fff 48%, #e1edfa 100%);
+  background: linear-gradient(135deg, var(--faq-tint) 0%, #fff 48%, var(--faq-end) 100%);
   scroll-margin-top: 24px;
+}
+.cs-faq-panel, .cs-faq-panel * { box-sizing: border-box; }
+.cs-faq-theme-orange {
+  --faq-accent: #b54b25;
+  --faq-bright: #d78042;
+  --faq-dark: #8d381c;
+  --faq-tint: #fff5ec;
+  --faq-end: #f8e8d8;
+  --faq-line: #eadbcc;
+  --faq-hover: #d6a17b;
+}
+.cs-faq-theme-teal {
+  --faq-accent: #176773;
+  --faq-bright: #249b9a;
+  --faq-dark: #12515b;
+  --faq-tint: #edf8f5;
+  --faq-end: #dceee8;
+  --faq-line: #cde3de;
+  --faq-hover: #83b7ae;
+}
+.cs-faq-theme-violet {
+  --faq-accent: #70489b;
+  --faq-bright: #a77bce;
+  --faq-dark: #573779;
+  --faq-tint: #f5effb;
+  --faq-end: #ebe0f6;
+  --faq-line: #e1d4ee;
+  --faq-hover: #b295cd;
 }
 
 .cs-faq-layout {
@@ -20,17 +57,17 @@
   display: inline-flex;
   margin: 0 0 18px;
   padding: 8px 13px;
-  border: 1px solid #d4e3f1;
+  border: 1px solid var(--faq-line);
   border-radius: 100px;
   background: #ffffffd9;
-  color: var(--cs-accent);
+  color: var(--faq-accent);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 1.6px;
   line-height: 1.5;
 }
 
-.cs-faq-intro h2 {
+.cs-faq-panel .cs-faq-intro h2 {
   margin: 0 0 16px;
   font-size: clamp(28px, 2.6vw, 36px);
   font-weight: 800;
@@ -48,7 +85,7 @@
 .cs-faq-contact {
   margin-top: 24px;
   padding: 20px;
-  border: 1px solid #d4e3f1;
+  border: 1px solid var(--faq-line);
   border-radius: 22px;
   background: #ffffffeb;
   box-shadow: 0 14px 36px #17334b0c;
@@ -62,8 +99,8 @@
   width: 34px;
   height: 34px;
   border-radius: 12px;
-  background: #edf5ff;
-  color: var(--cs-accent);
+  background: var(--faq-tint);
+  color: var(--faq-accent);
 }
 .cs-faq-contact-icon svg { width: 20px; height: 20px; }
 .cs-faq-contact h3 { margin: 0 0 7px; font-size: 16px; line-height: 1.4; }
@@ -84,23 +121,23 @@
   text-align: center;
   text-decoration: none;
 }
-.cs-faq-contact-actions .cs-faq-contact-primary { background: var(--cs-accent); color: #fff; }
-.cs-faq-contact-actions .cs-faq-contact-primary:hover { background: #174b78; color: #fff; }
-.cs-faq-contact-actions .cs-faq-contact-secondary { background: #fff; color: var(--cs-ink); border-color: #d4e3f1; }
-.cs-faq-contact-actions .cs-faq-contact-secondary:hover { background: #edf5ff; }
+.cs-faq-contact-actions .cs-faq-contact-primary { background: var(--faq-accent); color: #fff; }
+.cs-faq-contact-actions .cs-faq-contact-primary:hover { background: var(--faq-dark); color: #fff; }
+.cs-faq-contact-actions .cs-faq-contact-secondary { background: #fff; color: var(--faq-ink); border-color: var(--faq-line); }
+.cs-faq-contact-actions .cs-faq-contact-secondary:hover { background: var(--faq-tint); }
 
 .cs-faq-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
 .cs-faq-card {
   min-width: 0;
   overflow: hidden;
-  border: 1px solid #d4e3f1;
+  border: 1px solid var(--faq-line);
   border-radius: 20px;
   background: #fffffff0;
   box-shadow: 0 10px 28px #17334b0b;
   transition: border-color .2s, box-shadow .2s, transform .2s;
 }
-.cs-faq-card:hover { border-color: #8db5d8; box-shadow: 0 14px 34px #17334b14; transform: translateY(-2px); }
-.cs-faq-card[open] { grid-column: 1 / -1; border-color: var(--cs-accent); box-shadow: 0 16px 38px #17334b16; }
+.cs-faq-card:hover { border-color: var(--faq-hover); box-shadow: 0 14px 34px #17334b14; transform: translateY(-2px); }
+.cs-faq-card[open] { grid-column: 1 / -1; border-color: var(--faq-accent); box-shadow: 0 16px 38px #17334b16; }
 .cs-faq-card summary {
   position: relative;
   display: grid;
@@ -109,7 +146,7 @@
   gap: 10px;
   min-height: 112px;
   padding: 18px 17px;
-  color: var(--cs-ink);
+  color: var(--faq-ink);
   font-size: 14px;
   font-weight: 750;
   line-height: 1.6;
@@ -118,26 +155,31 @@
 }
 .cs-faq-card summary::-webkit-details-marker { display: none; }
 .cs-faq-card summary::marker { content: ""; }
-.cs-faq-card summary:focus-visible { outline-offset: -5px; border-radius: 18px; }
+.cs-faq-panel a:focus-visible { outline: 3px solid var(--faq-accent); outline-offset: 4px; }
+.cs-faq-card summary:focus-visible { outline: 3px solid var(--faq-accent); outline-offset: -5px; border-radius: 18px; }
 .cs-faq-card[open] summary { min-height: 78px; }
-.cs-faq-card[open] summary::before { content: ""; position: absolute; top: 18px; bottom: 18px; left: 0; width: 3px; border-radius: 0 3px 3px 0; background: var(--cs-accent); }
-.cs-faq-number { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #edf5ff; color: var(--cs-accent); font-size: 10px; font-weight: 800; }
-.cs-faq-toggle { position: relative; width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--cs-accent), #2197d1); box-shadow: 0 7px 18px #21609826; }
+.cs-faq-card[open] summary::before { content: ""; position: absolute; top: 18px; bottom: 18px; left: 0; width: 3px; border-radius: 0 3px 3px 0; background: var(--faq-accent); }
+.cs-faq-number { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--faq-tint); color: var(--faq-accent); font-size: 10px; font-weight: 800; }
+.cs-faq-toggle { position: relative; width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--faq-accent), var(--faq-bright)); box-shadow: 0 7px 18px #17334b20; }
 .cs-faq-toggle::before, .cs-faq-toggle::after { content: ""; position: absolute; top: 15px; left: 11px; width: 10px; height: 2px; border-radius: 1px; background: #fff; }
 .cs-faq-toggle::after { transform: rotate(90deg); transition: transform .2s, opacity .2s; }
 .cs-faq-card[open] .cs-faq-toggle::after { transform: rotate(0); opacity: 0; }
 .cs-faq-answer { margin: 0 20px; padding: 16px 0 20px; border-top: 1px solid #e0e8ef; }
-.cs-faq-answer p { margin: 0; color: #52677b; font-size: 15px; line-height: 1.85; }
+.cs-faq-panel .cs-faq-answer p { margin: 0; color: #52677b; font-size: 15px; line-height: 1.85; }
+
+.cs-faq-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.cs-faq-panel .cs-faq-answer a { display: inline-block; margin-top: 12px; color: var(--faq-accent); font-size: 13px; font-weight: 700; text-underline-offset: 4px; }
+.cs-faq-panel .cs-faq-answer p + p { margin-top: 12px; }
 
 @media (max-width: 1000px) {
   .cs-faq-layout { grid-template-columns: 1fr; gap: 26px; }
-  .cs-faq-intro h2 { max-width: 620px; }
+  .cs-faq-panel .cs-faq-intro h2 { max-width: 620px; }
   .cs-faq-card summary { min-height: 90px; font-size: 15px; }
 }
 
 @media (max-width: 600px) {
   .cs-faq-panel { margin-top: 40px; padding: 26px 18px; border-radius: 22px; }
-  .cs-faq-intro h2 { font-size: 29px; }
+  .cs-faq-panel .cs-faq-intro h2 { font-size: 29px; }
   .cs-faq-description { font-size: 14px; }
   .cs-faq-contact { padding: 17px; border-radius: 18px; }
   .cs-faq-contact-heading { gap: 10px; }
@@ -149,7 +191,7 @@
   .cs-faq-toggle { width: 30px; height: 30px; }
   .cs-faq-toggle::before, .cs-faq-toggle::after { top: 14px; left: 10px; }
   .cs-faq-answer { margin: 0 16px; }
-  .cs-faq-answer p { font-size: 14px; }
+  .cs-faq-panel .cs-faq-answer p { font-size: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
