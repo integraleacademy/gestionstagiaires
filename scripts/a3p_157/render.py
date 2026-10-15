@@ -127,7 +127,7 @@ def encode(row, scenes, voices):
         real_audio=duration(audio); audio_seconds+=real_audio
         seconds=max(real_audio+.25,cues[-1]['end']+.1)
         part=folder/f'{index}.mp4'
-        filt=f"subtitles={srt}:fontsdir={FONT.parent}:force_style='FontName=Manrope,FontSize=16,Outline=0,Shadow=0,MarginV=14,Alignment=2',format=yuv420p"
+        filt=f"subtitles={srt}:fontsdir={FONT.parent}:force_style='FontName=Manrope,FontSize=13,Outline=0,Shadow=0,MarginV=14,Alignment=2',format=yuv420p"
         run(['ffmpeg','-nostdin','-v','error','-y','-loop','1','-framerate','6','-i',str(png),'-i',str(audio),'-t',str(seconds),'-vf',filt,
              '-c:v','libx264','-preset','veryfast','-crf','30','-tune','stillimage','-threads','2',
              '-c:a','aac','-b:a','56k','-ar','48000','-af','apad',str(part)])
