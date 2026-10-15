@@ -1,4 +1,4 @@
-name: A3P 157h30 - verifier le parcours complet
+name: A3P 157h30 - verifier les medias et le lecteur complet
 on:
   push:
     branches: [codex/a3p-157h30-20261015]
