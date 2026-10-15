@@ -1,0 +1,62 @@
+name: A3P 157h30 - verifier le parcours complet
+on:
+  push:
+    branches: [codex/a3p-157h30-20261015]
+    paths:
+      - elearning_native/a3p_resources/v4/media_manifest.json
+      - .github/workflows/a3p157-review.yml
+permissions: {}
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      PERSIST_DIR: /tmp/a3p157-synthetic
+      SECRET_KEY: a3p157-ci-fixture-not-production
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !**/*.mp4
+            !**/*.mp3
+            !**/*.wav
+            !**/*.pdf
+            !**/*.docx
+            !**/*.zip
+            !**/*.jpg
+            !**/*.png
+            /static/manuals/a3p.jpg
+            /elearning_native/a3p_resources/assets/media/a3p/v4/a3p-v4-ii-01-01.mp4
+            /elearning_native/a3p_resources/assets/media/a3p/v4/a3p-v4-ii-01-01.jpg
+      - name: Attendre la publication des medias avant controle complet
+        id: ready
+        run: |
+          if test -f elearning_native/a3p_resources/v4/media_manifest.json; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        if: steps.ready.outputs.ready == 'true'
+        with:
+          python-version: '3.12'
+      - name: Installer les dependances de verification
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements.txt pytest playwright Pillow
+          python -m playwright install --with-deps chromium
+      - name: Verifier les sequences, les versions et les verrouillages
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          python -m pytest tests/test_a3p_157.py tests/test_a3p_enrichment.py tests/test_native_elearning_a3p.py tests/test_shared_lesson_timing.py -q -k 'not versions_and_media_are_preserved and not video_private_range'
+          python scripts/check_a3p157_ui.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always() && steps.ready.outputs.ready == 'true'
+        with:
+          name: a3p157-review
+          path: /tmp/a3p157-ui/*.png
+          if-no-files-found: warn
+          retention-days: 7

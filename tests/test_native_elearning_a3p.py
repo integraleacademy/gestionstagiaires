@@ -8,7 +8,7 @@ import re
 import unittest
 from collections import Counter
 from unittest.mock import patch
-from elearning_native import a3p
+from elearning_native import a3p_v3 as a3p  # immutable v3 regression coverage
 from elearning_native.exams import load_exam, public_exam, grade_exam
 from elearning_native.importer import CourseCatalog, CourseImportError
 from elearning_native.paths import project_course, validate_modules, path_revision, course_outline, project_progress
@@ -118,7 +118,7 @@ class A3PWebTests(unittest.TestCase):
         with patch('elearning_native.web.NativeElearningStore',side_effect=AssertionError('preview wrote tracking')):
             page=self.client.get('/admin/elearning/a3p')
             self.assertEqual(page.status_code,200)
-            for text in ('245','95','157 h 30','Répondre au QCM'):self.assertIn(text,page.text)
+            for text in ('160','168','157 h 30','Répondre au QCM'):self.assertIn(text,page.text)
             for text in ('ADEF','suspendue','certificateur'):self.assertNotIn(text,page.text)
             for cid in a3p.curriculum_ids():
                 c=a3p.load_bundled_course(cid)

@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from elearning_native import a3p
+from elearning_native import a3p_v3 as a3p  # immutable v3 regression coverage
 from elearning_native.content_audit import audit_course
 from elearning_native.paths import project_course
 from elearning_native.practice import grade_practice, public_practice
@@ -146,13 +146,13 @@ def test_old_assigned_version_retains_its_resource_route(case):
     assert 'nativeElearningConfig' not in response.text
 
 
-def test_catalog_and_audit_disclose_remaining_gap(case):
+def test_current_catalog_and_audit_disclose_planned_and_measured_time(case):
     case._admin_login()
     catalog = case.client.get('/admin/elearning/a3p')
     assert catalog.status_code == 200
-    assert '40 h 29' in catalog.text
-    assert 'durée globale à compléter et à mesurer' in catalog.text
+    assert '157 h 30' in catalog.text
+    assert '160 séquences' in catalog.text and 'temps réellement suivi' in catalog.text
     response = case.client.get('/admin/elearning/calibrage/contenus')
     assert response.status_code == 200
-    assert 'Écart de contenu estimé' in response.text
+    assert 'sans essai apprenant' in response.text
     assert 'minutes' in response.text

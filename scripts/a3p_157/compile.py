@@ -120,6 +120,7 @@ def signature(row, scenes):
 if __name__ == '__main__':
     rows = all_cards()
     validate_complete(rows)
+    RES.joinpath('v4').mkdir(parents=True, exist_ok=True)
     RES.joinpath('v4/programme.json').write_text(json.dumps(rows, ensure_ascii=False, indent=2) + '\n')
     scripts = [{**r, 'scenes': narration(r)} for r in rows]
     RES.joinpath('v4/video_scripts.json').write_text(json.dumps(scripts, ensure_ascii=False, indent=2) + '\n')

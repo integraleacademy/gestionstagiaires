@@ -14,7 +14,7 @@
     {% for exercise in activity.practice.exercises %}
     <fieldset class="aps-exercise" data-exercise-id="{{ exercise.id }}" data-kind="{{ exercise.kind }}"{% if guided and not loop.first %} hidden{% endif %}>
       <legend tabindex="-1"><span class="aps-exercise-number">{{ '%02d'|format(loop.index) }}</span>{{ exercise.stage if guided else exercise.prompt }}</legend>
-      {% if activity.practice.dossier %}<a class="aps-evidence-back" href="#apsDossierDocuments">Revoir les trois pièces du dossier ↑</a>{% endif %}
+      {% if activity.practice.dossier %}<a class="aps-evidence-back" href="#apsDossierDocuments">Revoir les pièces du dossier ↑</a>{% endif %}
       {% if guided %}{% if exercise.context %}<div class="aps-guided-context">{% if lesson.image and loop.first %}<img src="{{ lesson.image }}" alt="Illustration du contexte professionnel" loading="eager">{% endif %}<div><b>{{ 'Un nouvel événement' if exercise.stage == 'La suite de l’histoire' else 'La situation' }}</b>{% for paragraph in exercise.context.split('\n\n') %}<p>{{ paragraph }}</p>{% endfor %}</div></div>{% endif %}<h3 class="aps-guided-question">{{ exercise.prompt }}</h3>{% elif exercise.context %}<p class="aps-stage-context">{{ exercise.context }}</p>{% endif %}
       {% if exercise.kind == 'single' %}
       <p class="aps-exercise-instruction">Sélectionnez une réponse.</p>

@@ -4,6 +4,7 @@
   <div data-aps-lesson-page>
   <div class="a3p-objective"><span class="a3p-eyebrow">Objectif · Leçon {{ activity.a3p.ref }}</span><p>{{ activity.a3p.objective }}</p></div>
   {% if activity.a3p.delivery == 'presentiel' %}<p class="a3p-practice-note">Cette lecture prépare la compréhension. Les gestes, déplacements, matériels et mises en situation se travaillent avec un formateur ; ils ne sont pas validés à l’écran.</p>{% endif %}
+  {% if activity.a3p.pacing %}<section class="a3p-objective"><span class="a3p-eyebrow">Votre séquence</span><ul>{% for step in activity.a3p.pacing %}<li>{{ step.label }} · {{ step.minutes }} min</li>{% endfor %}</ul><p>{{ activity.a3p.pacing_note }}</p></section>{% endif %}
   <nav class="a3p-page-index" aria-label="Parties de la leçon">{% for page in activity.a3p.pages %}<a href="#a3p-page-{{ page.page }}">{{ loop.index }} · {{ (page.components|selectattr('kind', 'equalto', 'heading')|map(attribute='text')|list|first)|default('Repères du cours') }}</a>{% endfor %}</nav>
   </div>
   {% for page in activity.a3p.pages %}
@@ -35,7 +36,7 @@
   <section class="a3p-objective"><span class="a3p-eyebrow">L’objectif à savoir expliquer</span><p>{{ activity.a3p.objective }}</p></section>
   {% if activity.a3p.regulatory_objectives %}<details class="a3p-case-feedback"><summary>Correspondance avec l’arrêté</summary><ul>{% for objective in activity.a3p.regulatory_objectives %}<li>{{ objective }}</li>{% endfor %}</ul></details>{% endif %}
 {% elif activity.a3p.kind == 'video' %}
-  <p>Une synthèse avec Henri pour revoir les thèmes du module. Les sous-titres sont intégrés à l’image. Cette ressource complémentaire ne remplace pas les cours, les questionnaires et les séances présentielles.</p>
+  {% if activity.a3p.delivery == 'distance' %}<h2>{{ activity.title }}</h2><p>Un cas professionnel expliqué avec Henri. Regardez la capsule, étudiez les repères du cours puis résolvez le dossier évolutif. Les sous-titres sont intégrés à l’image.</p>{% else %}<p>Une synthèse avec Henri pour revoir les thèmes du module. Les sous-titres sont intégrés à l’image. Cette ressource complémentaire ne remplace pas les cours, les questionnaires et les séances présentielles.</p>{% endif %}
 {% elif activity.a3p.kind == 'case' %}
   {% set case = activity.a3p.case %}
   <ol class="a3p-flow" aria-label="Démarche de raisonnement">{% for step in activity.a3p.flow %}<li><b>{{ loop.index }}</b><span>{{ step }}</span></li>{% endfor %}</ol>

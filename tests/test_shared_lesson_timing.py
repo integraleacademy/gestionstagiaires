@@ -17,7 +17,7 @@ from tests import test_native_elearning_web as web_tests
 
 def test_all_lessons_have_stable_server_plans_without_mutating_courses():
     fixtures = reader_fixtures()
-    assert len(fixtures) == 28 + 95 + 96
+    assert len(fixtures) == 28 + 198 + 96
     for row in fixtures:
         assert len(row['plan']) >= 2, row['id']
         assert len({p['id'] for p in row['plan']}) == len(row['plan']), row['id']
@@ -66,7 +66,7 @@ def case():
     (mac_aps, 'academy-macaps-02', 'MAC APS'), (a3p, 'academy-a3p-02', 'A3P'),
     (vtc, 'academy-vtc-a', 'VTC')])
 def test_real_learners_cannot_skip_reading_or_validate_early_and_can_resume(case, provider, course_id, training):
-    course = provider.load_bundled_course(course_id)
+    course = provider.load_bundled_course(course_id, a3p.enriched.VERSION) if training == 'A3P' else provider.load_bundled_course(course_id)
     case.data['sessions'][0].update(training_type=training, aps_native_modules=[{
         'course_id': course['id'], 'course_version': course['version'], 'required_minutes': course['required_minutes']}])
     case._public_login()

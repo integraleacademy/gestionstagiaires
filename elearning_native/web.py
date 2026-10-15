@@ -1056,6 +1056,11 @@ def create_native_elearning_blueprint(
                 elif exam['id'].startswith('a3p-') and re.fullmatch(r'0[2-9]\.\d{2}', ref):
                     cid = 'academy-a3p-' + ref[:2]
                     activity = 'a3p-' + ref.replace('.', '-') + '-cours'
+                    if exam['version'] == a3p.VERSION:
+                        related = next((row for row in a3p.current.programme() if row['ref'] == ref), None)
+                        if related:
+                            cid = 'academy-a3p-' + related['uv']
+                            activity = related['id'] + '-cours'
                 elif re.fullmatch(r'[A-H]\.\d{2}', ref):
                     cid = 'academy-vtc-' + ref[0].lower()
                     activity = 'vtc-' + ref.lower().replace('.', '-') + '-cours'
@@ -2094,7 +2099,7 @@ def create_native_elearning_blueprint(
 
     def a3p_resource_context(token: str, course_id: str):
         session_obj, trainee, assigned = learner_context(token, course_id)
-        if assigned.get("training_label") != "A3P" or assigned["version"] not in (a3p.previous.VERSION, a3p.VERSION):
+        if assigned.get("training_label") != "A3P" or assigned["version"] not in a3p.SUPPORTED_VERSIONS[1:]:
             abort(404)
         course = catalog().load_course(course_id, assigned["version"])
         sections = [section for section in course["sections"] if section.get("delivery") != "distance"]
