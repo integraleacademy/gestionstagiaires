@@ -353,7 +353,8 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import mm
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, Image, PageBreak, LongTable
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak, LongTable, HRFlowable, CondPageBreak
+    from elearning_pdf_components import CompletionBadge, TimeProgress, module_duration, report_duration
 
     output = io.BytesIO()
     centre_name = str(partner.get("name") or partner.get("centre") or "Organisme de formation").strip()
@@ -366,28 +367,25 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
                             author=centre_name)
     styles = {name: ParagraphStyle(name, fontName=font, fontSize=size, leading=leading,
               textColor=colors.HexColor(color), spaceAfter=after, alignment=TA_LEFT) for name, font, size, leading, color, after in (
-        ("brand", "Helvetica-Bold", 12, 15, "#2265a8", 16),
-        ("title", "Helvetica-Bold", 23, 27, "#172c46", 10),
-        ("heading", "Helvetica-Bold", 12, 16, "#172c46", 8),
-        ("body", "Helvetica", 10, 15, "#263d55", 8),
-        ("small", "Helvetica", 8, 11, "#526579", 4),
-        ("cell", "Helvetica", 8, 11, "#263d55", 0),
-        ("th", "Helvetica-Bold", 8, 11, "#ffffff", 0))}
-    if is_mac_aps:
-        styles["body"].fontSize, styles["body"].leading, styles["body"].spaceAfter = 9, 13, 5
-        styles["brand"].spaceAfter = 9
-        styles["title"].fontSize, styles["title"].leading = 21, 25
-        # Embed a Unicode font for the French labels and objective titles.
-        # Historical APS/VTC document typography is left to its own template.
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-        font_root = Path("/usr/share/fonts/truetype/dejavu")
-        if (font_root / "DejaVuSans.ttf").is_file() and (font_root / "DejaVuSans-Bold.ttf").is_file():
-            if "MACReport" not in pdfmetrics.getRegisteredFontNames():
-                pdfmetrics.registerFont(TTFont("MACReport", str(font_root / "DejaVuSans.ttf")))
-                pdfmetrics.registerFont(TTFont("MACReportBold", str(font_root / "DejaVuSans-Bold.ttf")))
-            for style in styles.values():
-                style.fontName = "MACReportBold" if style.fontName == "Helvetica-Bold" else "MACReport"
+        ("brand", "Helvetica-Bold", 10, 13, "#19324b", 3),
+        ("title", "Helvetica-Bold", 22, 26, "#19324b", 5),
+        ("heading", "Helvetica-Bold", 11, 14, "#19324b", 5),
+        ("body", "Helvetica", 8.5, 12, "#263d55", 4),
+        ("small", "Helvetica", 7.2, 10, "#62768b", 2),
+        ("cell", "Helvetica", 7.5, 10, "#263d55", 0),
+        ("th", "Helvetica-Bold", 7, 10, "#ffffff", 0))}
+    # Embed the same readable typeface for every training path and PDF viewer.
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    font_root = Path("/usr/share/fonts/truetype/dejavu")
+    if (font_root / "DejaVuSans.ttf").is_file() and (font_root / "DejaVuSans-Bold.ttf").is_file():
+        if "LearningReport" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("LearningReport", str(font_root / "DejaVuSans.ttf")))
+            pdfmetrics.registerFont(TTFont("LearningReportBold", str(font_root / "DejaVuSans-Bold.ttf")))
+        for style in styles.values():
+            style.fontName = "LearningReportBold" if style.fontName == "Helvetica-Bold" else "LearningReport"
+    regular_font, bold_font = styles["body"].fontName, styles["heading"].fontName
+    styles["title"].keepWithNext = True
     def p(value, style="body"):
         return Paragraph(escape(str(value)).replace("\n", "<br/>"), styles[style])
     issuer = [p(centre_name, "brand")]
@@ -414,13 +412,13 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
                         image_buffer = io.BytesIO()
                         normalized.save(image_buffer, format="PNG")
                         image_buffer.seek(0)
-                        scale = min(48 * mm / width, 22 * mm / height)
+                        scale = min(36 * mm / width, 15 * mm / height)
                         logo = Image(image_buffer, width=width * scale, height=height * scale)
-                        logo.hAlign = "LEFT"
+                        logo.hAlign = "RIGHT"
         except (OSError, ValueError, UnidentifiedImageError, PillowImage.DecompressionBombError):
             logo = None
     if logo is not None:
-        heading = Table([[logo, issuer]], colWidths=[55 * mm, 119 * mm], hAlign="LEFT")
+        heading = Table([[issuer, logo]], colWidths=[136 * mm, 38 * mm], hAlign="LEFT")
         heading.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
                                     ("LEFTPADDING", (0, 0), (-1, -1), 0),
                                     ("RIGHTPADDING", (0, 0), (-1, -1), 0),
@@ -429,74 +427,70 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
         story = [heading]
     else:
         story = issuer
-    story.append(Spacer(1, 7 * mm))
+    story.extend([Spacer(1, 3 * mm), HRFlowable(width="100%", thickness=.6, color=colors.HexColor("#dbe6ef")), Spacer(1, 4 * mm)])
     if specimen:
         story.extend([p("SPECIMEN - DONNÉES FICTIVES", "heading"),
                       p("Exemple de document. Ce spécimen ne prouve aucun suivi de formation et ne constitue pas une attestation délivrée à un stagiaire.", "small")])
     name = f"{person.get('first_name', '')} {person.get('last_name', '')}".strip()
-    identity_lines = [p(f"Stagiaire : {name}"), p(f"Adresse e-mail : {person.get('email', '')}"),
-                      p(f"Organisme de formation : {centre_name}"),
-                      p(f"Formation : {learning.COURSES[order['course_code']]['title']} ({course_label})"),
-                      p(f"Groupe / accès : {order.get('group_name') or 'Accès individuel'}")]
-    if is_mac_aps:
-        identity_lines = [p(f"Stagiaire : {name} · {person.get('email', '')}"),
-                          p(f"Formation : {learning.COURSES[order['course_code']]['title']} ({course_label})"),
-                          p(f"Groupe / accès : {order.get('group_name') or 'Accès individuel'}")]
+    status = (CompletionBadge("Parcours numérique terminé" if is_mac_aps else "Parcours e-learning terminé", font=bold_font, size=9, width=320)
+              if report["complete"] else p("Relevé de suivi partiel - parcours non terminé", "body"))
+    identity_table = Table([[
+        [p("STAGIAIRE", "small"), p(name, "heading"), p(person.get("email", ""), "small")],
+        [p("FORMATION · " + course_label, "small"), p(learning.COURSES[order['course_code']]['title']),
+         p("Groupe / accès : " + (order.get("group_name") or "Accès individuel"), "small")]
+    ]], colWidths=[80 * mm, 94 * mm], hAlign="LEFT")
+    identity_table.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+        ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0)]))
     story.extend([p("Relevé de suivi numérique" if is_mac_aps else "Attestation de suivi", "title"),
-             p("Parcours numérique terminé" if report["complete"] and is_mac_aps else "Parcours e-learning terminé" if report["complete"] else "Relevé de suivi partiel - parcours non terminé", "heading"),
-             *identity_lines, Spacer(1, 4 * mm)])
+                  status, Spacer(1, 3 * mm), identity_table, Spacer(1, 3 * mm)])
     if is_mac_aps:
         versions = report.get("versions") or sorted({m.get("version", "") for m in report["modules"] if m.get("version")})
         story.extend([p("Édition(s) suivie(s) : " + (", ".join(versions) or "Non renseignée"), "small"),
                       p(MAC_APS_NOTICE, "small"), Spacer(1, 3 * mm)])
-    metrics = [[p("TEMPS ACTIF ENREGISTRÉ", "small"), p("MODULES TERMINÉS", "small")],
-               [p(report["active_time_label"], "heading"), p(f"{report['completed_modules']} / {report['total_modules']}", "heading")],
-               [p("DURÉE PRÉVUE DES MODULES" if report.get('final_exam_time') else "DURÉE PRÉVUE DU PARCOURS", "small"),
-                p("ACTIVITÉS OBLIGATOIRES TERMINÉES" if report.get("optional_activity_count") else "ACTIVITÉS TERMINÉES", "small")],
-               [p(report["required_time_label"], "body"), p(f"{report['completed_activities']} / {report['total_activities']}" if report["available"] else "Données partielles", "body")]]
-    box = Table(metrics, colWidths=[87 * mm, 87 * mm])
+    duration = report_duration(report)
+    metrics = [[
+        [p("TEMPS SUIVI / DURÉE PRÉVUE", "small"),
+         TimeProgress(duration, width=96 * mm, font=regular_font, bold=bold_font, large=True)],
+        [p("MODULES TERMINÉS", "small"), p(f"{report['completed_modules']} / {report['total_modules']}", "heading"),
+         p("ACTIVITÉS TERMINÉES", "small"), p(f"{report['completed_activities']} / {report['total_activities']}" if report["available"] else "Données partielles", "heading")]
+    ]]
+    box = Table(metrics, colWidths=[109 * mm, 65 * mm], hAlign="LEFT")
     box.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#edf4fb")),
                             ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 12),
-                            ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]))
-    story.extend([box, Spacer(1, 6 * mm), p(f"Première activité : {report['started_at_label']}"),
-                  p(f"Dernière activité : {report['updated_at_label']}"),
-                  p(("Le temps indiqué est le temps actif comptabilisé par la plateforme. La durée cible n'est pas acquise automatiquement. L'état terminé décrit les conditions pédagogiques de cette édition du parcours numérique."
-                     if is_mac_aps else "Le temps indiqué correspond exclusivement au temps actif comptabilisé par la plateforme. La durée prévue n’est pas une durée automatiquement acquise. Un module est terminé lorsque les activités obligatoires et le temps de suivi requis sont accomplis."), "small"),
-                  Spacer(1, 5 * mm)])
+                            ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 7)]))
+    story.extend([box, Spacer(1, 3 * mm),
+                  p("Temps actif enregistré : " + report["active_time_label"] + " · Durée prévue : " + report["required_time_label"], "small"),
+                  p(f"Première activité : {report['started_at_label']} · Dernière activité : {report['updated_at_label']}", "small"),
+                  p("La barre mesure les durées suivies. Le temps en plus sur un module ne remplace pas celui d'un autre. La coche confirme que les activités et la durée du module sont terminées.", "small"),
+                  Spacer(1, 3 * mm)])
     if report.get('final_exam_time'):
-        story.extend([p("Temps des modules : " + report['module_active_time_label'] +
-                        " · Examen final et corrigé : " + report['final_exam_time']['active_time_label'], 'small'),
-                      p("Le temps de l'examen blanc final est ajouté au total enregistré. Il ne remplace aucune durée obligatoire des modules.", 'small')])
-    headers = ("MODULE / ÉDITION", "ACTIVITÉS", "TEMPS ACTIF", "DURÉE CIBLE", "ÉTAT") if is_mac_aps else ("MODULE / EXAMEN" if report.get('final_exam_time') else "MODULE", "PROGRESSION", "TEMPS ACTIF", "ÉTAT")
+        story.append(p("Examen blanc final et corrigé : " + report['final_exam_time']['active_time_label'] +
+                       " en supplément. Ce temps reste hors de la barre d'avancement des modules.", 'small'))
+    headers = ("MODULE / ÉDITION" if is_mac_aps else "MODULE", "TEMPS SUIVI / " + ("CIBLE" if is_mac_aps else "REQUIS"), "ACTIVITÉS", "ÉTAT")
     table_rows = [[p(value, "th") for value in headers]]
     for module in report["modules"]:
+        activity_label = (f"{module['completed_activities']} / {module['total_activities']}"
+                          if "completed_activities" in module and "total_activities" in module
+                          else f"{module.get('progress_percent', 0):g} %")
+        completed_module = bool(module.get("available") and module.get("module_complete") and module.get("status") == "passed")
+        state = (CompletionBadge(font=bold_font, width=26 * mm) if completed_module else
+                 p("Activités à terminer" if module.get("status") == "in_progress" and module_duration(module)["fraction"] == 1 else
+                   "Temps à compléter" if module.get("status") == "awaiting_time" else module["status_label"], "cell"))
         row = [p(module["title"] + ("\n" + (module.get("version") or "Édition inconnue") if is_mac_aps else ""), "cell"),
-               p(f"{module['progress_percent']:g} %" if module["available"] else "Indisponible", "cell"),
-               p(module.get("active_time_label", "Indisponible"), "cell")]
-        if is_mac_aps:
-            row.append(p(module.get("required_time_label", "Non renseignée"), "cell"))
-        row.append(p(module["status_label"], "cell"))
+               TimeProgress(module_duration(module), width=51 * mm, font=regular_font, bold=bold_font),
+               p(activity_label if module["available"] else "Indisponible", "cell"), state]
         table_rows.append(row)
-    if report.get('final_exam_time'):
-        table_rows.append([p(report['final_exam_time']['title'], 'cell'), p('Sans objet', 'cell'),
-                           p(report['final_exam_time']['active_time_label'], 'cell'), p('Temps additionnel enregistré', 'cell')])
-    widths = [56, 23, 33, 33, 29] if is_mac_aps else [67, 31, 36, 40]
-    table = Table(table_rows, colWidths=[w * mm for w in widths], repeatRows=1, hAlign="LEFT")
+    table = LongTable(table_rows, colWidths=[w * mm for w in [64, 55, 24, 31]], repeatRows=1, hAlign="LEFT")
     table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#173858")),
                               ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f3f6fa")]),
-                              ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                              ("RIGHTPADDING", (0, 0), (-1, -1), 8), ("TOPPADDING", (0, 0), (-1, -1), 9),
-                              ("BOTTOMPADDING", (0, 0), (-1, -1), 9)]))
-    story.extend([p("Détail du parcours", "heading"), table])
-    # MAC edition/date/order/learner metadata already appears in the annexes.
-    # Do not strand a duplicate reference block on a nearly empty summary page.
-    if not is_mac_aps:
-        story.extend([Spacer(1, 6 * mm),
-                  KeepTogether([p(f"Édité le {report['generated_at_label']} (heure de Paris).", "small"),
-                    p("Données fictives de démonstration : ce document n’atteste d’aucune formation suivie." if specimen else
-                      f"Relevé édité pour {centre_name} à partir des traces de sa plateforme. Ce document ne constitue ni une attestation de stage MAC APS ni une attestation SST." if is_mac_aps else
-                      f"Attestation éditée pour {centre_name} à partir des traces de sa plateforme e-learning. Elle décrit le suivi pédagogique constaté à la date d’édition ; elle ne vaut ni diplôme ni certification professionnelle.", "small"),
-                    p(f"Référence de commande : {order['id']}\nIdentifiant du stagiaire : {person['id']}", "small")])])
+                              ("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                              ("RIGHTPADDING", (0, 0), (-1, -1), 6), ("TOPPADDING", (0, 0), (-1, -1), 3),
+                              ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                              ("LINEBELOW", (0, 1), (-1, -1), .3, colors.HexColor("#e2eaf1"))]))
+    story.extend([CondPageBreak(55), p("Détail du parcours", "heading"), table])
+    # References and legal notes are printed with the integral connection annex
+    # below, so a duplicate block cannot create a nearly empty summary page.
 
     def detail_table(rows, widths):
         value = LongTable(rows, colWidths=[width * mm for width in widths], repeatRows=1, hAlign="LEFT")
@@ -614,11 +608,14 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
             ("NOSPLIT", (0, -2), (-1, -1)),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-            ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ]))
         story.append(connection_table)
     story.extend([Spacer(1, 5 * mm),
                   p(f"Relevé édité le {report['generated_at_label']} (heure de Paris).", "small"),
+                  p("Données fictives de démonstration : ce document n’atteste d’aucune formation suivie." if specimen else
+                    f"Relevé édité pour {centre_name} à partir des traces de sa plateforme. Ce document ne constitue ni une attestation de stage MAC APS ni une attestation SST." if is_mac_aps else
+                    f"Attestation éditée pour {centre_name} à partir des traces de sa plateforme e-learning. Elle décrit le suivi pédagogique constaté à la date d’édition ; elle ne vaut ni diplôme ni certification professionnelle.", "small"),
                   p(f"Référence de commande : {order['id']} · Identifiant du stagiaire : {person['id']}", "small")])
 
     if is_mac_aps and report.get("complement_modules"):
@@ -656,10 +653,10 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
             canvas.restoreState()
         canvas.setStrokeColor(colors.HexColor("#d6e1ec"))
         canvas.line(18 * mm, 15 * mm, 192 * mm, 15 * mm)
-        canvas.setFont("Helvetica", 8)
+        canvas.setFont(regular_font, 7)
         canvas.setFillColor(colors.HexColor("#526579"))
         footer_name = ("SPECIMEN - " if specimen else "") + centre_name
-        while canvas.stringWidth(footer_name + " - Suivi e-learning", "Helvetica", 8) > 145 * mm:
+        while canvas.stringWidth(footer_name + " - Suivi e-learning", regular_font, 7) > 145 * mm:
             footer_name = footer_name[:-2].rstrip()
         canvas.drawString(18 * mm, 10 * mm, footer_name + " - Suivi e-learning")
         canvas.drawRightString(192 * mm, 10 * mm, f"Page {document.page}")
@@ -726,4 +723,5 @@ def register_routes(host, bp, *, page, customer, partner_data):
             writer.writerow(["'" + str(value) if str(value).lstrip().startswith(("=", "+", "-", "@")) else value for value in values])
         return Response("\ufeff" + output.getvalue(), content_type="text/csv; charset=utf-8",
                         headers={"Content-Disposition": 'attachment; filename="releve-connexions.csv"'})
+
 
