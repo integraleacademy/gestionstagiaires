@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+{% if ssiap_pathway %}<div class="card" style="margin:16px 0;padding:18px;"><strong>Votre parcours : {{ ssiap_pathway.label }}</strong><p>SSIAP : du {{ ssiap_pathway.ssiap_start|frdate }} au {{ ssiap_pathway.ssiap_end|frdate }} · {{ ssiap_pathway.ssiap_schedule }}</p>{% if ssiap_pathway.with_sst %}<p>SST : {% for d in ssiap_pathway.sst_dates %}{{ d|frdate }}{% if not loop.last %}, {% endif %}{% endfor %} · {{ ssiap_pathway.sst_schedule }}</p>{% endif %}</div>{% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/professional-experience.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/trainee-document-checks.css') }}">
 {% set token_safe = token or trainee.public_token or '' %}

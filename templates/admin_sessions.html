@@ -997,6 +997,7 @@
     <div class="card-actions session-actions">
       <a class="btn session-action session-action--primary" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">👥 Voir les stagiaires</a>
       {% if not is_read_only %}
+        {% if (s.training_type or '').upper().startswith('SSIAP') %}<a class="btn btn-outline session-action" href="{{ url_for('admin_ssiap_pathways',session_id=s.id) }}">Parcours SSIAP / SST</a>{% endif %}
         <button class="btn btn-outline session-action" data-edit-session="{{ s.id }}" data-training-type="{{ s.training_type }}" data-date-start="{{ s.date_start }}" data-date-end="{{ s.date_end }}" data-exam-date="{{ s.exam_date }}" data-exam-theory-date="{{ s.exam_theory_date }}" data-exam-practice-date="{{ s.exam_practice_date }}" data-practice-training-date="{{ s.practice_training_date }}" data-aps-remote-start="{{ s.aps_remote_start }}" data-aps-remote-end="{{ s.aps_remote_end }}" data-aps-in-person-start="{{ s.aps_in_person_start }}" data-aps-in-person-end="{{ s.aps_in_person_end }}" data-dirigeant-remote-start="{{ s.dirigeant_remote_start }}" data-dirigeant-remote-end="{{ s.dirigeant_remote_end }}" data-dirigeant-in-person-start="{{ s.dirigeant_in_person_start }}" data-dirigeant-in-person-end="{{ s.dirigeant_in_person_end }}" data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">✏️ Modifier</button>
         <button class="btn btn-outline session-action" data-archive-session="{{ s.id }}">📦 Archiver</button>
         <button class="btn btn-danger session-action session-action--danger" data-delete-session="{{ s.id }}">🗑️ Supprimer</button>
@@ -1166,6 +1167,7 @@
       <label class="trainee-create-section" style="margin-bottom:14px;display:block;">
         <div class="label">Session</div>
         <select id="traineeTargetSession"></select>
+      </label><label id="createSsiapPathwayWrap" class="trainee-create-section" style="display:none"><div class="label">Parcours</div><select id="createSsiapPathway"><option value="ssiap">SSIAP seul</option><option value="ssiap_sst">SSIAP + SST</option></select>
       </label>
 
       <div class="form-grid trainee-create-grid">
@@ -1659,6 +1661,7 @@
     const conventionPayload = await window.openConventionTransmission?.({
       trainingType: result.training_type || result.session_training_type || "",
       defaults: {
+        ssiap_pathway: result.ssiap_pathway || "",
         training_price: result.training_price || "",
         cpf_amount: result.cpf_amount || "",
         personal_amount: result.personal_amount || "",
@@ -1723,6 +1726,8 @@
 
   async function createTraineeFromSessions(send_access){
     const payload = getTraineeCreatePayload();
+    const target = availableSessionsForCreate.find(s=>s.id===document.getElementById("traineeTargetSession")?.value);
+    if(target?.ssiap_pathways) payload.ssiap_pathway=document.getElementById("createSsiapPathway").value;
     if(!payload.last_name || !payload.first_name){
       alert("Nom + prénom obligatoires");
       return;
@@ -1743,7 +1748,7 @@
       });
       const res = await r.json();
       if(!r.ok || !res.ok){
-        alert("Erreur ajout stagiaire");
+        alert(res.error || "Erreur ajout stagiaire");
         return;
       }
       closeModal("sendAccessFromSessionsModal");
@@ -1781,6 +1786,15 @@
     }
   }
 
+  function updateSsiapCreateChoice(){
+    const target=availableSessionsForCreate.find(s=>s.id===document.getElementById("traineeTargetSession")?.value);
+    const wrap=document.getElementById("createSsiapPathwayWrap"), field=document.getElementById("createSsiapPathway");
+    wrap.style.display=target?.ssiap_pathways ? "block" : "none";
+    const hasSst=!!target?.ssiap_pathways?.sst_dates?.length;
+    field.querySelector('[value="ssiap_sst"]').disabled=!hasSst;
+    if(!hasSst)field.value="ssiap";
+  }
+  document.getElementById("traineeTargetSession")?.addEventListener("change",updateSsiapCreateChoice);
   function refreshSessionChoices(){
     const select = document.getElementById("traineeTargetSession");
     if(!select) return;
@@ -1811,6 +1825,7 @@
       select.disabled = false;
     }
     renderSessionSearchResults(filtered, query);
+    updateSsiapCreateChoice();
   }
 
   function normalizeSessionSearch(value){
@@ -1844,6 +1859,7 @@
       button.addEventListener("click", ()=>{
         const select = document.getElementById("traineeTargetSession");
         if(select) select.value = session.id;
+        updateSsiapCreateChoice();
         results.classList.remove("show");
         status.textContent = `Session sélectionnée : ${sessionDisplayName(session)}`;
       });

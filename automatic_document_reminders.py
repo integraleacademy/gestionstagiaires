@@ -115,11 +115,13 @@ def run(services, *, now=None, dry_run=False, limit=5):
 
     candidates = []
     for training in data.get("sessions", []):
-        start = services._session_start_date(training)
-        if not start or not services._docs_relance_auto_enabled(training) or training.get("archived"):
+        if not services._docs_relance_auto_enabled(training) or training.get("archived"):
             continue
         for trainee in services._session_trainees_list(training):
             report["checked"] += 1
+            start = services._trainee_start_date(training, trainee)
+            if not start:
+                continue
             stage = due_stage(trainee, start, today, activation)
             if stage is None:
                 continue
@@ -140,7 +142,7 @@ def run(services, *, now=None, dry_run=False, limit=5):
             training, trainee = find(current, session_id, trainee_id)
             if trainee is None or not services._docs_relance_auto_enabled(training):
                 return {}
-            start = services._session_start_date(training)
+            start = services._trainee_start_date(training, trainee)
             if not start:
                 return {}
             stage = due_stage(trainee, start, today, activation)

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+{% include "_ssiap_pathway_style.html" %}
+<main class="ssiap-workspace">
+<a href="{{ url_for('admin_trainees',session_id=session.id) }}">← Retour aux stagiaires</a>
+<h1>Parcours SSIAP et SST</h1>
+<p class="intro">{{ session.name }} · Une session commune, des documents adaptés à chaque stagiaire.</p>
+<form id="ssiapSettingsForm" data-url="{{ url_for('api_update_session',session_id=session.id) }}" data-return="{{ url_for('admin_trainees',session_id=session.id) }}">
+<fieldset {% if is_read_only %}disabled{% endif %}>
+<section class="ssiap-panel"><h2>Les dates communes du SSIAP</h2>
+<div class="ssiap-grid">
+<label class="ssiap-field">Début du SSIAP<input name="date_start" type="date" required value="{{ session.date_start }}"><small>Premier jour SSIAP, sans les journées SST.</small></label>
+<label class="ssiap-field">Fin du SSIAP<input name="date_end" type="date" required value="{{ session.date_end }}"></label>
+<label class="ssiap-field">Date d’examen SSIAP<input name="exam_date" type="date" required value="{{ session.exam_date }}"></label>
+<label class="ssiap-field">Durée SSIAP en heures, hors examen<input name="ssiap_hours" type="number" min="0.5" step="0.5" required value="{{ config.ssiap_hours }}"><small>Valeur du modèle actuel : 70 h. Ajustez au programme de cette session.</small></label>
+<label class="ssiap-field">Horaires SSIAP<input name="ssiap_schedule" maxlength="100" required value="{{ config.ssiap_schedule }}"></label>
+</div></section>
+<section class="ssiap-panel"><h2>Les journées SST supplémentaires</h2><p class="ssiap-muted">Elles apparaîtront uniquement sur les documents des personnes inscrites au parcours SSIAP + SST.</p>
+<div id="ssiapSstDates" class="ssiap-field">
+{% for day in config.sst_dates or ['',''] %}<div class="ssiap-date-row"><input name="sst_date" type="date" aria-label="Journée SST" value="{{ day }}"><button type="button" class="btn btn-outline" data-remove-sst-date aria-label="Retirer cette journée SST">Retirer</button></div>{% endfor %}
+</div><button class="btn btn-outline" type="button" id="addSsiapSstDate">+ Ajouter une journée SST</button>
+<div class="ssiap-grid" style="margin-top:18px"><label class="ssiap-field">Durée SST totale en heures<input name="sst_hours" type="number" min="0.5" step="0.5" required value="{{ config.sst_hours }}"></label><label class="ssiap-field">Horaires SST<input name="sst_schedule" maxlength="100" required value="{{ config.sst_schedule }}"></label></div>
+</section>
+<section class="ssiap-panel"><h2>Les tarifs des deux parcours</h2><p class="ssiap-muted">Facultatifs. Ils seront proposés lors du choix du parcours. Les montants déjà enregistrés dans les dossiers restent conservés jusqu’à votre modification.</p><div class="ssiap-grid">
+<label class="ssiap-field">SSIAP seul — tarif TTC (€)<input name="ssiap_price" type="number" min="0" step="0.01" value="{{ config.ssiap_price }}" placeholder="À renseigner"></label>
+<label class="ssiap-field">SSIAP + SST — tarif TTC (€)<input name="ssiap_sst_price" type="number" min="0" step="0.01" value="{{ config.ssiap_sst_price }}" placeholder="À renseigner"></label></div></section>
+<p class="ssiap-notice">Après enregistrement, choisissez le parcours de chaque stagiaire dans la liste. Les dossiers sans choix explicite restent en SSIAP seul. Aucun document ni e-mail n’est envoyé par cet enregistrement.</p>
+<div class="ssiap-feedback" role="status" id="ssiapFeedback"></div>
+<div class="ssiap-actions"><button class="btn btn-primary" type="submit">Enregistrer les parcours</button><a class="btn btn-outline" href="{{ url_for('admin_trainees',session_id=session.id) }}">Retour</a></div>
+</fieldset></form></main><script src="{{ url_for('static',filename='js/ssiap-pathways.js',v='20261016-1') }}"></script>
+{% endblock %}

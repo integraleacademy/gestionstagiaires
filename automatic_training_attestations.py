@@ -90,7 +90,8 @@ def _has_template(services, training, kind):
     return services._automation_has_end_attestation(training)
 
 
-def _scheduled_date(services, training, kind):
+def _scheduled_date(services, training, kind, trainee=None):
+    training = services._trainee_training_session(training, trainee or {})
     return _date(services._session_get(training, KINDS[kind]["date_key"], ""))
 
 
@@ -98,7 +99,7 @@ def _is_due(services, training, trainee, kind, today, activated_on, now):
     config = KINDS[kind]
     if trainee.get(config["sent_key"]) or not _has_template(services, training, kind):
         return False
-    due = _scheduled_date(services, training, kind)
+    due = _scheduled_date(services, training, kind, trainee)
     activation = _date(activated_on) or today
     if not due or due > today:
         return False
@@ -106,7 +107,7 @@ def _is_due(services, training, trainee, kind, today, activated_on, now):
     if kind == "entry":
         # On activation, recover only enrolments whose training is still in
         # progress. This catches missed starts without mailing old archives.
-        end = _date(services._session_get(training, "date_end", ""))
+        end = _date(services._session_get(services._trainee_training_session(training, trainee), "date_end", ""))
         if due < activation and (not end or end < today):
             return False
     elif due < activation or (today - due).days > MAX_CATCH_UP_DAYS:
@@ -249,7 +250,7 @@ def run(services, *, now=None, dry_run=False, limit=5):
                 "id": uuid.uuid4().hex,
                 "kind": kind,
                 "source": "automatic_training_attestation",
-                "scheduled_for": _scheduled_date(services, training, kind).isoformat(),
+                "scheduled_for": _scheduled_date(services, training, kind, trainee).isoformat(),
                 "attempted_at": now.isoformat(),
                 "attempt_count": int(previous.get("attempt_count") or 0) + 1,
                 "pending": True,
@@ -280,12 +281,12 @@ def run(services, *, now=None, dry_run=False, limit=5):
             if kind == "entry":
                 docx_path, pdf_path = services._generate_aps_entry_attestation_files(training, trainee, session_id, trainee_id)
                 subject, html_content = services._build_aps_entry_attestation_email(
-                    str(trainee.get("first_name") or ""), services._session_get(training, "date_start", ""), training,
+                    str(trainee.get("first_name") or ""), services._session_get(training, "date_start", ""), training, trainee,
                 )
             else:
                 docx_path, pdf_path = services._generate_aps_end_attestation_files(training, trainee, session_id, trainee_id)
                 subject, html_content = services._build_aps_end_attestation_email(
-                    str(trainee.get("first_name") or ""), services._session_get(training, "date_end", ""), training,
+                    str(trainee.get("first_name") or ""), services._session_get(training, "date_end", ""), training, trainee,
                 )
             with open(pdf_path, "rb") as handle:
                 encoded_pdf = base64.b64encode(handle.read()).decode("ascii")

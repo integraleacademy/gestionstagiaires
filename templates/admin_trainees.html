@@ -413,6 +413,10 @@
 </div>
 {% endif %}
 
+{% if ssiap_supported %}
+{% include "_ssiap_pathway_style.html" %}
+<div class="ssiap-banner"><strong>Parcours de la session</strong><a class="btn btn-outline" href="{{ url_for('admin_ssiap_pathways',session_id=session.id) }}">Paramétrer SSIAP / SST</a><a class="btn btn-primary" href="{{ url_for('admin_ssiap_convocations',session_id=session.id) }}">Convocations du groupe</a><label>Afficher <select id="ssiapPathwayFilter"><option value="all">Tous</option><option value="ssiap">SSIAP seul</option><option value="ssiap_sst">SSIAP + SST</option></select></label></div>
+{% endif %}
 <div class="table-wrap full-bleed">
   <table class="table trainees-table {% if is_all_vtc %}trainees-table--all-vtc{% endif %}" id="traineesTable"
          data-session-id="{{ session.id }}"
@@ -425,6 +429,7 @@
         <th class="col-first-name">Prénom</th>
         <th class="col-email">Mail</th>
         <th class="col-phone">Téléphone</th>
+        {% if ssiap_supported %}<th>Parcours</th>{% endif %}
         <th class="col-convention">Convention</th>
         <th class="col-financement">Financement</th>
         {% if show_vae %}<th class="col-vae-status">VAE</th><th class="col-scotia-status">STATUT SCOTIA</th><th class="col-vae-exam-status">Statut examen</th>{% endif %}
@@ -462,6 +467,7 @@
 {% set vae_exam_date = (t.vae_jury_date or vae_action_dates.get('jury_date') or '')|trim %}
 {% set scotia_status = (t.scotia_status or '')|trim %}
 <tr class="row {% if t.registration_cancelled %}row-registration-cancelled{% endif %} {% if t.comment %}row-warning{% endif %} {% if vtc_exam_center == 'nice' %}row-vtc-nice{% elif vtc_exam_center == 'toulon' %}row-vtc-toulon{% endif %}"
+    data-ssiap-pathway="{{ t.ssiap_pathway or 'ssiap' }}"
     data-trainee-id="{{ t.id }}"
     data-session-id="{{ t.source_session_id or session.id }}"
     data-registration-cancelled="{{ '1' if t.registration_cancelled else '0' }}"
@@ -526,6 +532,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <input class="inline-edit" data-field="phone" type="tel" value="{{ t.phone or '' }}" placeholder="+33600000000" style="width:100%;min-width:150px;" {{ read_only_attr }}>
         </td>
 
+        {% if ssiap_supported %}<td class="ssiap-row-choice"><span class="ssiap-path-pill">{{ 'SSIAP + SST' if t.ssiap_pathway == 'ssiap_sst' else 'SSIAP seul' }}</span><br><a href="{{ url_for('admin_ssiap_trainee_pathway',session_id=session.id,trainee_id=t.id) }}">Choisir le parcours</a></td>{% endif %}
         <td class="col-convention">
           <select class="status sel status-dot" data-field="convention_status" {{ read_only_attr }}>
             {% for v in enums.convention %}
@@ -1084,6 +1091,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
     <div class="modal-body trainee-create-body">
       <div class="form-grid trainee-create-grid">
+        {% if ssiap_supported and session.ssiap_pathways %}<label><div class="label">Parcours</div><select id="tSsiapPathway"><option value="ssiap">SSIAP seul</option><option value="ssiap_sst" {% if not session.ssiap_pathways.sst_dates %}disabled{% endif %}>SSIAP + SST</option></select></label>{% endif %}
         <label>
           <div class="label">Nom</div>
           <input id="tLastName" type="text" placeholder="Nom">
@@ -3533,6 +3541,7 @@ function getVtcStatusValues(tr){
 }
 
 function applyRowFilters(){
+  const selectedSsiap = document.getElementById("ssiapPathwayFilter")?.value || "all";
   const vaeFilter = document.getElementById("vaeStatusFilter");
   const vaeNameSearch = document.getElementById("traineeNameSearch") || document.getElementById("vaeNameSearch");
   const vtcTheoryFilter = document.getElementById("vtcTheoryFilter");
@@ -3566,13 +3575,16 @@ function applyRowFilters(){
     const matchPractice = selectedPractice === "all" || practiceStatus === selectedPractice;
     const matchName = !searchedName || rowFullName.includes(searchedName);
 
-    tr.style.display = (matchVae && matchDashboard && matchTheory && matchPractice && matchName) ? "" : "none";
+    const matchSsiap = selectedSsiap === "all" || tr.dataset.ssiapPathway === selectedSsiap;
+    tr.style.display = (matchSsiap && matchVae && matchDashboard && matchTheory && matchPractice && matchName) ? "" : "none";
   });
 
   document.body.classList.toggle("vae-analysis-filter-active", activeVaeDashboardFilter === "status:livret_1_analysis");
   document.body.classList.toggle("vae-l2-validated-card-active", activeVaeDashboardFilter === "status:livret_2_validated");
   updateVaeDashboardPressedState();
 }
+
+document.getElementById("ssiapPathwayFilter")?.addEventListener("change", applyRowFilters);
 
 function bindVaeDashboardFilters(){
   document.addEventListener("click", event => {
@@ -3738,6 +3750,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     const conventionPayload = await window.openConventionTransmission?.({
       trainingType: result.training_type || result.session_training_type || "",
       defaults: {
+        ssiap_pathway: result.ssiap_pathway || "",
         training_price: result.training_price || "",
         cpf_amount: result.cpf_amount || "",
         personal_amount: result.personal_amount || "",
@@ -3838,13 +3851,14 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           city,
           vtc_real_training_dates,
           carte_pro_ok,
-          send_access
+          send_access,
+          ...(document.getElementById("tSsiapPathway") ? {ssiap_pathway:document.getElementById("tSsiapPathway").value} : {})
         })
       });
 
       const res = await r.json();
       if(!r.ok || !res.ok){
-        alert("Erreur ajout stagiaire");
+        alert(res.error || "Erreur ajout stagiaire");
         return;
       }
 

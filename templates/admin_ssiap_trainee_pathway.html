@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+{% include "_ssiap_pathway_style.html" %}
+<main class="ssiap-workspace"><a href="{{ url_for('admin_trainees',session_id=session.id) }}">← Retour aux stagiaires</a><h1>Le parcours de {{ trainee.first_name }} {{ trainee.last_name }}</h1><p class="intro">{{ session.name }}</p>
+{% if not enabled %}<div class="ssiap-notice">Renseignez d’abord les dates, durées et horaires communs de cette session. <a href="{{ url_for('admin_ssiap_pathways',session_id=session.id) }}">Configurer les parcours</a></div>{% endif %}
+<form id="ssiapTraineeForm" data-url="{{ url_for('api_ssiap_trainee_pathway',session_id=session.id,trainee_id=trainee.id) }}" data-return="{{ url_for('admin_trainee_page',session_id=session.id,trainee_id=trainee.id) }}" data-prices='{{ {"ssiap":config.ssiap_price,"ssiap_sst":config.ssiap_sst_price}|tojson }}'>
+<fieldset {% if is_read_only or not enabled or trainee.registration_cancelled %}disabled{% endif %}><section class="ssiap-panel"><div class="ssiap-grid">
+<label class="ssiap-field">Parcours<select name="ssiap_pathway"><option value="ssiap" {% if choice=='ssiap' %}selected{% endif %}>SSIAP seul</option><option value="ssiap_sst" {% if choice=='ssiap_sst' %}selected{% endif %} {% if not config.sst_dates %}disabled{% endif %}>SSIAP + SST</option></select></label>
+<label class="ssiap-field">Tarif TTC de ce stagiaire (€)<input name="training_price" type="number" min="0" step="0.01" value="{{ trainee.training_price if trainee.training_price is defined and trainee.training_price is not none else config[choice+'_price'] }}"><small>Vous pouvez conserver un tarif personnalisé.</small></label></div>
+<p><strong>SSIAP :</strong> du {{ session.date_start|frdate }} au {{ session.date_end|frdate }} · {{ config.ssiap_hours }} h · {{ config.ssiap_schedule }}</p><p id="ssiapSstSummary" {% if choice!='ssiap_sst' %}hidden{% endif %}><strong>SST :</strong> {% for d in config.sst_dates %}{{ d|frdate }}{% if not loop.last %}, {% endif %}{% endfor %} · {{ config.sst_hours }} h · {{ config.sst_schedule }}</p>
+<p class="ssiap-muted" id="ssiapPriceHint"></p></section>
+<p class="ssiap-notice">Les documents déjà envoyés ou signés sont conservés. Après un changement de parcours, vérifiez les nouveaux documents avant de les transmettre. Le financement CPF, les autres financements et les factures existantes ne sont pas recalculés.</p>
+<div class="ssiap-feedback" role="status" id="ssiapFeedback"></div><div class="ssiap-actions"><button class="btn btn-primary" type="submit">Enregistrer le parcours</button><a class="btn btn-outline" href="{{ url_for('admin_trainee_page',session_id=session.id,trainee_id=trainee.id) }}">Retour à la fiche</a></div></fieldset></form></main><script src="{{ url_for('static',filename='js/ssiap-pathways.js',v='20261016-1') }}"></script>
+{% endblock %}

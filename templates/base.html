@@ -25,7 +25,7 @@
     "admin_qonto_settings", "admin_wedof_requests", "admin_wedof", "admin_wedof_matching_preview", "admin_wedof_matching_sync_exact", "admin_cnaps_unknown", "admin_cnaps_tracking",
     "admin_afc", "admin_sessions_conventions", "admin_sessions_automations",
     "admin_sessions_billing", "admin_direct_debits", "admin_sessions_archived", "admin_cash_payments",
-    "admin_trainees", "admin_trainee_page", "admin_vtc_trainees_all",
+    "admin_ssiap_pathways", "admin_ssiap_trainee_pathway", "admin_ssiap_convocations", "admin_trainees", "admin_trainee_page", "admin_vtc_trainees_all",
     "admin_sales_tracking", "admin_cancellation_tracking", "admin_exams", "admin_exam_detail",
     "native_elearning.admin_catalog", "native_elearning.admin_vtc_catalog",
     "native_elearning.admin_a3p_catalog", "native_elearning.admin_macaps_catalog", "native_elearning.admin_live"
@@ -632,7 +632,7 @@
       const values = defaults || {};
       const normalizedTrainingType = String(trainingType || values.training_type || "").toUpperCase();
       let defaultTrainingPrice = values.training_price || "";
-      if(normalizedTrainingType.includes("SSIAP") && parseAmount(defaultTrainingPrice) <= 0){
+      if(normalizedTrainingType.includes("SSIAP") && !values.ssiap_pathway && parseAmount(defaultTrainingPrice) <= 0){
         const withAps = window.AppModal
           ? await window.AppModal.confirm({
               type: "info",
