@@ -1,0 +1,730 @@
+{
+  "id": "vtc-e",
+  "version": "20261006-vtc-v2",
+  "training_label": "VTC",
+  "title": "VTC · Accueillir en anglais · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "vtc-e-01-q1",
+      "prompt": "A passenger enters at 9 a.m. Which greeting is appropriate?",
+      "options": [
+        {
+          "id": "cd03ed45b076",
+          "text": "Good night. Go away."
+        },
+        {
+          "id": "4db35da3c663",
+          "text": "Yesterday was morning."
+        },
+        {
+          "id": "0fef2ef8c87e",
+          "text": "Good morning. Welcome on board."
+        }
+      ],
+      "answer": "0fef2ef8c87e",
+      "explanation": "« Good morning » accueille le matin ; « good night » sert généralement à prendre congé pour la nuit.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.01"
+      ]
+    },
+    {
+      "id": "vtc-e-02-q2",
+      "prompt": "Which question asks for the number of passengers?",
+      "options": [
+        {
+          "id": "f402318f3635",
+          "text": "Where is the passenger going?"
+        },
+        {
+          "id": "62847e6f4866",
+          "text": "How many passengers are there?"
+        },
+        {
+          "id": "0f1d0c32ae9e",
+          "text": "When is the passenger leaving?"
+        }
+      ],
+      "answer": "62847e6f4866",
+      "explanation": "« How many » interroge sur un nombre d’éléments dénombrables.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.02"
+      ]
+    },
+    {
+      "id": "vtc-e-10-q2",
+      "prompt": "Which phrase asks how the client would like to pay?",
+      "options": [
+        {
+          "id": "4997cb5e57b2",
+          "text": "Are you a payment yesterday?"
+        },
+        {
+          "id": "8ca08b5002a3",
+          "text": "Would you like to pay by card?"
+        },
+        {
+          "id": "16d7a325c7d7",
+          "text": "Would you like to drive the airport?"
+        }
+      ],
+      "answer": "8ca08b5002a3",
+      "explanation": "La formulation propose un mode de règlement. Elle doit correspondre aux moyens réellement acceptés.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.10"
+      ]
+    },
+    {
+      "id": "vtc-e-04-q2",
+      "prompt": "How do you ask for the exact meeting point?",
+      "options": [
+        {
+          "id": "283709aa5a57",
+          "text": "How much is your suitcase?"
+        },
+        {
+          "id": "5cdabdcfb93f",
+          "text": "Where shall we meet?"
+        },
+        {
+          "id": "8f8cd2ba345d",
+          "text": "Why did you pay yesterday?"
+        }
+      ],
+      "answer": "5cdabdcfb93f",
+      "explanation": "« Where » demande un lieu. La phrase sert à préciser le point de rencontre.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.04"
+      ]
+    },
+    {
+      "id": "vtc-e-12-q1",
+      "prompt": "Which phrase proposes tourist information without imposing it?",
+      "options": [
+        {
+          "id": "a772e75872b6",
+          "text": "Would you like some information about the city?"
+        },
+        {
+          "id": "0a987af69860",
+          "text": "You must listen to my whole story."
+        },
+        {
+          "id": "9b6f3027f47a",
+          "text": "The city pays by card."
+        }
+      ],
+      "answer": "a772e75872b6",
+      "explanation": "« Would you like…? » vérifie l’intérêt du passager et respecte son choix.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.12"
+      ]
+    },
+    {
+      "id": "vtc-e-manual-04",
+      "prompt": "Ask about the journey duration.",
+      "options": [
+        {
+          "id": "a",
+          "text": "How long does it take?"
+        },
+        {
+          "id": "b",
+          "text": "How many is it?"
+        },
+        {
+          "id": "c",
+          "text": "Who long is it?"
+        }
+      ],
+      "answer": "a",
+      "explanation": "How long demande une durée.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-e-06-q2",
+      "prompt": "How do you ask whether the temperature is comfortable?",
+      "options": [
+        {
+          "id": "d0b62566af18",
+          "text": "Is the temperature all right for you?"
+        },
+        {
+          "id": "63e5e6331f0c",
+          "text": "Where is the temperature going?"
+        },
+        {
+          "id": "a5d34e87fb5f",
+          "text": "Do you pay the temperature?"
+        }
+      ],
+      "answer": "d0b62566af18",
+      "explanation": "Cette question vérifie le confort du passager et lui permet d’exprimer son besoin.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.06"
+      ]
+    },
+    {
+      "id": "vtc-e-08-q1",
+      "prompt": "The customer asks « Is parking included? ». What do they want to know?",
+      "options": [
+        {
+          "id": "55b6f60330b3",
+          "text": "Si le chauffeur a son permis"
+        },
+        {
+          "id": "69cfbd0cbfca",
+          "text": "Où la voiture a été fabriquée"
+        },
+        {
+          "id": "289ec42f37cf",
+          "text": "Si le stationnement est compris dans le prix"
+        }
+      ],
+      "answer": "289ec42f37cf",
+      "explanation": "« Included » signifie compris. La réponse doit correspondre aux conditions réelles de l’offre.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.08"
+      ]
+    },
+    {
+      "id": "vtc-e-06-q1",
+      "prompt": "Which instruction asks the passenger to fasten a seat belt?",
+      "options": [
+        {
+          "id": "1a60090f849e",
+          "text": "Please open your suitcase."
+        },
+        {
+          "id": "901773543507",
+          "text": "Please fasten your seat belt."
+        },
+        {
+          "id": "22acba7851fd",
+          "text": "Please cancel your booking."
+        }
+      ],
+      "answer": "901773543507",
+      "explanation": "« Seat belt » désigne la ceinture et « fasten » signifie l’attacher.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.06"
+      ]
+    },
+    {
+      "id": "vtc-e-01-q2",
+      "prompt": "How do you politely ask a passenger to repeat?",
+      "options": [
+        {
+          "id": "1465e9b1fd4a",
+          "text": "Could you repeat that, please?"
+        },
+        {
+          "id": "d9e63aeebec5",
+          "text": "I am repeating you tomorrow."
+        },
+        {
+          "id": "99d33636b509",
+          "text": "You repeat yesterday."
+        }
+      ],
+      "answer": "1465e9b1fd4a",
+      "explanation": "« Could you… please? » permet de demander poliment. Il vaut mieux faire répéter que prétendre comprendre.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.01"
+      ]
+    },
+    {
+      "id": "vtc-e-09-q1",
+      "prompt": "Which phrase announces an estimated delay politely?",
+      "options": [
+        {
+          "id": "ac292c1ec982",
+          "text": "You are late because you are a passenger."
+        },
+        {
+          "id": "cfe818d4ebb5",
+          "text": "I am ten minutes old."
+        },
+        {
+          "id": "3e7c01b2eae0",
+          "text": "I’m sorry, we may be ten minutes late."
+        }
+      ],
+      "answer": "3e7c01b2eae0",
+      "explanation": "« May be » exprime une possibilité ; le message informe sans transformer l’estimation en certitude.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.09"
+      ]
+    },
+    {
+      "id": "vtc-e-manual-03",
+      "prompt": "Choose the correct sentence.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Two luggages."
+        },
+        {
+          "id": "b",
+          "text": "Two luggage."
+        },
+        {
+          "id": "c",
+          "text": "Two suitcases."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Luggage est indénombrable ; on peut compter des suitcases.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-e-manual-06",
+      "prompt": "Choose the correct question.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Does she needs a receipt?"
+        },
+        {
+          "id": "b",
+          "text": "Do she need a receipt?"
+        },
+        {
+          "id": "c",
+          "text": "Does she need a receipt?"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Après does, le verbe reste à sa forme de base.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-e-manual-02",
+      "prompt": "“A quarter to eight” means…",
+      "options": [
+        {
+          "id": "a",
+          "text": "8:15."
+        },
+        {
+          "id": "b",
+          "text": "7:45."
+        },
+        {
+          "id": "c",
+          "text": "8:45."
+        }
+      ],
+      "answer": "b",
+      "explanation": "To indique les minutes avant l’heure suivante.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-e-03-q1",
+      "prompt": "What time is « half past eight »?",
+      "options": [
+        {
+          "id": "653cc2c52b3b",
+          "text": "7:30"
+        },
+        {
+          "id": "c1814fbc230a",
+          "text": "8:15"
+        },
+        {
+          "id": "b9fdee32fe3d",
+          "text": "8:30"
+        }
+      ],
+      "answer": "b9fdee32fe3d",
+      "explanation": "« Half past » signifie une demi-heure après l’heure indiquée.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.03"
+      ]
+    },
+    {
+      "id": "vtc-e-07-q1",
+      "prompt": "How do you explain a detour?",
+      "options": [
+        {
+          "id": "b2c6225cb81a",
+          "text": "We arrived yesterday tomorrow."
+        },
+        {
+          "id": "a51bf6ec50f2",
+          "text": "The road is closed, so the price is always free."
+        },
+        {
+          "id": "b3a4dd3d8430",
+          "text": "The road is closed, so we need to take another route."
+        }
+      ],
+      "answer": "b3a4dd3d8430",
+      "explanation": "« So » introduit la conséquence : une autre route est nécessaire parce que la voie est fermée.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.07"
+      ]
+    },
+    {
+      "id": "vtc-e-05-q2",
+      "prompt": "The passenger has « two suitcases and one small bag ». What should you expect?",
+      "options": [
+        {
+          "id": "4c52e33f2737",
+          "text": "Trois valises"
+        },
+        {
+          "id": "550b08a77898",
+          "text": "Une valise et deux sacs"
+        },
+        {
+          "id": "17ec6672f71e",
+          "text": "Deux valises et un petit sac"
+        }
+      ],
+      "answer": "17ec6672f71e",
+      "explanation": "Il faut conserver à la fois le nombre et la nature des bagages dans la traduction.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.05"
+      ]
+    },
+    {
+      "id": "vtc-e-11-q2",
+      "prompt": "Which phrase is suitable when you do not understand a problem?",
+      "options": [
+        {
+          "id": "3fdc17a69f90",
+          "text": "Could you explain the problem, please?"
+        },
+        {
+          "id": "d907e39dce64",
+          "text": "Your problem is not a word."
+        },
+        {
+          "id": "786db37b0e03",
+          "text": "There is never a problem, goodbye."
+        }
+      ],
+      "answer": "3fdc17a69f90",
+      "explanation": "Demander une explication polie permet de vérifier le besoin avant de proposer une solution.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.11"
+      ]
+    },
+    {
+      "id": "vtc-e-07-q2",
+      "prompt": "What does « The journey takes about thirty minutes » mean?",
+      "options": [
+        {
+          "id": "36e123630c1c",
+          "text": "Le trajet coûte exactement trente euros."
+        },
+        {
+          "id": "d1481a38379f",
+          "text": "Le départ a eu lieu il y a trente minutes."
+        },
+        {
+          "id": "12e75650788e",
+          "text": "Le trajet dure environ trente minutes."
+        }
+      ],
+      "answer": "12e75650788e",
+      "explanation": "« Takes » exprime ici la durée et « about » conserve une approximation.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.07"
+      ]
+    },
+    {
+      "id": "vtc-e-12-q2",
+      "prompt": "What does « The museum is next to the station » mean?",
+      "options": [
+        {
+          "id": "e4fe769de50e",
+          "text": "Le musée est sous l’aéroport."
+        },
+        {
+          "id": "fe441df96ccb",
+          "text": "Le musée est fermé demain."
+        },
+        {
+          "id": "0432a7ac2146",
+          "text": "Le musée est à côté de la gare."
+        }
+      ],
+      "answer": "0432a7ac2146",
+      "explanation": "« Next to » indique la proximité immédiate ; la phrase ne donne aucun horaire d’ouverture.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.12"
+      ]
+    },
+    {
+      "id": "vtc-e-manual-05",
+      "prompt": "“The toll is included” means…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le péage est fermé."
+        },
+        {
+          "id": "b",
+          "text": "Le péage est inclus."
+        },
+        {
+          "id": "c",
+          "text": "Le péage est annulé."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Included indique qu’il est compris dans le prix ou service annoncé.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-e-manual-01",
+      "prompt": "Choose the correct greeting at 7 p.m.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Good evening."
+        },
+        {
+          "id": "b",
+          "text": "Good night, welcome!"
+        },
+        {
+          "id": "c",
+          "text": "Good morning."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Good evening sert à accueillir le soir ; good night sert généralement à prendre congé.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-e-11-q1",
+      "prompt": "A passenger says « I’ve lost my phone ». What happened?",
+      "options": [
+        {
+          "id": "ca6e2d0cbf3f",
+          "text": "Le passager a perdu son téléphone"
+        },
+        {
+          "id": "5f196cc7aec6",
+          "text": "Le téléphone sonne normalement"
+        },
+        {
+          "id": "62b25711a0eb",
+          "text": "Le passager veut vendre son téléphone"
+        }
+      ],
+      "answer": "ca6e2d0cbf3f",
+      "explanation": "« I’ve lost » exprime une perte ; il faut ensuite demander des précisions utiles calmement.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.11"
+      ]
+    },
+    {
+      "id": "vtc-e-05-q1",
+      "prompt": "Which phrase offers help with luggage?",
+      "options": [
+        {
+          "id": "8a250d992e04",
+          "text": "May I help you with your luggage?"
+        },
+        {
+          "id": "0109ce25be7e",
+          "text": "Your luggage are tomorrow."
+        },
+        {
+          "id": "f271f0f2e283",
+          "text": "Give me all your documents now."
+        }
+      ],
+      "answer": "8a250d992e04",
+      "explanation": "« May I help you…? » propose de l’aide sans l’imposer ; « luggage » est un nom indénombrable.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.05"
+      ]
+    },
+    {
+      "id": "vtc-e-09-q2",
+      "prompt": "The flight is delayed. Which question checks the new arrival time?",
+      "options": [
+        {
+          "id": "200d466b3e67",
+          "text": "What is the updated arrival time?"
+        },
+        {
+          "id": "3a983a3b1e77",
+          "text": "Where did you buy the plane?"
+        },
+        {
+          "id": "25cdc2be89e0",
+          "text": "How many receipts are blue?"
+        }
+      ],
+      "answer": "200d466b3e67",
+      "explanation": "« Updated arrival time » signifie l’heure d’arrivée actualisée.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.09"
+      ]
+    },
+    {
+      "id": "vtc-e-04-q1",
+      "prompt": "The passenger is « opposite the hotel ». Where are they?",
+      "options": [
+        {
+          "id": "9159d2f5b549",
+          "text": "Derrière l’hôtel"
+        },
+        {
+          "id": "339ba1064d21",
+          "text": "À l’intérieur de l’hôtel"
+        },
+        {
+          "id": "e30c0917a140",
+          "text": "En face de l’hôtel"
+        }
+      ],
+      "answer": "e30c0917a140",
+      "explanation": "« Opposite » indique un emplacement en face ; « inside » signifie à l’intérieur.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.04"
+      ]
+    },
+    {
+      "id": "vtc-e-08-q2",
+      "prompt": "Which phrase clearly gives an example of a fixed fare?",
+      "options": [
+        {
+          "id": "d82f543b3455",
+          "text": "The weather is eighty euros."
+        },
+        {
+          "id": "99c892db3626",
+          "text": "The price has eight passengers."
+        },
+        {
+          "id": "3e7041761ba0",
+          "text": "The agreed fare is eighty euros."
+        }
+      ],
+      "answer": "3e7041761ba0",
+      "explanation": "« Fare » désigne le prix du transport ; « agreed » indique qu’il a été convenu.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.08"
+      ]
+    },
+    {
+      "id": "vtc-e-03-q2",
+      "prompt": "What does « a quarter to nine » mean?",
+      "options": [
+        {
+          "id": "dc57fe185adf",
+          "text": "9:15"
+        },
+        {
+          "id": "6a018c795a50",
+          "text": "8:45"
+        },
+        {
+          "id": "d90059646709",
+          "text": "9:45"
+        }
+      ],
+      "answer": "6a018c795a50",
+      "explanation": "« A quarter to nine » signifie neuf heures moins le quart.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.03"
+      ]
+    },
+    {
+      "id": "vtc-e-02-q1",
+      "prompt": "What does « Do you have a booking? » mean?",
+      "options": [
+        {
+          "id": "84368c388b7a",
+          "text": "Avez-vous un livre à vendre ?"
+        },
+        {
+          "id": "b7c10d7e6a41",
+          "text": "Avez-vous une réservation ?"
+        },
+        {
+          "id": "19faf3feda1c",
+          "text": "Avez-vous terminé votre trajet ?"
+        }
+      ],
+      "answer": "b7c10d7e6a41",
+      "explanation": "Dans ce contexte « booking » signifie réservation ; « book » peut aussi être le verbe réserver.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.02"
+      ]
+    },
+    {
+      "id": "vtc-e-10-q1",
+      "prompt": "What is a « receipt » in the payment context?",
+      "options": [
+        {
+          "id": "163e90c0bb78",
+          "text": "Une nouvelle réservation"
+        },
+        {
+          "id": "47cf38d5946c",
+          "text": "Un reçu"
+        },
+        {
+          "id": "ce3746656a7d",
+          "text": "Une recette de cuisine obligatoirement"
+        }
+      ],
+      "answer": "47cf38d5946c",
+      "explanation": "Dans le contexte du paiement, « receipt » désigne une preuve de paiement.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.10"
+      ]
+    }
+  ],
+  "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+}

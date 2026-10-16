@@ -1,3 +1,5 @@
+import json
+import subprocess
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -71,7 +73,40 @@ class CpuLoadGuardTests(unittest.TestCase):
         billing_page = (project_root / "templates" / "admin_sessions_billing.html").read_text(encoding="utf-8")
         trainees_page = (project_root / "templates" / "admin_trainees.html").read_text(encoding="utf-8")
 
-        self.assertIn("document.hidden?120000:30000", trainee_page)
+        # Exercise the current scheduler: a hidden trainee tab must stop polling
+        # altogether, rather than continue on the former two-minute interval.
+        start = trainee_page.index("  let localTraineePollTimer;")
+        end = trainee_page.index("  document.addEventListener('visibilitychange'", start)
+        scheduler = trainee_page[start:end]
+        script = r'''
+const assert = require('node:assert/strict');
+const vm = require('node:vm');
+const timers = new Map();
+let nextId = 0, reads = 0;
+const context = vm.createContext({
+  document: {hidden: true},
+  clearTimeout: id => timers.delete(id),
+  setTimeout: (callback, delay) => { timers.set(++nextId, {callback, delay}); return nextId; },
+  load: async () => { reads++; }
+});
+vm.runInContext(SCHEDULER, context);
+context.scheduleLocalTraineePoll(true);
+assert.equal(reads, 0);
+assert.equal(timers.size, 0);
+context.document.hidden = false;
+context.scheduleLocalTraineePoll(true);
+assert.equal(reads, 1);
+assert.equal(timers.size, 1);
+assert.equal([...timers.values()][0].delay, 30000);
+context.scheduleLocalTraineePoll();
+assert.equal(timers.size, 1);
+context.document.hidden = true;
+context.scheduleLocalTraineePoll(true);
+assert.equal(reads, 1);
+assert.equal(timers.size, 0);
+'''.replace("SCHEDULER", json.dumps(scheduler))
+        result = subprocess.run(["node", "--eval", script], capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("document.hidden?120000:30000", billing_page)
         self.assertIn("if (document.hidden) return;", trainees_page)
         self.assertIn("setInterval(autoRefreshExternalStatuses, 15 * 60 * 1000)", trainees_page)

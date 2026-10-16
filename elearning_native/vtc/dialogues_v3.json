@@ -1,0 +1,1778 @@
+[
+  {
+    "id": "e-01-1",
+    "ref": "E.01",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Good evening. My name is Alex. I am your driver. Are you Ms Brown?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, I am. Good evening. Thank you for waiting. It took a little longer to collect my luggage.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "You are welcome. Your booking is for Central Hotel, is that right?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, that is right. I have 2 bags. Could you help me with the largest one, please?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Of course. Your car is just outside. Please keep your passport and any medicine with you.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. I appreciate your help. I will keep my small bag with me.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Alex accueille Mme Brown le soir, vérifie la réservation pour Central Hotel et propose de l’aide. La cliente a 2 bagages et demande de l’aide avec le plus grand. Les documents et médicaments restent avec elle."
+  },
+  {
+    "id": "e-01-2",
+    "ref": "E.01",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Good evening. My name is Alex. I am your driver. Are you Ms Green?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, I am. Good evening. Thank you for waiting. It took a little longer to collect my luggage.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "You are welcome. Your booking is for Riverside Hotel, is that right?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, that is right. I have 3 bags. Could you help me with the largest one, please?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Of course. Your car is just outside. Please keep your passport and any medicine with you.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. I appreciate your help. I will keep my small bag with me.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Alex accueille Mme Green le soir, vérifie la réservation pour Riverside Hotel et propose de l’aide. La cliente a 3 bagages et demande de l’aide avec le plus grand. Les documents et médicaments restent avec elle."
+  },
+  {
+    "id": "e-01-3",
+    "ref": "E.01",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Good evening. My name is Alex. I am your driver. Are you Ms Wilson?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, I am. Good evening. Thank you for waiting. It took a little longer to collect my luggage.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "You are welcome. Your booking is for Garden Hotel, is that right?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, that is right. I have 4 bags. Could you help me with the largest one, please?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Of course. Your car is just outside. Please keep your passport and any medicine with you.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. I appreciate your help. I will keep my small bag with me.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Alex accueille Mme Wilson le soir, vérifie la réservation pour Garden Hotel et propose de l’aide. La cliente a 4 bagages et demande de l’aide avec le plus grand. Les documents et médicaments restent avec elle."
+  },
+  {
+    "id": "e-01-4",
+    "ref": "E.01",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Good evening. My name is Alex. I am your driver. Are you Ms Taylor?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, I am. Good evening. Thank you for waiting. It took a little longer to collect my luggage.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "You are welcome. Your booking is for Harbour Hotel, is that right?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, that is right. I have 5 bags. Could you help me with the largest one, please?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Of course. Your car is just outside. Please keep your passport and any medicine with you.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. I appreciate your help. I will keep my small bag with me.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Alex accueille Mme Taylor le soir, vérifie la réservation pour Harbour Hotel et propose de l’aide. La cliente a 5 bagages et demande de l’aide avec le plus grand. Les documents et médicaments restent avec elle."
+  },
+  {
+    "id": "e-02-1",
+    "ref": "E.02",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Good morning. Do you have a booking with our company?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes. The booking is under Brown. We are going to Central Hotel.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you. How many passengers are travelling today?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "There are 2 passengers. We also have two large suitcases.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I will check the vehicle capacity. Could you confirm the full address of the hotel, please?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Certainly. It is 20 River Street. There is another hotel with a similar name, so please use this address.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "La réservation est au nom de Brown, pour 2 passagers et deux grandes valises, vers Central Hotel, au 20 River Street. Le conducteur vérifie l’adresse car plusieurs hôtels ont un nom proche."
+  },
+  {
+    "id": "e-02-2",
+    "ref": "E.02",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Good morning. Do you have a booking with our company?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes. The booking is under Green. We are going to Riverside Hotel.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you. How many passengers are travelling today?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "There are 3 passengers. We also have two large suitcases.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I will check the vehicle capacity. Could you confirm the full address of the hotel, please?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Certainly. It is 30 River Street. There is another hotel with a similar name, so please use this address.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "La réservation est au nom de Green, pour 3 passagers et deux grandes valises, vers Riverside Hotel, au 30 River Street. Le conducteur vérifie l’adresse car plusieurs hôtels ont un nom proche."
+  },
+  {
+    "id": "e-02-3",
+    "ref": "E.02",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Good morning. Do you have a booking with our company?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes. The booking is under Wilson. We are going to Garden Hotel.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you. How many passengers are travelling today?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "There are 4 passengers. We also have two large suitcases.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I will check the vehicle capacity. Could you confirm the full address of the hotel, please?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Certainly. It is 40 River Street. There is another hotel with a similar name, so please use this address.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "La réservation est au nom de Wilson, pour 4 passagers et deux grandes valises, vers Garden Hotel, au 40 River Street. Le conducteur vérifie l’adresse car plusieurs hôtels ont un nom proche."
+  },
+  {
+    "id": "e-02-4",
+    "ref": "E.02",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Good morning. Do you have a booking with our company?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes. The booking is under Taylor. We are going to Harbour Hotel.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you. How many passengers are travelling today?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "There are 5 passengers. We also have two large suitcases.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I will check the vehicle capacity. Could you confirm the full address of the hotel, please?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Certainly. It is 50 River Street. There is another hotel with a similar name, so please use this address.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "La réservation est au nom de Taylor, pour 5 passagers et deux grandes valises, vers Harbour Hotel, au 50 River Street. Le conducteur vérifie l’adresse car plusieurs hôtels ont un nom proche."
+  },
+  {
+    "id": "e-03-1",
+    "ref": "E.03",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Could you confirm the pick-up time for tomorrow, please?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes. Please collect us at seven thirty in the morning. Our appointment starts later.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you. I will repeat that: seven thirty in the morning. Is that correct?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, exactly. We need enough time to arrive calmly. There will be two passengers.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "The agreed fare is 60 euros. Could you confirm that amount as well? ",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, 60 euros. Thank you for checking both the time and the price.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "La prise en charge est prévue demain matin à 7 h 30. Le prix convenu est 60 €. Le conducteur répète les informations pour obtenir une confirmation."
+  },
+  {
+    "id": "e-03-2",
+    "ref": "E.03",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Could you confirm the pick-up time for tomorrow, please?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes. Please collect us at a quarter past eight in the morning. Our appointment starts later.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you. I will repeat that: a quarter past eight in the morning. Is that correct?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, exactly. We need enough time to arrive calmly. There will be two passengers.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "The agreed fare is 70 euros. Could you confirm that amount as well? ",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, 70 euros. Thank you for checking both the time and the price.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "La prise en charge est prévue demain matin à 8 h 15. Le prix convenu est 70 €. Le conducteur répète les informations pour obtenir une confirmation."
+  },
+  {
+    "id": "e-03-3",
+    "ref": "E.03",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Could you confirm the pick-up time for tomorrow, please?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes. Please collect us at a quarter to nine in the morning. Our appointment starts later.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you. I will repeat that: a quarter to nine in the morning. Is that correct?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, exactly. We need enough time to arrive calmly. There will be two passengers.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "The agreed fare is 80 euros. Could you confirm that amount as well? ",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, 80 euros. Thank you for checking both the time and the price.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "La prise en charge est prévue demain matin à 8 h 45. Le prix convenu est 80 €. Le conducteur répète les informations pour obtenir une confirmation."
+  },
+  {
+    "id": "e-03-4",
+    "ref": "E.03",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Could you confirm the pick-up time for tomorrow, please?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes. Please collect us at half past ten in the morning. Our appointment starts later.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you. I will repeat that: half past ten in the morning. Is that correct?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, exactly. We need enough time to arrive calmly. There will be two passengers.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "The agreed fare is 90 euros. Could you confirm that amount as well? ",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, 90 euros. Thank you for checking both the time and the price.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "La prise en charge est prévue demain matin à 10 h 30. Le prix convenu est 90 €. Le conducteur répète les informations pour obtenir une confirmation."
+  },
+  {
+    "id": "e-04-1",
+    "ref": "E.04",
+    "turns": [
+      {
+        "speaker": "Passenger",
+        "text": "Hello, I have arrived at the station, but I cannot see your car.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Hello. Please go to exit 2, on the ground floor. I am waiting in the authorised pick-up area.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "I can see a café and a blue information sign. Am I in the right place?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Yes. The pick-up area is opposite the café, next to the blue sign. Please use the pedestrian crossing.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. Should I go upstairs or stay on this level?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Please stay on the ground floor. I will be beside the car and I will check your name when you arrive.",
+        "voice": "en-GB-RyanNeural"
+      }
+    ],
+    "translation": "Le client doit rejoindre la sortie 2 au rez-de-chaussée. Le véhicule est dans la zone autorisée en face du café, près du panneau bleu. Il faut utiliser le passage piéton."
+  },
+  {
+    "id": "e-04-2",
+    "ref": "E.04",
+    "turns": [
+      {
+        "speaker": "Passenger",
+        "text": "Hello, I have arrived at the station, but I cannot see your car.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Hello. Please go to exit 3, on the ground floor. I am waiting in the authorised pick-up area.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "I can see a café and a blue information sign. Am I in the right place?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Yes. The pick-up area is opposite the café, next to the blue sign. Please use the pedestrian crossing.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. Should I go upstairs or stay on this level?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Please stay on the ground floor. I will be beside the car and I will check your name when you arrive.",
+        "voice": "en-GB-RyanNeural"
+      }
+    ],
+    "translation": "Le client doit rejoindre la sortie 3 au rez-de-chaussée. Le véhicule est dans la zone autorisée en face du café, près du panneau bleu. Il faut utiliser le passage piéton."
+  },
+  {
+    "id": "e-04-3",
+    "ref": "E.04",
+    "turns": [
+      {
+        "speaker": "Passenger",
+        "text": "Hello, I have arrived at the station, but I cannot see your car.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Hello. Please go to exit 4, on the ground floor. I am waiting in the authorised pick-up area.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "I can see a café and a blue information sign. Am I in the right place?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Yes. The pick-up area is opposite the café, next to the blue sign. Please use the pedestrian crossing.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. Should I go upstairs or stay on this level?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Please stay on the ground floor. I will be beside the car and I will check your name when you arrive.",
+        "voice": "en-GB-RyanNeural"
+      }
+    ],
+    "translation": "Le client doit rejoindre la sortie 4 au rez-de-chaussée. Le véhicule est dans la zone autorisée en face du café, près du panneau bleu. Il faut utiliser le passage piéton."
+  },
+  {
+    "id": "e-04-4",
+    "ref": "E.04",
+    "turns": [
+      {
+        "speaker": "Passenger",
+        "text": "Hello, I have arrived at the station, but I cannot see your car.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Hello. Please go to exit 5, on the ground floor. I am waiting in the authorised pick-up area.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "I can see a café and a blue information sign. Am I in the right place?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Yes. The pick-up area is opposite the café, next to the blue sign. Please use the pedestrian crossing.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. Should I go upstairs or stay on this level?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Please stay on the ground floor. I will be beside the car and I will check your name when you arrive.",
+        "voice": "en-GB-RyanNeural"
+      }
+    ],
+    "translation": "Le client doit rejoindre la sortie 5 au rez-de-chaussée. Le véhicule est dans la zone autorisée en face du café, près du panneau bleu. Il faut utiliser le passage piéton."
+  },
+  {
+    "id": "e-05-1",
+    "ref": "E.05",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "May I help you with your luggage?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, please. We have 2 large suitcases and one small bag. The small bag contains medicine.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Please keep the medicine with you. Are there any fragile items in the suitcases?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes. One suitcase contains a fragile gift. Please do not put heavy bags on top of it.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you for telling me. I will check that everything can be stored safely before we leave.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "That is perfect. Please ask me before folding my walking aid. I can show you how it works.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le groupe possède 2 grandes valises et un petit sac contenant des médicaments. Un cadeau fragile doit être protégé. Le passager demande d’être consulté avant de plier son aide à la mobilité."
+  },
+  {
+    "id": "e-05-2",
+    "ref": "E.05",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "May I help you with your luggage?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, please. We have 3 large suitcases and one small bag. The small bag contains medicine.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Please keep the medicine with you. Are there any fragile items in the suitcases?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes. One suitcase contains a fragile gift. Please do not put heavy bags on top of it.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you for telling me. I will check that everything can be stored safely before we leave.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "That is perfect. Please ask me before folding my walking aid. I can show you how it works.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le groupe possède 3 grandes valises et un petit sac contenant des médicaments. Un cadeau fragile doit être protégé. Le passager demande d’être consulté avant de plier son aide à la mobilité."
+  },
+  {
+    "id": "e-05-3",
+    "ref": "E.05",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "May I help you with your luggage?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, please. We have 4 large suitcases and one small bag. The small bag contains medicine.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Please keep the medicine with you. Are there any fragile items in the suitcases?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes. One suitcase contains a fragile gift. Please do not put heavy bags on top of it.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you for telling me. I will check that everything can be stored safely before we leave.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "That is perfect. Please ask me before folding my walking aid. I can show you how it works.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le groupe possède 4 grandes valises et un petit sac contenant des médicaments. Un cadeau fragile doit être protégé. Le passager demande d’être consulté avant de plier son aide à la mobilité."
+  },
+  {
+    "id": "e-05-4",
+    "ref": "E.05",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "May I help you with your luggage?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, please. We have 5 large suitcases and one small bag. The small bag contains medicine.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Please keep the medicine with you. Are there any fragile items in the suitcases?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes. One suitcase contains a fragile gift. Please do not put heavy bags on top of it.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you for telling me. I will check that everything can be stored safely before we leave.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "That is perfect. Please ask me before folding my walking aid. I can show you how it works.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le groupe possède 5 grandes valises et un petit sac contenant des médicaments. Un cadeau fragile doit être protégé. Le passager demande d’être consulté avant de plier son aide à la mobilité."
+  },
+  {
+    "id": "e-06-1",
+    "ref": "E.06",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Welcome on board. Could you fasten your seat belt, please?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Of course. Could you make the car a little cooler? It is quite warm today.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Certainly. I will adjust the air conditioning when it is safe to do so. Would you prefer a quiet journey?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, please. I need to rest. Please let me know when we are close to the hotel.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Of course. The journey should take about 25 minutes, depending on traffic.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. I will keep my seat belt fastened. Please stop in a safe place if you need to check anything.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le conducteur rappelle la ceinture, propose d’ajuster la climatisation et respecte le souhait d’un trajet calme. Le temps estimé est d’environ 25 minutes selon la circulation."
+  },
+  {
+    "id": "e-06-2",
+    "ref": "E.06",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Welcome on board. Could you fasten your seat belt, please?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Of course. Could you make the car a little cooler? It is quite warm today.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Certainly. I will adjust the air conditioning when it is safe to do so. Would you prefer a quiet journey?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, please. I need to rest. Please let me know when we are close to the hotel.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Of course. The journey should take about 30 minutes, depending on traffic.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. I will keep my seat belt fastened. Please stop in a safe place if you need to check anything.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le conducteur rappelle la ceinture, propose d’ajuster la climatisation et respecte le souhait d’un trajet calme. Le temps estimé est d’environ 30 minutes selon la circulation."
+  },
+  {
+    "id": "e-06-3",
+    "ref": "E.06",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Welcome on board. Could you fasten your seat belt, please?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Of course. Could you make the car a little cooler? It is quite warm today.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Certainly. I will adjust the air conditioning when it is safe to do so. Would you prefer a quiet journey?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, please. I need to rest. Please let me know when we are close to the hotel.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Of course. The journey should take about 35 minutes, depending on traffic.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. I will keep my seat belt fastened. Please stop in a safe place if you need to check anything.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le conducteur rappelle la ceinture, propose d’ajuster la climatisation et respecte le souhait d’un trajet calme. Le temps estimé est d’environ 35 minutes selon la circulation."
+  },
+  {
+    "id": "e-06-4",
+    "ref": "E.06",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Welcome on board. Could you fasten your seat belt, please?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Of course. Could you make the car a little cooler? It is quite warm today.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Certainly. I will adjust the air conditioning when it is safe to do so. Would you prefer a quiet journey?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, please. I need to rest. Please let me know when we are close to the hotel.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Of course. The journey should take about 40 minutes, depending on traffic.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. I will keep my seat belt fastened. Please stop in a safe place if you need to check anything.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le conducteur rappelle la ceinture, propose d’ajuster la climatisation et respecte le souhait d’un trajet calme. Le temps estimé est d’environ 40 minutes selon la circulation."
+  },
+  {
+    "id": "e-07-1",
+    "ref": "E.07",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "The usual route should take about 25 minutes, but there are roadworks today.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Is there another route? We would prefer to avoid arriving too late.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Yes. The toll road may save about ten minutes. The toll costs 5 euros and is not included in the original fare.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you for explaining. We agree to use the toll road and pay the additional toll.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I will use the authorised route. If traffic changes, I will update you when it is safe to do so.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "That is fine. Please do not take any risks to make up time.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Des travaux affectent le trajet de 25 minutes. Le péage coûte 5 € en plus et pourrait faire gagner dix minutes. Le client accepte cette option et demande de préserver la sécurité."
+  },
+  {
+    "id": "e-07-2",
+    "ref": "E.07",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "The usual route should take about 30 minutes, but there are roadworks today.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Is there another route? We would prefer to avoid arriving too late.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Yes. The toll road may save about ten minutes. The toll costs 6 euros and is not included in the original fare.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you for explaining. We agree to use the toll road and pay the additional toll.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I will use the authorised route. If traffic changes, I will update you when it is safe to do so.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "That is fine. Please do not take any risks to make up time.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Des travaux affectent le trajet de 30 minutes. Le péage coûte 6 € en plus et pourrait faire gagner dix minutes. Le client accepte cette option et demande de préserver la sécurité."
+  },
+  {
+    "id": "e-07-3",
+    "ref": "E.07",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "The usual route should take about 35 minutes, but there are roadworks today.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Is there another route? We would prefer to avoid arriving too late.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Yes. The toll road may save about ten minutes. The toll costs 7 euros and is not included in the original fare.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you for explaining. We agree to use the toll road and pay the additional toll.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I will use the authorised route. If traffic changes, I will update you when it is safe to do so.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "That is fine. Please do not take any risks to make up time.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Des travaux affectent le trajet de 35 minutes. Le péage coûte 7 € en plus et pourrait faire gagner dix minutes. Le client accepte cette option et demande de préserver la sécurité."
+  },
+  {
+    "id": "e-07-4",
+    "ref": "E.07",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "The usual route should take about 40 minutes, but there are roadworks today.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Is there another route? We would prefer to avoid arriving too late.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Yes. The toll road may save about ten minutes. The toll costs 8 euros and is not included in the original fare.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you for explaining. We agree to use the toll road and pay the additional toll.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I will use the authorised route. If traffic changes, I will update you when it is safe to do so.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "That is fine. Please do not take any risks to make up time.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Des travaux affectent le trajet de 40 minutes. Le péage coûte 8 € en plus et pourrait faire gagner dix minutes. Le client accepte cette option et demande de préserver la sécurité."
+  },
+  {
+    "id": "e-08-1",
+    "ref": "E.08",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "The agreed fare for this transfer is 60 euros. It includes the journey to Central Hotel.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Does that include waiting time and an extra stop?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "It includes ten minutes of waiting. An additional stop would cost 10 euros if we agree to it before changing the journey.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "I understand. We would like one extra stop at the pharmacy, please.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Let me check the route and confirm the new total: 70 euros, with the extra stop included.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, that is acceptable. Thank you for explaining the price before we leave.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le transfert initial coûte 60 € et inclut dix minutes d’attente. L’arrêt supplémentaire à la pharmacie coûte 10 € ; le nouveau total convenu est 70 €."
+  },
+  {
+    "id": "e-08-2",
+    "ref": "E.08",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "The agreed fare for this transfer is 70 euros. It includes the journey to Riverside Hotel.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Does that include waiting time and an extra stop?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "It includes ten minutes of waiting. An additional stop would cost 15 euros if we agree to it before changing the journey.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "I understand. We would like one extra stop at the pharmacy, please.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Let me check the route and confirm the new total: 85 euros, with the extra stop included.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, that is acceptable. Thank you for explaining the price before we leave.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le transfert initial coûte 70 € et inclut dix minutes d’attente. L’arrêt supplémentaire à la pharmacie coûte 15 € ; le nouveau total convenu est 85 €."
+  },
+  {
+    "id": "e-08-3",
+    "ref": "E.08",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "The agreed fare for this transfer is 80 euros. It includes the journey to Garden Hotel.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Does that include waiting time and an extra stop?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "It includes ten minutes of waiting. An additional stop would cost 20 euros if we agree to it before changing the journey.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "I understand. We would like one extra stop at the pharmacy, please.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Let me check the route and confirm the new total: 100 euros, with the extra stop included.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, that is acceptable. Thank you for explaining the price before we leave.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le transfert initial coûte 80 € et inclut dix minutes d’attente. L’arrêt supplémentaire à la pharmacie coûte 20 € ; le nouveau total convenu est 100 €."
+  },
+  {
+    "id": "e-08-4",
+    "ref": "E.08",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "The agreed fare for this transfer is 90 euros. It includes the journey to Harbour Hotel.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Does that include waiting time and an extra stop?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "It includes ten minutes of waiting. An additional stop would cost 25 euros if we agree to it before changing the journey.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "I understand. We would like one extra stop at the pharmacy, please.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Let me check the route and confirm the new total: 115 euros, with the extra stop included.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Yes, that is acceptable. Thank you for explaining the price before we leave.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le transfert initial coûte 90 € et inclut dix minutes d’attente. L’arrêt supplémentaire à la pharmacie coûte 25 € ; le nouveau total convenu est 115 €."
+  },
+  {
+    "id": "e-09-1",
+    "ref": "E.09",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Hello, I am sorry, but I am running about 10 minutes late because of an unexpected road closure.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you for letting me know. We are still at the hotel reception.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I expect to arrive in about 10 minutes. Would you like me to contact the office to check an alternative vehicle?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Please check with your office. Our appointment is important, and we would like the most reliable option.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I will contact the office from a safe place and update you with a confirmed solution.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. Please use the same pick-up point unless we agree on a change.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Une fermeture imprévue crée environ 10 minutes de retard. Le client reste à la réception. Le chauffeur doit vérifier un véhicule alternatif avec le bureau et confirmer la solution."
+  },
+  {
+    "id": "e-09-2",
+    "ref": "E.09",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Hello, I am sorry, but I am running about 15 minutes late because of an unexpected road closure.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you for letting me know. We are still at the hotel reception.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I expect to arrive in about 15 minutes. Would you like me to contact the office to check an alternative vehicle?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Please check with your office. Our appointment is important, and we would like the most reliable option.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I will contact the office from a safe place and update you with a confirmed solution.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. Please use the same pick-up point unless we agree on a change.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Une fermeture imprévue crée environ 15 minutes de retard. Le client reste à la réception. Le chauffeur doit vérifier un véhicule alternatif avec le bureau et confirmer la solution."
+  },
+  {
+    "id": "e-09-3",
+    "ref": "E.09",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Hello, I am sorry, but I am running about 20 minutes late because of an unexpected road closure.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you for letting me know. We are still at the hotel reception.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I expect to arrive in about 20 minutes. Would you like me to contact the office to check an alternative vehicle?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Please check with your office. Our appointment is important, and we would like the most reliable option.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I will contact the office from a safe place and update you with a confirmed solution.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. Please use the same pick-up point unless we agree on a change.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Une fermeture imprévue crée environ 20 minutes de retard. Le client reste à la réception. Le chauffeur doit vérifier un véhicule alternatif avec le bureau et confirmer la solution."
+  },
+  {
+    "id": "e-09-4",
+    "ref": "E.09",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "Hello, I am sorry, but I am running about 25 minutes late because of an unexpected road closure.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you for letting me know. We are still at the hotel reception.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I expect to arrive in about 25 minutes. Would you like me to contact the office to check an alternative vehicle?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Please check with your office. Our appointment is important, and we would like the most reliable option.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I will contact the office from a safe place and update you with a confirmed solution.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. Please use the same pick-up point unless we agree on a change.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Une fermeture imprévue crée environ 25 minutes de retard. Le client reste à la réception. Le chauffeur doit vérifier un véhicule alternatif avec le bureau et confirmer la solution."
+  },
+  {
+    "id": "e-10-1",
+    "ref": "E.10",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "The total fare is 60 euros. Would you like to pay by card or in cash?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "By card, please. Could I also have a receipt and an invoice for my company?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Of course. Please wait while I check that the payment has been confirmed.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "The terminal screen has changed. Should I try the card again?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Not yet. I will check the status first so that you are not charged twice. Then I will arrange the documents.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. I will give you the company details needed for the invoice through the agreed secure channel.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le passager paie 60 € par carte et demande un reçu ainsi qu’une facture pour son entreprise. Le conducteur vérifie la confirmation avant toute seconde tentative pour éviter un double débit."
+  },
+  {
+    "id": "e-10-2",
+    "ref": "E.10",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "The total fare is 70 euros. Would you like to pay by card or in cash?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "By card, please. Could I also have a receipt and an invoice for my company?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Of course. Please wait while I check that the payment has been confirmed.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "The terminal screen has changed. Should I try the card again?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Not yet. I will check the status first so that you are not charged twice. Then I will arrange the documents.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. I will give you the company details needed for the invoice through the agreed secure channel.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le passager paie 70 € par carte et demande un reçu ainsi qu’une facture pour son entreprise. Le conducteur vérifie la confirmation avant toute seconde tentative pour éviter un double débit."
+  },
+  {
+    "id": "e-10-3",
+    "ref": "E.10",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "The total fare is 80 euros. Would you like to pay by card or in cash?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "By card, please. Could I also have a receipt and an invoice for my company?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Of course. Please wait while I check that the payment has been confirmed.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "The terminal screen has changed. Should I try the card again?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Not yet. I will check the status first so that you are not charged twice. Then I will arrange the documents.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. I will give you the company details needed for the invoice through the agreed secure channel.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le passager paie 80 € par carte et demande un reçu ainsi qu’une facture pour son entreprise. Le conducteur vérifie la confirmation avant toute seconde tentative pour éviter un double débit."
+  },
+  {
+    "id": "e-10-4",
+    "ref": "E.10",
+    "turns": [
+      {
+        "speaker": "Driver",
+        "text": "The total fare is 90 euros. Would you like to pay by card or in cash?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "By card, please. Could I also have a receipt and an invoice for my company?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Of course. Please wait while I check that the payment has been confirmed.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "The terminal screen has changed. Should I try the card again?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Not yet. I will check the status first so that you are not charged twice. Then I will arrange the documents.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. I will give you the company details needed for the invoice through the agreed secure channel.",
+        "voice": "en-GB-SoniaNeural"
+      }
+    ],
+    "translation": "Le passager paie 90 € par carte et demande un reçu ainsi qu’une facture pour son entreprise. Le conducteur vérifie la confirmation avant toute seconde tentative pour éviter un double débit."
+  },
+  {
+    "id": "e-11-1",
+    "ref": "E.11",
+    "turns": [
+      {
+        "speaker": "Passenger",
+        "text": "Hello, I think I left my phone in your car after the transfer.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I am sorry to hear that. Could you confirm the booking name and the time of the journey?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "The booking was under Brown. We arrived at Central Hotel this morning.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you. I will check the vehicle when I am safely parked and contact the office to arrange the next step.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "If you find it, could you leave it with a stranger outside the hotel?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "For security reasons, I will arrange a verified handover through the office. I cannot promise a refund or delivery until the details are checked.",
+        "voice": "en-GB-RyanNeural"
+      }
+    ],
+    "translation": "Un téléphone aurait été oublié après le trajet de Brown vers Central Hotel. Le conducteur vérifiera à l’arrêt et organisera une remise vérifiée avec le bureau, sans promesse non confirmée."
+  },
+  {
+    "id": "e-11-2",
+    "ref": "E.11",
+    "turns": [
+      {
+        "speaker": "Passenger",
+        "text": "Hello, I think I left my phone in your car after the transfer.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I am sorry to hear that. Could you confirm the booking name and the time of the journey?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "The booking was under Green. We arrived at Riverside Hotel this morning.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you. I will check the vehicle when I am safely parked and contact the office to arrange the next step.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "If you find it, could you leave it with a stranger outside the hotel?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "For security reasons, I will arrange a verified handover through the office. I cannot promise a refund or delivery until the details are checked.",
+        "voice": "en-GB-RyanNeural"
+      }
+    ],
+    "translation": "Un téléphone aurait été oublié après le trajet de Green vers Riverside Hotel. Le conducteur vérifiera à l’arrêt et organisera une remise vérifiée avec le bureau, sans promesse non confirmée."
+  },
+  {
+    "id": "e-11-3",
+    "ref": "E.11",
+    "turns": [
+      {
+        "speaker": "Passenger",
+        "text": "Hello, I think I left my phone in your car after the transfer.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I am sorry to hear that. Could you confirm the booking name and the time of the journey?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "The booking was under Wilson. We arrived at Garden Hotel this morning.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you. I will check the vehicle when I am safely parked and contact the office to arrange the next step.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "If you find it, could you leave it with a stranger outside the hotel?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "For security reasons, I will arrange a verified handover through the office. I cannot promise a refund or delivery until the details are checked.",
+        "voice": "en-GB-RyanNeural"
+      }
+    ],
+    "translation": "Un téléphone aurait été oublié après le trajet de Wilson vers Garden Hotel. Le conducteur vérifiera à l’arrêt et organisera une remise vérifiée avec le bureau, sans promesse non confirmée."
+  },
+  {
+    "id": "e-11-4",
+    "ref": "E.11",
+    "turns": [
+      {
+        "speaker": "Passenger",
+        "text": "Hello, I think I left my phone in your car after the transfer.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I am sorry to hear that. Could you confirm the booking name and the time of the journey?",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "The booking was under Taylor. We arrived at Harbour Hotel this morning.",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "Thank you. I will check the vehicle when I am safely parked and contact the office to arrange the next step.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "If you find it, could you leave it with a stranger outside the hotel?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "For security reasons, I will arrange a verified handover through the office. I cannot promise a refund or delivery until the details are checked.",
+        "voice": "en-GB-RyanNeural"
+      }
+    ],
+    "translation": "Un téléphone aurait été oublié après le trajet de Taylor vers Harbour Hotel. Le conducteur vérifiera à l’arrêt et organisera une remise vérifiée avec le bureau, sans promesse non confirmée."
+  },
+  {
+    "id": "e-12-1",
+    "ref": "E.12",
+    "turns": [
+      {
+        "speaker": "Passenger",
+        "text": "Could you recommend something to visit near our hotel?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "The old town and the harbour are popular places to explore. You can walk between them using the pedestrian route.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Is the small museum open this afternoon?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I am not sure about today’s opening hours. I can check an official source when we stop, rather than give you an uncertain time.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. Do we need to book a restaurant as well?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "A booking may be useful, but availability changes. I can help you find the contact details once the car is safely parked.",
+        "voice": "en-GB-RyanNeural"
+      }
+    ],
+    "translation": "Le conducteur propose la vieille ville et le port. Il ne connaît pas les horaires du musée ni la disponibilité du restaurant et propose une vérification une fois stationné."
+  },
+  {
+    "id": "e-12-2",
+    "ref": "E.12",
+    "turns": [
+      {
+        "speaker": "Passenger",
+        "text": "Could you recommend something to visit near our hotel?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "The public garden and the market square are popular places to explore. You can walk between them using the pedestrian route.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Is the small museum open this afternoon?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I am not sure about today’s opening hours. I can check an official source when we stop, rather than give you an uncertain time.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. Do we need to book a restaurant as well?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "A booking may be useful, but availability changes. I can help you find the contact details once the car is safely parked.",
+        "voice": "en-GB-RyanNeural"
+      }
+    ],
+    "translation": "Le conducteur propose le jardin public et la place du marché. Il ne connaît pas les horaires du musée ni la disponibilité du restaurant et propose une vérification une fois stationné."
+  },
+  {
+    "id": "e-12-3",
+    "ref": "E.12",
+    "turns": [
+      {
+        "speaker": "Passenger",
+        "text": "Could you recommend something to visit near our hotel?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "The castle and the riverside walk are popular places to explore. You can walk between them using the pedestrian route.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Is the small museum open this afternoon?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I am not sure about today’s opening hours. I can check an official source when we stop, rather than give you an uncertain time.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. Do we need to book a restaurant as well?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "A booking may be useful, but availability changes. I can help you find the contact details once the car is safely parked.",
+        "voice": "en-GB-RyanNeural"
+      }
+    ],
+    "translation": "Le conducteur propose le château et la promenade au bord de la rivière. Il ne connaît pas les horaires du musée ni la disponibilité du restaurant et propose une vérification une fois stationné."
+  },
+  {
+    "id": "e-12-4",
+    "ref": "E.12",
+    "turns": [
+      {
+        "speaker": "Passenger",
+        "text": "Could you recommend something to visit near our hotel?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "The art gallery and the historic centre are popular places to explore. You can walk between them using the pedestrian route.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Is the small museum open this afternoon?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "I am not sure about today’s opening hours. I can check an official source when we stop, rather than give you an uncertain time.",
+        "voice": "en-GB-RyanNeural"
+      },
+      {
+        "speaker": "Passenger",
+        "text": "Thank you. Do we need to book a restaurant as well?",
+        "voice": "en-GB-SoniaNeural"
+      },
+      {
+        "speaker": "Driver",
+        "text": "A booking may be useful, but availability changes. I can help you find the contact details once the car is safely parked.",
+        "voice": "en-GB-RyanNeural"
+      }
+    ],
+    "translation": "Le conducteur propose la galerie d’art et le centre historique. Il ne connaît pas les horaires du musée ni la disponibilité du restaurant et propose une vérification une fois stationné."
+  }
+]

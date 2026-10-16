@@ -1,0 +1,12 @@
+{% from '_aps62_scene.html' import scene %}
+{% macro lesson_intro(label, title, paragraphs, objectives, pacing=[], pacing_note='', illustration=none) %}
+<section class="aps-editorial" data-aps-lesson-page>
+  <span class="aps-label">{{ label }}</span>
+  <h2>{{ title }}</h2>
+  {% if illustration %}{{ scene(illustration) }}{% endif %}
+  {% for paragraph in paragraphs %}<p>{{ paragraph }}</p>{% endfor %}
+  <div class="aps-objectives"><span class="aps-label">À l’issue de ce dossier</span><ul>{% for objective in objectives %}<li>{{ objective }}</li>{% endfor %}</ul></div>
+  <p>Étudiez les explications, les tableaux et les exemples commentés, puis observez leur application dans la vidéo. Les exercices vous proposeront d’autres situations avec des réponses à sélectionner. Aucun texte à rédiger.</p>
+  {% if pacing %}<details class="aps-transcript"><summary>Organisation et temps de travail indicatifs</summary><div class="aps-route">{% for item in pacing %}<span><b>{{ item.minutes }} min</b> {{ item.label }}</span>{% endfor %}</div>{% if pacing_note %}<p class="aps-small">{{ pacing_note }}</p>{% endif %}</details>{% endif %}
+</section>
+{% endmacro %}

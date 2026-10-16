@@ -1,0 +1,250 @@
+# Deux erreurs plausibles pour chacune des trois décisions de l'atelier principal.
+# Ordre : constat, décision, évolution. La réponse correcte et les IDs existants sont conservés.
+@01-01
+Photographier les véhicules entrant sur le site.|Contrôler seulement une porte de son établissement.
+Photographier d'abord, puis demander validation.|Observer le commerce voisin depuis un autre emplacement en laissant l'accueil quelques minutes.
+Attendre la validation de la demande initiale avant de traiter cette porte.|Quitter immédiatement l'accueil sans vérifier le relais du poste.
+@01-02
+Une carte renouvelée et valide.|Un titre couvrant déjà le poste proposé.
+L'affecter provisoirement en binôme.|Vérifier seulement son diplôme puis laisser la régularisation suivre son cours.
+Vérifier seulement la date du titre.|Considérer la présentation d'un document comme suffisante sans vérifier l'activité couverte.
+@01-03
+Pour la seule usine qu'il surveille déjà.|Pour la même entreprise, sans extension de mission.
+Essayer la ronde avant de vérifier le cadre.|Accepter si le voisin confirme oralement qu'il souhaite cette surveillance.
+Vérifier seulement le périmètre de la ronde.|Ajouter la ronde au planning sans examiner la tenue des autres postes.
+@01-04
+Elle identifie sans ambiguïté une mission privée.|Elle pose seulement un problème de confort.
+Porter la veste et expliquer seulement si l'on demande.|Conserver les signes d'autorité en masquant seulement le nom de l'employeur.
+Laisser le client annoncer la fausse qualité.|Utiliser ce titre seulement au début de l'échange pour obtenir l'attention.
+@02-01
+Une condamnation et une indemnisation déjà fixées.|Une seule procédure interne à l'employeur.
+Choisir une responsabilité qui exclut les autres.|Considérer que la décision de l'employeur suffit à trancher toute la situation.
+Retenir la vidéo comme preuve complète même si le premier geste manque.|Écarter toute la vidéo parce qu'elle ne montre pas chaque moment.
+@02-02
+Il continue de porter les mêmes coups.|Il est déjà pris en charge par la police.
+Poursuivre la réaction commencée jusqu'à obtenir des excuses.|Maintenir la même réponse tant que la personne reste visible.
+Garder l'analyse précédente parce que la personne s'était éloignée.|Choisir le moyen le plus fort disponible sans réexaminer la nécessité.
+@02-03
+La cause de l'odeur est déjà confirmée.|L'accès à la victime est déjà sécurisé.
+Entrer pour vérifier avant d'alerter.|Attendre un témoin capable d'identifier l'odeur avant toute alerte.
+Présenter le témoignage comme une confirmation.|Supprimer la protection dès qu'une explication rassurante est proposée.
+@03-01
+Oui, il a directement vu le vol.|Oui, la description confirme son observation.
+Retenir la personne pour rechercher ensuite les faits qui manquent.|Exiger un contrôle contraint sur la seule correspondance avec la description.
+Considérer que tout indice supplémentaire autorise automatiquement une contrainte.|Attendre l'arrivée du directeur avant d'organiser le relais compétent.
+@03-02
+Appeler tout de suite la police.|Attendre une instruction reçue de la police.
+Recueillir d'abord une reconnaissance écrite avant d'appeler.|Retarder l'appel si la personne promet de rester calme.
+Attendre l'arrivée de la police pour transmettre le problème de santé.|Considérer le malaise comme une hypothèse à ignorer tant qu'il n'est pas confirmé.
+@04-01
+Pour un besoin de sécurité déjà validé.|Pour une consultation dont les droits sont établis.
+Tout envoyer et demander au destinataire de trier.|Communiquer une partie de la liste sans vérifier d'abord le droit et le besoin.
+Valider toute demande présentée comme officielle.|Envoyer par le canal le plus rapide puis consigner la transmission après coup.
+@05-01
+Sur des autorisations de livraison différentes.|Sur un comportement dangereux constaté.
+Renforcer le contrôle d'une seule livraison pour rassurer le collègue.|Reporter la décision à la relève sans traiter la différence de critères.
+Supprimer tous les contrôles pour éviter la difficulté d'accès.|Choisir une porte de service non prévue parce qu'elle paraît plus facile.
+@05-02
+Sur un refus des contrôles d'accès.|Sur un trouble concret déjà observé.
+Étendre la règle du personnel à tout visiteur.|Demander à la personne de cacher le signe sans faire vérifier le fondement de la demande.
+Juger les convictions à partir de la distribution.|Interdire toute présence de la personne sans distinguer l'acte de distribution.
+@05-03
+Des menaces précises contre une personne.|Une obstruction matérielle des issues.
+Sanctionner les critiques du client.|Assimiler tout désaccord public à une infraction avant d'examiner les faits.
+Poursuivre le débat avant de traiter le passage.|Laisser chaque agent décider seul de la circulation pour agir plus vite.
+@06-01
+Une autorisation du responsable de déroger.|Aucune autre demande dans ce cas.
+Accepter l'avantage et tracer l'accès après coup.|Accorder une unique exception puis rappeler la procédure pour les fois suivantes.
+Accepter dès que la contrepartie est retirée.|Se fonder uniquement sur le faible prix du cadeau sans consulter les règles internes.
+@06-02
+Seulement l'objet au centre de la photo.|Uniquement des informations publiques.
+Envoyer la photo puis demander au groupe de la supprimer après lecture.|La transmettre sur un téléphone personnel en masquant uniquement le titre.
+Multiplier les envois pour demander à chaque collègue où la photo a circulé.|Attendre la prochaine réunion puisque l'envoi ne peut plus être annulé.
+@06-03
+L'exactitude parfaite de tous les documents.|L'accord de chaque agent pour le contrôle.
+Remettre tout immédiatement sans vérifier la qualité annoncée.|Différer toute coopération jusqu'au prochain jour ouvrable.
+Réimprimer discrètement une version corrigée en retirant l'ancienne.|Écarter les pièces inexactes et présenter seulement celles qui sont complètes.
+@06-04
+La propre identité de l'agent.|Une identité commune autorisée pour l'équipe.
+Utiliser l'identité proposée en précisant son vrai nom dans une remarque.|Accepter pour cette seule vacation afin d'éviter une interruption de service.
+Répondre publiquement aux pressions en diffusant les documents du poste.|Attendre plusieurs incidents identiques avant de conserver une trace des faits.
+@07-01
+Un passage forcé déjà réalisé.|Une fraude déjà confirmée par vérification.
+Promettre un accès très rapide sans disposer d'une confirmation.|Répéter uniquement l'interdiction plus fort sans clarifier ce qui bloque.
+Se rapprocher pour montrer que l'on garde le contrôle.|Poursuivre la même explication sans réexaminer la distance ni le besoin d'appui.
+@07-02
+Il prouve l'absence de tout rendez-vous.|Il établit que le courriel est faux.
+Promettre l'admission avant de vérifier le service attendu.|Demander seulement à la personne d'affirmer une seconde fois qu'elle a rendez-vous.
+Ouvrir dès que le rendez-vous est retrouvé sans les autres contrôles prévus.|Ajouter un contrôle non prévu pour compenser le temps déjà perdu.
+@07-03
+Le recul est déjà garanti par le comptoir.|Un franchissement de l'accès est déjà réalisé.
+Rester dans l'espace étroit pour ne pas sembler reculer.|Se rapprocher davantage afin de parler à voix basse.
+Donner toutes les consignes d'un coup pour accélérer l'échange.|Faire intervenir plusieurs interlocuteurs en même temps pour renforcer l'explication.
+@07-04
+Elle a déjà franchi le portillon de force.|Elle a déjà porté un coup à l'agent.
+Promettre une dérogation si les insultes cessent.|Répondre sur le même ton pour montrer que la règle est ferme.
+Conserver exactement la même réponse malgré le nouveau comportement.|Poursuivre le rappel verbal sans transmettre le risque d'accès qui apparaît.
+@07-05
+La tension continue, sans vérification aboutie.|L'autorisation est toujours refusée.
+Transmettre seulement une appréciation sur le caractère de la personne.|Écrire uniquement « réglé » sans préciser la solution ni le suivi.
+Clore le sujet puisque cet usager est désormais satisfait.|Retirer seul tous les supports sans faire valider une information de remplacement.
+@08-01
+Deux versions également applicables à tout cas.|Aucun indice sur le statut des documents.
+Choisir l'horaire le plus favorable au visiteur pour résoudre l'écart.|Appliquer un horaire intermédiaire en attendant la prochaine relève.
+Modifier la règle parce que l'appel contient des détails précis sur le site.|Considérer toute demande urgente comme une dérogation déjà autorisée.
+@08-02
+Seulement l'historique des incidents précédents.|Seulement le nom complet de tous les agents.
+Envoyer un agent au lieu le plus probable sans demander de précision.|Demander d'abord une conclusion sur le responsable de l'incident.
+Supposer que le destinataire a compris puisqu'il a répondu.|Laisser chacun déduire l'action attendue à partir du premier message.
+@08-03
+Une heure invérifiable et seulement estimée.|Un dossier impossible à rectifier.
+Remplacer silencieusement l'heure dans l'entrée validée.|Supprimer l'entrée puis la ressaisir en faisant disparaître l'ancienne version.
+Attribuer à tous les faits l'heure exacte de l'appel.|Transformer le souvenir approximatif en heure certaine pour simplifier la lecture.
+@08-04
+Oui, il a directement observé le geste.|Oui, courir prouve l'auteur du dommage.
+Fusionner les témoignages avec les constats pour produire un récit plus fluide.|Retenir uniquement l'hypothèse la plus probable et supprimer les réserves.
+Copier lui-même l'élément sur un support personnel pour gagner du temps.|Présenter la pièce comme décisive avant que sa portée ait été examinée.
+@08-05
+Clore une réparation déjà confirmée.|Recommencer un incident désormais résolu.
+Indiquer uniquement l'équipement concerné en laissant la relève rechercher la suite.|Transmettre tous les anciens incidents sans préciser celui qui reste ouvert.
+Demander à la relève d'improviser sans les moyens manquants.|Considérer que la consigne transmise suffit même si elle ne peut être exécutée.
+@09-01
+Oui, le danger reste identique par principe.|Oui, les données initiales suffisent toujours.
+Prolonger l'action jusqu'à une durée fixée à l'avance.|Poursuivre pour empêcher une récidive seulement supposée.
+Reprendre automatiquement le geste précédent sans examiner le nouveau danger.|Choisir la force maximale disponible pour ne plus devoir réévaluer.
+@09-02
+Aucun accès n'est disponible.|Seulement le portail principal bloqué.
+Attendre que les secours arrivent avant de leur signaler l'accès bloqué.|Proposer un passage proche dont l'utilisation n'a pas été vérifiée.
+Maintenir la première orientation même si elle est devenue inadaptée.|Attendre une résolution complète avant de signaler le changement.
+@09-03
+Une simple lecture du badge.|Un contrôle librement accepté et vérifié.
+Demander une décharge écrite puis exécuter la demande.|Appliquer la demande aux seules personnes inconnues pour en réduire la portée.
+Considérer que le seul mot « accord » rend tous les contrôles possibles.|Vérifier uniquement que le client confirme sa demande par écrit.
+@10-01
+Un danger absent avant la première chute.|Seulement la lenteur des piétons.
+Entrer dans le flux pour installer rapidement un balisage sans coordination.|Attendre la fin de la pluie avant de signaler le passage.
+Considérer le problème réglé dès qu'un premier groupe a été averti.|Retirer les protections parce que l'alerte initiale a déjà été transmise.
+@10-02
+Seulement le nom du nouvel agent.|Une simple illustration du poste déjà évalué.
+Réécrire seul l'évaluation complète sans passer par les responsables prévus.|Conserver le document inchangé jusqu'au premier accident.
+Examiner seulement l'équipement individuel proposé.|Présumer que la possession d'un téléphone garantit l'organisation des secours.
+@10-03
+Le seul fournisseur qui sera facturé.|Le choix des vêtements de chaque entreprise.
+Laisser entrer dès que les badges sont reconnus.|Permettre au chef d'équipe de définir seul ses conditions de circulation.
+Corriger seulement le planning sans faire vérifier les nouvelles interférences.|Accepter le changement si l'entreprise promet une intervention courte.
+@10-04
+La même conduite que sur son ancien site.|Une sortie automatique, sans autre référence.
+Appliquer de mémoire la conduite connue sur un autre site.|Choisir l'itinéraire utilisé par le plus grand nombre de personnes.
+Transmettre la nouvelle destination sans son origine ni son périmètre.|Maintenir l'ancienne consigne pour éviter de changer les habitudes.
+@10-05
+Seule l'apparence du passage change.|Le gilet remplace déjà la protection retirée.
+Compter sur les équipements individuels pour remplacer la séparation manquante.|Replacer le matériel dans le trafic sans coordination ni protection.
+Utiliser le matériel en se fondant uniquement sur l'habitude d'un collègue.|Déduire le mode d'emploi de sa ressemblance avec un ancien équipement.
+@10-06
+C'est le produit habituel du poste.|Sa transparence suffit à l'identifier.
+Identifier le produit en l'ouvrant brièvement.|Le déplacer immédiatement vers un local pour dégager le passage.
+Utiliser la première fiche récente disponible même si la référence diffère.|Choisir la protection en fonction du nom commercial le plus proche.
+@10-07
+S'il possède une facture d'achat récente.|Si son propriétaire préfère cet appareil.
+Autoriser un usage bref en reportant le contrôle après l'intervention.|Se fier uniquement à l'expérience habituelle du prestataire.
+Étendre automatiquement la première validation à la nouvelle zone.|Examiner uniquement les droits du badge sans vérifier le matériel.
+@11-01
+Une panne sans danger, puisqu'il n'y a pas de blessé.|Un défaut que l'on peut tester au toucher.
+Refermer manuellement le coffret avant d'appeler.|Tester l'équipement pour déterminer si le danger est encore présent.
+Se contenter du premier avertissement même si les personnes s'approchent encore.|S'approcher du défaut pour le montrer plus précisément au public.
+@11-02
+Seul un obstacle au sol présente un risque.|L'immobilité prouve la mise hors tension.
+Toucher la victime brièvement pour vérifier son état avant d'alerter.|Demander à un passant de la déplacer pendant l'appel.
+Déduire de la coupure que toute prise en charge médicale est devenue inutile.|Réaliser des gestes techniques non appris pour accélérer l'intervention.
+@12-01
+Oui, elle est confirmée par sa répétition.|Oui, le titre du message l'authentifie.
+Diffuser immédiatement la rumeur comme une consigne du site.|Attendre une certitude personnelle avant tout signalement au circuit prévu.
+Maintenir la rumeur initiale si elle semblait plus alarmante.|Étendre la consigne reçue à toutes les zones sans vérifier son champ.
+@12-02
+Sa dangerosité est techniquement confirmée.|Son immobilité prouve qu'il est sans risque.
+Le déplacer vers un endroit moins passant avant d'alerter.|L'ouvrir assez pour rechercher une identité et confirmer son statut.
+Lever les protections dès que la personne affirme en être propriétaire.|Demander à la personne de manipuler l'objet pour vérifier sa déclaration.
+@12-03
+Elles doivent toutes deux s'appliquer partout.|La plus ancienne prime sur toute nouvelle fiche.
+Choisir l'affiche la plus visible comme référence du poste.|Demander à chaque équipe de retenir la mesure qu'elle juge la plus simple.
+Appliquer la proposition sans réexaminer l'accès des secours.|Fermer d'abord pour paraître prudent puis demander une validation plus tard.
+@12-04
+L'apparence suffit à qualifier le danger.|L'intention exacte est déjà établie.
+Transmettre un profil supposé en laissant de côté les gestes observés.|Conclure à une préparation d'attaque avant de vérifier le contexte.
+Ignorer l'autorisation nouvelle pour rester cohérent avec le premier soupçon.|Considérer toute explication détaillée comme confirmée sans la vérifier.
+@12-05
+La cause technique est la seule inconnue.|Le lieu est déjà identifié avec certitude.
+Provoquer l'appelant pour l'obliger à préciser sa menace.|Promettre de ne prévenir personne afin d'obtenir plus d'informations.
+Compléter les éléments incertains par l'hypothèse qui semble la plus vraisemblable.|Transformer le bruit entendu en identification technique certaine.
+@12-06
+Il est autorisé car d'allure professionnelle.|Il est hostile par sa seule présence.
+Tenter une neutralisation avec les moyens disponibles au poste.|Quitter le site pour suivre un pilote supposé sans relais organisé.
+Considérer toute mention d'un tournage comme une validation complète.|Arrêter toute observation dès qu'une explication rassurante est proposée.
+@12-07
+Oui, une cause commune impose les mêmes signes.|Oui, un diagnostic unique suffit pour les deux.
+Donner un diagnostic probable plutôt que les signes visibles.|Présenter comme certain un nombre estimé pour toute la zone.
+Franchir la limite afin de rendre le bilan complet avant de signaler.|Ne pas mentionner la personne puisque l'agent ne peut pas l'approcher.
+@13-01
+Il transfère les droits au nouvel utilisateur.|Il identifie tous les agents de façon équivalente.
+Utiliser le compte ouvert puis préciser son prénom en fin d'entrée.|Attendre la prochaine vacation sans conserver les événements nécessaires.
+Saisir de mémoire une seule heure lors du retour de l'application.|Utiliser n'importe quel compte disponible sans faire vérifier le secours autorisé.
+@13-02
+Uniquement la taille des fichiers.|Seulement leur ordre dans le dossier.
+Choisir la pièce jointe ouverte en dernier sans vérifier sa validation.|Contrôler seulement l'objet du courriel avant de cliquer sur envoyer.
+Accepter toute nouvelle adresse dès lors que le nom du destinataire est connu.|Choisir le canal le plus rapide et vérifier les droits après la transmission.
+@14-01
+Un vol dont l'auteur est déjà identifié.|Une livraison dont l'autorisation est confirmée.
+Contraindre immédiatement la personne pour obtenir l'autorisation manquante.|Quitter la surveillance prévue pour mener seul une recherche hors du secteur.
+Considérer que le nouvel élément suffit à autoriser toute mesure.|Conserver l'analyse initiale sans transmettre les faits qui la modifient.
+@14-02
+L'absence certaine de paiement.|L'identité confirmée de l'auteur d'un vol.
+Demander une reconnaissance de vol avant de lire les éléments présentés.|Ignorer les justificatifs puisque l'alarme a déjà sonné.
+Maintenir le soupçon comme fait établi malgré l'explication vérifiée.|Poursuivre une contrainte pour sanctionner le déclenchement de l'alarme.
+@14-03
+Elle ne change pas les fonctions déjà couvertes.|Elle crée automatiquement un relais au poste.
+Quitter la fonction en cours dès que le nouveau demandeur insiste.|Promettre de traiter les deux situations sans examiner les moyens ni les relais.
+Terminer d'abord le différend même si la procédure d'alarme exige une action.|Déclarer le différend réglé sans transmettre son état au relais.
+@14-04
+Elle résiste autant qu'au début.|Son comportement n'a pas encore changé.
+Maintenir les mêmes moyens jusqu'à une durée standard.|Prolonger la contrainte pour prévenir une récidive seulement supposée.
+Attendre la fin des formalités avant de transmettre le problème médical.|Considérer la plainte comme une simulation tant qu'elle n'est pas confirmée.
+@14-05
+Aucun : il faut marcher sur les traces.|Un trajet exigeant de déplacer les traces.
+Ranger les éléments utiles dans un casier pour éviter leur disparition.|Nettoyer les traces avant de les photographier pour mieux les montrer.
+Dicter au témoin une déclaration cohérente avec l'hypothèse du poste.|Exiger des réponses comme condition de son départ hors cadre légal de contrainte.
+@14-06
+Elle établit déjà clairement toutes les sources.|Elle manque seulement d'un auteur certain.
+Présenter d'abord une conclusion ferme puis ajouter les réserves si on les demande.|Fusionner toutes les sources pour produire un récit plus simple à lire.
+Intégrer cette information comme si elle était connue dès le départ.|Retirer les faits certains qui ne correspondent plus à l'hypothèse nouvelle.
+@14-07
+L'infraction et l'auteur sont établis.|Toute vérification peut être clôturée.
+Imposer la contrainte envisagée pour obtenir les informations manquantes.|Attendre de connaître l'auteur avant de prendre une mesure de protection ou d'alerte.
+Accepter l'explication parce qu'elle est détaillée.|La rejeter pour conserver une analyse identique à celle du début.
+@15-01
+Toutes les équipes ont reçu le même plan.|Deux circuits sont nécessairement voulus.
+Laisser chaque poste retenir la version qu'il a reçue en premier.|Faire choisir au public l'entrée qui lui semble la plus claire.
+Se limiter à vérifier que le chef possède le plan corrigé.|Supposer que la validation implique sa bonne réception par toutes les équipes.
+@15-02
+Oui, sa validité donne tous les accès.|Oui, le rôle annoncé étend les droits.
+Laisser entrer si la personne connaît le nom du responsable.|Autoriser un passage bref avant de demander confirmation.
+Étendre l'autorisation à toute la journée pour éviter une nouvelle vérification.|Retenir seulement la zone en oubliant l'horaire et l'accompagnement.
+@15-03
+Dans une zone d'attente prévue et libre.|Sur un espace sans fonction de passage.
+Déplacer seul la file vers une porte voisine non vérifiée.|Attendre une obstruction totale avant de signaler le problème.
+Traiter uniquement la tête de file sans signaler le nouveau flux entrant.|Laisser les autres postes découvrir seuls le changement d'arrivée.
+@15-04
+Une simple hausse du bruit seulement.|Des déplacements aussi faciles qu'avant.
+Attendre un comptage exact avant d'alerter sur la pression.|Donner un ordre local sans tenir compte des consignes des autres postes.
+Laisser chaque accès appliquer sa propre consigne pour éviter tout délai.|Répéter les deux instructions contradictoires plus fort au public.
+@15-05
+Il est toujours utilisable sans changement.|Tous les trajets du site sont indisponibles.
+Envoyer immédiatement le public vers une porte proche non vérifiée.|Conserver l'itinéraire initial pour ne pas contredire la première annonce.
+Donner plusieurs destinations et laisser chaque usager choisir.|Expliquer tout l'historique du plan avant de guider le public.
+@15-06
+Oui, chaque badge donne le choix du circuit.|Oui, le premier arrivé a toujours priorité.
+Faire attendre les secours derrière les autres intervenants déjà présents.|Ouvrir toutes les zones aux intervenants pour libérer rapidement l'entrée.
+Laisser le chauffeur valider lui-même l'exception demandée.|Utiliser temporairement le passage des secours en prévenant seulement après la livraison.
+@15-07
+L'identité de la personne ayant fraudé.|La cause certaine de la précédente lecture.
+Exiger une reconnaissance de fraude avant le contrôle secondaire.|Autoriser immédiatement l'accès pour éviter de prolonger la discussion.
+Inscrire que la fraude a été pardonnée même si elle n'a pas été établie.|Supprimer toute trace puisque le problème a trouvé une solution.

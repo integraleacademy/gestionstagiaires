@@ -1,0 +1,22 @@
+{# One presentation for the four catalogues; course data and links stay specific. #}
+{% macro hero(label, title, description, image, image_alt, course_url, modules_url, modules_label, report_url, title_id='') -%}
+<section class="aps-catalog-hero">
+  <div>
+    <span class="aps-catalog-label">{{ label }}</span>
+    <h2{% if title_id %} id="{{ title_id }}"{% endif %}>{{ title }}</h2>
+    <p>{{ description }}</p>
+    <div class="aps-catalog-actions">
+      <a class="nel-button nel-button--primary" href="{{ course_url }}">Découvrir le premier cours →</a>
+      <a class="nel-button" href="{{ report_url }}">Rapport de calibrage des durées →</a>
+    </div>
+    <a class="aps-catalog-link" href="{{ modules_url }}">{{ modules_label }} ↓</a>
+  </div>
+  <figure class="aps-catalog-art"><img src="{{ url_for('static', filename=image) }}" alt="{{ image_alt }}" fetchpriority="high"></figure>
+</section>
+{%- endmacro %}
+
+{% macro stats(items) -%}
+<div class="aps-catalog-stats" aria-label="Contenu du parcours">
+  {% for value, label in items %}<span><b>{{ value }}</b>{{ label }}</span>{% endfor %}
+</div>
+{%- endmacro %}

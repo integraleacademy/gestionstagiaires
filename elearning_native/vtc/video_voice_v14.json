@@ -1,0 +1,935 @@
+{
+  "revision": 14,
+  "approved_on": "2026-10-13",
+  "preview_source_commit": "852d9c157369f2618d805e20eeb0fa1af96de073",
+  "lessons": {
+    "D.02": {
+      "src": "media/vtc/v14/lesson-d-02.mp4",
+      "poster": "media/vtc/v14/lesson-d-02.jpg",
+      "captions": "media/vtc/v14/lesson-d-02.vtt",
+      "duration_seconds": 136.65,
+      "narration_seconds": 136.65,
+      "transcript": "Pour trouver la bonne information, commencez par une question simple : qu’est-ce qu’on me demande exactement ? Cherchez ensuite les mots qui y répondent, puis relisez la phrase autour. Un même message peut donner l’heure de réservation, l’heure de prise en charge et l’heure d’arrivée. Attention, ces trois heures ne désignent pas la même chose. Dans un tableau ou un courriel, regardez aussi les en-têtes et les unités. Deux adultes et un enfant, par exemple, cela fait trois passagers. Le conducteur ne fait pas partie de ce total. Autre distinction : un départ souhaité n’est pas une arrivée impérative. Enfin, si le document ne donne pas une information, ne l’inventez pas. À l’examen, une réponse très précise doit pouvoir s’appuyer sur le texte.\n\nVoyons comment garder le sens du message. Séparez les dates, les heures, les lieux et les personnes. Si vous avez reçu deux versions d’un même message, repérez la plus récente. Puis cherchez ce qu’elle corrige exactement. Un changement d’heure n’implique pas un changement d’adresse. Quand vous formulez votre réponse, gardez donc le contexte et l’unité. Vous devez retrouver l’information demandée, sans lui faire dire davantage.\n\nPrenons une réservation effectuée le douze juin à dix-huit heures. La prise en charge est prévue le treize juin à sept heures trente. Quelle est la date de la course ? C’est le treize juin. Le douze juin, c’est la date de la commande. Et à quelle heure faut-il prendre en charge le client ? À sept heures trente, pas à dix-huit heures. Vous voyez la méthode : chaque chiffre doit rester lié à ce qu’il désigne. Pour un nombre, vérifiez ce qu’il compte : des passagers, des bagages, des véhicules ou des euros. Quatre places au total peuvent inclure celle du conducteur. En revanche, quatre passagers ne l’incluent pas. Retrouver un chiffre ne suffit donc pas. Il faut aussi en conserver le sens.\n\nRetenez trois réflexes. D’abord, identifiez ce que l’on vous demande : un nom, un lieu, une heure ou une condition. Ensuite, retrouvez la phrase qui apporte la preuve. Enfin, écartez les réponses qui ajoutent une supposition. Avant de valider, posez-vous cette question : est-ce bien écrit dans le document ? Et gardez cet exemple en tête : l’heure de réservation, l’heure de prise en charge et l’heure d’arrivée sont trois informations différentes.",
+      "title": "Trouver l’information exacte",
+      "lesson_ref": "D.02",
+      "objective": "Répondre aux questions qui, quoi, où, quand et comment.",
+      "voice": {
+        "fr": "fr-FR-HenriNeural"
+      },
+      "rate": {
+        "fr": "-2%"
+      },
+      "audio": true,
+      "burned_captions": true,
+      "course_only": true,
+      "animated": true,
+      "chapters": [
+        {
+          "ref": "D.02-01",
+          "title": "Les repères essentiels",
+          "kind": "concept",
+          "start_seconds": 0.0,
+          "end_seconds": 43.4
+        },
+        {
+          "ref": "D.02-02",
+          "title": "Extraire une information sans la déformer",
+          "kind": "concept",
+          "start_seconds": 43.4,
+          "end_seconds": 69.6
+        },
+        {
+          "ref": "D.02-03",
+          "title": "Un exemple expliqué",
+          "kind": "method",
+          "start_seconds": 69.6,
+          "end_seconds": 110.15
+        },
+        {
+          "ref": "D.02-04",
+          "title": "La méthode à retenir",
+          "kind": "method",
+          "start_seconds": 110.15,
+          "end_seconds": 136.65
+        }
+      ],
+      "content_sha256": "4ffa04632df01d4666c8856b19784212aac7dcaa2bd512cac20c4c7feab1d87e",
+      "source_sha256": "642efb2aa24ad8dbdc66420d1d1d5ced8b48a2942af4d756e20d23dce378a9c6",
+      "render_revision": 14,
+      "source_code_sha256": "fc4933237f0d20e5a371b78ee40a70bdcd8f0c8bfd608d45e2a52679f63a9218",
+      "source_authoring_sha256": "03b23c9d9818934e5c13ee225fe3bba2fb3f4ec0cb7247f24a8981d71d002a63",
+      "default_playback_rate": 1,
+      "allowed_playback_rates": [
+        1
+      ],
+      "learning_pauses": [
+        {
+          "id": "vtc-d-02-pause-1",
+          "at_seconds": 42.743,
+          "duration_seconds": 4,
+          "message": "Quelle heure le document vous demande-t-il de retrouver ?",
+          "kind": "reflect"
+        },
+        {
+          "id": "vtc-d-02-pause-2",
+          "at_seconds": 68.908,
+          "duration_seconds": 4,
+          "message": "Quel élément a réellement changé dans le message ?",
+          "kind": "reflect"
+        },
+        {
+          "id": "vtc-d-02-pause-3",
+          "at_seconds": 109.482,
+          "duration_seconds": 4,
+          "message": "Quelle différence faites-vous entre quatre places et quatre passagers ?",
+          "kind": "reflect"
+        }
+      ],
+      "scenes": [
+        {
+          "index": 0,
+          "title": "Les repères essentiels",
+          "kind": "concept",
+          "label": "COMPRENDRE",
+          "points": [
+            {
+              "label": "La question",
+              "text": "Chercher les mots qui répondent exactement à la question.",
+              "anchor_text": "Cherchez ensuite les mots"
+            },
+            {
+              "label": "Le contexte",
+              "text": "Lire les en-têtes, les unités et le sens des nombres.",
+              "anchor_text": "Dans un tableau ou un courriel"
+            }
+          ],
+          "language_segments": [
+            {
+              "lang": "fr",
+              "text": "Pour trouver la bonne information, commencez par une question simple : qu’est-ce qu’on me demande exactement ? Cherchez ensuite les mots qui y répondent, puis relisez la phrase autour. ",
+              "delivery": {
+                "rate": "+2%",
+                "pitch": "+1Hz",
+                "gap_after_seconds": 0.04,
+                "intention": "Accueillir et poser la question"
+              }
+            },
+            {
+              "lang": "fr",
+              "text": "Un même message peut donner l’heure de réservation, l’heure de prise en charge et l’heure d’arrivée. Attention, ces trois heures ne désignent pas la même chose. ",
+              "delivery": {
+                "rate": "-2%",
+                "pitch": "+0Hz",
+                "gap_after_seconds": 0.16,
+                "intention": "Distinguer les trois horaires"
+              }
+            },
+            {
+              "lang": "fr",
+              "text": "Dans un tableau ou un courriel, regardez aussi les en-têtes et les unités. Deux adultes et un enfant, par exemple, cela fait trois passagers. Le conducteur ne fait pas partie de ce total. ",
+              "delivery": {
+                "rate": "+3%",
+                "pitch": "+0Hz",
+                "gap_after_seconds": 0.08,
+                "intention": "Dérouler le contexte et l’exemple"
+              }
+            },
+            {
+              "lang": "fr",
+              "text": "Autre distinction : un départ souhaité n’est pas une arrivée impérative. Enfin, si le document ne donne pas une information, ne l’inventez pas. À l’examen, une réponse très précise doit pouvoir s’appuyer sur le texte.",
+              "delivery": {
+                "rate": "+0%",
+                "pitch": "-1Hz",
+                "gap_after_seconds": 0,
+                "intention": "Conclure sans ajouter d’information"
+              }
+            }
+          ],
+          "spoken_segments": [
+            {
+              "lang": "fr",
+              "text": "Pour trouver la bonne information, commencez par une question simple : qu’est-ce qu’on me demande exactement ? Cherchez ensuite les mots qui y répondent, puis relisez la phrase autour. ",
+              "start_seconds": 0.0,
+              "end_seconds": 9.494,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "+2%",
+                "pitch": "+1Hz"
+              },
+              "join_silence_seconds": 0.04
+            },
+            {
+              "lang": "fr",
+              "text": "Un même message peut donner l’heure de réservation, l’heure de prise en charge et l’heure d’arrivée. Attention, ces trois heures ne désignent pas la même chose. ",
+              "start_seconds": 9.534,
+              "end_seconds": 17.914,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "pitch": "+0Hz"
+              },
+              "join_silence_seconds": 0.16
+            },
+            {
+              "lang": "fr",
+              "text": "Dans un tableau ou un courriel, regardez aussi les en-têtes et les unités. Deux adultes et un enfant, par exemple, cela fait trois passagers. Le conducteur ne fait pas partie de ce total. ",
+              "start_seconds": 18.074,
+              "end_seconds": 29.371,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "+3%",
+                "pitch": "+0Hz"
+              },
+              "join_silence_seconds": 0.08
+            },
+            {
+              "lang": "fr",
+              "text": "Autre distinction : un départ souhaité n’est pas une arrivée impérative. Enfin, si le document ne donne pas une information, ne l’inventez pas. À l’examen, une réponse très précise doit pouvoir s’appuyer sur le texte.",
+              "start_seconds": 29.451,
+              "end_seconds": 42.543,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "+0%",
+                "pitch": "-1Hz"
+              }
+            }
+          ],
+          "start_seconds": 0.0,
+          "end_seconds": 43.4,
+          "speech_end_seconds": 42.363,
+          "verified_silence": {
+            "start": 42.543,
+            "end": 43.4
+          },
+          "reveals": [
+            {
+              "anchor_text": "Cherchez ensuite les mots",
+              "at_seconds": 5.772,
+              "timing_method": "original-synthesis-word",
+              "word_text": "Cherchez"
+            },
+            {
+              "anchor_text": "Dans un tableau ou un courriel",
+              "at_seconds": 18.173,
+              "timing_method": "original-synthesis-word",
+              "word_text": "Dans"
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "title": "Extraire une information sans la déformer",
+          "kind": "concept",
+          "label": "EXPLIQUER",
+          "points": [
+            {
+              "label": "Les repères",
+              "text": "Distinguer dates, heures, lieux et personnes.",
+              "anchor_text": "Séparez les dates"
+            },
+            {
+              "label": "La correction",
+              "text": "Vérifier ce que le message le plus récent modifie.",
+              "anchor_text": "Si vous avez reçu deux versions"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Une nouvelle heure ne change pas forcément l’adresse.",
+              "anchor_text": "Un changement d’heure"
+            }
+          ],
+          "language_segments": [
+            {
+              "lang": "fr",
+              "text": "Voyons comment garder le sens du message. Séparez les dates, les heures, les lieux et les personnes. ",
+              "delivery": {
+                "rate": "+3%",
+                "pitch": "+1Hz",
+                "gap_after_seconds": 0.06,
+                "intention": "Introduire les repères"
+              }
+            },
+            {
+              "lang": "fr",
+              "text": "Si vous avez reçu deux versions d’un même message, repérez la plus récente. Puis cherchez ce qu’elle corrige exactement. Un changement d’heure n’implique pas un changement d’adresse. ",
+              "delivery": {
+                "rate": "+0%",
+                "pitch": "+0Hz",
+                "gap_after_seconds": 0.12,
+                "intention": "Expliquer ce que corrige le message"
+              }
+            },
+            {
+              "lang": "fr",
+              "text": "Quand vous formulez votre réponse, gardez donc le contexte et l’unité. Vous devez retrouver l’information demandée, sans lui faire dire davantage.",
+              "delivery": {
+                "rate": "-2%",
+                "pitch": "+0Hz",
+                "gap_after_seconds": 0,
+                "intention": "Faire ressortir le principe"
+              }
+            }
+          ],
+          "spoken_segments": [
+            {
+              "lang": "fr",
+              "text": "Voyons comment garder le sens du message. Séparez les dates, les heures, les lieux et les personnes. ",
+              "start_seconds": 43.4,
+              "end_seconds": 49.587,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "+3%",
+                "pitch": "+1Hz"
+              },
+              "join_silence_seconds": 0.06
+            },
+            {
+              "lang": "fr",
+              "text": "Si vous avez reçu deux versions d’un même message, repérez la plus récente. Puis cherchez ce qu’elle corrige exactement. Un changement d’heure n’implique pas un changement d’adresse. ",
+              "start_seconds": 49.647,
+              "end_seconds": 59.952,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "+0%",
+                "pitch": "+0Hz"
+              },
+              "join_silence_seconds": 0.12
+            },
+            {
+              "lang": "fr",
+              "text": "Quand vous formulez votre réponse, gardez donc le contexte et l’unité. Vous devez retrouver l’information demandée, sans lui faire dire davantage.",
+              "start_seconds": 60.072,
+              "end_seconds": 68.708,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "pitch": "+0Hz"
+              }
+            }
+          ],
+          "start_seconds": 43.4,
+          "end_seconds": 69.6,
+          "speech_end_seconds": 68.528,
+          "verified_silence": {
+            "start": 68.708,
+            "end": 69.6
+          },
+          "reveals": [
+            {
+              "anchor_text": "Séparez les dates",
+              "at_seconds": 46.422,
+              "timing_method": "original-synthesis-word",
+              "word_text": "Séparez"
+            },
+            {
+              "anchor_text": "Si vous avez reçu deux versions",
+              "at_seconds": 49.747,
+              "timing_method": "original-synthesis-word",
+              "word_text": "Si"
+            },
+            {
+              "anchor_text": "Un changement d’heure",
+              "at_seconds": 57.285,
+              "timing_method": "original-synthesis-word",
+              "word_text": "Un"
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "title": "Un exemple expliqué",
+          "kind": "method",
+          "label": "METTRE EN PRATIQUE",
+          "points": [
+            {
+              "label": "La commande",
+              "text": "Réservation : le 12 juin à 18 h.",
+              "anchor_text": "Prenons une réservation"
+            },
+            {
+              "label": "La course",
+              "text": "Prise en charge : le 13 juin à 7 h 30.",
+              "anchor_text": "La prise en charge est prévue"
+            },
+            {
+              "label": "L’unité",
+              "text": "Vérifier ce que compte le nombre.",
+              "anchor_text": "Pour un nombre, vérifiez"
+            }
+          ],
+          "language_segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons une réservation effectuée le douze juin à dix-huit heures. La prise en charge est prévue le treize juin à sept heures trente. ",
+              "delivery": {
+                "rate": "+4%",
+                "pitch": "+0Hz",
+                "gap_after_seconds": 0.16,
+                "intention": "Installer la situation"
+              }
+            },
+            {
+              "lang": "fr",
+              "text": "Quelle est la date de la course ? C’est le treize juin. Le douze juin, c’est la date de la commande. ",
+              "delivery": {
+                "rate": "+0%",
+                "pitch": "+1Hz",
+                "gap_after_seconds": 0.1,
+                "intention": "Garder la question et sa réponse ensemble"
+              }
+            },
+            {
+              "lang": "fr",
+              "text": "Et à quelle heure faut-il prendre en charge le client ? À sept heures trente, pas à dix-huit heures. ",
+              "delivery": {
+                "rate": "-2%",
+                "pitch": "+2Hz",
+                "gap_after_seconds": 0.12,
+                "intention": "Souligner le bon horaire"
+              }
+            },
+            {
+              "lang": "fr",
+              "text": "Vous voyez la méthode : chaque chiffre doit rester lié à ce qu’il désigne. Pour un nombre, vérifiez ce qu’il compte : des passagers, des bagages, des véhicules ou des euros. ",
+              "delivery": {
+                "rate": "+3%",
+                "pitch": "+0Hz",
+                "gap_after_seconds": 0.06,
+                "intention": "Relier l’exemple à la méthode"
+              }
+            },
+            {
+              "lang": "fr",
+              "text": "Quatre places au total peuvent inclure celle du conducteur. En revanche, quatre passagers ne l’incluent pas. Retrouver un chiffre ne suffit donc pas. Il faut aussi en conserver le sens.",
+              "delivery": {
+                "rate": "-2%",
+                "pitch": "-1Hz",
+                "gap_after_seconds": 0,
+                "intention": "Clarifier places et passagers"
+              }
+            }
+          ],
+          "spoken_segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons une réservation effectuée le douze juin à dix-huit heures. La prise en charge est prévue le treize juin à sept heures trente. ",
+              "start_seconds": 69.6,
+              "end_seconds": 76.282,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "+4%",
+                "pitch": "+0Hz"
+              },
+              "join_silence_seconds": 0.16
+            },
+            {
+              "lang": "fr",
+              "text": "Quelle est la date de la course ? C’est le treize juin. Le douze juin, c’est la date de la commande. ",
+              "start_seconds": 76.442,
+              "end_seconds": 82.835,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "+0%",
+                "pitch": "+1Hz"
+              },
+              "join_silence_seconds": 0.1
+            },
+            {
+              "lang": "fr",
+              "text": "Et à quelle heure faut-il prendre en charge le client ? À sept heures trente, pas à dix-huit heures. ",
+              "start_seconds": 82.935,
+              "end_seconds": 88.42,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "pitch": "+2Hz"
+              },
+              "join_silence_seconds": 0.12
+            },
+            {
+              "lang": "fr",
+              "text": "Vous voyez la méthode : chaque chiffre doit rester lié à ce qu’il désigne. Pour un nombre, vérifiez ce qu’il compte : des passagers, des bagages, des véhicules ou des euros. ",
+              "start_seconds": 88.54,
+              "end_seconds": 98.15,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "+3%",
+                "pitch": "+0Hz"
+              },
+              "join_silence_seconds": 0.06
+            },
+            {
+              "lang": "fr",
+              "text": "Quatre places au total peuvent inclure celle du conducteur. En revanche, quatre passagers ne l’incluent pas. Retrouver un chiffre ne suffit donc pas. Il faut aussi en conserver le sens.",
+              "start_seconds": 98.21,
+              "end_seconds": 109.282,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "pitch": "-1Hz"
+              }
+            }
+          ],
+          "start_seconds": 69.6,
+          "end_seconds": 110.15,
+          "speech_end_seconds": 109.102,
+          "verified_silence": {
+            "start": 109.282,
+            "end": 110.15
+          },
+          "reveals": [
+            {
+              "anchor_text": "Prenons une réservation",
+              "at_seconds": 69.698,
+              "timing_method": "original-synthesis-word",
+              "word_text": "Prenons"
+            },
+            {
+              "anchor_text": "La prise en charge est prévue",
+              "at_seconds": 73.374,
+              "timing_method": "original-synthesis-word",
+              "word_text": "La"
+            },
+            {
+              "anchor_text": "Pour un nombre, vérifiez",
+              "at_seconds": 92.885,
+              "timing_method": "original-synthesis-word",
+              "word_text": "Pour"
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "title": "La méthode à retenir",
+          "kind": "method",
+          "label": "RETENIR",
+          "points": [
+            {
+              "label": "Identifier",
+              "text": "Repérer le nom, le lieu, l’heure ou la condition demandée.",
+              "anchor_text": "D’abord, identifiez"
+            },
+            {
+              "label": "Prouver",
+              "text": "Retrouver la phrase qui donne la réponse.",
+              "anchor_text": "Ensuite, retrouvez"
+            },
+            {
+              "label": "Contrôler",
+              "text": "Écarter toute supposition ajoutée au texte.",
+              "anchor_text": "Enfin, écartez"
+            }
+          ],
+          "language_segments": [
+            {
+              "lang": "fr",
+              "text": "Retenez trois réflexes. D’abord, identifiez ce que l’on vous demande : un nom, un lieu, une heure ou une condition. ",
+              "delivery": {
+                "rate": "+1%",
+                "pitch": "+1Hz",
+                "gap_after_seconds": 0.06,
+                "intention": "Lancer la synthèse"
+              }
+            },
+            {
+              "lang": "fr",
+              "text": "Ensuite, retrouvez la phrase qui apporte la preuve. Enfin, écartez les réponses qui ajoutent une supposition. ",
+              "delivery": {
+                "rate": "+2%",
+                "pitch": "+0Hz",
+                "gap_after_seconds": 0.12,
+                "intention": "Enchaîner les deux réflexes"
+              }
+            },
+            {
+              "lang": "fr",
+              "text": "Avant de valider, posez-vous cette question : est-ce bien écrit dans le document ? Et gardez cet exemple en tête : l’heure de réservation, l’heure de prise en charge et l’heure d’arrivée sont trois informations différentes.",
+              "delivery": {
+                "rate": "-2%",
+                "pitch": "+0Hz",
+                "gap_after_seconds": 0,
+                "intention": "Poser la question de contrôle et conclure"
+              }
+            }
+          ],
+          "spoken_segments": [
+            {
+              "lang": "fr",
+              "text": "Retenez trois réflexes. D’abord, identifiez ce que l’on vous demande : un nom, un lieu, une heure ou une condition. ",
+              "start_seconds": 110.15,
+              "end_seconds": 117.273,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "+1%",
+                "pitch": "+1Hz"
+              },
+              "join_silence_seconds": 0.06
+            },
+            {
+              "lang": "fr",
+              "text": "Ensuite, retrouvez la phrase qui apporte la preuve. Enfin, écartez les réponses qui ajoutent une supposition. ",
+              "start_seconds": 117.333,
+              "end_seconds": 124.155,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "+2%",
+                "pitch": "+0Hz"
+              },
+              "join_silence_seconds": 0.12
+            },
+            {
+              "lang": "fr",
+              "text": "Avant de valider, posez-vous cette question : est-ce bien écrit dans le document ? Et gardez cet exemple en tête : l’heure de réservation, l’heure de prise en charge et l’heure d’arrivée sont trois informations différentes.",
+              "start_seconds": 124.275,
+              "end_seconds": 135.768,
+              "speech_settings": {
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "pitch": "+0Hz"
+              }
+            }
+          ],
+          "start_seconds": 110.15,
+          "end_seconds": 136.65,
+          "speech_end_seconds": 135.588,
+          "verified_silence": {
+            "start": 135.768,
+            "end": 136.65
+          },
+          "reveals": [
+            {
+              "anchor_text": "D’abord, identifiez",
+              "at_seconds": 112.39,
+              "timing_method": "original-synthesis-word",
+              "word_text": "D’abord"
+            },
+            {
+              "anchor_text": "Ensuite, retrouvez",
+              "at_seconds": 117.432,
+              "timing_method": "original-synthesis-word",
+              "word_text": "Ensuite"
+            },
+            {
+              "anchor_text": "Enfin, écartez",
+              "at_seconds": 120.911,
+              "timing_method": "original-synthesis-word",
+              "word_text": "Enfin"
+            }
+          ]
+        }
+      ],
+      "media_sha256": "a9e6aae708388e899694043f90576e5b748b26b7be8a8673b63a3cdb1bed06fc",
+      "poster_sha256": "751ff8846d5b30aeea231cd61df028c6f839412f566b2c55d556353a6e4503b4",
+      "captions_sha256": "b3692ac0bb841dd2a832e62d8133ee6be9d8911651946ac50c6e5edcd490fa26",
+      "audio_provenance": {
+        "codec": "aac",
+        "sample_rate": 48000,
+        "channels": 1,
+        "packets": 6407,
+        "sha256": "4121c433c8bb1aad59a89ae092c3c52a5efadb3bfc07d9de9a12fe2b5fede53a"
+      },
+      "previous_src": "media/vtc/v11/lesson-d-02.mp4",
+      "previous_duration_seconds": 127.35,
+      "previous_chapters": [
+        {
+          "ref": "D.02-01",
+          "title": "Les repères essentiels",
+          "kind": "concept",
+          "start_seconds": 0.0,
+          "end_seconds": 41.3
+        },
+        {
+          "ref": "D.02-02",
+          "title": "Extraire une information sans la déformer",
+          "kind": "concept",
+          "start_seconds": 41.3,
+          "end_seconds": 62.5
+        },
+        {
+          "ref": "D.02-03",
+          "title": "Un exemple expliqué",
+          "kind": "method",
+          "start_seconds": 62.5,
+          "end_seconds": 105.0
+        },
+        {
+          "ref": "D.02-04",
+          "title": "La méthode à retenir",
+          "kind": "method",
+          "start_seconds": 105.0,
+          "end_seconds": 127.35
+        }
+      ],
+      "previous_media_sha256": "eedb54872380a64ec45c1f1ef883b82f32c8088dd29fe1beb64bcc972f54a014",
+      "presentation": {
+        "scenes": [
+          {
+            "start": 0.0,
+            "end": 43.4,
+            "title": "Les repères essentiels",
+            "points": [
+              {
+                "label": "La question",
+                "text": "Chercher les mots qui répondent exactement à la question.",
+                "at_seconds": 5.772
+              },
+              {
+                "label": "Le contexte",
+                "text": "Lire les en-têtes, les unités et le sens des nombres.",
+                "at_seconds": 18.173
+              }
+            ]
+          },
+          {
+            "start": 43.4,
+            "end": 69.6,
+            "title": "Extraire une information sans la déformer",
+            "points": [
+              {
+                "label": "Les repères",
+                "text": "Distinguer dates, heures, lieux et personnes.",
+                "at_seconds": 46.422
+              },
+              {
+                "label": "La correction",
+                "text": "Vérifier ce que le message le plus récent modifie.",
+                "at_seconds": 49.747
+              },
+              {
+                "label": "Le point clé",
+                "text": "Une nouvelle heure ne change pas forcément l’adresse.",
+                "at_seconds": 57.285
+              }
+            ]
+          },
+          {
+            "start": 69.6,
+            "end": 110.15,
+            "title": "Un exemple expliqué",
+            "points": [
+              {
+                "label": "La commande",
+                "text": "Réservation : le 12 juin à 18 h.",
+                "at_seconds": 69.698
+              },
+              {
+                "label": "La course",
+                "text": "Prise en charge : le 13 juin à 7 h 30.",
+                "at_seconds": 73.374
+              },
+              {
+                "label": "L’unité",
+                "text": "Vérifier ce que compte le nombre.",
+                "at_seconds": 92.885
+              }
+            ]
+          },
+          {
+            "start": 110.15,
+            "end": 136.65,
+            "title": "La méthode à retenir",
+            "points": [
+              {
+                "label": "Identifier",
+                "text": "Repérer le nom, le lieu, l’heure ou la condition demandée.",
+                "at_seconds": 112.39
+              },
+              {
+                "label": "Prouver",
+                "text": "Retrouver la phrase qui donne la réponse.",
+                "at_seconds": 117.432
+              },
+              {
+                "label": "Contrôler",
+                "text": "Écarter toute supposition ajoutée au texte.",
+                "at_seconds": 120.911
+              }
+            ]
+          }
+        ],
+        "captions": [
+          {
+            "start": 0.039,
+            "end": 1.755,
+            "text": "Pour trouver la bonne information,"
+          },
+          {
+            "start": 1.755,
+            "end": 5.712,
+            "text": "commencez par une question simple :\nqu’est-ce qu’on me demande exactement ?"
+          },
+          {
+            "start": 5.712,
+            "end": 9.574,
+            "text": "Cherchez ensuite les mots qui y répondent,\npuis relisez la phrase autour."
+          },
+          {
+            "start": 9.574,
+            "end": 12.15,
+            "text": "Un même message peut donner\nl’heure de réservation,"
+          },
+          {
+            "start": 12.15,
+            "end": 15.697,
+            "text": "l’heure de prise en charge\net l’heure d’arrivée. Attention,"
+          },
+          {
+            "start": 15.697,
+            "end": 19.824,
+            "text": "ces trois heures ne désignent pas la même\nchose. Dans un tableau ou un courriel,"
+          },
+          {
+            "start": 19.824,
+            "end": 24.046,
+            "text": "regardez aussi les en-têtes\net les unités. Deux adultes et un enfant,"
+          },
+          {
+            "start": 24.046,
+            "end": 29.491,
+            "text": "par exemple, cela fait trois passagers. Le\nconducteur ne fait pas partie de ce total."
+          },
+          {
+            "start": 29.491,
+            "end": 33.841,
+            "text": "Autre distinction : un départ souhaité\nn’est pas une arrivée impérative."
+          },
+          {
+            "start": 33.841,
+            "end": 38.528,
+            "text": "Enfin, si le document ne donne pas\nune information, ne l’inventez pas."
+          },
+          {
+            "start": 38.528,
+            "end": 43.3,
+            "text": "À l’examen, une réponse très précise\ndoit pouvoir s’appuyer sur le texte."
+          },
+          {
+            "start": 43.439,
+            "end": 48.316,
+            "text": "Voyons comment garder le sens du message.\nSéparez les dates, les heures,"
+          },
+          {
+            "start": 48.316,
+            "end": 52.237,
+            "text": "les lieux et les personnes. Si vous avez\nreçu deux versions d’un même message,"
+          },
+          {
+            "start": 52.237,
+            "end": 55.737,
+            "text": "repérez la plus récente. Puis\ncherchez ce qu’elle corrige"
+          },
+          {
+            "start": 55.737,
+            "end": 60.112,
+            "text": "exactement. Un changement d’heure\nn’implique pas un changement d’adresse."
+          },
+          {
+            "start": 60.112,
+            "end": 64.743,
+            "text": "Quand vous formulez votre réponse,\ngardez donc le contexte et l’unité."
+          },
+          {
+            "start": 64.743,
+            "end": 69.5,
+            "text": "Vous devez retrouver l’information\ndemandée, sans lui faire dire davantage."
+          },
+          {
+            "start": 69.638,
+            "end": 74.191,
+            "text": "Prenons une réservation effectuée le douze\njuin à dix-huit heures. La prise en charge"
+          },
+          {
+            "start": 74.191,
+            "end": 78.632,
+            "text": "est prévue le treize juin à sept heures\ntrente. Quelle est la date de la course ?"
+          },
+          {
+            "start": 78.632,
+            "end": 82.975,
+            "text": "C’est le treize juin. Le douze juin,\nc’est la date de la commande."
+          },
+          {
+            "start": 82.975,
+            "end": 85.961,
+            "text": "Et à quelle heure faut-il\nprendre en charge le client ?"
+          },
+          {
+            "start": 85.961,
+            "end": 89.78,
+            "text": "À sept heures trente, pas à dix-huit\nheures. Vous voyez la méthode :"
+          },
+          {
+            "start": 89.78,
+            "end": 93.65,
+            "text": "chaque chiffre doit rester lié\nà ce qu’il désigne. Pour un nombre,"
+          },
+          {
+            "start": 93.65,
+            "end": 98.25,
+            "text": "vérifiez ce qu’il compte : des passagers,\ndes bagages, des véhicules ou des euros."
+          },
+          {
+            "start": 98.25,
+            "end": 102.97,
+            "text": "Quatre places au total peuvent inclure\ncelle du conducteur. En revanche,"
+          },
+          {
+            "start": 102.97,
+            "end": 107.064,
+            "text": "quatre passagers ne l’incluent pas.\nRetrouver un chiffre ne suffit donc pas."
+          },
+          {
+            "start": 107.064,
+            "end": 110.05,
+            "text": "Il faut aussi en conserver le sens."
+          },
+          {
+            "start": 110.19,
+            "end": 116.031,
+            "text": "Retenez trois réflexes. D’abord, identifiez\nce que l’on vous demande : un nom, un lieu,"
+          },
+          {
+            "start": 116.031,
+            "end": 120.851,
+            "text": "une heure ou une condition. Ensuite,\nretrouvez la phrase qui apporte la preuve."
+          },
+          {
+            "start": 120.851,
+            "end": 125.463,
+            "text": "Enfin, écartez les réponses qui ajoutent\nune supposition. Avant de valider,"
+          },
+          {
+            "start": 125.463,
+            "end": 129.01,
+            "text": "posez-vous cette question :\nest-ce bien écrit dans le document ?"
+          },
+          {
+            "start": 129.01,
+            "end": 132.709,
+            "text": "Et gardez cet exemple en tête :\nl’heure de réservation, l’heure de prise"
+          },
+          {
+            "start": 132.709,
+            "end": 136.55,
+            "text": "en charge et l’heure d’arrivée sont\ntrois informations différentes."
+          }
+        ]
+      },
+      "preview_only": false,
+      "voice_time_stretching": false,
+      "delivery_mode": "authored-thought-groups",
+      "rate_mode": "per-segment",
+      "synthesis_rate_range": [
+        "-2%",
+        "+4%"
+      ],
+      "preview_source_sha256": "341f3a5093bc03df292ad39e4db2dcdce978b4202e1982240ffb391f164e9ccc",
+      "speech_client": {
+        "version": "7.2.8",
+        "protocol_version": "2",
+        "source_revision": "5f9b7e4319d0b70d147b9e63144e64078e3eb858",
+        "requirements_sha256": "735020d1c487d346660c006f4cdd28f233730b71b78d366baf6b76df2c527a53"
+      }
+    }
+  }
+}

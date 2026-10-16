@@ -1,0 +1,25 @@
+{% set lesson = activity.macaps %}
+<div class="mac-lesson"{% if lesson.kind == 'lesson' %} data-aps-lesson-group{% endif %}>
+  {% if lesson.kind == 'lesson' %}
+    <div data-aps-lesson-page>
+    <div class="mac-objective"><span class="mac-eyebrow">Objectif du chapitre</span><p>{{ lesson.objective }}</p></div>
+    {% if lesson.mode == 'presentiel_preparation' %}<p class="mac-practice-note">Cette lecture prépare les exercices avec votre formateur. Les gestes et les mises en situation pratiques ne sont pas validés à l’écran.</p>{% endif %}
+    <nav class="mac-lesson-index" aria-label="Parties de la leçon">{% for section in lesson.sections %}<a href="#mac-part-{{ loop.index }}">{{ '%02d'|format(loop.index) }} · {{ section.heading }}</a>{% endfor %}</nav>
+    </div>
+    {% for section in lesson.sections %}<section class="mac-reading" data-aps-lesson-page id="mac-part-{{ loop.index }}"><header><span>{{ '%02d'|format(loop.index) }}</span><h2>{{ section.heading }}</h2></header>{% for paragraph in section.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}</section>{% endfor %}
+    {% if lesson.table %}<section class="mac-visual" data-aps-lesson-page><span class="mac-eyebrow">Des repères pour décider</span><h2>De la situation à l’action</h2><div class="mac-table-wrap" tabindex="0" role="region" aria-label="Repères de décision"><table><caption>{{ lesson.title }}</caption><thead><tr>{% for cell in lesson.table.headers %}<th scope="col">{{ cell }}</th>{% endfor %}</tr></thead><tbody>{% for row in lesson.table.rows %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div></section>{% endif %}
+    {% if lesson.flow %}<section class="mac-visual" data-aps-lesson-page><span class="mac-eyebrow">Une démarche à mémoriser</span><ol class="mac-decision-flow">{% for step in lesson.flow.steps %}<li><b>{{ loop.index }}</b><span>{{ step }}</span></li>{% endfor %}</ol></section>{% endif %}
+    <footer class="mac-source"><details><summary>Sources du chapitre</summary><ul>{% for url in lesson.source_urls %}<li><a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ url }}</a></li>{% endfor %}</ul></details></footer>
+  {% elif lesson.kind == 'application' %}
+    <section class="mac-example"><span class="mac-eyebrow">Exemple professionnel</span><h2>{{ lesson.example.title }}</h2>{% for paragraph in lesson.example.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}</section>
+    <section class="mac-situation"><span class="mac-eyebrow">À vous de décider</span><p>{{ lesson.situation }}</p></section>
+    <p class="mac-question-note">{{ lesson.question_count }} décisions à prendre. Choisissez votre réponse à chaque étape, puis validez pour lire la correction. Vous pourrez réessayer sans travail à rédiger.</p>
+  {% elif lesson.kind == 'quiz' %}
+    <div class="mac-objective"><span class="mac-eyebrow">{{ 'Clôturer cet objectif' if lesson.is_objective_assessment else 'Vérifier l’acquis du chapitre' }}</span><p>{{ lesson.objective }}</p></div>
+  {% elif lesson.kind == 'recap' %}
+    <span class="mac-eyebrow">Votre fiche de révision</span><h2>Les réflexes à conserver</h2><div class="mac-memory">{% for point in lesson.takeaways %}<article><b>{{ '%02d'|format(loop.index) }}</b><p>{{ point }}</p></article>{% endfor %}</div><div class="mac-objective"><span class="mac-eyebrow">L’objectif à savoir expliquer</span><p>{{ lesson.objective }}</p></div>
+    <p class="mac-recall">Sans relire le cours, expliquez mentalement la règle principale et imaginez une situation de votre site où elle s’applique.</p>
+  {% elif lesson.kind == 'video' %}
+    <p class="mac-video-note">Retrouvez les points clés avec Henri et les sous-titres. Vous pouvez reprendre un chapitre de la vidéo et ralentir la lecture. {{ 'Cette vidéo est un complément, hors des 14 heures du parcours principal.' if lesson.pedagogical_scope == 'complement' else 'Le visionnage complet fait partie de votre parcours pédagogique.' }}</p>
+  {% endif %}
+</div>

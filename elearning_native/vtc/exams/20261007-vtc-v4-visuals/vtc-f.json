@@ -1,0 +1,730 @@
+{
+  "id": "vtc-f",
+  "version": "20261007-vtc-v4-visuals",
+  "training_label": "VTC",
+  "title": "VTC · Développer son activité VTC · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "vtc-f-12-q1",
+      "prompt": "70 km mobilisent 2 h. Avec 0,30 €/km et 18 €/h dans l’exemple, quel coût binôme ?",
+      "options": [
+        {
+          "id": "33ad2f77b4d6",
+          "text": "21 €"
+        },
+        {
+          "id": "737336c9bab9",
+          "text": "36 €"
+        },
+        {
+          "id": "2482820f5f79",
+          "text": "57 €"
+        }
+      ],
+      "answer": "2482820f5f79",
+      "explanation": "70 × 0,30 + 2 × 18 = 21 + 36 = 57 €. Les deux termes couvrent des composantes distinctes.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.12"
+      ]
+    },
+    {
+      "id": "vtc-f-02-q2",
+      "prompt": "Pourquoi annoncer les limites de bagages avant la réservation ?",
+      "options": [
+        {
+          "id": "b38b0120123a",
+          "text": "Pour remplacer l’assurance du véhicule"
+        },
+        {
+          "id": "8132965e3203",
+          "text": "Pour pouvoir refuser tous les passagers à l’arrivée"
+        },
+        {
+          "id": "db757af84387",
+          "text": "Pour vérifier que la prestation est réalisable"
+        }
+      ],
+      "answer": "db757af84387",
+      "explanation": "La capacité se prépare avec le véhicule et le nombre de personnes ; elle ne se découvre pas à l’embarquement.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.02"
+      ]
+    },
+    {
+      "id": "vtc-f-10-q2",
+      "prompt": "Quel indicateur mesure directement la ponctualité ?",
+      "options": [
+        {
+          "id": "bc1d85ebac77",
+          "text": "Le nombre total d’abonnés"
+        },
+        {
+          "id": "a1fd19f03345",
+          "text": "Le nombre de photos publiées"
+        },
+        {
+          "id": "0cd28c596061",
+          "text": "La part des prises en charge réalisées à l’heure selon une règle définie"
+        }
+      ],
+      "answer": "0cd28c596061",
+      "explanation": "Un indicateur doit correspondre au phénomène mesuré et conserver une définition stable.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.10"
+      ]
+    },
+    {
+      "id": "vtc-f-09-q1",
+      "prompt": "Comment fidéliser un client sans intrusion ?",
+      "options": [
+        {
+          "id": "c92c96bf450f",
+          "text": "Conserver tous ses déplacements sans limite"
+        },
+        {
+          "id": "b7aff9117e73",
+          "text": "Assurer le service convenu et respecter ses choix de contact"
+        },
+        {
+          "id": "2efc0dd592ff",
+          "text": "Le contacter sur tous ses comptes personnels"
+        }
+      ],
+      "answer": "b7aff9117e73",
+      "explanation": "La fidélisation repose sur la qualité et un usage approprié des données, pas sur une surveillance du client.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.09"
+      ]
+    },
+    {
+      "id": "vtc-f-05-q2",
+      "prompt": "Le virement d’une plateforme représente-t-il automatiquement le bénéfice du chauffeur ?",
+      "options": [
+        {
+          "id": "94b10d2c7fca",
+          "text": "Oui, sauf le dimanche"
+        },
+        {
+          "id": "5a42451cd003",
+          "text": "Non, d’autres coûts et obligations restent à prendre en compte"
+        },
+        {
+          "id": "5c54e69b2649",
+          "text": "Oui, c’est toujours le salaire net"
+        }
+      ],
+      "answer": "5a42451cd003",
+      "explanation": "Le virement après commission n’intègre pas nécessairement carburant, véhicule, cotisations et impôts.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.05"
+      ]
+    },
+    {
+      "id": "vtc-f-03-q2",
+      "prompt": "Avec 20 % de commission, quel prix brut laisse 80 € après cette commission ?",
+      "options": [
+        {
+          "id": "f1b945f53510",
+          "text": "80 €"
+        },
+        {
+          "id": "944a63c53151",
+          "text": "96 €"
+        },
+        {
+          "id": "6ae1cd1fe909",
+          "text": "100 €"
+        }
+      ],
+      "answer": "6ae1cd1fe909",
+      "explanation": "Le prix doit vérifier prix × 0,80 = 80 ; donc 80 ÷ 0,80 = 100 €.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.03"
+      ]
+    },
+    {
+      "id": "vtc-f-10-q1",
+      "prompt": "Une note moyenne de 4,8 sur 5 suffit-elle à expliquer toutes les difficultés du service ?",
+      "options": [
+        {
+          "id": "60a52a5c3057",
+          "text": "Oui, cela garantit la rentabilité"
+        },
+        {
+          "id": "4a0f81aabe43",
+          "text": "Non, il faut aussi lire les motifs et suivre des indicateurs concrets"
+        },
+        {
+          "id": "b32c7f7659f7",
+          "text": "Oui, les commentaires deviennent inutiles"
+        }
+      ],
+      "answer": "4a0f81aabe43",
+      "explanation": "La note synthétise des avis, mais les retards, réclamations et causes donnent les pistes d’amélioration.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.10"
+      ]
+    },
+    {
+      "id": "vtc-f-11-q1",
+      "prompt": "Un client conteste un supplément. Quelle première réponse ?",
+      "options": [
+        {
+          "id": "f41883f08039",
+          "text": "Écouter puis vérifier la réservation et les conditions convenues"
+        },
+        {
+          "id": "55d05135532f",
+          "text": "Supprimer la facture sans examen"
+        },
+        {
+          "id": "9623657a3b2a",
+          "text": "Le menacer immédiatement"
+        }
+      ],
+      "answer": "f41883f08039",
+      "explanation": "Le traitement commence par les faits et les preuves, puis une réponse proportionnée et expliquée.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.11"
+      ]
+    },
+    {
+      "id": "vtc-f-07-q1",
+      "prompt": "Avant un partenariat avec une conciergerie, que clarifier ?",
+      "options": [
+        {
+          "id": "f4f5b7297246",
+          "text": "Seulement la couleur des cartes de visite"
+        },
+        {
+          "id": "2155b8025392",
+          "text": "Réservation, paiement, responsabilités et conditions de service"
+        },
+        {
+          "id": "68d50efd0d90",
+          "text": "Uniquement la poignée de main"
+        }
+      ],
+      "answer": "2155b8025392",
+      "explanation": "Les rôles et engagements évitent les malentendus sur qui commande, qui paie et qui traite un incident.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.07"
+      ]
+    },
+    {
+      "id": "vtc-f-04-q1",
+      "prompt": "Un devis doit préciser une attente facturable. Quelle formulation est utile ?",
+      "options": [
+        {
+          "id": "b9fdb4b19b3b",
+          "text": "Attente selon mon humeur"
+        },
+        {
+          "id": "050718f30cb6",
+          "text": "La durée incluse et la méthode de facturation au-delà"
+        },
+        {
+          "id": "f2523ed85319",
+          "text": "Le supplément sera révélé après paiement"
+        }
+      ],
+      "answer": "050718f30cb6",
+      "explanation": "Une condition claire permet au client de comprendre et d’accepter la prestation avant son exécution.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.04"
+      ]
+    },
+    {
+      "id": "vtc-f-manual-05",
+      "prompt": "Une mission plus chère est-elle toujours plus rentable ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Oui."
+        },
+        {
+          "id": "b",
+          "text": "Oui, si elle est longue."
+        },
+        {
+          "id": "c",
+          "text": "Non, les coûts et le temps doivent être comparés."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le prix seul ne mesure ni contribution ni revenu horaire.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-f-08-q1",
+      "prompt": "Quelle publication respecte mieux la confidentialité ?",
+      "options": [
+        {
+          "id": "d5ef58fa1c0e",
+          "text": "Une photo du client avec son adresse sans accord"
+        },
+        {
+          "id": "53dfb38ae410",
+          "text": "Une présentation du service sans données personnelles de passagers"
+        },
+        {
+          "id": "4a063eb2e288",
+          "text": "Une capture de toutes les réservations du jour"
+        }
+      ],
+      "answer": "53dfb38ae410",
+      "explanation": "La promotion peut présenter le service sans exposer les données de courses ni l’identité des passagers.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.08"
+      ]
+    },
+    {
+      "id": "vtc-f-01-q1",
+      "prompt": "Pour étudier un marché local, quelles données sont utiles ?",
+      "options": [
+        {
+          "id": "f2224366d517",
+          "text": "La seule intuition du chauffeur"
+        },
+        {
+          "id": "94a1f849a0c6",
+          "text": "Les besoins, horaires, flux et offres concurrentes"
+        },
+        {
+          "id": "c230d6216b89",
+          "text": "Uniquement le nombre de voitures de luxe"
+        }
+      ],
+      "answer": "94a1f849a0c6",
+      "explanation": "Une étude relie demande réelle, concurrence et contraintes afin de construire une offre viable.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.01"
+      ]
+    },
+    {
+      "id": "vtc-f-07-q2",
+      "prompt": "Un hôtel réserve pour un client mais une société paie. Quelle précaution ?",
+      "options": [
+        {
+          "id": "58a0d23f9724",
+          "text": "Supposer que l’hôtel est toujours le payeur"
+        },
+        {
+          "id": "9d70cef8ae03",
+          "text": "Facturer au premier numéro trouvé"
+        },
+        {
+          "id": "f8509ec8101a",
+          "text": "Identifier les trois rôles dans la commande"
+        }
+      ],
+      "answer": "f8509ec8101a",
+      "explanation": "Réservant, passager et payeur peuvent différer. Les informations de facturation doivent être confirmées.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.07"
+      ]
+    },
+    {
+      "id": "vtc-f-manual-06",
+      "prompt": "Une promesse de dix courses par mois…",
+      "options": [
+        {
+          "id": "a",
+          "text": "N’est pas nécessairement une commande ferme."
+        },
+        {
+          "id": "b",
+          "text": "Garantit toujours le paiement."
+        },
+        {
+          "id": "c",
+          "text": "Supprime les conditions d’annulation."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Les engagements réels doivent être définis dans l’accord.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-f-manual-03",
+      "prompt": "Un taux de transformation de 12 acceptations pour 30 devis vaut…",
+      "options": [
+        {
+          "id": "a",
+          "text": "40 %."
+        },
+        {
+          "id": "b",
+          "text": "12 %."
+        },
+        {
+          "id": "c",
+          "text": "60 %."
+        }
+      ],
+      "answer": "a",
+      "explanation": "12 ÷ 30 × 100 = 40 %.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-f-06-q1",
+      "prompt": "Quelle prospection est pertinente auprès d’un hôtel ?",
+      "options": [
+        {
+          "id": "fda96ed427a4",
+          "text": "Envoyer des messages identiques sans connaître ses besoins"
+        },
+        {
+          "id": "c7046d3a2512",
+          "text": "Présenter une offre adaptée à ses besoins et un contact professionnel"
+        },
+        {
+          "id": "5f018f5c5d1b",
+          "text": "Promettre une disponibilité impossible"
+        }
+      ],
+      "answer": "c7046d3a2512",
+      "explanation": "La prospection utile part du besoin du partenaire et propose un service réalisable.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.06"
+      ]
+    },
+    {
+      "id": "vtc-f-04-q2",
+      "prompt": "Le client change la destination après acceptation du devis. Que faire ?",
+      "options": [
+        {
+          "id": "3f91d7bf8e69",
+          "text": "Clarifier la modification et son éventuel prix avant de l’exécuter"
+        },
+        {
+          "id": "44ec18ea750a",
+          "text": "Considérer que le devis couvre toute distance"
+        },
+        {
+          "id": "d2ebc09a39ed",
+          "text": "Ajouter librement un montant sans information"
+        }
+      ],
+      "answer": "3f91d7bf8e69",
+      "explanation": "Une modification du service peut changer le coût ; elle doit être expliquée et convenue.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.04"
+      ]
+    },
+    {
+      "id": "vtc-f-03-q1",
+      "prompt": "Coût d’une mission 40 €, recette après commission 55 € : quelle marge avant autres charges non incluses ?",
+      "options": [
+        {
+          "id": "e6eebac98f1b",
+          "text": "15 €"
+        },
+        {
+          "id": "9862b7c25390",
+          "text": "95 €"
+        },
+        {
+          "id": "41c1bd900335",
+          "text": "55 €"
+        }
+      ],
+      "answer": "e6eebac98f1b",
+      "explanation": "55 − 40 = 15 €. Le résultat dépend du périmètre de coûts et ne représente pas nécessairement un revenu net.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.03"
+      ]
+    },
+    {
+      "id": "vtc-f-02-q1",
+      "prompt": "Quelle offre est la plus lisible ?",
+      "options": [
+        {
+          "id": "c197329f1823",
+          "text": "Transport de tout, partout, sans limites"
+        },
+        {
+          "id": "ea9407379b0d",
+          "text": "Transfert réservé avec zone, capacité, prix et conditions précisés"
+        },
+        {
+          "id": "cf38dddb5eb2",
+          "text": "Un slogan sans contenu de prestation"
+        }
+      ],
+      "answer": "ea9407379b0d",
+      "explanation": "Une offre claire indique ce que le client achète, ce qui est inclus et les limites du service.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.02"
+      ]
+    },
+    {
+      "id": "vtc-f-11-q2",
+      "prompt": "Une réclamation se révèle justifiée. Quelle suite est professionnelle ?",
+      "options": [
+        {
+          "id": "239de2d5571c",
+          "text": "Accuser un autre client"
+        },
+        {
+          "id": "95b2f79f4109",
+          "text": "Proposer une correction adaptée et traiter la cause"
+        },
+        {
+          "id": "13fcce956d85",
+          "text": "Promettre de supprimer tous les avis négatifs"
+        }
+      ],
+      "answer": "95b2f79f4109",
+      "explanation": "La solution au cas individuel et la prévention d’une répétition sont deux volets complémentaires.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.11"
+      ]
+    },
+    {
+      "id": "vtc-f-06-q2",
+      "prompt": "Quel indicateur suit l’efficacité d’une prospection ?",
+      "options": [
+        {
+          "id": "0d86526dd24b",
+          "text": "Le nombre de contacts transformés en clients selon une période définie"
+        },
+        {
+          "id": "d4f4fe4e284e",
+          "text": "Le nombre de kilomètres du véhicule uniquement"
+        },
+        {
+          "id": "e79987052d7a",
+          "text": "Le nombre de couleurs du logo"
+        }
+      ],
+      "answer": "0d86526dd24b",
+      "explanation": "Une conversion relie les démarches entreprises aux résultats commerciaux obtenus.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.06"
+      ]
+    },
+    {
+      "id": "vtc-f-manual-02",
+      "prompt": "Pour conserver 80 € après une commission de 20 % sur le HT, il faut facturer…",
+      "options": [
+        {
+          "id": "a",
+          "text": "96 € HT."
+        },
+        {
+          "id": "b",
+          "text": "80 € HT."
+        },
+        {
+          "id": "c",
+          "text": "100 € HT."
+        }
+      ],
+      "answer": "c",
+      "explanation": "80 ÷ 0,80 = 100 € HT.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-f-01-q2",
+      "prompt": "Des hôtels affichent complet certains week-ends. Que faut-il encore vérifier ?",
+      "options": [
+        {
+          "id": "b9c0ec8140ea",
+          "text": "Que toutes les chambres commanderont forcément une course"
+        },
+        {
+          "id": "f5331e2827a1",
+          "text": "Les besoins de transport et les conditions d’accès à cette clientèle"
+        },
+        {
+          "id": "9f1fbadb3809",
+          "text": "Qu’aucun concurrent ne travaille"
+        }
+      ],
+      "answer": "f5331e2827a1",
+      "explanation": "Une fréquentation touristique n’est pas automatiquement un volume de ventes ; il faut vérifier le besoin réel.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.01"
+      ]
+    },
+    {
+      "id": "vtc-f-12-q2",
+      "prompt": "Quel tableau de bord aide à décider ?",
+      "options": [
+        {
+          "id": "a4977be0be54",
+          "text": "Uniquement le chiffre d’affaires cumulé"
+        },
+        {
+          "id": "ba13fbf0f8c2",
+          "text": "Seulement le nombre d’avis"
+        },
+        {
+          "id": "bdb1b3a44a3d",
+          "text": "Recettes, coûts, kilomètres à vide, temps et qualité sur la même période"
+        }
+      ],
+      "answer": "bdb1b3a44a3d",
+      "explanation": "Relier activité, consommation de ressources et qualité permet d’identifier une amélioration utile.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.12"
+      ]
+    },
+    {
+      "id": "vtc-f-manual-01",
+      "prompt": "Une proposition de valeur décrit surtout…",
+      "options": [
+        {
+          "id": "a",
+          "text": "La taille du logo."
+        },
+        {
+          "id": "b",
+          "text": "Le besoin satisfait et le service proposé."
+        },
+        {
+          "id": "c",
+          "text": "Le revenu garanti au chauffeur."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Elle relie le besoin du client à une offre réalisable.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-f-manual-04",
+      "prompt": "Un numéro obtenu pour une réservation…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Autorise toutes les publicités."
+        },
+        {
+          "id": "b",
+          "text": "Ne vaut pas consentement général à la prospection."
+        },
+        {
+          "id": "c",
+          "text": "Doit être publié avec l’avis client."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Il faut une base autorisant l’envoi et respecter les règles d’opposition ou de consentement.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-f-09-q2",
+      "prompt": "Un client demande de ne plus recevoir de messages commerciaux. Que faire ?",
+      "options": [
+        {
+          "id": "37288c598491",
+          "text": "Lui demander le mot de passe de son téléphone"
+        },
+        {
+          "id": "6e559120dfbc",
+          "text": "Respecter sa demande et mettre à jour le suivi"
+        },
+        {
+          "id": "48a49bd2c4b7",
+          "text": "Continuer jusqu’à ce qu’il réserve"
+        }
+      ],
+      "answer": "6e559120dfbc",
+      "explanation": "Le choix de contact doit être pris en compte et appliqué dans les outils utilisés.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.09"
+      ]
+    },
+    {
+      "id": "vtc-f-05-q1",
+      "prompt": "Une course affiche 60 € et la commission de l’exemple est de 25 %. Quel reste avant les autres frais ?",
+      "options": [
+        {
+          "id": "c61543a79114",
+          "text": "45 €"
+        },
+        {
+          "id": "9f2913fbdaa9",
+          "text": "35 €"
+        },
+        {
+          "id": "2d013226a160",
+          "text": "60 €"
+        }
+      ],
+      "answer": "c61543a79114",
+      "explanation": "Commission : 60 × 0,25 = 15 €. Reste : 60 − 15 = 45 €, avant les autres obligations.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.05"
+      ]
+    },
+    {
+      "id": "vtc-f-08-q2",
+      "prompt": "Quelle information commerciale doit rester exacte sur le site ?",
+      "options": [
+        {
+          "id": "be636f86cf89",
+          "text": "Uniquement le slogan"
+        },
+        {
+          "id": "67fda8eb2636",
+          "text": "Le nombre de concurrents supprimés"
+        },
+        {
+          "id": "5a78b533e070",
+          "text": "Les prestations, capacités et conditions réellement proposées"
+        }
+      ],
+      "answer": "5a78b533e070",
+      "explanation": "Une promesse doit correspondre au service réalisable. Une présentation attractive ne justifie pas une information trompeuse.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.08"
+      ]
+    }
+  ],
+  "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+}

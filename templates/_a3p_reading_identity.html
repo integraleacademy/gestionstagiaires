@@ -1,0 +1,23 @@
+{# Compatibility source for reading IDs issued before the APS presentation. Not displayed. #}
+<div class="a3p-lesson"{% if activity.a3p.kind == 'lesson' %} data-aps-lesson-group{% endif %}>
+{% if activity.a3p.delivery %}<span class="a3p-delivery a3p-delivery--{{ activity.a3p.delivery }}">{{ {'distance':'Objectif à distance · annexes II / XI','presentiel':'Préparation du présentiel · hors volume à distance','complement':'Ressource complémentaire · hors volume à distance'}[activity.a3p.delivery] }}</span>{% endif %}
+{% if activity.a3p.kind == 'lesson' %}
+  <div data-aps-lesson-page>
+  <div class="a3p-objective"><span class="a3p-eyebrow">Objectif · Leçon {{ activity.a3p.ref }}</span><p>{{ activity.a3p.objective }}</p></div>
+  {% if activity.a3p.delivery == 'presentiel' %}<p class="a3p-practice-note">Cette lecture prépare la compréhension. Les gestes, déplacements, matériels et mises en situation se travaillent avec un formateur ; ils ne sont pas validés à l’écran.</p>{% endif %}
+  {% if activity.a3p.pacing %}<section class="a3p-objective"><span class="a3p-eyebrow">Votre séquence</span><ul>{% for step in activity.a3p.pacing %}<li>{{ step.label }} · {{ step.minutes }} min</li>{% endfor %}</ul><p>{{ activity.a3p.pacing_note }}</p></section>{% endif %}
+  <nav class="a3p-page-index" aria-label="Parties de la leçon">{% for page in activity.a3p.pages %}<a href="#a3p-page-{{ page.page }}">{{ loop.index }} · {{ (page.components|selectattr('kind', 'equalto', 'heading')|map(attribute='text')|list|first)|default('Repères du cours') }}</a>{% endfor %}</nav>
+  </div>
+  {% for page in activity.a3p.pages %}
+  <section class="a3p-reading" data-aps-lesson-page id="a3p-page-{{ page.page }}" aria-labelledby="a3p-page-title-{{ page.page }}">
+    <header><span class="a3p-reading-number">{{ '%02d'|format(loop.index) }}</span><div><h2 id="a3p-page-title-{{ page.page }}">{{ (page.components|selectattr('kind', 'equalto', 'heading')|map(attribute='text')|list|first)|default('Repères du cours') }}</h2><span>{{ page.source_label if page.source_label else 'Arrêté · annexe XI' if page.page == 'XI' else 'Manuel A3P · page ' ~ page.page }}</span></div></header>
+    {% for component in page.components %}
+      {% if component.kind == 'heading' %}<h3>{{ component.text }}</h3>
+      {% elif component.kind == 'table' %}<div class="a3p-table-scroll" role="region" aria-label="Repères de la page {{ page.page }}" tabindex="0"><table><caption>Repères du cours · page {{ page.page }}</caption><tbody>{% for row in component.rows %}{% set header_row = loop.first %}<tr>{% for cell in row %}{% if header_row %}<th scope="col">{{ cell }}</th>{% else %}<td>{{ cell }}</td>{% endif %}{% endfor %}</tr>{% endfor %}</tbody></table></div>
+      {% else %}<p>{{ component.text }}</p>{% endif %}
+    {% endfor %}
+  </section>
+  {% endfor %}
+  <footer class="a3p-source">{% if activity.a3p.ref == '09.15' %}Source : arrêté du 1er septembre 2025, annexe XI, reconnaissance des blessures spécifiques.{% else %}Source : manuel A3P Intégrale Academy, leçon {{ activity.a3p.ref }}. Le cours est suivi d’une application, d’un QCM regroupé et d’une synthèse.{% endif %}</footer>
+{% endif %}
+</div>

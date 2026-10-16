@@ -1,0 +1,940 @@
+{
+  "id": "module-09",
+  "version": "20261010-aps62-v10",
+  "title": "Justifier ses décisions",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-q-09-01",
+      "prompt": "Quelle structure justifie une décision professionnelle ?",
+      "options": [
+        {
+          "id": "3",
+          "text": "Les faits, la règle, les risques, l’action retenue et ses limites"
+        },
+        {
+          "id": "1",
+          "text": "Le résultat recherché, l’habitude du poste et l’accord des témoins"
+        },
+        {
+          "id": "2",
+          "text": "La demande du client, le moyen disponible et la rapidité d’exécution"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La justification doit relier le choix aux éléments disponibles au moment de l’action.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-02",
+      "prompt": "Une décision a donné un bon résultat par chance. Que faut-il encore pouvoir expliquer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Les faits connus et le raisonnement ayant guidé l'action."
+        },
+        {
+          "id": "2",
+          "text": "Le résultat favorable, suffisant pour valider toute la méthode."
+        },
+        {
+          "id": "3",
+          "text": "L'accord des collègues obtenu après la résolution de l'incident."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le résultat seul ne montre pas que la méthode était adaptée.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-03",
+      "prompt": "Quel élément est une hypothèse ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La porte B était ouverte au contrôle de 10 h 15"
+        },
+        {
+          "id": "3",
+          "text": "La personne pourrait tenter de rejoindre une autre entrée"
+        },
+        {
+          "id": "2",
+          "text": "L’appel au PC a été noté après le constat d’ouverture"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une possibilité doit être présentée comme telle et confrontée à des observations.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-04",
+      "prompt": "Deux mesures peuvent résoudre un problème. Comment choisir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Retenir la mesure la plus rapide même si ses risques restent inconnus"
+        },
+        {
+          "id": "2",
+          "text": "Retenir la mesure habituelle sans tenir compte des personnes présentes"
+        },
+        {
+          "id": "3",
+          "text": "Comparer leur efficacité, les risques et leur proportionnalité"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La mesure doit répondre au besoin en limitant les effets inutiles.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-05",
+      "prompt": "Une information manque avant une décision non urgente. Que faire ?",
+      "options": [
+        {
+          "id": "3",
+          "text": "Obtenir l’information nécessaire auprès du relais approprié"
+        },
+        {
+          "id": "1",
+          "text": "Retenir l’hypothèse la plus probable sans signaler cette incertitude"
+        },
+        {
+          "id": "2",
+          "text": "Reprendre la décision d’un cas précédent sans vérifier les différences"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’incertitude peut être réduite avant une action qui ne doit pas être précipitée.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-06",
+      "prompt": "Un danger immédiat impose d’agir avec des informations partielles. Quel principe ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Attendre une description complète avant toute mesure de protection"
+        },
+        {
+          "id": "3",
+          "text": "Protéger de façon adaptée puis réévaluer rapidement la situation"
+        },
+        {
+          "id": "2",
+          "text": "Engager tous les moyens disponibles sans apprécier leurs effets"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’urgence modifie le délai disponible, pas l’exigence de nécessité et de réévaluation.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-07",
+      "prompt": "Pourquoi annoncer les limites de sa décision ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Pour réserver toute responsabilité aux personnes prenant la relève"
+        },
+        {
+          "id": "3",
+          "text": "Pour éviter d’avoir à vérifier les effets de la mesure choisie"
+        },
+        {
+          "id": "1",
+          "text": "Pour rendre l’incertitude visible et préparer le relais utile"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une limite explicite permet au destinataire de compléter l’analyse.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-08",
+      "prompt": "Quel argument est insuffisant à lui seul ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "« Cette façon de faire est habituelle dans notre équipe. »"
+        },
+        {
+          "id": "1",
+          "text": "« La consigne prévoit ici un signalement au PC. »"
+        },
+        {
+          "id": "3",
+          "text": "« Une dégradation vient d’être constatée sur la porte. »"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’habitude ne démontre ni la licéité ni l’adaptation au cas présent.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-09",
+      "prompt": "Un supérieur conteste votre choix. Que présenter d’abord ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "L’accord informel de collègues sans rappeler les faits de la situation"
+        },
+        {
+          "id": "1",
+          "text": "Les faits disponibles et les risques qui ont guidé le choix"
+        },
+        {
+          "id": "3",
+          "text": "L’expérience acquise au poste sans préciser les risques rencontrés"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une discussion utile commence par les éléments de la situation.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-10",
+      "prompt": "Pourquoi distinguer urgence et importance ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour ne conserver que les tâches qui exigent une intervention immédiate"
+        },
+        {
+          "id": "3",
+          "text": "Pour prioriser les actions tout en organisant les suites utiles"
+        },
+        {
+          "id": "2",
+          "text": "Pour traiter d’abord les demandes du client indépendamment du danger"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Certains sujets demandent une réponse immédiate, d’autres un traitement organisé.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-11",
+      "prompt": "Une rumeur confirme votre première impression. Que vérifier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le nombre de collègues qui partagent déjà la même interprétation"
+        },
+        {
+          "id": "3",
+          "text": "Les éléments qui confirment le mieux l’hypothèse retenue au départ"
+        },
+        {
+          "id": "2",
+          "text": "La source et les faits, indépendamment de la première impression"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La répétition d’une rumeur ne constitue pas une confirmation factuelle.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-12",
+      "prompt": "Une mesure crée un nouveau danger. Que faire ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Poursuivre la mesure jusqu’au terme prévu pour garder une ligne cohérente"
+        },
+        {
+          "id": "1",
+          "text": "Réévaluer la mesure et chercher une solution présentant moins de risque"
+        },
+        {
+          "id": "3",
+          "text": "Réduire la mention du nouvel effet en attendant de connaître son ampleur"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La cohérence professionnelle inclut l’adaptation lorsque la situation change.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-13",
+      "prompt": "Quel écrit montre une décision traçable ?",
+      "options": [
+        {
+          "id": "3",
+          "text": "« À 16 h, accès suspendu après constat de verre au sol ; responsable avisé. »"
+        },
+        {
+          "id": "1",
+          "text": "« À 16 h, accès suspendu par précaution ; la mesure paraît la plus adaptée. »"
+        },
+        {
+          "id": "2",
+          "text": "« À 16 h, accès suspendu comme d’habitude ; rien ne justifie de le maintenir ouvert. »"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le motif, l’heure et le relais rendent le choix compréhensible.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-14",
+      "prompt": "Que signifie proportionner une mesure ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Garder le même niveau de contrainte dans tous les cas"
+        },
+        {
+          "id": "2",
+          "text": "Choisir la mesure la mieux acceptée par le public"
+        },
+        {
+          "id": "3",
+          "text": "Adapter la mesure à la réalité et à la gravité du besoin"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le choix doit être relié à la situation concrète.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-15",
+      "prompt": "Un refus d’accès est contesté. Comment l’expliquer ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Expliquer que le refus démontre l’existence d’un comportement suspect"
+        },
+        {
+          "id": "1",
+          "text": "Expliquer la condition non remplie et le recours disponible"
+        },
+        {
+          "id": "3",
+          "text": "Expliquer que l’expérience de l’agent suffit à justifier le refus"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La justification porte sur l’accès, sans jugement inutile sur la personne.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-16",
+      "prompt": "Pourquoi préparer une solution de remplacement ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Pour pouvoir changer de méthode sans informer les autres intervenants"
+        },
+        {
+          "id": "3",
+          "text": "Pour éviter de vérifier si le premier moyen reste adapté à la situation"
+        },
+        {
+          "id": "1",
+          "text": "Pour maintenir la protection si le premier moyen devient inutilisable"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une alternative anticipée permet une continuité adaptée.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-17",
+      "prompt": "Une décision dépend d’une autorisation non obtenue. Que faire ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Faire valider l’action par une personne présente qui accepte de témoigner"
+        },
+        {
+          "id": "3",
+          "text": "Mettre l’action en œuvre puis demander une régularisation au responsable"
+        },
+        {
+          "id": "1",
+          "text": "Saisir le décideur compétent et maintenir les mesures déjà autorisées"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le relais hiérarchique ou technique ne se remplace pas par une initiative hors cadre.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-18",
+      "prompt": "Quel indicateur permet d’évaluer une mesure après coup ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "L’absence de remarque immédiate des témoins présents sur les lieux"
+        },
+        {
+          "id": "1",
+          "text": "L’effet constaté sur le risque et les conséquences de la mesure"
+        },
+        {
+          "id": "3",
+          "text": "La conformité du résultat annoncé avec la première impression de l’agent"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le retour d’expérience confronte l’objectif à ce qui s’est produit.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-19",
+      "prompt": "La même règle s'applique à deux situations concrètes différentes. Comment choisir l'action ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Reproduire chaque geste à l'identique pour garantir la conformité."
+        },
+        {
+          "id": "3",
+          "text": "Abandonner la règle dès que les circonstances diffèrent du cas habituel."
+        },
+        {
+          "id": "2",
+          "text": "Adapter la réponse au contexte en restant conforme à la règle."
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’application professionnelle tient compte des faits tout en respectant la règle.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-20",
+      "prompt": "Pourquoi prévoir un point de réévaluation ?",
+      "options": [
+        {
+          "id": "3",
+          "text": "Pour décider de maintenir, d’adapter ou de lever la mesure"
+        },
+        {
+          "id": "1",
+          "text": "Pour maintenir la mesure jusqu’à la prochaine relève quel que soit le risque"
+        },
+        {
+          "id": "2",
+          "text": "Pour transférer le choix au suivant sans examiner les nouveaux éléments"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une mesure utile à un instant peut devenir inutile ou insuffisante ensuite.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-21",
+      "prompt": "Une information nouvelle invalide votre hypothèse. Que faire ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Réviser l’analyse et prévenir les destinataires qui doivent en tenir compte"
+        },
+        {
+          "id": "1",
+          "text": "Réviser seulement ses notes personnelles pour éviter de multiplier les versions"
+        },
+        {
+          "id": "3",
+          "text": "Attendre la fin de l’événement pour ne pas fragiliser la décision déjà annoncée"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La crédibilité repose sur une actualisation fidèle, pas sur le maintien d’une erreur.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-22",
+      "prompt": "Quel critère distingue observation et jugement ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "L’observation reprend l’avis commun de l’équipe"
+        },
+        {
+          "id": "3",
+          "text": "L’observation exprime une conclusion probable"
+        },
+        {
+          "id": "1",
+          "text": "L’observation décrit un élément qui peut être vérifié"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Un fait concret peut être discuté et vérifié plus facilement qu’une étiquette.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-23",
+      "prompt": "Comment justifier un appel à un spécialiste ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Expliquer que l’intervention sera plus rapide si tout lui est transféré"
+        },
+        {
+          "id": "1",
+          "text": "Expliquer le risque identifié et la limite de compétence rencontrée"
+        },
+        {
+          "id": "3",
+          "text": "Expliquer que l’absence de matériel suffit à clore toute action de protection"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le relais répond à une nécessité identifiable et prépare une intervention adaptée.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-24",
+      "prompt": "Aucun incident n'a été relevé depuis un mois. Que peut-on en conclure ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La procédure est validée et n'a plus besoin de contrôle."
+        },
+        {
+          "id": "2",
+          "text": "Les signalements de presque-accidents peuvent être suspendus."
+        },
+        {
+          "id": "3",
+          "text": "Il faut encore rechercher les risques et écarts possibles."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le résultat observé ne suffit pas à écarter les vulnérabilités.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-25",
+      "prompt": "Une mesure de protection concerne des personnes vulnérables. Quand intégrer leurs besoins ?",
+      "options": [
+        {
+          "id": "3",
+          "text": "Dès l'évaluation et l'organisation de la protection."
+        },
+        {
+          "id": "1",
+          "text": "Après l'application de la mesure commune à tout le groupe."
+        },
+        {
+          "id": "2",
+          "text": "Uniquement lorsqu'une personne se plaint du dispositif retenu."
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’adaptation vise une protection effective des personnes exposées.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-26",
+      "prompt": "Quelle question révèle une mesure excessive ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Une option moins restrictive permet-elle une protection suffisante ?"
+        },
+        {
+          "id": "1",
+          "text": "La mesure sera-t-elle immédiatement acceptée par la majorité des témoins ?"
+        },
+        {
+          "id": "3",
+          "text": "La mesure peut-elle être appliquée sans modifier le planning des agents ?"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La comparaison des alternatives aide à apprécier la nécessité.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-27",
+      "prompt": "Un choix est expliqué avec un article mal identifié. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Conserver le numéro cité si la conclusion paraît malgré tout raisonnable"
+        },
+        {
+          "id": "2",
+          "text": "Supprimer uniquement la référence sans revoir le raisonnement présenté"
+        },
+        {
+          "id": "3",
+          "text": "Vérifier la référence puis rectifier l’argumentation utilisée"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une référence inexacte peut fragiliser un raisonnement pourtant fondé sur des faits réels.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-28",
+      "prompt": "Pourquoi noter les options écartées dans un cas complexe ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Pour montrer que toutes les solutions possibles ont été essayées sur place"
+        },
+        {
+          "id": "1",
+          "text": "Pour expliquer les risques ayant conduit à préférer une option"
+        },
+        {
+          "id": "3",
+          "text": "Pour remplacer la description des moyens réellement mis en œuvre"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une comparaison concise éclaire la décision lorsque plusieurs réponses étaient envisageables.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-29",
+      "prompt": "Que faire si la décision dépasse la mission du poste ?",
+      "options": [
+        {
+          "id": "3",
+          "text": "Saisir le relais compétent et maintenir la protection possible"
+        },
+        {
+          "id": "1",
+          "text": "Intervenir au-delà du poste puis obtenir une validation après coup"
+        },
+        {
+          "id": "2",
+          "text": "Transmettre le dossier et cesser immédiatement toute mesure de protection"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La limite de mission appelle une transmission, pas une extension de pouvoir.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-09-30",
+      "prompt": "Quel bilan est le plus utile au formateur ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le résultat final et l’affirmation que les consignes ont été bien appliquées"
+        },
+        {
+          "id": "3",
+          "text": "Les observations, les décisions, leurs effets et les incertitudes restantes"
+        },
+        {
+          "id": "2",
+          "text": "Le ressenti de réussite de l’agent et l’appréciation générale des témoins"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’analyse des faits et des limites permet une correction pédagogique concrète.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    }
+  ],
+  "reviewed_on": "2026-10-10",
+  "assessment_revision": "20261010-aps62-v10"
+}

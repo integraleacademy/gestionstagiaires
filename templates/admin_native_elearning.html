@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-catalog.css', v='20261016-shared-catalog-2') }}">
+<style>
+  .nel-admin{max-width:1180px;margin:0 auto;padding:8px 0 42px;color:#172033}.nel-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:20px}.nel-eyebrow{color:#4f46e5;font-size:11px;font-weight:950;letter-spacing:.14em;text-transform:uppercase}.nel-head h1{margin:5px 0 5px;font-size:34px;letter-spacing:-.035em}.nel-head p{max-width:740px;margin:0;color:#64748b;line-height:1.55}.nel-grid{display:grid;grid-template-columns:minmax(300px,.8fr) minmax(0,1.2fr);gap:18px}.nel-card{border:1px solid #e2e8f0;border-radius:20px;background:#fff;padding:22px;box-shadow:0 12px 32px rgba(15,23,42,.05)}.nel-card h2{margin:0 0 7px;font-size:19px}.nel-muted{color:#64748b;font-size:13px;line-height:1.5}.nel-upload-zone{display:flex;min-height:180px;align-items:center;justify-content:center;margin-top:17px;border:2px dashed #c7d2fe;border-radius:17px;background:#f8faff;padding:22px;text-align:center;transition:.16s}.nel-upload-zone.is-dragging{border-color:#4f46e5;background:#eef2ff}.nel-upload-zone input{position:absolute;width:1px;height:1px;overflow:hidden;opacity:0}.nel-upload-zone label{cursor:pointer}.nel-upload-zone strong{display:block;font-size:15px}.nel-upload-zone span{display:block;margin-top:5px;color:#64748b;font-size:12px}.nel-button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:1px solid #dbe3ee;border-radius:12px;background:#fff;padding:9px 13px;color:#334155;font-size:13px;font-weight:900;text-decoration:none;cursor:pointer}.nel-button--primary{border-color:#4f46e5;background:linear-gradient(135deg,#4f46e5,#2563eb);color:#fff}.nel-button:disabled{cursor:wait;opacity:.6}.nel-selected{min-height:21px;margin:10px 0;color:#334155;font-size:12px;font-weight:800}.nel-progress{display:none;margin-top:13px}.nel-progress.is-visible{display:block}.nel-progress__track{height:9px;overflow:hidden;border-radius:999px;background:#e2e8f0}.nel-progress__track i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#4f46e5,#22c55e);transition:width .15s}.nel-progress div{display:flex;justify-content:space-between;margin-top:6px;color:#64748b;font-size:11px;font-weight:750}.nel-status{display:none;margin-top:12px;padding:11px 13px;border-radius:11px;font-size:12px;font-weight:800}.nel-status.is-visible{display:block}.nel-status.is-error{border:1px solid #fecdd3;background:#fff1f2;color:#9f1239}.nel-status.is-success{border:1px solid #bbf7d0;background:#ecfdf5;color:#166534}.nel-course-list{display:grid;gap:12px;margin-top:16px}.nel-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;padding:16px;border:1px solid #e2e8f0;border-radius:16px;background:#fbfdff}.nel-course h3{margin:0;color:#172033;font-size:16px}.nel-course__meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.nel-pill{display:inline-flex;align-items:center;border:1px solid #dbeafe;border-radius:999px;background:#eff6ff;padding:4px 8px;color:#1e40af;font-size:10px;font-weight:900}.nel-course__version{margin-top:7px;color:#94a3b8;font-size:10px}.nel-course__actions{display:flex;align-items:center}.nel-warning{margin-top:9px;color:#b45309;font-size:11px}.nel-assignments{margin-top:18px}.nel-assignment-list{display:grid;gap:10px;margin-top:15px}.nel-assignment{display:grid;grid-template-columns:minmax(180px,1fr) minmax(250px,1.2fr) auto;align-items:center;gap:12px;padding:13px 14px;border:1px solid #e2e8f0;border-radius:14px;background:#fff}.nel-assignment__name strong{display:block;font-size:14px}.nel-assignment__name span{color:#64748b;font-size:11px}.nel-assignment select{width:100%;min-height:40px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;padding:8px 10px;color:#172033;font-weight:700}.nel-empty{margin-top:15px;border:1px dashed #cbd5e1;border-radius:14px;padding:22px;color:#64748b;text-align:center}.nel-flash{margin-bottom:13px;border-radius:13px;padding:12px 14px;font-size:13px;font-weight:800}.nel-flash--success{border:1px solid #bbf7d0;background:#ecfdf5;color:#166534}.nel-flash--error{border:1px solid #fecdd3;background:#fff1f2;color:#9f1239}.nel-note{margin-top:14px;padding:12px;border-radius:12px;background:#f8fafc;color:#64748b;font-size:11px;line-height:1.5}
+  @media(max-width:900px){.nel-grid{grid-template-columns:1fr}.nel-head{align-items:flex-start;flex-direction:column}.nel-assignment{grid-template-columns:1fr}.nel-assignment .nel-button{width:100%}}
+  @media(max-width:600px){.nel-head h1{font-size:28px}.nel-card{padding:17px}.nel-course{grid-template-columns:1fr}.nel-course__actions .nel-button{width:100%}}
+  .nel-course__actions{grid-column:1/-1;flex-wrap:wrap;gap:8px}
+</style>
+
+<div class="nel-admin nel-catalog--{{ selected_curriculum }}">
+  {% import "_native_catalog_components.html" as catalog_ui with context %}
+  <header class="nel-head">
+    <div><span class="nel-eyebrow">Intégrale Academy · Formations</span><h1>E-learning</h1><p>Explorez les cours illustrés, composez les parcours de vos sessions et suivez le travail de vos stagiaires.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px">{% if config.get('NATIVE_MODULE_SIGNATURES_ENABLED') %}<a class="nel-button" href="{{ url_for('native_module_signatures.index') }}">Tableaux de suivi à signer</a>{% endif %}<a class="nel-button" href="{{ url_for('admin_sessions') }}">← Sessions</a></div>
+  </header>
+
+  <p><a class="nel-button" href="{{ url_for('native_elearning.admin_content_audit') }}">Vérifier les contenus et les durées · tous les parcours →</a></p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="nel-flash nel-flash--{{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261012-tabs') }}">
+  <nav class="curriculum-tabs" aria-label="Choisir une formation"><a href="{{ url_for('native_elearning.admin_catalog') }}"{% if selected_curriculum == 'aps' %} aria-current="page"{% endif %}>Sécurité privée · APS</a><a href="{{ url_for('native_elearning.admin_vtc_catalog') }}"{% if selected_curriculum == 'vtc' %} aria-current="page"{% endif %}>Chauffeur · VTC</a><a href="{{ url_for('native_elearning.admin_a3p_catalog') }}"{% if selected_curriculum == 'a3p' %} aria-current="page"{% endif %}>Protection des personnes · A3P</a><a href="{{ url_for('native_elearning.admin_macaps_catalog') }}"{% if selected_curriculum == 'macaps' %} aria-current="page"{% endif %}>Actualisation · MAC APS</a></nav>
+  {% if selected_curriculum == 'macaps' %}{% include '_macaps_catalog.html' %}{% elif selected_curriculum == 'a3p' %}{% include '_a3p_catalog.html' %}{% elif selected_curriculum == 'vtc' %}{% include '_vtc_catalog.html' %}{% elif academy_courses %}{% include '_aps62_catalog.html' %}{% endif %}
+
+  {% if selected_curriculum not in ['a3p', 'macaps'] %}
+  <div class="nel-grid">
+    <section class="nel-card">
+      <h2>Importer un cours</h2>
+      <p class="nel-muted">Utilisez l’export <strong>SCORM manuel</strong> d’Easygenerator. Le contenu, les images, la vidéo et les questions sont convertis dans le lecteur Intégrale.</p>
+      <form id="nativeCourseUploadForm">
+        <div class="nel-upload-zone" id="nativeUploadZone">
+          <input type="file" id="nativeCourseFile" accept=".zip,application/zip" required{% if is_read_only %} disabled{% endif %}>
+          <label for="nativeCourseFile"><strong>Déposez le ZIP ici</strong><span>ou cliquez pour sélectionner · {{ upload_limit_mb }} Mo maximum</span></label>
+        </div>
+        <div class="nel-selected" id="nativeSelectedFile">Aucun fichier sélectionné</div>
+        <button class="nel-button nel-button--primary" id="nativeImportButton" type="submit"{% if is_read_only %} disabled{% endif %}>Importer et convertir</button>
+        <div class="nel-progress" id="nativeUploadProgress"><div class="nel-progress__track"><i id="nativeUploadBar"></i></div><div><span id="nativeUploadStep">Préparation…</span><b id="nativeUploadPercent">0 %</b></div></div>
+        <div class="nel-status" id="nativeUploadStatus" role="status" aria-live="polite"></div>
+      </form>
+      <div class="nel-note">L’envoi est découpé par fragments de {{ upload_chunk_mb }} Mo : votre export de plus de 100 Mo passe sans modifier la limite globale des pièces jointes du portail.</div>
+    </section>
+
+    <section class="nel-card">
+      <h2>Modules importés</h2>
+      <p class="nel-muted">Chaque import est versionné. Une session affectée conserve sa version pour ne pas modifier un parcours déjà commencé.</p>
+      {% if imported_courses %}
+        <div class="nel-course-list">
+          {% for course in imported_courses %}
+            <article class="nel-course">
+              <div>
+                <h3>{{ course.title }}</h3>
+                <div class="nel-course__meta"><span class="nel-pill">{{ course.counts.sections }} séquences</span><span class="nel-pill">{{ course.counts.activities }} activités</span><span class="nel-pill">{{ course.counts.scored_activities }} questions</span><span class="nel-pill">Seuil {{ course.settings.mastery_score }} %</span></div>
+                {% if course.counts.required_videos %}<div class="nel-course__meta"><span class="nel-pill">{{ course.counts.required_videos }} vidéos · visionnage intégral obligatoire</span></div>{% endif %}
+                <div class="nel-course__version">Version {{ course.version }} · source {{ course.source.sha256[:12] }}</div>
+                {% if course.import_warnings %}<div class="nel-warning">⚠ {{ course.import_warnings|length }} point(s) à vérifier après import</div>{% endif %}
+              </div>
+              <div class="nel-course__actions">
+                <a class="nel-button nel-button--primary" href="{{ url_for('native_elearning.admin_preview', course_id=course.id, version=course.version) }}">Visualiser le contenu</a>
+                <a class="nel-button" href="{{ url_for('native_elearning.admin_live', course_id=course.id) }}">Suivi en direct</a>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}<div class="nel-empty">Aucun cours importé pour le moment.</div>{% endif %}
+    </section>
+  </div>
+
+  <section class="nel-card nel-assignments">
+    <h2>Parcours des sessions APS et VTC</h2>
+    <p class="nel-muted">Composez chaque parcours avec plusieurs modules, puis choisissez et ordonnez leurs séquences. L’accès stagiaire s’ouvre lorsque le e-learning est activé et que la date de début est atteinte.</p>
+    {% if aps_sessions %}
+      <div class="nel-assignment-list">
+        {% for aps_session in aps_sessions %}
+          {% set summary = path_summaries[aps_session.id] %}
+          <article class="nel-assignment">
+            <div class="nel-assignment__name"><strong>{{ aps_session.name or aps_session.training_type or aps_session.id }}</strong><span>{{ aps_session.date_start or 'Date non renseignée' }} · {{ 'E-learning activé' if aps_session.aps_elearning_enabled else 'E-learning à activer' }}</span></div>
+            <div><div class="nel-course__meta"><span class="nel-pill">{{ summary.modules }} modules</span><span class="nel-pill">{{ summary.sections }} séquences</span><span class="nel-pill">{{ summary.activities }} activités</span></div>{% if summary.unavailable %}<div class="nel-warning">Un module est indisponible : vérifiez le parcours.</div>{% endif %}</div>
+            <a class="nel-button nel-button--primary" href="{{ url_for('native_elearning.admin_path', session_id=aps_session.id) }}">{{ 'Voir le parcours' if is_read_only else 'Composer le parcours' }}</a>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}<div class="nel-empty">Aucune session APS disponible.</div>{% endif %}
+  </section>
+  {% endif %}
+</div>
+
+<script id="nativeAdminUploadConfig" type="application/json">{{ {
+  'createUrl': url_for('native_elearning.admin_create_chunked_import'),
+  'csrfToken': csrf_token,
+  'maxBytes': upload_limit_bytes
+}|tojson }}</script>
+<script src="{{ url_for('static', filename='js/native-elearning-admin.js', v='20260907-1') }}" defer></script>
+{% endblock %}
+
+

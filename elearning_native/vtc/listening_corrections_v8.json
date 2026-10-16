@@ -1,0 +1,75 @@
+{
+  "revision": 8,
+  "dialogues": {
+    "e-01-2": {
+      "original_src": "media/vtc/v3/audio/e-01-2.mp3",
+      "src": "media/vtc/v8/audio/e-01-2.mp3",
+      "duration_seconds": 43.824,
+      "original_turns": [
+        {
+          "speaker": "Driver",
+          "text": "Good evening. My name is Alex. I am your driver. Are you Ms Green?"
+        },
+        {
+          "speaker": "Passenger",
+          "text": "Yes, I am. Good evening. Thank you for waiting. It took a little longer to collect my luggage."
+        },
+        {
+          "speaker": "Driver",
+          "text": "You are welcome. Your booking is for Riverside Hotel, is that right?"
+        },
+        {
+          "speaker": "Passenger",
+          "text": "Yes, that is right. I have 3 bags. Could you help me with the largest one, please?"
+        },
+        {
+          "speaker": "Driver",
+          "text": "Of course. Your car is just outside. Please keep your passport and any medicine with you."
+        },
+        {
+          "speaker": "Passenger",
+          "text": "Thank you. I appreciate your help. I will keep my small bag with me."
+        }
+      ],
+      "turns": [
+        {
+          "speaker": "Driver",
+          "text": "Good evening. My name is Alex. I am your driver. Is your booking under the name Green?",
+          "voice": "en-GB-RyanNeural"
+        },
+        {
+          "speaker": "Passenger",
+          "text": "Yes, it is. Good evening. Thank you for waiting. It took a little longer to collect my luggage.",
+          "voice": "en-GB-SoniaNeural"
+        },
+        {
+          "speaker": "Driver",
+          "text": "You are welcome. Your booking is for Riverside Hotel, is that right?",
+          "voice": "en-GB-RyanNeural"
+        },
+        {
+          "speaker": "Passenger",
+          "text": "Yes, that is right. I have 3 bags. Could you help me with the largest one, please?",
+          "voice": "en-GB-SoniaNeural"
+        },
+        {
+          "speaker": "Driver",
+          "text": "Of course. Your car is just outside. Please keep your passport and any medicine with you.",
+          "voice": "en-GB-RyanNeural"
+        },
+        {
+          "speaker": "Passenger",
+          "text": "Thank you. I appreciate your help. I will keep my small bag with me.",
+          "voice": "en-GB-SoniaNeural"
+        }
+      ],
+      "translation": "Alex accueille la cliente le soir et confirme que sa réservation est au nom de Green, pour Riverside Hotel. La cliente a 3 bagages et demande de l’aide avec le plus grand. Les documents et médicaments restent avec elle.",
+      "voices": [
+        "en-GB-RyanNeural",
+        "en-GB-SoniaNeural"
+      ],
+      "rate": "-6%",
+      "sha256": "1113849d501eddb55d666af4ae872305b374324b38d3808f5160a3de08bf5e9d"
+    }
+  }
+}

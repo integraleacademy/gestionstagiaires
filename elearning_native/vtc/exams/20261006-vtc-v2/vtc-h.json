@@ -1,0 +1,730 @@
+{
+  "id": "vtc-h",
+  "version": "20261006-vtc-v2",
+  "training_label": "VTC",
+  "title": "VTC · Réaliser une mission professionnelle · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "vtc-h-05-q2",
+      "prompt": "Comment annoncer un freinage prévisible lié à un ralentissement ?",
+      "options": [
+        {
+          "id": "7dc2ce0d23b5",
+          "text": "Attendre au dernier moment pour surprendre le client"
+        },
+        {
+          "id": "3993fd8241ed",
+          "text": "Changer de file sans contrôle"
+        },
+        {
+          "id": "e5cc25f68674",
+          "text": "Anticiper et ralentir progressivement selon la situation"
+        }
+      ],
+      "answer": "e5cc25f68674",
+      "explanation": "Le confort repose sur l’observation et des actions adaptées, tout en gardant la priorité à la sécurité.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.05"
+      ]
+    },
+    {
+      "id": "vtc-h-manual-02",
+      "prompt": "Le barème actuel VTC est…",
+      "options": [
+        {
+          "id": "a",
+          "text": "2/10/6/2."
+        },
+        {
+          "id": "b",
+          "text": "3/10/5/2."
+        },
+        {
+          "id": "c",
+          "text": "5/5/5/5."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Parcours 3 ; conduite 10 ; relation client/tourisme 5 ; facturation 2.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-h-12-q1",
+      "prompt": "Réussir tous les exercices en ligne suffit-il à valider la conduite pratique ?",
+      "options": [
+        {
+          "id": "c28ce841d256",
+          "text": "Oui, automatiquement"
+        },
+        {
+          "id": "2234e253b014",
+          "text": "Non, l’entraînement et l’évaluation en circulation restent nécessaires"
+        },
+        {
+          "id": "97578df69b1b",
+          "text": "Oui, avec un score de 100 % en anglais"
+        }
+      ],
+      "answer": "2234e253b014",
+      "explanation": "Le numérique prépare les décisions et connaissances ; il ne démontre pas à lui seul la conduite en situation réelle.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.12"
+      ]
+    },
+    {
+      "id": "vtc-h-09-q1",
+      "prompt": "Pendant l’épreuve pratique, la facture doit correspondre à quoi ?",
+      "options": [
+        {
+          "id": "86269545e7bf",
+          "text": "Au seul numéro du permis"
+        },
+        {
+          "id": "45e57822f489",
+          "text": "À la prestation réellement présentée et à ses données"
+        },
+        {
+          "id": "058997fa5411",
+          "text": "À un ancien trajet choisi au hasard"
+        }
+      ],
+      "answer": "45e57822f489",
+      "explanation": "Les noms, dates, prestation, montants et mentions doivent être cohérents et adaptés à la situation évaluée.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.09"
+      ]
+    },
+    {
+      "id": "vtc-h-09-q2",
+      "prompt": "Prix de l’exercice : 50 € HT avec 10 % de TVA. Quel total TTC ?",
+      "options": [
+        {
+          "id": "58ec9d9e79cd",
+          "text": "45 €"
+        },
+        {
+          "id": "e29468dac86f",
+          "text": "60 €"
+        },
+        {
+          "id": "6caa0eea55dd",
+          "text": "55 €"
+        }
+      ],
+      "answer": "6caa0eea55dd",
+      "explanation": "50 × 1,10 = 55 €. Vérifiez le taux donné, la base et les unités avant de calculer.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.09"
+      ]
+    },
+    {
+      "id": "vtc-h-04-q2",
+      "prompt": "Quelle attitude correspond à un accueil professionnel ?",
+      "options": [
+        {
+          "id": "b19fc3d97a0c",
+          "text": "Éviter toute explication sur le trajet"
+        },
+        {
+          "id": "d1f3299fdeab",
+          "text": "Prendre les bagages sans demander"
+        },
+        {
+          "id": "bdb3fcae3c92",
+          "text": "Saluer, confirmer la mission et proposer une aide adaptée"
+        }
+      ],
+      "answer": "bdb3fcae3c92",
+      "explanation": "L’accueil associe clarté, respect du choix du passager et préparation du service.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.04"
+      ]
+    },
+    {
+      "id": "vtc-h-01-q2",
+      "prompt": "L’adresse comporte deux entrées éloignées. Que faire ?",
+      "options": [
+        {
+          "id": "2dcc9f6f28a5",
+          "text": "Confirmer l’entrée précise avant la prise en charge"
+        },
+        {
+          "id": "16bc6f2da29d",
+          "text": "Choisir au hasard"
+        },
+        {
+          "id": "cc7c6e506a5e",
+          "text": "Attendre que le client se trompe"
+        }
+      ],
+      "answer": "2dcc9f6f28a5",
+      "explanation": "La clarification réduit le risque de retard et de rendez-vous manqué.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.01"
+      ]
+    },
+    {
+      "id": "vtc-h-04-q1",
+      "prompt": "Comment confirmer l’identité du passager à l’accueil ?",
+      "options": [
+        {
+          "id": "794ffb7bc540",
+          "text": "En demandant son dossier médical"
+        },
+        {
+          "id": "f6230041c6f1",
+          "text": "Avec discrétion et en recoupant la réservation"
+        },
+        {
+          "id": "a4d1809a0830",
+          "text": "En annonçant publiquement toutes ses coordonnées"
+        }
+      ],
+      "answer": "f6230041c6f1",
+      "explanation": "La vérification doit être utile à la mission et proportionnée, sans exposer les données personnelles.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.04"
+      ]
+    },
+    {
+      "id": "vtc-h-01-q1",
+      "prompt": "Avant de partir, quelles informations rapprocher ?",
+      "options": [
+        {
+          "id": "edef44300582",
+          "text": "Uniquement le prénom du client"
+        },
+        {
+          "id": "0e766ad81a29",
+          "text": "Passagers, point de rencontre, horaire, destination et contraintes"
+        },
+        {
+          "id": "6461ee3191ee",
+          "text": "Uniquement le prix du carburant"
+        }
+      ],
+      "answer": "0e766ad81a29",
+      "explanation": "Lire la mission permet de préparer une prestation réalisable, avec les moyens et marges adaptés.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.01"
+      ]
+    },
+    {
+      "id": "vtc-h-12-q2",
+      "prompt": "Après une séance avec le formateur, quelle méthode favorise la progression ?",
+      "options": [
+        {
+          "id": "af5d9e15af9a",
+          "text": "Répéter sans retour ni objectif"
+        },
+        {
+          "id": "0abf95f48a57",
+          "text": "Changer toutes les habitudes au hasard"
+        },
+        {
+          "id": "5a38aeac31e2",
+          "text": "Identifier une difficulté précise, s’entraîner puis observer l’amélioration"
+        }
+      ],
+      "answer": "5a38aeac31e2",
+      "explanation": "Une progression ciblée relie observation, correction et nouvelle mise en situation avec le formateur.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.12"
+      ]
+    },
+    {
+      "id": "vtc-h-10-q2",
+      "prompt": "Comment clôturer une prestation sans créer un malentendu ?",
+      "options": [
+        {
+          "id": "ab818746f5b1",
+          "text": "Considérer qu’un sourire vaut paiement"
+        },
+        {
+          "id": "9aea62157c49",
+          "text": "Confirmer la fin du service, le règlement et la remise du justificatif pertinent"
+        },
+        {
+          "id": "516490865290",
+          "text": "Reporter toutes les vérifications à la fin du mois"
+        }
+      ],
+      "answer": "9aea62157c49",
+      "explanation": "La clôture vérifie les éléments réellement accomplis et informe le client clairement.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.10"
+      ]
+    },
+    {
+      "id": "vtc-h-manual-03",
+      "prompt": "Le seuil chiffré d’admission pratique est…",
+      "options": [
+        {
+          "id": "a",
+          "text": "8/20."
+        },
+        {
+          "id": "b",
+          "text": "10/20."
+        },
+        {
+          "id": "c",
+          "text": "12/20."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Il faut au moins 12/20, sans neutraliser les causes d’ajournement prévues.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-h-11-q1",
+      "prompt": "Quel groupe de compétences pèse 10 points sur 20 à l’épreuve pratique VTC ?",
+      "options": [
+        {
+          "id": "2b67b6d8ad99",
+          "text": "La seule présentation du véhicule"
+        },
+        {
+          "id": "5d34f623eaaf",
+          "text": "La seule facturation"
+        },
+        {
+          "id": "cc82eb237b7e",
+          "text": "Sécurité, souplesse de conduite et respect du code de la route"
+        }
+      ],
+      "answer": "cc82eb237b7e",
+      "explanation": "La conduite représente 10 points ; parcours, relation client et facturation complètent l’évaluation.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.11"
+      ]
+    },
+    {
+      "id": "vtc-h-06-q2",
+      "prompt": "Avant qu’un passager ouvre la porte côté circulation, que vérifier ?",
+      "options": [
+        {
+          "id": "0be2dc11db75",
+          "text": "Seulement le montant payé"
+        },
+        {
+          "id": "ec71f21e17ff",
+          "text": "Uniquement la destination suivante"
+        },
+        {
+          "id": "754c83de02d0",
+          "text": "La présence d’usagers et les conditions de sortie"
+        }
+      ],
+      "answer": "754c83de02d0",
+      "explanation": "Une dépose se termine avec une sortie sûre, en tenant compte notamment des cycles et des autres véhicules.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.06"
+      ]
+    },
+    {
+      "id": "vtc-h-manual-04",
+      "prompt": "Une intervention sur la double commande ou le volant entraîne…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Arrêt de l’épreuve et ajournement."
+        },
+        {
+          "id": "b",
+          "text": "Un simple avertissement garanti."
+        },
+        {
+          "id": "c",
+          "text": "Deux points de moins seulement."
+        }
+      ],
+      "answer": "a",
+      "explanation": "L’article 3 prévoit cette conséquence, indépendamment du calcul des autres points.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-h-manual-05",
+      "prompt": "Avant de toucher un fauteuil ou une personne, vous…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Agissez vite sans demander."
+        },
+        {
+          "id": "b",
+          "text": "Demandez quelle aide est souhaitée."
+        },
+        {
+          "id": "c",
+          "text": "Vous adressez uniquement à l’accompagnant."
+        }
+      ],
+      "answer": "b",
+      "explanation": "L’aide respecte l’autonomie et le consentement de la personne.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-h-02-q1",
+      "prompt": "Arrivée souhaitée 9 h, trajet 35 min et marge 10 min. Quel départ au plus tard selon ces hypothèses ?",
+      "options": [
+        {
+          "id": "a51abfa5a59d",
+          "text": "8 h 25"
+        },
+        {
+          "id": "c15752ea094f",
+          "text": "8 h 35"
+        },
+        {
+          "id": "ec764447f56a",
+          "text": "8 h 15"
+        }
+      ],
+      "answer": "ec764447f56a",
+      "explanation": "On remonte depuis l’arrivée : 9 h − 35 min − 10 min = 8 h 15, avant de compter le temps d’installation.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.02"
+      ]
+    },
+    {
+      "id": "vtc-h-11-q2",
+      "prompt": "L’examinateur doit intervenir sur la double commande ou le volant. Quelle conséquence officielle ?",
+      "options": [
+        {
+          "id": "6b06181bc382",
+          "text": "Un simple avertissement sans effet"
+        },
+        {
+          "id": "2b1c86af734a",
+          "text": "Un bonus de sécurité"
+        },
+        {
+          "id": "47a79fb73d6b",
+          "text": "Arrêt de l’épreuve et ajournement"
+        }
+      ],
+      "answer": "47a79fb73d6b",
+      "explanation": "Cette intervention est éliminatoire selon les modalités de l’épreuve pratique.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.11"
+      ]
+    },
+    {
+      "id": "vtc-h-03-q1",
+      "prompt": "Quel élément doit être vérifié avant le départ ?",
+      "options": [
+        {
+          "id": "2690469983a5",
+          "text": "Seulement la température extérieure"
+        },
+        {
+          "id": "b7b4ab06998f",
+          "text": "Seulement la playlist"
+        },
+        {
+          "id": "366ab3ee3d96",
+          "text": "La position de conduite et l’accès libre aux pédales"
+        }
+      ],
+      "answer": "366ab3ee3d96",
+      "explanation": "Un poste correctement réglé et sans objet gênant aide à conserver le contrôle du véhicule.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.03"
+      ]
+    },
+    {
+      "id": "vtc-h-07-q2",
+      "prompt": "Quelle présentation touristique respecte le passager ?",
+      "options": [
+        {
+          "id": "be29b38e2ed0",
+          "text": "Une information concise, adaptée à son intérêt"
+        },
+        {
+          "id": "505cbd1159f2",
+          "text": "Un long discours imposé"
+        },
+        {
+          "id": "089d7a5464a3",
+          "text": "Une opinion personnelle présentée comme un fait historique"
+        }
+      ],
+      "answer": "be29b38e2ed0",
+      "explanation": "Le besoin du client et la fiabilité des informations guident le service.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.07"
+      ]
+    },
+    {
+      "id": "vtc-h-08-q1",
+      "prompt": "Une fermeture de route impose un détour. Que faire ?",
+      "options": [
+        {
+          "id": "ecf265b596a9",
+          "text": "Expliquer la situation, adapter le trajet et clarifier l’incidence éventuelle"
+        },
+        {
+          "id": "3e19927c31a0",
+          "text": "Garantir une arrivée devenue irréaliste"
+        },
+        {
+          "id": "181ac15d517c",
+          "text": "Changer de destination sans prévenir"
+        }
+      ],
+      "answer": "ecf265b596a9",
+      "explanation": "L’imprévu se gère par une décision sûre et une information claire sur les conséquences.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.08"
+      ]
+    },
+    {
+      "id": "vtc-h-02-q2",
+      "prompt": "Le GPS propose une rue interdite à la circulation. Quelle décision ?",
+      "options": [
+        {
+          "id": "ac3addd28610",
+          "text": "Demander au client d’ignorer le panneau"
+        },
+        {
+          "id": "78de922ecd5f",
+          "text": "Suivre le GPS quoi qu’il arrive"
+        },
+        {
+          "id": "4e54732e5db7",
+          "text": "Respecter la signalisation et choisir un itinéraire autorisé"
+        }
+      ],
+      "answer": "4e54732e5db7",
+      "explanation": "L’aide à la navigation ne remplace pas l’observation ni le respect des règles réelles.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.02"
+      ]
+    },
+    {
+      "id": "vtc-h-manual-06",
+      "prompt": "Une sortie manquée se corrige par…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Une marche arrière sur la voie rapide."
+        },
+        {
+          "id": "b",
+          "text": "Un rabattement forcé."
+        },
+        {
+          "id": "c",
+          "text": "Un itinéraire autorisé et sûr."
+        }
+      ],
+      "answer": "c",
+      "explanation": "La sécurité prime sur le rattrapage immédiat du parcours.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-h-10-q1",
+      "prompt": "Après la dépose et le règlement, quelle vérification est utile ?",
+      "options": [
+        {
+          "id": "6a9b22356f59",
+          "text": "Contrôler les objets oubliés et l’état du véhicule avant la mission suivante"
+        },
+        {
+          "id": "de891a9a4e91",
+          "text": "Supprimer toutes les preuves de prestation"
+        },
+        {
+          "id": "09bd826b1bdb",
+          "text": "Repartir sans regarder l’habitacle"
+        }
+      ],
+      "answer": "6a9b22356f59",
+      "explanation": "La fin de mission prépare la qualité et la sécurité de la suivante, avec conservation appropriée des justificatifs.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.10"
+      ]
+    },
+    {
+      "id": "vtc-h-08-q2",
+      "prompt": "Un passager oublie un objet à la fin de la course. Quelle démarche ?",
+      "options": [
+        {
+          "id": "19a839ff937a",
+          "text": "Sécuriser l’objet et organiser sa restitution par un canal adapté"
+        },
+        {
+          "id": "dc348c10430f",
+          "text": "Le confier au premier passant"
+        },
+        {
+          "id": "6f10bc5b2b41",
+          "text": "Publier immédiatement son contenu en ligne"
+        }
+      ],
+      "answer": "19a839ff937a",
+      "explanation": "La restitution doit préserver le bien et la confidentialité, en suivant une procédure traçable.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.08"
+      ]
+    },
+    {
+      "id": "vtc-h-05-q1",
+      "prompt": "Un passager souhaite discuter pendant une insertion difficile. Quelle priorité ?",
+      "options": [
+        {
+          "id": "60c83c04da70",
+          "text": "Répondre en consultant simultanément l’application"
+        },
+        {
+          "id": "dc8380156260",
+          "text": "Le regarder longuement pour être poli"
+        },
+        {
+          "id": "33e040f1a02f",
+          "text": "Préserver l’attention nécessaire à la conduite"
+        }
+      ],
+      "answer": "33e040f1a02f",
+      "explanation": "Le service commercial ne doit pas diminuer la sécurité. On peut reprendre la conversation après la phase exigeante.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.05"
+      ]
+    },
+    {
+      "id": "vtc-h-manual-01",
+      "prompt": "La phase de conduite de l’épreuve pratique dure au minimum…",
+      "options": [
+        {
+          "id": "a",
+          "text": "20 minutes."
+        },
+        {
+          "id": "b",
+          "text": "10 minutes."
+        },
+        {
+          "id": "c",
+          "text": "60 minutes."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le minimum de vingt minutes concerne la phase de conduite en circulation.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-h-07-q1",
+      "prompt": "Un client demande les horaires d’un musée que vous ne connaissez pas. Que faire ?",
+      "options": [
+        {
+          "id": "17ba9f974d7d",
+          "text": "Consulter le téléphone au milieu d’un virage"
+        },
+        {
+          "id": "59ce3d13db85",
+          "text": "Inventer un horaire plausible"
+        },
+        {
+          "id": "5b9344edf650",
+          "text": "Proposer de vérifier une information fiable à un moment sûr"
+        }
+      ],
+      "answer": "5b9344edf650",
+      "explanation": "L’information touristique doit être fiable et donnée sans distraire la conduite.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.07"
+      ]
+    },
+    {
+      "id": "vtc-h-06-q1",
+      "prompt": "Le client demande une dépose sur un passage piéton. Que proposer ?",
+      "options": [
+        {
+          "id": "15b389d063f5",
+          "text": "Un emplacement proche, autorisé et sûr"
+        },
+        {
+          "id": "505e5d27ffcc",
+          "text": "S’arrêter sur le passage si les feux de détresse fonctionnent"
+        },
+        {
+          "id": "6973025b46fd",
+          "text": "Le laisser ouvrir la porte en roulant"
+        }
+      ],
+      "answer": "15b389d063f5",
+      "explanation": "La commodité du client ne supprime pas les règles de stationnement ni la sécurité des piétons.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.06"
+      ]
+    },
+    {
+      "id": "vtc-h-03-q2",
+      "prompt": "Le téléphone glisse sous les pédales pendant la conduite. Quelle priorité ?",
+      "options": [
+        {
+          "id": "39ccb95f98bd",
+          "text": "Demander au client de toucher les pédales"
+        },
+        {
+          "id": "7a9648f09bbf",
+          "text": "Se pencher immédiatement sous le volant"
+        },
+        {
+          "id": "4887d7995c9e",
+          "text": "Garder le contrôle et s’arrêter en sécurité avant de le récupérer"
+        }
+      ],
+      "answer": "4887d7995c9e",
+      "explanation": "Une recherche d’objet en roulant compromet la conduite. L’arrêt sûr précède la récupération.",
+      "module": "H",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon H.03"
+      ]
+    }
+  ],
+  "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+}

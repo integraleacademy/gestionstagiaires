@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Tableaux de suivi {{ ctx.training_label if ctx else 'APS et MAC APS' }} · {{ provider.name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-module-signatures.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('native_module_signatures.index') }}">{{ provider.name }}</a>
+    <a href="/admin">Administration</a>
+  </header>
+  <main class="page">
+    <nav class="breadcrumb" aria-label="Fil d’Ariane">
+      <a href="{{ url_for('native_module_signatures.index') }}">Tableaux de suivi APS et MAC APS</a>
+      {% if ctx %}<span aria-hidden="true">/</span><span>{{ ctx.person.first_name }} {{ ctx.person.last_name }}</span>{% endif %}
+    </nav>
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+      <div class="notice {{ 'error' if category in ('error', 'danger') else 'success' }}" role="status">{{ message }}</div>
+    {% endfor %}
+
+    <section class="intro">
+      <p class="eyebrow">{{ 'Parcours numérique MAC APS' if ctx and ctx.training_code == 'mac-aps' else 'Formation APS à distance' if ctx else 'Suivi des parcours APS et MAC APS' }}</p>
+      <h1>Un tableau signé pour chaque module</h1>
+      <p>Retrouvez les temps de suivi, les réponses enregistrées et les preuves de signature du stagiaire et du responsable de l’organisme.</p>
+      {% if ctx and ctx.training_code == 'mac-aps' %}<p class="notice">{{ mac_aps_notice }}</p>{% endif %}
+    </section>
+
+    {% if not ctx %}
+      <section class="group-grid" aria-label="Sessions et stagiaires">
+        {% for group in groups %}
+          <article class="card">
+            <p class="eyebrow">{{ group.training_label }}</p><h2>{{ group.name }}</h2>
+            {% if group.people %}
+              <ul class="people">
+                {% for person in group.people %}<li><a href="{{ person.url }}">{{ person.name or 'Stagiaire' }} <span aria-hidden="true">→</span></a></li>{% endfor %}
+              </ul>
+            {% else %}<p class="muted">Aucun stagiaire dans cette session.</p>{% endif %}
+          </article>
+        {% else %}
+          <div class="card empty"><h2>Aucun parcours APS ou MAC APS natif affecté</h2><p>Les stagiaires apparaîtront ici lorsque des modules principaux APS ou MAC APS natifs seront affectés à leur session ou à leur accès e-learning.</p></div>
+        {% endfor %}
+      </section>
+    {% else %}
+      <section class="learner card">
+        <div><p class="eyebrow">Stagiaire</p><h2>{{ ctx.person.first_name }} {{ ctx.person.last_name }}</h2><p>{{ ctx.person.email }}</p></div>
+        <div><p class="eyebrow">Session</p><h2>{{ ctx.session.name }}</h2><p>{{ modules|length }} module{% if modules|length != 1 %}s{% endif %} affecté{% if modules|length != 1 %}s{% endif %}</p></div>
+        <a class="button secondary" href="#tableaux">Voir les tableaux préparés</a>
+      </section>
+
+      <ol class="steps" aria-label="Étapes de signature">
+        <li><strong>1. Préparer</strong><span>Le module doit être terminé. Le suivi et les destinataires sont alors figés.</span></li>
+        <li><strong>2. Vérifier et envoyer</strong><span>Consultez le PDF puis déclenchez l’envoi aux deux signataires.</span></li>
+        <li><strong>3. Récupérer les preuves</strong><span>Actualisez l’état pour archiver le tableau signé et les preuves Yousign.</span></li>
+      </ol>
+      {% if not ready %}<p class="notice">L’envoi Yousign n’est pas configuré. Vous pouvez préparer et vérifier les tableaux.</p>{% endif %}
+      {% if read_only %}<p class="notice">Votre accès permet de consulter et de télécharger les tableaux.</p>{% endif %}
+
+      <section aria-labelledby="modules-title">
+        <div class="section-heading"><h2 id="modules-title">Modules et résultats</h2><p>Le premier essai correspond uniquement aux réponses dont l’historique a été enregistré.</p></div>
+        <div class="module-list">
+        {% for module in modules %}
+          <article class="card module">
+            <div class="card-heading">
+              <div><h3>{{ module.title }}</h3>{% if module.version %}<p class="muted edition">Édition {{ module.version }}</p>{% endif %}</div>
+              {% if not module.error %}<span class="badge {{ 'complete' if module.progress.status == 'passed' else '' }}">{{ 'Terminé' if module.progress.status == 'passed' else 'Durée à compléter' if module.progress.status == 'awaiting_time' else 'Résultats à revoir' if module.progress.status == 'failed' else 'En cours' if module.progress.started_at else 'Non commencé' }}</span>{% endif %}
+            </div>
+            {% if module.error %}
+              <p class="notice error">{{ module.error }}</p>
+            {% else %}
+              {% set summary = module.progress.assessment_summary or {} %}
+              <dl class="metrics">
+                <div><dt>Activités terminées</dt><dd>{{ module.progress.progress_percent|round(1) }} %</dd></div>
+                <div><dt>{{ 'Temps actif / cible numérique' if ctx.training_code == 'mac-aps' else 'Temps actif / obligatoire' }}</dt><dd class="time">{{ duration(module.progress.active_seconds) }}<small>/ {{ duration(module.progress.required_seconds) }}</small></dd></div>
+                <div><dt>Premier essai enregistré</dt><dd>{% if summary.first_attempt_score_percent is defined and summary.first_attempt_score_percent is not none %}{{ summary.first_attempt_score_percent|round(1) }} %<small>{{ summary.assessed_items }} question{% if summary.assessed_items != 1 %}s{% endif %} suivie{% if summary.assessed_items != 1 %}s{% endif %}</small>{% else %}<span class="unavailable">Historique non disponible</span>{% endif %}</dd></div>
+                <div><dt>Après correction</dt><dd>{{ module.progress.score_percent|round(1) }} %<small>{{ summary.incorrect_attempt_count or 0 }} erreur{% if (summary.incorrect_attempt_count or 0) != 1 %}s{% endif %} enregistrée{% if (summary.incorrect_attempt_count or 0) != 1 %}s{% endif %} aux questions</small></dd></div>
+              </dl>
+              {% if ctx.training_code == 'mac-aps' and module.progress.timed_objectives %}
+                <details><summary>Temps enregistrés par objectif</summary><ul>
+                  {% for objective in module.progress.timed_objectives %}<li><strong>{{ objective.title }}</strong> : {{ duration(objective.active_seconds) }} / {{ duration(objective.required_seconds) }} · {{ 'Terminé' if objective.complete else 'Activités à compléter' if objective.duration_met else 'Temps à compléter' }}</li>{% endfor %}
+                </ul></details>
+              {% endif %}
+              {% if module.progress.module_complete and module.progress.status == 'passed' and not read_only %}
+                <details class="prepare">
+                  <summary>Préparer le tableau de ce module</summary>
+                  <form method="post" action="{{ module.prepare_url }}" class="prepare-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <p>Le tableau sera figé avec les coordonnées ci-dessous. Le PDF sera disponible immédiatement pour vérification.</p>
+                    <fieldset>
+                      <legend>Stagiaire et session</legend>
+                      <div class="field-grid">
+                        <label>Carte professionnelle ou autorisation préalable CNAPS<input name="cnaps_number" value="{{ defaults.cnaps_number }}" maxlength="160" required><small>Le NUB seul ne remplace pas ce numéro.</small></label>
+                        <label>{{ 'Fin du suivi numérique' if ctx.training_code == 'mac-aps' else 'Fin de la session de formation' }}<input type="date" name="session_end" value="{{ defaults.session_end }}" required><small>La conservation est calculée jusqu’à trois ans après cette date.</small></label>
+                      </div>
+                    </fieldset>
+                    <fieldset>
+                      <legend>Responsable du prestataire de formation</legend>
+                      <div class="field-grid">
+                        <label>Prénom<input name="responsible_first_name" autocomplete="given-name" value="{{ defaults.responsible_first_name }}" maxlength="100" required></label>
+                        <label>Nom<input name="responsible_last_name" autocomplete="family-name" value="{{ defaults.responsible_last_name }}" maxlength="100" required></label>
+                        <label>Adresse e-mail<input type="email" name="responsible_email" autocomplete="email" value="{{ defaults.responsible_email }}" maxlength="180" required></label>
+                        <label>Téléphone mobile <small>Facultatif</small><input type="tel" name="responsible_phone" autocomplete="tel" value="{{ defaults.responsible_phone }}" maxlength="100"><small>Le code de confirmation est envoyé par SMS si le numéro est compatible, sinon par e-mail.</small></label>
+                      </div>
+                    </fieldset>
+                    <div class="form-actions"><button type="submit" class="button">Préparer le PDF</button><span class="muted">Cette étape ne contacte pas les signataires.</span></div>
+                  </form>
+                </details>
+              {% elif not module.progress.module_complete %}<p class="muted prerequisite">Le tableau sera disponible après validation des activités, des questionnaires et de la durée obligatoire de ce module.</p>{% endif %}
+            {% endif %}
+          </article>
+        {% else %}<p class="card empty">Aucun module principal {{ ctx.training_label }} natif n’est affecté à cet accès.</p>{% endfor %}
+        </div>
+      </section>
+
+      <section id="tableaux" aria-labelledby="records-title">
+        <div class="section-heading"><h2 id="records-title">Tableaux préparés et signés</h2><p>Chaque édition conserve son suivi, son PDF et ses propres destinataires. Une nouvelle préparation ne modifie pas les tableaux existants.</p></div>
+        <div class="record-list">
+        {% for record in records %}
+          <article class="card record" id="tableau-{{ record.id }}">
+            <div class="card-heading">
+              <div><h3>{{ record.evidence.course.title }}</h3><p class="muted">Préparé le {{ date_label(record.frozen_at) }} · Édition {{ record.course_version }}</p></div>
+              <span class="badge {{ 'complete' if record.status == 'signed' else 'pending' if record.status in ('ongoing', 'signed_pending_archive') else '' }}">{{ status_labels.get(record.status, record.status) }}</span>
+            </div>
+            <dl class="signers">
+              {% for role, label in [('learner', 'Stagiaire'), ('responsible', 'Responsable du prestataire')] %}
+                {% set person = record.evidence[role] %}
+                {% set signer = (record.state.signers or {}).get(role, {}) %}
+                <div><dt>{{ label }}</dt><dd><strong>{{ person.first_name }} {{ person.last_name }}</strong><span>{{ person.email }}</span>{% if person.phone %}<span class="muted">Téléphone de confirmation : {{ person.phone }}</span>{% endif %}{% if signer.status == 'signed' %}<span class="signed-label">Signature confirmée par Yousign{% if signer.signed_at %} le {{ date_label(signer.signed_at) }}{% endif %}</span>{% elif record.status in ('ongoing', 'signed_pending_archive') %}<span class="muted">Signature en attente</span>{% endif %}</dd></div>
+              {% endfor %}
+            </dl>
+            {% if record.evidence.reissued_from %}<p class="muted">Réédition du <a href="{{ url_for('native_module_signatures.snapshot_pdf', snapshot_id=record.evidence.reissued_from) }}">tableau précédent</a>, avec les mêmes traces et destinataires.</p>{% endif %}
+            {% if record.state.last_error %}<p class="notice error">{{ record.state.last_error }}</p>{% endif %}
+            <div class="document-actions">
+              <a class="button secondary" href="{{ url_for('native_module_signatures.snapshot_pdf', snapshot_id=record.id) }}">Vérifier le PDF préparé</a>
+              {% if record.has_signed_pdf and record.state.two_signatures_confirmed_at %}<a class="button" href="{{ url_for('native_module_signatures.signed_pdf', snapshot_id=record.id) }}">Télécharger le tableau signé</a>{% endif %}
+              <a class="button quiet" href="{{ url_for('native_module_signatures.audit_archive', snapshot_id=record.id) }}">{{ 'Archive complète des preuves' if record.status == 'signed' else 'Télécharger les traces figées' }}</a>
+            </div>
+            {% if not read_only and ready %}
+              {% if record.status in ('prepared', 'preparing') %}
+                <form method="post" action="{{ url_for('native_module_signatures.send', snapshot_id=record.id) }}" class="send-form">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <label class="confirmation"><input type="checkbox" name="confirm_send" value="yes" required><span>J’ai vérifié le tableau et les deux destinataires affichés. Je confirme l’envoi de leur demande de signature par e-mail.</span></label>
+                  <button class="button" type="submit">{{ 'Reprendre l’envoi aux deux signataires' if record.status == 'preparing' else 'Envoyer aux deux signataires' }}</button>
+                </form>
+              {% endif %}
+              {% if record.state.request_id or record.state.uncertain_step %}
+                <form method="post" action="{{ url_for('native_module_signatures.refresh', snapshot_id=record.id) }}" class="refresh-form">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button type="submit" class="button secondary">{{ 'Récupérer les preuves manquantes' if record.status == 'signed_pending_archive' else 'Actualiser les signatures' }}</button>
+                  {% if record.state.last_checked_at %}<span class="muted">Dernière vérification : {{ date_label(record.state.last_checked_at) }}</span>{% endif %}
+                </form>
+              {% endif %}
+            {% endif %}
+            {% if not read_only and record.status in closed_statuses %}
+              <form method="post" action="{{ url_for('native_module_signatures.reissue', snapshot_id=record.id) }}" class="refresh-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="button secondary">Rééditer ce tableau</button>
+                <span class="muted">Prépare une nouvelle édition liée à celle-ci, avec les mêmes traces et destinataires.</span>
+              </form>
+            {% endif %}
+            <p class="retention muted">Conservation prévue jusqu’au {{ record.retention_until }} · Référence {{ record.id }}</p>
+          </article>
+        {% else %}<div class="card empty"><h3>Aucun tableau préparé</h3><p>Préparez le tableau d’un module terminé pour pouvoir le vérifier et le transmettre aux deux signataires.</p></div>{% endfor %}
+        </div>
+      </section>
+      <p class="legal-note">Les tableaux et preuves de signature sont conservés trois ans à compter de la fin de session renseignée. Les anciennes tentatives absentes du suivi restent indiquées comme inconnues. {{ mac_aps_notice if ctx.training_code == 'mac-aps' else 'Ces documents décrivent le suivi pédagogique ; ils ne constituent pas une certification professionnelle.' }}</p>
+    {% endif %}
+  </main>
+</body>
+</html>

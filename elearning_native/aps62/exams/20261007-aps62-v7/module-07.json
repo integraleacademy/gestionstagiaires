@@ -1,0 +1,939 @@
+{
+  "id": "module-07",
+  "version": "20261007-aps62-v7",
+  "title": "Comprendre et apaiser les conflits",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-q-07-01",
+      "prompt": "Une personne hausse le ton à l’accueil. Quelle première attitude ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Hausser davantage la voix"
+        },
+        {
+          "id": "2",
+          "text": "La toucher immédiatement pour la calmer"
+        },
+        {
+          "id": "3",
+          "text": "Garder une distance adaptée et parler calmement"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La posture, la distance et le ton peuvent limiter l’escalade dès le premier échange.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-02",
+      "prompt": "Quelle phrase favorise la désescalade ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Calmez-vous sinon vous allez le regretter"
+        },
+        {
+          "id": "2",
+          "text": "Je comprends votre difficulté ; voici ce que je peux faire"
+        },
+        {
+          "id": "3",
+          "text": "Vous êtes toujours tous pareils"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Reconnaître une difficulté ne signifie pas céder sur la règle.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-03",
+      "prompt": "Une personne s’approche brutalement. Que privilégier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Se laisser coincer contre un mur"
+        },
+        {
+          "id": "2",
+          "text": "Avancer pour montrer sa supériorité"
+        },
+        {
+          "id": "3",
+          "text": "Préserver une distance et une possibilité de retrait"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’environnement doit permettre de se protéger et de solliciter un appui.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-04",
+      "prompt": "À quoi sert la reformulation ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Vérifier ce qui a été compris du problème"
+        },
+        {
+          "id": "2",
+          "text": "Obtenir automatiquement l’accord"
+        },
+        {
+          "id": "3",
+          "text": "Répéter une accusation plus fort"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Elle clarifie le besoin et peut réduire les malentendus.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-05",
+      "prompt": "Un public se rassemble autour d’un conflit. Quel effet possible ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La foule garantit le calme"
+        },
+        {
+          "id": "2",
+          "text": "Le dialogue devient inutile"
+        },
+        {
+          "id": "3",
+          "text": "La pression peut amplifier l’escalade"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Un relais et une réduction de l’exposition peuvent aider sans isoler l’agent dangereusement.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-06",
+      "prompt": "Pourquoi éviter de toucher une personne agitée sans nécessité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le toucher vaut consentement"
+        },
+        {
+          "id": "2",
+          "text": "Le contact prouve toujours l’autorité"
+        },
+        {
+          "id": "3",
+          "text": "Le geste peut être perçu comme une menace"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’interprétation du geste dépend du contexte ; une distance maîtrisée est souvent préférable.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-07",
+      "prompt": "Quelle information annoncer avant un contrôle ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Ce qui est demandé, pourquoi et quelle suite est possible"
+        },
+        {
+          "id": "2",
+          "text": "La sanction que l’agent souhaite"
+        },
+        {
+          "id": "3",
+          "text": "Une menace vague"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La compréhension de la procédure réduit l’incertitude et permet une réponse éclairée.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-08",
+      "prompt": "Une personne refuse d’écouter une longue explication. Que modifier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Utiliser une phrase courte et une option concrète"
+        },
+        {
+          "id": "2",
+          "text": "Répéter sans pause le même discours"
+        },
+        {
+          "id": "3",
+          "text": "Ajouter davantage de jargon"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Sous tension, une information brève et précise est plus exploitable.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-09",
+      "prompt": "Quand demander un renfort ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Dès que le risque ou la charge dépasse les moyens disponibles"
+        },
+        {
+          "id": "2",
+          "text": "Uniquement après une blessure"
+        },
+        {
+          "id": "3",
+          "text": "Seulement à la fin du conflit"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’anticipation évite d’attendre que la situation devienne ingérable.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-10",
+      "prompt": "Un collègue parle en même temps que vous à la personne. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Contester le collègue devant le public"
+        },
+        {
+          "id": "2",
+          "text": "Coordonner un interlocuteur principal et des rôles clairs"
+        },
+        {
+          "id": "3",
+          "text": "Multiplier les injonctions contradictoires"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Des messages cohérents rendent l’action plus lisible.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-11",
+      "prompt": "Quel indice mérite une réévaluation du risque ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une tenue vestimentaire inhabituelle seule"
+        },
+        {
+          "id": "2",
+          "text": "Des menaces précises et une réduction de la distance"
+        },
+        {
+          "id": "3",
+          "text": "Un accent différent"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’analyse porte sur des comportements et faits pertinents.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-12",
+      "prompt": "L’empathie oblige-t-elle à supprimer la règle d’accès ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui pour tout visiteur mécontent"
+        },
+        {
+          "id": "2",
+          "text": "Non, elle aide à expliquer la règle avec respect"
+        },
+        {
+          "id": "3",
+          "text": "Oui si la file est longue"
+        }
+      ],
+      "answer": "2",
+      "explanation": "On peut comprendre la frustration tout en maintenant une décision licite.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-13",
+      "prompt": "Une personne veut une solution que l’agent ne peut accorder. Que proposer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le recours ou l’alternative réellement disponible"
+        },
+        {
+          "id": "2",
+          "text": "Une sanction inventée"
+        },
+        {
+          "id": "3",
+          "text": "Une promesse impossible pour la faire partir"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une option tenable évite une nouvelle déception et maintient la confiance.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-14",
+      "prompt": "Pourquoi éviter l’ironie dans un conflit ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Elle peut être vécue comme une humiliation"
+        },
+        {
+          "id": "2",
+          "text": "Elle dispense d’expliquer"
+        },
+        {
+          "id": "3",
+          "text": "Elle fait toujours baisser la tension"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une plaisanterie n’est pas forcément reçue comme telle en situation tendue.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-15",
+      "prompt": "Quel emplacement de l’agent est préférable ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Un angle sans sortie"
+        },
+        {
+          "id": "2",
+          "text": "Entre la personne et toute issue sans motif"
+        },
+        {
+          "id": "3",
+          "text": "Un espace permettant observation et retrait"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La sécurité de la position fait partie de la prévention du conflit.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-16",
+      "prompt": "Une personne semble désorientée. Quel raisonnement ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Supposer systématiquement une fraude"
+        },
+        {
+          "id": "2",
+          "text": "Envisager une difficulté ou un besoin d’aide sans diagnostic hâtif"
+        },
+        {
+          "id": "3",
+          "text": "La qualifier immédiatement d’agressive"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Des comportements similaires peuvent avoir des causes différentes ; il faut observer et orienter.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-17",
+      "prompt": "Comment vérifier une demande confuse ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Enchaîner plusieurs questions rapides"
+        },
+        {
+          "id": "2",
+          "text": "Poser une question simple, une à la fois"
+        },
+        {
+          "id": "3",
+          "text": "Répondre avant d’avoir compris"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une question ciblée permet de clarifier sans surcharger l’échange.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-18",
+      "prompt": "La personne accepte finalement la procédure. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Continuer les menaces"
+        },
+        {
+          "id": "2",
+          "text": "Rappeler ses torts devant la file"
+        },
+        {
+          "id": "3",
+          "text": "Expliquer la suite et réduire la tension"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La sortie de conflit doit être consolidée sans relancer l’affrontement.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-19",
+      "prompt": "Un objet dangereux apparaît. Quelle priorité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Se protéger, éloigner les tiers si possible et alerter"
+        },
+        {
+          "id": "2",
+          "text": "Tenter seul de désarmer sans nécessité ni maîtrise"
+        },
+        {
+          "id": "3",
+          "text": "Poursuivre une discussion de principe à proximité"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’évolution du danger peut rendre le dialogue insuffisant et imposer un relais urgent.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-20",
+      "prompt": "Une insulte oblige-t-elle à répondre immédiatement sur le même registre ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui pour préserver son autorité"
+        },
+        {
+          "id": "2",
+          "text": "Oui devant les collègues"
+        },
+        {
+          "id": "3",
+          "text": "Non, garder une réponse professionnelle protège la situation"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le conflit ne doit pas être transformé en duel personnel.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-21",
+      "prompt": "Quel signe peut indiquer une baisse de tension ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Un tiers dit que tout va bien"
+        },
+        {
+          "id": "2",
+          "text": "Elle cesse de regarder l’agent une seconde"
+        },
+        {
+          "id": "3",
+          "text": "La personne reprend un échange et respecte davantage la distance"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Les signes doivent être appréciés ensemble ; aucun indice isolé ne garantit la sécurité.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-22",
+      "prompt": "Comment présenter un choix limité mais réel ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Faites ce que vous voulez partout"
+        },
+        {
+          "id": "2",
+          "text": "Obéissez ou je choisis une punition"
+        },
+        {
+          "id": "3",
+          "text": "Vous pouvez attendre ici ou contacter le responsable à ce point"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Deux options concrètes compatibles avec la règle redonnent de la lisibilité.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-23",
+      "prompt": "Pourquoi conserver un ton régulier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour éviter une escalade liée à sa propre communication"
+        },
+        {
+          "id": "2",
+          "text": "Pour masquer toute alerte"
+        },
+        {
+          "id": "3",
+          "text": "Pour dominer tous les échanges"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La maîtrise de soi contribue à stabiliser l’interaction.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-24",
+      "prompt": "Une personne filme et cherche une réaction provocatrice. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Rester factuel et appliquer la procédure"
+        },
+        {
+          "id": "2",
+          "text": "Saisir le téléphone par réflexe"
+        },
+        {
+          "id": "3",
+          "text": "Se mettre en scène devant la caméra"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La présence d’une caméra ne change pas les limites de la mission.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-25",
+      "prompt": "Quel compte rendu après le conflit ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Paroles utiles, gestes observés, mesures et relais"
+        },
+        {
+          "id": "2",
+          "text": "Une étiquette comme « fou » sans faits"
+        },
+        {
+          "id": "3",
+          "text": "Uniquement le sentiment d’avoir gagné"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le récit doit permettre une compréhension opérationnelle et une relecture.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-26",
+      "prompt": "L’agent sent sa propre colère augmenter. Quelle action ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Prendre du recul et organiser un relais si possible"
+        },
+        {
+          "id": "2",
+          "text": "Se rapprocher brusquement"
+        },
+        {
+          "id": "3",
+          "text": "Parler plus fort pour conclure"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Reconnaître sa tension permet de préserver la maîtrise de l’intervention.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-27",
+      "prompt": "Une personne demande à parler à un responsable. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Inventer la présence d’un supérieur"
+        },
+        {
+          "id": "2",
+          "text": "Proposer le circuit réellement disponible"
+        },
+        {
+          "id": "3",
+          "text": "Refuser pour préserver son prestige"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Un recours expliqué peut aider à sortir du face-à-face.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-28",
+      "prompt": "Quel objectif donner à la communication en crise ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Faire admettre la supériorité de l’agent"
+        },
+        {
+          "id": "2",
+          "text": "Gagner un débat public"
+        },
+        {
+          "id": "3",
+          "text": "Obtenir une conduite sûre et compréhensible"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’efficacité se mesure à la protection et à la résolution opérationnelle.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-29",
+      "prompt": "Une menace est formulée mais la personne garde ses distances. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Employer automatiquement une force maximale"
+        },
+        {
+          "id": "2",
+          "text": "La prendre en compte et ajuster protection et alerte"
+        },
+        {
+          "id": "3",
+          "text": "L’ignorer car aucun coup n’a été porté"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La menace appelle une évaluation concrète, sans banalisation ni réaction automatique excessive.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-07-30",
+      "prompt": "À quoi sert le retour d’expérience après un conflit ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Rechercher seulement un responsable à blâmer"
+        },
+        {
+          "id": "2",
+          "text": "Identifier ce qui a réduit ou aggravé la tension"
+        },
+        {
+          "id": "3",
+          "text": "Supprimer les consignes"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’analyse factuelle améliore les prochaines interventions et la coordination.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    }
+  ],
+  "reviewed_on": "2026-10-04"
+}

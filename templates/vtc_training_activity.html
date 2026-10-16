@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ activity.title }} · Entraînement libre VTC</title><link rel="stylesheet" href="{{ url_for('static',filename='css/aps62-exam.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-annales.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-journey.css') }}"></head>
+<body>
+<header class="exam-top"><a href="{{ back_url }}">← Tous les entraînements de cette matière</a><strong>INTÉGRALE ACADEMY / VTC</strong><span>{{ 'Aperçu administrateur' if preview else 'Mon entraînement libre' }}</span></header>
+<main class="exam-shell"><header class="exam-intro"><span class="exam-eyebrow">ENTRAÎNEMENT LIBRE</span><h1>{{ activity.title }}</h1><p>Explorez d’autres situations et leurs corrections, sans ajouter de temps ni valider d’activité dans votre parcours.</p></header>
+{% if unavailable_audio %}<aside class="annales-notice"><p>Certains enregistrements ne font pas partie de votre édition du cours. Leur dialogue et leur traduction sont proposés à l’écrit pour réaliser ces exercices.</p></aside>{% endif %}
+{% if not preview_can_answer %}<p class="exam-alert" role="status">Votre compte est en lecture seule : vous pouvez consulter les situations, mais vous ne pouvez pas vérifier les réponses.</p>{% endif %}
+{% include '_vtc_journey.html' %}
+</main>
+<script id="nativePreviewConfig" type="application/json">{{ config|tojson }}</script>
+<script src="{{ url_for('static',filename='js/vtc-journey.js',v='20261010-v6') }}" defer></script>
+</body></html>

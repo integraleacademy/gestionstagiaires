@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="fr">
+{% set centre_name = learner_brand.get('name') or 'Votre organisme de formation' %}
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ path_title }} · {{ centre_name }}</title>
+  {% if learner_brand.get('logo_url') %}<link rel="icon" href="{{ learner_brand.logo_url }}">{% endif %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning-path.css', v='20260908-2') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/learner-path-visuals.css', v='20261010-1') }}">
+  {% if training_label == 'MAC APS' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-elearning.css', v='20261012-2') }}">{% endif %}
+</head>
+<body class="np-learner-body">
+  <header class="np-brandbar">
+    <div class="np-brandbar-inner">
+      <div class="np-brand">
+        {% if learner_brand.get('logo_url') %}<img class="np-brand-logo" src="{{ learner_brand.logo_url }}" alt="Logo {{ centre_name }}" width="144" height="60">{% else %}<span class="np-brand-initial" aria-hidden="true">{{ centre_name[0]|upper }}</span>{% endif %}
+        <div><strong>{{ centre_name }}</strong><span>Mon espace de formation</span></div>
+      </div>
+      <span class="np-brand-course">E-learning {{ training_label }}</span>
+    </div>
+  </header>
+  <main class="np-shell np-learner-shell">
+    <a class="np-back" href="{{ portal_url }}">← Retour à mon espace</a>
+    <header class="np-welcome{% if not hero_illustration_url %} np-welcome--text{% endif %}">
+      <div class="np-welcome-copy"><span class="np-eyebrow">{{ session_name }}</span><h1>{{ path_title }}</h1><p class="np-greeting">Bonjour {{ learner_name }} !</p><p>Des cours illustrés, des activités et des mises en situation pour avancer dans votre formation.</p>{% if resume_url %}<a class="np-button np-button--primary" href="{{ resume_url }}">{{ 'Reprendre mon parcours' if completed_activities else 'Commencer mon parcours' }} <span aria-hidden="true">→</span></a>{% endif %}</div>
+      {% if hero_illustration_url %}<div class="np-welcome-art"><img src="{{ hero_illustration_url }}" alt="{{ 'Des agents de sécurité révisent les situations professionnelles du MAC APS avec leur formateur.' if training_label == 'MAC APS' else 'Un futur chauffeur VTC révise sur ordinateur avec son manuel, son carnet et un véhicule visible en arrière-plan.' if training_label == 'VTC' else 'Une stagiaire révise sa formation de sécurité sur ordinateur, avec son casque, son manuel et son carnet.' }}" width="1536" height="1024" fetchpriority="high"></div>{% endif %}
+    </header>
+    {% if training_label == 'MAC APS' %}<p class="macaps-scope">{% if macaps_v2 %}{{ 'Parcours de préparation et de révision de 14 heures' if macaps_full_path else 'Modules de préparation et de révision issus de l’édition de 14 heures' }}, selon les objectifs de l’arrêté du 27 janvier 2025. Son ouverture temporaire au distanciel se terminait le 31 décembre 2025. {% else %}Votre ancienne édition MAC APS et sa progression sont conservées. {% endif %}Ce parcours numérique ne délivre pas l’attestation réglementaire de stage MAC APS.</p>{% endif %}
+    <section class="np-panel np-overview" aria-label="Progression du parcours">
+      <div><span>Modules terminés</span><strong>{{ completed_modules }} / {{ modules|length }}</strong></div>
+      <div><span>{{ 'Progression des activités obligatoires' if training_label == 'VTC' else 'Progression des activités' }}</span><strong>{{ progress_percent }} %</strong><div class="np-progress"><i style="width:{{ progress_percent }}%"></i></div></div>
+      <div><span>Temps actif cumulé{{ ', examen final compris' if aps_final_time }}</span><strong>{{ active_time_label }}</strong>{% if aps_final_time %}<small>Modules : {{ modules_time_label }} · Examen final et corrigé : {{ aps_final_time.time_label }}</small>{% endif %}</div>
+      <div><span>{{ 'Activités obligatoires terminées' if training_label == 'VTC' else 'Activités terminées' }}</span><strong>{{ completed_activities }} / {{ total_activities }}</strong></div>
+    </section>
+    {% if training_label == 'VTC' %}<p class="np-hint">Durée minimale de votre parcours : <strong>{{ programme_time_label }}</strong>. Le temps actif réellement effectué apparaît dans votre suivi. Les productions personnelles sont facultatives. Vous pouvez approfondir les cours avec les exercices, les missions et les révisions de votre choix.</p>{% endif %}
+    {% if training_label == 'MAC APS' %}<p class="np-hint">Durée de votre parcours : <strong>{{ programme_time_label }}</strong>. Le temps actif réellement effectué apparaît dans votre suivi.{% if macaps_v2 %} Les durées sont vérifiées séparément pour les dix objectifs ; les compléments ne s’ajoutent pas à ces 14 heures.{% endif %}</p>{% endif %}
+    {% if cma_url %}<section class="np-panel"><h2>Examen en conditions réelles</h2><p>Les sept matières du format CMA, avec QCM, réponses courtes, chronométrage et coefficients. Vous pouvez mettre le chronomètre en pause et reprendre plus tard. Retrouvez votre résultat par matière et les points à réviser.</p><a class="np-button np-button--primary" href="{{ cma_url }}">Ouvrir l’examen en conditions réelles →</a></section>{% endif %}
+    {% if annales_url %}<section class="np-panel"><h2>Les annales VTC</h2><p>Entraînez-vous avec les sujets fournis, puis retrouvez les corrections expliquées et les leçons à réviser. Les questions anciennes qui ne peuvent plus être évaluées sont signalées.</p><a class="np-button np-button--primary" href="{{ annales_url }}">Ouvrir les annales →</a></section>{% endif %}
+    <div class="np-section-heading"><div><span class="np-eyebrow">Votre programme</span><h2>Les étapes de votre parcours</h2></div><span class="np-module-count">{{ modules|length }} modules</span></div>
+    {% if free_module_navigation %}<p class="np-hint">Tous vos modules VTC sont accessibles. Vous pouvez les consulter dans l’ordre de votre choix et passer de l’un à l’autre sans terminer le précédent. Votre progression est conservée dans chaque module.</p>{% endif %}
+    <div class="np-modules np-learner-modules">
+      {% for module in modules %}
+        <article class="np-panel np-learner-module{% if module.locked %} is-locked{% endif %}">
+          <div class="np-module-intro{% if not module.illustration_url %} np-module-intro--text{% endif %}">
+          {% if module.illustration_url %}<img class="np-module-illustration" src="{{ module.illustration_url }}" alt="Illustration du module : {{ module.course.title }}" width="1536" height="1024" loading="lazy" decoding="async">{% endif %}
+          <div class="np-module-heading"><span class="np-number">{{ '%02d'|format(loop.index) }}</span><div>
+            <span class="np-eyebrow">Module {{ loop.index }}</span>
+            <h2>{{ module.course.title if module.course else (module.assignment.title or 'Module indisponible') }}</h2>
+          </div></div></div>
+          {% if module.course %}
+            <div class="np-totals"><span>{{ module.course.counts.sections }} séquences</span>{% if training_label == 'VTC' %}<span>{{ module.course.counts.required_activities|default(module.course.counts.activities) }} activités obligatoires</span>{% if module.course.counts.optional_activities %}<span>{{ module.course.counts.optional_activities }} productions facultatives</span>{% endif %}{% else %}<span>{{ module.course.counts.activities }} activités</span>{% endif %}<span>{{ module.time_label }} de temps actif</span><span>{{ module.progress.progress_percent|round|int }} % des activités{{ ' obligatoires' if training_label == 'VTC' else '' }} terminées</span></div>
+            <div class="np-progress"><i style="width:{{ module.progress.progress_percent }}%"></i></div>
+            {% if module.progress.required_seconds %}<p class="np-duration-progress">Durée obligatoire : <strong>{{ module.required_time_label }}</strong> · {% if module.progress.duration_met %}Durée atteinte{% else %}Temps actif restant : <strong>{{ module.remaining_time_label }}</strong>{% endif %}</p>{% endif %}
+            {% if module.course.aps_depth_revision %}<p class="np-duration-progress">Durée effectuée : <strong>{{ module.progress.duration_percent|round(0, 'floor')|int }} %</strong> · <strong>{{ 'Module validé' if module.progress.status == 'passed' else 'Résultats à reprendre' if module.progress.status == 'failed' else 'Module à terminer' }}</strong></p><div class="np-progress" aria-hidden="true"><i style="width:{{ module.progress.duration_percent }}%"></i></div><p class="np-hint">{{ module.course.counts.depth_dossiers }} dossiers approfondis · examen et correction : {{ module.course.study_plan.exam_minutes }} min prévues dans ce module.</p>{% endif %}
+            {% if module.progress.timed_objectives %}<details class="np-learner-sequences"><summary>Durées et validation par objectif</summary><ul>{% for objective in module.progress.timed_objectives %}<li><strong>{{ objective.title }}</strong> · {{ objective.required_seconds // 60 }} min prévues · {{ (objective.active_seconds / 60)|round(0, 'floor')|int }} min actives · {{ 'Validé' if objective.complete else 'Durée atteinte, activités à terminer' if objective.duration_met else 'À compléter' }}</li>{% endfor %}</ul></details>{% endif %}
+            <div class="np-learner-actions">
+              <span class="np-badge">{{ 'Verrouillé' if module.locked else {'not_started': 'À commencer', 'in_progress': 'En cours', 'awaiting_time': 'Durée obligatoire à compléter', 'passed': 'Terminé · objectif atteint', 'failed': 'Terminé · résultats à retravailler' if training_label == 'VTC' else 'Terminé · à revoir avec le formateur'}[module.progress.status] }}</span>
+              {% if module.locked %}<button class="np-button" type="button" disabled>Module verrouillé</button>{% else %}<a class="np-button np-button--primary" href="{{ module.url }}">{{ 'Revoir le module' if module.complete else ('Continuer' if module.progress.status != 'not_started' else 'Commencer') }} →</a>{% endif %}
+            </div>
+            {% if module.locked %}<p class="np-lock-reason">{{ module.lock_reason }}</p>{% elif module.exam_url %}<p><a class="np-button" href="{{ module.exam_url }}">Examen blanc · 30 questions →</a>{% if module.course.id.startswith('academy-aps62-') %}<span class="np-hint"> Temps actif inclus dans ce module.</span>{% endif %}</p>{% endif %}
+            <details class="np-learner-sequences"><summary>Voir les séquences et activités</summary><ol>{% for section in module.course.sections %}<li><strong>{{ section.title }}</strong><ul>{% for activity in section.activities %}<li>{{ '✓ ' if activity.id in module.progress.completed_activity_ids else '' }}{{ activity.title }}{% if training_label == 'VTC' and activity.optional %} <small>· Facultatif</small>{% endif %}{% if activity.scored %} <small>· Question</small>{% endif %}</li>{% endfor %}</ul></li>{% endfor %}</ol></details>
+          {% else %}<p class="np-error">Ce module est momentanément indisponible. Contactez l’équipe pédagogique.</p>{% endif %}
+        </article>
+      {% else %}<section class="np-panel np-empty"><h2>Votre parcours est en préparation</h2><p>Les modules apparaîtront ici dès leur affectation par l’équipe pédagogique.</p></section>{% endfor %}
+    </div>
+    <p class="np-hint">{% if free_module_navigation %}Chaque module est validé lorsque ses activités{{ ' obligatoires' if training_label == 'VTC' else '' }} et sa durée obligatoire sont terminées.{% if training_label == 'VTC' %} Les productions facultatives ne sont pas exigées.{% endif %}{% else %}Terminez les activités et la durée obligatoire d’un module pour ouvrir le suivant.{% endif %} {% if aps_tracking %}Le temps est enregistré dans les cours, les examens blancs de module et l’examen final, corrigés compris. Changer d’onglet ne coupe pas le chrono ; il se met en pause après 10 minutes sans interaction ni lecture vidéo suivie. Le temps passé sur cette page de présentation n’est pas chronométré.{% else %}Le compteur fonctionne dans le lecteur, pas sur cette page, et se met en pause après 5 minutes sans interaction.{% endif %} Une seule activité peut être chronométrée à la fois.</p>
+    {% if final_exam_url %}<section class="np-panel"><h2>{{ "Quiz final de révision – 100 questions" if training_label == "VTC" else "Examen blanc final · 100 questions" }}</h2><p>{{ final_exam_description }} : correction détaillée et nouvelles tentatives.{% if training_label == "VTC" %} Sans chronomètre, avec un objectif pédagogique de 80 %.{% endif %}</p>{% if aps_final_time %}<p><strong>Temps enregistré : {{ aps_final_time.time_label }}</strong>, inclus dans le total du parcours et ajouté au temps des modules. Les durées obligatoires de chaque module restent inchangées.</p>{% endif %}{% if final_exam_unlocked %}<a class="np-button np-button--primary" href="{{ final_exam_url }}">{{ "Commencer le quiz final" if training_label == "VTC" else "Commencer l’examen final" }} →</a>{% else %}<p>Terminez les {{ final_module_count }} modules et leurs durées obligatoires pour ouvrir {{ "ce quiz" if training_label == "VTC" else "cet examen" }}.</p>{% endif %}</section>{% endif %}
+    {% if macaps_complements %}<section class="np-panel mac-complements"><span class="np-eyebrow">Hors des 14 heures</span><h2>Préparer les ateliers avec votre formateur</h2><p>Des cours et vidéos complémentaires pour préparer le secourisme, les conflits, le filtrage et les mises en situation. Leur consultation ne crédite aucune heure du parcours principal et ne valide aucun geste pratique.</p><ul>{% for item in macaps_complements %}<li><a class="np-button" href="{{ item.url }}">{{ item.title }} →</a></li>{% endfor %}</ul></section>{% endif %}
+    <footer class="np-support"><div><strong>Une question pendant votre parcours ?</strong><p>Votre organisme de formation vous accompagne.</p></div><div class="np-support-contact"><strong>{{ centre_name }}</strong>{% if learner_brand.get('email') %}<a href="mailto:{{ learner_brand.email }}">{{ learner_brand.email }}</a>{% endif %}{% if learner_brand.get('phone') %}<span>{{ learner_brand.phone }}</span>{% endif %}</div></footer>
+  </main>
+</body>
+</html>
+

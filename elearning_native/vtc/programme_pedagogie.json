@@ -1,0 +1,262 @@
+{
+  "version": "20261010-vtc-v6-pedagogie",
+  "planned_minutes": 5422,
+  "status": "programme_previsionnel",
+  "duration_note": "Charge indicative recalculée après allègement. La durée dépend des acquis et des révisions ; elle reste à mesurer avec un groupe pilote. Les affectations existantes conservent leur durée configurée.",
+  "estimation_method": "Estimation initiale : briefing 2 min, choix 2 min, ligne à placer 1 min, document distinct 2 min, audio distinct 1 min. Cours et vidéos inchangés. Aucun temps minimum ajouté.",
+  "modules": [
+    {
+      "letter": "A",
+      "title": "VTC A · Exercer dans le cadre du T3P",
+      "planned_minutes": 755,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 240
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 267
+        },
+        {
+          "label": "Missions",
+          "minutes": 68
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 52
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "letter": "B",
+      "title": "VTC B · Gérer son entreprise",
+      "planned_minutes": 693,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 264
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 169
+        },
+        {
+          "label": "Missions",
+          "minutes": 76
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 56
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "letter": "C",
+      "title": "VTC C · Conduire en sécurité",
+      "planned_minutes": 706,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 240
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 234
+        },
+        {
+          "label": "Missions",
+          "minutes": 52
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 52
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "letter": "D",
+      "title": "VTC D · Comprendre et s’exprimer en français",
+      "planned_minutes": 618,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 180
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 196
+        },
+        {
+          "label": "Missions",
+          "minutes": 56
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 58
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "letter": "E",
+      "title": "VTC E · Accueillir en anglais",
+      "planned_minutes": 718,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 216
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 240
+        },
+        {
+          "label": "Missions",
+          "minutes": 58
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 76
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "letter": "F",
+      "title": "VTC F · Développer son activité VTC",
+      "planned_minutes": 678,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 240
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 186
+        },
+        {
+          "label": "Missions",
+          "minutes": 76
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 48
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "letter": "G",
+      "title": "VTC G · Appliquer les règles du VTC",
+      "planned_minutes": 612,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 180
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 192
+        },
+        {
+          "label": "Missions",
+          "minutes": 60
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 52
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "letter": "H",
+      "title": "VTC H · Réaliser une mission professionnelle",
+      "planned_minutes": 642,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 144
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 108
+        },
+        {
+          "label": "Dossiers professionnels",
+          "minutes": 242
+        },
+        {
+          "label": "Missions",
+          "minutes": 76
+        },
+        {
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 52
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "real_learners_tested": 0,
+    "measured_median_minutes": null,
+    "status": "a_valider_avec_un_groupe_pilote"
+  }
+}

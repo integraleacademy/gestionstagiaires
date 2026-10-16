@@ -1,0 +1,31 @@
+{% set same_category = books|selectattr('category', 'equalto', book.category)|rejectattr('code', 'equalto', book.code)|list %}
+{% set companion_code = book.code|replace('_recyclage', '') if book.code.endswith('_recyclage') else book.code ~ '_recyclage' %}
+{% set same_category = (same_category|selectattr('code', 'equalto', companion_code)|list) + (same_category|rejectattr('code', 'equalto', companion_code)|list) %}
+{% set other_categories = books|rejectattr('category', 'equalto', book.category)|list %}
+<section class="discovery-section manual-related" aria-labelledby="other-title">
+  <div class="manual-related-heading">
+    <div class="discovery-heading">
+      <span class="eyebrow blue">DANS LA MÊME COLLECTION</span>
+      <h2 id="other-title">D’autres manuels à découvrir.</h2>
+      <p>Des supports illustrés pour accompagner toutes vos formations.</p>
+    </div>
+    <a class="text-link" href="{{ url_for('manuals_shop.public_presentation') }}#collection">Voir les {{ books|length }} manuels <span aria-hidden="true">→</span></a>
+  </div>
+  <div class="manual-related-grid">
+    {% for other in (same_category + other_categories)[:4] %}
+    <a class="manual-related-card" href="{{ url_for('manuals_shop.public_manual_detail', code=other.code) }}" style="--related-color:{{ other.color }}">
+      <div class="manual-related-cover">
+        <span class="manual-related-category">{{ other.category_name }}</span>
+        <img src="{{ url_for('static', filename='manuals/' ~ other.code ~ '.webp') }}" alt="Couverture du manuel {{ other.name }}" width="212" height="300" loading="lazy">
+      </div>
+      <div class="manual-related-copy">
+        {% if other.code.endswith('_recyclage') %}<span class="manual-related-edition">Recyclage / Remise à niveau</span><h3>{{ other.name|replace('Recyclage / Remise à niveau ', '') }}</h3>{% else %}<span class="manual-related-edition">Manuel de formation</span><h3>{{ other.name }}</h3>{% endif %}
+        <p>{{ other.title }}</p>
+        <div class="manual-related-price">Dès <strong>{{ other.bulk_price|manuals_money }}</strong> <span>TTC / ex.</span><small>À partir de 100 exemplaires</small></div>
+        <span class="manual-related-link">Découvrir le manuel <span aria-hidden="true">↗</span></span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  <p class="manual-related-note">Votre logo sur la couverture et la livraison sont inclus. Commande à partir de 50 exemplaires par titre.</p>
+</section>

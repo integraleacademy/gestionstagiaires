@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.content-audit{max-width:1240px;margin:auto;padding:28px 16px;color:#172033}.content-audit h1{font-size:30px}.content-audit p{line-height:1.6}.content-audit nav{display:flex;flex-wrap:wrap;gap:16px;margin:22px 0}.content-audit article{background:#fff;border:1px solid #dbe3ee;border-radius:16px;padding:22px;margin:20px 0}.content-audit .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;background:#f1f5f9;padding:18px;border-radius:12px}.content-audit .metrics b{display:block;font-size:22px}.content-audit .metrics span{font-size:13px}.content-audit .notice{background:#eef2ff;padding:18px;border-radius:12px}.content-audit .warning{background:#fff7ed;border-left:4px solid #ea580c;padding:12px 18px}.content-audit .scroll{overflow-x:auto}.content-audit table{border-collapse:collapse;width:100%;font-size:14px}.content-audit th,.content-audit td{text-align:left;padding:12px;border-bottom:1px solid #e2e8f0}.content-audit summary{padding:18px 0;cursor:pointer;font-weight:700}.content-audit a{color:#3730a3}.content-audit small{color:#64748b}.content-audit h2{font-size:22px}.content-audit .family{scroll-margin-top:90px}
+</style>
+<main class="content-audit">
+  <a href="{{ url_for('native_elearning.admin_catalog') }}">← Catalogue e-learning</a>
+  <h1>Contenus et durées de tous les parcours</h1>
+  <p>APS, MAC APS, A3P et VTC : comparez le contenu disponible, la lecture minimale et le travail prévu avant de faire tester chaque module.</p>
+  <div class="notice"><strong>Un compte à rebours ne mesure pas la richesse d’un cours.</strong><p>Les durées de lecture de 1, 2 et 5 minutes assurent une progression par page. Elles ne prouvent ni l’apprentissage ni la durée réelle nécessaire à chaque personne. Le volume de texte est présenté avec une estimation indicative de 120 à 180 mots par minute, hors exercices, vidéos et échanges. Les pages peuvent reprendre des repères : ce nombre n’est pas un décompte de notions différentes.</p></div>
+  <nav aria-label="Parcours">{% for training in ['APS','MAC APS','A3P','VTC'] %}<a href="#audit-{{ training|replace(' ', '-') }}">{{ training }}</a>{% endfor %}<a href="{{ url_for('native_elearning.admin_aps_workload') }}">Observations réelles APS →</a></nav>
+  <p>Les ressources préparatoires au présentiel et les compléments A3P sont exclus du volume à distance. MAC APS conserve son périmètre de support numérique de préparation et de révision. Les vidéos complémentaires ne sont pas comptées parmi les vidéos obligatoires. Les anciens temps et résultats ne sont pas reconstitués.</p>
+  {% for training, modules in reports|groupby('training') %}
+  <section class="family" id="audit-{{ training|replace(' ', '-') }}">
+    <h2>{{ training }} · {{ modules|length }} modules · {{ modules|sum(attribute='required_minutes') // 60 }} h {{ '%02d'|format(modules|sum(attribute='required_minutes') % 60) }} prévues</h2>
+    {% for report in modules %}<article id="{{ report.id }}">
+      <h3>{{ report.title }}</h3>
+      <div class="metrics"><span>Durée du module<b>{{ report.required_minutes }} min</b></span><span>Cours / pages de lecture<b>{{ report.lessons }} / {{ report.pages }}</b></span><span>Temps minimal des pages<b>{{ report.countdown_minutes }} min</b></span><span>Vidéos obligatoires<b>{{ report.video_minutes }} min</b></span></div>
+      <p><strong>{{ report.words }} mots</strong> dans les pages de cours, soit environ <strong>{{ report.reading_low }} à {{ report.reading_high }} minutes de lecture</strong>, hors exercices et vidéos. {{ report.questions }} questions de cours et {{ report.interactive_items }} exercices interactifs ; les examens blancs sont distincts.</p>
+      <p><strong>{{ report.priority }}</strong></p>
+      {% if report.calibration %}<div class="notice"><b>Activités disponibles : {{ report.planned_minutes }} min estimées · écart à compléter : {{ report.gap_minutes }} min</b><p>{{ report.calibration.method }}</p><p>Les 1, 2 ou 5 minutes par page restent des minima de lecture. Aucun temps prévisionnel n’est crédité à un stagiaire.</p></div>{% endif %}
+      {% for issue in report.issues %}<p class="warning">{{ issue }}</p>{% endfor %}
+      <details><summary>Examiner la répartition par séquence</summary><div class="scroll"><table><thead><tr><th>Séquence</th><th>Budget prévu</th><th>Pages de cours</th><th>Lecture minimale</th></tr></thead><tbody>{% for section in report.sections %}<tr><td>{{ section.title }}</td><td>{{ (section.planned_minutes|string ~ ' min') if section.planned_minutes else 'À définir' }}</td><td>{{ section.pages }}</td><td>{{ section.reading_minutes|round|int }} min</td></tr>{% endfor %}</tbody></table></div>
+      {% if report.calibration %}{% for section in report.sections %}<details><summary>{{ section.title }} · {{ section.planned_minutes }} min estimées</summary><ul>{% for activity in section.activities %}<li>{{ activity.title }} : {{ activity.minutes }} min{% if activity.decisions %} · {{ activity.decisions }} décisions corrigées{% endif %}</li>{% endfor %}</ul></details>{% endfor %}{% endif %}</details>
+      <a href="{{ url_for('native_elearning.admin_preview', course_id=report.id, version=report.version) }}">Revoir le module →</a> · <a href="{{ url_for('native_elearning.admin_live', course_id=report.id) }}">Suivi des apprenants →</a>
+      <p><small>Après vérification du contenu, faire réaliser le module par plusieurs profils et relever les incompréhensions, les répétitions et les moments sans travail utile. Un budget chiffré reste une prévision tant que ces essais ne sont pas réalisés.</small></p>
+    </article>{% endfor %}
+  </section>{% endfor %}
+</main>
+{% endblock %}

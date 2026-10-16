@@ -1,0 +1,957 @@
+{
+  "format_version": 1,
+  "id": "academy-aps62-13",
+  "version": "20261003-aps62-v1",
+  "title": "APS 13 · La main courante numérique",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "source": {
+    "type": "academy-aps62",
+    "reviewed_on": "2026-10-03"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false
+  },
+  "theme": {
+    "main_color": "#2860e8",
+    "button_color": "#245bdb",
+    "text_color": "#172b4d"
+  },
+  "planned_minutes": 120,
+  "required_minutes": 120,
+  "regulation": "Annexe III · Outil informatique et transmission",
+  "introduction": [],
+  "sections": [
+    {
+      "id": "aps62-13-01",
+      "title": "01 · Utiliser la main courante électronique",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-13-01-comprendre",
+          "title": "Comprendre · Utiliser la main courante électronique",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "13.01",
+            "title": "Utiliser la main courante électronique",
+            "kind": "lesson",
+            "image": "media/aps62/scene-04.webp",
+            "case": "Vous partagez un poste informatique avec plusieurs agents. Un collègue propose d’utiliser le même compte pour gagner du temps et de copier un ancien rapport en changeant seulement la date.",
+            "reason": "L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus.",
+            "lessons": [
+              {
+                "ref": "04.06",
+                "title": "Utiliser un logiciel professionnel",
+                "page": 193,
+                "diagram": "media/aps62/repere-04.06.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Comprendre ce que l'outil enregistre"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Il comporte des comptes, des droits et une traçabilité. Utiliser le compte d'un collègue rend les actions difficiles à attribuer. Avant de valider une saisie, vérifiez le site, la personne et l'événement concernés : une information juste dans le mauvais dossier devient une erreur opérationnelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Prévoir les erreurs et les indisponibilités"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. Un brouillon n'est pas toujours visible par la relève ; un bouton « enregistré » ne signifie pas forcément « transmis ». Une pièce jointe doit être ouverte et contrôlée avant envoi, dans le cadre des règles informatiques. Les informations sensibles ne sont pas transférées vers une messagerie personnelle pour contourner une difficulté."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une main courante numérique devient indisponible. L'agent utilise le support de secours prévu, avec heures et auteur. Au rétablissement, les informations sont intégrées de façon traçable en conservant la distinction entre l'heure des faits et l'heure de saisie. Cette continuité évite une période sans historique."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · L'outil facilite la mission, mais l'agent reste responsable de la qualité de sa saisie et de la vérification de ce qui a réellement été enregistré ou transmis."
+                  }
+                ],
+                "course_page": 194,
+                "practice": {
+                  "background": "Enregistrez dans l’emplacement prévu et vérifiez que l’opération a réussi. Un document ouvert à l’écran n’est pas nécessairement sauvegardé. Ne branchez pas une clé USB inconnue et n’installez pas un logiciel pour contourner une difficulté. Si le système est indisponible, appliquez la procédure de continuité. Les notes temporaires doivent être reprises de manière traçable puis traitées selon les règles de conservation. Demandez une assistance plutôt que de partager votre session ou vos identifiants.",
+                  "case": "Vous préparez un rapport pour le responsable du site. Le logiciel de messagerie propose automatiquement une adresse externe portant presque le même nom. Une pièce jointe contient un registre complet de visiteurs. Quels contrôles empêchent l’erreur ? Que faites-vous si le message est déjà parti ?",
+                  "transfer": "Vous quittez le PC quelques minutes pour un appel. Quelle action protège votre session ?",
+                  "page": 208
+                }
+              },
+              {
+                "ref": "04.04",
+                "title": "Écrire une main courante utile",
+                "page": 189,
+                "diagram": "media/aps62/repere-04.04.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une chronologie du service"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La main courante enregistre les faits et les actions dans l'ordre du temps. Elle permet la continuité entre agents et la reconstitution d'un événement. Chaque entrée doit situer ce qui s'est passé, quand, où, par qui et avec quelle suite. Une main courante interne ne se confond pas avec une déclaration faite auprès d'un service de police."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Des faits, une origine, un état de suivi"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Écrivez ce que vous avez constaté. Lorsqu'une information vient d'un tiers, indiquez-le. Distinguez l'heure de l'événement et celle de sa connaissance si elles diffèrent. Une correction doit rester traçable selon l'outil ; il ne faut pas réécrire discrètement l'histoire. Évitez les jugements, les détails privés inutiles et les formules qui concluent sans preuve, comme « tout est réglé »."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "« 16 h 10 : porte de livraison trouvée ouverte lors de la ronde. 16 h 12 : PC informé ; accès surveillé. 16 h 18 : fermeture réalisée par le responsable technique, contrôle effectué. » La suite est lisible. Si une réparation reste attendue, elle doit être indiquée pour que la relève ne suppose pas le problème clos."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une trace de qualité permet à un autre professionnel de reprendre le dossier sans devoir deviner ce qui a été fait."
+                  }
+                ],
+                "course_page": 190,
+                "practice": {
+                  "background": "Écrivez des faits observables, sans insultes ni diagnostics. Distinguez l’heure de l’événement et l’heure de saisie si elles diffèrent. Une correction doit préserver la traçabilité selon le support ; ne supprimez pas une entrée pour dissimuler une erreur. Sur une main courante électronique, utilisez votre compte, sélectionnez la catégorie adaptée et vérifiez les champs avant validation. Une panne déclenche le support de secours prévu, puis une reprise qui conserve les horaires et l’origine des notes.",
+                  "case": "Vous constatez à 22 h 14 une porte qui ferme mal, prévenez le PC à 22 h 16 et saisissez l’entrée à 22 h 35 après avoir balisé la zone. Quels horaires distinguez-vous ? Quelle information évite une fausse impression de résolution ?",
+                  "transfer": "Qu’ajouter à « 18 h : problème caméra » pour que la relève puisse agir ?",
+                  "page": 204
+                }
+              },
+              {
+                "ref": "02.14",
+                "title": "Protéger une information numérique",
+                "page": 100,
+                "diagram": "media/aps62/repere-02.14.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Trois qualités complémentaires"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La confidentialité limite l'accès aux personnes autorisées. L'intégrité signifie que l'information reste exacte et n'a pas été modifiée sans contrôle. La disponibilité permet de la retrouver au moment nécessaire. Un mot de passe protège l'accès ; une sauvegarde contribue à la disponibilité ; une correction tracée préserve l'historique. Aucune de ces mesures ne remplace les autres."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Les gestes ordinaires sont déterminants"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Utilisez votre compte, verrouillez la session lorsque vous vous éloignez et évitez les supports personnels non autorisés. Vérifiez le destinataire avant un envoi. Une demande urgente de code ou de document peut relever d'une tentative de manipulation : confirmez-la par un canal connu. Si une erreur est découverte, prévenez rapidement selon la procédure ; la supprimer silencieusement ne garantit pas que ses effets disparaissent."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un courriel prétend provenir du directeur et réclame la liste des badges actifs. L'agent vérifie la demande par le numéro habituel du responsable, sans utiliser celui indiqué dans le message suspect. Cette démarche protège la confidentialité tout en permettant de traiter une demande légitime par le circuit approprié."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La sécurité numérique est une continuité de la sécurité du poste. Une porte contrôlée perd de son intérêt si les codes d'accès sont transmis sans vérification."
+                  }
+                ],
+                "course_page": 101,
+                "practice": {
+                  "background": "Sur les outils numériques, utilisez votre compte, verrouillez la session et ne partagez pas de mot de passe. Une demande urgente de code par téléphone doit être vérifiée par un canal connu. N’accédez pas à un système au-delà des droits attribués ; une session ouverte ne vaut pas autorisation. Une erreur, un courriel suspect ou une perte de matériel doit être signalé rapidement. Préservez les traces sans mener votre propre investigation technique et appliquez le plan de continuité prévu.",
+                  "case": "Une personne se présente au téléphone comme technicien et vous demande votre identifiant, votre mot de passe et un code reçu par SMS. Elle affirme que le système va tomber en panne dans cinq minutes. Quels indices vous alertent ? Quelle méthode permet de vérifier la demande ?",
+                  "transfer": "Un collègue vous demande votre mot de passe pour gagner du temps. Quel principe explique votre refus ?",
+                  "page": 125
+                }
+              }
+            ],
+            "decision": "Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies.",
+            "pitfall": "Réutiliser automatiquement l’ancien rapport.",
+            "objectives": [
+              "Expliquer : utiliser la main courante électronique",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Vous partagez un poste informatique avec plusieurs agents. Un collègue propose d’utiliser le même compte pour gagner du temps et de copier un ancien rapport en changeant seulement la date."
+              ],
+              [
+                "Décision à justifier",
+                "Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies."
+              ],
+              [
+                "Piège à éviter",
+                "Réutiliser automatiquement l’ancien rapport."
+              ],
+              [
+                "Pourquoi ?",
+                "L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Vous partagez un poste informatique avec plusieurs agents."
+              },
+              {
+                "label": "Vérifier",
+                "text": "L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite."
+              },
+              {
+                "label": "Décider",
+                "text": "Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Une pièce jointe contient les données d’un autre visiteur. Comment signaler et traiter l’erreur sans multiplier les copies ?"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-13-01-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-13-01-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-13-01-video",
+                "title": "Utiliser la main courante électronique",
+                "required": true,
+                "src": "media/aps62/aps62-13-01.mp4",
+                "poster": "media/aps62/aps62-13-01.jpg",
+                "captions": "media/aps62/aps62-13-01.vtt",
+                "duration_seconds": 66.375977,
+                "transcript": "La situation : Vous partagez un poste informatique avec plusieurs agents. Un collègue propose d’utiliser le même compte pour gagner du temps et de copier un ancien rapport en changeant seulement la date.\n\nÀ vous de décider : Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies. Ou bien : Réutiliser automatiquement l’ancien rapport. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus.\n\nLe bon relais : Chaque entrée identifie lieu, fait, action et suite. La correction indique la donnée rectifiée et le motif sans effacement dissimulé. Le modèle sert de structure ; chaque champ est vérifié. La session informatique est sécurisée au départ et les documents restent dans les espaces autorisés."
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "13.01",
+            "title": "Utiliser la main courante électronique",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Comprendre ce que l'outil enregistre",
+                "back": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Il comporte des comptes, des droits et une traçabilité. Utiliser le compte d'un collègue rend les actions difficiles à attribuer. Avant de valider une saisie, vérifiez le site, la personne et l'événement concernés : une information juste dans le mauvais dossier devient une erreur opérationnelle."
+              },
+              {
+                "front": "Prévoir les erreurs et les indisponibilités",
+                "back": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. Un brouillon n'est pas toujours visible par la relève ; un bouton « enregistré » ne signifie pas forcément « transmis ». Une pièce jointe doit être ouverte et contrôlée avant envoi, dans le cadre des règles informatiques. Les informations sensibles ne sont pas transférées vers une messagerie personnelle pour contourner une difficulté."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Une main courante numérique devient indisponible. L'agent utilise le support de secours prévu, avec heures et auteur. Au rétablissement, les informations sont intégrées de façon traçable en conservant la distinction entre l'heure des faits et l'heure de saisie. Cette continuité évite une période sans historique."
+              },
+              {
+                "front": "Une chronologie du service",
+                "back": "La main courante enregistre les faits et les actions dans l'ordre du temps. Elle permet la continuité entre agents et la reconstitution d'un événement. Chaque entrée doit situer ce qui s'est passé, quand, où, par qui et avec quelle suite. Une main courante interne ne se confond pas avec une déclaration faite auprès d'un service de police."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Vous partagez un poste informatique avec plusieurs agents. Un collègue propose d’utiliser le même compte pour gagner du temps et de copier un ancien rapport en changeant seulement la date.\n\nÀ vous de décider : Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies. Ou bien : Réutiliser automatiquement l’ancien rapport. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus.\n\nLe bon relais : Chaque entrée identifie lieu, fait, action et suite. La correction indique la donnée rectifiée et le motif sans effacement dissimulé. Le modèle sert de structure ; chaque champ est vérifié. La session informatique est sécurisée au départ et les documents restent dans les espaces autorisés."
+          }
+        },
+        {
+          "id": "aps62-13-01-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "13.01",
+            "title": "Utiliser la main courante électronique",
+            "kind": "workshop",
+            "case": "Vous partagez un poste informatique avec plusieurs agents. Un collègue propose d’utiliser le même compte pour gagner du temps et de copier un ancien rapport en changeant seulement la date.",
+            "choices": [
+              {
+                "text": "Réutiliser automatiquement l’ancien rapport.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus.",
+                "correct": false
+              },
+              {
+                "text": "Laisser la session ouverte afin que la relève n’ait pas à se connecter.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. Chaque entrée identifie lieu, fait, action et suite. La correction indique la donnée rectifiée et le motif sans effacement dissimulé. Le modèle sert de structure ; chaque champ est vérifié. La session informatique est sécurisée au départ et les documents restent dans les espaces autorisés.",
+                "correct": false
+              },
+              {
+                "text": "Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies.",
+                "feedback": "L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus.",
+                "correct": true
+              }
+            ],
+            "task": "Saisissez une main courante fictive de cinq entrées. Corrigez ensuite une erreur par un complément traçable et préparez une relève.",
+            "model": "Chaque entrée identifie lieu, fait, action et suite. La correction indique la donnée rectifiée et le motif sans effacement dissimulé. Le modèle sert de structure ; chaque champ est vérifié. La session informatique est sécurisée au départ et les documents restent dans les espaces autorisés.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ]
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-13-01-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Vous partagez un poste informatique avec plusieurs agents. Un collègue propose d’utiliser le même compte pour gagner du temps et de copier un ancien rapport en changeant seulement la date.",
+          "options": [
+            {
+              "id": "aps62-13-01-a0",
+              "text": "Réutiliser automatiquement l’ancien rapport.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-13-01-a1",
+              "text": "Laisser la session ouverte afin que la relève n’ait pas à se connecter.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-13-01-a2",
+              "text": "Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus."
+        },
+        {
+          "id": "aps62-13-01-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-13-01-pair0",
+              "left": "Comprendre ce que l'outil enregistre",
+              "right": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes."
+            },
+            {
+              "id": "aps62-13-01-pair1",
+              "left": "Prévoir les erreurs et les indisponibilités",
+              "right": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne."
+            },
+            {
+              "id": "aps62-13-01-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Une main courante numérique devient indisponible."
+            }
+          ],
+          "explanation": "Comprendre ce que l'outil enregistre : Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Prévoir les erreurs et les indisponibilités : Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. EXEMPLE EXPLIQUÉ : Une main courante numérique devient indisponible."
+        },
+        {
+          "id": "aps62-13-01-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "13.01",
+            "title": "Utiliser la main courante électronique",
+            "kind": "transfer",
+            "case": "Une pièce jointe contient les données d’un autre visiteur. Comment signaler et traiter l’erreur sans multiplier les copies ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus. Chaque entrée identifie lieu, fait, action et suite. La correction indique la donnée rectifiée et le motif sans effacement dissimulé. Le modèle sert de structure ; chaque champ est vérifié. La session informatique est sécurisée au départ et les documents restent dans les espaces autorisés.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ]
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-13-01-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "13.01",
+            "title": "Utiliser la main courante électronique",
+            "kind": "recap",
+            "decision": "Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies.",
+            "reason": "L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus.",
+            "pitfall": "Réutiliser automatiquement l’ancien rapport.",
+            "cards": [
+              {
+                "front": "Comprendre ce que l'outil enregistre",
+                "back": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Il comporte des comptes, des droits et une traçabilité. Utiliser le compte d'un collègue rend les actions difficiles à attribuer. Avant de valider une saisie, vérifiez le site, la personne et l'événement concernés : une information juste dans le mauvais dossier devient une erreur opérationnelle."
+              },
+              {
+                "front": "Prévoir les erreurs et les indisponibilités",
+                "back": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. Un brouillon n'est pas toujours visible par la relève ; un bouton « enregistré » ne signifie pas forcément « transmis ». Une pièce jointe doit être ouverte et contrôlée avant envoi, dans le cadre des règles informatiques. Les informations sensibles ne sont pas transférées vers une messagerie personnelle pour contourner une difficulté."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Une main courante numérique devient indisponible. L'agent utilise le support de secours prévu, avec heures et auteur. Au rétablissement, les informations sont intégrées de façon traçable en conservant la distinction entre l'heure des faits et l'heure de saisie. Cette continuité évite une période sans historique."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "04.06",
+                "page": 194
+              },
+              {
+                "ref": "04.04",
+                "page": 190
+              },
+              {
+                "ref": "02.14",
+                "page": 101
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique."
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-13-02",
+      "title": "02 · Documents, recherche et continuité numérique",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-13-02-comprendre",
+          "title": "Comprendre · Documents, recherche et continuité numérique",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "13.02",
+            "title": "Documents, recherche et continuité numérique",
+            "kind": "lesson",
+            "image": "media/aps62/scene-04.webp",
+            "case": "Le réseau tombe en panne pendant une vacation. Les consignes et contacts utiles n’existent que dans un dossier en ligne. Un agent veut enregistrer tous les documents sur une clé USB personnelle.",
+            "reason": "La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions.",
+            "lessons": [
+              {
+                "ref": "04.06",
+                "title": "Utiliser un logiciel professionnel",
+                "page": 193,
+                "diagram": "media/aps62/repere-04.06.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Comprendre ce que l'outil enregistre"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Il comporte des comptes, des droits et une traçabilité. Utiliser le compte d'un collègue rend les actions difficiles à attribuer. Avant de valider une saisie, vérifiez le site, la personne et l'événement concernés : une information juste dans le mauvais dossier devient une erreur opérationnelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Prévoir les erreurs et les indisponibilités"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. Un brouillon n'est pas toujours visible par la relève ; un bouton « enregistré » ne signifie pas forcément « transmis ». Une pièce jointe doit être ouverte et contrôlée avant envoi, dans le cadre des règles informatiques. Les informations sensibles ne sont pas transférées vers une messagerie personnelle pour contourner une difficulté."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une main courante numérique devient indisponible. L'agent utilise le support de secours prévu, avec heures et auteur. Au rétablissement, les informations sont intégrées de façon traçable en conservant la distinction entre l'heure des faits et l'heure de saisie. Cette continuité évite une période sans historique."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · L'outil facilite la mission, mais l'agent reste responsable de la qualité de sa saisie et de la vérification de ce qui a réellement été enregistré ou transmis."
+                  }
+                ],
+                "course_page": 194,
+                "practice": {
+                  "background": "Enregistrez dans l’emplacement prévu et vérifiez que l’opération a réussi. Un document ouvert à l’écran n’est pas nécessairement sauvegardé. Ne branchez pas une clé USB inconnue et n’installez pas un logiciel pour contourner une difficulté. Si le système est indisponible, appliquez la procédure de continuité. Les notes temporaires doivent être reprises de manière traçable puis traitées selon les règles de conservation. Demandez une assistance plutôt que de partager votre session ou vos identifiants.",
+                  "case": "Vous préparez un rapport pour le responsable du site. Le logiciel de messagerie propose automatiquement une adresse externe portant presque le même nom. Une pièce jointe contient un registre complet de visiteurs. Quels contrôles empêchent l’erreur ? Que faites-vous si le message est déjà parti ?",
+                  "transfer": "Vous quittez le PC quelques minutes pour un appel. Quelle action protège votre session ?",
+                  "page": 208
+                }
+              },
+              {
+                "ref": "04.07",
+                "title": "Réussir une relève",
+                "page": 195,
+                "diagram": "media/aps62/repere-04.07.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Transmettre ce qui continue après vous"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La relève ne consiste pas à raconter toute la vacation. Elle donne au nouvel agent une vision du site, des événements ouverts, des moyens indisponibles et des tâches à venir. Distinguez les faits clos de ceux qui nécessitent une surveillance. La présence d'un écrit ne garantit pas sa lecture ; les points sensibles sont expliqués oralement et confirmés."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Vérifier les moyens remis"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Clés, badges, radio, téléphone, documents et équipements doivent être rapprochés de l'état annoncé. Une clé absente ou une radio déchargée doit être signalée avant que le collègue ne parte. Une consigne temporaire comporte une échéance et un responsable. Les urgences du moment priment sur les détails administratifs, mais la remise des moyens doit ensuite être finalisée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "« Porte C défectueuse depuis 18 h ; elle reste surveillée. Le technicien est attendu à 22 h, contact dans la main courante. Aucun rétablissement confirmé. » Le collègue sait ce qu'il doit maintenir et vérifier. « Porte C vue avec la maintenance » ne permettrait pas de comprendre l'état réel."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La relève est réussie lorsque le nouvel agent peut agir sans dépendre de la mémoire de celui qui part. Une tâche ouverte doit avoir un responsable identifiable."
+                  }
+                ],
+                "course_page": 196,
+                "practice": {
+                  "background": "Le successeur pose des questions, contrôle les éléments critiques et confirme la prise en compte. La relève ne se réduit pas à une signature. Si personne ne se présente ou si un incident empêche une passation normale, alertez l’encadrement et appliquez la procédure. Les consignes transmises oralement doivent rester accessibles après le départ de l’agent. Vérifiez les heures, les stocks sensibles, les moyens de communication et les mesures compensatoires encore en vigueur.",
+                  "case": "Une porte est surveillée par caméra parce que sa fermeture est défectueuse. Le technicien est attendu à 7 h 30. Votre service se termine à 7 h et la main courante contient seulement « problème porte signalé ». Que complétez-vous avant de partir ? Comment vérifiez-vous la compréhension ?",
+                  "transfer": "Une porte reste hors service à la relève. Quelles informations évitent une rupture de surveillance ?",
+                  "page": 209
+                }
+              },
+              {
+                "ref": "08.03",
+                "title": "Organiser les documents du PC",
+                "page": 344,
+                "diagram": "media/aps62/repere-08.03.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Le bon document au bon moment"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Le poste central, ou PC, rassemble les informations utiles à la surveillance et à la coordination. Les documents d'urgence doivent être accessibles rapidement : contacts, accès secours, plans et consignes. Les documents courants concernent notamment les visiteurs, les clés, les interventions et la main courante. Un classement logique évite de rechercher un numéro dans plusieurs classeurs pendant un incident."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Maîtriser les versions"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un document opérationnel doit être identifiable par son objet, sa date et son responsable. Les versions périmées sont retirées du circuit selon la procédure. Les coordonnées doivent être vérifiées régulièrement ; un annuaire présent mais obsolète ne garantit aucune capacité d'alerte. Les informations sensibles restent protégées du public et accessibles seulement aux personnes autorisées. Le classement numérique obéit aux mêmes principes que le papier."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Deux plans montrent des accès différents après des travaux. L'agent signale la contradiction et utilise la version validée par le responsable. Il ne choisit pas le plan le plus récent en apparence sans confirmation. L'ancien exemplaire est identifié pour éviter qu'un collègue le réutilise à la vacation suivante."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Le rangement doit servir l'action. Testez-le simplement : un remplaçant doit pouvoir retrouver rapidement le document essentiel à une situation donnée."
+                  }
+                ],
+                "course_page": 345,
+                "practice": {
+                  "background": "Les documents sensibles ne sont pas exposés au public. Une liste de codes, un plan technique ou les coordonnées personnelles des salariés nécessitent un accès limité. Vérifiez périodiquement les éléments qui changent, notamment les contacts et les itinéraires. Ne modifiez pas seul une procédure validée ; proposez la correction et suivez sa diffusion. En cas de panne informatique, un support de secours maîtrisé doit permettre la continuité des fonctions essentielles, sans constituer une seconde version divergente.",
+                  "case": "Deux classeurs contiennent des numéros différents pour le responsable d’astreinte. L’un porte une date récente, mais le contact ne répond plus depuis plusieurs semaines. Comment vérifiez-vous la référence ? Quelle amélioration évite une nouvelle confusion ?",
+                  "transfer": "Deux plans portent des noms identiques mais des dates différentes. Quelle vérification faites-vous avant de guider une équipe ?",
+                  "page": 398
+                }
+              }
+            ],
+            "decision": "Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires.",
+            "pitfall": "Copier l’ensemble des dossiers sur un support personnel.",
+            "objectives": [
+              "Expliquer : documents, recherche et continuité numérique",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Le réseau tombe en panne pendant une vacation. Les consignes et contacts utiles n’existent que dans un dossier en ligne. Un agent veut enregistrer tous les documents sur une clé USB personnelle."
+              ],
+              [
+                "Décision à justifier",
+                "Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires."
+              ],
+              [
+                "Piège à éviter",
+                "Copier l’ensemble des dossiers sur un support personnel."
+              ],
+              [
+                "Pourquoi ?",
+                "La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Le réseau tombe en panne pendant une vacation."
+              },
+              {
+                "label": "Vérifier",
+                "text": "La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé."
+              },
+              {
+                "label": "Décider",
+                "text": "Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Deux versions d’une consigne réapparaissent après la panne. Comment retrouver la version applicable sans choisir au hasard ?"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-13-02-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-13-02-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-13-02-video",
+                "title": "Documents, recherche et continuité numérique",
+                "required": true,
+                "src": "media/aps62/aps62-13-02.mp4",
+                "poster": "media/aps62/aps62-13-02.jpg",
+                "captions": "media/aps62/aps62-13-02.vtt",
+                "duration_seconds": 69.831156,
+                "transcript": "La situation : Le réseau tombe en panne pendant une vacation. Les consignes et contacts utiles n’existent que dans un dossier en ligne. Un agent veut enregistrer tous les documents sur une clé USB personnelle.\n\nÀ vous de décider : Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires. Ou bien : Copier l’ensemble des dossiers sur un support personnel. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions.\n\nLe bon relais : Le kit comprend les consignes à jour, les contacts d’urgence, les plans utiles et les supports de traçabilité autorisés. La reprise vérifie les entrées temporaires, leur heure réelle et leur intégration sans doublon, puis sécurise les supports. Le responsable confirme la version de référence et les droits d’accès."
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "13.02",
+            "title": "Documents, recherche et continuité numérique",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Comprendre ce que l'outil enregistre",
+                "back": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Il comporte des comptes, des droits et une traçabilité. Utiliser le compte d'un collègue rend les actions difficiles à attribuer. Avant de valider une saisie, vérifiez le site, la personne et l'événement concernés : une information juste dans le mauvais dossier devient une erreur opérationnelle."
+              },
+              {
+                "front": "Prévoir les erreurs et les indisponibilités",
+                "back": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. Un brouillon n'est pas toujours visible par la relève ; un bouton « enregistré » ne signifie pas forcément « transmis ». Une pièce jointe doit être ouverte et contrôlée avant envoi, dans le cadre des règles informatiques. Les informations sensibles ne sont pas transférées vers une messagerie personnelle pour contourner une difficulté."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Une main courante numérique devient indisponible. L'agent utilise le support de secours prévu, avec heures et auteur. Au rétablissement, les informations sont intégrées de façon traçable en conservant la distinction entre l'heure des faits et l'heure de saisie. Cette continuité évite une période sans historique."
+              },
+              {
+                "front": "Transmettre ce qui continue après vous",
+                "back": "La relève ne consiste pas à raconter toute la vacation. Elle donne au nouvel agent une vision du site, des événements ouverts, des moyens indisponibles et des tâches à venir. Distinguez les faits clos de ceux qui nécessitent une surveillance. La présence d'un écrit ne garantit pas sa lecture ; les points sensibles sont expliqués oralement et confirmés."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Le réseau tombe en panne pendant une vacation. Les consignes et contacts utiles n’existent que dans un dossier en ligne. Un agent veut enregistrer tous les documents sur une clé USB personnelle.\n\nÀ vous de décider : Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires. Ou bien : Copier l’ensemble des dossiers sur un support personnel. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions.\n\nLe bon relais : Le kit comprend les consignes à jour, les contacts d’urgence, les plans utiles et les supports de traçabilité autorisés. La reprise vérifie les entrées temporaires, leur heure réelle et leur intégration sans doublon, puis sécurise les supports. Le responsable confirme la version de référence et les droits d’accès."
+          }
+        },
+        {
+          "id": "aps62-13-02-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "13.02",
+            "title": "Documents, recherche et continuité numérique",
+            "kind": "workshop",
+            "case": "Le réseau tombe en panne pendant une vacation. Les consignes et contacts utiles n’existent que dans un dossier en ligne. Un agent veut enregistrer tous les documents sur une clé USB personnelle.",
+            "choices": [
+              {
+                "text": "Continuer sans consignes en se fiant à la mémoire.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. Le kit comprend les consignes à jour, les contacts d’urgence, les plans utiles et les supports de traçabilité autorisés. La reprise vérifie les entrées temporaires, leur heure réelle et leur intégration sans doublon, puis sécurise les supports. Le responsable confirme la version de référence et les droits d’accès.",
+                "correct": false
+              },
+              {
+                "text": "Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires.",
+                "feedback": "La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions.",
+                "correct": true
+              },
+              {
+                "text": "Copier l’ensemble des dossiers sur un support personnel.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions.",
+                "correct": false
+              }
+            ],
+            "task": "Construisez un kit documentaire minimal de continuité et une procédure de reprise en six étapes.",
+            "model": "Le kit comprend les consignes à jour, les contacts d’urgence, les plans utiles et les supports de traçabilité autorisés. La reprise vérifie les entrées temporaires, leur heure réelle et leur intégration sans doublon, puis sécurise les supports. Le responsable confirme la version de référence et les droits d’accès.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ]
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-13-02-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Le réseau tombe en panne pendant une vacation. Les consignes et contacts utiles n’existent que dans un dossier en ligne. Un agent veut enregistrer tous les documents sur une clé USB personnelle.",
+          "options": [
+            {
+              "id": "aps62-13-02-a0",
+              "text": "Continuer sans consignes en se fiant à la mémoire.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-13-02-a1",
+              "text": "Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-13-02-a2",
+              "text": "Copier l’ensemble des dossiers sur un support personnel.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions."
+        },
+        {
+          "id": "aps62-13-02-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-13-02-pair0",
+              "left": "Comprendre ce que l'outil enregistre",
+              "right": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes."
+            },
+            {
+              "id": "aps62-13-02-pair1",
+              "left": "Prévoir les erreurs et les indisponibilités",
+              "right": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne."
+            },
+            {
+              "id": "aps62-13-02-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Une main courante numérique devient indisponible."
+            }
+          ],
+          "explanation": "Comprendre ce que l'outil enregistre : Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Prévoir les erreurs et les indisponibilités : Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. EXEMPLE EXPLIQUÉ : Une main courante numérique devient indisponible."
+        },
+        {
+          "id": "aps62-13-02-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "13.02",
+            "title": "Documents, recherche et continuité numérique",
+            "kind": "transfer",
+            "case": "Deux versions d’une consigne réapparaissent après la panne. Comment retrouver la version applicable sans choisir au hasard ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions. Le kit comprend les consignes à jour, les contacts d’urgence, les plans utiles et les supports de traçabilité autorisés. La reprise vérifie les entrées temporaires, leur heure réelle et leur intégration sans doublon, puis sécurise les supports. Le responsable confirme la version de référence et les droits d’accès.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ]
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-13-02-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "13.02",
+            "title": "Documents, recherche et continuité numérique",
+            "kind": "recap",
+            "decision": "Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires.",
+            "reason": "La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions.",
+            "pitfall": "Copier l’ensemble des dossiers sur un support personnel.",
+            "cards": [
+              {
+                "front": "Comprendre ce que l'outil enregistre",
+                "back": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Il comporte des comptes, des droits et une traçabilité. Utiliser le compte d'un collègue rend les actions difficiles à attribuer. Avant de valider une saisie, vérifiez le site, la personne et l'événement concernés : une information juste dans le mauvais dossier devient une erreur opérationnelle."
+              },
+              {
+                "front": "Prévoir les erreurs et les indisponibilités",
+                "back": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. Un brouillon n'est pas toujours visible par la relève ; un bouton « enregistré » ne signifie pas forcément « transmis ». Une pièce jointe doit être ouverte et contrôlée avant envoi, dans le cadre des règles informatiques. Les informations sensibles ne sont pas transférées vers une messagerie personnelle pour contourner une difficulté."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Une main courante numérique devient indisponible. L'agent utilise le support de secours prévu, avec heures et auteur. Au rétablissement, les informations sont intégrées de façon traçable en conservant la distinction entre l'heure des faits et l'heure de saisie. Cette continuité évite une période sans historique."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "04.06",
+                "page": 194
+              },
+              {
+                "ref": "04.07",
+                "page": 196
+              },
+              {
+                "ref": "08.03",
+                "page": 345
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique."
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "aps62-13-01-comprendre",
+    "aps62-13-01-memoriser",
+    "aps62-13-01-atelier",
+    "aps62-13-01-q1",
+    "aps62-13-01-q2",
+    "aps62-13-01-transfert",
+    "aps62-13-01-synthese",
+    "aps62-13-02-comprendre",
+    "aps62-13-02-memoriser",
+    "aps62-13-02-atelier",
+    "aps62-13-02-q1",
+    "aps62-13-02-q2",
+    "aps62-13-02-transfert",
+    "aps62-13-02-synthese"
+  ],
+  "counts": {
+    "sections": 2,
+    "activities": 14,
+    "scored_activities": 4,
+    "required_videos": 2,
+    "workbooks": 4,
+    "assets": 12
+  },
+  "assets": [
+    "media/aps62/aps62-13-01.jpg",
+    "media/aps62/aps62-13-01.mp4",
+    "media/aps62/aps62-13-01.vtt",
+    "media/aps62/aps62-13-02.jpg",
+    "media/aps62/aps62-13-02.mp4",
+    "media/aps62/aps62-13-02.vtt",
+    "media/aps62/repere-02.14.webp",
+    "media/aps62/repere-04.04.webp",
+    "media/aps62/repere-04.06.webp",
+    "media/aps62/repere-04.07.webp",
+    "media/aps62/repere-08.03.webp",
+    "media/aps62/scene-04.webp"
+  ],
+  "import_warnings": []
+}

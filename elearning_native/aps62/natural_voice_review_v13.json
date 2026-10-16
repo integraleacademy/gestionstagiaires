@@ -1,0 +1,10 @@
+{
+  "videos": 62,
+  "caption_cues": 8642,
+  "caption_text_matches_transcript": true,
+  "maximum_retiming_error_ms": 0.51,
+  "source_phrase_matches": 5536,
+  "median_source_phrase_delta_ms": 9.64,
+  "p95_source_phrase_delta_ms": 10.39,
+  "max_source_phrase_delta_ms": 184.04
+}

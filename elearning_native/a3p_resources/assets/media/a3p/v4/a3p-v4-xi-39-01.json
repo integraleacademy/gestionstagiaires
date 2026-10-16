@@ -1,0 +1,58 @@
+{
+  "id": "a3p-v4-xi-39-01-video",
+  "title": "Contrôler les versions et les droits d'accès",
+  "duration_seconds": 375.15568,
+  "narration_seconds": 372.86400000000003,
+  "voice": "fr-FR-HenriNeural",
+  "rate": "-2%",
+  "required": true,
+  "burned_captions": true,
+  "chapters": [
+    {
+      "title": "Contrôler les versions et les droits d'accès",
+      "start_seconds": 0,
+      "end_seconds": 29.554
+    },
+    {
+      "title": "Les repères du cours",
+      "start_seconds": 29.554,
+      "end_seconds": 131.468
+    },
+    {
+      "title": "Lire la situation professionnelle",
+      "start_seconds": 131.468,
+      "end_seconds": 171.301
+    },
+    {
+      "title": "Expliquer la décision",
+      "start_seconds": 171.301,
+      "end_seconds": 233.635
+    },
+    {
+      "title": "Fiabilité et disponibilité vont ensemble",
+      "start_seconds": 233.635,
+      "end_seconds": 260.468
+    },
+    {
+      "title": "Vérifier une demande inhabituelle",
+      "start_seconds": 260.468,
+      "end_seconds": 289.135
+    },
+    {
+      "title": "Préciser le cadre de la décision",
+      "start_seconds": 289.135,
+      "end_seconds": 320.135
+    },
+    {
+      "title": "Vérifier son raisonnement",
+      "start_seconds": 320.135,
+      "end_seconds": 375.135
+    }
+  ],
+  "transcript": "Contrôler les versions et les droits d'accès. Un outil partagé doit permettre d'identifier la version de référence, les personnes autorisées à la modifier et les lecteurs concernés. Une copie locale peut rester accessible après une mise à jour et devenir trompeuse. Le nom du fichier ne prouve pas à lui seul sa validité. Les droits doivent correspondre aux fonctions réelles et être retirés lorsqu'ils ne sont plus nécessaires. Une modification sensible doit être traçable et annoncée aux utilisateurs concernés.\n\nUn dossier utile comporte une structure commune : cadrage, programme, contacts, reconnaissance et comptes rendus. Les noms de fichiers indiquent le sujet, la date et la version. « Programme_final_vraiment_final » ne permet pas de savoir quelle version est active. Une version validée doit être identifiable par l’équipe, et les anciennes versions conservées ou retirées selon la procédure. Le rangement fait gagner du temps au moment où l’attention est déjà sollicitée. Utilisez les comptes et outils autorisés, verrouillez les appareils et limitez les droits au besoin réel. Une sauvegarde permet de retrouver des données ; elle ne remplace pas la maîtrise des accès. Une copie locale peut être nécessaire en cas de mauvaise connexion, mais elle doit être prévue, protégée et supprimée à la clôture selon les règles. Un téléphone déchargé rend inutilisable un dossier pourtant bien préparé. Un envoi au mauvais destinataire, une perte d’appareil ou un document ouvert à tous constitue un incident à signaler rapidement. Conservez les faits utiles et suivez la procédure de l’organisation. Ne cherchez pas à dissimuler l’erreur en supprimant les seules traces disponibles. Pour un débutant, trois habitudes réduisent de nombreux problèmes : vérifier le destinataire avant d’envoyer, vérifier la version avant d’agir et vérifier la fermeture des accès à la fin de la mission. Ces contrôles courts doivent devenir réguliers. Nommez le document par mission, objet, date et version. L’organisation désigne l’emplacement faisant référence et les droits de modification. Une diffusion précise ce qui change et qui doit confirmer. La sauvegarde restaure après perte ; l’historique de versions explique les modifications. Les deux répondent à des problèmes différents.\n\nLe planning partagé a été corrigé, mais deux agents consultent encore une copie téléchargée la veille. Le point établi est le suivant. La version de référence et la copie ne portent pas le même horaire. Il faut cependant conserver une distinction avec ce qui reste inconnu. Les utilisateurs de la copie n'ont pas confirmé la mise à jour. Ces deux informations ne jouent pas le même rôle. La première peut fonder une décision ; la seconde doit être traitée comme une vérification à organiser. Le fait de ne pas connaître une information ne permet ni de la considérer favorable, ni de conclure au pire. Il faut préciser comment cette incertitude affecte la mission.\n\nDans cette situation, la décision adaptée est la suivante. Diffuser la référence validée et faire vérifier la version réellement utilisée, plutôt que multiplier les pièces jointes. Pour comprendre cette réponse, revenons à la règle étudiée. Un outil partagé doit permettre d'identifier la version de référence, les personnes autorisées à la modifier et les lecteurs concernés. Une copie locale peut rester accessible après une mise à jour et devenir trompeuse. Le nom du fichier ne prouve pas à lui seul sa validité. Les droits doivent correspondre aux fonctions réelles et être retirés lorsqu'ils ne sont plus nécessaires. Une modification sensible doit être traçable et annoncée aux utilisateurs concernés. La qualité du choix se vérifie sur ses conséquences : maintien de la protection, respect du cadre, information de la personne compétente et possibilité de réévaluer. Une décision ne doit pas être présentée comme définitivement valable si ses conditions changent. Il faut donc conserver les éléments sur lesquels elle repose et prévoir le retour d’information utile.\n\nUn document doit être exact, accessible aux personnes autorisées et identifiable comme version applicable. La sécurité numérique ne se limite pas au mot de passe. Vérifiez les droits, les liens, les copies hors ligne autorisées et la procédure de secours. Un plan parfaitement protégé mais inaccessible au moment utile crée une difficulté de mission. À l’inverse, un lien public facilite l’accès au prix d’une exposition excessive.\n\nL’urgence, le changement de coordonnées et la demande d’identifiants sont des signaux qui justifient une vérification par un autre canal connu. Ne confirmez pas une demande en utilisant uniquement le numéro fourni dans le message suspect. Signalez l’anomalie selon la procédure et conservez les éléments utiles sans les rediffuser à tous. La reprise doit utiliser une source de référence contrôlée. Une erreur d’accès ou de partage se traite collectivement, sans masquer le problème derrière une copie non maîtrisée.\n\nUne équipe peut posséder trois fichiers intitulés « programme final ». Sans numéro de version ni responsable de diffusion, un ancien horaire peut être pris pour une nouvelle consigne. Dans notre exemple, le dossier utilise une identification simple : « Érable - programme - v03 - 28/09, 18 h ». Le nom du fichier aide à le reconnaître ; la diffusion par le circuit autorisé confirme qu’il s’agit de la version applicable. Un nom contenant « validé » ne prouve pas à lui seul une validation.\n\nPour faire le point, distinguez quatre éléments dans le cas expliqué. D’abord, la situation. Le planning partagé a été corrigé, mais deux agents consultent encore une copie téléchargée la veille. Ensuite, le fait confirmé. La version de référence et la copie ne portent pas le même horaire. Puis, la limite de l’information disponible. Les utilisateurs de la copie n'ont pas confirmé la mise à jour. Enfin, l’action retenue et son relais. Diffuser la référence validée et faire vérifier la version réellement utilisée, plutôt que multiplier les pièces jointes. Dans l’atelier qui suit, une information nouvelle modifiera le dossier. Vous devrez relire les pièces et choisir une réponse adaptée à cette évolution. La correction expliquera le choix après votre réponse. Le but est de transférer le raisonnement, et pas de mémoriser la phrase donnée dans cet exemple.",
+  "source_sha256": "50362e32967cdf36dd74fd957cfaa6d539e7324f80f53554985952997d0d6d56",
+  "video_sha256": "d469db4a819831ecb57686ac5a2ca534f517407658b7ffbb575bf836bc3ca1d9",
+  "src": "media/a3p/v4/a3p-v4-xi-39-01.mp4",
+  "poster": "media/a3p/v4/a3p-v4-xi-39-01.jpg",
+  "captions": "media/a3p/v4/a3p-v4-xi-39-01.vtt"
+}

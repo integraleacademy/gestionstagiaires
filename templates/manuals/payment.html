@@ -1,0 +1,19 @@
+{% extends 'manuals/layout.html' %}
+{% block title %}Paiement de votre commande{% endblock %}
+{% block content %}
+<div class="order-wrap">
+  <section class="form-card checkout-card" data-checkout
+           data-checkout-status="{{ url_for('manuals_shop.order_payment_status', order_id=order.id) }}"
+           data-checkout-url="{{ checkout.payment_url }}"
+           data-order-url="{{ url_for('manuals_shop.order_detail', order_id=order.id) }}">
+    <span class="eyebrow blue">PAIEMENT SÉCURISÉ</span>
+    <h1>Ouverture du paiement…</h1>
+    <p class="muted" role="status">Votre commande est enregistrée. Le paiement Qonto va s’ouvrir automatiquement dans cet onglet.</p>
+    <p><strong>{{ order.total_cents|manuals_money }} TTC</strong><br><span class="small">Commande {{ order.reference }}</span></p>
+    <progress aria-label="Préparation du paiement sécurisé"></progress>
+    <p class="small">Votre facture sera créée après confirmation du paiement, envoyée par e-mail et disponible dans votre espace.</p>
+    <noscript><p><a class="button primary" href="{{ checkout.payment_url or url_for('manuals_shop.order_payment', order_id=order.id) }}">{{ 'Accéder au paiement' if checkout.payment_url else 'Actualiser le paiement' }}</a></p></noscript>
+    <a class="text-link" href="{{ url_for('manuals_shop.order_detail', order_id=order.id) }}">Revenir à ma commande</a>
+  </section>
+</div>
+{% endblock %}

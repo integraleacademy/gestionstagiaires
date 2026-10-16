@@ -1,0 +1,40 @@
+{
+  "edition": "20261012-mac-aps-v1",
+  "creation_method": "OpenAI image generation, built-in imagegen tool",
+  "created_on": "2026-10-12",
+  "style_reference": "https://gestionstagiaires-test-v2.onrender.com/static/images/aps62-cover.webp",
+  "style_reference_use": "Référence de style uniquement ; cinq compositions originales.",
+  "art_direction": "Illustration pédagogique de manuel français, contours nets, aplats bleu marine et bleu clair, ombres douces, adultes en tenue de sécurité privée, lieux contemporains lumineux. Aucun texte intégré, aucune arme, aucune photographie.",
+  "assets": [
+    {
+      "module": "01",
+      "file": "module-01.webp",
+      "scene": "Organisation des secours : une agente reste auprès d’un visiteur conscient qui se sent mal, un collègue transmet l’alerte ; défibrillateur repéré à l’arrière-plan ; aucun geste technique montré.",
+      "sha256": "33d46f29240d4a18e42febc389fbf8922497f8b4dca327caec5422d29ca97eba"
+    },
+    {
+      "module": "02",
+      "file": "module-02.webp",
+      "scene": "Accueil équitable dans un centre culturel : une agente explique la même règle d’admission à un visiteur en fauteuil, une visiteuse portant un foulard et une personne âgée.",
+      "sha256": "c1631a130063d08cee3bf029bf2da44a8fc9a3c8bdf07b2b2abaa6019c913890"
+    },
+    {
+      "module": "03",
+      "file": "module-03.webp",
+      "scene": "Déontologie et traçabilité : une responsable de sécurité et un agent examinent un compte rendu factuel dans un poste de sécurité.",
+      "sha256": "5c073a213058b9a306eb217fcd5241aedfb969321acacccc7e86b95d37b719e2"
+    },
+    {
+      "module": "04",
+      "file": "module-04.webp",
+      "scene": "Prévention du conflit : une agente explique calmement une règle à un visiteur contrarié à l’entrée d’un événement, avec un collègue en soutien à distance.",
+      "sha256": "81d617db0085fee346cf1e533e98d89ff07c10594cc5cce5e65fa58a0c7cdd65"
+    },
+    {
+      "module": "05",
+      "file": "module-05.webp",
+      "scene": "Protection et alerte : des agents accompagnent le public vers un espace extérieur de regroupement et transmettent une alerte, sans danger visible ni confrontation.",
+      "sha256": "2fedcfa569dfdd55a1b62e3f8182cabba2a7cb91d604897d7848c8d4c5df8cfa"
+    }
+  ]
+}

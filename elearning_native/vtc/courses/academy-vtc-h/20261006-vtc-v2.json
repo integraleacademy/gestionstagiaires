@@ -1,0 +1,2624 @@
+{
+  "format_version": 1,
+  "id": "academy-vtc-h",
+  "version": "20261006-vtc-v2",
+  "title": "VTC H · Réaliser une mission professionnelle",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "training_label": "VTC",
+  "source": {
+    "type": "academy-vtc",
+    "reviewed_on": "2026-10-06",
+    "manual_sha256": "dc22c7f98da0700180499c1fba3f15e0c9238f26c4a734da584952eef67ef8ce"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false
+  },
+  "theme": {
+    "main_color": "#7045bd",
+    "button_color": "#6534b4",
+    "text_color": "#241a38"
+  },
+  "planned_minutes": 360,
+  "required_minutes": 0,
+  "introduction": [],
+  "illustration": "images/vtc/module-h.webp",
+  "mock_exam_id": "vtc-h",
+  "mock_exam_questions": 30,
+  "regulation": "Préparation à la pratique en circulation",
+  "sections": [
+    {
+      "id": "vtc-h-01",
+      "title": "H.01 · Lire la mission avant de partir",
+      "activities": [
+        {
+          "id": "vtc-h-01-cours",
+          "title": "Lire la mission avant de partir",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 15,
+          "blocks": [],
+          "vtc": {
+            "ref": "H.01",
+            "title": "Lire la mission avant de partir",
+            "page": 389,
+            "pages": [
+              389,
+              390
+            ],
+            "objective": "Transformer une commande en plan d’action.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Avant de démarrer, extrayez les informations utiles : client, horaire souhaité, départ, destination, nombre de passagers, bagages, équipements et conditions financières. Repérez ce qui manque et ce qui paraît incohérent. Une adresse sans commune ou un hôtel sans numéro peut conduire à un mauvais point de prise en charge."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Vérifiez la faisabilité en temps et en capacité. Ajoutez une marge réaliste pour l’approche, le stationnement et l’accueil. Préparez un contact et un plan de repli. L’ordre de mission est un document opérationnel ; il doit être cohérent avec la réservation réglementaire sans exposer inutilement toutes les données aux personnes qui n’en ont pas besoin."
+              },
+              {
+                "kind": "heading",
+                "text": "Distinguer demande et confirmation"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une demande peut être incomplète ou encore soumise à disponibilité. Avant de partir, vérifiez qu'elle est confirmée et que les informations critiques sont connues. Identifiez le passager, le réservant et le payeur. Une entreprise peut réserver pour un collaborateur ; le nom présent sur le devis n'est donc pas nécessairement celui de la personne qui montera dans la voiture."
+              },
+              {
+                "kind": "heading",
+                "text": "Extraire les contraintes"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Relevez la date, l'heure de prise en charge, les adresses exactes, le nombre de passagers, les bagages et les besoins d'équipement. Une heure de train ou de rendez-vous final impose de raisonner à rebours : temps de trajet, marge, dépose et déplacement du client jusqu'à son lieu d'arrivée. L'heure de départ ne se choisit pas uniquement avec le temps affiché par le GPS."
+              },
+              {
+                "kind": "heading",
+                "text": "Vérifier la faisabilité"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Comparez la mission aux moyens disponibles, au planning, aux règles d'accès et au prix convenu. Si une donnée manque, demandez-la avant le service. Préparez le justificatif de réservation et une solution de contact. La lecture de mission est un travail de décision : elle peut conduire à demander une adaptation ou à ne pas accepter une prestation impossible à réaliser correctement."
+              }
+            ],
+            "cards": [
+              {
+                "label": "EXTRAIRE",
+                "text": "Qui, où, quand, combien et dans quelles conditions ?"
+              },
+              {
+                "label": "VÉRIFIER",
+                "text": "Capacité, temps, accès et documents."
+              },
+              {
+                "label": "CONFIRMER",
+                "text": "Informations manquantes et plan de rencontre."
+              }
+            ],
+            "diagram": "media/vtc/diagram-h.01.webp",
+            "diagram_text": [
+              "Transformer la commande en mission",
+              "Qui et combien ? Passagers, bagages et équipements.",
+              "Où et quand ? Départ, destination et horaire souhaité.",
+              "Prix, accès et faisabilité.",
+              "Sous quelles conditions ?",
+              "À confirmer Informations manquantes et plan de rencontre.",
+              "Le train part à 10 h 20",
+              "1 Trajet estimé 30 minutes.",
+              "2 Départ à 9 h 50 Aucune marge pour la dépose et l’accès au quai.",
+              "3 Préparation Organiser une prise en charge plus tôt.",
+              "Un départ préparé réduit les questions à gérer pendant la conduite."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-h.webp",
+            "module": "H"
+          }
+        },
+        {
+          "id": "vtc-h-01-atelier",
+          "title": "À vous de jouer · Lire la mission avant de partir",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "H.01",
+            "title": "Lire la mission avant de partir",
+            "objective": "Transformer une commande en plan d’action.",
+            "module": "H"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Avant de partir, quelles informations rapprocher ?",
+                "options": [
+                  {
+                    "id": "edef44300582",
+                    "text": "Uniquement le prénom du client"
+                  },
+                  {
+                    "id": "0e766ad81a29",
+                    "text": "Passagers, point de rencontre, horaire, destination et contraintes"
+                  },
+                  {
+                    "id": "6461ee3191ee",
+                    "text": "Uniquement le prix du carburant"
+                  }
+                ],
+                "answer": "0e766ad81a29",
+                "explanation": "Lire la mission permet de préparer une prestation réalisable, avec les moyens et marges adaptés.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.01"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "L’adresse comporte deux entrées éloignées. Que faire ?",
+                "options": [
+                  {
+                    "id": "2dcc9f6f28a5",
+                    "text": "Confirmer l’entrée précise avant la prise en charge"
+                  },
+                  {
+                    "id": "16bc6f2da29d",
+                    "text": "Choisir au hasard"
+                  },
+                  {
+                    "id": "cc7c6e506a5e",
+                    "text": "Attendre que le client se trompe"
+                  }
+                ],
+                "answer": "2dcc9f6f28a5",
+                "explanation": "La clarification réduit le risque de retard et de rendez-vous manqué.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.01"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "EXTRAIRE"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "VÉRIFIER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "CONFIRMER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Qui, où, quand, combien et dans quelles conditions ?",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Capacité, temps, accès et documents.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Informations manquantes et plan de rencontre.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon H.01. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-02",
+      "title": "H.02 · Préparer un itinéraire",
+      "activities": [
+        {
+          "id": "vtc-h-02-cours",
+          "title": "Préparer un itinéraire",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 15,
+          "blocks": [],
+          "vtc": {
+            "ref": "H.02",
+            "title": "Préparer un itinéraire",
+            "page": 391,
+            "pages": [
+              391,
+              392
+            ],
+            "objective": "Choisir un parcours et expliquer son choix.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Localisez départ et destination, puis comparez les trajets possibles. Relevez distance, durée estimée, péage, travaux, limitations d’accès et possibilités de dépose. Un trajet plus court peut être plus lent ou inconfortable ; un trajet plus rapide peut modifier le prix."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Préparez la navigation à l’arrêt, en vérifiant le point exact d’arrivée. Repérez les principaux axes et une alternative pour ne pas dépendre d’un seul écran. Si une erreur d’itinéraire survient, continuez jusqu’à une manœuvre autorisée : jamais de freinage brusque ni de marche arrière dangereuse pour rattraper une sortie. L’explication au client doit rester brève et honnête."
+              },
+              {
+                "kind": "heading",
+                "text": "Comprendre le trajet"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Repérez l'adresse de départ, l'entrée utilisable à destination, les grands axes et les contraintes connues. Vérifiez les sens uniques, les restrictions, les travaux et les règles d'accès. Une adresse postale peut correspondre à une entrée impossible pour la voiture. Le trajet se prépare donc jusqu'au point réel de dépose, pas seulement jusqu'au nom du bâtiment."
+              },
+              {
+                "kind": "heading",
+                "text": "Comparer les options"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le plus court en kilomètres n'est pas forcément le plus rapide ou le plus adapté. Comparez durée, régularité du trafic, péages, confort et contraintes du véhicule. Préparez une alternative raisonnable pour un blocage. Le client peut exprimer une préférence, à intégrer lorsqu'elle est compatible avec les règles et la sécurité. Une demande ne vous oblige pas à emprunter une voie interdite."
+              },
+              {
+                "kind": "heading",
+                "text": "Utiliser le GPS comme aide"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Programmez avant de partir et comprenez les grandes étapes. Un conducteur qui dépend uniquement de chaque instruction vocale réagit souvent tard. Si l'itinéraire devient impossible, poursuivez en sécurité puis réorganisez le trajet. Expliquer calmement un détour est préférable à une manœuvre brusque pour conserver la route initiale."
+              }
+            ],
+            "cards": [
+              {
+                "label": "LOCALISER",
+                "text": "Adresses et accès réellement utilisables."
+              },
+              {
+                "label": "COMPARER",
+                "text": "Temps, distance, confort et coût."
+              },
+              {
+                "label": "JUSTIFIER",
+                "text": "Un choix clair, avec une alternative."
+              }
+            ],
+            "diagram": "media/vtc/diagram-h.02.webp",
+            "diagram_text": [
+              "Les critères du choix",
+              "Temps et distance Tenir compte des conditions réelles.",
+              "€ Coût et confort Péage et engagements commerciaux.",
+              "Arrivée Un point de dépose légal et utile.",
+              "L’itinéraire se termine à un point de dépose légal et utile au passager."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-h.webp",
+            "module": "H"
+          }
+        },
+        {
+          "id": "vtc-h-02-atelier",
+          "title": "À vous de jouer · Préparer un itinéraire",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "H.02",
+            "title": "Préparer un itinéraire",
+            "objective": "Choisir un parcours et expliquer son choix.",
+            "module": "H"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Arrivée souhaitée 9 h, trajet 35 min et marge 10 min. Quel départ au plus tard selon ces hypothèses ?",
+                "options": [
+                  {
+                    "id": "a51abfa5a59d",
+                    "text": "8 h 25"
+                  },
+                  {
+                    "id": "c15752ea094f",
+                    "text": "8 h 35"
+                  },
+                  {
+                    "id": "ec764447f56a",
+                    "text": "8 h 15"
+                  }
+                ],
+                "answer": "ec764447f56a",
+                "explanation": "On remonte depuis l’arrivée : 9 h − 35 min − 10 min = 8 h 15, avant de compter le temps d’installation.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.02"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Le GPS propose une rue interdite à la circulation. Quelle décision ?",
+                "options": [
+                  {
+                    "id": "ac3addd28610",
+                    "text": "Demander au client d’ignorer le panneau"
+                  },
+                  {
+                    "id": "78de922ecd5f",
+                    "text": "Suivre le GPS quoi qu’il arrive"
+                  },
+                  {
+                    "id": "4e54732e5db7",
+                    "text": "Respecter la signalisation et choisir un itinéraire autorisé"
+                  }
+                ],
+                "answer": "4e54732e5db7",
+                "explanation": "L’aide à la navigation ne remplace pas l’observation ni le respect des règles réelles.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.02"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "COMPARER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "JUSTIFIER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "LOCALISER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Adresses et accès réellement utilisables.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Temps, distance, confort et coût.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Un choix clair, avec une alternative.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon H.02. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-03",
+      "title": "H.03 · Installer son poste de conduite",
+      "activities": [
+        {
+          "id": "vtc-h-03-cours",
+          "title": "Installer son poste de conduite",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 15,
+          "blocks": [],
+          "vtc": {
+            "ref": "H.03",
+            "title": "Installer son poste de conduite",
+            "page": 394,
+            "pages": [
+              394,
+              395
+            ],
+            "objective": "Réaliser les réglages dans un ordre efficace.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "À l’arrêt, réglez d’abord le siège pour atteindre les commandes sans étirement, puis dossier et appuie-tête, volant et rétroviseurs. Vérifiez la liberté des mouvements, le champ de vision et la ceinture. Les réglages doivent permettre une posture stable et une bonne maîtrise des commandes."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Repérez les commandes du véhicule utilisé : éclairage, essuie-glaces, désembuage, frein de stationnement, feux de détresse et aides de conduite. Un véhicule d’examen ou de remplacement peut différer du vôtre. Familiarisez-vous avant la mise en circulation. Les actions sur navigation et température ne doivent pas détourner durablement votre attention ; certaines se préparent ou s’effectuent à l’arrêt sûr."
+              },
+              {
+                "kind": "heading",
+                "text": "Régler dans un ordre cohérent"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Commencez par la position du siège, puis le dossier, l'appui-tête et le volant selon les réglages disponibles. Les jambes et les bras doivent permettre des commandes efficaces sans étirement excessif. Réglez ensuite les rétroviseurs depuis cette position. Si vous les ajustez avant de déplacer le siège, le champ obtenu peut ne plus correspondre à la position finale."
+              },
+              {
+                "kind": "heading",
+                "text": "Garder les équipements accessibles"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Identifiez les commandes de désembuage, d'éclairage et d'essuie-glaces avant le départ. Un véhicule inhabituel demande un temps de familiarisation. Fixez les appareils et rangez les objets susceptibles de tomber. Une bouteille près des pédales ou un câble gênant peut devenir un danger. Le poste de conduite doit rester dégagé et compatible avec une bonne visibilité."
+              },
+              {
+                "kind": "heading",
+                "text": "Faire un dernier contrôle"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Vérifiez la ceinture, les portes, les témoins et l'installation des passagers. L'écran de navigation ne doit pas masquer la route. Le téléphone et les documents se préparent à l'arrêt. Le professionnalisme se voit dans cette routine calme : partir précipitamment oblige souvent à corriger un réglage lorsque l'attention devrait déjà être entièrement disponible pour la circulation."
+              }
+            ],
+            "cards": [
+              {
+                "label": "POSITION",
+                "text": "Siège, dossier et appuie-tête."
+              },
+              {
+                "label": "VISIBILITÉ",
+                "text": "Volant, rétroviseurs et désembuage."
+              },
+              {
+                "label": "COMMANDES",
+                "text": "Ceinture, fonctions utiles et voyants."
+              }
+            ],
+            "diagram": "media/vtc/diagram-h.03.webp",
+            "diagram_text": [
+              "Après un autre conducteur",
+              "1 Siège déplacé La position du regard change.",
+              "2 Rétroviseurs Reprendre les réglages.",
+              "3 Avant de partir Vérifier l’ensemble du poste.",
+              "La familiarisation avec le véhicule est une étape de sécurité, pas un détail de confort."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-h.webp",
+            "module": "H"
+          }
+        },
+        {
+          "id": "vtc-h-03-atelier",
+          "title": "À vous de jouer · Installer son poste de conduite",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "H.03",
+            "title": "Installer son poste de conduite",
+            "objective": "Réaliser les réglages dans un ordre efficace.",
+            "module": "H"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Quel élément doit être vérifié avant le départ ?",
+                "options": [
+                  {
+                    "id": "2690469983a5",
+                    "text": "Seulement la température extérieure"
+                  },
+                  {
+                    "id": "b7b4ab06998f",
+                    "text": "Seulement la playlist"
+                  },
+                  {
+                    "id": "366ab3ee3d96",
+                    "text": "La position de conduite et l’accès libre aux pédales"
+                  }
+                ],
+                "answer": "366ab3ee3d96",
+                "explanation": "Un poste correctement réglé et sans objet gênant aide à conserver le contrôle du véhicule.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.03"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Le téléphone glisse sous les pédales pendant la conduite. Quelle priorité ?",
+                "options": [
+                  {
+                    "id": "39ccb95f98bd",
+                    "text": "Demander au client de toucher les pédales"
+                  },
+                  {
+                    "id": "7a9648f09bbf",
+                    "text": "Se pencher immédiatement sous le volant"
+                  },
+                  {
+                    "id": "4887d7995c9e",
+                    "text": "Garder le contrôle et s’arrêter en sécurité avant de le récupérer"
+                  }
+                ],
+                "answer": "4887d7995c9e",
+                "explanation": "Une recherche d’objet en roulant compromet la conduite. L’arrêt sûr précède la récupération.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.03"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "POSITION"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "COMMANDES"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "VISIBILITÉ"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Volant, rétroviseurs et désembuage.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Siège, dossier et appuie-tête.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Ceinture, fonctions utiles et voyants.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon H.03. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-04",
+      "title": "H.04 · Réussir l’accueil",
+      "activities": [
+        {
+          "id": "vtc-h-04-cours",
+          "title": "Réussir l’accueil",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 15,
+          "blocks": [],
+          "vtc": {
+            "ref": "H.04",
+            "title": "Réussir l’accueil",
+            "page": 396,
+            "pages": [
+              396,
+              397
+            ],
+            "objective": "Donner un cadre rassurant dès la rencontre.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Arrivez au point autorisé et convenu, avec une présentation propre et adaptée. Saluez, présentez-vous puis vérifiez discrètement l’identité de la réservation. Confirmez destination et informations utiles, sans raconter à voix haute des données personnelles."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Proposez l’aide aux bagages et à l’installation, puis attendez l’accord. Surveillez circulation, portières et trottoir. Vérifiez que chacun est installé avec une retenue adaptée avant de partir. Une attitude professionnelle est attentive sans être intrusive : regarder le client, écouter sa réponse et éviter les questions personnelles inutiles. Le service doit rester accessible et respectueux de l’autonomie."
+              },
+              {
+                "kind": "heading",
+                "text": "Reconnaître le bon passager"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Présentez-vous et vérifiez la réservation avec discrétion. Confirmez la destination et le nombre de personnes. Ne supposez pas que le premier voyageur avec une valise est votre client. Dans un lieu fréquenté, une erreur d'identification peut entraîner une mauvaise prise en charge et divulguer des informations. Utilisez les repères convenus dans la réservation."
+              },
+              {
+                "kind": "heading",
+                "text": "Proposer l'aide utile"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Demandez l'accord avant de manipuler les bagages ou un équipement. Vérifiez le volume réel et installez les objets de façon stable. Ouvrez la porte lorsque l'environnement le permet et laissez au passager le temps de s'installer. Une personne à mobilité réduite peut souhaiter une aide précise ; une question respectueuse vaut mieux qu'un geste imposé."
+              },
+              {
+                "kind": "heading",
+                "text": "Confirmer avant le départ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Rappelez les éléments utiles : destination, durée estimée et conditions particulières convenues. Vérifiez les dispositifs de retenue et le confort. Le ton doit être naturel, sans récitation excessive. L'accueil prépare la suite : un client qui sait où il va, combien de temps le trajet devrait durer et comment poser une question se sent mieux accompagné."
+              }
+            ],
+            "cards": [
+              {
+                "label": "SALUER",
+                "text": "Nom, présentation et réservation."
+              },
+              {
+                "label": "CONFIRMER",
+                "text": "Destination et conditions utiles."
+              },
+              {
+                "label": "INSTALLER",
+                "text": "Aide consentie, bagages et sécurité."
+              }
+            ],
+            "diagram": "media/vtc/diagram-h.04.webp",
+            "diagram_text": [
+              "Trois dimensions ensemble",
+              "Courtoisie Présentation et écoute.",
+              "Vérification Réservation et destination.",
+              "Sécurité Bagages, installation et retenue.",
+              "Un accueil réussi combine courtoisie, vérification et sécurité."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-h.webp",
+            "module": "H"
+          }
+        },
+        {
+          "id": "vtc-h-04-atelier",
+          "title": "À vous de jouer · Réussir l’accueil",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "H.04",
+            "title": "Réussir l’accueil",
+            "objective": "Donner un cadre rassurant dès la rencontre.",
+            "module": "H"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Comment confirmer l’identité du passager à l’accueil ?",
+                "options": [
+                  {
+                    "id": "794ffb7bc540",
+                    "text": "En demandant son dossier médical"
+                  },
+                  {
+                    "id": "f6230041c6f1",
+                    "text": "Avec discrétion et en recoupant la réservation"
+                  },
+                  {
+                    "id": "a4d1809a0830",
+                    "text": "En annonçant publiquement toutes ses coordonnées"
+                  }
+                ],
+                "answer": "f6230041c6f1",
+                "explanation": "La vérification doit être utile à la mission et proportionnée, sans exposer les données personnelles.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.04"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quelle attitude correspond à un accueil professionnel ?",
+                "options": [
+                  {
+                    "id": "b19fc3d97a0c",
+                    "text": "Éviter toute explication sur le trajet"
+                  },
+                  {
+                    "id": "d1f3299fdeab",
+                    "text": "Prendre les bagages sans demander"
+                  },
+                  {
+                    "id": "bdb3fcae3c92",
+                    "text": "Saluer, confirmer la mission et proposer une aide adaptée"
+                  }
+                ],
+                "answer": "bdb3fcae3c92",
+                "explanation": "L’accueil associe clarté, respect du choix du passager et préparation du service.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.04"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "SALUER"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "CONFIRMER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "INSTALLER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Destination et conditions utiles.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Nom, présentation et réservation.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Aide consentie, bagages et sécurité.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon H.04. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-05",
+      "title": "H.05 · Conduire avec une attention disponible",
+      "activities": [
+        {
+          "id": "vtc-h-05-cours",
+          "title": "Conduire avec une attention disponible",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 15,
+          "blocks": [],
+          "vtc": {
+            "ref": "H.05",
+            "title": "Conduire avec une attention disponible",
+            "page": 399,
+            "pages": [
+              399,
+              400
+            ],
+            "objective": "Gérer le service sans perdre la route de vue.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Votre regard et votre anticipation restent prioritaires. Observez loin, contrôlez les côtés et maintenez des intervalles adaptés. Annoncez les manœuvres par les moyens réglementaires et engagez-vous seulement lorsque la situation le permet. Une conduite souple se prépare : elle ne s’obtient pas en corrigeant tardivement chaque danger."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le client peut poser des questions ou demander une modification. Répondez brièvement si la tâche de conduite le permet ; sinon, différez avec courtoisie. Il est préférable d’expliquer que vous vérifierez à l’arrêt que d’essayer de montrer plusieurs compétences en même temps. Les aides et le GPS ne remplacent pas votre décision."
+              },
+              {
+                "kind": "heading",
+                "text": "Hiérarchiser les tâches"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La conduite en sécurité reste la tâche principale. Une demande de facture, un réglage secondaire ou une question touristique peut attendre quelques instants. Prévenez simplement le client lorsque vous devez différer : « Je vous réponds dès que nous aurons passé ce carrefour. » Cette phrase explique votre priorité sans donner l'impression d'ignorer la personne."
+              },
+              {
+                "kind": "heading",
+                "text": "Garder une communication adaptée"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une conversation courte est différente d'un échange demandant de chercher une information ou de prendre une décision complexe. Réduisez les interactions pendant une manœuvre, une insertion ou une situation dense. Le passager ne connaît pas toujours la difficulté de conduite du moment. C'est au chauffeur de réguler l'échange et de choisir un arrêt si une action nécessite son attention."
+              },
+              {
+                "kind": "heading",
+                "text": "Utiliser l'anticipation"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Préparez les demandes fréquentes avant de partir : mode de paiement, destination et éventuelle facture. Une information collectée à l'arrêt réduit les interruptions ensuite. Les outils numériques doivent soutenir cette organisation. Accepter une nouvelle course en conduisant n'est pas une priorité supérieure à l'observation de la route et au service déjà en cours."
+              }
+            ],
+            "cards": [
+              {
+                "label": "OBSERVER",
+                "text": "Route, côtés, rétroviseurs et indices."
+              },
+              {
+                "label": "DÉCIDER",
+                "text": "Allure, espace et trajectoire."
+              },
+              {
+                "label": "SERVIR",
+                "text": "Une réponse compatible avec la conduite."
+              }
+            ],
+            "diagram": "media/vtc/diagram-h.05.webp",
+            "diagram_text": [
+              "Une adresse de facturation à modifier",
+              "1 Carrefour chargé La conduite reste prioritaire.",
+              "2 Réponse brève La demande sera traitée à l’arrêt.",
+              "3 Arrêt adapté Recueillir les coordonnées.",
+              "Une sortie manquée se corrige par un itinéraire ; une manœuvre dangereuse peut provoquer un accident."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-h.webp",
+            "module": "H"
+          }
+        },
+        {
+          "id": "vtc-h-05-atelier",
+          "title": "À vous de jouer · Conduire avec une attention disponible",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "H.05",
+            "title": "Conduire avec une attention disponible",
+            "objective": "Gérer le service sans perdre la route de vue.",
+            "module": "H"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Un passager souhaite discuter pendant une insertion difficile. Quelle priorité ?",
+                "options": [
+                  {
+                    "id": "60c83c04da70",
+                    "text": "Répondre en consultant simultanément l’application"
+                  },
+                  {
+                    "id": "dc8380156260",
+                    "text": "Le regarder longuement pour être poli"
+                  },
+                  {
+                    "id": "33e040f1a02f",
+                    "text": "Préserver l’attention nécessaire à la conduite"
+                  }
+                ],
+                "answer": "33e040f1a02f",
+                "explanation": "Le service commercial ne doit pas diminuer la sécurité. On peut reprendre la conversation après la phase exigeante.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.05"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Comment annoncer un freinage prévisible lié à un ralentissement ?",
+                "options": [
+                  {
+                    "id": "7dc2ce0d23b5",
+                    "text": "Attendre au dernier moment pour surprendre le client"
+                  },
+                  {
+                    "id": "3993fd8241ed",
+                    "text": "Changer de file sans contrôle"
+                  },
+                  {
+                    "id": "e5cc25f68674",
+                    "text": "Anticiper et ralentir progressivement selon la situation"
+                  }
+                ],
+                "answer": "e5cc25f68674",
+                "explanation": "Le confort repose sur l’observation et des actions adaptées, tout en gardant la priorité à la sécurité.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.05"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "OBSERVER"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "DÉCIDER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "SERVIR"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Une réponse compatible avec la conduite.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Route, côtés, rétroviseurs et indices.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Allure, espace et trajectoire.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon H.05. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-06",
+      "title": "H.06 · Manœuvrer et déposer",
+      "activities": [
+        {
+          "id": "vtc-h-06-cours",
+          "title": "Manœuvrer et déposer",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 15,
+          "blocks": [],
+          "vtc": {
+            "ref": "H.06",
+            "title": "Manœuvrer et déposer",
+            "page": 401,
+            "pages": [
+              401,
+              402
+            ],
+            "objective": "Choisir la sécurité avant la proximité maximale.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Avant une manœuvre, observez l’environnement : piétons, cycles, obstacles bas et zones masquées. Avancez lentement et gardez la possibilité de vous arrêter. Les capteurs et caméras ne détectent pas tout ; ils complètent les contrôles directs et les rétroviseurs. Si la visibilité manque, renoncez ou recherchez une autre solution."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La dépose doit être autorisée et permettre une sortie sûre. Évitez l’arrêt sur passage piéton, piste cyclable, voie réservée ou zone dangereuse. Une double file « pour trente secondes » peut gêner et exposer le passager. Prévenez-le si le point sûr est légèrement décalé par rapport à l’adresse et accompagnez la fin du service selon ses besoins."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le meilleur point de dépose est celui où le passager peut sortir sans être mis en danger."
+              },
+              {
+                "kind": "heading",
+                "text": "Choisir l'emplacement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Recherchez un endroit autorisé où les personnes peuvent descendre sans être exposées inutilement. La porte exacte de la destination n'est pas toujours accessible. Expliquez un point de dépose voisin si nécessaire. Les feux de détresse ne rendent pas licite ou sûr un arrêt gênant. Anticipez la sortie des passagers et l'accès au coffre, pas seulement la place occupée par la voiture."
+              },
+              {
+                "kind": "heading",
+                "text": "Contrôler pendant toute la manœuvre"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Observez autour du véhicule et complétez les rétroviseurs par les contrôles directs nécessaires. Une caméra ou un capteur peut ne pas montrer un obstacle ou un usager qui arrive. Manœuvrez lentement et arrêtez-vous si la situation n'est plus lisible. Il est préférable de reprendre une manœuvre que de continuer avec un doute sur la présence d'une personne."
+              },
+              {
+                "kind": "heading",
+                "text": "Sécuriser la descente"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Immobilisez correctement le véhicule, annoncez au passager quand il peut ouvrir et surveillez les cyclistes ou autres usagers. Lorsque c'est possible, privilégiez une sortie du côté le plus sûr. Aidez avec les bagages après avoir sécurisé le véhicule. La prestation n'est pas terminée tant que les personnes et leurs effets restent exposés à la circulation."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L'entrée de l'hôtel est devant une voie réservée. Le chauffeur choisit un emplacement autorisé plus loin, explique le court chemin à pied et accompagne la récupération des bagages. Il ne s'arrête pas dans la voie pour gagner quelques mètres. Une dépose réussie associe proximité raisonnable, légalité et sécurité des personnes."
+              }
+            ],
+            "cards": [
+              {
+                "label": "CHOISIR",
+                "text": "Un emplacement autorisé et adapté."
+              },
+              {
+                "label": "CONTRÔLER",
+                "text": "Tout autour avant et pendant la manœuvre."
+              },
+              {
+                "label": "DÉPOSER",
+                "text": "Sortie sûre et accès utile au client."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-h.webp",
+            "module": "H"
+          }
+        },
+        {
+          "id": "vtc-h-06-atelier",
+          "title": "À vous de jouer · Manœuvrer et déposer",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "H.06",
+            "title": "Manœuvrer et déposer",
+            "objective": "Choisir la sécurité avant la proximité maximale.",
+            "module": "H"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Le client demande une dépose sur un passage piéton. Que proposer ?",
+                "options": [
+                  {
+                    "id": "15b389d063f5",
+                    "text": "Un emplacement proche, autorisé et sûr"
+                  },
+                  {
+                    "id": "505e5d27ffcc",
+                    "text": "S’arrêter sur le passage si les feux de détresse fonctionnent"
+                  },
+                  {
+                    "id": "6973025b46fd",
+                    "text": "Le laisser ouvrir la porte en roulant"
+                  }
+                ],
+                "answer": "15b389d063f5",
+                "explanation": "La commodité du client ne supprime pas les règles de stationnement ni la sécurité des piétons.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.06"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Avant qu’un passager ouvre la porte côté circulation, que vérifier ?",
+                "options": [
+                  {
+                    "id": "0be2dc11db75",
+                    "text": "Seulement le montant payé"
+                  },
+                  {
+                    "id": "ec71f21e17ff",
+                    "text": "Uniquement la destination suivante"
+                  },
+                  {
+                    "id": "754c83de02d0",
+                    "text": "La présence d’usagers et les conditions de sortie"
+                  }
+                ],
+                "answer": "754c83de02d0",
+                "explanation": "Une dépose se termine avec une sortie sûre, en tenant compte notamment des cycles et des autres véhicules.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.06"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "CHOISIR"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "CONTRÔLER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "DÉPOSER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Un emplacement autorisé et adapté.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Sortie sûre et accès utile au client.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Tout autour avant et pendant la manœuvre.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon H.06. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-07",
+      "title": "H.07 · Informer sur le territoire",
+      "activities": [
+        {
+          "id": "vtc-h-07-cours",
+          "title": "Informer sur le territoire",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 15,
+          "blocks": [],
+          "vtc": {
+            "ref": "H.07",
+            "title": "Informer sur le territoire",
+            "page": 405,
+            "pages": [
+              405,
+              406
+            ],
+            "objective": "Apporter une information utile au bon moment.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un chauffeur connaît les principaux pôles de sa zone : gares, terminaux, hôpitaux, centres d’affaires, hôtels et lieux culturels. Préparez une fiche locale vérifiable avec accès, déposes et informations pratiques. La connaissance touristique ne se limite pas à réciter des dates : elle aide le visiteur à comprendre où il se trouve."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Demandez s’il souhaite des informations. Restez bref, exact et adapté à ses intérêts. Les horaires, prix et disponibilités changent : distinguez un fait stable d’une information à vérifier. N’inventez pas une réponse pour paraître compétent. En conduite complexe, reportez l’explication afin de garder l’attention sur la route."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Informer, c’est aussi savoir ce que l’on doit vérifier."
+              },
+              {
+                "kind": "heading",
+                "text": "Préparer quelques repères"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Connaissez les principales gares, les accès aux aéroports, les quartiers, les lieux d'affaires et les sites touristiques utiles à votre zone. Une bonne préparation ne se limite pas à apprendre des anecdotes. Elle comprend les entrées, les contraintes d'accès et les déplacements à pied nécessaires. Les informations pratiques rendent souvent davantage service qu'un long commentaire historique."
+              },
+              {
+                "kind": "heading",
+                "text": "Distinguer stable et variable"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La localisation d'un monument évolue peu ; son horaire d'ouverture ou une fermeture temporaire peuvent changer. Vérifiez les informations variables avant de les affirmer. Si vous ne savez pas, dites-le et proposez une vérification à l'arrêt. Inventer une réponse pour paraître compétent peut faire perdre du temps au client et fragiliser sa confiance."
+              },
+              {
+                "kind": "heading",
+                "text": "Adapter le commentaire"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Demandez si le passager souhaite des informations. Choisissez un moment où la conduite le permet et restez bref. Un client qui travaille, se repose ou téléphone n'attend pas forcément une visite guidée. Votre information doit être pertinente pour sa demande, compréhensible et factuelle. Les préférences personnelles peuvent être présentées comme telles, sans les faire passer pour des faits."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le client demande si un musée est ouvert le soir. Le chauffeur connaît le lieu mais n'a pas vérifié les horaires du jour. Il répond qu'il peut consulter la source officielle lors d'un arrêt. Cette réponse est plus professionnelle qu'une affirmation fondée sur un souvenir ancien. Elle distingue ce qu'il connaît de ce qu'il doit actualiser."
+              }
+            ],
+            "cards": [
+              {
+                "label": "SITUER",
+                "text": "Un lieu et son intérêt principal."
+              },
+              {
+                "label": "ADAPTER",
+                "text": "Temps disponible et intérêt du passager."
+              },
+              {
+                "label": "VÉRIFIER",
+                "text": "Horaires, prix et conditions d’accès."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-h.webp",
+            "module": "H"
+          }
+        },
+        {
+          "id": "vtc-h-07-atelier",
+          "title": "À vous de jouer · Informer sur le territoire",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "H.07",
+            "title": "Informer sur le territoire",
+            "objective": "Apporter une information utile au bon moment.",
+            "module": "H"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Un client demande les horaires d’un musée que vous ne connaissez pas. Que faire ?",
+                "options": [
+                  {
+                    "id": "17ba9f974d7d",
+                    "text": "Consulter le téléphone au milieu d’un virage"
+                  },
+                  {
+                    "id": "59ce3d13db85",
+                    "text": "Inventer un horaire plausible"
+                  },
+                  {
+                    "id": "5b9344edf650",
+                    "text": "Proposer de vérifier une information fiable à un moment sûr"
+                  }
+                ],
+                "answer": "5b9344edf650",
+                "explanation": "L’information touristique doit être fiable et donnée sans distraire la conduite.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.07"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quelle présentation touristique respecte le passager ?",
+                "options": [
+                  {
+                    "id": "be29b38e2ed0",
+                    "text": "Une information concise, adaptée à son intérêt"
+                  },
+                  {
+                    "id": "505cbd1159f2",
+                    "text": "Un long discours imposé"
+                  },
+                  {
+                    "id": "089d7a5464a3",
+                    "text": "Une opinion personnelle présentée comme un fait historique"
+                  }
+                ],
+                "answer": "be29b38e2ed0",
+                "explanation": "Le besoin du client et la fiabilité des informations guident le service.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.07"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "VÉRIFIER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "SITUER"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "ADAPTER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Horaires, prix et conditions d’accès.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Un lieu et son intérêt principal.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Temps disponible et intérêt du passager.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon H.07. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-08",
+      "title": "H.08 · Gérer un imprévu de service",
+      "activities": [
+        {
+          "id": "vtc-h-08-cours",
+          "title": "Gérer un imprévu de service",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 15,
+          "blocks": [],
+          "vtc": {
+            "ref": "H.08",
+            "title": "Gérer un imprévu de service",
+            "page": 409,
+            "pages": [
+              409,
+              410
+            ],
+            "objective": "Maintenir la sécurité et un accord clair.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un imprévu peut être routier, commercial ou humain. Commencez par ce qui ne peut pas attendre : sécurité, santé et protection. Ensuite, clarifiez les faits et recherchez une solution réaliste. Expliquez les conséquences utiles au client sans l’inonder d’informations techniques."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un retard, un changement d’adresse ou une panne peut affecter le prix, la durée et les courses suivantes. Confirmez les changements importants et conservez une trace. Face à une agressivité, gardez une distance et une voix calme ; posez des limites. Si la situation devient menaçante, recherchez un arrêt sûr et demandez de l’aide. La satisfaction commerciale ne justifie pas de poursuivre en danger."
+              },
+              {
+                "kind": "heading",
+                "text": "Stabiliser la situation"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un changement de destination, une route fermée ou une demande imprévue peut créer de la pression. Gardez d'abord une conduite sûre. Identifiez ensuite le problème exact : manque de temps, impossibilité d'accès, équipement absent ou désaccord commercial. Ne cherchez pas une solution globale tant que vous ne savez pas quelle contrainte doit être résolue."
+              },
+              {
+                "kind": "heading",
+                "text": "Comparer les solutions"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Évaluez la sécurité, la conformité, le temps et le coût. Expliquez les options réellement possibles au client et les conséquences de chacune. Une solution peut être refusée si elle implique une manœuvre interdite ou un service que vous ne pouvez pas assurer. Cherchez une alternative utile sans promettre l'impossible."
+              },
+              {
+                "kind": "heading",
+                "text": "Confirmer la décision"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Lorsque l'accord commercial change, conservez une trace adaptée. Informez l'exploitant ou l'organisateur si la modification affecte le planning ou le prix. La communication doit rester proportionnée : le client a besoin de comprendre la suite, pas de suivre toutes vos démarches internes. Après la mission, utilisez l'incident pour améliorer la préparation."
+              }
+            ],
+            "cards": [
+              {
+                "label": "PRIORISER",
+                "text": "Sécurité et santé avant le planning."
+              },
+              {
+                "label": "CLARIFIER",
+                "text": "Faits, besoin et possibilités."
+              },
+              {
+                "label": "CONFIRMER",
+                "text": "Solution et conditions actualisées."
+              }
+            ],
+            "diagram": "media/vtc/diagram-h.08.webp",
+            "diagram_text": [
+              "Une rue est fermée près de la gare",
+              "Pas de demi-tour brusque interdit.",
+              "1 Continuer en sécurité",
+              "2 Choisir Un accès autorisé.",
+              "3 Expliquer Nouvelle dépose et temps de marche.",
+              "Une solution professionnelle est réalisable, expliquée et confirmée."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-h.webp",
+            "module": "H"
+          }
+        },
+        {
+          "id": "vtc-h-08-atelier",
+          "title": "À vous de jouer · Gérer un imprévu de service",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "H.08",
+            "title": "Gérer un imprévu de service",
+            "objective": "Maintenir la sécurité et un accord clair.",
+            "module": "H"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Une fermeture de route impose un détour. Que faire ?",
+                "options": [
+                  {
+                    "id": "ecf265b596a9",
+                    "text": "Expliquer la situation, adapter le trajet et clarifier l’incidence éventuelle"
+                  },
+                  {
+                    "id": "3e19927c31a0",
+                    "text": "Garantir une arrivée devenue irréaliste"
+                  },
+                  {
+                    "id": "181ac15d517c",
+                    "text": "Changer de destination sans prévenir"
+                  }
+                ],
+                "answer": "ecf265b596a9",
+                "explanation": "L’imprévu se gère par une décision sûre et une information claire sur les conséquences.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.08"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Un passager oublie un objet à la fin de la course. Quelle démarche ?",
+                "options": [
+                  {
+                    "id": "19a839ff937a",
+                    "text": "Sécuriser l’objet et organiser sa restitution par un canal adapté"
+                  },
+                  {
+                    "id": "dc348c10430f",
+                    "text": "Le confier au premier passant"
+                  },
+                  {
+                    "id": "6f10bc5b2b41",
+                    "text": "Publier immédiatement son contenu en ligne"
+                  }
+                ],
+                "answer": "19a839ff937a",
+                "explanation": "La restitution doit préserver le bien et la confidentialité, en suivant une procédure traçable.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.08"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "PRIORISER"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "CLARIFIER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "CONFIRMER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Solution et conditions actualisées.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Sécurité et santé avant le planning.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Faits, besoin et possibilités.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon H.08. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-09",
+      "title": "H.09 · Facturer pendant la pratique",
+      "activities": [
+        {
+          "id": "vtc-h-09-cours",
+          "title": "Facturer pendant la pratique",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 15,
+          "blocks": [],
+          "vtc": {
+            "ref": "H.09",
+            "title": "Facturer pendant la pratique",
+            "page": 411,
+            "pages": [
+              411,
+              412
+            ],
+            "objective": "Présenter un calcul lisible et un document cohérent.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "À l’arrêt et après vérification de la mission réalisée, reprenez le prix convenu et les éventuelles modifications acceptées. Présentez clairement les montants, le régime de TVA applicable et le total. Les calculs doivent être compréhensibles ; conservez les unités et arrondissez au bon stade."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Distinguez facture et preuve de paiement. Une facture peut être émise avant règlement ; la mention acquittée suppose que le paiement ait été reçu. Pour l’examen, entraînez-vous à remplir les documents autorisés avec les données du sujet, sans inventer une TVA si l’entreprise fictive est en franchise. Les coordonnées, dates, numéro et description doivent rester cohérents."
+              },
+              {
+                "kind": "heading",
+                "text": "Repartir de l'accord"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Avant de calculer, relisez la prestation et ses conditions : forfait, attente, arrêt supplémentaire ou autre élément convenu. Un calcul exact peut rester incorrect si sa base ne correspond pas à l'accord. Identifiez aussi le régime de TVA et le destinataire de la facture. Dans un exercice, utilisez les hypothèses données ; dans l'activité, utilisez la situation réelle de l'entreprise."
+              },
+              {
+                "kind": "heading",
+                "text": "Calculer dans le bon ordre"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Déterminez les lignes de prestation, appliquez les conditions prévues puis calculez les montants HT, TVA et TTC lorsque la taxe est due. Utilisez une méthode cohérente d'arrondi aux centimes. Vérifiez l'addition finale et le montant demandé au client."
+              },
+              {
+                "kind": "heading",
+                "text": "Expliquer sans jargon"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le client doit pouvoir relier le total au service reçu. Montrez les lignes utiles et répondez calmement à une question. Le règlement et l'émission de la facture sont deux opérations à suivre. Un paiement confirmé doit être rapproché de la bonne pièce pour éviter une relance injustifiée ou une double facturation."
+              }
+            ],
+            "cards": [
+              {
+                "label": "REPRENDRE",
+                "text": "Prix convenu et modifications validées."
+              },
+              {
+                "label": "CALCULER",
+                "text": "HT, TVA éventuelle et total."
+              },
+              {
+                "label": "REMETTRE",
+                "text": "Document exact et trace du règlement."
+              }
+            ],
+            "diagram": "media/vtc/diagram-h.09.webp",
+            "diagram_text": [
+              "Les documents racontent la même mission",
+              "Réservation Le service convenu.",
+              "Facture La prestation et les montants.",
+              "€ Paiement Le règlement réellement reçu.",
+              "Le document final doit raconter la même prestation que la réservation et le paiement."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-h.webp",
+            "module": "H"
+          }
+        },
+        {
+          "id": "vtc-h-09-atelier",
+          "title": "À vous de jouer · Facturer pendant la pratique",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "H.09",
+            "title": "Facturer pendant la pratique",
+            "objective": "Présenter un calcul lisible et un document cohérent.",
+            "module": "H"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Pendant l’épreuve pratique, la facture doit correspondre à quoi ?",
+                "options": [
+                  {
+                    "id": "86269545e7bf",
+                    "text": "Au seul numéro du permis"
+                  },
+                  {
+                    "id": "45e57822f489",
+                    "text": "À la prestation réellement présentée et à ses données"
+                  },
+                  {
+                    "id": "058997fa5411",
+                    "text": "À un ancien trajet choisi au hasard"
+                  }
+                ],
+                "answer": "45e57822f489",
+                "explanation": "Les noms, dates, prestation, montants et mentions doivent être cohérents et adaptés à la situation évaluée.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.09"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Prix de l’exercice : 50 € HT avec 10 % de TVA. Quel total TTC ?",
+                "options": [
+                  {
+                    "id": "58ec9d9e79cd",
+                    "text": "45 €"
+                  },
+                  {
+                    "id": "e29468dac86f",
+                    "text": "60 €"
+                  },
+                  {
+                    "id": "6caa0eea55dd",
+                    "text": "55 €"
+                  }
+                ],
+                "answer": "6caa0eea55dd",
+                "explanation": "50 × 1,10 = 55 €. Vérifiez le taux donné, la base et les unités avant de calculer.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.09"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "CALCULER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "REMETTRE"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "REPRENDRE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "HT, TVA éventuelle et total.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Document exact et trace du règlement.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Prix convenu et modifications validées.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon H.09. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-10",
+      "title": "H.10 · Terminer la prestation",
+      "activities": [
+        {
+          "id": "vtc-h-10-cours",
+          "title": "Terminer la prestation",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 15,
+          "blocks": [],
+          "vtc": {
+            "ref": "H.10",
+            "title": "Terminer la prestation",
+            "page": 414,
+            "pages": [
+              414,
+              415
+            ],
+            "objective": "Clore le service sans oublier les personnes ni les objets.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La course ne se termine pas au dernier freinage. Vérifiez le lieu, sécurisez la sortie, proposez l’aide aux bagages puis confirmez leur restitution. Avant de repartir, contrôlez l’habitacle pour repérer un objet oublié. Remerciez et indiquez le canal utile pour une demande ultérieure."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un objet retrouvé doit être conservé et traité selon une procédure claire : description, date, course concernée et contact discret. Ne publiez pas une photo contenant des données personnelles pour retrouver son propriétaire. Après la dépose, organisez le repositionnement conformément aux règles VTC et préparez la prochaine mission sans stationner en recherche de clients non réservés."
+              },
+              {
+                "kind": "heading",
+                "text": "Accompagner jusqu'à la sortie"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La fin du trajet comprend l'immobilisation, la descente, la remise des bagages et les informations utiles pour rejoindre l'entrée. Prenez le temps de vérifier que chacun a récupéré ses effets. Une arrivée précise suivie d'une descente précipitée laisse une impression de service inachevé et peut créer un danger."
+              },
+              {
+                "kind": "heading",
+                "text": "Vérifier l'habitacle"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Après le départ du passager, regardez les places, les vide-poches et le coffre. Un objet oublié se traite selon une procédure permettant d'identifier son propriétaire et de le restituer dans de bonnes conditions. Ne fouillez pas inutilement dans un appareil ou un sac pour satisfaire votre curiosité. La recherche d'un contact doit respecter la confidentialité."
+              },
+              {
+                "kind": "heading",
+                "text": "Préparer la suite"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Mettez à jour le statut de la mission, classez les pièces et signalez un incident utile. Vérifiez la propreté et l'autonomie avant le prochain client. Organisez ensuite votre déplacement selon les règles de fin de course. Le temps de clôture fait partie de l'activité : le supprimer du planning conduit souvent à des retards ou à des oublis."
+              }
+            ],
+            "cards": [
+              {
+                "label": "PERSONNES",
+                "text": "Sortie sûre et destination confirmée."
+              },
+              {
+                "label": "BAGAGES",
+                "text": "Restitution et contrôle de l’habitacle."
+              },
+              {
+                "label": "SUITE",
+                "text": "Document, remerciement et repositionnement"
+              }
+            ],
+            "diagram": "media/vtc/diagram-h.10.webp",
+            "diagram_text": [
+              "Un téléphone est retrouvé",
+              "1 Identifier Date et mission concernée.",
+              "2 Contacter Discrètement, par le canal professionnel.",
+              "3 Restituer Conserver l’objet en sécurité et tracer la remise.",
+              "La qualité de la fin de course laisse une impression durable et prévient les litiges."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-h.webp",
+            "module": "H"
+          }
+        },
+        {
+          "id": "vtc-h-10-atelier",
+          "title": "À vous de jouer · Terminer la prestation",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "H.10",
+            "title": "Terminer la prestation",
+            "objective": "Clore le service sans oublier les personnes ni les objets.",
+            "module": "H"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Après la dépose et le règlement, quelle vérification est utile ?",
+                "options": [
+                  {
+                    "id": "6a9b22356f59",
+                    "text": "Contrôler les objets oubliés et l’état du véhicule avant la mission suivante"
+                  },
+                  {
+                    "id": "de891a9a4e91",
+                    "text": "Supprimer toutes les preuves de prestation"
+                  },
+                  {
+                    "id": "09bd826b1bdb",
+                    "text": "Repartir sans regarder l’habitacle"
+                  }
+                ],
+                "answer": "6a9b22356f59",
+                "explanation": "La fin de mission prépare la qualité et la sécurité de la suivante, avec conservation appropriée des justificatifs.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.10"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Comment clôturer une prestation sans créer un malentendu ?",
+                "options": [
+                  {
+                    "id": "ab818746f5b1",
+                    "text": "Considérer qu’un sourire vaut paiement"
+                  },
+                  {
+                    "id": "9aea62157c49",
+                    "text": "Confirmer la fin du service, le règlement et la remise du justificatif pertinent"
+                  },
+                  {
+                    "id": "516490865290",
+                    "text": "Reporter toutes les vérifications à la fin du mois"
+                  }
+                ],
+                "answer": "9aea62157c49",
+                "explanation": "La clôture vérifie les éléments réellement accomplis et informe le client clairement.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.10"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "BAGAGES"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "PERSONNES"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "SUITE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Restitution et contrôle de l’habitacle.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Sortie sûre et destination confirmée.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Document, remerciement et repositionnement",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon H.10. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-11",
+      "title": "H.11 · Comprendre l’épreuve pratique",
+      "activities": [
+        {
+          "id": "vtc-h-11-cours",
+          "title": "Comprendre l’épreuve pratique",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 15,
+          "blocks": [],
+          "vtc": {
+            "ref": "H.11",
+            "title": "Comprendre l’épreuve pratique",
+            "page": 416,
+            "pages": [
+              416,
+              417
+            ],
+            "objective": "Préparer les compétences évaluées et les documents demandés.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L’épreuve d’admission comporte une phase de conduite en circulation d’au moins vingt minutes. Le barème VTC en vigueur répartit vingt points : préparation et réalisation du parcours, trois ; sécurité, souplesse et Code de la route, dix ; prise en charge, relation client et information touristique, cinq ; facturation, deux. L’admission demande au moins douze sur vingt."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Toute intervention de l’examinateur sur la double commande ou le volant entraîne l’arrêt de l’épreuve et l’ajournement. Ne cherchez donc pas à compenser une conduite dangereuse par un discours commercial. Consultez la convocation et le règlement de l’organisateur pour le véhicule, les pièces, les outils autorisés et l’heure de présentation. Le minimum de vingt minutes concerne la conduite, pas toute la durée administrative du rendez-vous."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La sécurité représente la moitié des points et ne se négocie jamais."
+              },
+              {
+                "kind": "heading",
+                "text": "Une prestation complète"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L'épreuve pratique évalue la capacité à réaliser une mission, depuis sa préparation jusqu'à la facturation. La conduite en circulation dure au minimum vingt minutes. Le parcours, la sécurité et la souplesse, la relation client et l'information touristique, ainsi que la facturation forment les domaines du barème VTC. La grille détaillée figure dans les outils de fin de manuel."
+              },
+              {
+                "kind": "heading",
+                "text": "Relier un point à une preuve"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un comportement observable vaut mieux qu'une intention annoncée. Dire « je contrôle » ne remplace pas le contrôle effectif. Une facture lisible, un itinéraire justifié et une dépose sécurisée montrent des compétences. Le candidat doit conserver une attitude naturelle ; une récitation permanente peut détourner l'attention et nuire à la qualité de la conduite."
+              },
+              {
+                "kind": "heading",
+                "text": "Préparer les conditions matérielles"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Lisez la convocation et les consignes de la CMA pour les documents, le véhicule et les équipements requis. Arrivez avec une organisation permettant de vous concentrer sur la prestation. Le seuil de réussite est de 12/20. Une intervention de l'examinateur sur les doubles commandes ou le volant entraîne l'arrêt de l'épreuve et l'ajournement selon le règlement."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le candidat prépare un bon itinéraire mais néglige les contrôles à la dépose. Le travail n'est pas de mémoriser seulement une formule d'accueil : il faut entraîner la sécurité à chaque phase. Les dix points consacrés à la conduite rappellent son poids, mais les autres domaines restent nécessaires à une prestation complète. Une bonne note partielle ne rend pas acceptable une situation dangereuse."
+              }
+            ],
+            "cards": [
+              {
+                "label": "Parcours",
+                "text": "Préparer et réaliser : 3 points."
+              },
+              {
+                "label": "Conduite",
+                "text": "Sécurité, souplesse et code : 10 points."
+              },
+              {
+                "label": "Service",
+                "text": "Relation et tourisme : 5 points ; facturation : 2 points."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-h.webp",
+            "module": "H"
+          }
+        },
+        {
+          "id": "vtc-h-11-atelier",
+          "title": "À vous de jouer · Comprendre l’épreuve pratique",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "H.11",
+            "title": "Comprendre l’épreuve pratique",
+            "objective": "Préparer les compétences évaluées et les documents demandés.",
+            "module": "H"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Quel groupe de compétences pèse 10 points sur 20 à l’épreuve pratique VTC ?",
+                "options": [
+                  {
+                    "id": "2b67b6d8ad99",
+                    "text": "La seule présentation du véhicule"
+                  },
+                  {
+                    "id": "5d34f623eaaf",
+                    "text": "La seule facturation"
+                  },
+                  {
+                    "id": "cc82eb237b7e",
+                    "text": "Sécurité, souplesse de conduite et respect du code de la route"
+                  }
+                ],
+                "answer": "cc82eb237b7e",
+                "explanation": "La conduite représente 10 points ; parcours, relation client et facturation complètent l’évaluation.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.11"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "L’examinateur doit intervenir sur la double commande ou le volant. Quelle conséquence officielle ?",
+                "options": [
+                  {
+                    "id": "6b06181bc382",
+                    "text": "Un simple avertissement sans effet"
+                  },
+                  {
+                    "id": "2b1c86af734a",
+                    "text": "Un bonus de sécurité"
+                  },
+                  {
+                    "id": "47a79fb73d6b",
+                    "text": "Arrêt de l’épreuve et ajournement"
+                  }
+                ],
+                "answer": "47a79fb73d6b",
+                "explanation": "Cette intervention est éliminatoire selon les modalités de l’épreuve pratique.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.11"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "Conduite"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "Parcours"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "Service"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Préparer et réaliser : 3 points.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Relation et tourisme : 5 points ; facturation : 2 points.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Sécurité, souplesse et code : 10 points.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon H.11. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-12",
+      "title": "H.12 · S’entraîner et progresser",
+      "activities": [
+        {
+          "id": "vtc-h-12-cours",
+          "title": "S’entraîner et progresser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 15,
+          "blocks": [],
+          "vtc": {
+            "ref": "H.12",
+            "title": "S’entraîner et progresser",
+            "page": 419,
+            "pages": [
+              419,
+              420
+            ],
+            "objective": "Transformer une observation en action de travail.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un entraînement utile reproduit une mission cohérente, puis donne lieu à un retour précis. L’observateur note des faits : préparation du trajet, vérifications, accueil, trajectoire, anticipation, confort, explication et facture. « C’était bien » ne suffit pas pour progresser ; « la destination a été confirmée avant le départ » décrit une action."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Choisissez ensuite une priorité de travail et un exercice adapté. Répétez dans un cadre sécurisé avec le formateur, puis vérifiez le progrès. L’entraînement en circulation doit respecter les autorisations, assurances et conditions d’encadrement ; ce manuel ne les remplace pas. Alternez travail sur documents, jeux de rôle et conduite accompagnée dans le cadre prévu."
+              },
+              {
+                "kind": "heading",
+                "text": "Observer un comportement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Après un entraînement, décrivez ce qui s'est passé : « Le GPS a été réglé après le départ » est plus utile que « mauvaise préparation ». Une observation précise permet de savoir quelle action travailler. Distinguez les faits, leurs conséquences et l'objectif suivant. Évitez les jugements globaux sur la personne, qui n'indiquent aucune méthode de progrès."
+              },
+              {
+                "kind": "heading",
+                "text": "Travailler une difficulté à la fois"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Choisissez un point prioritaire et entraînez-le dans un cadre adapté. Une routine d'accueil peut être répétée à l'arrêt ; un calcul de facture peut être travaillé au calme ; une manœuvre exige un encadrement et un lieu autorisé. Réunissez ensuite les compétences dans une mission complète. La répétition sert à rendre les gestes plus fiables, sans automatiser une erreur."
+              },
+              {
+                "kind": "heading",
+                "text": "Vérifier le transfert"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une compétence est mieux acquise lorsqu'elle reste correcte dans une situation légèrement différente : autre adresse, nouveau passager ou itinéraire modifié. Reprenez le carnet d'erreurs et expliquez pourquoi la nouvelle réponse est meilleure. L'objectif est de savoir décider, pas de reconnaître uniquement un exercice déjà vu. Le formateur aide à choisir le niveau de difficulté et à sécuriser la progression."
+              }
+            ],
+            "cards": [
+              {
+                "label": "OBSERVER",
+                "text": "Un comportement concret, daté et descriptible."
+              },
+              {
+                "label": "COMPRENDRE",
+                "text": "Ce qui a aidé ou provoqué l’écart."
+              },
+              {
+                "label": "RÉPÉTER",
+                "text": "Une action ciblée, puis une nouvelle observation."
+              }
+            ],
+            "diagram": "media/vtc/diagram-h.12.webp",
+            "diagram_text": [
+              "Confirmer la destination sans réciter",
+              "1 Premier essai La destination n’a pas été confirmée.",
+              "2 Entraînement Routine en jeu de rôle avec une autre adresse.",
+              "3 Débriefing Vérifier la question ET l’écoute de la réponse.",
+              "Progresser, c’est rendre un bon geste fiable et reproductible."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-h.webp",
+            "module": "H"
+          }
+        },
+        {
+          "id": "vtc-h-12-atelier",
+          "title": "À vous de jouer · S’entraîner et progresser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "H.12",
+            "title": "S’entraîner et progresser",
+            "objective": "Transformer une observation en action de travail.",
+            "module": "H"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Réussir tous les exercices en ligne suffit-il à valider la conduite pratique ?",
+                "options": [
+                  {
+                    "id": "c28ce841d256",
+                    "text": "Oui, automatiquement"
+                  },
+                  {
+                    "id": "2234e253b014",
+                    "text": "Non, l’entraînement et l’évaluation en circulation restent nécessaires"
+                  },
+                  {
+                    "id": "97578df69b1b",
+                    "text": "Oui, avec un score de 100 % en anglais"
+                  }
+                ],
+                "answer": "2234e253b014",
+                "explanation": "Le numérique prépare les décisions et connaissances ; il ne démontre pas à lui seul la conduite en situation réelle.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.12"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Après une séance avec le formateur, quelle méthode favorise la progression ?",
+                "options": [
+                  {
+                    "id": "af5d9e15af9a",
+                    "text": "Répéter sans retour ni objectif"
+                  },
+                  {
+                    "id": "0abf95f48a57",
+                    "text": "Changer toutes les habitudes au hasard"
+                  },
+                  {
+                    "id": "5a38aeac31e2",
+                    "text": "Identifier une difficulté précise, s’entraîner puis observer l’amélioration"
+                  }
+                ],
+                "answer": "5a38aeac31e2",
+                "explanation": "Une progression ciblée relie observation, correction et nouvelle mise en situation avec le formateur.",
+                "module": "H",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon H.12"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "OBSERVER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "RÉPÉTER"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "COMPRENDRE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Ce qui a aidé ou provoqué l’écart.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Une action ciblée, puis une nouvelle observation.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Un comportement concret, daté et descriptible.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon H.12. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-synthese",
+      "title": "Synthèse · relier les notions",
+      "activities": [
+        {
+          "id": "vtc-h-capsule",
+          "title": "Voir et retenir · les essentiels",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [
+            {
+              "type": "Video",
+              "video": {
+                "src": "media/vtc/v2/capsule-h.mp4",
+                "poster": "media/vtc/v2/capsule-h.jpg",
+                "captions": "media/vtc/v2/capsule-h.vtt",
+                "duration_seconds": 65.258,
+                "transcript": "Avant de partir, quelles informations rapprocher ? Passagers, point de rencontre, horaire, destination et contraintes. Lire la mission permet de préparer une prestation réalisable, avec les moyens et marges adaptés.\n\nComment confirmer l’identité du passager à l’accueil ? Avec discrétion et en recoupant la réservation. La vérification doit être utile à la mission et proportionnée, sans exposer les données personnelles.\n\nUne fermeture de route impose un détour. Que faire ? Expliquer la situation, adapter le trajet et clarifier l’incidence éventuelle. L’imprévu se gère par une décision sûre et une information claire sur les conséquences.\n\nRéussir tous les exercices en ligne suffit-il à valider la conduite pratique ? Non, l’entraînement et l’évaluation en circulation restent nécessaires. Le numérique prépare les décisions et connaissances ; il ne démontre pas à lui seul la conduite en situation réelle.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "audio": true,
+                "burned_captions": true,
+                "id": "vtc-h-capsule",
+                "title": "Les essentiels · Réaliser une mission professionnelle",
+                "required": true
+              }
+            }
+          ],
+          "vtc": {
+            "kind": "recap",
+            "module": "H",
+            "title": "Réaliser une mission professionnelle",
+            "image": "media/vtc/module-h.webp",
+            "transcript": "Avant de partir, quelles informations rapprocher ? Passagers, point de rencontre, horaire, destination et contraintes. Lire la mission permet de préparer une prestation réalisable, avec les moyens et marges adaptés.\n\nComment confirmer l’identité du passager à l’accueil ? Avec discrétion et en recoupant la réservation. La vérification doit être utile à la mission et proportionnée, sans exposer les données personnelles.\n\nUne fermeture de route impose un détour. Que faire ? Expliquer la situation, adapter le trajet et clarifier l’incidence éventuelle. L’imprévu se gère par une décision sûre et une information claire sur les conséquences.\n\nRéussir tous les exercices en ligne suffit-il à valider la conduite pratique ? Non, l’entraînement et l’évaluation en circulation restent nécessaires. Le numérique prépare les décisions et connaissances ; il ne démontre pas à lui seul la conduite en situation réelle.",
+            "audio": true,
+            "cards": [
+              {
+                "label": "H.01",
+                "text": "Lire la mission avant de partir"
+              },
+              {
+                "label": "H.02",
+                "text": "Préparer un itinéraire"
+              },
+              {
+                "label": "H.03",
+                "text": "Installer son poste de conduite"
+              },
+              {
+                "label": "H.04",
+                "text": "Réussir l’accueil"
+              },
+              {
+                "label": "H.05",
+                "text": "Conduire avec une attention disponible"
+              },
+              {
+                "label": "H.06",
+                "text": "Manœuvrer et déposer"
+              },
+              {
+                "label": "H.07",
+                "text": "Informer sur le territoire"
+              },
+              {
+                "label": "H.08",
+                "text": "Gérer un imprévu de service"
+              },
+              {
+                "label": "H.09",
+                "text": "Facturer pendant la pratique"
+              },
+              {
+                "label": "H.10",
+                "text": "Terminer la prestation"
+              },
+              {
+                "label": "H.11",
+                "text": "Comprendre l’épreuve pratique"
+              },
+              {
+                "label": "H.12",
+                "text": "S’entraîner et progresser"
+              }
+            ]
+          }
+        },
+        {
+          "id": "vtc-h-approfondir",
+          "title": "Approfondir · repères et méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 24,
+          "blocks": [],
+          "vtc": {
+            "kind": "supplements",
+            "module": "H",
+            "title": "Relier le cours à la mission",
+            "supplements": [],
+            "sources": [
+              {
+                "title": "Programme et modalités de l’examen · arrêté du 6 avril 2017 modifié",
+                "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046/"
+              },
+              {
+                "title": "Devenir chauffeur de VTC · Service Public",
+                "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+              },
+              {
+                "title": "Réforme de l’accès par expérience · décret du 5 août 2026",
+                "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000054658967/"
+              }
+            ],
+            "exam": {
+              "minutes": 20,
+              "coefficient": 0,
+              "format": "Mise en situation en circulation"
+            },
+            "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "vtc-h-01-cours",
+    "vtc-h-01-atelier",
+    "vtc-h-02-cours",
+    "vtc-h-02-atelier",
+    "vtc-h-03-cours",
+    "vtc-h-03-atelier",
+    "vtc-h-04-cours",
+    "vtc-h-04-atelier",
+    "vtc-h-05-cours",
+    "vtc-h-05-atelier",
+    "vtc-h-06-cours",
+    "vtc-h-06-atelier",
+    "vtc-h-07-cours",
+    "vtc-h-07-atelier",
+    "vtc-h-08-cours",
+    "vtc-h-08-atelier",
+    "vtc-h-09-cours",
+    "vtc-h-09-atelier",
+    "vtc-h-10-cours",
+    "vtc-h-10-atelier",
+    "vtc-h-11-cours",
+    "vtc-h-11-atelier",
+    "vtc-h-12-cours",
+    "vtc-h-12-atelier",
+    "vtc-h-capsule",
+    "vtc-h-approfondir"
+  ],
+  "assets": [
+    "media/vtc/diagram-h.01.webp",
+    "media/vtc/diagram-h.02.webp",
+    "media/vtc/diagram-h.03.webp",
+    "media/vtc/diagram-h.04.webp",
+    "media/vtc/diagram-h.05.webp",
+    "media/vtc/diagram-h.08.webp",
+    "media/vtc/diagram-h.09.webp",
+    "media/vtc/diagram-h.10.webp",
+    "media/vtc/diagram-h.12.webp",
+    "media/vtc/module-h.webp",
+    "media/vtc/v2/capsule-h.jpg",
+    "media/vtc/v2/capsule-h.mp4",
+    "media/vtc/v2/capsule-h.vtt"
+  ],
+  "import_warnings": [],
+  "counts": {
+    "sections": 13,
+    "lessons": 12,
+    "activities": 26,
+    "scored_activities": 0,
+    "workbooks": 0,
+    "interactive_workshops": 12,
+    "required_videos": 1,
+    "assets": 13
+  }
+}

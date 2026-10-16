@@ -1,0 +1,1613 @@
+{
+  "schema_version": 1,
+  "index_base": 0,
+  "default_active": [],
+  "source": "scripts/render_mac_aps.py:MODULES",
+  "reviewed_on": "2026-10-12",
+  "description": "Ancrages sémantiques dans la narration. Les temps sont calculés à partir de la voix ; aucune durée égale ni chronologie artificielle n’est imposée. Les cases non développées restent neutres.",
+  "modules": {
+    "01": [
+      {
+        "scene_index": 0,
+        "title": "Une réponse préparée et coordonnée",
+        "events": [
+          {
+            "anchor": "L’objectif est de reconnaître une situation préoccupante",
+            "active": [],
+            "reason": "Présentation générale : aucun repérage du matériel n’est encore expliqué."
+          },
+          {
+            "anchor": "de transmettre une alerte exploitable et d’accueillir les secours",
+            "active": [
+              1,
+              2
+            ],
+            "reason": "L’alerte et l’accueil des intervenants sont énoncés ensemble."
+          },
+          {
+            "anchor": "Cette vidéo accompagne les cours et les exercices",
+            "active": [],
+            "reason": "Le passage précise la portée pédagogique de la vidéo."
+          },
+          {
+            "anchor": "ce que vous devez transmettre au professionnel qui prend le relais",
+            "active": [
+              2
+            ],
+            "reason": "La dernière clause revient sur le passage de relais."
+          }
+        ]
+      },
+      {
+        "scene_index": 1,
+        "title": "Avant la prise de poste",
+        "events": [
+          {
+            "anchor": "consultez les consignes de secours",
+            "active": [
+              0
+            ],
+            "reason": "La voix demande de consulter les consignes."
+          },
+          {
+            "anchor": "vérifiez les moyens d’alerte et repérez le matériel disponible",
+            "active": [
+              1
+            ],
+            "reason": "Les moyens d’alerte et le matériel sont explicitement abordés."
+          },
+          {
+            "anchor": "Identifiez l’adresse exacte du site",
+            "active": [
+              2
+            ],
+            "reason": "Le passage développe l’adresse, les bâtiments et les accès."
+          },
+          {
+            "anchor": "Demandez aussi comment joindre les sauveteurs secouristes du travail présents",
+            "active": [],
+            "reason": "La fin élargit la préparation aux personnes et à l’organisation."
+          }
+        ]
+      },
+      {
+        "scene_index": 2,
+        "title": "Protéger sans créer une autre victime",
+        "events": [
+          {
+            "anchor": "Face à un événement, commencez par observer l’environnement",
+            "active": [
+              0
+            ],
+            "reason": "L’agent recherche les dangers persistants."
+          },
+          {
+            "anchor": "Vous ne devez pas vous engager dans une zone dangereuse",
+            "active": [
+              1
+            ],
+            "reason": "La voix énonce la protection de l’intervenant."
+          },
+          {
+            "anchor": "Empêchez d’autres personnes de s’exposer",
+            "active": [
+              1,
+              2
+            ],
+            "reason": "Éviter l’exposition et faire sécuriser la zone sont des actions complémentaires."
+          },
+          {
+            "anchor": "Les décisions particulières se travaillent dans la formation pratique",
+            "active": [],
+            "reason": "La conclusion renvoie à l’entraînement encadré."
+          }
+        ]
+      },
+      {
+        "scene_index": 3,
+        "title": "Observer et décrire des faits",
+        "events": [
+          {
+            "anchor": "Une personne vous répond-elle ? Que vous dit-elle ?",
+            "active": [
+              1
+            ],
+            "reason": "Les premières questions portent sur la réponse et les paroles de la personne."
+          },
+          {
+            "anchor": "Quel événement venez-vous de constater ?",
+            "active": [
+              0
+            ],
+            "reason": "La question porte sur un événement constaté."
+          },
+          {
+            "anchor": "Décrivez simplement les signes observés et leur évolution.",
+            "active": [
+              0,
+              2
+            ],
+            "reason": "La phrase suivante associe explicitement observation et évolution."
+          },
+          {
+            "anchor": "Affirmer qu’elle fait une maladie précise sans compétence médicale",
+            "active": [],
+            "reason": "Le propos traite des limites du diagnostic et de l’intimité."
+          },
+          {
+            "anchor": "Si son état change, signalez-le immédiatement",
+            "active": [
+              2
+            ],
+            "reason": "Le changement d’état est explicitement signalé."
+          }
+        ]
+      },
+      {
+        "scene_index": 4,
+        "title": "Une alerte que l’on peut exploiter",
+        "events": [
+          {
+            "anchor": "Lorsque vous appelez les secours, donnez d’abord une localisation précise",
+            "active": [
+              0
+            ],
+            "reason": "L’alerte commence par la localisation et les accès."
+          },
+          {
+            "anchor": "Présentez ensuite la situation observée, le nombre de personnes concernées",
+            "active": [
+              1
+            ],
+            "reason": "La voix présente la situation et le nombre de victimes."
+          },
+          {
+            "anchor": "les dangers encore présents et les premières mesures prises",
+            "active": [
+              2
+            ],
+            "reason": "La clause énonce les risques restants et les actions déjà réalisées."
+          },
+          {
+            "anchor": "Parlez clairement et laissez l’opérateur poser ses questions",
+            "active": [],
+            "reason": "La suite traite de l’échange et des numéros d’urgence, absents des trois cases."
+          }
+        ]
+      },
+      {
+        "scene_index": 5,
+        "title": "Distribuer les rôles clairement",
+        "events": [
+          {
+            "anchor": "Une personne reste auprès de la victime",
+            "active": [
+              0
+            ],
+            "reason": "Premier rôle : rester auprès de la personne."
+          },
+          {
+            "anchor": "une autre transmet l’alerte",
+            "active": [
+              1
+            ],
+            "reason": "Deuxième rôle : transmettre l’alerte."
+          },
+          {
+            "anchor": "une troisième va accueillir les secours",
+            "active": [
+              2
+            ],
+            "reason": "Troisième rôle : accueillir et guider les intervenants."
+          },
+          {
+            "anchor": "Adressez-vous à une personne identifiée",
+            "active": [
+              1
+            ],
+            "reason": "La voix revient à l’attribution claire des missions."
+          },
+          {
+            "anchor": "Le guidage doit conduire les intervenants jusqu’au bon lieu",
+            "active": [
+              2
+            ],
+            "reason": "Réactivation du guidage au moment où il est développé."
+          },
+          {
+            "anchor": "Vérifiez que les informations essentielles circulent entre les rôles",
+            "active": [
+              1
+            ],
+            "reason": "La fin revient à la coordination, y compris lorsque l’agent est seul."
+          }
+        ]
+      },
+      {
+        "scene_index": 6,
+        "title": "Agir dans ses compétences",
+        "events": [
+          {
+            "anchor": "Les gestes doivent correspondre à votre formation actualisée",
+            "active": [
+              0,
+              1
+            ],
+            "reason": "La phrase associe les gestes appris et les instructions des secours."
+          },
+          {
+            "anchor": "N’improvisez pas un traitement",
+            "active": [
+              0
+            ],
+            "reason": "Les limites des gestes et le défibrillateur sont ensuite expliqués."
+          },
+          {
+            "anchor": "Pendant l’attente, restez attentif aux changements",
+            "active": [
+              2
+            ],
+            "reason": "Le passage commence la surveillance et la réévaluation."
+          },
+          {
+            "anchor": "Préservez la confidentialité et annoncez calmement ce que vous faites",
+            "active": [],
+            "reason": "La conclusion élargit le propos à la relation et à la confidentialité."
+          }
+        ]
+      },
+      {
+        "scene_index": 7,
+        "title": "Cas : malaise dans le hall",
+        "events": [
+          {
+            "anchor": "Il est conscient, répond à vos questions et demande à s’asseoir",
+            "active": [
+              0
+            ],
+            "reason": "La narration décrit l’état conscient du visiteur, sans ajouter de signe clinique."
+          },
+          {
+            "anchor": "Vous sollicitez un collègue, restez auprès du visiteur",
+            "active": [
+              1
+            ],
+            "reason": "L’agent protège la personne et fait contacter les secours."
+          },
+          {
+            "anchor": "Votre collègue prépare l’accès",
+            "active": [
+              2
+            ],
+            "reason": "La voix énonce la préparation de l’accès."
+          },
+          {
+            "anchor": "Vous ne substituez pas cette initiative à l’avis des secours",
+            "active": [
+              1
+            ],
+            "reason": "L’alerte médicale et les consignes des secours restent la référence."
+          },
+          {
+            "anchor": "Vous surveillez la situation et signalez tout changement à l’opérateur",
+            "active": [
+              2
+            ],
+            "reason": "La conclusion réactive explicitement la surveillance."
+          }
+        ]
+      },
+      {
+        "scene_index": 8,
+        "title": "Passer le relais et tirer les enseignements",
+        "events": [
+          {
+            "anchor": "À l’arrivée des intervenants, fournissez une transmission courte",
+            "active": [
+              1
+            ],
+            "reason": "Le passage commence par la transmission aux intervenants."
+          },
+          {
+            "anchor": "l’événement constaté, les horaires utiles",
+            "active": [
+              0,
+              1
+            ],
+            "reason": "La chronologie factuelle constitue le contenu de cette transmission."
+          },
+          {
+            "anchor": "Après l’événement, rédigez le compte rendu prévu",
+            "active": [
+              0
+            ],
+            "reason": "La voix traite du compte rendu et de ses faits nécessaires."
+          },
+          {
+            "anchor": "Le retour d’expérience peut révéler",
+            "active": [
+              2
+            ],
+            "reason": "Le propos passe aux améliorations de l’organisation."
+          },
+          {
+            "anchor": "Pour vérifier vos acquis, expliquez maintenant",
+            "active": [],
+            "reason": "Le dernier passage est une invitation à poursuivre les exercices."
+          }
+        ]
+      }
+    ],
+    "02": [
+      {
+        "scene_index": 0,
+        "title": "Des principes dans les actes quotidiens",
+        "events": [
+          {
+            "anchor": "Dans cette synthèse, nous allons relier les principes de la République",
+            "active": [],
+            "reason": "Introduction globale : les trois mots de la devise ne sont pas développés séparément."
+          },
+          {
+            "anchor": "Pour chaque situation, posez-vous trois questions",
+            "active": [],
+            "reason": "Les questions portent sur la méthode de décision, pas sur trois étapes de la devise."
+          }
+        ]
+      },
+      {
+        "scene_index": 1,
+        "title": "Liberté : des limites définies par le droit",
+        "events": [
+          {
+            "anchor": "La liberté implique le respect des droits d’autrui",
+            "active": [
+              0
+            ],
+            "reason": "La voix présente les libertés des personnes."
+          },
+          {
+            "anchor": "Il applique les règles nécessaires à sa mission, dans les limites de ses pouvoirs",
+            "active": [
+              1,
+              2
+            ],
+            "reason": "Règles applicables et limites de mission sont énoncées dans la même phrase."
+          },
+          {
+            "anchor": "Si un visiteur critique l’établissement",
+            "active": [
+              0,
+              1
+            ],
+            "reason": "L’exemple articule liberté d’opinion et critère légitime de sécurité."
+          },
+          {
+            "anchor": "Avant d’intervenir, vérifiez aussi que la consigne reçue est comprise",
+            "active": [
+              1,
+              2
+            ],
+            "reason": "La voix revient à la vérification de la consigne dans son contexte."
+          },
+          {
+            "anchor": "Un désaccord d’opinion ne doit pas devenir un conflit artificiel",
+            "active": [
+              0
+            ],
+            "reason": "La conclusion revient au respect des opinions."
+          }
+        ]
+      },
+      {
+        "scene_index": 2,
+        "title": "Égalité : des critères explicables",
+        "events": [
+          {
+            "anchor": "L’égalité demande des critères objectifs",
+            "active": [
+              0
+            ],
+            "reason": "Le premier principe est un critère objectif."
+          },
+          {
+            "anchor": "Si l’accès exige un titre valable",
+            "active": [
+              1
+            ],
+            "reason": "L’exemple applique la même règle d’accès aux situations comparables."
+          },
+          {
+            "anchor": "expliquer plus lentement à une personne qui comprend mal le français",
+            "active": [
+              2
+            ],
+            "reason": "L’explication adaptée et respectueuse est ici explicitement donnée."
+          },
+          {
+            "anchor": "Si l’explication repose seulement sur une impression, revenez aux faits",
+            "active": [
+              0
+            ],
+            "reason": "La dernière phrase réactive le critère objectif."
+          }
+        ]
+      },
+      {
+        "scene_index": 3,
+        "title": "Fraternité et dignité dans la relation",
+        "events": [
+          {
+            "anchor": "Dans votre mission, cela signifie écouter une demande",
+            "active": [
+              0
+            ],
+            "reason": "La voix commence par l’écoute de la demande."
+          },
+          {
+            "anchor": "et orienter vers l’interlocuteur compétent",
+            "active": [
+              2
+            ],
+            "reason": "La clause évoque l’orientation vers une solution."
+          },
+          {
+            "anchor": "Vous pouvez rester ferme sur une règle tout en choisissant des mots respectueux",
+            "active": [
+              1
+            ],
+            "reason": "Le passage développe la dignité et les paroles respectueuses."
+          },
+          {
+            "anchor": "Proposez votre aide sans l’imposer",
+            "active": [
+              0,
+              2
+            ],
+            "reason": "L’aide proposée associe écoute du besoin et recherche de solution."
+          },
+          {
+            "anchor": "Une posture professionnelle n’exige ni froideur systématique ni familiarité",
+            "active": [
+              1
+            ],
+            "reason": "La conclusion insiste sur le respect et l’autonomie."
+          }
+        ]
+      },
+      {
+        "scene_index": 4,
+        "title": "Laïcité : connaître le contexte",
+        "events": [
+          {
+            "anchor": "La laïcité garantit la liberté de conscience",
+            "active": [
+              0
+            ],
+            "reason": "La liberté de conscience est nommée en premier."
+          },
+          {
+            "anchor": "la neutralité de l’État",
+            "active": [
+              1
+            ],
+            "reason": "La seconde notion apparaît dans la même phrase."
+          },
+          {
+            "anchor": "Elle ne donne pas à un agent privé un pouvoir général",
+            "active": [],
+            "reason": "La mise au point ne doit pas laisser une notion isolée surlignée."
+          },
+          {
+            "anchor": "Les règles varient selon le cadre",
+            "active": [
+              2
+            ],
+            "reason": "Le reste de l’explication développe le contexte légal précis du lieu."
+          }
+        ]
+      },
+      {
+        "scene_index": 5,
+        "title": "Identifier une discrimination",
+        "events": [
+          {
+            "anchor": "Une discrimination peut résulter d’une différence de traitement",
+            "active": [
+              0,
+              1
+            ],
+            "reason": "La définition associe différence de traitement et critère interdit."
+          },
+          {
+            "anchor": "Dans l’accueil et l’accès à un service",
+            "active": [
+              1
+            ],
+            "reason": "Les exemples portent sur les critères protégés."
+          },
+          {
+            "anchor": "Si un responsable vous demande de filtrer un public sur la base d’un stéréotype",
+            "active": [
+              2
+            ],
+            "reason": "La décision et l’instruction doivent être vérifiées."
+          },
+          {
+            "anchor": "Une trace factuelle des instructions et des faits",
+            "active": [],
+            "reason": "La fin traite de la traçabilité du signalement."
+          }
+        ]
+      },
+      {
+        "scene_index": 6,
+        "title": "Handicap : demander avant d’aider",
+        "events": [
+          {
+            "anchor": "Adressez-vous directement à elle",
+            "active": [
+              0
+            ],
+            "reason": "L’agent s’adresse d’abord à la personne concernée."
+          },
+          {
+            "anchor": "et demandez comment vous pouvez faciliter le passage",
+            "active": [
+              1
+            ],
+            "reason": "La clause demande le besoin de la personne."
+          },
+          {
+            "anchor": "Une consigne doit rester intelligible",
+            "active": [
+              2
+            ],
+            "reason": "L’explication passe aux adaptations de communication et de parcours."
+          },
+          {
+            "anchor": "Préservez la confidentialité de ce qu’elle vous explique",
+            "active": [],
+            "reason": "La fin porte sur la confidentialité et l’absence de diagnostic inutile."
+          }
+        ]
+      },
+      {
+        "scene_index": 7,
+        "title": "Cas : une instruction de filtrage injustifiée",
+        "events": [
+          {
+            "anchor": "un collègue vous conseille de contrôler systématiquement plus longtemps les personnes ayant un certain accent",
+            "active": [
+              0
+            ],
+            "reason": "Le cas décrit précisément une consigne liée à l’accent."
+          },
+          {
+            "anchor": "Vous appliquez les critères d’accès prévus à tous les visiteurs concernés",
+            "active": [
+              1
+            ],
+            "reason": "La réponse rétablit les critères licites et cohérents."
+          },
+          {
+            "anchor": "et vous demandez au responsable de clarifier l’instruction problématique",
+            "active": [
+              2
+            ],
+            "reason": "La clause désigne le relais au responsable."
+          },
+          {
+            "anchor": "Mettez la vidéo en pause et formulez une réponse professionnelle au collègue",
+            "active": [],
+            "reason": "Le passage devient une consigne d’exercice."
+          }
+        ]
+      },
+      {
+        "scene_index": 8,
+        "title": "Justifier et rendre compte",
+        "events": [
+          {
+            "anchor": "constatez les faits",
+            "active": [
+              0
+            ],
+            "reason": "La méthode commence par les faits."
+          },
+          {
+            "anchor": "identifiez la règle applicable",
+            "active": [
+              1
+            ],
+            "reason": "La deuxième clause nomme la règle applicable."
+          },
+          {
+            "anchor": "choisissez une réponse adaptée et préparez le relais",
+            "active": [
+              2
+            ],
+            "reason": "La troisième clause associe réponse et relais."
+          },
+          {
+            "anchor": "Évitez les étiquettes comme personne bizarre ou public à problème",
+            "active": [],
+            "reason": "La voix précise ensuite la qualité du compte rendu."
+          },
+          {
+            "anchor": "Lorsque vous doutez de la légalité d’une instruction",
+            "active": [
+              1,
+              2
+            ],
+            "reason": "Le doute sur la règle conduit au relais compétent et à l’exercice final."
+          }
+        ]
+      }
+    ],
+    "03": [
+      {
+        "scene_index": 0,
+        "title": "Une mission privée dans un cadre précis",
+        "events": [
+          {
+            "anchor": "Votre mission est définie",
+            "active": [
+              0
+            ],
+            "reason": "Le cadre de mission est explicitement nommé."
+          },
+          {
+            "anchor": "vos pouvoirs sont limités",
+            "active": [
+              1
+            ],
+            "reason": "La clause présente les limites des pouvoirs."
+          },
+          {
+            "anchor": "et vos actes peuvent engager votre responsabilité",
+            "active": [
+              2
+            ],
+            "reason": "La responsabilité personnelle est nommée ensuite."
+          },
+          {
+            "anchor": "Le port d’une tenue ou d’une carte professionnelle ne vous transforme pas en policier",
+            "active": [
+              1
+            ],
+            "reason": "La voix revient aux pouvoirs limités."
+          },
+          {
+            "anchor": "Nous allons examiner les conditions d’exercice",
+            "active": [],
+            "reason": "La fin annonce le programme de la synthèse."
+          }
+        ]
+      },
+      {
+        "scene_index": 1,
+        "title": "Vérifier les conditions d’exercice",
+        "events": [
+          {
+            "anchor": "Avant d’exercer, assurez-vous que votre situation professionnelle",
+            "active": [
+              0
+            ],
+            "reason": "La voix développe les titres et la situation professionnelle."
+          },
+          {
+            "anchor": "Sur le poste, vérifiez le périmètre de la mission",
+            "active": [
+              1,
+              2
+            ],
+            "reason": "La phrase réunit périmètre de mission et consignes particulières."
+          },
+          {
+            "anchor": "Si une tâche nouvelle vous est demandée",
+            "active": [
+              1
+            ],
+            "reason": "La voix revient au périmètre autorisé de l’activité."
+          },
+          {
+            "anchor": "Lorsqu’une instruction est ambiguë, demandez une clarification",
+            "active": [
+              2
+            ],
+            "reason": "La dernière phrase porte sur la compréhension des consignes."
+          }
+        ]
+      },
+      {
+        "scene_index": 2,
+        "title": "Consigne et règle de droit",
+        "events": [
+          {
+            "anchor": "Une consigne sert à organiser la mission",
+            "active": [
+              1,
+              2
+            ],
+            "reason": "Le début associe la mission et la consigne qui l’organise."
+          },
+          {
+            "anchor": "mais elle reste soumise au droit",
+            "active": [
+              0
+            ],
+            "reason": "Le droit applicable est explicitement supérieur à la consigne."
+          },
+          {
+            "anchor": "Elle précise par exemple un circuit de ronde",
+            "active": [
+              2
+            ],
+            "reason": "Les exemples développent la consigne opérationnelle."
+          },
+          {
+            "anchor": "Elle ne peut pas autoriser une violence injustifiée",
+            "active": [
+              0,
+              2
+            ],
+            "reason": "La suite examine ensemble les limites légales et la vérification des instructions."
+          }
+        ]
+      },
+      {
+        "scene_index": 3,
+        "title": "Identifier sans contrôler comme la police",
+        "events": [
+          {
+            "anchor": "Dans certains accès, la procédure peut prévoir de présenter un justificatif",
+            "active": [
+              0
+            ],
+            "reason": "Le début présente la vérification d’accès."
+          },
+          {
+            "anchor": "Le refus d’une formalité d’accès se traite selon la procédure",
+            "active": [
+              1
+            ],
+            "reason": "La voix développe la procédure et l’absence de contrainte arbitraire."
+          },
+          {
+            "anchor": "Si une situation dépasse votre mission",
+            "active": [
+              2
+            ],
+            "reason": "L’agent doit demander le relais du responsable ou des autorités."
+          },
+          {
+            "anchor": "Précisez toujours ce que vous avez réellement vérifié",
+            "active": [
+              0
+            ],
+            "reason": "La dernière phrase revient aux vérifications effectivement réalisées."
+          }
+        ]
+      },
+      {
+        "scene_index": 4,
+        "title": "Intervention : nécessité et proportion",
+        "events": [
+          {
+            "anchor": "Il faut notamment apprécier la réalité et l’actualité de l’atteinte injustifiée",
+            "active": [
+              0
+            ],
+            "reason": "La première condition porte sur l’atteinte actuelle et injustifiée."
+          },
+          {
+            "anchor": "la nécessité de la réponse",
+            "active": [
+              1
+            ],
+            "reason": "La deuxième condition porte sur la nécessité."
+          },
+          {
+            "anchor": "et sa proportion",
+            "active": [
+              2
+            ],
+            "reason": "La troisième condition porte sur la proportion."
+          },
+          {
+            "anchor": "Une réaction de vengeance après les faits n’est pas une défense",
+            "active": [
+              0
+            ],
+            "reason": "L’exemple réactive la condition d’actualité."
+          },
+          {
+            "anchor": "La protection des biens obéit également à des règles particulières",
+            "active": [],
+            "reason": "La suite distingue les régimes et renvoie aux exercices encadrés."
+          }
+        ]
+      },
+      {
+        "scene_index": 5,
+        "title": "Flagrance : un cadre exceptionnel",
+        "events": [
+          {
+            "anchor": "dans certaines situations de crime flagrant ou de délit flagrant puni d’emprisonnement",
+            "active": [
+              0
+            ],
+            "reason": "La voix énonce les conditions de la flagrance."
+          },
+          {
+            "anchor": "et de le conduire devant l’officier de police judiciaire le plus proche",
+            "active": [
+              1
+            ],
+            "reason": "La clause précise la remise à l’OPJ."
+          },
+          {
+            "anchor": "Une simple suspicion ne suffit pas",
+            "active": [
+              0
+            ],
+            "reason": "La voix revient à la nécessité de faits répondant aux conditions."
+          },
+          {
+            "anchor": "Sollicitez les forces de l’ordre et respectez la dignité ainsi que la sécurité des personnes",
+            "active": [
+              1,
+              2
+            ],
+            "reason": "Le relais aux autorités et la protection de la personne sont demandés ensemble."
+          },
+          {
+            "anchor": "La procédure exacte se travaille lors de la formation encadrée",
+            "active": [],
+            "reason": "La dernière phrase renvoie à la formation encadrée."
+          }
+        ]
+      },
+      {
+        "scene_index": 6,
+        "title": "Déontologie et confidentialité",
+        "events": [
+          {
+            "anchor": "La déontologie se voit dans la tenue, les paroles, la maîtrise de soi",
+            "active": [
+              0
+            ],
+            "reason": "La voix décrit le comportement professionnel digne."
+          },
+          {
+            "anchor": "Elle implique aussi de protéger les informations obtenues pendant la mission",
+            "active": [
+              1
+            ],
+            "reason": "L’explication passe aux données obtenues et à leur protection."
+          },
+          {
+            "anchor": "Utilisez les outils autorisés et limitez la transmission aux destinataires qui en ont besoin",
+            "active": [
+              2
+            ],
+            "reason": "La phrase définit les destinataires légitimes."
+          },
+          {
+            "anchor": "Dans un compte rendu, séparez les faits constatés des informations rapportées",
+            "active": [
+              1
+            ],
+            "reason": "La voix revient au contenu nécessaire et fiable des données."
+          },
+          {
+            "anchor": "Ne modifiez pas une chronologie pour protéger une mauvaise décision",
+            "active": [
+              0
+            ],
+            "reason": "La fin réactive l’intégrité du comportement professionnel."
+          }
+        ]
+      },
+      {
+        "scene_index": 7,
+        "title": "Cas : une suspicion à l’accueil",
+        "events": [
+          {
+            "anchor": "Un salarié vous affirme qu’un visiteur a probablement pris un objet",
+            "active": [
+              0
+            ],
+            "reason": "Le début expose un signalement incertain d’objet manquant."
+          },
+          {
+            "anchor": "Vous cherchez les éléments objectifs accessibles dans votre mission",
+            "active": [
+              1
+            ],
+            "reason": "La voix passe à la vérification des faits disponibles."
+          },
+          {
+            "anchor": "et informez le responsable selon la procédure",
+            "active": [
+              2
+            ],
+            "reason": "Le relais est explicitement énoncé sans accusation."
+          },
+          {
+            "anchor": "Mettez la vidéo en pause et formulez votre premier message radio",
+            "active": [],
+            "reason": "La dernière partie demande de préparer une réponse personnelle."
+          }
+        ]
+      },
+      {
+        "scene_index": 8,
+        "title": "La trace qui permet de comprendre",
+        "events": [
+          {
+            "anchor": "Indiquez les horaires utiles, le lieu précis",
+            "active": [
+              0
+            ],
+            "reason": "Les premiers éléments du compte rendu sont les horaires et lieux."
+          },
+          {
+            "anchor": "les faits constatés",
+            "active": [
+              1
+            ],
+            "reason": "La clause suivante nomme les faits."
+          },
+          {
+            "anchor": "les actions réalisées et les personnes ou services alertés",
+            "active": [
+              2
+            ],
+            "reason": "La suite énonce les actions et les relais."
+          },
+          {
+            "anchor": "Évitez les jugements personnels et les formulations vagues",
+            "active": [
+              1
+            ],
+            "reason": "La voix revient à la fiabilité des faits et des paroles rapportées."
+          },
+          {
+            "anchor": "Pour poursuivre cette synthèse, choisissez une situation de votre poste",
+            "active": [],
+            "reason": "La fin invite à un exercice de transfert."
+          }
+        ]
+      }
+    ],
+    "04": [
+      {
+        "scene_index": 0,
+        "title": "Faire comprendre la règle",
+        "events": [
+          {
+            "anchor": "Une règle d’accès peut être justifiée et pourtant mal comprise",
+            "active": [
+              1
+            ],
+            "reason": "La voix introduit la nécessité d’expliquer la règle."
+          },
+          {
+            "anchor": "Nous allons revoir l’observation de la tension",
+            "active": [
+              0
+            ],
+            "reason": "Le programme annonce l’observation de la tension."
+          },
+          {
+            "anchor": "l’écoute, l’explication d’un refus",
+            "active": [
+              1
+            ],
+            "reason": "La clause revient à l’explication de la règle."
+          },
+          {
+            "anchor": "et la demande de renfort",
+            "active": [
+              2
+            ],
+            "reason": "Le renfort constitue une issue et un relais."
+          },
+          {
+            "anchor": "Les techniques d’intervention physique nécessitent un entraînement encadré",
+            "active": [],
+            "reason": "La fin précise la portée pédagogique, sans démonstration physique."
+          }
+        ]
+      },
+      {
+        "scene_index": 1,
+        "title": "Repérer ce qui fait monter la tension",
+        "events": [
+          {
+            "anchor": "La tension peut venir d’une attente",
+            "active": [
+              0
+            ],
+            "reason": "Les causes contextuelles de tension sont présentées."
+          },
+          {
+            "anchor": "Observez les signes concrets",
+            "active": [
+              1
+            ],
+            "reason": "La voix passe aux signes observables."
+          },
+          {
+            "anchor": "Examinez aussi votre propre posture",
+            "active": [
+              2
+            ],
+            "reason": "La fin développe la posture, la distance et le ton de l’agent."
+          }
+        ]
+      },
+      {
+        "scene_index": 2,
+        "title": "Écouter puis reformuler",
+        "events": [
+          {
+            "anchor": "Commencez par écouter la demande",
+            "active": [
+              0
+            ],
+            "reason": "L’écoute ouvre l’échange."
+          },
+          {
+            "anchor": "Une reformulation courte montre que vous avez compris",
+            "active": [
+              1
+            ],
+            "reason": "La voix développe la reformulation et donne un exemple."
+          },
+          {
+            "anchor": "Si la personne parle difficilement français",
+            "active": [
+              2
+            ],
+            "reason": "Le passage demande des mots simples et une vérification de compréhension."
+          },
+          {
+            "anchor": "La reformulation sert aussi à corriger un malentendu",
+            "active": [
+              1
+            ],
+            "reason": "La fin réactive la reformulation pour clarifier le besoin."
+          }
+        ]
+      },
+      {
+        "scene_index": 3,
+        "title": "Annoncer une limite et une solution",
+        "events": [
+          {
+            "anchor": "ce passage est réservé aux personnes inscrites",
+            "active": [
+              0
+            ],
+            "reason": "Première phrase de l’exemple : la règle."
+          },
+          {
+            "anchor": "votre nom n’apparaît pas sur la liste disponible",
+            "active": [
+              1
+            ],
+            "reason": "Deuxième phrase : le motif concret du refus."
+          },
+          {
+            "anchor": "je peux joindre l’accueil pour vérifier votre invitation",
+            "active": [
+              2
+            ],
+            "reason": "Troisième phrase : une suite possible."
+          },
+          {
+            "anchor": "Évitez les phrases personnelles comme je vous interdis d’entrer",
+            "active": [
+              0
+            ],
+            "reason": "La voix revient à la règle objective, distincte d’une décision personnelle."
+          },
+          {
+            "anchor": "Si aucune alternative immédiate n’est possible",
+            "active": [
+              2
+            ],
+            "reason": "La fin développe le circuit de réclamation et le relais."
+          }
+        ]
+      },
+      {
+        "scene_index": 4,
+        "title": "Filtrage : distinguer les opérations",
+        "events": [
+          {
+            "anchor": "Vérifier un titre d’accès",
+            "active": [
+              0
+            ],
+            "reason": "La première opération est le contrôle du titre d’accès."
+          },
+          {
+            "anchor": "regarder visuellement l’intérieur d’un bagage présenté",
+            "active": [
+              1
+            ],
+            "reason": "La deuxième opération est l’inspection visuelle."
+          },
+          {
+            "anchor": "et procéder à sa fouille",
+            "active": [
+              2
+            ],
+            "reason": "La troisième opération est la fouille, distincte des précédentes."
+          },
+          {
+            "anchor": "Dans le cadre prévu pour les agents concernés, l’inspection visuelle",
+            "active": [
+              1
+            ],
+            "reason": "La voix revient au cadre de l’inspection visuelle."
+          },
+          {
+            "anchor": "leur fouille exige le consentement du propriétaire",
+            "active": [
+              2
+            ],
+            "reason": "La suite développe le consentement et l’absence de fouille forcée."
+          }
+        ]
+      },
+      {
+        "scene_index": 5,
+        "title": "Palpation : des conditions spécifiques",
+        "events": [
+          {
+            "anchor": "La palpation de sécurité obéit à des conditions spécifiques",
+            "active": [
+              0
+            ],
+            "reason": "Le cadre légal est présenté avant toute opération."
+          },
+          {
+            "anchor": "Le consentement exprès de la personne est nécessaire",
+            "active": [
+              1
+            ],
+            "reason": "La voix énonce le consentement exprès."
+          },
+          {
+            "anchor": "et la palpation est réalisée par une personne du même sexe",
+            "active": [
+              2
+            ],
+            "reason": "La condition de même sexe suit immédiatement dans la narration."
+          },
+          {
+            "anchor": "Ne confondez pas ce cadre avec une fouille corporelle",
+            "active": [
+              0
+            ],
+            "reason": "La voix revient aux limites du cadre applicable."
+          },
+          {
+            "anchor": "Les gestes, la posture et la coordination doivent être appris en situation encadrée",
+            "active": [],
+            "reason": "La fin concerne l’apprentissage pratique, absent de cette vidéo."
+          }
+        ]
+      },
+      {
+        "scene_index": 6,
+        "title": "Demander du renfort avant la rupture",
+        "events": [
+          {
+            "anchor": "Un renfort demandé suffisamment tôt",
+            "active": [
+              2
+            ],
+            "reason": "La scène commence par le relais et le message de renfort."
+          },
+          {
+            "anchor": "L’accumulation d’agents autour d’une personne peut accroître la tension",
+            "active": [
+              0
+            ],
+            "reason": "La voix invite à réévaluer la tension et le risque réel."
+          },
+          {
+            "anchor": "Si une menace grave apparaît",
+            "active": [
+              2
+            ],
+            "reason": "Le passage demande l’appel aux services compétents."
+          },
+          {
+            "anchor": "Le choix de se retirer et de faire intervenir un relais",
+            "active": [
+              1,
+              2
+            ],
+            "reason": "La dernière phrase associe explicitement retrait et relais."
+          }
+        ]
+      },
+      {
+        "scene_index": 7,
+        "title": "Cas : refus d’ouverture d’un sac",
+        "events": [
+          {
+            "anchor": "une personne refuse la vérification demandée pour son bagage et élève la voix",
+            "active": [
+              0
+            ],
+            "reason": "Le cas commence par le refus effectivement observé."
+          },
+          {
+            "anchor": "expliquez précisément la règle applicable",
+            "active": [
+              1
+            ],
+            "reason": "L’agent explique la règle et la suite prévue."
+          },
+          {
+            "anchor": "Vous ne touchez pas son sac par surprise",
+            "active": [
+              2
+            ],
+            "reason": "La voix exclut la fouille forcée puis développe le relais."
+          },
+          {
+            "anchor": "Mettez la vidéo en pause et préparez trois phrases",
+            "active": [],
+            "reason": "La conclusion devient une consigne d’exercice."
+          }
+        ]
+      },
+      {
+        "scene_index": 8,
+        "title": "Après le conflit : remettre le service en ordre",
+        "events": [
+          {
+            "anchor": "Quand la situation est revenue au calme, vérifiez que l’accès et les personnes sont en sécurité",
+            "active": [
+              0
+            ],
+            "reason": "La première action est la vérification de la situation."
+          },
+          {
+            "anchor": "Transmettez les informations utiles au responsable",
+            "active": [
+              1
+            ],
+            "reason": "La voix présente la transmission et le compte rendu."
+          },
+          {
+            "anchor": "Analysez ensuite ce qui aurait pu éviter la tension",
+            "active": [
+              2
+            ],
+            "reason": "Le passage développe les améliorations de prévention."
+          },
+          {
+            "anchor": "Pour poursuivre, entraînez-vous avec un collègue",
+            "active": [],
+            "reason": "La dernière partie renvoie à une mise en situation encadrée."
+          }
+        ]
+      }
+    ],
+    "05": [
+      {
+        "scene_index": 0,
+        "title": "Une vigilance fondée sur les faits",
+        "events": [
+          {
+            "anchor": "Elle porte sur la vigilance, la protection du public et l’alerte",
+            "active": [
+              0,
+              1,
+              2
+            ],
+            "reason": "La phrase présente les trois priorités ensemble."
+          },
+          {
+            "anchor": "Elle ne prépare pas une confrontation armée",
+            "active": [],
+            "reason": "La mise au point sur la portée de la vidéo reste neutre."
+          },
+          {
+            "anchor": "Votre rôle consiste à repérer des faits préoccupants",
+            "active": [
+              0,
+              1,
+              2
+            ],
+            "reason": "La phrase développe à nouveau prévention, protection et transmission comme un ensemble."
+          },
+          {
+            "anchor": "La vigilance ne consiste pas à suspecter un public",
+            "active": [
+              0
+            ],
+            "reason": "La fin précise la vigilance factuelle et l’absence de profilage."
+          }
+        ]
+      },
+      {
+        "scene_index": 1,
+        "title": "Connaître le site avant l’événement",
+        "events": [
+          {
+            "anchor": "La préparation commence par les consignes de sûreté actualisées du site",
+            "active": [
+              0
+            ],
+            "reason": "La voix traite des consignes et des contacts utiles."
+          },
+          {
+            "anchor": "Repérez les accès, les cheminements et les espaces prévus",
+            "active": [
+              1
+            ],
+            "reason": "Le passage développe les cheminements et les moyens utilisables."
+          },
+          {
+            "anchor": "Les exercices encadrés permettent de vérifier la compréhension des rôles",
+            "active": [
+              2
+            ],
+            "reason": "La fin traite des rôles de l’équipe et de l’adaptation au public."
+          }
+        ]
+      },
+      {
+        "scene_index": 2,
+        "title": "Décrire une anomalie sans conclure trop vite",
+        "events": [
+          {
+            "anchor": "Une anomalie peut concerner un accès inhabituellement ouvert",
+            "active": [
+              0
+            ],
+            "reason": "Le début décrit des faits observables."
+          },
+          {
+            "anchor": "Ne cherchez pas à deviner une intention à partir d’un seul détail",
+            "active": [
+              2
+            ],
+            "reason": "La voix souligne l’incertitude sur l’intention."
+          },
+          {
+            "anchor": "Recoupez les informations disponibles dans le cadre de votre mission",
+            "active": [
+              1
+            ],
+            "reason": "Les informations disponibles apportent le contexte autorisé."
+          },
+          {
+            "anchor": "Dans votre message, distinguez ce que vous avez vu de ce qu’un tiers vous a rapporté",
+            "active": [
+              0,
+              2
+            ],
+            "reason": "La conclusion distingue faits constatés et informations incertaines."
+          }
+        ]
+      },
+      {
+        "scene_index": 3,
+        "title": "Objet suspect : ne pas manipuler",
+        "events": [
+          {
+            "anchor": "Si un objet présente un caractère suspect au regard du contexte",
+            "active": [
+              0
+            ],
+            "reason": "La première clause qualifie une présence préoccupante dans son contexte."
+          },
+          {
+            "anchor": "ne l’ouvrez pas, ne le déplacez pas",
+            "active": [
+              1
+            ],
+            "reason": "La voix énonce immédiatement l’interdiction de manipulation."
+          },
+          {
+            "anchor": "Prévenez les personnes de ne pas s’en approcher",
+            "active": [
+              2
+            ],
+            "reason": "La suite porte sur la mise à distance, l’alerte et l’accès des spécialistes."
+          }
+        ]
+      },
+      {
+        "scene_index": 4,
+        "title": "Danger grave : choisir une protection possible",
+        "events": [
+          {
+            "anchor": "s’échapper lorsque cela est possible sans se mettre davantage en danger",
+            "active": [
+              0,
+              1
+            ],
+            "reason": "La fuite est expressément conditionnée à l’absence de surdanger."
+          },
+          {
+            "anchor": "ou de se cacher lorsque la fuite n’est pas possible",
+            "active": [
+              2
+            ],
+            "reason": "La seconde possibilité n’est énoncée que lorsque la fuite est impossible."
+          },
+          {
+            "anchor": "Le choix dépend de ce qui est réellement observé",
+            "active": [
+              0
+            ],
+            "reason": "La voix revient à l’évaluation du chemin et de la situation."
+          },
+          {
+            "anchor": "Donnez des indications courtes et compréhensibles",
+            "active": [],
+            "reason": "La fin traite de la communication et de l’absence de recherche de l’auteur."
+          }
+        ]
+      },
+      {
+        "scene_index": 5,
+        "title": "Alerter depuis une position sûre",
+        "events": [
+          {
+            "anchor": "Donnez la localisation exacte",
+            "active": [
+              0
+            ],
+            "reason": "L’alerte commence par le lieu."
+          },
+          {
+            "anchor": "les faits constatés, les dangers visibles",
+            "active": [
+              1
+            ],
+            "reason": "La voix énonce les faits et les personnes exposées."
+          },
+          {
+            "anchor": "Indiquez également les mesures de protection déjà engagées",
+            "active": [
+              2
+            ],
+            "reason": "La phrase précise les protections déjà mises en place."
+          },
+          {
+            "anchor": "Laissez l’opérateur vous guider",
+            "active": [],
+            "reason": "Le passage suivant traite de l’échange et des canaux de communication."
+          }
+        ]
+      },
+      {
+        "scene_index": 6,
+        "title": "Accueillir les forces de l’ordre",
+        "events": [
+          {
+            "anchor": "Suivez leurs consignes, gardez les mains visibles et évitez les gestes brusques",
+            "active": [
+              0,
+              1,
+              2
+            ],
+            "reason": "La phrase énonce trois consignes simultanées, sans trois étapes successives."
+          },
+          {
+            "anchor": "N’avancez pas vers elles avec un objet à la main",
+            "active": [
+              1,
+              2
+            ],
+            "reason": "L’exemple associe les mains et l’absence de geste brusque."
+          },
+          {
+            "anchor": "Votre tenue professionnelle ne leur permet pas de connaître immédiatement votre rôle",
+            "active": [],
+            "reason": "La mise au point sur l’identification ne justifie pas un repère isolé."
+          },
+          {
+            "anchor": "Quand elles vous le demandent, transmettez les informations utiles",
+            "active": [
+              0
+            ],
+            "reason": "La fin revient aux informations et aux actions demandées par les forces de l’ordre."
+          }
+        ]
+      },
+      {
+        "scene_index": 7,
+        "title": "Cas : une information alarmante au poste",
+        "events": [
+          {
+            "anchor": "Un visiteur rejoint le poste d’accueil et signale un danger grave",
+            "active": [
+              0
+            ],
+            "reason": "La voix présente le témoignage initial."
+          },
+          {
+            "anchor": "Vous recueillez les faits essentiels sans prolonger un interrogatoire",
+            "active": [
+              1
+            ],
+            "reason": "L’agent évalue les informations accessibles au poste."
+          },
+          {
+            "anchor": "prévenez immédiatement le responsable et faites déclencher l’alerte adaptée",
+            "active": [
+              2
+            ],
+            "reason": "La clause énonce le relais et l’alerte."
+          },
+          {
+            "anchor": "Vous ne vous rendez pas dans la zone pour vérifier personnellement le récit",
+            "active": [
+              1
+            ],
+            "reason": "La voix réactive l’évaluation sans s’approcher."
+          },
+          {
+            "anchor": "Vous protégez les personnes présentes",
+            "active": [
+              2
+            ],
+            "reason": "La protection et le relais aux forces de l’ordre sont explicitement repris."
+          },
+          {
+            "anchor": "Mettez la vidéo en pause et préparez votre message",
+            "active": [],
+            "reason": "Le dernier passage est une consigne d’exercice."
+          }
+        ]
+      },
+      {
+        "scene_index": 8,
+        "title": "Après l’alerte : préserver et transmettre",
+        "events": [
+          {
+            "anchor": "Suivez les décisions des autorités et des responsables",
+            "active": [
+              0
+            ],
+            "reason": "La reprise dépend des décisions des autorités."
+          },
+          {
+            "anchor": "Préservez les éléments utiles sans les manipuler inutilement",
+            "active": [
+              1
+            ],
+            "reason": "La voix développe la préservation et la confidentialité des informations."
+          },
+          {
+            "anchor": "L’équipe peut ensuite analyser les difficultés de communication",
+            "active": [
+              2
+            ],
+            "reason": "Le passage introduit le retour d’expérience et l’accompagnement."
+          },
+          {
+            "anchor": "Pour poursuivre votre travail, expliquez les trois priorités de cette synthèse",
+            "active": [],
+            "reason": "La conclusion reprend les priorités générales, distinctes des trois cases de cette scène."
+          }
+        ]
+      }
+    ]
+  }
+}

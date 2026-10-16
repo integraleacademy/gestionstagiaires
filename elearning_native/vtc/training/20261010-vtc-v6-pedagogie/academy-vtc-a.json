@@ -1,0 +1,3418 @@
+{
+  "version": "20261010-vtc-v6-pedagogie",
+  "course_id": "academy-vtc-a",
+  "title": "VTC A · Exercer dans le cadre du T3P",
+  "activities": [
+    {
+      "id": "vtc-a-04-dossier",
+      "title": "Décider et appliquer · Entretenir son droit d’exercer",
+      "vtc": {
+        "kind": "journey",
+        "ref": "A.04",
+        "module": "A",
+        "introduction": "Cette séance combine l’analyse des données, les décisions, la lecture des corrections et la reprise des erreurs. Les exemples chiffrés et les documents sont fictifs. Prenez le temps d’expliquer mentalement chaque décision avant de la vérifier."
+      },
+      "practice": {
+        "revision": "20261010-vtc-v6-pedagogie",
+        "mode": "journey",
+        "purpose": "Entraînement libre · Décider et appliquer · Entretenir son droit d’exercer",
+        "adaptive": false,
+        "exercises": [
+          {
+            "id": "e008",
+            "kind": "single",
+            "competency": "A.04",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "9306edf02b",
+                "text": "La date de réservation prolonge la pièce"
+              },
+              {
+                "id": "139b65dd4a",
+                "text": "Non, elle arrive à échéance avant la mission"
+              },
+              {
+                "id": "1ef9110d0b",
+                "text": "Oui, sur ce seul critère de date"
+              }
+            ],
+            "answer": "139b65dd4a",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "139b65dd4a": "La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier.",
+              "9306edf02b": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier.",
+              "1ef9110d0b": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 1 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Atlas (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Une autre entreprise fictive"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "10 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e009",
+            "kind": "single",
+            "competency": "A.04",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "16b32fa8b8",
+                "text": "Oui, les titulaires correspondent"
+              },
+              {
+                "id": "eac3fd6434",
+                "text": "Non, les titulaires diffèrent"
+              },
+              {
+                "id": "8f9b758e61",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              }
+            ],
+            "answer": "16b32fa8b8",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "8f9b758e61": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "eac3fd6434": "Vous avez choisi « Non, les titulaires diffèrent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "16b32fa8b8": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 2 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Azur (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Azur"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "11 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e010",
+            "kind": "single",
+            "competency": "A.04",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "139b65dd4a",
+                "text": "Non, elle arrive à échéance avant la mission"
+              },
+              {
+                "id": "1ef9110d0b",
+                "text": "Oui, sur ce seul critère de date"
+              },
+              {
+                "id": "9306edf02b",
+                "text": "La date de réservation prolonge la pièce"
+              }
+            ],
+            "answer": "139b65dd4a",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "139b65dd4a": "La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier.",
+              "9306edf02b": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier.",
+              "1ef9110d0b": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 2 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Azur (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Azur"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "11 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e011",
+            "kind": "single",
+            "competency": "A.04",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "8f9b758e61",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              },
+              {
+                "id": "16b32fa8b8",
+                "text": "Oui, les titulaires correspondent"
+              },
+              {
+                "id": "eac3fd6434",
+                "text": "Non, les titulaires diffèrent"
+              }
+            ],
+            "answer": "16b32fa8b8",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "8f9b758e61": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "eac3fd6434": "Vous avez choisi « Non, les titulaires diffèrent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "16b32fa8b8": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 3 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Riviera (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Riviera"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "12 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e012",
+            "kind": "single",
+            "competency": "A.04",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "9306edf02b",
+                "text": "La date de réservation prolonge la pièce"
+              },
+              {
+                "id": "139b65dd4a",
+                "text": "Non, elle arrive à échéance avant la mission"
+              },
+              {
+                "id": "1ef9110d0b",
+                "text": "Oui, sur ce seul critère de date"
+              }
+            ],
+            "answer": "139b65dd4a",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "139b65dd4a": "La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier.",
+              "9306edf02b": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier.",
+              "1ef9110d0b": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 3 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Riviera (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Riviera"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "12 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e013",
+            "kind": "single",
+            "competency": "A.04",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "eac3fd6434",
+                "text": "Oui, les titulaires correspondent"
+              },
+              {
+                "id": "8f9b758e61",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              },
+              {
+                "id": "16b32fa8b8",
+                "text": "Non, la pièce désigne une autre entreprise"
+              }
+            ],
+            "answer": "16b32fa8b8",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "8f9b758e61": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "eac3fd6434": "Vous avez choisi « Oui, les titulaires correspondent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "16b32fa8b8": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 4 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Horizon (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Une autre entreprise fictive"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "13 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e014",
+            "kind": "single",
+            "competency": "A.04",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "9306edf02b",
+                "text": "La date de réservation prolonge la pièce"
+              },
+              {
+                "id": "1ef9110d0b",
+                "text": "Oui, sur ce seul critère de date"
+              },
+              {
+                "id": "139b65dd4a",
+                "text": "Non, elle arrive à échéance avant la mission"
+              }
+            ],
+            "answer": "139b65dd4a",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "139b65dd4a": "La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier.",
+              "9306edf02b": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier.",
+              "1ef9110d0b": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 4 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Horizon (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Une autre entreprise fictive"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "13 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e015",
+            "kind": "single",
+            "competency": "A.04",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "8f9b758e61",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              },
+              {
+                "id": "eac3fd6434",
+                "text": "Non, les titulaires diffèrent"
+              },
+              {
+                "id": "16b32fa8b8",
+                "text": "Oui, les titulaires correspondent"
+              }
+            ],
+            "answer": "16b32fa8b8",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "8f9b758e61": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "eac3fd6434": "Vous avez choisi « Non, les titulaires diffèrent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "16b32fa8b8": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 5 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Delta (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Delta"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "14 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e016",
+            "kind": "single",
+            "competency": "A.04",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "1ef9110d0b",
+                "text": "Oui, sur ce seul critère de date"
+              },
+              {
+                "id": "139b65dd4a",
+                "text": "Non, elle arrive à échéance avant la mission"
+              },
+              {
+                "id": "9306edf02b",
+                "text": "La date de réservation prolonge la pièce"
+              }
+            ],
+            "answer": "139b65dd4a",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "139b65dd4a": "La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier.",
+              "9306edf02b": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier.",
+              "1ef9110d0b": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 5 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Delta (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Delta"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "14 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e017",
+            "kind": "single",
+            "competency": "A.04",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "16b32fa8b8",
+                "text": "Oui, les titulaires correspondent"
+              },
+              {
+                "id": "eac3fd6434",
+                "text": "Non, les titulaires diffèrent"
+              },
+              {
+                "id": "8f9b758e61",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              }
+            ],
+            "answer": "16b32fa8b8",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "8f9b758e61": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "eac3fd6434": "Vous avez choisi « Non, les titulaires diffèrent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "16b32fa8b8": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 6 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Central (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Central"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "15 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e018",
+            "kind": "single",
+            "competency": "A.04",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "9306edf02b",
+                "text": "La date de réservation prolonge la pièce"
+              },
+              {
+                "id": "1ef9110d0b",
+                "text": "Non, elle expire avant la mission"
+              },
+              {
+                "id": "139b65dd4a",
+                "text": "Oui, sur ce seul critère de date"
+              }
+            ],
+            "answer": "139b65dd4a",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "139b65dd4a": "La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier.",
+              "9306edf02b": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier.",
+              "1ef9110d0b": "Vous avez choisi « Non, elle expire avant la mission ». La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 6 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Central (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Central"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "15 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          }
+        ]
+      }
+    },
+    {
+      "id": "vtc-a-05-dossier",
+      "title": "Décider et appliquer · Assurer le conducteur et l’activité",
+      "vtc": {
+        "kind": "journey",
+        "ref": "A.05",
+        "module": "A",
+        "introduction": "Cette séance combine l’analyse des données, les décisions, la lecture des corrections et la reprise des erreurs. Les exemples chiffrés et les documents sont fictifs. Prenez le temps d’expliquer mentalement chaque décision avant de la vérifier."
+      },
+      "practice": {
+        "revision": "20261010-vtc-v6-pedagogie",
+        "mode": "journey",
+        "purpose": "Entraînement libre · Décider et appliquer · Assurer le conducteur et l’activité",
+        "adaptive": false,
+        "exercises": [
+          {
+            "id": "e008",
+            "kind": "single",
+            "competency": "A.05",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "d76981ba46",
+                "text": "Non, elle arrive à échéance avant la mission"
+              },
+              {
+                "id": "17fccd2bc7",
+                "text": "La date de réservation prolonge la pièce"
+              },
+              {
+                "id": "eaf732496c",
+                "text": "Oui, sur ce seul critère de date"
+              }
+            ],
+            "answer": "d76981ba46",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "17fccd2bc7": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier.",
+              "eaf732496c": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier.",
+              "d76981ba46": "La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 1 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Atlas (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Une autre entreprise fictive"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "10 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e009",
+            "kind": "single",
+            "competency": "A.05",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "1f7a925b87",
+                "text": "Non, les titulaires diffèrent"
+              },
+              {
+                "id": "4e32908104",
+                "text": "Oui, les titulaires correspondent"
+              },
+              {
+                "id": "9030b4f62d",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              }
+            ],
+            "answer": "4e32908104",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "9030b4f62d": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "4e32908104": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "1f7a925b87": "Vous avez choisi « Non, les titulaires diffèrent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 2 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Azur (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Azur"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "11 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e010",
+            "kind": "single",
+            "competency": "A.05",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "eaf732496c",
+                "text": "Oui, sur ce seul critère de date"
+              },
+              {
+                "id": "17fccd2bc7",
+                "text": "La date de réservation prolonge la pièce"
+              },
+              {
+                "id": "d76981ba46",
+                "text": "Non, elle arrive à échéance avant la mission"
+              }
+            ],
+            "answer": "d76981ba46",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "17fccd2bc7": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier.",
+              "eaf732496c": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier.",
+              "d76981ba46": "La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 2 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Azur (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Azur"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "11 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e011",
+            "kind": "single",
+            "competency": "A.05",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "1f7a925b87",
+                "text": "Non, les titulaires diffèrent"
+              },
+              {
+                "id": "9030b4f62d",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              },
+              {
+                "id": "4e32908104",
+                "text": "Oui, les titulaires correspondent"
+              }
+            ],
+            "answer": "4e32908104",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "9030b4f62d": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "4e32908104": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "1f7a925b87": "Vous avez choisi « Non, les titulaires diffèrent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 3 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Riviera (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Riviera"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "12 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e012",
+            "kind": "single",
+            "competency": "A.05",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "d76981ba46",
+                "text": "Non, elle arrive à échéance avant la mission"
+              },
+              {
+                "id": "eaf732496c",
+                "text": "Oui, sur ce seul critère de date"
+              },
+              {
+                "id": "17fccd2bc7",
+                "text": "La date de réservation prolonge la pièce"
+              }
+            ],
+            "answer": "d76981ba46",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "17fccd2bc7": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier.",
+              "eaf732496c": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier.",
+              "d76981ba46": "La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 3 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Riviera (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Riviera"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "12 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e013",
+            "kind": "single",
+            "competency": "A.05",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "9030b4f62d",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              },
+              {
+                "id": "1f7a925b87",
+                "text": "Oui, les titulaires correspondent"
+              },
+              {
+                "id": "4e32908104",
+                "text": "Non, la pièce désigne une autre entreprise"
+              }
+            ],
+            "answer": "4e32908104",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "9030b4f62d": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "4e32908104": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "1f7a925b87": "Vous avez choisi « Oui, les titulaires correspondent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 4 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Horizon (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Une autre entreprise fictive"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "13 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e014",
+            "kind": "single",
+            "competency": "A.05",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "17fccd2bc7",
+                "text": "La date de réservation prolonge la pièce"
+              },
+              {
+                "id": "eaf732496c",
+                "text": "Oui, sur ce seul critère de date"
+              },
+              {
+                "id": "d76981ba46",
+                "text": "Non, elle arrive à échéance avant la mission"
+              }
+            ],
+            "answer": "d76981ba46",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "17fccd2bc7": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier.",
+              "eaf732496c": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier.",
+              "d76981ba46": "La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 4 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Horizon (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Une autre entreprise fictive"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "13 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e015",
+            "kind": "single",
+            "competency": "A.05",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "1f7a925b87",
+                "text": "Non, les titulaires diffèrent"
+              },
+              {
+                "id": "9030b4f62d",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              },
+              {
+                "id": "4e32908104",
+                "text": "Oui, les titulaires correspondent"
+              }
+            ],
+            "answer": "4e32908104",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "9030b4f62d": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "4e32908104": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "1f7a925b87": "Vous avez choisi « Non, les titulaires diffèrent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 5 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Delta (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Delta"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "14 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e016",
+            "kind": "single",
+            "competency": "A.05",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "d76981ba46",
+                "text": "Non, elle arrive à échéance avant la mission"
+              },
+              {
+                "id": "eaf732496c",
+                "text": "Oui, sur ce seul critère de date"
+              },
+              {
+                "id": "17fccd2bc7",
+                "text": "La date de réservation prolonge la pièce"
+              }
+            ],
+            "answer": "d76981ba46",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "17fccd2bc7": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier.",
+              "eaf732496c": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier.",
+              "d76981ba46": "La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 5 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Delta (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Delta"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "14 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e017",
+            "kind": "single",
+            "competency": "A.05",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "4e32908104",
+                "text": "Oui, les titulaires correspondent"
+              },
+              {
+                "id": "1f7a925b87",
+                "text": "Non, les titulaires diffèrent"
+              },
+              {
+                "id": "9030b4f62d",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              }
+            ],
+            "answer": "4e32908104",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "9030b4f62d": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "4e32908104": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "1f7a925b87": "Vous avez choisi « Non, les titulaires diffèrent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 6 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Central (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Central"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "15 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e018",
+            "kind": "single",
+            "competency": "A.05",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "17fccd2bc7",
+                "text": "La date de réservation prolonge la pièce"
+              },
+              {
+                "id": "d76981ba46",
+                "text": "Oui, sur ce seul critère de date"
+              },
+              {
+                "id": "eaf732496c",
+                "text": "Non, elle expire avant la mission"
+              }
+            ],
+            "answer": "d76981ba46",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "17fccd2bc7": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier.",
+              "eaf732496c": "Vous avez choisi « Non, elle expire avant la mission ». La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier.",
+              "d76981ba46": "La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 6 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Central (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Central"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "15 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          }
+        ]
+      }
+    },
+    {
+      "id": "vtc-a-06-dossier",
+      "title": "Décider et appliquer · Accueillir sans discriminer",
+      "vtc": {
+        "kind": "journey",
+        "ref": "A.06",
+        "module": "A",
+        "introduction": "Cette séance combine l’analyse des données, les décisions, la lecture des corrections et la reprise des erreurs. Les exemples chiffrés et les documents sont fictifs. Prenez le temps d’expliquer mentalement chaque décision avant de la vérifier."
+      },
+      "practice": {
+        "revision": "20261010-vtc-v6-pedagogie",
+        "mode": "journey",
+        "purpose": "Entraînement libre · Décider et appliquer · Accueillir sans discriminer",
+        "adaptive": false,
+        "exercises": [
+          {
+            "id": "e006",
+            "kind": "order",
+            "competency": "A.06",
+            "stage": "Construire la méthode",
+            "context": "Un hôtel souhaite que vous refusiez certains voyageurs en raison de leur nationalité. Il affirme que cette demande est une condition du partenariat.",
+            "prompt": "Pour « Accueillir sans discriminer », retrouvez l’ordre de la méthode présentée dans le cours.",
+            "options": [
+              {
+                "id": "p0",
+                "text": "Étape 1"
+              },
+              {
+                "id": "p1",
+                "text": "Étape 2"
+              },
+              {
+                "id": "p2",
+                "text": "Étape 3"
+              }
+            ],
+            "rows": [
+              {
+                "id": "r1",
+                "text": "La possibilité : Vérifier une contrainte réelle du service.",
+                "answer": "p1"
+              },
+              {
+                "id": "r2",
+                "text": "La solution : Expliquer et proposer une réponse adaptée.",
+                "answer": "p2"
+              },
+              {
+                "id": "r0",
+                "text": "Le besoin : Écouter la demande sans préjugé.",
+                "answer": "p0"
+              }
+            ],
+            "explanation": "La méthode suit ces étapes : Le besoin : Écouter la demande sans préjugé. → La possibilité : Vérifier une contrainte réelle du service. → La solution : Expliquer et proposer une réponse adaptée. Fonder une décision sur des critères légitimes.",
+            "coaching": "Reprenez le schéma « La méthode : Accueillir sans discriminer » : chaque étape prépare la suivante dans cette démarche pédagogique."
+          }
+        ]
+      }
+    },
+    {
+      "id": "vtc-a-11-dossier",
+      "title": "Décider et appliquer · Réagir à un contrôle",
+      "vtc": {
+        "kind": "journey",
+        "ref": "A.11",
+        "module": "A",
+        "introduction": "Cette séance combine l’analyse des données, les décisions, la lecture des corrections et la reprise des erreurs. Les exemples chiffrés et les documents sont fictifs. Prenez le temps d’expliquer mentalement chaque décision avant de la vérifier."
+      },
+      "practice": {
+        "revision": "20261010-vtc-v6-pedagogie",
+        "mode": "journey",
+        "purpose": "Entraînement libre · Décider et appliquer · Réagir à un contrôle",
+        "adaptive": false,
+        "exercises": [
+          {
+            "id": "e008",
+            "kind": "single",
+            "competency": "A.11",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "521604e2f9",
+                "text": "Non, elle arrive à échéance avant la mission"
+              },
+              {
+                "id": "9c1f2bcb65",
+                "text": "La date de réservation prolonge la pièce"
+              },
+              {
+                "id": "b3a3a66d2f",
+                "text": "Oui, sur ce seul critère de date"
+              }
+            ],
+            "answer": "521604e2f9",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "b3a3a66d2f": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier.",
+              "9c1f2bcb65": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier.",
+              "521604e2f9": "La mission est le 15 novembre ; la pièce arrive à échéance le 10. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 1 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Atlas (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Une autre entreprise fictive"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "10 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e009",
+            "kind": "single",
+            "competency": "A.11",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "2a92cdb6a0",
+                "text": "Oui, les titulaires correspondent"
+              },
+              {
+                "id": "475be4ef3e",
+                "text": "Non, les titulaires diffèrent"
+              },
+              {
+                "id": "590c3beec1",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              }
+            ],
+            "answer": "2a92cdb6a0",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "590c3beec1": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "475be4ef3e": "Vous avez choisi « Non, les titulaires diffèrent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "2a92cdb6a0": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 2 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Azur (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Azur"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "11 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e010",
+            "kind": "single",
+            "competency": "A.11",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "b3a3a66d2f",
+                "text": "Oui, sur ce seul critère de date"
+              },
+              {
+                "id": "521604e2f9",
+                "text": "Non, elle arrive à échéance avant la mission"
+              },
+              {
+                "id": "9c1f2bcb65",
+                "text": "La date de réservation prolonge la pièce"
+              }
+            ],
+            "answer": "521604e2f9",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "b3a3a66d2f": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier.",
+              "9c1f2bcb65": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier.",
+              "521604e2f9": "La mission est le 15 novembre ; la pièce arrive à échéance le 11. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 2 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Azur (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Azur"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "11 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e011",
+            "kind": "single",
+            "competency": "A.11",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "475be4ef3e",
+                "text": "Non, les titulaires diffèrent"
+              },
+              {
+                "id": "2a92cdb6a0",
+                "text": "Oui, les titulaires correspondent"
+              },
+              {
+                "id": "590c3beec1",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              }
+            ],
+            "answer": "2a92cdb6a0",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "590c3beec1": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "475be4ef3e": "Vous avez choisi « Non, les titulaires diffèrent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "2a92cdb6a0": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 3 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Riviera (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Riviera"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "12 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e012",
+            "kind": "single",
+            "competency": "A.11",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "521604e2f9",
+                "text": "Non, elle arrive à échéance avant la mission"
+              },
+              {
+                "id": "9c1f2bcb65",
+                "text": "La date de réservation prolonge la pièce"
+              },
+              {
+                "id": "b3a3a66d2f",
+                "text": "Oui, sur ce seul critère de date"
+              }
+            ],
+            "answer": "521604e2f9",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "b3a3a66d2f": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier.",
+              "9c1f2bcb65": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier.",
+              "521604e2f9": "La mission est le 15 novembre ; la pièce arrive à échéance le 12. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 3 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Riviera (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Riviera"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "12 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e013",
+            "kind": "single",
+            "competency": "A.11",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "590c3beec1",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              },
+              {
+                "id": "2a92cdb6a0",
+                "text": "Non, la pièce désigne une autre entreprise"
+              },
+              {
+                "id": "475be4ef3e",
+                "text": "Oui, les titulaires correspondent"
+              }
+            ],
+            "answer": "2a92cdb6a0",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "590c3beec1": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "475be4ef3e": "Vous avez choisi « Oui, les titulaires correspondent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "2a92cdb6a0": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 4 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Horizon (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Une autre entreprise fictive"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "13 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e014",
+            "kind": "single",
+            "competency": "A.11",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "521604e2f9",
+                "text": "Non, elle arrive à échéance avant la mission"
+              },
+              {
+                "id": "b3a3a66d2f",
+                "text": "Oui, sur ce seul critère de date"
+              },
+              {
+                "id": "9c1f2bcb65",
+                "text": "La date de réservation prolonge la pièce"
+              }
+            ],
+            "answer": "521604e2f9",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "b3a3a66d2f": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier.",
+              "9c1f2bcb65": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier.",
+              "521604e2f9": "La mission est le 15 novembre ; la pièce arrive à échéance le 13. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 4 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Horizon (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Une autre entreprise fictive"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "13 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e015",
+            "kind": "single",
+            "competency": "A.11",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "590c3beec1",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              },
+              {
+                "id": "2a92cdb6a0",
+                "text": "Oui, les titulaires correspondent"
+              },
+              {
+                "id": "475be4ef3e",
+                "text": "Non, les titulaires diffèrent"
+              }
+            ],
+            "answer": "2a92cdb6a0",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "590c3beec1": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "475be4ef3e": "Vous avez choisi « Non, les titulaires diffèrent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "2a92cdb6a0": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 5 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Delta (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Delta"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "14 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e016",
+            "kind": "single",
+            "competency": "A.11",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "9c1f2bcb65",
+                "text": "La date de réservation prolonge la pièce"
+              },
+              {
+                "id": "b3a3a66d2f",
+                "text": "Oui, sur ce seul critère de date"
+              },
+              {
+                "id": "521604e2f9",
+                "text": "Non, elle arrive à échéance avant la mission"
+              }
+            ],
+            "answer": "521604e2f9",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "b3a3a66d2f": "Vous avez choisi « Oui, sur ce seul critère de date ». La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier.",
+              "9c1f2bcb65": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier.",
+              "521604e2f9": "La mission est le 15 novembre ; la pièce arrive à échéance le 14. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 5 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Delta (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Delta"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "14 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Disponible sans délai"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Usage privé seulement"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e017",
+            "kind": "single",
+            "competency": "A.11",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · titulaire",
+            "prompt": "La pièce présentée est-elle cohérente avec le titulaire du dossier sur ce point ?",
+            "options": [
+              {
+                "id": "2a92cdb6a0",
+                "text": "Oui, les titulaires correspondent"
+              },
+              {
+                "id": "590c3beec1",
+                "text": "Une concordance suffisante dès que les entreprises ont le même dirigeant."
+              },
+              {
+                "id": "475be4ef3e",
+                "text": "Non, les titulaires diffèrent"
+              }
+            ],
+            "answer": "2a92cdb6a0",
+            "explanation": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "coaching": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+            "consequences": {
+              "590c3beec1": "Deux entreprises ne sont pas nécessairement le même titulaire ; il faut rapprocher la pièce de l’exploitant concerné.",
+              "475be4ef3e": "Vous avez choisi « Non, les titulaires diffèrent ». Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable.",
+              "2a92cdb6a0": "Il faut comparer le titulaire de la preuve et l’entité concernée, sans supposer qu’un document est transférable."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 6 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Central (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Central"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "15 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "restored_variant": true,
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e018",
+            "kind": "single",
+            "competency": "A.11",
+            "context": "Ce dossier fictif est un extrait de travail, pas un justificatif réglementaire complet. Chaque question porte uniquement sur le point indiqué. Ne concluez pas à une conformité générale à partir d’un seul contrôle.",
+            "stage": "Audit · échéance",
+            "prompt": "Sur les seules dates données, la pièce couvre-t-elle la date de mission ?",
+            "options": [
+              {
+                "id": "9c1f2bcb65",
+                "text": "La date de réservation prolonge la pièce"
+              },
+              {
+                "id": "521604e2f9",
+                "text": "Oui, sur ce seul critère de date"
+              },
+              {
+                "id": "b3a3a66d2f",
+                "text": "Non, elle expire avant la mission"
+              }
+            ],
+            "answer": "521604e2f9",
+            "explanation": "La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier.",
+            "consequences": {
+              "b3a3a66d2f": "Vous avez choisi « Non, elle expire avant la mission ». La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier.",
+              "9c1f2bcb65": "Vous avez choisi « La date de réservation prolonge la pièce ». La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier.",
+              "521604e2f9": "La mission est le 15 novembre ; la pièce arrive à échéance le 15. Les autres conditions restent à vérifier."
+            },
+            "documents": [
+              {
+                "title": "Fiche de contrôle 6 · extrait simplifié",
+                "rows": [
+                  [
+                    "Exploitant du dossier",
+                    "Société Central (fictif)"
+                  ],
+                  [
+                    "Titulaire de la pièce",
+                    "Société Central"
+                  ],
+                  [
+                    "Mission",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Échéance de la pièce",
+                    "15 novembre 2026, fin de journée"
+                  ],
+                  [
+                    "Réservation enregistrée",
+                    "15 novembre 2026, 13 h 20"
+                  ],
+                  [
+                    "Prise en charge souhaitée",
+                    "15 novembre 2026, 14 h"
+                  ],
+                  [
+                    "Moyen de contacter le client",
+                    "Absent du dossier et non accessible"
+                  ],
+                  [
+                    "Usage couvert",
+                    "Transport rémunéré confirmé"
+                  ]
+                ]
+              }
+            ],
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          }
+        ]
+      }
+    },
+    {
+      "id": "vtc-a-mission-1",
+      "title": "Lancer une activité et protéger les personnes · cas 1",
+      "vtc": {
+        "kind": "journey",
+        "ref": "A.MISSION",
+        "module": "A",
+        "introduction": "Vous accompagnez la préparation d’une nouvelle activité. Les documents sont des extraits pédagogiques fictifs. Le traitement d’un point ne permet pas de déclarer tout le dossier conforme. Les étapes suivantes supposent que les anomalies antérieures ont été résolues avant tout transport."
+      },
+      "practice": {
+        "revision": "20261010-vtc-v6-pedagogie",
+        "mode": "journey",
+        "purpose": "Entraînement libre · Lancer une activité et protéger les personnes · cas 1",
+        "adaptive": false,
+        "exercises": [
+          {
+            "id": "e006",
+            "kind": "single",
+            "competency": "G.05",
+            "context": "Vous accompagnez la préparation d’une nouvelle activité. Les documents sont des extraits pédagogiques fictifs. Le traitement d’un point ne permet pas de déclarer tout le dossier conforme. Les étapes suivantes supposent que les anomalies antérieures ont été résolues avant tout transport.",
+            "stage": "Dossier professionnel · étape 6",
+            "prompt": "Que vérifier au-delà de la chronologie ?",
+            "options": [
+              {
+                "id": "0d26339991",
+                "text": "Les autres mentions et moyens de preuve requis pour la mission"
+              },
+              {
+                "id": "4a45dd6f3c",
+                "text": "Seulement la date du document, sans vérifier les identités ni les autres mentions."
+              },
+              {
+                "id": "bb5df15967",
+                "text": "Uniquement la note du client"
+              }
+            ],
+            "answer": "0d26339991",
+            "explanation": "Un seul critère cohérent ne rend pas le justificatif complet.",
+            "coaching": "Un seul critère cohérent ne rend pas le justificatif complet.",
+            "consequences": {
+              "0d26339991": "Un seul critère cohérent ne rend pas le justificatif complet.",
+              "bb5df15967": "Vous avez choisi « Uniquement la note du client ». Un seul critère cohérent ne rend pas le justificatif complet.",
+              "4a45dd6f3c": "La chronologie n’est qu’un contrôle parmi ceux nécessaires sur le justificatif."
+            },
+            "documents": [
+              {
+                "title": "Dossier de départ · entreprise et personne fictives",
+                "rows": [
+                  [
+                    "Conductrice",
+                    "Nadia, carte personnelle valide"
+                  ],
+                  [
+                    "Entreprise",
+                    "Nouvelle entreprise de Nadia"
+                  ],
+                  [
+                    "REVTC",
+                    "Dossier incomplet, inscription non finalisée"
+                  ],
+                  [
+                    "Aptitude médicale",
+                    "Valide à la date de mission"
+                  ],
+                  [
+                    "Assurance véhicule",
+                    "Usage transport rémunéré confirmé"
+                  ],
+                  [
+                    "Mission",
+                    "Réservation réelle la veille ; prise en charge à 10 h"
+                  ],
+                  [
+                    "Client",
+                    "Deux adultes ; besoin d’assistance à préciser"
+                  ],
+                  [
+                    "Contact client",
+                    "Accessible sans délai"
+                  ],
+                  [
+                    "Fin de mission",
+                    "Aucune réservation suivante confirmée"
+                  ]
+                ]
+              }
+            ],
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          }
+        ]
+      }
+    },
+    {
+      "id": "vtc-a-mission-2",
+      "title": "Lancer une activité et protéger les personnes · cas 2",
+      "vtc": {
+        "kind": "journey",
+        "ref": "A.MISSION",
+        "module": "A",
+        "introduction": "Vous accompagnez la préparation d’une nouvelle activité. Les documents sont des extraits pédagogiques fictifs. Le traitement d’un point ne permet pas de déclarer tout le dossier conforme. Les étapes suivantes supposent que les anomalies antérieures ont été résolues avant tout transport."
+      },
+      "practice": {
+        "revision": "20261010-vtc-v6-pedagogie",
+        "mode": "journey",
+        "purpose": "Entraînement libre · Lancer une activité et protéger les personnes · cas 2",
+        "adaptive": false,
+        "exercises": [
+          {
+            "id": "e006",
+            "kind": "single",
+            "competency": "G.05",
+            "context": "Vous accompagnez la préparation d’une nouvelle activité. Les documents sont des extraits pédagogiques fictifs. Le traitement d’un point ne permet pas de déclarer tout le dossier conforme. Les étapes suivantes supposent que les anomalies antérieures ont été résolues avant tout transport.",
+            "stage": "Dossier professionnel · étape 6",
+            "prompt": "Que vérifier au-delà de la chronologie ?",
+            "options": [
+              {
+                "id": "0d26339991",
+                "text": "Les autres mentions et moyens de preuve requis pour la mission"
+              },
+              {
+                "id": "bb5df15967",
+                "text": "Uniquement la note du client"
+              },
+              {
+                "id": "4a45dd6f3c",
+                "text": "Seulement la date du document, sans vérifier les identités ni les autres mentions."
+              }
+            ],
+            "answer": "0d26339991",
+            "explanation": "Un seul critère cohérent ne rend pas le justificatif complet.",
+            "coaching": "Un seul critère cohérent ne rend pas le justificatif complet.",
+            "consequences": {
+              "0d26339991": "Un seul critère cohérent ne rend pas le justificatif complet.",
+              "bb5df15967": "Vous avez choisi « Uniquement la note du client ». Un seul critère cohérent ne rend pas le justificatif complet.",
+              "4a45dd6f3c": "La chronologie n’est qu’un contrôle parmi ceux nécessaires sur le justificatif."
+            },
+            "documents": [
+              {
+                "title": "Dossier de départ · entreprise et personne fictives",
+                "rows": [
+                  [
+                    "Conductrice",
+                    "Nadia, carte personnelle valide"
+                  ],
+                  [
+                    "Entreprise",
+                    "Nouvelle entreprise de Nadia"
+                  ],
+                  [
+                    "REVTC",
+                    "Inscription confirmée"
+                  ],
+                  [
+                    "Aptitude médicale",
+                    "Échéance dépassée avant la mission"
+                  ],
+                  [
+                    "Assurance véhicule",
+                    "Usage transport rémunéré confirmé"
+                  ],
+                  [
+                    "Mission",
+                    "Réservation réelle la veille ; prise en charge à 10 h"
+                  ],
+                  [
+                    "Client",
+                    "Deux adultes ; besoin d’assistance à préciser"
+                  ],
+                  [
+                    "Contact client",
+                    "Accessible sans délai"
+                  ],
+                  [
+                    "Fin de mission",
+                    "Aucune réservation suivante confirmée"
+                  ]
+                ]
+              }
+            ],
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          }
+        ]
+      }
+    },
+    {
+      "id": "vtc-a-diagnostic",
+      "title": "Faire le point · 24 décisions",
+      "vtc": {
+        "kind": "journey",
+        "ref": "A.BILAN",
+        "module": "A",
+        "introduction": "Répondez sans relire immédiatement le cours. Les premières erreurs servent à repérer les notions à consolider. La correction reste disponible ; ce bilan n’est pas l’examen officiel."
+      },
+      "practice": {
+        "revision": "20261010-vtc-v6-pedagogie",
+        "mode": "journey",
+        "purpose": "Entraînement libre · Faire le point · 24 décisions",
+        "adaptive": false,
+        "exercises": [
+          {
+            "id": "e002",
+            "kind": "single",
+            "competency": "A.01",
+            "context": "Trois passagers hèlent un VTC au sortir d’un congrès. Le chauffeur affiche « partage de frais ».",
+            "stage": "Analyser et décider",
+            "prompt": "Quelle réponse est correcte ?",
+            "options": [
+              {
+                "id": "3446b18433",
+                "text": "Le changement d’étiquette ne remplace pas les conditions du VTC"
+              },
+              {
+                "id": "ab0bb52f24",
+                "text": "Une participation en espèces rend le trajet privé"
+              },
+              {
+                "id": "ea1380a448",
+                "text": "Trois passagers permettent toujours de partir sans réservation"
+              }
+            ],
+            "answer": "3446b18433",
+            "explanation": "Ce sont les faits qui déterminent l’activité : on ne peut pas masquer une prestation commerciale par une appellation.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. Ce sont les faits qui déterminent l’activité : on ne peut pas masquer une prestation commerciale par une appellation.",
+            "consequences": {
+              "3446b18433": "Ce sont les faits qui déterminent l’activité : on ne peut pas masquer une prestation commerciale par une appellation.",
+              "ea1380a448": "Vous avez choisi « Trois passagers permettent toujours de partir sans réservation ». Ce sont les faits qui déterminent l’activité : on ne peut pas masquer une prestation commerciale par une appellation.",
+              "ab0bb52f24": "Vous avez choisi « Une participation en espèces rend le trajet privé ». Ce sont les faits qui déterminent l’activité : on ne peut pas masquer une prestation commerciale par une appellation."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e004",
+            "kind": "single",
+            "competency": "A.02",
+            "context": "Un candidat veut s’inscrire aux épreuves VTC.",
+            "stage": "Analyser et décider",
+            "prompt": "Quel interlocuteur est directement concerné ?",
+            "options": [
+              {
+                "id": "737d1b8070",
+                "text": "La CMA organisatrice de l’examen"
+              },
+              {
+                "id": "8d232431ce",
+                "text": "La compagnie d’assurance du client"
+              },
+              {
+                "id": "aa5d816bc5",
+                "text": "Le garagiste chargé de l’entretien"
+              }
+            ],
+            "answer": "737d1b8070",
+            "explanation": "Il faut distinguer l’organisation de l’examen et les démarches ultérieures de carte ou de registre.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. Il faut distinguer l’organisation de l’examen et les démarches ultérieures de carte ou de registre.",
+            "consequences": {
+              "737d1b8070": "Il faut distinguer l’organisation de l’examen et les démarches ultérieures de carte ou de registre.",
+              "8d232431ce": "Vous avez choisi « La compagnie d’assurance du client ». Il faut distinguer l’organisation de l’examen et les démarches ultérieures de carte ou de registre.",
+              "aa5d816bc5": "Vous avez choisi « Le garagiste chargé de l’entretien ». Il faut distinguer l’organisation de l’examen et les démarches ultérieures de carte ou de registre."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e006",
+            "kind": "single",
+            "competency": "A.03",
+            "context": "Un candidat fait établir son aptitude par son médecin habituel sans vérifier son agrément.",
+            "stage": "Analyser et décider",
+            "prompt": "Quel contrôle manque ?",
+            "options": [
+              {
+                "id": "834f97331c",
+                "text": "Le nombre de courses prévues"
+              },
+              {
+                "id": "ab7a2eefa4",
+                "text": "La marque du futur véhicule"
+              },
+              {
+                "id": "d57f511ee2",
+                "text": "L’habilitation du médecin pour ce contrôle"
+              }
+            ],
+            "answer": "d57f511ee2",
+            "explanation": "Le contrôle doit être effectué par un médecin agréé dans le cadre prévu.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. Le contrôle doit être effectué par un médecin agréé dans le cadre prévu.",
+            "consequences": {
+              "d57f511ee2": "Le contrôle doit être effectué par un médecin agréé dans le cadre prévu.",
+              "834f97331c": "Vous avez choisi « Le nombre de courses prévues ». Le contrôle doit être effectué par un médecin agréé dans le cadre prévu.",
+              "ab7a2eefa4": "Vous avez choisi « La marque du futur véhicule ». Le contrôle doit être effectué par un médecin agréé dans le cadre prévu."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e008",
+            "kind": "single",
+            "competency": "A.04",
+            "context": "Le permis est suspendu avant sa date d’expiration imprimée.",
+            "stage": "Analyser et décider",
+            "prompt": "Quelle réaction retenir ?",
+            "options": [
+              {
+                "id": "b1e21c138f",
+                "text": "Conduire si le client accepte"
+              },
+              {
+                "id": "4e01179309",
+                "text": "Suspendre la conduite et traiter la situation"
+              },
+              {
+                "id": "e00c452fc2",
+                "text": "Se fier uniquement à la date imprimée"
+              }
+            ],
+            "answer": "4e01179309",
+            "explanation": "Le droit réel peut cesser avant la date portée sur un document.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. Le droit réel peut cesser avant la date portée sur un document.",
+            "consequences": {
+              "b1e21c138f": "Vous avez choisi « Conduire si le client accepte ». Le droit réel peut cesser avant la date portée sur un document.",
+              "4e01179309": "Le droit réel peut cesser avant la date portée sur un document.",
+              "e00c452fc2": "Vous avez choisi « Se fier uniquement à la date imprimée ». Le droit réel peut cesser avant la date portée sur un document."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e010",
+            "kind": "single",
+            "competency": "A.05",
+            "context": "Le conducteur possède uniquement une attestation automobile pour usage privé.",
+            "stage": "Analyser et décider",
+            "prompt": "Quelle vérification reste nécessaire ?",
+            "options": [
+              {
+                "id": "d00175b2fb",
+                "text": "La couverture de l’usage professionnel rémunéré"
+              },
+              {
+                "id": "549a15d8f5",
+                "text": "Le nombre de sièges chauffants"
+              },
+              {
+                "id": "02699fad40",
+                "text": "La note du conducteur dans l’application"
+              }
+            ],
+            "answer": "d00175b2fb",
+            "explanation": "L’activité réelle doit être déclarée et couverte.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. L’activité réelle doit être déclarée et couverte.",
+            "consequences": {
+              "d00175b2fb": "L’activité réelle doit être déclarée et couverte.",
+              "02699fad40": "Vous avez choisi « La note du conducteur dans l’application ». L’activité réelle doit être déclarée et couverte.",
+              "549a15d8f5": "Vous avez choisi « Le nombre de sièges chauffants ». L’activité réelle doit être déclarée et couverte."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e012",
+            "kind": "single",
+            "competency": "A.06",
+            "context": "Un client manifeste un comportement violent et menaçant.",
+            "stage": "Analyser et décider",
+            "prompt": "Sur quoi fonder la décision ?",
+            "options": [
+              {
+                "id": "fb1f719189",
+                "text": "Les faits observés et le risque immédiat"
+              },
+              {
+                "id": "d8350f9d05",
+                "text": "Sa tenue vestimentaire uniquement"
+              },
+              {
+                "id": "f88233af6a",
+                "text": "Sa nationalité supposée"
+              }
+            ],
+            "answer": "fb1f719189",
+            "explanation": "Le danger concret appelle une mise en sécurité et, si nécessaire, une alerte.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. Le danger concret appelle une mise en sécurité et, si nécessaire, une alerte.",
+            "consequences": {
+              "f88233af6a": "Vous avez choisi « Sa nationalité supposée ». Le danger concret appelle une mise en sécurité et, si nécessaire, une alerte.",
+              "fb1f719189": "Le danger concret appelle une mise en sécurité et, si nécessaire, une alerte.",
+              "d8350f9d05": "Vous avez choisi « Sa tenue vestimentaire uniquement ». Le danger concret appelle une mise en sécurité et, si nécessaire, une alerte."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e014",
+            "kind": "single",
+            "competency": "A.07",
+            "context": "Des messages insistants continuent après une course.",
+            "stage": "Analyser et décider",
+            "prompt": "Que faire des preuves ?",
+            "options": [
+              {
+                "id": "f9632237ec",
+                "text": "Tout transférer à des amis sans nécessité"
+              },
+              {
+                "id": "c11bc3f515",
+                "text": "Conserver les éléments utiles sans diffusion publique"
+              },
+              {
+                "id": "9280ef6948",
+                "text": "Les transférer à tous les collègues sans limiter les destinataires."
+              }
+            ],
+            "answer": "c11bc3f515",
+            "explanation": "La conservation utile au signalement se distingue d’une diffusion injustifiée.",
+            "coaching": "La conservation utile au signalement se distingue d’une diffusion injustifiée.",
+            "consequences": {
+              "f9632237ec": "Vous avez choisi « Tout transférer à des amis sans nécessité ». La conservation utile au signalement se distingue d’une diffusion injustifiée.",
+              "9280ef6948": "Les éléments doivent être conservés et transmis aux interlocuteurs utiles, pas diffusés à tout un réseau.",
+              "c11bc3f515": "La conservation utile au signalement se distingue d’une diffusion injustifiée."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e016",
+            "kind": "single",
+            "competency": "A.08",
+            "context": "Vous ne savez pas si une personne est blessée.",
+            "stage": "Analyser et décider",
+            "prompt": "Comment le dire ?",
+            "options": [
+              {
+                "id": "b64d06ca99",
+                "text": "Elle est forcément gravement blessée"
+              },
+              {
+                "id": "ff2419f18a",
+                "text": "Elle n’a certainement rien"
+              },
+              {
+                "id": "9ed02d52fd",
+                "text": "Je ne peux pas le confirmer ; voici ce que j’observe"
+              }
+            ],
+            "answer": "9ed02d52fd",
+            "explanation": "Il faut distinguer l’observation d’une conclusion non vérifiée.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. Il faut distinguer l’observation d’une conclusion non vérifiée.",
+            "consequences": {
+              "b64d06ca99": "Vous avez choisi « Elle est forcément gravement blessée ». Il faut distinguer l’observation d’une conclusion non vérifiée.",
+              "ff2419f18a": "Vous avez choisi « Elle n’a certainement rien ». Il faut distinguer l’observation d’une conclusion non vérifiée.",
+              "9ed02d52fd": "Il faut distinguer l’observation d’une conclusion non vérifiée."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e018",
+            "kind": "single",
+            "competency": "A.09",
+            "context": "Le véhicule ne permet pas le transport sécurisé d’un fauteuil occupé.",
+            "stage": "Analyser et décider",
+            "prompt": "Comment traiter la demande ?",
+            "options": [
+              {
+                "id": "77e7dcc203",
+                "text": "Classer toute future demande avec fauteuil comme techniquement impossible."
+              },
+              {
+                "id": "3d26168e40",
+                "text": "Improviser une fixation"
+              },
+              {
+                "id": "5c9d500838",
+                "text": "Expliquer la limite matérielle et rechercher un véhicule adapté"
+              }
+            ],
+            "answer": "5c9d500838",
+            "explanation": "Une contrainte de véhicule se traite par une solution adaptée, pas par une exclusion générale.",
+            "coaching": "Une contrainte de véhicule se traite par une solution adaptée, pas par une exclusion générale.",
+            "consequences": {
+              "3d26168e40": "Vous avez choisi « Improviser une fixation ». Une contrainte de véhicule se traite par une solution adaptée, pas par une exclusion générale.",
+              "5c9d500838": "Une contrainte de véhicule se traite par une solution adaptée, pas par une exclusion générale.",
+              "77e7dcc203": "Un fauteuil plié et un passager restant dans son fauteuil présentent des contraintes différentes ; il faut examiner chaque besoin."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e020",
+            "kind": "single",
+            "competency": "A.10",
+            "context": "Le client indique avoir besoin de temps pour monter.",
+            "stage": "Analyser et décider",
+            "prompt": "Quelle donnée est utile ?",
+            "options": [
+              {
+                "id": "222c31eec3",
+                "text": "L’historique des déplacements médicaux précédents."
+              },
+              {
+                "id": "f6033d1800",
+                "text": "Le diagnostic détaillé, même s’il ne change pas l’aide à organiser."
+              },
+              {
+                "id": "17bce5660c",
+                "text": "Le besoin d’assistance pour la prestation"
+              }
+            ],
+            "answer": "17bce5660c",
+            "explanation": "La minimisation limite la collecte au besoin du service.",
+            "coaching": "La minimisation limite la collecte au besoin du service.",
+            "consequences": {
+              "17bce5660c": "La minimisation limite la collecte au besoin du service.",
+              "f6033d1800": "Le service demande de connaître les besoins utiles ; le diagnostic peut être inutile et excessif.",
+              "222c31eec3": "Cet historique ne décrit pas l’aide nécessaire pour la prise en charge actuelle et collecte des informations supplémentaires."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e022",
+            "kind": "single",
+            "competency": "A.11",
+            "context": "Un agent signale une incohérence d’immatriculation.",
+            "stage": "Analyser et décider",
+            "prompt": "Que faire ?",
+            "options": [
+              {
+                "id": "0f1399b3c3",
+                "text": "Présenter seulement le bon initial sans documenter le remplacement."
+              },
+              {
+                "id": "5545830123",
+                "text": "Vérifier les pièces et expliquer factuellement le remplacement éventuel"
+              },
+              {
+                "id": "457f70d86a",
+                "text": "Corriger la plaque sur une copie sans conserver la trace du changement."
+              }
+            ],
+            "answer": "5545830123",
+            "explanation": "Une explication vérifiable et les pièces du véhicule réel sont nécessaires.",
+            "coaching": "Une explication vérifiable et les pièces du véhicule réel sont nécessaires.",
+            "consequences": {
+              "0f1399b3c3": "Le changement de véhicule doit être expliqué avec des pièces correspondant à la situation réelle.",
+              "457f70d86a": "Une modification non traçable ne permet pas de comprendre l’incohérence relevée.",
+              "5545830123": "Une explication vérifiable et les pièces du véhicule réel sont nécessaires."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e024",
+            "kind": "single",
+            "competency": "A.12",
+            "context": "L’entreprise promet un transfert à 8 h mais confirme par erreur 9 h au chauffeur.",
+            "stage": "Analyser et décider",
+            "prompt": "Quelle analyse faut-il mener ?",
+            "options": [
+              {
+                "id": "0eca324dec",
+                "text": "Se fonder uniquement sur l’horaire reçu par le chauffeur pour conclure."
+              },
+              {
+                "id": "5ceab80caf",
+                "text": "Identifier les engagements et les échanges avant d’attribuer la responsabilité"
+              },
+              {
+                "id": "a1f290e1e3",
+                "text": "Considérer qu’aucun contrat n’existe"
+              }
+            ],
+            "answer": "5ceab80caf",
+            "explanation": "La chronologie et les preuves montrent l’origine et les conséquences de l’écart.",
+            "coaching": "La chronologie et les preuves montrent l’origine et les conséquences de l’écart.",
+            "consequences": {
+              "a1f290e1e3": "Vous avez choisi « Considérer qu’aucun contrat n’existe ». La chronologie et les preuves montrent l’origine et les conséquences de l’écart.",
+              "0eca324dec": "Il faut aussi vérifier l’engagement communiqué au client et l’origine de la divergence.",
+              "5ceab80caf": "La chronologie et les preuves montrent l’origine et les conséquences de l’écart."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          }
+        ]
+      }
+    },
+    {
+      "id": "vtc-a-revision",
+      "title": "Réviser selon mes erreurs · 24 décisions",
+      "vtc": {
+        "kind": "journey",
+        "ref": "A.REVISION",
+        "module": "A",
+        "introduction": "Les thèmes de vos premières erreurs sont présentés en priorité. Lisez les explications, reprenez les décisions à revoir, puis vérifiez votre compréhension sur les autres notions."
+      },
+      "practice": {
+        "revision": "20261010-vtc-v6-pedagogie",
+        "mode": "journey",
+        "purpose": "Entraînement libre · Réviser selon mes erreurs · 24 décisions",
+        "adaptive": false,
+        "exercises": [
+          {
+            "id": "e002",
+            "kind": "single",
+            "competency": "A.01",
+            "context": "Une commune organise un service collectif déclenché sur réservation.",
+            "stage": "Analyser et décider",
+            "prompt": "Quel raisonnement éviter ?",
+            "options": [
+              {
+                "id": "739a54ed12",
+                "text": "Conclure que toute réservation est nécessairement une course VTC"
+              },
+              {
+                "id": "c4bf89e54e",
+                "text": "Lire le contrat et les règles du dispositif"
+              },
+              {
+                "id": "3502364ad1",
+                "text": "Chercher qui organise le service"
+              }
+            ],
+            "answer": "739a54ed12",
+            "explanation": "La réservation existe dans plusieurs régimes. Il faut examiner l’organisation et les autorisations.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La réservation existe dans plusieurs régimes. Il faut examiner l’organisation et les autorisations.",
+            "consequences": {
+              "3502364ad1": "Vous avez choisi « Chercher qui organise le service ». La réservation existe dans plusieurs régimes. Il faut examiner l’organisation et les autorisations.",
+              "739a54ed12": "La réservation existe dans plusieurs régimes. Il faut examiner l’organisation et les autorisations.",
+              "c4bf89e54e": "Vous avez choisi « Lire le contrat et les règles du dispositif ». La réservation existe dans plusieurs régimes. Il faut examiner l’organisation et les autorisations."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e004",
+            "kind": "single",
+            "competency": "A.02",
+            "context": "Le contrat du véhicule ne précise pas le transport rémunéré de passagers.",
+            "stage": "Analyser et décider",
+            "prompt": "À qui demander la confirmation utile ?",
+            "options": [
+              {
+                "id": "6202801e32",
+                "text": "À l’assureur, sur la garantie et l’usage concernés"
+              },
+              {
+                "id": "089968e382",
+                "text": "Au client, qui peut renoncer à toute assurance"
+              },
+              {
+                "id": "556df0ab19",
+                "text": "À la plateforme, dont l’écran suffit"
+              }
+            ],
+            "answer": "6202801e32",
+            "explanation": "Une garantie doit être vérifiée auprès du professionnel qui couvre le risque.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. Une garantie doit être vérifiée auprès du professionnel qui couvre le risque.",
+            "consequences": {
+              "089968e382": "Vous avez choisi « Au client, qui peut renoncer à toute assurance ». Une garantie doit être vérifiée auprès du professionnel qui couvre le risque.",
+              "6202801e32": "Une garantie doit être vérifiée auprès du professionnel qui couvre le risque.",
+              "556df0ab19": "Vous avez choisi « À la plateforme, dont l’écran suffit ». Une garantie doit être vérifiée auprès du professionnel qui couvre le risque."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e006",
+            "kind": "single",
+            "competency": "A.03",
+            "context": "Un interlocuteur résume l’honorabilité à « un casier totalement vierge dans tous les cas ».",
+            "stage": "Analyser et décider",
+            "prompt": "Quelle formulation retenir ?",
+            "options": [
+              {
+                "id": "909a799fc9",
+                "text": "Considérer la réussite à l’examen comme une validation de l’honorabilité."
+              },
+              {
+                "id": "57d3c41228",
+                "text": "Certaines condamnations incompatibles sont recherchées selon les textes"
+              },
+              {
+                "id": "4e85d4fa08",
+                "text": "Se limiter au bulletin personnel présenté par le candidat pour conclure."
+              }
+            ],
+            "answer": "57d3c41228",
+            "explanation": "Le contrôle porte sur le cadre et les condamnations incompatibles prévus, pas sur une formule approximative.",
+            "coaching": "Le contrôle porte sur le cadre et les condamnations incompatibles prévus, pas sur une formule approximative.",
+            "consequences": {
+              "57d3c41228": "Le contrôle porte sur le cadre et les condamnations incompatibles prévus, pas sur une formule approximative.",
+              "4e85d4fa08": "L’honorabilité fait l’objet du contrôle prévu ; un document personnel ne remplace pas ce contrôle.",
+              "909a799fc9": "L’examen et les conditions d’honorabilité répondent à des exigences distinctes."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e008",
+            "kind": "single",
+            "competency": "A.04",
+            "context": "L’assureur confirme une interruption de couverture du transport rémunéré.",
+            "stage": "Analyser et décider",
+            "prompt": "Que faire des courses prévues ?",
+            "options": [
+              {
+                "id": "5230bcb7d0",
+                "text": "Organiser une solution conforme avant tout transport"
+              },
+              {
+                "id": "64423e1d6f",
+                "text": "Demander au passager de signer une décharge"
+              },
+              {
+                "id": "8b4aa8bbd6",
+                "text": "Partir puis régulariser après"
+              }
+            ],
+            "answer": "5230bcb7d0",
+            "explanation": "Une réservation ou une décharge du client ne remplace pas la couverture requise.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. Une réservation ou une décharge du client ne remplace pas la couverture requise.",
+            "consequences": {
+              "64423e1d6f": "Vous avez choisi « Demander au passager de signer une décharge ». Une réservation ou une décharge du client ne remplace pas la couverture requise.",
+              "8b4aa8bbd6": "Vous avez choisi « Partir puis régulariser après ». Une réservation ou une décharge du client ne remplace pas la couverture requise.",
+              "5230bcb7d0": "Une réservation ou une décharge du client ne remplace pas la couverture requise."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e010",
+            "kind": "single",
+            "competency": "A.05",
+            "context": "Une franchise est prévue au contrat.",
+            "stage": "Analyser et décider",
+            "prompt": "Que signifie-t-elle dans le cadre de l’exercice ?",
+            "options": [
+              {
+                "id": "b899772d8b",
+                "text": "L’assurance rembourse toujours tout sans limite"
+              },
+              {
+                "id": "a7b77c77f9",
+                "text": "Le conducteur n’a plus d’obligation de déclaration"
+              },
+              {
+                "id": "bb085ad815",
+                "text": "Une part du dommage peut rester à charge selon le contrat"
+              }
+            ],
+            "answer": "bb085ad815",
+            "explanation": "Les modalités exactes se lisent dans le contrat ; la franchise n’efface pas les autres conditions.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. Les modalités exactes se lisent dans le contrat ; la franchise n’efface pas les autres conditions.",
+            "consequences": {
+              "b899772d8b": "Vous avez choisi « L’assurance rembourse toujours tout sans limite ». Les modalités exactes se lisent dans le contrat ; la franchise n’efface pas les autres conditions.",
+              "a7b77c77f9": "Vous avez choisi « Le conducteur n’a plus d’obligation de déclaration ». Les modalités exactes se lisent dans le contrat ; la franchise n’efface pas les autres conditions.",
+              "bb085ad815": "Les modalités exactes se lisent dans le contrat ; la franchise n’efface pas les autres conditions."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e012",
+            "kind": "single",
+            "competency": "A.06",
+            "context": "Un partenaire demande d’écarter une catégorie de clients selon leur religion.",
+            "stage": "Analyser et décider",
+            "prompt": "Quelle réponse retenir ?",
+            "options": [
+              {
+                "id": "3adf36ae18",
+                "text": "Refuser cette consigne discriminatoire"
+              },
+              {
+                "id": "f9cb084b25",
+                "text": "La facturer comme service premium"
+              },
+              {
+                "id": "f339ca8db5",
+                "text": "L’appliquer discrètement"
+              }
+            ],
+            "answer": "3adf36ae18",
+            "explanation": "Une demande commerciale ne justifie pas une discrimination.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. Une demande commerciale ne justifie pas une discrimination.",
+            "consequences": {
+              "3adf36ae18": "Une demande commerciale ne justifie pas une discrimination.",
+              "f339ca8db5": "Vous avez choisi « L’appliquer discrètement ». Une demande commerciale ne justifie pas une discrimination.",
+              "f9cb084b25": "Vous avez choisi « La facturer comme service premium ». Une demande commerciale ne justifie pas une discrimination."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e014",
+            "kind": "single",
+            "competency": "A.07",
+            "context": "Une agression est en cours devant le véhicule.",
+            "stage": "Analyser et décider",
+            "prompt": "Quel recours répond à l’urgence ?",
+            "options": [
+              {
+                "id": "c10fa1f1f4",
+                "text": "Une réponse à l’avis client la semaine suivante"
+              },
+              {
+                "id": "b52aedf520",
+                "text": "Le 17 ou le 112"
+              },
+              {
+                "id": "59f29fff24",
+                "text": "Le seul classement du dossier commercial"
+              }
+            ],
+            "answer": "b52aedf520",
+            "explanation": "Un danger immédiat nécessite une alerte urgente adaptée, pas seulement un traitement administratif.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. Un danger immédiat nécessite une alerte urgente adaptée, pas seulement un traitement administratif.",
+            "consequences": {
+              "59f29fff24": "Vous avez choisi « Le seul classement du dossier commercial ». Un danger immédiat nécessite une alerte urgente adaptée, pas seulement un traitement administratif.",
+              "b52aedf520": "Un danger immédiat nécessite une alerte urgente adaptée, pas seulement un traitement administratif.",
+              "c10fa1f1f4": "Vous avez choisi « Une réponse à l’avis client la semaine suivante ». Un danger immédiat nécessite une alerte urgente adaptée, pas seulement un traitement administratif."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e016",
+            "kind": "single",
+            "competency": "A.08",
+            "context": "L’opérateur vous demande de rester en ligne.",
+            "stage": "Analyser et décider",
+            "prompt": "Quelle conduite tenir ?",
+            "options": [
+              {
+                "id": "5ad9b4abff",
+                "text": "Raccrocher pour appeler plusieurs amis"
+              },
+              {
+                "id": "304b41b1e6",
+                "text": "S’éloigner sans donner de moyen de rappel"
+              },
+              {
+                "id": "6c9045de68",
+                "text": "Répondre et suivre ses consignes"
+              }
+            ],
+            "answer": "6c9045de68",
+            "explanation": "L’échange permet d’adapter la réponse et de transmettre les consignes utiles.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. L’échange permet d’adapter la réponse et de transmettre les consignes utiles.",
+            "consequences": {
+              "304b41b1e6": "Vous avez choisi « S’éloigner sans donner de moyen de rappel ». L’échange permet d’adapter la réponse et de transmettre les consignes utiles.",
+              "6c9045de68": "L’échange permet d’adapter la réponse et de transmettre les consignes utiles.",
+              "5ad9b4abff": "Vous avez choisi « Raccrocher pour appeler plusieurs amis ». L’échange permet d’adapter la réponse et de transmettre les consignes utiles."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e018",
+            "kind": "single",
+            "competency": "A.09",
+            "context": "Un client entend difficilement votre explication.",
+            "stage": "Analyser et décider",
+            "prompt": "Quelle adaptation proposer ?",
+            "options": [
+              {
+                "id": "92b44d75dc",
+                "text": "Augmenter le volume de voix sans se placer face à la personne."
+              },
+              {
+                "id": "609d7b23f2",
+                "text": "Parler clairement face à lui et vérifier la compréhension"
+              },
+              {
+                "id": "0c7afcbd97",
+                "text": "S’adresser uniquement à son accompagnant"
+              }
+            ],
+            "answer": "609d7b23f2",
+            "explanation": "L’échange doit rester adressé à la personne concernée et adapté à son besoin.",
+            "coaching": "L’échange doit rester adressé à la personne concernée et adapté à son besoin.",
+            "consequences": {
+              "0c7afcbd97": "Vous avez choisi « S’adresser uniquement à son accompagnant ». L’échange doit rester adressé à la personne concernée et adapté à son besoin.",
+              "609d7b23f2": "L’échange doit rester adressé à la personne concernée et adapté à son besoin.",
+              "92b44d75dc": "La difficulté de communication peut demander des repères visuels ou un message écrit plutôt qu’un volume plus élevé."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e020",
+            "kind": "single",
+            "competency": "A.10",
+            "context": "Un client demande l’effacement de ses coordonnées. Des factures doivent encore être conservées.",
+            "stage": "Analyser et décider",
+            "prompt": "Quelle méthode adopter ?",
+            "options": [
+              {
+                "id": "e803860a13",
+                "text": "Effacer aussi les factures soumises à une obligation de conservation."
+              },
+              {
+                "id": "99a9a734bd",
+                "text": "Examiner séparément les finalités et les obligations de conservation"
+              },
+              {
+                "id": "8cddbd776a",
+                "text": "Conserver les coordonnées de prospection aussi longtemps que les factures."
+              }
+            ],
+            "answer": "99a9a734bd",
+            "explanation": "Les données opérationnelles inutiles et les pièces soumises à conservation ne suivent pas forcément le même traitement.",
+            "coaching": "Les données opérationnelles inutiles et les pièces soumises à conservation ne suivent pas forcément le même traitement.",
+            "consequences": {
+              "99a9a734bd": "Les données opérationnelles inutiles et les pièces soumises à conservation ne suivent pas forcément le même traitement.",
+              "e803860a13": "Une demande d’effacement doit être examinée selon la finalité et les obligations de conservation de chaque document.",
+              "8cddbd776a": "La durée de conservation d’une facture ne justifie pas automatiquement celle d’un fichier commercial."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e022",
+            "kind": "single",
+            "competency": "A.11",
+            "context": "Le chauffeur conteste une observation.",
+            "stage": "Analyser et décider",
+            "prompt": "Quel comportement retenir ?",
+            "options": [
+              {
+                "id": "46862c4b35",
+                "text": "Refuser toute coopération par principe"
+              },
+              {
+                "id": "cda9856156",
+                "text": "Débattre de la contestation au lieu de présenter les pièces demandées."
+              },
+              {
+                "id": "9c8e50fd83",
+                "text": "Rester courtois et utiliser la voie de recours adaptée"
+              }
+            ],
+            "answer": "9c8e50fd83",
+            "explanation": "La contestation se traite dans le cadre prévu, sans aggraver la situation.",
+            "coaching": "La contestation se traite dans le cadre prévu, sans aggraver la situation.",
+            "consequences": {
+              "9c8e50fd83": "La contestation se traite dans le cadre prévu, sans aggraver la situation.",
+              "46862c4b35": "Vous avez choisi « Refuser toute coopération par principe ». La contestation se traite dans le cadre prévu, sans aggraver la situation.",
+              "cda9856156": "La contestation suit une voie adaptée ; elle ne dispense pas de coopérer au contrôle dans son cadre."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          },
+          {
+            "id": "e024",
+            "kind": "single",
+            "competency": "A.12",
+            "context": "Le conducteur est certain de son impression mais n’a pas observé le début de l’incident.",
+            "stage": "Analyser et décider",
+            "prompt": "Comment présenter son témoignage ?",
+            "options": [
+              {
+                "id": "6ff5b5d02c",
+                "text": "Combler les détails manquants pour rendre le récit cohérent"
+              },
+              {
+                "id": "55d06ead34",
+                "text": "Affirmer avoir tout vu"
+              },
+              {
+                "id": "0af078c82e",
+                "text": "Distinguer ce qu’il a vu et ce qu’il suppose"
+              }
+            ],
+            "answer": "0af078c82e",
+            "explanation": "La précision inclut les limites de ce qui a réellement été observé.",
+            "coaching": "Reprenez les faits du dossier, identifiez ce qui est demandé et vérifiez la limite de votre réponse. La précision inclut les limites de ce qui a réellement été observé.",
+            "consequences": {
+              "6ff5b5d02c": "Vous avez choisi « Combler les détails manquants pour rendre le récit cohérent ». La précision inclut les limites de ce qui a réellement été observé.",
+              "55d06ead34": "Vous avez choisi « Affirmer avoir tout vu ». La précision inclut les limites de ce qui a réellement été observé.",
+              "0af078c82e": "La précision inclut les limites de ce qui a réellement été observé."
+            },
+            "content_revision": "20261010-vtc-v6-pedagogie"
+          }
+        ]
+      }
+    }
+  ]
+}

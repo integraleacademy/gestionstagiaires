@@ -1,0 +1,3023 @@
+{
+  "format_version": 1,
+  "id": "academy-aps62-11",
+  "version": "20261006-aps62-v3",
+  "title": "APS 11 · Sensibilisation au risque électrique",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "source": {
+    "type": "academy-aps62",
+    "reviewed_on": "2026-10-06"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false,
+    "require_correct_answers": true
+  },
+  "theme": {
+    "main_color": "#2860e8",
+    "button_color": "#245bdb",
+    "text_color": "#172b4d"
+  },
+  "planned_minutes": 120,
+  "required_minutes": 120,
+  "regulation": "Annexe III · Risque électrique",
+  "introduction": [],
+  "sections": [
+    {
+      "id": "aps62-11-01",
+      "title": "01 · Reconnaître une situation électrique dangereuse",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-11-01-comprendre",
+          "title": "Comprendre · Reconnaître une situation électrique dangereuse",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "11.01",
+            "title": "Reconnaître une situation électrique dangereuse",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-11.webp",
+            "case": "En ronde, vous observez une prise noircie et un câble détérioré près d’une zone humide. L’appareil alimenté semble encore fonctionner. Un utilisateur propose de remettre du ruban adhésif et de continuer.",
+            "reason": "Le risque électrique peut être présent sans panne apparente. Le courant, les contacts, l’environnement et la durée d’exposition influencent les conséquences. La sensibilisation APS ne vaut pas habilitation. Toute opération doit correspondre à une compétence, un titre et une organisation adaptés lorsque ceux-ci sont requis. L’agent ne s’improvise pas réparateur.",
+            "lessons": [
+              {
+                "ref": "11.07",
+                "title": "Comprendre le risque électrique",
+                "page": 527,
+                "diagram": "media/aps62/repere-11.07.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Le courant peut traverser le corps"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un contact direct avec une partie sous tension ou indirect avec une masse devenue dangereuse peut provoquer une électrisation, des brûlures ou un arrêt cardiaque. Un arc électrique peut aussi blesser sans contact direct. L'humidité, les matériaux et l'environnement influencent le risque. L'absence de bruit ou de mouvement ne prouve pas qu'un équipement est hors tension."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Reconnaître sans intervenir au-delà de sa compétence"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un câble abîmé, un capot manquant, une odeur anormale ou de l'eau près d'un appareil doivent être signalés. L'habilitation électrique est liée à des opérations définies et délivrée par l'employeur dans le cadre applicable ; le diplôme APS ne vaut pas habilitation générale. Des gants ordinaires ou des chaussures usuelles ne constituent pas automatiquement une protection électrique adaptée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'agent découvre une prise arrachée dans un couloir. Il empêche l'approche et fait intervenir le service compétent. Il ne remet pas les fils en place et ne teste pas la prise avec un appareil. La zone ne redevient accessible qu'après sécurisation confirmée."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La mission de l'APS est de repérer, protéger et alerter. La mise hors tension et les opérations électriques doivent respecter les compétences, procédures et moyens requis."
+                  }
+                ],
+                "course_page": 528,
+                "practice": {
+                  "background": "La sensibilisation APS ne vaut pas habilitation électrique. L’habilitation est délivrée par l’employeur pour des opérations définies, après les vérifications et la formation requises. L’agent ne démonte pas, ne répare pas et n’ouvre pas une armoire hors de son périmètre. Repérez, éloignez, balisez si cela est sûr et faites intervenir le personnel compétent. Un bouton d’arrêt ou une coupure accessible ne s’utilise que selon la situation, la formation et les consignes. Ne touchez pas une victime tant que le danger électrique persiste.",
+                  "case": "Une rallonge présente un conducteur apparent dans une zone humide. Un salarié vous demande de la recouvrir de ruban adhésif pour terminer le service. Pourquoi cette réparation improvisée est-elle inacceptable ? Quelle protection immédiate est possible ?",
+                  "transfer": "Pourquoi mettre des gants ordinaires ne vous autorise-t-il pas à toucher un conducteur électrique ?",
+                  "page": 543
+                }
+              },
+              {
+                "ref": "14.01",
+                "title": "Comprendre la prévention industrielle",
+                "page": 618,
+                "diagram": "media/aps62/repere-14.01.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Un environnement de risques combinés"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un site industriel peut associer machines, énergies, produits, manutention et circulation. L'agent doit connaître les zones autorisées et les dangers spécifiques, sans supposer qu'un équipement arrêté est sans risque. Des énergies peuvent rester stockées et des procédés fonctionner automatiquement. La formation au site complète les connaissances APS générales."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Agir selon une hiérarchie de prévention"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La prévention cherche d'abord à éviter les risques, puis à évaluer ceux qui subsistent et à les combattre à la source. Les protections collectives sont prioritaires sur les protections individuelles lorsqu'elles permettent de traiter le risque. Le document unique d'évaluation des risques professionnels, ou DUERP, participe à cette démarche. L'agent contribue par ses observations et ses signalements, sans remplacer l'analyse de l'employeur et des spécialistes."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un couloir piéton traverse une zone de manœuvre. Demander seulement aux visiteurs de « faire attention » ne règle pas l'organisation. Une séparation des circulations ou une modification du trajet peut réduire l'exposition. L'agent signale les situations observées, notamment les presque-collisions, pour soutenir une correction adaptée."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La sécurité industrielle repose sur un système de prévention. L'attention individuelle est nécessaire, mais ne compense pas une organisation durablement dangereuse."
+                  }
+                ],
+                "course_page": 619,
+                "practice": {
+                  "background": "Les principes généraux de prévention donnent une logique : éviter les risques, évaluer ceux qui subsistent, les combattre à la source, adapter le travail à l’homme, tenir compte des évolutions techniques, remplacer ce qui est dangereux, planifier la prévention, privilégier les protections collectives et donner les instructions appropriées. Le salarié prend soin de sa sécurité et de celle des autres selon sa formation et les instructions reçues. Cela ne transfère pas les responsabilités de l’employeur. Signaler un risque doit conduire à une analyse et à une réponse suivie.",
+                  "case": "Chaque nuit, vous contournez une zone sombre où passent aussi des chariots. La consigne indique seulement « être prudent ». Plusieurs agents ont déjà signalé un presque-accident. Pourquoi cette consigne est-elle insuffisante ? Quelles pistes de prévention doivent être étudiées ?",
+                  "transfer": "Pourquoi distribuer un équipement individuel ne dispense-t-il pas de rechercher une protection collective ?",
+                  "page": 634
+                }
+              }
+            ],
+            "decision": "Empêcher l’exposition selon les consignes et alerter le personnel compétent.",
+            "pitfall": "Toucher le câble pour vérifier s’il chauffe.",
+            "objectives": [
+              "Expliquer : reconnaître une situation électrique dangereuse",
+              "Justifier une décision à partir de faits et de limites.",
+              "Choisir une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "En ronde, vous observez une prise noircie et un câble détérioré près d’une zone humide. L’appareil alimenté semble encore fonctionner. Un utilisateur propose de remettre du ruban adhésif et de continuer."
+              ],
+              [
+                "Décision à justifier",
+                "Empêcher l’exposition selon les consignes et alerter le personnel compétent."
+              ],
+              [
+                "Piège à éviter",
+                "Toucher le câble pour vérifier s’il chauffe."
+              ],
+              [
+                "Pourquoi ?",
+                "Le risque électrique peut être présent sans panne apparente. Le courant, les contacts, l’environnement et la durée d’exposition influencent les conséquences. La sensibilisation APS ne vaut pas habilitation. Toute opération doit correspondre à une compétence, un titre et une organisation adaptés lorsque ceux-ci sont requis. L’agent ne s’improvise pas réparateur."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "En ronde, vous observez une prise noircie et un câble détérioré près d’une zone humide."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Le risque électrique peut être présent sans panne apparente."
+              },
+              {
+                "label": "Décider",
+                "text": "Empêcher l’exposition selon les consignes et alerter le personnel compétent."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Une installation paraît hors tension parce qu’un voyant est éteint. Pourquoi cela ne constitue-t-il pas une vérification d’absence de tension ?"
+              }
+            ],
+            "edition": "2026-10-06",
+            "image_alt": "Scène professionnelle illustrée : Sensibilisation au risque électrique",
+            "visual_board": {
+              "title": "Électricité : les limites qui protègent",
+              "steps": [
+                {
+                  "label": "Observer à distance",
+                  "text": "Un équipement silencieux peut rester sous tension."
+                },
+                {
+                  "label": "Éviter le contact",
+                  "text": "Ne pas toucher, bricoler ou s’approcher pour confirmer une hypothèse."
+                },
+                {
+                  "label": "Vérifier son cadre",
+                  "text": "Formation, titre d’habilitation et opération autorisée sont distincts."
+                },
+                {
+                  "label": "Faire intervenir",
+                  "text": "Protéger les abords et alerter le relais technique ou les secours."
+                }
+              ]
+            },
+            "extra_case": {
+              "title": "Un réarmement de trop",
+              "case": "Un équipement déclenche plusieurs fois. Un responsable demande à l’APS d’ouvrir le tableau et de maintenir le disjoncteur en position. L’agent n’a pas l’habilitation correspondant à une intervention électrique.",
+              "task": "Expliquez le refus de l’acte technique et proposez une continuité sûre.",
+              "model": "Ne pas neutraliser la protection ni ouvrir pour réparer. Signaler les déclenchements et faire intervenir le service compétent. Protéger les abords si nécessaire et appliquer la procédure de continuité du site."
+            },
+            "sorting": [
+              {
+                "text": "En ronde, vous observez une prise noircie et un câble détérioré près d’une zone humide. L’appareil alimenté semble encore fonctionner. Un utilisateur propose de remettre du ruban adhésif et de continuer.",
+                "category": "fait"
+              },
+              {
+                "text": "Empêcher l’exposition selon les consignes et alerter le personnel compétent.",
+                "category": "adapte"
+              },
+              {
+                "text": "Toucher le câble pour vérifier s’il chauffe.",
+                "category": "ecarter"
+              }
+            ],
+            "pacing": [
+              {
+                "label": "Comprendre et comparer",
+                "minutes": 16
+              },
+              {
+                "label": "Mémoriser",
+                "minutes": 4
+              },
+              {
+                "label": "Mission en cinq décisions",
+                "minutes": 12
+              },
+              {
+                "label": "Vérifier les repères",
+                "minutes": 6
+              },
+              {
+                "label": "Transférer",
+                "minutes": 6
+              },
+              {
+                "label": "Analyser les documents",
+                "minutes": 8
+              },
+              {
+                "label": "Composer la main courante",
+                "minutes": 6
+              },
+              {
+                "label": "Retenir",
+                "minutes": 2
+              }
+            ],
+            "deepening": [
+              {
+                "title": "Reconnaître le danger sans intervenir sur l'installation",
+                "paragraphs": [
+                  "Le risque électrique peut résulter d'un contact direct avec une partie sous tension ou indirect avec une masse devenue dangereuse. Il peut provoquer électrisation, brûlure, chute ou autres conséquences ; l'électrocution désigne une issue mortelle. L'absence de bruit, d'étincelle ou de mouvement ne démontre pas l'absence de tension. Un coffret ouvert, un câble détérioré ou de l'humidité près d'un équipement impose un signalement et une protection adaptés.",
+                  "La mission APS et cette sensibilisation ne donnent pas une habilitation électrique. L'habilitation relève de l'employeur pour des opérations définies après les vérifications et formations applicables. L'agent ne remet pas un couvercle avec un objet métallique, ne répare pas un câble et ne teste pas une installation. Il éloigne les personnes, applique la procédure et fait intervenir les personnes compétentes."
+                ]
+              },
+              {
+                "title": "L'alerte et la protection d'une victime",
+                "paragraphs": [
+                  "Avant de toucher une victime potentiellement en contact avec le courant, il faut éviter une nouvelle exposition et faire assurer la sécurité selon les moyens et compétences disponibles. L'alerte précise le lieu, l'installation concernée, le danger possible, le nombre de victimes et les signes observés. Elle indique si la mise en sécurité est confirmée ou encore incertaine.",
+                  "Après confirmation de la sécurité par l'interlocuteur compétent, les gestes relèvent de la formation de secours et des instructions reçues. La coupure ne signifie pas que la personne est indemne. Dans les exercices, la décision porte sur la reconnaissance des limites et la transmission ; les gestes et opérations ne s'apprennent pas par la seule sélection d'une réponse sur écran."
+                ]
+              },
+              {
+                "title": "Comparer deux moments de la décision",
+                "paragraphs": [
+                  "Dans le nouveau dossier « Le coffret endommagé », le point de départ est le suivant : L'APS constate un coffret électrique ouvert après un choc. Une odeur inhabituelle est présente. Il ne possède ni habilitation ni mission d'intervention électrique.",
+                  "Le fait établi est : Un équipement électrique est endommagé et accessible. La première réponse à examiner est : Tenir les personnes à distance et alerter l'interlocuteur prévu sans toucher au coffret. La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle.",
+                  "La situation évolue : Un salarié propose d'utiliser un objet métallique pour remettre le couvercle. La décision doit donc être réexaminée : Empêcher l'exposition par une consigne claire et maintenir le balisage adapté. La connaissance des lieux ne prouve ni l'habilitation ni l'absence de danger.",
+                  "Comparez les deux moments avant de lancer la mission. Le document à contrôler contient cet écart : Main courante : installation hors tension, sans vérification par personne compétente. La référence vérifiée est : Consigne : ne pas toucher, éloigner, alerter et attendre l'intervenant habilité."
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-11-01-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 4,
+          "blocks": [
+            {
+              "id": "aps62-11-01-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-11-01-video",
+                "title": "Reconnaître une situation électrique dangereuse",
+                "required": true,
+                "src": "media/aps62/v2/aps62-11-01.mp4",
+                "poster": "media/aps62/v2/aps62-11-01.jpg",
+                "captions": "media/aps62/v2/aps62-11-01.vtt",
+                "duration_seconds": 80.874,
+                "transcript": "La situation : En ronde, vous observez une prise noircie et un câble détérioré près d’une zone humide. L’appareil alimenté semble encore fonctionner. Un utilisateur propose de remettre du ruban adhésif et de continuer.\n\nÀ vous de décider : Empêcher l’exposition selon les consignes et alerter le personnel compétent. Ou bien : Toucher le câble pour vérifier s’il chauffe. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Le risque électrique peut être présent sans panne apparente. Le courant, les contacts, l’environnement et la durée d’exposition influencent les conséquences. La sensibilisation APS ne vaut pas habilitation. Toute opération doit correspondre à une compétence, un titre et une organisation adaptés lorsque ceux-ci sont requis. L’agent ne s’improvise pas réparateur.\n\nLe bon relais : Le signalement précise prise noircie, câble détérioré, humidité et lieu, sans toucher pour confirmer. L’agent protège la circulation et contacte le référent. Les opérations électriques, y compris les gestes parfois présentés comme simples, sont vérifiées au regard du cadre d’habilitation et des consignes ; le cours APS n’en délivre aucune.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "11.01",
+            "title": "Reconnaître une situation électrique dangereuse",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Le courant peut traverser le corps",
+                "back": "Un contact direct avec une partie sous tension ou indirect avec une masse devenue dangereuse peut provoquer une électrisation, des brûlures ou un arrêt cardiaque. Un arc électrique peut aussi blesser sans contact direct. L'humidité, les matériaux et l'environnement influencent le risque. L'absence de bruit ou de mouvement ne prouve pas qu'un équipement est hors tension."
+              },
+              {
+                "front": "Reconnaître sans intervenir au-delà de sa compétence",
+                "back": "Un câble abîmé, un capot manquant, une odeur anormale ou de l'eau près d'un appareil doivent être signalés. L'habilitation électrique est liée à des opérations définies et délivrée par l'employeur dans le cadre applicable ; le diplôme APS ne vaut pas habilitation générale. Des gants ordinaires ou des chaussures usuelles ne constituent pas automatiquement une protection électrique adaptée."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "L'agent découvre une prise arrachée dans un couloir. Il empêche l'approche et fait intervenir le service compétent. Il ne remet pas les fils en place et ne teste pas la prise avec un appareil. La zone ne redevient accessible qu'après sécurisation confirmée."
+              },
+              {
+                "front": "Un environnement de risques combinés",
+                "back": "Un site industriel peut associer machines, énergies, produits, manutention et circulation. L'agent doit connaître les zones autorisées et les dangers spécifiques, sans supposer qu'un équipement arrêté est sans risque. Des énergies peuvent rester stockées et des procédés fonctionner automatiquement. La formation au site complète les connaissances APS générales."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : En ronde, vous observez une prise noircie et un câble détérioré près d’une zone humide. L’appareil alimenté semble encore fonctionner. Un utilisateur propose de remettre du ruban adhésif et de continuer.\n\nÀ vous de décider : Empêcher l’exposition selon les consignes et alerter le personnel compétent. Ou bien : Toucher le câble pour vérifier s’il chauffe. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Le risque électrique peut être présent sans panne apparente. Le courant, les contacts, l’environnement et la durée d’exposition influencent les conséquences. La sensibilisation APS ne vaut pas habilitation. Toute opération doit correspondre à une compétence, un titre et une organisation adaptés lorsque ceux-ci sont requis. L’agent ne s’improvise pas réparateur.\n\nLe bon relais : Le signalement précise prise noircie, câble détérioré, humidité et lieu, sans toucher pour confirmer. L’agent protège la circulation et contacte le référent. Les opérations électriques, y compris les gestes parfois présentés comme simples, sont vérifiées au regard du cadre d’habilitation et des consignes ; le cours APS n’en délivre aucune.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-11-01-atelier",
+          "title": "Mission · Le coffret endommagé",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "academy": {
+            "kind": "workshop",
+            "dossier": "11.01",
+            "title": "Le coffret endommagé",
+            "case": "L'APS constate un coffret électrique ouvert après un choc. Une odeur inhabituelle est présente. Il ne possède ni habilitation ni mission d'intervention électrique.",
+            "edition": "2026-10-06"
+          },
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Le coffret endommagé · cinq décisions successives",
+            "sequential": true,
+            "exercises": [
+              {
+                "id": "constat",
+                "kind": "single",
+                "prompt": "1. Sur quel fait fonder votre analyse ?",
+                "context": "L'APS constate un coffret électrique ouvert après un choc. Une odeur inhabituelle est présente. Il ne possède ni habilitation ni mission d'intervention électrique.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Aucun fait ne mérite une vérification tant qu’aucun dommage n’est visible."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Un équipement électrique est endommagé et accessible."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Le récit prouve à lui seul une intention malveillante de toutes les personnes concernées."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Le point de départ établi est : Un équipement électrique est endommagé et accessible. Il ne faut pas compléter ce constat par une supposition.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : Le point de départ établi est : Un équipement électrique est endommagé et accessible. Il ne faut pas compléter ce constat par une supposition. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "3": "Ce choix crée une difficulté : Le point de départ établi est : Un équipement électrique est endommagé et accessible. Il ne faut pas compléter ce constat par une supposition. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "decision",
+                "kind": "single",
+                "prompt": "2. Quelle première décision prenez-vous ?",
+                "context": "Le poste doit maintenant choisir une action à partir du constat.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Refermer le coffret à la main pour supprimer l'accès."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Attendre la fin de la vacation sans transmettre la situation à un interlocuteur."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Tenir les personnes à distance et alerter l'interlocuteur prévu sans toucher au coffret."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix crée une difficulté : La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite."
+                },
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Déplacer le câble à mains nues pour libérer le passage."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "3. Une nouvelle information arrive. Que décidez-vous ?",
+                "context": "Un salarié propose d'utiliser un objet métallique pour remettre le couvercle.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Empêcher l'exposition par une consigne claire et maintenir le balisage adapté."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Le laisser faire parce qu'il connaît le bâtiment."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Garder la première décision sans examiner l’information nouvelle."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La connaissance des lieux ne prouve ni l'habilitation ni l'absence de danger.",
+                "branches": {
+                  "1": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "2": "Ce choix crée une difficulté : La connaissance des lieux ne prouve ni l'habilitation ni l'absence de danger. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix crée une difficulté : La connaissance des lieux ne prouve ni l'habilitation ni l'absence de danger. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Déplacer le câble à mains nues pour libérer le passage."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle."
+                }
+              },
+              {
+                "id": "consigne",
+                "kind": "single",
+                "prompt": "4. Quel document doit être écarté ou clarifié avant application ?",
+                "context": "Deux documents sont transmis au poste. Comparez-les avec la situation et la règle.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Consigne : ne pas toucher, éloigner, alerter et attendre l'intervenant habilité."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Main courante : installation hors tension, sans vérification par personne compétente."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Trame validée : identifier les faits, les mesures prises et les interlocuteurs avisés."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle. La note incompatible est : Main courante : installation hors tension, sans vérification par personne compétente.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle. La note incompatible est : Main courante : installation hors tension, sans vérification par personne compétente. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "3": "Ce choix crée une difficulté : La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle. La note incompatible est : Main courante : installation hors tension, sans vérification par personne compétente. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Déplacer le câble à mains nues pour libérer le passage."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              },
+              {
+                "id": "releve",
+                "kind": "single",
+                "prompt": "5. Quelle transmission permet une relève fiable ?",
+                "context": "Le collègue de relève arrive. Il n’a assisté à aucune des étapes précédentes.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Transmettre seulement la première décision, sans l’évolution reçue ensuite."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Transmettre le constat, l’évolution, les mesures réellement prises et ce qui reste à vérifier."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Annoncer que toutes les vérifications sont terminées pour simplifier la relève."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Le relais doit connaître les faits nouveaux et les limites de l’information. La connaissance des lieux ne prouve ni l'habilitation ni l'absence de danger.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : Le relais doit connaître les faits nouveaux et les limites de l’information. La connaissance des lieux ne prouve ni l'habilitation ni l'absence de danger. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "3": "Ce choix crée une difficulté : Le relais doit connaître les faits nouveaux et les limites de l’information. La connaissance des lieux ne prouve ni l'habilitation ni l'absence de danger. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "2",
+                      "text": "La vérification ou le relais prévu : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-11-01-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "En ronde, vous observez une prise noircie et un câble détérioré près d’une zone humide. L’appareil alimenté semble encore fonctionner. Un utilisateur propose de remettre du ruban adhésif et de continuer.",
+          "options": [
+            {
+              "id": "aps62-11-01-a0",
+              "text": "Toucher le câble pour vérifier s’il chauffe.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-11-01-a1",
+              "text": "Considérer que le fonctionnement normal prouve l’absence de danger.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-11-01-a2",
+              "text": "Empêcher l’exposition selon les consignes et alerter le personnel compétent.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "Le risque électrique peut être présent sans panne apparente. Le courant, les contacts, l’environnement et la durée d’exposition influencent les conséquences. La sensibilisation APS ne vaut pas habilitation. Toute opération doit correspondre à une compétence, un titre et une organisation adaptés lorsque ceux-ci sont requis. L’agent ne s’improvise pas réparateur."
+        },
+        {
+          "id": "aps62-11-01-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-11-01-pair0",
+              "left": "Le courant peut traverser le corps",
+              "right": "Un contact direct avec une partie sous tension ou indirect avec une masse devenue dangereuse peut provoquer une électrisation, des brûlures ou un arrêt cardiaque."
+            },
+            {
+              "id": "aps62-11-01-pair1",
+              "left": "Reconnaître sans intervenir au-delà de sa compétence",
+              "right": "Un câble abîmé, un capot manquant, une odeur anormale ou de l'eau près d'un appareil doivent être signalés."
+            },
+            {
+              "id": "aps62-11-01-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "L'agent découvre une prise arrachée dans un couloir."
+            }
+          ],
+          "explanation": "Le courant peut traverser le corps : Un contact direct avec une partie sous tension ou indirect avec une masse devenue dangereuse peut provoquer une électrisation, des brûlures ou un arrêt cardiaque. Reconnaître sans intervenir au-delà de sa compétence : Un câble abîmé, un capot manquant, une odeur anormale ou de l'eau près d'un appareil doivent être signalés. EXEMPLE EXPLIQUÉ : L'agent découvre une prise arrachée dans un couloir."
+        },
+        {
+          "id": "aps62-11-01-transfert",
+          "title": "Transférer · comparer de nouvelles situations",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "academy": {
+            "dossier": "11.01",
+            "title": "Reconnaître une situation électrique dangereuse",
+            "kind": "transfer",
+            "case": "Une installation paraît hors tension parce qu’un voyant est éteint. Pourquoi cela ne constitue-t-il pas une vérification d’absence de tension ?",
+            "model": "Le risque électrique peut être présent sans panne apparente. Le courant, les contacts, l’environnement et la durée d’exposition influencent les conséquences. La sensibilisation APS ne vaut pas habilitation. Toute opération doit correspondre à une compétence, un titre et une organisation adaptés lorsque ceux-ci sont requis. L’agent ne s’improvise pas réparateur. Le signalement précise prise noircie, câble détérioré, humidité et lieu, sans toucher pour confirmer. L’agent protège la circulation et contacte le référent. Les opérations électriques, y compris les gestes parfois présentés comme simples, sont vérifiées au regard du cadre d’habilitation et des consignes ; le cours APS n’en délivre aucune.",
+            "edition": "2026-10-04"
+          },
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Transférer le raisonnement et comparer les contextes",
+            "exercises": [
+              {
+                "id": "variante",
+                "kind": "single",
+                "prompt": "Quelle réponse retenir dans cette nouvelle situation ?",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Assimiler l’arrêt apparent à une vérification d’absence de tension."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Considérer l’absence de tension comme non établie ; maintenir la protection et faire intervenir le personnel compétent."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Toucher l’installation puisque le voyant est éteint."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Considérer l’absence de tension comme non établie ; maintenir la protection et faire intervenir le personnel compétent. Le risque électrique peut être présent sans panne apparente. Le courant, les contacts, l’environnement et la durée d’exposition influencent les conséquences. La sensibilisation APS ne vaut pas habilitation. Toute opération doit correspondre à une compétence, un titre et une organisation adaptés lorsque ceux-ci sont requis. L’agent ne s’improvise pas réparateur.",
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Déplacer le câble à mains nues pour libérer le passage."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle."
+                }
+              },
+              {
+                "id": "contre_exemple",
+                "kind": "single",
+                "prompt": "Comparez avec ce cas de référence : quelle conduite lui correspond ?",
+                "context": "Un équipement déclenche plusieurs fois. Un responsable demande à l’APS d’ouvrir le tableau et de maintenir le disjoncteur en position. L’agent n’a pas l’habilitation correspondant à une intervention électrique.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Appliquer la même réponse quels que soient les faits et les interlocuteurs."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Refermer le coffret à la main pour supprimer l'accès."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Ne pas neutraliser la protection ni ouvrir pour réparer. Signaler les déclenchements et faire intervenir le service compétent. Protéger les abords si nécessaire et appliquer la procédure de continuité du site."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Ne pas neutraliser la protection ni ouvrir pour réparer. Signaler les déclenchements et faire intervenir le service compétent. Protéger les abords si nécessaire et appliquer la procédure de continuité du site.",
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Déplacer le câble à mains nues pour libérer le passage."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle."
+                }
+              },
+              {
+                "id": "methode",
+                "kind": "single",
+                "prompt": "Que faut-il comparer avant de transposer la solution du premier cas ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Uniquement la première impression laissée par la personne concernée."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Seulement le nom du site et l’heure de la vacation."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Les faits, le périmètre, les autorisations, le danger et les relais effectivement disponibles."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Un même principe peut conduire à des actions différentes lorsque les conditions changent. Ne pas neutraliser la protection ni ouvrir pour réparer. Signaler les déclenchements et faire intervenir le service compétent. Protéger les abords si nécessaire et appliquer la procédure de continuité du site.",
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-11-01-documents",
+          "title": "Documents · repérer les anomalies",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Croiser trois pièces et rechercher les anomalies",
+            "documents": [
+              {
+                "title": "A · Fiche d’événement 11-01",
+                "text": "L'APS constate un coffret électrique ouvert après un choc. Une odeur inhabituelle est présente. Il ne possède ni habilitation ni mission d'intervention électrique.",
+                "rows": [
+                  [
+                    "09 h 02 · constat au poste",
+                    "Un équipement électrique est endommagé et accessible."
+                  ],
+                  [
+                    "09 h 04 · action enregistrée par l’agent",
+                    "Tenir les personnes à distance et alerter l'interlocuteur prévu sans toucher au coffret."
+                  ],
+                  [
+                    "09 h 07 · nouvelle information reçue",
+                    "Un salarié propose d'utiliser un objet métallique pour remettre le couvercle."
+                  ],
+                  [
+                    "09 h 10 · état du suivi",
+                    "Réévaluation engagée ; issue finale non confirmée."
+                  ]
+                ]
+              },
+              {
+                "title": "B · Consigne validée pour l’exercice",
+                "text": "Consigne : ne pas toucher, éloigner, alerter et attendre l'intervenant habilité.",
+                "rows": [
+                  [
+                    "Statut",
+                    "Version validée par le responsable pédagogique pour ce cas fictif."
+                  ],
+                  [
+                    "Traçabilité",
+                    "Distinguer les faits, les sources, les horaires, les actions et les suites."
+                  ]
+                ]
+              },
+              {
+                "title": "C · Brouillon reçu, à contrôler",
+                "text": "Main courante : installation hors tension, sans vérification par personne compétente.",
+                "rows": [
+                  [
+                    "09 h 12 · heure de saisie",
+                    "Entrée saisie au retour au poste."
+                  ],
+                  [
+                    "Heure d’événement indiquée dans le brouillon",
+                    "09 h 12"
+                  ],
+                  [
+                    "Conclusion proposée",
+                    "Toutes les vérifications sont achevées ; aucune suite nécessaire."
+                  ]
+                ]
+              }
+            ],
+            "exercises": [
+              {
+                "id": "anomalie",
+                "kind": "single",
+                "prompt": "Quelle phrase du document C pose un problème de fond ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "L’entrée a été saisie à 09 h 12."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Main courante : installation hors tension, sans vérification par personne compétente."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Consigne : ne pas toucher, éloigner, alerter et attendre l'intervenant habilité."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle.",
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Déplacer le câble à mains nues pour libérer le passage."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              },
+              {
+                "id": "horodatage",
+                "kind": "single",
+                "prompt": "Quelle anomalie chronologique faut-il corriger ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Le brouillon utilise l’heure de saisie 09 h 12 comme heure de l’événement signalé à 09 h 02."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Le délai entre constat et saisie prouve que l’événement n’a pas eu lieu."
+                  },
+                  {
+                    "id": "3",
+                    "text": "L’heure de la nouvelle information doit remplacer toutes les autres heures."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La pièce A distingue le constat à 09 h 02, l’action à 09 h 04 et l’évolution à 09 h 07. La saisie à 09 h 12 n’efface pas cette chronologie.",
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Le fait est signalé à 11 h 06, puis saisi à 11 h 12. Quelle entrée est fidèle ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Événement signalé à 11 h 06 ; saisie à 11 h 12 ; origine de l’information précisée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Saisie à 11 h 06, en modifiant l’historique pour faire coïncider les heures."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Événement à 11 h 12, puisque l’application l’a enregistré à cette heure."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Distinguer heure de l’événement et heure de saisie préserve la chronologie. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "Distinguer heure de l’événement et heure de saisie préserve la chronologie."
+                }
+              },
+              {
+                "id": "cloture",
+                "kind": "single",
+                "prompt": "Quelle conclusion est réellement étayée par la pièce A ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Tout est définitivement résolu puisque le brouillon l’affirme."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Aucune action n’a été engagée avant la saisie."
+                  },
+                  {
+                    "id": "3",
+                    "text": "La réévaluation est engagée et l’issue finale n’est pas confirmée."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La dernière ligne de A décrit un suivi en cours. La conclusion de C n’est pas étayée.",
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "2",
+                      "text": "La vérification ou le relais prévu : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              },
+              {
+                "id": "statut",
+                "kind": "sort",
+                "prompt": "Attribuez un statut à chaque élément du dossier.",
+                "options": [
+                  {
+                    "id": "fait",
+                    "text": "Fait ou action enregistré dans A"
+                  },
+                  {
+                    "id": "regle",
+                    "text": "Instruction validée dans B"
+                  },
+                  {
+                    "id": "ecart",
+                    "text": "Affirmation du brouillon C à corriger"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Un équipement électrique est endommagé et accessible.",
+                    "answer": "fait"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Consigne : ne pas toucher, éloigner, alerter et attendre l'intervenant habilité.",
+                    "answer": "regle"
+                  },
+                  {
+                    "id": "r3",
+                    "text": "Main courante : installation hors tension, sans vérification par personne compétente.",
+                    "answer": "ecart"
+                  },
+                  {
+                    "id": "r4",
+                    "text": "Action à 09 h 04 : Tenir les personnes à distance et alerter l'interlocuteur prévu sans toucher au coffret.",
+                    "answer": "fait"
+                  },
+                  {
+                    "id": "r5",
+                    "text": "Toutes les vérifications sont achevées.",
+                    "answer": "ecart"
+                  }
+                ],
+                "explanation": "Le document d’origine et le statut de l’information comptent autant que sa formulation. A constate, B prescrit, C contient des erreurs.",
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "correction",
+                "kind": "single",
+                "prompt": "Comment corriger ce brouillon avant une transmission autorisée ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Rectifier les horaires, écarter la note incompatible, garder le suivi en cours et tracer la validation."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Changer seulement le titre du document, sans contrôler les trois écarts."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Supprimer la fiche A pour ne conserver qu’un récit cohérent avec C."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La correction doit résoudre les écarts de fond, de chronologie et de statut, sans détruire les sources.",
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Déplacer le câble à mains nues pour libérer le passage."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              }
+            ]
+          },
+          "academy": {
+            "kind": "documents",
+            "dossier": "11.01",
+            "title": "Le coffret endommagé",
+            "case": "Dossier fictif « Le coffret endommagé ». Comparez les pièces et justifiez mentalement chaque choix.",
+            "edition": "2026-10-06"
+          }
+        },
+        {
+          "id": "aps62-11-01-journal",
+          "title": "Main courante · composer une entrée",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Composer une main courante fiable, sans rédaction",
+            "journal": true,
+            "documents": [
+              {
+                "title": "A · Fiche d’événement 11-01",
+                "text": "L'APS constate un coffret électrique ouvert après un choc. Une odeur inhabituelle est présente. Il ne possède ni habilitation ni mission d'intervention électrique.",
+                "rows": [
+                  [
+                    "09 h 02 · constat au poste",
+                    "Un équipement électrique est endommagé et accessible."
+                  ],
+                  [
+                    "09 h 04 · action enregistrée par l’agent",
+                    "Tenir les personnes à distance et alerter l'interlocuteur prévu sans toucher au coffret."
+                  ],
+                  [
+                    "09 h 07 · nouvelle information reçue",
+                    "Un salarié propose d'utiliser un objet métallique pour remettre le couvercle."
+                  ],
+                  [
+                    "09 h 10 · état du suivi",
+                    "Réévaluation engagée ; issue finale non confirmée."
+                  ]
+                ]
+              },
+              {
+                "title": "B · Consigne validée pour l’exercice",
+                "text": "Consigne : ne pas toucher, éloigner, alerter et attendre l'intervenant habilité.",
+                "rows": [
+                  [
+                    "Statut",
+                    "Version validée par le responsable pédagogique pour ce cas fictif."
+                  ],
+                  [
+                    "Traçabilité",
+                    "Distinguer les faits, les sources, les horaires, les actions et les suites."
+                  ]
+                ]
+              },
+              {
+                "title": "Moment de la saisie",
+                "text": "Il est 09 h 12 lorsque vous composez cette entrée. L’heure de saisie ne remplace pas les heures de la fiche A."
+              }
+            ],
+            "exercises": [
+              {
+                "id": "heure",
+                "kind": "single",
+                "prompt": "Heures de l’événement et de la saisie",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Événement et saisie : 09 h 12 ; aucune autre heure utile."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Événement à 09 h 04 ; saisie antidatée à 09 h 02."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Constat : 09 h 02 ; action : 09 h 04 ; évolution : 09 h 07 ; saisie : 09 h 12."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La pièce A et le brouillon donnent des heures de nature différente. Conservez chacune avec sa fonction.",
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Le fait est signalé à 11 h 06, puis saisi à 11 h 12. Quelle entrée est fidèle ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Événement signalé à 11 h 06 ; saisie à 11 h 12 ; origine de l’information précisée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Saisie à 11 h 06, en modifiant l’historique pour faire coïncider les heures."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Événement à 11 h 12, puisque l’application l’a enregistré à cette heure."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Distinguer heure de l’événement et heure de saisie préserve la chronologie. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "Distinguer heure de l’événement et heure de saisie préserve la chronologie."
+                }
+              },
+              {
+                "id": "source",
+                "kind": "single",
+                "prompt": "Origine des informations",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Informations certaines, sans source à conserver."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Tous les éléments ont été personnellement observés au même moment."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Constat et action consignés dans A ; nouvelle information reçue à 09 h 07 ; consigne B identifiée."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Ne transformez pas une information reçue en observation personnelle.",
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "fait",
+                "kind": "single",
+                "prompt": "Constat initial",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Aucun fait précis à conserver dans le registre."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Un équipement électrique est endommagé et accessible."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Intention malveillante certaine des personnes concernées."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La formulation fidèle n’ajoute ni intention ni qualification définitive. Un équipement électrique est endommagé et accessible.",
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "action",
+                "kind": "single",
+                "prompt": "Action réellement enregistrée à 09 h 04",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Refermer le coffret à la main pour supprimer l'accès."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Tenir les personnes à distance et alerter l'interlocuteur prévu sans toucher au coffret."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Aucune action effectuée avant la saisie."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La pièce A enregistre cette action à 09 h 04. La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle.",
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Déplacer le câble à mains nues pour libérer le passage."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "Évolution à transmettre",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Un salarié propose d'utiliser un objet métallique pour remettre le couvercle."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Situation inchangée depuis le constat initial."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Issue définitivement confirmée à 09 h 07 sans autre démarche."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Cette nouvelle information modifie l’analyse. La connaissance des lieux ne prouve ni l'habilitation ni l'absence de danger.",
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Déplacer le câble à mains nues pour libérer le passage."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "La protection des tiers n'autorise pas une intervention électrique hors compétence. Le danger peut persister même sans bruit ni étincelle."
+                }
+              },
+              {
+                "id": "suite",
+                "kind": "single",
+                "prompt": "État du suivi et prochaine décision",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Réévaluation engagée, issue non confirmée. Décision à mettre en œuvre : Empêcher l'exposition par une consigne claire et maintenir le balisage adapté."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Résultat juridique définitif établi par le poste."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Dossier clos ; aucune vérification ni transmission complémentaire."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Distinguez ce qui est fait, ce qui est décidé et ce qui reste à confirmer.",
+                "remediation": {
+                  "prompt": "Une rallonge abîmée traverse un passage humide. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "2",
+                      "text": "La vérification ou le relais prévu : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Signaler et protéger la zone sans manipuler une installation potentiellement dangereuse.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              }
+            ]
+          },
+          "academy": {
+            "kind": "journal",
+            "dossier": "11.01",
+            "title": "Le coffret endommagé",
+            "case": "Dossier fictif « Le coffret endommagé ». Comparez les pièces et justifiez mentalement chaque choix.",
+            "edition": "2026-10-06"
+          }
+        },
+        {
+          "id": "aps62-11-01-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "11.01",
+            "title": "Reconnaître une situation électrique dangereuse",
+            "kind": "recap",
+            "decision": "Empêcher l’exposition selon les consignes et alerter le personnel compétent.",
+            "reason": "Le risque électrique peut être présent sans panne apparente. Le courant, les contacts, l’environnement et la durée d’exposition influencent les conséquences. La sensibilisation APS ne vaut pas habilitation. Toute opération doit correspondre à une compétence, un titre et une organisation adaptés lorsque ceux-ci sont requis. L’agent ne s’improvise pas réparateur.",
+            "pitfall": "Toucher le câble pour vérifier s’il chauffe.",
+            "cards": [
+              {
+                "front": "Le courant peut traverser le corps",
+                "back": "Un contact direct avec une partie sous tension ou indirect avec une masse devenue dangereuse peut provoquer une électrisation, des brûlures ou un arrêt cardiaque. Un arc électrique peut aussi blesser sans contact direct. L'humidité, les matériaux et l'environnement influencent le risque. L'absence de bruit ou de mouvement ne prouve pas qu'un équipement est hors tension."
+              },
+              {
+                "front": "Reconnaître sans intervenir au-delà de sa compétence",
+                "back": "Un câble abîmé, un capot manquant, une odeur anormale ou de l'eau près d'un appareil doivent être signalés. L'habilitation électrique est liée à des opérations définies et délivrée par l'employeur dans le cadre applicable ; le diplôme APS ne vaut pas habilitation générale. Des gants ordinaires ou des chaussures usuelles ne constituent pas automatiquement une protection électrique adaptée."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "L'agent découvre une prise arrachée dans un couloir. Il empêche l'approche et fait intervenir le service compétent. Il ne remet pas les fils en place et ne teste pas la prise avec un appareil. La zone ne redevient accessible qu'après sécurisation confirmée."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "11.07",
+                "page": 528
+              },
+              {
+                "ref": "14.01",
+                "page": 619
+              }
+            ],
+            "instruction": "Retrouvez mentalement la décision et les limites du dossier, puis consultez les repères pour vérifier. Vous pouvez refaire les ateliers pour réviser.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-11-02",
+      "title": "02 · Accident électrique : éviter une seconde victime",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-11-02-comprendre",
+          "title": "Comprendre · Accident électrique : éviter une seconde victime",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "11.02",
+            "title": "Accident électrique : éviter une seconde victime",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-11.webp",
+            "case": "Une personne est au sol près d’un équipement électrique endommagé. Un témoin veut la saisir immédiatement. Vous ne savez pas si le danger électrique a été supprimé.",
+            "reason": "La priorité est de ne pas créer un second accident. Un objet du quotidien n’est pas une garantie d’isolement. La suppression du danger s’effectue dans les limites de compétence et selon les dispositifs prévus. Une fois l’accès rendu sûr, les secours s’inscrivent dans les compétences acquises et les instructions des services d’urgence. Cette séquence n’enseigne pas une manipulation électrique.",
+            "lessons": [
+              {
+                "ref": "11.08",
+                "title": "Réagir à un accident électrique",
+                "page": 529,
+                "diagram": "media/aps62/repere-11.08.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Le sauveteur peut devenir conducteur"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Toucher une victime encore en contact avec une source électrique peut exposer le sauveteur au courant. Un vêtement, un manche ou un objet trouvé sur place ne garantit pas une isolation suffisante. La première étape consiste à faire supprimer le danger par un moyen sûr, autorisé et adapté, ou à attendre l'intervenant compétent tout en empêchant d'autres contacts."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Secourir après sécurisation"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une fois l'accès sûr, examinez la victime et appliquez les gestes SST adaptés, avec alerte aux secours. Une électrisation peut provoquer des lésions ou troubles non visibles ; l'apparence d'une petite brûlure ne permet pas d'écarter le danger. Les circonstances, la source supposée et les signes observés sont transmis. L'installation reste indisponible jusqu'à validation de sa sécurité."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un salarié est effondré près d'une machine défectueuse. L'agent empêche un collègue de le saisir, fait alerter et demande la sécurisation par le moyen prévu. Dès que le contact est sûr, il vérifie la réponse et la respiration. Si nécessaire, il commence la réanimation et fait apporter le DAE."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La suppression du danger électrique précède le contact avec la victime. Le secours humain et la sécurisation durable de l'installation doivent tous deux être assurés."
+                  }
+                ],
+                "course_page": 530,
+                "practice": {
+                  "background": "Une fois la zone sécurisée, appliquez l’examen et les gestes SST. Une victime peut présenter peu de marques visibles et pourtant nécessiter un avis médical urgent. Alertez, surveillez et préparez le DAE si l’état le demande. Ne remettez pas l’installation en service après le départ de la victime sans contrôle compétent. Préservez les faits et signalez les protections ou équipements concernés. L’analyse de l’événement recherchera les causes techniques et organisationnelles, sans se limiter à l’erreur supposée de la victime.",
+                  "case": "Une personne est au sol près d’une machine et un câble endommagé touche son vêtement. Un témoin veut la tirer par le bras. Vous ne savez pas si l’alimentation est coupée. Que dites-vous au témoin ? Quelles actions pouvez-vous lancer simultanément ?",
+                  "transfer": "Un collègue propose de tirer la victime par sa veste. Pourquoi cette solution improvisée n’est-elle pas une garantie de sécurité ?",
+                  "page": 544
+                }
+              },
+              {
+                "ref": "11.07",
+                "title": "Comprendre le risque électrique",
+                "page": 527,
+                "diagram": "media/aps62/repere-11.07.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Le courant peut traverser le corps"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un contact direct avec une partie sous tension ou indirect avec une masse devenue dangereuse peut provoquer une électrisation, des brûlures ou un arrêt cardiaque. Un arc électrique peut aussi blesser sans contact direct. L'humidité, les matériaux et l'environnement influencent le risque. L'absence de bruit ou de mouvement ne prouve pas qu'un équipement est hors tension."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Reconnaître sans intervenir au-delà de sa compétence"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un câble abîmé, un capot manquant, une odeur anormale ou de l'eau près d'un appareil doivent être signalés. L'habilitation électrique est liée à des opérations définies et délivrée par l'employeur dans le cadre applicable ; le diplôme APS ne vaut pas habilitation générale. Des gants ordinaires ou des chaussures usuelles ne constituent pas automatiquement une protection électrique adaptée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'agent découvre une prise arrachée dans un couloir. Il empêche l'approche et fait intervenir le service compétent. Il ne remet pas les fils en place et ne teste pas la prise avec un appareil. La zone ne redevient accessible qu'après sécurisation confirmée."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La mission de l'APS est de repérer, protéger et alerter. La mise hors tension et les opérations électriques doivent respecter les compétences, procédures et moyens requis."
+                  }
+                ],
+                "course_page": 528,
+                "practice": {
+                  "background": "La sensibilisation APS ne vaut pas habilitation électrique. L’habilitation est délivrée par l’employeur pour des opérations définies, après les vérifications et la formation requises. L’agent ne démonte pas, ne répare pas et n’ouvre pas une armoire hors de son périmètre. Repérez, éloignez, balisez si cela est sûr et faites intervenir le personnel compétent. Un bouton d’arrêt ou une coupure accessible ne s’utilise que selon la situation, la formation et les consignes. Ne touchez pas une victime tant que le danger électrique persiste.",
+                  "case": "Une rallonge présente un conducteur apparent dans une zone humide. Un salarié vous demande de la recouvrir de ruban adhésif pour terminer le service. Pourquoi cette réparation improvisée est-elle inacceptable ? Quelle protection immédiate est possible ?",
+                  "transfer": "Pourquoi mettre des gants ordinaires ne vous autorise-t-il pas à toucher un conducteur électrique ?",
+                  "page": 543
+                }
+              },
+              {
+                "ref": "01.03",
+                "title": "Organiser une protection efficace",
+                "page": 16,
+                "diagram": "media/aps62/repere-01.03.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Regarder avant d'approcher"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La protection vise à empêcher un second accident. Avant de rejoindre la victime, observez la circulation, les machines, les fils, les fumées, la chaleur et les produits. Un danger peut être invisible : une atmosphère toxique ne se reconnaît pas toujours à son odeur. Une personne allongée dans une zone technique ne doit donc pas déclencher une entrée précipitée. Votre position doit permettre de comprendre la scène sans vous exposer."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Supprimer, isoler, faire intervenir"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Supprimer le danger signifie obtenir une sécurité durable avec un moyen que vous savez utiliser et êtes autorisé à employer. Si cela n'est pas possible, empêchez l'accès et demandez les moyens compétents. Une coupure improvisée, une porte simplement tenue à la main ou un collègue averti oralement ne garantissent pas nécessairement cette sécurité. Le dégagement d'urgence d'une victime répond à des conditions exceptionnelles de danger immédiat ; ce n'est pas le déplacement ordinaire d'une personne blessée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un manutentionnaire est tombé dans une zone où circulent des chariots. L'agent fait arrêter la circulation par le dispositif prévu, empêche les autres véhicules d'entrer et fait alerter. La victime devient accessible lorsque cette protection est effective. Se placer lui-même devant un chariot pour le stopper l'aurait exposé au même danger."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La protection doit durer pendant les soins et jusqu'au relais. Vérifiez que personne ne rétablit involontairement le danger."
+                  }
+                ],
+                "course_page": 17,
+                "practice": {
+                  "background": "Supprimez le danger seulement si vous pouvez le faire durablement, sans risque et dans votre compétence. À défaut, isolez la zone et interdisez l’accès. Le dégagement d’urgence reste exceptionnel : un danger réel, immédiat et non contrôlable menace la victime, et son déplacement est réalisable sans exposer le sauveteur. N’entrez jamais dans une atmosphère suspecte pour tenter un sauvetage sans moyens adaptés. Appelez les secours spécialisés et transmettez les risques identifiés.",
+                  "case": "Vous trouvez un technicien au sol dans un local où une odeur inhabituelle est perceptible. La porte est ouverte. Un salarié propose d’entrer avec vous en retenant sa respiration pendant quelques secondes. Quelle décision prenez-vous ? Quelles informations seront utiles aux secours ?",
+                  "transfer": "Une machine continue de tourner près d’une victime. Pourquoi l’appel aux secours ne suffit-il pas à protéger les témoins ?",
+                  "page": 46
+                }
+              }
+            ],
+            "decision": "Faire empêcher le contact dangereux, alerter et obtenir la mise en sécurité par le moyen prévu.",
+            "pitfall": "Toucher la victime sans connaître l’état de l’installation.",
+            "objectives": [
+              "Expliquer : accident électrique : éviter une seconde victime",
+              "Justifier une décision à partir de faits et de limites.",
+              "Choisir une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Une personne est au sol près d’un équipement électrique endommagé. Un témoin veut la saisir immédiatement. Vous ne savez pas si le danger électrique a été supprimé."
+              ],
+              [
+                "Décision à justifier",
+                "Faire empêcher le contact dangereux, alerter et obtenir la mise en sécurité par le moyen prévu."
+              ],
+              [
+                "Piège à éviter",
+                "Toucher la victime sans connaître l’état de l’installation."
+              ],
+              [
+                "Pourquoi ?",
+                "La priorité est de ne pas créer un second accident. Un objet du quotidien n’est pas une garantie d’isolement. La suppression du danger s’effectue dans les limites de compétence et selon les dispositifs prévus. Une fois l’accès rendu sûr, les secours s’inscrivent dans les compétences acquises et les instructions des services d’urgence. Cette séquence n’enseigne pas une manipulation électrique."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Une personne est au sol près d’un équipement électrique endommagé."
+              },
+              {
+                "label": "Vérifier",
+                "text": "La priorité est de ne pas créer un second accident."
+              },
+              {
+                "label": "Décider",
+                "text": "Faire empêcher le contact dangereux, alerter et obtenir la mise en sécurité par le moyen prévu."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Le courant paraît coupé mais d’autres sources d’énergie existent. Quelle information doit rester explicitement non confirmée ?"
+              }
+            ],
+            "edition": "2026-10-06",
+            "image_alt": "Scène professionnelle illustrée : Sensibilisation au risque électrique",
+            "sorting": [
+              {
+                "text": "Une personne est au sol près d’un équipement électrique endommagé. Un témoin veut la saisir immédiatement. Vous ne savez pas si le danger électrique a été supprimé.",
+                "category": "fait"
+              },
+              {
+                "text": "Faire empêcher le contact dangereux, alerter et obtenir la mise en sécurité par le moyen prévu.",
+                "category": "adapte"
+              },
+              {
+                "text": "Toucher la victime sans connaître l’état de l’installation.",
+                "category": "ecarter"
+              }
+            ],
+            "pacing": [
+              {
+                "label": "Comprendre et comparer",
+                "minutes": 16
+              },
+              {
+                "label": "Mémoriser",
+                "minutes": 4
+              },
+              {
+                "label": "Mission en cinq décisions",
+                "minutes": 12
+              },
+              {
+                "label": "Vérifier les repères",
+                "minutes": 6
+              },
+              {
+                "label": "Transférer",
+                "minutes": 6
+              },
+              {
+                "label": "Analyser les documents",
+                "minutes": 8
+              },
+              {
+                "label": "Composer la main courante",
+                "minutes": 6
+              },
+              {
+                "label": "Retenir",
+                "minutes": 2
+              }
+            ],
+            "deepening": [
+              {
+                "title": "Comparer deux moments de la décision",
+                "paragraphs": [
+                  "Dans le nouveau dossier « La seconde victime », le point de départ est le suivant : Une personne est au sol près d'un appareil électrique dégradé. Un témoin s'apprête à la saisir. L'absence de danger électrique n'est pas établie.",
+                  "Le fait établi est : Une victime potentielle se trouve dans un environnement possiblement électrisé. La première réponse à examiner est : Alerter et empêcher un contact exposant, en suivant les consignes de secours et de mise en sécurité. La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences.",
+                  "La situation évolue : Un interlocuteur compétent confirme la sécurisation de l'installation. La décision doit donc être réexaminée : Transmettre l'état observé et appliquer les gestes relevant de sa formation selon les instructions des secours. La fin du danger électrique ne supprime pas les conséquences possibles pour la victime.",
+                  "Comparez les deux moments avant de lancer la mission. Le document à contrôler contient cet écart : Appel : personne simplement fatiguée, malgré le contexte électrique. La référence vérifiée est : Trame d'alerte : lieu, danger électrique possible, nombre de victimes, état observé et sécurisation confirmée ou non."
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-11-02-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 4,
+          "blocks": [
+            {
+              "id": "aps62-11-02-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-11-02-video",
+                "title": "Accident électrique : éviter une seconde victime",
+                "required": true,
+                "src": "media/aps62/v2/aps62-11-02.mp4",
+                "poster": "media/aps62/v2/aps62-11-02.jpg",
+                "captions": "media/aps62/v2/aps62-11-02.vtt",
+                "duration_seconds": 77.772667,
+                "transcript": "La situation : Une personne est au sol près d’un équipement électrique endommagé. Un témoin veut la saisir immédiatement. Vous ne savez pas si le danger électrique a été supprimé.\n\nÀ vous de décider : Faire empêcher le contact dangereux, alerter et obtenir la mise en sécurité par le moyen prévu. Ou bien : Toucher la victime sans connaître l’état de l’installation. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La priorité est de ne pas créer un second accident. Un objet du quotidien n’est pas une garantie d’isolement. La suppression du danger s’effectue dans les limites de compétence et selon les dispositifs prévus. Une fois l’accès rendu sûr, les secours s’inscrivent dans les compétences acquises et les instructions des services d’urgence. Cette séquence n’enseigne pas une manipulation électrique.\n\nLe bon relais : L’alerte localise la victime et signale le danger électrique non maîtrisé. Les témoins sont éloignés de la zone dangereuse. L’intervenant compétent réalise la mise en sécurité prévue ; l’agent n’assimile pas une commande actionnée à une certitude technique. Les secours reçoivent les faits et les conditions d’accès.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "11.02",
+            "title": "Accident électrique : éviter une seconde victime",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Le sauveteur peut devenir conducteur",
+                "back": "Toucher une victime encore en contact avec une source électrique peut exposer le sauveteur au courant. Un vêtement, un manche ou un objet trouvé sur place ne garantit pas une isolation suffisante. La première étape consiste à faire supprimer le danger par un moyen sûr, autorisé et adapté, ou à attendre l'intervenant compétent tout en empêchant d'autres contacts."
+              },
+              {
+                "front": "Secourir après sécurisation",
+                "back": "Une fois l'accès sûr, examinez la victime et appliquez les gestes SST adaptés, avec alerte aux secours. Une électrisation peut provoquer des lésions ou troubles non visibles ; l'apparence d'une petite brûlure ne permet pas d'écarter le danger. Les circonstances, la source supposée et les signes observés sont transmis. L'installation reste indisponible jusqu'à validation de sa sécurité."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un salarié est effondré près d'une machine défectueuse. L'agent empêche un collègue de le saisir, fait alerter et demande la sécurisation par le moyen prévu. Dès que le contact est sûr, il vérifie la réponse et la respiration. Si nécessaire, il commence la réanimation et fait apporter le DAE."
+              },
+              {
+                "front": "Le courant peut traverser le corps",
+                "back": "Un contact direct avec une partie sous tension ou indirect avec une masse devenue dangereuse peut provoquer une électrisation, des brûlures ou un arrêt cardiaque. Un arc électrique peut aussi blesser sans contact direct. L'humidité, les matériaux et l'environnement influencent le risque. L'absence de bruit ou de mouvement ne prouve pas qu'un équipement est hors tension."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Une personne est au sol près d’un équipement électrique endommagé. Un témoin veut la saisir immédiatement. Vous ne savez pas si le danger électrique a été supprimé.\n\nÀ vous de décider : Faire empêcher le contact dangereux, alerter et obtenir la mise en sécurité par le moyen prévu. Ou bien : Toucher la victime sans connaître l’état de l’installation. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La priorité est de ne pas créer un second accident. Un objet du quotidien n’est pas une garantie d’isolement. La suppression du danger s’effectue dans les limites de compétence et selon les dispositifs prévus. Une fois l’accès rendu sûr, les secours s’inscrivent dans les compétences acquises et les instructions des services d’urgence. Cette séquence n’enseigne pas une manipulation électrique.\n\nLe bon relais : L’alerte localise la victime et signale le danger électrique non maîtrisé. Les témoins sont éloignés de la zone dangereuse. L’intervenant compétent réalise la mise en sécurité prévue ; l’agent n’assimile pas une commande actionnée à une certitude technique. Les secours reçoivent les faits et les conditions d’accès.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-11-02-atelier",
+          "title": "Mission · La seconde victime",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "academy": {
+            "kind": "workshop",
+            "dossier": "11.02",
+            "title": "La seconde victime",
+            "case": "Une personne est au sol près d'un appareil électrique dégradé. Un témoin s'apprête à la saisir. L'absence de danger électrique n'est pas établie.",
+            "edition": "2026-10-06"
+          },
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "La seconde victime · cinq décisions successives",
+            "sequential": true,
+            "exercises": [
+              {
+                "id": "constat",
+                "kind": "single",
+                "prompt": "1. Sur quel fait fonder votre analyse ?",
+                "context": "Une personne est au sol près d'un appareil électrique dégradé. Un témoin s'apprête à la saisir. L'absence de danger électrique n'est pas établie.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Aucun fait ne mérite une vérification tant qu’aucun dommage n’est visible."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Une victime potentielle se trouve dans un environnement possiblement électrisé."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Le récit prouve à lui seul une intention malveillante de toutes les personnes concernées."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Le point de départ établi est : Une victime potentielle se trouve dans un environnement possiblement électrisé. Il ne faut pas compléter ce constat par une supposition.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : Le point de départ établi est : Une victime potentielle se trouve dans un environnement possiblement électrisé. Il ne faut pas compléter ce constat par une supposition. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "3": "Ce choix crée une difficulté : Le point de départ établi est : Une victime potentielle se trouve dans un environnement possiblement électrisé. Il ne faut pas compléter ce constat par une supposition. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "decision",
+                "kind": "single",
+                "prompt": "2. Quelle première décision prenez-vous ?",
+                "context": "Le poste doit maintenant choisir une action à partir du constat.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Toucher immédiatement la personne pour vérifier sa réaction."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Attendre la fin de la vacation sans transmettre la situation à un interlocuteur."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Alerter et empêcher un contact exposant, en suivant les consignes de secours et de mise en sécurité."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix crée une difficulté : La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite."
+                },
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Éloigner les personnes et alerter sans s'approcher pour tester le câble."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Le déplacer avec un objet trouvé à proximité."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "3. Une nouvelle information arrive. Que décidez-vous ?",
+                "context": "Un interlocuteur compétent confirme la sécurisation de l'installation.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Transmettre l'état observé et appliquer les gestes relevant de sa formation selon les instructions des secours."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Garder la première décision sans examiner l’information nouvelle."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Considérer que la victime n'a plus besoin d'évaluation parce que le courant est coupé."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La fin du danger électrique ne supprime pas les conséquences possibles pour la victime.",
+                "branches": {
+                  "1": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "2": "Ce choix crée une difficulté : La fin du danger électrique ne supprime pas les conséquences possibles pour la victime. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix crée une difficulté : La fin du danger électrique ne supprime pas les conséquences possibles pour la victime. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Éloigner les personnes et alerter sans s'approcher pour tester le câble."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Le déplacer avec un objet trouvé à proximité."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences."
+                }
+              },
+              {
+                "id": "consigne",
+                "kind": "single",
+                "prompt": "4. Quel document doit être écarté ou clarifié avant application ?",
+                "context": "Deux documents sont transmis au poste. Comparez-les avec la situation et la règle.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Trame d'alerte : lieu, danger électrique possible, nombre de victimes, état observé et sécurisation confirmée ou non."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Trame validée : identifier les faits, les mesures prises et les interlocuteurs avisés."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Appel : personne simplement fatiguée, malgré le contexte électrique."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences. La note incompatible est : Appel : personne simplement fatiguée, malgré le contexte électrique.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences. La note incompatible est : Appel : personne simplement fatiguée, malgré le contexte électrique. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix crée une difficulté : La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences. La note incompatible est : Appel : personne simplement fatiguée, malgré le contexte électrique. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite."
+                },
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Le déplacer avec un objet trouvé à proximité."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Éloigner les personnes et alerter sans s'approcher pour tester le câble."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              },
+              {
+                "id": "releve",
+                "kind": "single",
+                "prompt": "5. Quelle transmission permet une relève fiable ?",
+                "context": "Le collègue de relève arrive. Il n’a assisté à aucune des étapes précédentes.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Transmettre le constat, l’évolution, les mesures réellement prises et ce qui reste à vérifier."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Transmettre seulement la première décision, sans l’évolution reçue ensuite."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Annoncer que toutes les vérifications sont terminées pour simplifier la relève."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Le relais doit connaître les faits nouveaux et les limites de l’information. La fin du danger électrique ne supprime pas les conséquences possibles pour la victime.",
+                "branches": {
+                  "1": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "2": "Ce choix crée une difficulté : Le relais doit connaître les faits nouveaux et les limites de l’information. La fin du danger électrique ne supprime pas les conséquences possibles pour la victime. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix crée une difficulté : Le relais doit connaître les faits nouveaux et les limites de l’information. La fin du danger électrique ne supprime pas les conséquences possibles pour la victime. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "La vérification ou le relais prévu : Éloigner les personnes et alerter sans s'approcher pour tester le câble."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-11-02-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Une personne est au sol près d’un équipement électrique endommagé. Un témoin veut la saisir immédiatement. Vous ne savez pas si le danger électrique a été supprimé.",
+          "options": [
+            {
+              "id": "aps62-11-02-a0",
+              "text": "Utiliser un objet trouvé sur place comme protection supposée isolante.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-11-02-a1",
+              "text": "Faire empêcher le contact dangereux, alerter et obtenir la mise en sécurité par le moyen prévu.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-11-02-a2",
+              "text": "Toucher la victime sans connaître l’état de l’installation.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "La priorité est de ne pas créer un second accident. Un objet du quotidien n’est pas une garantie d’isolement. La suppression du danger s’effectue dans les limites de compétence et selon les dispositifs prévus. Une fois l’accès rendu sûr, les secours s’inscrivent dans les compétences acquises et les instructions des services d’urgence. Cette séquence n’enseigne pas une manipulation électrique."
+        },
+        {
+          "id": "aps62-11-02-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-11-02-pair0",
+              "left": "Le sauveteur peut devenir conducteur",
+              "right": "Toucher une victime encore en contact avec une source électrique peut exposer le sauveteur au courant."
+            },
+            {
+              "id": "aps62-11-02-pair1",
+              "left": "Secourir après sécurisation",
+              "right": "Une fois l'accès sûr, examinez la victime et appliquez les gestes SST adaptés, avec alerte aux secours."
+            },
+            {
+              "id": "aps62-11-02-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Un salarié est effondré près d'une machine défectueuse."
+            }
+          ],
+          "explanation": "Le sauveteur peut devenir conducteur : Toucher une victime encore en contact avec une source électrique peut exposer le sauveteur au courant. Secourir après sécurisation : Une fois l'accès sûr, examinez la victime et appliquez les gestes SST adaptés, avec alerte aux secours. EXEMPLE EXPLIQUÉ : Un salarié est effondré près d'une machine défectueuse."
+        },
+        {
+          "id": "aps62-11-02-transfert",
+          "title": "Transférer · comparer de nouvelles situations",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "academy": {
+            "dossier": "11.02",
+            "title": "Accident électrique : éviter une seconde victime",
+            "kind": "transfer",
+            "case": "Le courant paraît coupé mais d’autres sources d’énergie existent. Quelle information doit rester explicitement non confirmée ?",
+            "model": "La priorité est de ne pas créer un second accident. Un objet du quotidien n’est pas une garantie d’isolement. La suppression du danger s’effectue dans les limites de compétence et selon les dispositifs prévus. Une fois l’accès rendu sûr, les secours s’inscrivent dans les compétences acquises et les instructions des services d’urgence. Cette séquence n’enseigne pas une manipulation électrique. L’alerte localise la victime et signale le danger électrique non maîtrisé. Les témoins sont éloignés de la zone dangereuse. L’intervenant compétent réalise la mise en sécurité prévue ; l’agent n’assimile pas une commande actionnée à une certitude technique. Les secours reçoivent les faits et les conditions d’accès.",
+            "edition": "2026-10-04"
+          },
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Transférer le raisonnement et comparer les contextes",
+            "exercises": [
+              {
+                "id": "variante",
+                "kind": "single",
+                "prompt": "Quelle réponse retenir dans cette nouvelle situation ?",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Déclarer l’installation sûre dès qu’un seul interrupteur est coupé."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Signaler que l’absence de danger électrique n’est pas confirmée pour toutes les sources et maintenir la distance."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Toucher la victime pour tester s’il reste du courant."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Signaler que l’absence de danger électrique n’est pas confirmée pour toutes les sources et maintenir la distance. La priorité est de ne pas créer un second accident. Un objet du quotidien n’est pas une garantie d’isolement. La suppression du danger s’effectue dans les limites de compétence et selon les dispositifs prévus. Une fois l’accès rendu sûr, les secours s’inscrivent dans les compétences acquises et les instructions des services d’urgence. Cette séquence n’enseigne pas une manipulation électrique.",
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Éloigner les personnes et alerter sans s'approcher pour tester le câble."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Le déplacer avec un objet trouvé à proximité."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences."
+                }
+              },
+              {
+                "id": "contre_exemple",
+                "kind": "single",
+                "prompt": "Comparez avec ce cas de référence : quelle conduite lui correspond ?",
+                "context": "Une personne est au sol près d’un équipement électrique endommagé. Un témoin veut la saisir immédiatement. Vous ne savez pas si le danger électrique a été supprimé.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Appliquer la même réponse quels que soient les faits et les interlocuteurs."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Toucher immédiatement la personne pour vérifier sa réaction."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Faire empêcher le contact dangereux, alerter et obtenir la mise en sécurité par le moyen prévu. La priorité est de ne pas créer un second accident. Un objet du quotidien n’est pas une garantie d’isolement. La suppression du danger s’effectue dans les limites de compétence et selon les dispositifs prévus. Une fois l’accès rendu sûr, les secours s’inscrivent dans les compétences acquises et les instructions des services d’urgence. Cette séquence n’enseigne pas une manipulation électrique."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Faire empêcher le contact dangereux, alerter et obtenir la mise en sécurité par le moyen prévu. La priorité est de ne pas créer un second accident. Un objet du quotidien n’est pas une garantie d’isolement. La suppression du danger s’effectue dans les limites de compétence et selon les dispositifs prévus. Une fois l’accès rendu sûr, les secours s’inscrivent dans les compétences acquises et les instructions des services d’urgence. Cette séquence n’enseigne pas une manipulation électrique.",
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Éloigner les personnes et alerter sans s'approcher pour tester le câble."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Le déplacer avec un objet trouvé à proximité."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences."
+                }
+              },
+              {
+                "id": "methode",
+                "kind": "single",
+                "prompt": "Que faut-il comparer avant de transposer la solution du premier cas ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Les faits, le périmètre, les autorisations, le danger et les relais effectivement disponibles."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Uniquement la première impression laissée par la personne concernée."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Seulement le nom du site et l’heure de la vacation."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Un même principe peut conduire à des actions différentes lorsque les conditions changent. Faire empêcher le contact dangereux, alerter et obtenir la mise en sécurité par le moyen prévu. La priorité est de ne pas créer un second accident. Un objet du quotidien n’est pas une garantie d’isolement. La suppression du danger s’effectue dans les limites de compétence et selon les dispositifs prévus. Une fois l’accès rendu sûr, les secours s’inscrivent dans les compétences acquises et les instructions des services d’urgence. Cette séquence n’enseigne pas une manipulation électrique.",
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-11-02-documents",
+          "title": "Documents · repérer les anomalies",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Croiser trois pièces et rechercher les anomalies",
+            "documents": [
+              {
+                "title": "A · Fiche d’événement 11-02",
+                "text": "Une personne est au sol près d'un appareil électrique dégradé. Un témoin s'apprête à la saisir. L'absence de danger électrique n'est pas établie.",
+                "rows": [
+                  [
+                    "09 h 02 · constat au poste",
+                    "Une victime potentielle se trouve dans un environnement possiblement électrisé."
+                  ],
+                  [
+                    "09 h 04 · action enregistrée par l’agent",
+                    "Alerter et empêcher un contact exposant, en suivant les consignes de secours et de mise en sécurité."
+                  ],
+                  [
+                    "09 h 07 · nouvelle information reçue",
+                    "Un interlocuteur compétent confirme la sécurisation de l'installation."
+                  ],
+                  [
+                    "09 h 10 · état du suivi",
+                    "Réévaluation engagée ; issue finale non confirmée."
+                  ]
+                ]
+              },
+              {
+                "title": "B · Consigne validée pour l’exercice",
+                "text": "Trame d'alerte : lieu, danger électrique possible, nombre de victimes, état observé et sécurisation confirmée ou non.",
+                "rows": [
+                  [
+                    "Statut",
+                    "Version validée par le responsable pédagogique pour ce cas fictif."
+                  ],
+                  [
+                    "Traçabilité",
+                    "Distinguer les faits, les sources, les horaires, les actions et les suites."
+                  ]
+                ]
+              },
+              {
+                "title": "C · Brouillon reçu, à contrôler",
+                "text": "Appel : personne simplement fatiguée, malgré le contexte électrique.",
+                "rows": [
+                  [
+                    "09 h 12 · heure de saisie",
+                    "Entrée saisie au retour au poste."
+                  ],
+                  [
+                    "Heure d’événement indiquée dans le brouillon",
+                    "09 h 12"
+                  ],
+                  [
+                    "Conclusion proposée",
+                    "Toutes les vérifications sont achevées ; aucune suite nécessaire."
+                  ]
+                ]
+              }
+            ],
+            "exercises": [
+              {
+                "id": "anomalie",
+                "kind": "single",
+                "prompt": "Quelle phrase du document C pose un problème de fond ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Appel : personne simplement fatiguée, malgré le contexte électrique."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Trame d'alerte : lieu, danger électrique possible, nombre de victimes, état observé et sécurisation confirmée ou non."
+                  },
+                  {
+                    "id": "3",
+                    "text": "L’entrée a été saisie à 09 h 12."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences.",
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Le déplacer avec un objet trouvé à proximité."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Éloigner les personnes et alerter sans s'approcher pour tester le câble."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              },
+              {
+                "id": "horodatage",
+                "kind": "single",
+                "prompt": "Quelle anomalie chronologique faut-il corriger ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Le brouillon utilise l’heure de saisie 09 h 12 comme heure de l’événement signalé à 09 h 02."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Le délai entre constat et saisie prouve que l’événement n’a pas eu lieu."
+                  },
+                  {
+                    "id": "3",
+                    "text": "L’heure de la nouvelle information doit remplacer toutes les autres heures."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La pièce A distingue le constat à 09 h 02, l’action à 09 h 04 et l’évolution à 09 h 07. La saisie à 09 h 12 n’efface pas cette chronologie.",
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Le fait est signalé à 11 h 06, puis saisi à 11 h 12. Quelle entrée est fidèle ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Événement signalé à 11 h 06 ; saisie à 11 h 12 ; origine de l’information précisée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Événement à 11 h 12, puisque l’application l’a enregistré à cette heure."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Saisie à 11 h 06, en modifiant l’historique pour faire coïncider les heures."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Distinguer heure de l’événement et heure de saisie préserve la chronologie. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "Distinguer heure de l’événement et heure de saisie préserve la chronologie."
+                }
+              },
+              {
+                "id": "cloture",
+                "kind": "single",
+                "prompt": "Quelle conclusion est réellement étayée par la pièce A ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Tout est définitivement résolu puisque le brouillon l’affirme."
+                  },
+                  {
+                    "id": "2",
+                    "text": "La réévaluation est engagée et l’issue finale n’est pas confirmée."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Aucune action n’a été engagée avant la saisie."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La dernière ligne de A décrit un suivi en cours. La conclusion de C n’est pas étayée.",
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "La vérification ou le relais prévu : Éloigner les personnes et alerter sans s'approcher pour tester le câble."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              },
+              {
+                "id": "statut",
+                "kind": "sort",
+                "prompt": "Attribuez un statut à chaque élément du dossier.",
+                "options": [
+                  {
+                    "id": "fait",
+                    "text": "Fait ou action enregistré dans A"
+                  },
+                  {
+                    "id": "regle",
+                    "text": "Instruction validée dans B"
+                  },
+                  {
+                    "id": "ecart",
+                    "text": "Affirmation du brouillon C à corriger"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Une victime potentielle se trouve dans un environnement possiblement électrisé.",
+                    "answer": "fait"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Trame d'alerte : lieu, danger électrique possible, nombre de victimes, état observé et sécurisation confirmée ou non.",
+                    "answer": "regle"
+                  },
+                  {
+                    "id": "r3",
+                    "text": "Appel : personne simplement fatiguée, malgré le contexte électrique.",
+                    "answer": "ecart"
+                  },
+                  {
+                    "id": "r4",
+                    "text": "Action à 09 h 04 : Alerter et empêcher un contact exposant, en suivant les consignes de secours et de mise en sécurité.",
+                    "answer": "fait"
+                  },
+                  {
+                    "id": "r5",
+                    "text": "Toutes les vérifications sont achevées.",
+                    "answer": "ecart"
+                  }
+                ],
+                "explanation": "Le document d’origine et le statut de l’information comptent autant que sa formulation. A constate, B prescrit, C contient des erreurs.",
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "correction",
+                "kind": "single",
+                "prompt": "Comment corriger ce brouillon avant une transmission autorisée ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Rectifier les horaires, écarter la note incompatible, garder le suivi en cours et tracer la validation."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Supprimer la fiche A pour ne conserver qu’un récit cohérent avec C."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Changer seulement le titre du document, sans contrôler les trois écarts."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La correction doit résoudre les écarts de fond, de chronologie et de statut, sans détruire les sources.",
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Le déplacer avec un objet trouvé à proximité."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Éloigner les personnes et alerter sans s'approcher pour tester le câble."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              }
+            ]
+          },
+          "academy": {
+            "kind": "documents",
+            "dossier": "11.02",
+            "title": "La seconde victime",
+            "case": "Dossier fictif « La seconde victime ». Comparez les pièces et justifiez mentalement chaque choix.",
+            "edition": "2026-10-06"
+          }
+        },
+        {
+          "id": "aps62-11-02-journal",
+          "title": "Main courante · composer une entrée",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Composer une main courante fiable, sans rédaction",
+            "journal": true,
+            "documents": [
+              {
+                "title": "A · Fiche d’événement 11-02",
+                "text": "Une personne est au sol près d'un appareil électrique dégradé. Un témoin s'apprête à la saisir. L'absence de danger électrique n'est pas établie.",
+                "rows": [
+                  [
+                    "09 h 02 · constat au poste",
+                    "Une victime potentielle se trouve dans un environnement possiblement électrisé."
+                  ],
+                  [
+                    "09 h 04 · action enregistrée par l’agent",
+                    "Alerter et empêcher un contact exposant, en suivant les consignes de secours et de mise en sécurité."
+                  ],
+                  [
+                    "09 h 07 · nouvelle information reçue",
+                    "Un interlocuteur compétent confirme la sécurisation de l'installation."
+                  ],
+                  [
+                    "09 h 10 · état du suivi",
+                    "Réévaluation engagée ; issue finale non confirmée."
+                  ]
+                ]
+              },
+              {
+                "title": "B · Consigne validée pour l’exercice",
+                "text": "Trame d'alerte : lieu, danger électrique possible, nombre de victimes, état observé et sécurisation confirmée ou non.",
+                "rows": [
+                  [
+                    "Statut",
+                    "Version validée par le responsable pédagogique pour ce cas fictif."
+                  ],
+                  [
+                    "Traçabilité",
+                    "Distinguer les faits, les sources, les horaires, les actions et les suites."
+                  ]
+                ]
+              },
+              {
+                "title": "Moment de la saisie",
+                "text": "Il est 09 h 12 lorsque vous composez cette entrée. L’heure de saisie ne remplace pas les heures de la fiche A."
+              }
+            ],
+            "exercises": [
+              {
+                "id": "heure",
+                "kind": "single",
+                "prompt": "Heures de l’événement et de la saisie",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Événement et saisie : 09 h 12 ; aucune autre heure utile."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Événement à 09 h 04 ; saisie antidatée à 09 h 02."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Constat : 09 h 02 ; action : 09 h 04 ; évolution : 09 h 07 ; saisie : 09 h 12."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La pièce A et le brouillon donnent des heures de nature différente. Conservez chacune avec sa fonction.",
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Le fait est signalé à 11 h 06, puis saisi à 11 h 12. Quelle entrée est fidèle ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Événement signalé à 11 h 06 ; saisie à 11 h 12 ; origine de l’information précisée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Événement à 11 h 12, puisque l’application l’a enregistré à cette heure."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Saisie à 11 h 06, en modifiant l’historique pour faire coïncider les heures."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Distinguer heure de l’événement et heure de saisie préserve la chronologie. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "Distinguer heure de l’événement et heure de saisie préserve la chronologie."
+                }
+              },
+              {
+                "id": "source",
+                "kind": "single",
+                "prompt": "Origine des informations",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Tous les éléments ont été personnellement observés au même moment."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Informations certaines, sans source à conserver."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Constat et action consignés dans A ; nouvelle information reçue à 09 h 07 ; consigne B identifiée."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Ne transformez pas une information reçue en observation personnelle.",
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "fait",
+                "kind": "single",
+                "prompt": "Constat initial",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Une victime potentielle se trouve dans un environnement possiblement électrisé."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Intention malveillante certaine des personnes concernées."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Aucun fait précis à conserver dans le registre."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La formulation fidèle n’ajoute ni intention ni qualification définitive. Une victime potentielle se trouve dans un environnement possiblement électrisé.",
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "action",
+                "kind": "single",
+                "prompt": "Action réellement enregistrée à 09 h 04",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Aucune action effectuée avant la saisie."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Alerter et empêcher un contact exposant, en suivant les consignes de secours et de mise en sécurité."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Toucher immédiatement la personne pour vérifier sa réaction."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La pièce A enregistre cette action à 09 h 04. La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences.",
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Éloigner les personnes et alerter sans s'approcher pour tester le câble."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Le déplacer avec un objet trouvé à proximité."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "Évolution à transmettre",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Un interlocuteur compétent confirme la sécurisation de l'installation."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Issue définitivement confirmée à 09 h 07 sans autre démarche."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Situation inchangée depuis le constat initial."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Cette nouvelle information modifie l’analyse. La fin du danger électrique ne supprime pas les conséquences possibles pour la victime.",
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Éloigner les personnes et alerter sans s'approcher pour tester le câble."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Le déplacer avec un objet trouvé à proximité."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "La première priorité est d'éviter une seconde victime. Le secours direct dépend de la suppression effective du danger et des compétences."
+                }
+              },
+              {
+                "id": "suite",
+                "kind": "single",
+                "prompt": "État du suivi et prochaine décision",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Réévaluation engagée, issue non confirmée. Décision à mettre en œuvre : Transmettre l'état observé et appliquer les gestes relevant de sa formation selon les instructions des secours."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Dossier clos ; aucune vérification ni transmission complémentaire."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Résultat juridique définitif établi par le poste."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Distinguez ce qui est fait, ce qui est décidé et ce qui reste à confirmer.",
+                "remediation": {
+                  "prompt": "Un câble tombé au sol est signalé à l'extérieur. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "La vérification ou le relais prévu : Éloigner les personnes et alerter sans s'approcher pour tester le câble."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Éloigner les personnes et alerter sans s'approcher pour tester le câble.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              }
+            ]
+          },
+          "academy": {
+            "kind": "journal",
+            "dossier": "11.02",
+            "title": "La seconde victime",
+            "case": "Dossier fictif « La seconde victime ». Comparez les pièces et justifiez mentalement chaque choix.",
+            "edition": "2026-10-06"
+          }
+        },
+        {
+          "id": "aps62-11-02-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "11.02",
+            "title": "Accident électrique : éviter une seconde victime",
+            "kind": "recap",
+            "decision": "Faire empêcher le contact dangereux, alerter et obtenir la mise en sécurité par le moyen prévu.",
+            "reason": "La priorité est de ne pas créer un second accident. Un objet du quotidien n’est pas une garantie d’isolement. La suppression du danger s’effectue dans les limites de compétence et selon les dispositifs prévus. Une fois l’accès rendu sûr, les secours s’inscrivent dans les compétences acquises et les instructions des services d’urgence. Cette séquence n’enseigne pas une manipulation électrique.",
+            "pitfall": "Toucher la victime sans connaître l’état de l’installation.",
+            "cards": [
+              {
+                "front": "Le sauveteur peut devenir conducteur",
+                "back": "Toucher une victime encore en contact avec une source électrique peut exposer le sauveteur au courant. Un vêtement, un manche ou un objet trouvé sur place ne garantit pas une isolation suffisante. La première étape consiste à faire supprimer le danger par un moyen sûr, autorisé et adapté, ou à attendre l'intervenant compétent tout en empêchant d'autres contacts."
+              },
+              {
+                "front": "Secourir après sécurisation",
+                "back": "Une fois l'accès sûr, examinez la victime et appliquez les gestes SST adaptés, avec alerte aux secours. Une électrisation peut provoquer des lésions ou troubles non visibles ; l'apparence d'une petite brûlure ne permet pas d'écarter le danger. Les circonstances, la source supposée et les signes observés sont transmis. L'installation reste indisponible jusqu'à validation de sa sécurité."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un salarié est effondré près d'une machine défectueuse. L'agent empêche un collègue de le saisir, fait alerter et demande la sécurisation par le moyen prévu. Dès que le contact est sûr, il vérifie la réponse et la respiration. Si nécessaire, il commence la réanimation et fait apporter le DAE."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "11.08",
+                "page": 530
+              },
+              {
+                "ref": "11.07",
+                "page": 528
+              },
+              {
+                "ref": "01.03",
+                "page": 17
+              }
+            ],
+            "instruction": "Retrouvez mentalement la décision et les limites du dossier, puis consultez les repères pour vérifier. Vous pouvez refaire les ateliers pour réviser.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "aps62-11-01-comprendre",
+    "aps62-11-01-memoriser",
+    "aps62-11-01-atelier",
+    "aps62-11-01-q1",
+    "aps62-11-01-q2",
+    "aps62-11-01-transfert",
+    "aps62-11-01-documents",
+    "aps62-11-01-journal",
+    "aps62-11-01-synthese",
+    "aps62-11-02-comprendre",
+    "aps62-11-02-memoriser",
+    "aps62-11-02-atelier",
+    "aps62-11-02-q1",
+    "aps62-11-02-q2",
+    "aps62-11-02-transfert",
+    "aps62-11-02-documents",
+    "aps62-11-02-journal",
+    "aps62-11-02-synthese"
+  ],
+  "counts": {
+    "sections": 2,
+    "activities": 18,
+    "scored_activities": 4,
+    "required_videos": 2,
+    "workbooks": 0,
+    "assets": 11,
+    "interactive_workshops": 8
+  },
+  "assets": [
+    "media/aps62/repere-01.03.webp",
+    "media/aps62/repere-11.07.webp",
+    "media/aps62/repere-11.08.webp",
+    "media/aps62/repere-14.01.webp",
+    "media/aps62/v2/aps62-11-01.jpg",
+    "media/aps62/v2/aps62-11-01.mp4",
+    "media/aps62/v2/aps62-11-01.vtt",
+    "media/aps62/v2/aps62-11-02.jpg",
+    "media/aps62/v2/aps62-11-02.mp4",
+    "media/aps62/v2/aps62-11-02.vtt",
+    "media/aps62/v2/module-11.webp"
+  ],
+  "import_warnings": [],
+  "mock_exam_id": "module-11",
+  "mock_exam_questions": 30,
+  "voice": "fr-FR-HenriNeural",
+  "illustration": "images/aps62/module-11.webp",
+  "interaction_revision": "20261006-aps62-v3"
+}

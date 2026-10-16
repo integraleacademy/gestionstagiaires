@@ -1,0 +1,63 @@
+# id|question|observation exacte|autre proposition
+01-01|Que demande le gestionnaire ?|Photographier les voitures des clients d’un commerce voisin.|Surveiller une porte à l’intérieur du site.
+01-02|Quel document Léa présente-t-elle ?|Une demande de carte encore en cours d’examen.|Une carte dont le droit d’exercer a été vérifié.
+01-03|Pour qui la ronde proposée serait-elle faite ?|Pour l’entreprise voisine de l’usine.|Uniquement pour l’usine qui emploie l’agent.
+01-04|Quel problème pose la veste ?|Elle peut faire croire que l’agent appartient à la police.|Elle permet de reconnaître clairement la sécurité privée.
+02-01|Quelles démarches sont en cours ?|Une plainte et un examen des consignes par l’employeur.|Une seule démarche : le visiteur demande un renseignement.
+02-02|Que fait le visiteur maintenant ?|Il s’éloigne et ne porte plus de coup.|Il continue à frapper l’agent.
+02-03|Que sait l’agent à ce moment-là ?|Une personne appelle à l’aide et une odeur est présente.|Le produit responsable de l’odeur a été identifié.
+03-01|L’agent a-t-il vu le vol ?|Non. Il a reçu une accusation et dispose d’une description.|Oui. Il a vu lui-même la personne voler.
+03-02|Que veut le responsable ?|Retarder l’appel à la police pour une raison commerciale.|Faire appeler la police sans attendre.
+04-01|Pourquoi cette liste est-elle demandée ?|Pour un usage personnel annoncé par le demandeur.|Pour traiter un incident de sécurité identifié.
+05-01|Sur quoi repose la différence de traitement demandée ?|Sur le nom de la personne.|Sur une différence de droit d’accès vérifiée.
+05-02|Pourquoi envisage-t-on de refuser l’accès ?|À cause d’un signe religieux.|Parce qu’une condition d’accès applicable n’est pas remplie.
+05-03|Qu’a-t-on constaté ?|Des paroles critiques, sans menace constatée.|Une menace précise contre une personne.
+06-01|Qu’accompagne le cadeau ?|Une demande pour éviter un contrôle.|Une demande pour renforcer les contrôles.
+06-02|Que peut montrer la photo du poste ?|Des personnes et des informations de sécurité.|Uniquement un mur vide, sans information visible.
+06-03|Que faut-il encore vérifier ?|La qualité des personnes qui annoncent le contrôle.|Leur qualité est déjà confirmée par le circuit prévu.
+06-04|Quelle identité veut-on utiliser ?|Celle d’un autre agent.|Celle de l’agent qui travaille réellement.
+07-01|Que s’est-il passé avant la hausse de voix ?|Il y a eu de l’attente et une incompréhension.|Une agression physique a été constatée.
+07-02|Que montre l’outil de rendez-vous ?|Le rendez-vous annoncé n’y a pas été retrouvé.|Le rendez-vous est confirmé dans l’outil.
+07-03|Quel problème gêne l’agent ?|La personne est proche et le retrait est difficile.|L’agent dispose d’un large passage libre derrière lui.
+07-04|Que fait la personne ?|Elle insulte, sans tenter de franchir le portillon.|Elle tente de franchir le portillon de force.
+07-05|Où en est le conflit ?|Le calme est revenu et l’autorisation a été vérifiée.|Les cris et la tentative de passage continuent.
+08-01|Quel problème rencontre l’agent ?|Il trouve deux versions de la même consigne.|Il dispose d’une seule consigne clairement à jour.
+08-02|Que manque-t-il dans le message radio ?|Des précisions pour savoir où aller et quelle aide envoyer.|Le message donne déjà le lieu et l’aide nécessaire.
+08-03|Qu’a-t-on découvert dans la main courante ?|L’heure d’un appel est fausse et peut être vérifiée.|L’heure est correcte et aucune source ne la contredit.
+08-04|L’agent a-t-il vu qui a causé la dégradation ?|Non. Il a vu une dégradation et un déplacement.|Oui. Il a vu la personne commettre la dégradation.
+08-05|Que reste-t-il à faire à la relève ?|Suivre une mesure provisoire et une intervention en cours.|Rien : toutes les interventions sont terminées.
+09-01|La situation est-elle restée identique après la chute ?|Non. Il faut tenir compte de ce qui a changé.|Oui. La première menace suffit à décider de toute la suite.
+09-02|Quel accès peuvent prendre les secours ?|Un autre accès disponible et utilisable.|Aucun autre accès n’est disponible.
+09-03|Quel contrôle est demandé ?|Une fouille imposée à toutes les personnes.|Une simple information sur le chemin à suivre.
+10-01|Quel danger est visible sur le quai ?|Le sol est glissant sur un passage utilisé.|Le passage est sec et ne présente aucun risque signalé.
+10-02|Que manque-t-il dans le document consulté ?|Une nouvelle situation de travail.|L’adresse personnelle de chaque visiteur.
+10-03|Qu’est-ce qui n’est pas clair ?|L’organisation des travaux avec la circulation sur le site.|Le nom de la personne chargée d’ouvrir le courrier.
+10-04|Que signifie le signal entendu ?|Il correspond à une conduite prévue pour ce site.|Il permet à chacun d’improviser sa propre conduite.
+10-05|Quel changement est constaté ?|Une protection collective a été déplacée.|La protection collective est restée à sa place.
+10-06|Que sait-on du contenu du bidon ?|Il n’est pas identifié de manière fiable.|Son nom et ses dangers sont clairement confirmés.
+10-07|Qu’ignore-t-on au sujet du matériel ?|S’il est adapté à la zone où il sera utilisé.|Sa couleur est inconnue, mais son adaptation est confirmée.
+11-01|Quel danger voit-on ?|Un équipement électrique abîmé et accessible.|Un équipement intact, fermé et hors d’accès.
+11-02|Pourquoi l’approche de la victime peut-elle être dangereuse ?|L’environnement peut encore être sous tension électrique.|L’absence de danger électrique a déjà été confirmée.
+12-01|L’information sur l’attaque est-elle confirmée au poste ?|Non. Il s’agit encore d’une rumeur.|Oui. Une confirmation officielle a été reçue.
+12-02|Que sait-on de l’objet ?|Sa nature et son propriétaire sont inconnus.|Son propriétaire vient de le récupérer et de l’identifier.
+12-03|Quel problème présentent les affiches ?|Elles donnent des informations qui ne concordent pas.|Elles présentent toutes la même information actualisée.
+12-04|Que faut-il décrire dans cette situation ?|Les comportements observés autour de la sécurité.|Des intentions supposées à partir de l’apparence.
+12-05|Quelle information reste imprécise ?|Le lieu concerné par la menace.|Le lieu a été décrit précisément et confirmé.
+12-06|Que sait l’agent du drone ?|Il le voit, mais son statut n’est pas confirmé au poste.|Le poste a confirmé qu’il est autorisé pour cette mission.
+12-07|Les deux personnes présentent-elles les mêmes signes ?|Non. Leurs signes sont différents.|Oui. Il faut donner exactement le même bilan pour les deux.
+13-01|Quel problème pose le compte ouvert ?|Il ne permet pas d’identifier correctement l’auteur de la saisie.|Il identifie bien l’agent qui va effectuer la saisie.
+13-02|Que faut-il distinguer avant l’envoi ?|Les deux versions du document.|Les couleurs des écrans du poste.
+14-01|Que voit l’agent ?|Un déplacement de colis dans une zone à accès contrôlé.|Un vol dont il a déjà vérifié tous les éléments.
+14-02|Qu’a-t-on constaté en caisse ?|Une alarme et un article portant un dispositif de protection.|Un aveu qui explique à lui seul toute la situation.
+14-03|Quel risque pose la nouvelle demande ?|Laisser sans surveillance la tâche en cours.|Maintenir normalement la surveillance en cours.
+14-04|Comment se comporte la personne maintenant ?|Elle ne résiste plus.|Elle continue à résister de la même manière.
+14-05|Quel autre passage existe ?|Un itinéraire permet d’éviter les traces à préserver.|Il n’existe aucun autre passage.
+14-06|Quel problème présente la transmission ?|Elle mélange observations, témoignages et suppositions.|Elle sépare clairement ce qui a été vu et ce qui a été rapporté.
+14-07|Que permet d’affirmer la scène observée ?|Elle ne suffit pas à identifier une infraction ou son auteur.|Elle prouve à elle seule qui a commis une infraction.
+15-01|Quel problème apparaît au briefing ?|Les informations données aux équipes ne concordent pas.|Toutes les équipes disposent du même dispositif confirmé.
+15-02|Le badge autorise-t-il la zone demandée ?|Non. Cette zone n’est pas couverte par le badge.|Oui. Le badge indique clairement cette zone.
+15-03|Où la file d’attente se trouve-t-elle ?|Sur un cheminement qui doit rester libre.|Dans une zone qui ne gêne aucun passage.
+15-04|Quels signes sont signalés dans la foule ?|La pression augmente et les déplacements deviennent difficiles.|La foule se disperse et chacun circule facilement.
+15-05|Quel problème concerne le cheminement prévu ?|Il n’est plus disponible.|Il reste libre et utilisable comme prévu.
+15-06|Les intervenants suivent-ils tous le même circuit ?|Non. Plusieurs circuits sont prévus selon leur rôle.|Oui. Un circuit identique s’applique à tout le monde.
+15-07|Que dit le lecteur de billet ?|Le billet a déjà été utilisé.|Il prouve à lui seul que la personne veut frauder.

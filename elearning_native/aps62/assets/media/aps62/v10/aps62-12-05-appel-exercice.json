@@ -1,0 +1,27 @@
+{
+  "id": "aps62-12-05-appel-exercice-v10",
+  "title": "Appel fictif reçu au poste des Ateliers Rive",
+  "generated_at_utc": "2026-10-10T04:24:34.735650+00:00",
+  "provider": "Microsoft Edge TTS through edge-tts",
+  "voice": "fr-FR-HenriNeural",
+  "rate": "-2%",
+  "pitch": "+0Hz",
+  "volume": "+0%",
+  "fictional": true,
+  "spoken_text": "Exercice fictif. Agent. Poste de sécurité des Ateliers Rive, bonjour. Appelant. Écoutez bien. Dans vingt minutes, il y aura un grave incident dans la salle après la verrière. Faites partir les gens. Agent. De quelle verrière parlez-vous ? Il y en a deux sur le site. Appelant. Au fond. Vous avez entendu. Je ne répondrai plus. Agent. Pouvez-vous préciser la salle concernée ? La communication est interrompue, sans autre réponse.",
+  "text_sha256": "c841363c8441e4b8147e35d7afd0ab430df24bf90af7697f61867f9e1183bd4e",
+  "audio_sha256": "a8d1f05a941e5e21886aa1c4a70fa764d4ac1faf3b5f36ba58bc5efa43a7bd65",
+  "caption_end_seconds": 36.390291,
+  "source": "scripts/aps62_v10/practical_cases.py:THREAT_CALL_AUDIO",
+  "src": "media/aps62/v10/aps62-12-05-appel-exercice.mp3",
+  "captions": "media/aps62/v10/aps62-12-05-appel-exercice.vtt",
+  "transcript": "Agent : Poste de sécurité des Ateliers Rive, bonjour.\nAppelant : Écoutez bien. Dans vingt minutes, il y aura un grave incident dans la salle après la verrière. Faites partir les gens.\nAgent : De quelle verrière parlez-vous ? Il y en a deux sur le site.\nAppelant : Au fond. Vous avez entendu. Je ne répondrai plus.\nAgent : Pouvez-vous préciser la salle concernée ?\n[La communication est interrompue, sans autre réponse.]",
+  "qa": {
+    "word_boundaries_present": true,
+    "human_listening_confirmed": false,
+    "complete_decode": true,
+    "final_caption_inside_audio": true,
+    "listening_limitation": "Audio input is unavailable in the auditing model; no human listening is claimed."
+  },
+  "duration_seconds": 37.296
+}

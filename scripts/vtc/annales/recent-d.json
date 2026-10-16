@@ -1,0 +1,180 @@
+[
+  {
+    "number": 1,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "D.02"
+    ],
+    "explanation": "Le texte rapproche les gains de Jorge des revenus locaux : l’activité de moto-taxi lui procure un revenu plus important. L’essence bon marché constitue un élément de contexte, pas la réponse principale sur son changement de métier.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 2,
+    "answers": [
+      "b"
+    ],
+    "lesson_refs": [
+      "D.02"
+    ],
+    "explanation": "Le texte indique 250 bolivars en moyenne et le double les bons jours, notamment lorsque le métro tombe en panne. Calcul : 250 × 2 = 500. Les 800 bolivars correspondent au salaire minimum mentionné.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 3,
+    "answers": [
+      "b"
+    ],
+    "lesson_refs": [
+      "D.07"
+    ],
+    "explanation": "Un fléau est un grand mal ou une calamité. Parmi ces choix, catastrophe s’en rapproche. Bonheur et aubaine ont un sens positif ; bouleversement n’implique pas nécessairement un dommage.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 4,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "D.07"
+    ],
+    "explanation": "Vrombir décrit un bruit grave, continu et puissant, comme celui d’un moteur. Rugir est le synonyme le plus proche proposé. Accélérer décrit une action de conduite, trembler un mouvement.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 5,
+    "answers": [
+      "a"
+    ],
+    "lesson_refs": [
+      "D.06"
+    ],
+    "explanation": "Une ambiance bon enfant est simple, détendue et conviviale. Le mot enfant ne doit pas être interprété littéralement comme infantile ou capricieux : il faut comprendre l’expression entière.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 6,
+    "answers": [
+      "a"
+    ],
+    "lesson_refs": [
+      "D.03",
+      "D.10"
+    ],
+    "explanation": "Le texte relie la hausse du nombre de motos au manque de pièces, puis au développement d’un trafic de motos volées et revendues en morceaux. Une bonne réponse restitue cette chaîne de causes et mentionne les violences associées.",
+    "status": "active",
+    "update_note": "",
+    "sources": [],
+    "options": [
+      {
+        "id": "a",
+        "text": "La pénurie de pièces favorise un trafic de motos volées et démontées, accompagné de violences."
+      },
+      {
+        "id": "b",
+        "text": "La hausse du nombre de motos favorise surtout des importations légales de pièces et réduit les vols."
+      },
+      {
+        "id": "c",
+        "text": "Les prix de l’essence rendent impossible l’achat d’une moto."
+      }
+    ],
+    "original_answer": "La pénurie de pièces favorise un trafic de motos volées et démontées, accompagné de violences."
+  },
+  {
+    "number": 7,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "D.02"
+    ],
+    "explanation": "L’auteur dit « dangereux et cher, certes, mais rapide ». L’avantage retenu est la rapidité. Le connecteur mais oppose cet avantage aux défauts précédents.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 8,
+    "answers": [
+      "b"
+    ],
+    "lesson_refs": [
+      "D.07"
+    ],
+    "explanation": "Une horde est ici un groupe nombreux, présenté comme agité. Ce terme ne désigne ni un modèle de moto ni nécessairement une association organisée.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 9,
+    "answers": [
+      "a"
+    ],
+    "lesson_refs": [
+      "D.07",
+      "D.10"
+    ],
+    "explanation": "Le titre emploie nuées, le premier paragraphe hordes et le deuxième troupeau. Pour une question demandant plusieurs mots du texte, recherchez chaque occurrence et contrôlez le nombre d’éléments attendu.",
+    "status": "active",
+    "update_note": "",
+    "sources": [],
+    "options": [
+      {
+        "id": "a",
+        "text": "Nuées, hordes et troupeau."
+      },
+      {
+        "id": "b",
+        "text": "Nuées, carrefours et capitale."
+      },
+      {
+        "id": "c",
+        "text": "Hordes, gardien et bandits."
+      }
+    ],
+    "original_answer": "Nuées, hordes et troupeau."
+  },
+  {
+    "number": 10,
+    "answers": [
+      "a"
+    ],
+    "lesson_refs": [
+      "D.06",
+      "D.10"
+    ],
+    "explanation": "Vendre un service à la criée signifie l’annoncer à voix haute pour attirer les clients. Il ne s’agit pas ici de vendre aux enchères ni d’établir une réservation écrite.",
+    "status": "active",
+    "update_note": "",
+    "sources": [],
+    "options": [
+      {
+        "id": "a",
+        "text": "Annoncer le service à voix haute pour attirer les clients."
+      },
+      {
+        "id": "b",
+        "text": "Vendre uniquement au client qui propose le prix le plus élevé."
+      },
+      {
+        "id": "c",
+        "text": "Informer les clients exclusivement par un panneau écrit."
+      }
+    ],
+    "original_answer": "Annoncer le service à voix haute pour attirer les clients."
+  }
+]

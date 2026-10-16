@@ -1,0 +1,1284 @@
+from __future__ import annotations
+
+import contextlib
+import datetime as dt
+import json
+import math
+import os
+import sqlite3
+import threading
+import time
+import uuid
+from pathlib import Path
+from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence
+
+from .videos import videos_complete, vtc_pacing_enabled, mac_aps_pacing_enabled
+from .video_compatibility import compatible_record
+from . import assessment
+from .aps_final_time import FINAL_COURSE_ID
+from .lesson_timing import first_pending, remaining_seconds as lesson_remaining_seconds
+
+
+HEARTBEAT_MAX_CREDIT_SECONDS = 20.0
+ACTIVE_SESSION_STALE_SECONDS = 45.0
+IDLE_TIMEOUT_SECONDS = 300.0
+APS_IDLE_TIMEOUT_SECONDS = 600.0
+VIDEO_PLAYBACK_RATES = frozenset((0.85, 0.9, 1.0))
+APS_PACED_COURSES = frozenset(f"academy-aps62-{number:02d}" for number in range(1, 16))
+APS_TRACKED_COURSES = APS_PACED_COURSES | {FINAL_COURSE_ID}
+
+
+def idle_timeout_seconds(course_id: str) -> float:
+    return APS_IDLE_TIMEOUT_SECONDS if course_id in APS_TRACKED_COURSES else IDLE_TIMEOUT_SECONDS
+
+_INITIALIZE_LOCK = threading.Lock()
+_INITIALIZED_DATABASES: set[str] = set()
+
+
+class TrackingError(ValueError):
+    """Raised when a learner tracking operation is invalid."""
+
+
+def _utc_iso(epoch: Optional[float] = None) -> str:
+    instant = dt.datetime.fromtimestamp(epoch if epoch is not None else time.time(), tz=dt.timezone.utc)
+    return instant.isoformat().replace("+00:00", "Z")
+
+
+def _json_list(raw: Any) -> List[Any]:
+    try:
+        value = json.loads(str(raw or "[]"))
+    except (TypeError, json.JSONDecodeError):
+        return []
+    return value if isinstance(value, list) else []
+
+
+def _json_dict(raw: Any) -> Dict[str, Any]:
+    try:
+        value = json.loads(str(raw or "{}"))
+    except (TypeError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+class NativeElearningStore:
+    """SQLite-backed progress and server-authoritative active-time store.
+
+    The historical application stores administrative data in ``data.json``.
+    Heartbeats deliberately live in this separate transactional database so a
+    learner ping never rewrites the large administrative JSON document.
+    """
+
+    def __init__(self, database_path: os.PathLike[str] | str) -> None:
+        self.database_path = Path(database_path).resolve()
+        self._ensure_schema()
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(str(self.database_path), timeout=15)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute("PRAGMA busy_timeout = 15000")
+        return connection
+
+    def _ensure_schema(self) -> None:
+        key = str(self.database_path)
+        with _INITIALIZE_LOCK:
+            if key in _INITIALIZED_DATABASES and self.database_path.is_file():
+                return
+            self.database_path.parent.mkdir(parents=True, exist_ok=True)
+            with self._connect() as connection:
+                connection.execute("PRAGMA journal_mode = WAL")
+                connection.execute("PRAGMA synchronous = NORMAL")
+                connection.executescript(
+                    """
+                    CREATE TABLE IF NOT EXISTS learner_course_progress (
+                        session_id TEXT NOT NULL,
+                        trainee_id TEXT NOT NULL,
+                        course_id TEXT NOT NULL,
+                        course_version TEXT NOT NULL,
+                        current_activity_id TEXT NOT NULL DEFAULT '',
+                        completed_json TEXT NOT NULL DEFAULT '[]',
+                        answers_json TEXT NOT NULL DEFAULT '{}',
+                        active_seconds REAL NOT NULL DEFAULT 0,
+                        score_percent REAL NOT NULL DEFAULT 0,
+                        status TEXT NOT NULL DEFAULT 'not_started',
+                        started_at TEXT,
+                        updated_at TEXT,
+                        completed_at TEXT,
+                        active_tracking_session_id TEXT,
+                        active_tracking_seen_epoch REAL,
+                        PRIMARY KEY (session_id, trainee_id, course_id, course_version)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS tracking_sessions (
+                        id TEXT PRIMARY KEY,
+                        session_id TEXT NOT NULL,
+                        trainee_id TEXT NOT NULL,
+                        course_id TEXT NOT NULL,
+                        course_version TEXT NOT NULL,
+                        tab_id TEXT NOT NULL,
+                        current_activity_id TEXT NOT NULL DEFAULT '',
+                        created_at TEXT NOT NULL,
+                        last_seen_at TEXT NOT NULL,
+                        last_seen_epoch REAL NOT NULL,
+                        was_active INTEGER NOT NULL DEFAULT 0,
+                        was_duplicate INTEGER NOT NULL DEFAULT 0,
+                        credited_seconds REAL NOT NULL DEFAULT 0,
+                        status TEXT NOT NULL DEFAULT 'open',
+                        ended_at TEXT
+                    );
+
+                    CREATE INDEX IF NOT EXISTS tracking_sessions_learner_idx
+                    ON tracking_sessions (session_id, trainee_id, course_id, course_version);
+
+                    CREATE TABLE IF NOT EXISTS tracking_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        tracking_session_id TEXT,
+                        session_id TEXT NOT NULL,
+                        trainee_id TEXT NOT NULL,
+                        course_id TEXT NOT NULL,
+                        course_version TEXT NOT NULL,
+                        event_type TEXT NOT NULL,
+                        activity_id TEXT NOT NULL DEFAULT '',
+                        event_at TEXT NOT NULL,
+                        credited_seconds REAL NOT NULL DEFAULT 0,
+                        details_json TEXT NOT NULL DEFAULT '{}'
+                    );
+
+                    CREATE INDEX IF NOT EXISTS tracking_events_learner_idx
+                    ON tracking_events (session_id, trainee_id, course_id, course_version, event_at);
+                    """
+                )
+                # Serialize the additive migration across separate Gunicorn workers.
+                connection.execute("BEGIN IMMEDIATE")
+                columns = {row["name"] for row in connection.execute("PRAGMA table_info(tracking_sessions)")}
+                if "active_until_epoch" not in columns:
+                    connection.execute("ALTER TABLE tracking_sessions ADD COLUMN active_until_epoch REAL NOT NULL DEFAULT 0")
+                if "video_samples_json" not in columns:
+                    connection.execute("ALTER TABLE tracking_sessions ADD COLUMN video_samples_json TEXT NOT NULL DEFAULT '{}'")
+                if "lesson_page_id" not in columns:
+                    connection.execute("ALTER TABLE tracking_sessions ADD COLUMN lesson_page_id TEXT NOT NULL DEFAULT ''")
+                if "lesson_active_until_epoch" not in columns:
+                    connection.execute("ALTER TABLE tracking_sessions ADD COLUMN lesson_active_until_epoch REAL NOT NULL DEFAULT 0")
+                progress_columns = {row["name"] for row in connection.execute("PRAGMA table_info(learner_course_progress)")}
+                if "video_progress_json" not in progress_columns:
+                    connection.execute("ALTER TABLE learner_course_progress ADD COLUMN video_progress_json TEXT NOT NULL DEFAULT '{}'")
+                if "activity_seconds_json" not in progress_columns:
+                    connection.execute("ALTER TABLE learner_course_progress ADD COLUMN activity_seconds_json TEXT NOT NULL DEFAULT '{}'")
+                if "aps_workload_json" not in progress_columns:
+                    connection.execute("ALTER TABLE learner_course_progress ADD COLUMN aps_workload_json TEXT NOT NULL DEFAULT '{}'")
+                if "lesson_seconds_json" not in progress_columns:
+                    connection.execute("ALTER TABLE learner_course_progress ADD COLUMN lesson_seconds_json TEXT NOT NULL DEFAULT '{}'")
+                assessment.ensure_schema(connection)
+            _INITIALIZED_DATABASES.add(key)
+
+    @contextlib.contextmanager
+    def _transaction(self) -> Iterator[sqlite3.Connection]:
+        connection = self._connect()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            yield connection
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+    @staticmethod
+    def _key_values(access: Mapping[str, Any]) -> tuple[str, str, str, str]:
+        values = tuple(
+            str(access.get(name) or "").strip()
+            for name in ("session_id", "trainee_id", "course_id", "course_version")
+        )
+        if not all(values):
+            raise TrackingError("Contexte apprenant incomplet.")
+        return values  # type: ignore[return-value]
+
+    @staticmethod
+    def _ensure_progress_row(
+        connection: sqlite3.Connection,
+        access: Mapping[str, Any],
+        *,
+        now_iso: str,
+        current_activity_id: str = "",
+    ) -> None:
+        session_id, trainee_id, course_id, course_version = NativeElearningStore._key_values(access)
+        connection.execute(
+            """
+            INSERT INTO learner_course_progress (
+                session_id, trainee_id, course_id, course_version,
+                current_activity_id, status, started_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, 'in_progress', ?, ?)
+            ON CONFLICT(session_id, trainee_id, course_id, course_version) DO NOTHING
+            """,
+            (
+                session_id,
+                trainee_id,
+                course_id,
+                course_version,
+                current_activity_id,
+                now_iso,
+                now_iso,
+            ),
+        )
+
+    @staticmethod
+    def _progress_row(connection: sqlite3.Connection, access: Mapping[str, Any]) -> sqlite3.Row:
+        key = NativeElearningStore._key_values(access)
+        row = connection.execute(
+            """
+            SELECT * FROM learner_course_progress
+            WHERE session_id = ? AND trainee_id = ? AND course_id = ? AND course_version = ?
+            """,
+            key,
+        ).fetchone()
+        if row is None:
+            raise TrackingError("Progression apprenant introuvable.")
+        return row
+
+    @staticmethod
+    def _serialize_progress(
+        row: sqlite3.Row,
+        *,
+        activity_order: Sequence[str] = (),
+        scored_activity_ids: Sequence[str] = (),
+        required_activity_ids: Optional[Sequence[str]] = None,
+    ) -> Dict[str, Any]:
+        completed = [str(value) for value in _json_list(row["completed_json"])]
+        answers = _json_dict(row["answers_json"])
+        assessment_diagnostics = _json_dict(row['assessment_diagnostics_json'])
+        required_set = set(activity_order if required_activity_ids is None else required_activity_ids)
+        required = [activity_id for activity_id in activity_order if activity_id in required_set]
+        completed_set = set(completed)
+        completed_required = [activity_id for activity_id in required if activity_id in completed_set]
+        scored_activity_ids = [activity_id for activity_id in scored_activity_ids if activity_id in required]
+        total = len(required)
+        progress_percent = round(len(completed_required) / total * 100, 2) if total else (100.0 if activity_order else 0.0)
+        correct_count = sum(
+            1
+            for activity_id in scored_activity_ids
+            if isinstance(answers.get(activity_id), dict) and answers[activity_id].get("correct") is True
+        )
+        return {
+            "session_id": row["session_id"],
+            "trainee_id": row["trainee_id"],
+            "course_id": row["course_id"],
+            "course_version": row["course_version"],
+            "current_activity_id": row["current_activity_id"],
+            "completed_activity_ids": completed,
+            "completed_required_activity_ids": completed_required,
+            "required_activity_count": total,
+            "completed_required_activities": len(completed_required),
+            "optional_activity_count": len(activity_order) - total,
+            "answers": answers,
+            "assessment_diagnostics": assessment_diagnostics,
+            "assessment_summary": assessment.summary_for(assessment_diagnostics),
+            "video_progress": _json_dict(row["video_progress_json"]),
+            "activity_seconds": _json_dict(row["activity_seconds_json"]) if "activity_seconds_json" in row.keys() else {},
+            "lesson_seconds": _json_dict(row["lesson_seconds_json"]),
+            "aps_workload": _json_dict(row["aps_workload_json"]) if "aps_workload_json" in row.keys() else {},
+            "active_seconds": math.floor(float(row["active_seconds"] or 0) * 100) / 100,
+            "score_percent": round(float(row["score_percent"] or 0), 2),
+            "correct_answers": correct_count,
+            "scored_activities": len(scored_activity_ids),
+            "progress_percent": progress_percent,
+            "status": row["status"],
+            "started_at": row["started_at"],
+            "updated_at": row["updated_at"],
+            "completed_at": row["completed_at"],
+        }
+
+    @staticmethod
+    def _event(
+        connection: sqlite3.Connection,
+        access: Mapping[str, Any],
+        event_type: str,
+        *,
+        tracking_session_id: str = "",
+        activity_id: str = "",
+        at: Optional[str] = None,
+        credited_seconds: float = 0.0,
+        details: Optional[Mapping[str, Any]] = None,
+    ) -> None:
+        session_id, trainee_id, course_id, course_version = NativeElearningStore._key_values(access)
+        connection.execute(
+            """
+            INSERT INTO tracking_events (
+                tracking_session_id, session_id, trainee_id, course_id, course_version,
+                event_type, activity_id, event_at, credited_seconds, details_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                tracking_session_id or None,
+                session_id,
+                trainee_id,
+                course_id,
+                course_version,
+                event_type,
+                activity_id,
+                at or _utc_iso(),
+                float(credited_seconds or 0),
+                json.dumps(dict(details or {}), ensure_ascii=False, separators=(",", ":")),
+            ),
+        )
+
+    def record_question_attempt(self, access, activity_id, answer, correct, *, request_id='', competency='', revision=''):
+        """Persist an initial/error response without unlocking an activity."""
+        now = _utc_iso()
+        with self._transaction() as connection:
+            self._ensure_progress_row(connection, access, now_iso=now)
+            try:
+                return assessment.record_attempt(connection, access, activity_id=activity_id,
+                    item_id=activity_id, kind='question', answer=answer, correct=correct,
+                    submitted_at=now, request_id=request_id, competency=competency, revision=revision)
+            except ValueError as exc:
+                raise TrackingError(str(exc)) from exc
+
+    def assessment_history(self, access, *, activity_id=None):
+        with self._connect() as connection:
+            return assessment.history_for(connection, access, activity_id=activity_id)
+
+    def record_practice_result(self, access, activity_id, result, *, request_id=''):
+        """Save server-marked choices and weak concepts; never award time or completion."""
+        now = _utc_iso()
+        with self._transaction() as connection:
+            self._ensure_progress_row(connection, access, now_iso=now)
+            row = self._progress_row(connection, access)
+            if activity_id in _json_list(row['completed_json']):
+                return  # An optional retry must not rewrite completed learner work.
+            answers = _json_dict(row['answers_json'])
+            saved = answers.get(activity_id, {})
+            chosen = saved.setdefault('practice_answers', {})
+            previous_choices = dict(chosen)
+            chosen.update(result['answers'])
+            diagnostics = saved.setdefault('practice_diagnostics', {})
+            for item in result['feedback']:
+                try:
+                    assessment.record_attempt(connection, access, activity_id=activity_id,
+                        item_id=item['id'], kind='practice', answer=result['answers'][item['id']],
+                        correct=item['correct'], submitted_at=now, request_id=request_id,
+                        competency=item.get('competency', ''), revision=result['revision'])
+                except ValueError as exc:
+                    raise TrackingError(str(exc)) from exc
+                if (item['id'] in diagnostics and previous_choices.get(item['id']) == chosen.get(item['id'])
+                        and diagnostics[item['id']].get('correct') == item['correct']):
+                    continue  # A retry or full confirmation must not inflate attempts.
+                detail = diagnostics.setdefault(item['id'], {'attempts': 0, 'first_correct': item['correct'],
+                                                            'competency': item.get('competency', '')})
+                detail.update(attempts=detail['attempts'] + 1, correct=item['correct'])
+            saved.update(practice_revision=result['revision'], practice_draft=True)
+            answers[activity_id] = saved
+            connection.execute('''UPDATE learner_course_progress SET answers_json=?, updated_at=?
+                WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?''',
+                (json.dumps(answers, ensure_ascii=False), now, *self._key_values(access)))
+            self._event(connection, access, 'practice_checked', activity_id=activity_id, at=now,
+                        details={'passed': result['passed'], 'total': result['total'],
+                                 'exercise_ids': [f['id'] for f in result['feedback']]})
+
+    def record_production(self, access, activity_id, answers, *, compared=False, self_review=None, capture_first=False):
+        """Keep an individual draft and first submission without awarding a score."""
+        now = _utc_iso()
+        with self._transaction() as connection:
+            self._ensure_progress_row(connection, access, now_iso=now)
+            row = self._progress_row(connection, access)
+            if activity_id in _json_list(row['completed_json']):
+                return
+            stored = _json_dict(row['answers_json'])
+            saved = stored.setdefault(activity_id, {})
+            saved.update(production_answers=dict(answers), production_draft=True)
+            if compared or capture_first:
+                saved.setdefault('production_first_answers', dict(answers))
+                saved.setdefault('production_first_submitted_at', now)
+            if compared:
+                saved['production_feedback_seen'] = True
+            if self_review is not None and saved.get('production_feedback_seen'):
+                saved['production_self_review'] = dict(self_review)
+            connection.execute('''UPDATE learner_course_progress SET answers_json=?, updated_at=?
+                WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?''',
+                (json.dumps(stored, ensure_ascii=False), now, *self._key_values(access)))
+
+    def get_progress(
+        self,
+        access: Mapping[str, Any],
+        *,
+        activity_order: Sequence[str] = (),
+        scored_activity_ids: Sequence[str] = (),
+        required_activity_ids: Optional[Sequence[str]] = None,
+        mastery_score: float = 80,
+        required_seconds: int = 0,
+        video_requirements: Optional[Mapping[str, Mapping[str, float]]] = None,
+    ) -> Dict[str, Any]:
+        now_iso = _utc_iso()
+        with self._transaction() as connection:
+            self._ensure_progress_row(
+                connection,
+                access,
+                now_iso=now_iso,
+                current_activity_id=activity_order[0] if activity_order else "",
+            )
+            row = self._progress_row(connection, access)
+            if activity_order:
+                completion = self._completion_values(
+                    _json_list(row["completed_json"]), _json_dict(row["answers_json"]),
+                    activity_order=activity_order, scored_activity_ids=scored_activity_ids,
+                    required_activity_ids=required_activity_ids,
+                    mastery_score=mastery_score, active_seconds=float(row["active_seconds"] or 0),
+                    required_seconds=required_seconds,
+                    video_requirements=video_requirements,
+                    video_progress=_json_dict(row["video_progress_json"]),
+                )
+                completed_at = (row["completed_at"] or now_iso) if completion["all_complete"] else None
+                if row["status"] != completion["status"] or row["completed_at"] != completed_at or row["score_percent"] != completion["score"]:
+                    connection.execute(
+                        """UPDATE learner_course_progress SET status = ?, score_percent = ?, completed_at = ?
+                           WHERE session_id = ? AND trainee_id = ? AND course_id = ? AND course_version = ?""",
+                        (completion["status"], completion["score"], completed_at, *self._key_values(access)),
+                    )
+                    if completion["all_complete"] and not row["completed_at"]:
+                        self._event(connection, access, "course_completed", at=now_iso,
+                                    details={"status": completion["status"], "required_seconds": required_seconds})
+                    row = self._progress_row(connection, access)
+            return self._serialize_progress(
+                row,
+                activity_order=activity_order,
+                scored_activity_ids=scored_activity_ids,
+                required_activity_ids=required_activity_ids,
+            )
+
+    @staticmethod
+    def _settle_lesson(connection, access, tracking, progress, credited):
+        """Attribute existing server time to the previously visible reading page.
+
+        This is a breakdown of credited time, never additional module credit.
+        A missing/late request cannot grant more than one short presence lease.
+        """
+        ledger = _json_dict(progress['lesson_seconds_json'])
+        page_id = tracking['lesson_page_id']
+        seconds = min(credited, HEARTBEAT_MAX_CREDIT_SECONDS,
+                      max(0, tracking['lesson_active_until_epoch'] - tracking['last_seen_epoch']))
+        if page_id and seconds > 0:
+            activity_id = tracking['current_activity_id']
+            pages = ledger.setdefault(activity_id, {})
+            pages[page_id] = round(float(pages.get(page_id) or 0) + seconds, 3)
+            connection.execute('UPDATE learner_course_progress SET lesson_seconds_json=? '
+                               'WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?',
+                               (json.dumps(ledger), *NativeElearningStore._key_values(access)))
+        return ledger
+
+    def start_tracking(
+        self,
+        access: Mapping[str, Any],
+        *,
+        tab_id: str,
+        activity_id: str,
+        now_epoch: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        if not str(tab_id or "").strip():
+            raise TrackingError("Identifiant d’onglet manquant.")
+        epoch = float(now_epoch if now_epoch is not None else time.time())
+        now_iso = _utc_iso(epoch)
+        tracking_id = uuid.uuid4().hex
+        session_id, trainee_id, course_id, course_version = self._key_values(access)
+        with self._transaction() as connection:
+            self._ensure_progress_row(
+                connection,
+                access,
+                now_iso=now_iso,
+                current_activity_id=activity_id,
+            )
+            if course_id in APS_TRACKED_COURSES:
+                # Navigation can reach this endpoint before the previous page's
+                # keepalive finish, or without that finish reaching us at all.
+                # Settle and release this tab atomically before opening its next
+                # page. A delayed finish/heartbeat then cannot credit it twice.
+                previous = connection.execute(
+                    """SELECT t.* FROM tracking_sessions t
+                       JOIN learner_course_progress p ON p.active_tracking_session_id = t.id
+                       WHERE t.session_id = ? AND t.trainee_id = ? AND t.tab_id = ?
+                         AND t.status = 'open'""",
+                    (session_id, trainee_id, str(tab_id)[:128]),
+                ).fetchall()
+                for old in previous:
+                    if old['course_id'] not in APS_TRACKED_COURSES:
+                        continue
+                    old_key = tuple(old[name] for name in ('session_id', 'trainee_id', 'course_id', 'course_version'))
+                    credited = min(
+                        max(0.0, epoch - old['last_seen_epoch']), APS_IDLE_TIMEOUT_SECONDS,
+                        max(0.0, old['active_until_epoch'] - old['last_seen_epoch']),
+                    ) if old['was_active'] else 0.0
+                    connection.execute(
+                        """UPDATE learner_course_progress SET active_seconds = active_seconds + ?,
+                           active_tracking_session_id = NULL, active_tracking_seen_epoch = NULL, updated_at = ?
+                           WHERE session_id = ? AND trainee_id = ? AND course_id = ? AND course_version = ?""",
+                        (credited, now_iso, *old_key),
+                    )
+                    if credited > 0 and old['current_activity_id']:
+                        prior = self._progress_row(connection, dict(zip(('session_id', 'trainee_id', 'course_id', 'course_version'), old_key)))
+                        self._settle_lesson(connection, dict(zip(('session_id', 'trainee_id', 'course_id', 'course_version'), old_key)), old, prior, credited)
+                        ledger = _json_dict(prior['activity_seconds_json'])
+                        aid = str(old['current_activity_id'])
+                        ledger[aid] = float(ledger.get(aid) or 0) + credited
+                        connection.execute('UPDATE learner_course_progress SET activity_seconds_json=? WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?',
+                            (json.dumps(ledger, ensure_ascii=False), *old_key))
+                    connection.execute(
+                        """UPDATE tracking_sessions SET status = 'ended', ended_at = ?, was_active = 0,
+                           active_until_epoch = 0, credited_seconds = credited_seconds + ? WHERE id = ?""",
+                        (now_iso, credited, old['id']),
+                    )
+                    self._event(connection, dict(zip(('session_id', 'trainee_id', 'course_id', 'course_version'), old_key)),
+                        'session_finished', tracking_session_id=old['id'], activity_id=old['current_activity_id'],
+                        at=now_iso, credited_seconds=credited, details={'reason': 'navigation'})
+            connection.execute(
+                """
+                INSERT INTO tracking_sessions (
+                    id, session_id, trainee_id, course_id, course_version, tab_id,
+                    current_activity_id, created_at, last_seen_at, last_seen_epoch
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    tracking_id,
+                    session_id,
+                    trainee_id,
+                    course_id,
+                    course_version,
+                    str(tab_id)[:128],
+                    str(activity_id or "")[:128],
+                    now_iso,
+                    now_iso,
+                    epoch,
+                ),
+            )
+            connection.execute(
+                """
+                UPDATE learner_course_progress
+                SET current_activity_id = CASE WHEN ? <> '' THEN ? ELSE current_activity_id END,
+                    status = CASE WHEN status = 'not_started' THEN 'in_progress' ELSE status END,
+                    updated_at = ?
+                WHERE session_id = ? AND trainee_id = ? AND course_id = ? AND course_version = ?
+                """,
+                (activity_id, activity_id, now_iso, session_id, trainee_id, course_id, course_version),
+            )
+            self._event(
+                connection,
+                access,
+                "session_started",
+                tracking_session_id=tracking_id,
+                activity_id=activity_id,
+                at=now_iso,
+                details={"tab_id": str(tab_id)[:128]},
+            )
+        return {"tracking_session_id": tracking_id, "server_time": now_iso}
+
+    def heartbeat(
+        self,
+        access: Mapping[str, Any],
+        tracking_session_id: str,
+        *,
+        activity_id: str,
+        visible: bool,
+        focused: bool,
+        recent_activity: bool,
+        media_playing: bool,
+        interaction_age_seconds: Optional[float] = None,
+        now_epoch: Optional[float] = None,
+        video_requirements: Optional[Mapping[str, float]] = None,
+        video_samples: Any = None,
+        video_playback_policy: Optional[Mapping[str, Mapping[str, Any]]] = None,
+        lesson_pages: Sequence[Mapping[str, Any]] = (),
+        lesson_page_id: str = '',
+    ) -> Dict[str, Any]:
+        epoch = float(now_epoch if now_epoch is not None else time.time())
+        now_iso = _utc_iso(epoch)
+        age = 0.0 if interaction_age_seconds is None else interaction_age_seconds
+        if isinstance(age, bool) or not isinstance(age, (int, float)) or not math.isfinite(age) or age < 0:
+            raise TrackingError("Durée d’inactivité invalide. Rechargez la page.")
+        # A media_playing flag alone never establishes presence. Required-video
+        # receipts must advance at an allowed rate between server-timed heartbeats.
+        key = self._key_values(access)
+        aps_tracking = key[2] in APS_TRACKED_COURSES
+        idle_seconds = idle_timeout_seconds(key[2])
+        interactive_active = bool((aps_tracking or (visible and focused)) and recent_activity and age < idle_seconds)
+        playback = (video_playback_policy or {}) if vtc_pacing_enabled(key[2], key[3]) else {}
+        if key[2] in APS_PACED_COURSES or mac_aps_pacing_enabled(key[2], key[3]):
+            # Reviewed APS/MAC APS speeds are authorized by the authenticated module,
+            # never by a policy supplied in a browser heartbeat.
+            playback = {video_id: {"rates": VIDEO_PLAYBACK_RATES, "conservative_rate_changes": True}
+                        for video_id in (video_requirements or {})}
+        with self._transaction() as connection:
+            tracking = connection.execute(
+                "SELECT * FROM tracking_sessions WHERE id = ?",
+                (tracking_session_id,),
+            ).fetchone()
+            if tracking is None or tuple(tracking[name] for name in ("session_id", "trainee_id", "course_id", "course_version")) != key:
+                raise TrackingError("Session de suivi invalide.")
+            if tracking["status"] == "ended":
+                progress = self._progress_row(connection, access)
+                return {
+                    "ended": True,
+                    "duplicate": False,
+                    "active": False,
+                    "credited_seconds": 0.0,
+                    "server_time": now_iso,
+                    "progress": self._serialize_progress(progress),
+                }
+
+            progress = self._progress_row(connection, access)
+            delta = max(0.0, epoch - float(tracking["last_seen_epoch"] or epoch))
+            incoming = self._validated_video_samples(video_samples, video_requirements or {})
+            media_id, media_credit = self._video_activity_evidence(
+                tracking, progress, activity_id, video_requirements or {}, incoming, delta, playback,
+            ) if visible and focused else (None, 0.0)
+            pause_windows = self._learning_pause_windows(
+                tracking, activity_id, incoming, playback, media_id, epoch,
+            ) if visible and focused else {}
+            media_active = bool(media_id and incoming[media_id].get("playing") is True)
+            requested_active = interactive_active or media_active or bool(pause_windows)
+            owner_id = str(progress["active_tracking_session_id"] or "")
+            owner_seen = float(progress["active_tracking_seen_epoch"] or 0)
+            owner_is_stale = not owner_id or epoch - owner_seen > ACTIVE_SESSION_STALE_SECONDS
+            owns_slot = owner_id == tracking_session_id
+            duplicate = bool(requested_active and not owns_slot and not owner_is_stale)
+            # One learner must not earn time on two modules at once (e.g. two
+            # playing videos). This check shares the same SQLite transaction.
+            other_module = connection.execute(
+                """SELECT 1 FROM learner_course_progress
+                   WHERE session_id = ? AND trainee_id = ?
+                     AND NOT (course_id = ? AND course_version = ?)
+                     AND active_tracking_session_id IS NOT NULL
+                     AND active_tracking_seen_epoch >= ? LIMIT 1""",
+                (*key, epoch - ACTIVE_SESSION_STALE_SECONDS),
+            ).fetchone()
+            duplicate = duplicate or bool(requested_active and other_module)
+
+            previous_active = bool(tracking["was_active"])
+            previous_duplicate = bool(tracking["was_duplicate"])
+            credited = 0.0
+            if previous_active and owns_slot:
+                # Interactive time stops at the previously recorded deadline.
+                # Continuing video time needs separate advancing-media evidence.
+                until_idle = max(0.0, float(tracking["active_until_epoch"]) - float(tracking["last_seen_epoch"]))
+                # Background tabs may deliver heartbeats only once a minute.
+                # APS keeps its existing lease until the last real activity's
+                # ten-minute deadline; delayed requests never extend that lease.
+                credit_limit = idle_seconds if aps_tracking else HEARTBEAT_MAX_CREDIT_SECONDS
+                credited = min(delta, credit_limit, until_idle)
+                if not duplicate:
+                    credited = max(credited, media_credit)
+                if aps_tracking:
+                    credited = min(delta, credited)
+
+            accepted_active = bool(requested_active and not duplicate)
+            lesson_ledger = self._settle_lesson(connection, access, tracking, progress, credited)
+            if lesson_page_id:
+                page_ids = [page['id'] for page in lesson_pages]
+                if lesson_page_id not in page_ids:
+                    raise TrackingError('Page de lecture inconnue. Rechargez le cours.')
+                if (activity_id not in _json_list(progress['completed_json'])
+                        and page_ids.index(lesson_page_id) > first_pending(lesson_pages, lesson_ledger.get(activity_id, {}),
+                            _json_dict(progress['video_progress_json']).get(activity_id, {}))):
+                    raise TrackingError('Terminez le temps de lecture de la page précédente.')
+            lesson_active = bool(lesson_page_id and accepted_active and visible and focused
+                                 and recent_activity and age < idle_seconds)
+            next_owner_id: Optional[str] = owner_id or None
+            next_owner_seen: Optional[float] = owner_seen or None
+            if accepted_active:
+                next_owner_id = tracking_session_id
+                next_owner_seen = epoch
+                # Taking over from a stale *different* module also revokes its
+                # old slot, so a delayed heartbeat cannot credit overlapping time.
+                connection.execute(
+                    """UPDATE learner_course_progress
+                       SET active_tracking_session_id = NULL, active_tracking_seen_epoch = NULL
+                       WHERE session_id = ? AND trainee_id = ?
+                         AND NOT (course_id = ? AND course_version = ?)""",
+                    key,
+                )
+            elif owns_slot:
+                next_owner_id = None
+                next_owner_seen = None
+
+            # Credit the activity open during the preceding confirmed interval,
+            # never the newly requested activity. A navigation heartbeat must not
+            # transfer seconds from one MAC APS objective to the next one.
+            from .mac_aps_timing import is_timed_key
+            if credited > 0 and (aps_tracking or is_timed_key(key[2], key[3])):
+                previous_activity_id = str(tracking["current_activity_id"] or "")
+                if previous_activity_id:
+                    ledger = _json_dict(progress["activity_seconds_json"])
+                    ledger[previous_activity_id] = float(ledger.get(previous_activity_id) or 0) + credited
+                    connection.execute(
+                        "UPDATE learner_course_progress SET activity_seconds_json = ? "
+                        "WHERE session_id = ? AND trainee_id = ? AND course_id = ? AND course_version = ?",
+                        (json.dumps(ledger, ensure_ascii=False), *key),
+                    )
+
+            connection.execute(
+                """
+                UPDATE tracking_sessions
+                SET current_activity_id = ?, last_seen_at = ?, last_seen_epoch = ?,
+                    was_active = ?, was_duplicate = ?, credited_seconds = credited_seconds + ?, active_until_epoch = ?
+                WHERE id = ?
+                """,
+                (
+                    str(activity_id or "")[:128],
+                    now_iso,
+                    epoch,
+                    int(accepted_active),
+                    int(duplicate),
+                    credited,
+                    epoch + max(0.0, idle_seconds - (0 if aps_tracking and media_active else age)) if accepted_active else 0,
+                    tracking_session_id,
+                ),
+            )
+            connection.execute(
+                """
+                UPDATE learner_course_progress
+                SET current_activity_id = CASE WHEN ? <> '' THEN ? ELSE current_activity_id END,
+                    active_seconds = active_seconds + ?, updated_at = ?,
+                    active_tracking_session_id = ?, active_tracking_seen_epoch = ?
+                WHERE session_id = ? AND trainee_id = ? AND course_id = ? AND course_version = ?
+                """,
+                (
+                    activity_id,
+                    activity_id,
+                    credited,
+                    now_iso,
+                    next_owner_id,
+                    next_owner_seen,
+                    *key,
+                ),
+            )
+            connection.execute('UPDATE tracking_sessions SET lesson_page_id=?, lesson_active_until_epoch=? WHERE id=?',
+                               (lesson_page_id, epoch + min(HEARTBEAT_MAX_CREDIT_SECONDS, idle_seconds - age)
+                                if lesson_active else 0, tracking_session_id))
+
+            if accepted_active and not previous_active:
+                self._event(
+                    connection,
+                    access,
+                    "active_resumed",
+                    tracking_session_id=tracking_session_id,
+                    activity_id=activity_id,
+                    at=now_iso,
+                )
+            elif not accepted_active and previous_active:
+                self._event(
+                    connection,
+                    access,
+                    "active_paused",
+                    tracking_session_id=tracking_session_id,
+                    activity_id=activity_id,
+                    at=now_iso,
+                    credited_seconds=credited,
+                    details={"duplicate": duplicate, "visible": visible, "focused": focused},
+                )
+            if duplicate and not previous_duplicate:
+                self._event(
+                    connection,
+                    access,
+                    "duplicate_tab_blocked",
+                    tracking_session_id=tracking_session_id,
+                    activity_id=activity_id,
+                    at=now_iso,
+                )
+            elif previous_duplicate and not duplicate:
+                self._event(
+                    connection,
+                    access,
+                    "duplicate_tab_released",
+                    tracking_session_id=tracking_session_id,
+                    activity_id=activity_id,
+                    at=now_iso,
+                )
+
+            video_resync = self._record_video_samples(
+                connection, access, tracking, progress, activity_id=activity_id,
+                requirements=video_requirements or {}, samples=video_samples,
+                credited=credited, delta=delta, accepted_active=accepted_active,
+                visible=visible, focused=focused, now_iso=now_iso,
+                playback=playback, pause_windows=pause_windows,
+                media_time_carry={media_id: min(.5, max(0.0, delta - credited))}
+                    if media_active and accepted_active else {},
+            )
+            updated = self._progress_row(connection, access)
+            return {
+                "ended": False,
+                "duplicate": duplicate,
+                "active": accepted_active,
+                "media_active": bool(accepted_active and media_active),
+                "lesson_active": lesson_active,
+                "lesson_page_id": lesson_page_id,
+                "credited_seconds": round(credited, 2),
+                "server_time": now_iso,
+                "video_resync": video_resync,
+                "progress": self._serialize_progress(updated),
+            }
+
+    @staticmethod
+    def _validated_video_samples(samples: Any, requirements: Mapping[str, float]) -> Dict[str, Any]:
+        if samples is None:
+            samples = []
+        if not isinstance(samples, list) or len(samples) > 20:
+            raise TrackingError("Suivi vidéo invalide.")
+        incoming = {}
+        for sample in samples:
+            if not isinstance(sample, dict):
+                raise TrackingError("Suivi vidéo invalide.")
+            video_id = sample.get("id")
+            position = sample.get("position")
+            rate = sample.get("rate", 1)
+            if (not isinstance(video_id, str) or video_id not in requirements or video_id in incoming
+                    or isinstance(position, bool) or not isinstance(position, (int, float))
+                    or not math.isfinite(position) or position < 0
+                    or isinstance(rate, bool) or not isinstance(rate, (int, float)) or not math.isfinite(rate)):
+                raise TrackingError("Position de lecture invalide.")
+            incoming[video_id] = sample
+        if sum(sample.get("playing") is True for sample in incoming.values()) > 1:
+            raise TrackingError("Regardez une seule vidéo à la fois.")
+        return incoming
+
+    @staticmethod
+    def _video_activity_evidence(
+        tracking: sqlite3.Row, progress: sqlite3.Row, activity_id: str,
+        requirements: Mapping[str, float], incoming: Mapping[str, Any], delta: float,
+        playback: Mapping[str, Mapping[str, Any]],
+    ) -> tuple[Optional[str], float]:
+        previous = _json_dict(tracking["video_samples_json"]) if tracking["current_activity_id"] == activity_id else {}
+        saved = _json_dict(progress["video_progress_json"]).get(activity_id, {})
+        for video_id, sample in incoming.items():
+            before = previous.get(video_id) or {}
+            position = float(sample["position"])
+            prior_position = float(before.get("position") or 0)
+            advancement = position - prior_position
+            rate = sample.get("rate", 1)
+            prior_rate = before.get("rate", 1)
+            duration = requirements[video_id]
+            record = compatible_record(video_id, saved.get(video_id) or {}, duration)
+            completed = videos_complete({video_id: record}, {video_id: duration})
+            frontier = float(record.get("watched_seconds") or 0) if record.get("duration_seconds") == duration else 0
+            policy = playback.get(video_id, {})
+            rates = policy.get("rates", (1,))
+            # VTC closes its prior-rate interval on every speed change. APS
+            # conservatively allows an interval spanning either endpoint rate.
+            interval_rate = max(rate, prior_rate) if policy.get("conservative_rate_changes") else prior_rate
+            if (before.get("playing") is True and sample.get("rate", 1) in rates and prior_rate in rates
+                    and position <= duration + .05 and (completed or prior_position <= frontier + .5)
+                    and delta <= HEARTBEAT_MAX_CREDIT_SECONDS
+                    and 0 < advancement <= (min(delta, HEARTBEAT_MAX_CREDIT_SECONDS) + .5) * interval_rate):
+                # Only previously uncredited wall time may absorb request jitter;
+                # it is not a new per-request allowance. Buffering earns nothing.
+                carry = min(.5, max(0.0, float(before.get("time_credit_carry") or 0)))
+                elapsed_playback = round(advancement / interval_rate, 9)
+                return video_id, min(elapsed_playback, delta + carry, HEARTBEAT_MAX_CREDIT_SECONDS)
+        return None, 0.0
+
+    @staticmethod
+    def _learning_pause_windows(tracking, activity_id, incoming, playback, media_id, epoch):
+        """Keep a short resume window for a reached, server-configured pause.
+
+        This maintains single-tab ownership but never provides viewing/time
+        credit. A stalled flag or an arbitrary paused position cannot create it.
+        """
+        previous = _json_dict(tracking["video_samples_json"]) if tracking["current_activity_id"] == activity_id else {}
+        windows = {}
+        for video_id, sample in incoming.items():
+            policy = playback.get(video_id) or {}
+            if sample.get("rate", 1) not in policy.get("rates", (1,)):
+                continue
+            before = previous.get(video_id) or {}
+            position = float(sample["position"])
+            prior_until = float(before.get("learning_pause_until") or 0)
+            if prior_until > epoch and abs(position - float(before.get("position") or 0)) <= .5:
+                windows[video_id] = prior_until
+            if video_id == media_id and sample.get("playing") is not True and sample.get("ended") is not True:
+                for pause in policy.get("pauses") or []:
+                    if abs(position - pause["at_seconds"]) <= .5:
+                        windows[video_id] = epoch + pause["duration_seconds"] + 3
+                        break
+        return windows
+
+    def _record_video_samples(
+        self, connection: sqlite3.Connection, access: Mapping[str, Any],
+        tracking: sqlite3.Row, progress: sqlite3.Row, *, activity_id: str,
+        requirements: Mapping[str, float], samples: Any, credited: float,
+        delta: float, accepted_active: bool, visible: bool, focused: bool, now_iso: str,
+        media_time_carry: Optional[Mapping[str, float]] = None,
+        playback: Optional[Mapping[str, Mapping[str, Any]]] = None,
+        pause_windows: Optional[Mapping[str, float]] = None,
+    ) -> Dict[str, float]:
+        """Credit a continuous prefix within server-timed, single-tab receipts."""
+        incoming = self._validated_video_samples(samples, requirements)
+        saved = _json_dict(progress["video_progress_json"])
+        activity_saved = saved.setdefault(activity_id, {})
+        previous = _json_dict(tracking["video_samples_json"]) if tracking["current_activity_id"] == activity_id else {}
+        next_samples = {}
+        resync = {}
+        budget = credited if visible and focused else 0.0
+        for video_id, sample in incoming.items():
+            duration = requirements[video_id]
+            policy = (playback or {}).get(video_id, {})
+            rates = policy.get("rates", (1,))
+            normal_rate = sample.get("rate", 1) in rates
+            rate = sample.get("rate", 1)
+            record = compatible_record(video_id, activity_saved.get(video_id) or {}, duration)
+            if record.get("duration_seconds") != duration:
+                record = {"duration_seconds": duration, "watched_seconds": 0.0, "completed": False}
+            if videos_complete({video_id: record}, {video_id: duration}):
+                activity_saved[video_id] = record
+                next_samples[video_id] = {
+                    "position": min(float(sample["position"]), duration),
+                    "rate": rate,
+                    "learning_pause_until": (pause_windows or {}).get(video_id, 0) if accepted_active else 0,
+                    "playing": bool(sample.get("playing") is True and normal_rate
+                                    and accepted_active and visible and focused),
+                    "time_credit_carry": (media_time_carry or {}).get(video_id, 0.0),
+                }
+                continue
+            frontier = min(duration, max(0.0, float(record.get("watched_seconds") or 0)))
+            position = float(sample["position"])
+            before = previous.get(video_id) or {}
+            previous_position = float(before.get("position") or 0)
+            advancement = position - previous_position
+            prior_rate = float(before.get("rate", 1))
+            interval_rate = max(rate, prior_rate) if policy.get("conservative_rate_changes") else prior_rate
+            valid_position = normal_rate and position <= duration + .05
+            continuous = (before.get("playing") is True and prior_rate in rates and previous_position <= frontier + .5
+                          and -.25 <= advancement <= (min(delta, HEARTBEAT_MAX_CREDIT_SECONDS) + .5) * interval_rate)
+            carry = 0.0
+            if valid_position and continuous and budget > 0:
+                # Retain a small amount of *already credited* time to absorb
+                # request jitter without losing viewing time on every ping.
+                # This is a balance, not a fresh allowance per request.
+                available = budget + min(.5, max(0.0, float(before.get("credit_carry") or 0)))
+                extension = max(0.0, min(position, frontier + available * interval_rate) - frontier)
+                frontier += extension
+                carry = min(.5, max(0.0, available - extension / interval_rate))
+                budget = 0.0
+            if not valid_position or position > frontier + .5:
+                resync[video_id] = round(frontier, 3)
+            completed = (video_id not in resync and sample.get("ended") is True
+                         and position >= duration - .05 and frontier >= duration - .5)
+            if completed:
+                frontier = duration
+                self._event(connection, access, "video_completed", tracking_session_id=tracking["id"],
+                            activity_id=activity_id, at=now_iso,
+                            details={"video_id": video_id, "duration_seconds": duration})
+            activity_saved[video_id] = {
+                "duration_seconds": duration, "watched_seconds": round(frontier, 3),
+                "completed": completed, "completed_at": now_iso if completed else None,
+            }
+            next_samples[video_id] = {
+                "position": frontier if video_id in resync else min(position, duration),
+                "rate": rate,
+                "learning_pause_until": (pause_windows or {}).get(video_id, 0) if accepted_active and video_id not in resync else 0,
+                "playing": bool(sample.get("playing") is True and normal_rate and accepted_active
+                                and visible and focused and video_id not in resync),
+                "credit_carry": carry if sample.get("playing") is True and video_id not in resync else 0.0,
+                "time_credit_carry": (media_time_carry or {}).get(video_id, 0.0) if video_id not in resync else 0.0,
+            }
+        connection.execute("UPDATE tracking_sessions SET video_samples_json = ? WHERE id = ?",
+                           (json.dumps(next_samples, separators=(",", ":")), tracking["id"]))
+        if incoming:
+            connection.execute(
+                """UPDATE learner_course_progress SET video_progress_json = ?
+                   WHERE session_id = ? AND trainee_id = ? AND course_id = ? AND course_version = ?""",
+                (json.dumps(saved, separators=(",", ":")), *self._key_values(access)),
+            )
+        return resync
+
+    def finish_tracking(
+        self,
+        access: Mapping[str, Any],
+        tracking_session_id: str,
+        *,
+        activity_id: str = "",
+        now_epoch: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        epoch = float(now_epoch if now_epoch is not None else time.time())
+        heartbeat = self.heartbeat(
+            access,
+            tracking_session_id,
+            activity_id=activity_id,
+            visible=False,
+            focused=False,
+            recent_activity=False,
+            media_playing=False,
+            now_epoch=epoch,
+        )
+        now_iso = _utc_iso(epoch)
+        with self._transaction() as connection:
+            tracking = connection.execute(
+                "SELECT status FROM tracking_sessions WHERE id = ?",
+                (tracking_session_id,),
+            ).fetchone()
+            if tracking is not None and tracking["status"] != "ended":
+                connection.execute(
+                    "UPDATE tracking_sessions SET status = 'ended', ended_at = ?, was_active = 0 WHERE id = ?",
+                    (now_iso, tracking_session_id),
+                )
+                self._event(
+                    connection,
+                    access,
+                    "session_finished",
+                    tracking_session_id=tracking_session_id,
+                    activity_id=activity_id,
+                    at=now_iso,
+                )
+        heartbeat["ended"] = True
+        heartbeat["active"] = False
+        return heartbeat
+
+    @staticmethod
+    def _completion_values(
+        completed: Iterable[str],
+        answers: Mapping[str, Any],
+        *,
+        activity_order: Sequence[str],
+        scored_activity_ids: Sequence[str],
+        mastery_score: float,
+        required_activity_ids: Optional[Sequence[str]] = None,
+        active_seconds: float = 0,
+        required_seconds: int = 0,
+        video_requirements: Optional[Mapping[str, Mapping[str, float]]] = None,
+        video_progress: Optional[Mapping[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        completed_set = {str(value) for value in completed}
+        for activity_id, videos in (video_requirements or {}).items():
+            if not videos_complete((video_progress or {}).get(activity_id, {}), videos):
+                completed_set.discard(activity_id)
+        ordered_completed = [activity_id for activity_id in activity_order if activity_id in completed_set]
+        required_set = set(activity_order if required_activity_ids is None else required_activity_ids)
+        required = [activity_id for activity_id in activity_order if activity_id in required_set]
+        scored_activity_ids = [activity_id for activity_id in scored_activity_ids if activity_id in required_set]
+        correct = sum(
+            1
+            for activity_id in scored_activity_ids
+            if isinstance(answers.get(activity_id), Mapping) and answers[activity_id].get("correct") is True
+        )
+        score = round((correct / len(scored_activity_ids)) * 100, 2) if scored_activity_ids else 100.0
+        activities_complete = bool(activity_order) and all(activity_id in completed_set for activity_id in required)
+        all_complete = activities_complete and active_seconds >= required_seconds
+        if all_complete:
+            status = "passed" if score >= float(mastery_score) else "failed"
+        elif activities_complete:
+            status = "awaiting_time"
+        else:
+            status = "in_progress"
+        next_activity = next(
+            (activity_id for activity_id in required if activity_id not in completed_set),
+            required[-1] if required else (activity_order[-1] if activity_order else ""),
+        )
+        return {
+            "completed": ordered_completed,
+            "score": score,
+            "status": status,
+            "next_activity": next_activity,
+            "all_complete": all_complete,
+        }
+
+    def complete_activity(
+        self,
+        access: Mapping[str, Any],
+        activity_id: str,
+        *,
+        activity_order: Sequence[str],
+        scored_activity_ids: Sequence[str],
+        mastery_score: float,
+        required_activity_ids: Optional[Sequence[str]] = None,
+        required_seconds: int = 0,
+        answer: Optional[Mapping[str, Any]] = None,
+        video_requirements: Optional[Mapping[str, Mapping[str, float]]] = None,
+        assessment_attempt: Optional[Mapping[str, Any]] = None,
+        lesson_requirements: Sequence[Mapping[str, Any]] = (),
+    ) -> Dict[str, Any]:
+        if activity_id not in activity_order:
+            raise TrackingError("Activité inconnue.")
+        now_iso = _utc_iso()
+        key = self._key_values(access)
+        with self._transaction() as connection:
+            self._ensure_progress_row(
+                connection,
+                access,
+                now_iso=now_iso,
+                current_activity_id=activity_id,
+            )
+            row = self._progress_row(connection, access)
+            video_progress = _json_dict(row["video_progress_json"])
+            if not videos_complete(video_progress.get(activity_id, {}), (video_requirements or {}).get(activity_id, {})):
+                raise TrackingError("Regardez toute la vidéo avant de continuer.")
+            completed = [str(value) for value in _json_list(row["completed_json"])]
+            answers = _json_dict(row["answers_json"])
+            already_completed = activity_id in completed
+            if (not already_completed and lesson_remaining_seconds(
+                    lesson_requirements, _json_dict(row['lesson_seconds_json']).get(activity_id, {})) > 0):
+                raise TrackingError('Terminez le temps de lecture de chaque page avant de valider ce cours.')
+            if (not already_completed and key[2].startswith("academy-vtc-")
+                    and answer is not None and answer.get("production_ai_hash")):
+                # VTC feedback was checked before entering this transaction. A
+                # second tab may have saved a newer draft in that interval; its
+                # text must not be overwritten by the previously checked copy.
+                saved_production = answers.get(activity_id)
+                if (not isinstance(saved_production, Mapping)
+                        or saved_production.get("production_answers") != answer.get("production_answers")):
+                    raise TrackingError("Votre brouillon a changé. Rechargez la page et faites corriger la copie actuelle avant de valider cet atelier.")
+            if assessment_attempt is not None and not already_completed:
+                try:
+                    assessment.record_attempt(connection, access, activity_id=activity_id,
+                        item_id=activity_id, kind='question', submitted_at=now_iso,
+                        **dict(assessment_attempt))
+                except ValueError as exc:
+                    raise TrackingError(str(exc)) from exc
+            if not already_completed:
+                completed.append(activity_id)
+            if answer is not None and (activity_id not in answers or
+                    (not already_completed and (answers[activity_id].get('practice_draft') is True
+                                               or answers[activity_id].get('production_draft') is True))):
+                answers[activity_id] = dict(answer)
+
+            completion = self._completion_values(
+                completed,
+                answers,
+                activity_order=activity_order,
+                scored_activity_ids=scored_activity_ids,
+                required_activity_ids=required_activity_ids,
+                mastery_score=mastery_score,
+                active_seconds=float(row["active_seconds"] or 0), required_seconds=required_seconds,
+                video_requirements=video_requirements, video_progress=video_progress,
+            )
+            completed_at = (row["completed_at"] or now_iso) if completion["all_complete"] else None
+            connection.execute(
+                """
+                UPDATE learner_course_progress
+                SET current_activity_id = ?, completed_json = ?, answers_json = ?,
+                    score_percent = ?, status = ?, updated_at = ?, completed_at = ?
+                WHERE session_id = ? AND trainee_id = ? AND course_id = ? AND course_version = ?
+                """,
+                (
+                    completion["next_activity"],
+                    # Deselected sequences can later be re-added. Never erase
+                    # their completion records when saving another activity.
+                    json.dumps(list(dict.fromkeys(completed)), separators=(",", ":")),
+                    json.dumps(answers, ensure_ascii=False, separators=(",", ":")),
+                    completion["score"],
+                    completion["status"],
+                    now_iso,
+                    completed_at,
+                    *key,
+                ),
+            )
+            if not already_completed:
+                # Snapshot the first end of the activities, before later review
+                # time reaches the required module floor and masks underload.
+                # No reconstruction for older completions; no seconds awarded.
+                if (key[2] in APS_PACED_COURSES and access.get('aps_depth_revision')
+                        and not _json_dict(row['aps_workload_json'])
+                        and completion['status'] in ('awaiting_time', 'passed', 'failed')):
+                    snapshot = {'revision': access['aps_depth_revision'], 'finished_at': now_iso,
+                        'active_seconds': float(row['active_seconds'] or 0),
+                        'activity_seconds': _json_dict(row['activity_seconds_json']),
+                        'reading_revisions': {aid: value.get('reading_revision') for aid, value in answers.items()
+                                              if isinstance(value, Mapping) and value.get('reading_revision')},
+                        'workshop_revisions': {aid: value.get('practice_revision') for aid, value in answers.items()
+                                              if isinstance(value, Mapping) and value.get('practice_revision')}}
+                    connection.execute('UPDATE learner_course_progress SET aps_workload_json=? WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?',
+                        (json.dumps(snapshot, ensure_ascii=False), *key))
+                self._event(
+                    connection,
+                    access,
+                    "answer_submitted" if answer is not None and not answer.get('reading_revision') else "content_completed",
+                    activity_id=activity_id,
+                    at=now_iso,
+                    details={"correct": answer.get("correct") if answer else None},
+                )
+                if completion["all_complete"] and not row["completed_at"]:
+                    self._event(
+                        connection,
+                        access,
+                        "course_completed",
+                        activity_id=activity_id,
+                        at=now_iso,
+                        details={"status": completion["status"], "score_percent": completion["score"]},
+                    )
+            updated = self._progress_row(connection, access)
+            result = self._serialize_progress(
+                updated,
+                activity_order=activity_order,
+                scored_activity_ids=scored_activity_ids,
+                required_activity_ids=required_activity_ids,
+            )
+            result["already_completed"] = already_completed
+            return result
+
+    def learner_progress(self, session_id: str, trainee_id: str) -> List[Dict[str, Any]]:
+        """Read the whole path in one query, without starting any new module."""
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM learner_course_progress WHERE session_id = ? AND trainee_id = ?",
+                (session_id, trainee_id),
+            ).fetchall()
+        return [self._serialize_progress(row) for row in rows]
+
+    def live_progress(
+        self,
+        course_id: str,
+        *,
+        course_version: Optional[str] = None,
+        now_epoch: Optional[float] = None,
+    ) -> List[Dict[str, Any]]:
+        epoch = float(now_epoch if now_epoch is not None else time.time())
+        with self._connect() as connection:
+            if course_version:
+                rows = connection.execute(
+                    """
+                    SELECT * FROM learner_course_progress
+                    WHERE course_id = ? AND course_version = ?
+                    ORDER BY updated_at DESC
+                    """,
+                    (course_id, course_version),
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    """
+                    SELECT * FROM learner_course_progress
+                    WHERE course_id = ?
+                    ORDER BY updated_at DESC
+                    """,
+                    (course_id,),
+                ).fetchall()
+        result: List[Dict[str, Any]] = []
+        for row in rows:
+            item = self._serialize_progress(row)
+            seen = float(row["active_tracking_seen_epoch"] or 0)
+            item["live"] = bool(row["active_tracking_session_id"] and epoch - seen <= ACTIVE_SESSION_STALE_SECONDS)
+            item["last_seen_seconds_ago"] = round(max(0.0, epoch - seen), 1) if seen else None
+            result.append(item)
+        return result
+
+    def events_for_learner(
+        self,
+        access: Mapping[str, Any],
+        *,
+        limit: int = 500,
+    ) -> List[Dict[str, Any]]:
+        key = self._key_values(access)
+        safe_limit = max(1, min(int(limit), 5_000))
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT * FROM tracking_events
+                WHERE session_id = ? AND trainee_id = ? AND course_id = ? AND course_version = ?
+                ORDER BY id ASC LIMIT ?
+                """,
+                (*key, safe_limit),
+            ).fetchall()
+        return [
+            {
+                "event_type": row["event_type"],
+                "activity_id": row["activity_id"],
+                "event_at": row["event_at"],
+                "credited_seconds": round(float(row["credited_seconds"] or 0), 2),
+                "details": _json_dict(row["details_json"]),
+            }
+            for row in rows
+        ]
+

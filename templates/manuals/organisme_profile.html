@@ -1,0 +1,30 @@
+{% extends 'manuals/layout.html' %}
+{% block title %}Mon organisme{% endblock %}
+{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static',filename='css/organisme-profile.css',v='20261010-1') }}">{% endblock %}
+{% block content %}
+<div class="op-wrap">
+  <a class="op-back" href="{{ url_for('manuals_shop.home') }}">← Mon espace</a>
+  <header class="op-heading"><span class="op-eyebrow">VOTRE IDENTITÉ</span><h1>Mon organisme</h1><p>Votre logo et vos coordonnées pour accompagner vos stagiaires et personnaliser vos documents.</p></header>
+  {% if errors %}<div class="op-errors" role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</div>{% endif %}
+  <form method="post" enctype="multipart/form-data" class="op-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="revision" value="{{ profile_revision }}">
+    <fieldset {% if readonly %}disabled{% endif %}>
+      <div class="op-columns"><div class="op-main">
+        <section class="op-card"><div class="op-card-heading"><span class="op-step">01</span><div><h2>Votre organisme</h2><p>L’identité affichée à vos stagiaires.</p></div></div>
+          <div class="op-grid"><label class="op-wide" for="op-name">Nom de l’organisme<input id="op-name" name="name" value="{{ values.get('name','') }}" maxlength="160" minlength="2" required autocomplete="organization"></label><label class="op-wide" for="op-siret">SIRET<input id="op-siret" name="siret" value="{{ values.get('siret','') }}" maxlength="20" required inputmode="numeric" autocomplete="off"><small>14 chiffres, sans espaces.</small></label></div>
+        </section>
+        <section class="op-card"><div class="op-card-heading"><span class="op-step">02</span><div><h2>Votre contact</h2><p>Les coordonnées pour joindre votre équipe.</p></div></div>
+          <div class="op-grid"><label for="op-first">Prénom<input id="op-first" name="contact_first_name" value="{{ values.get('contact_first_name','') }}" maxlength="100" required autocomplete="given-name"></label><label for="op-last">Nom<input id="op-last" name="contact_last_name" value="{{ values.get('contact_last_name','') }}" maxlength="100" required autocomplete="family-name"></label><label class="op-wide" for="op-email">E-mail de contact<input id="op-email" name="email" type="email" value="{{ values.get('email','') }}" maxlength="254" required autocomplete="email"><small>Utilisé dans vos échanges avec les stagiaires et pour vos commandes.</small></label><label class="op-wide" for="op-phone">Téléphone<input id="op-phone" name="phone" type="tel" value="{{ values.get('phone','') }}" maxlength="40" autocomplete="tel" placeholder="01 23 45 67 89"></label></div>
+        </section>
+        <section class="op-card"><div class="op-card-heading"><span class="op-step">03</span><div><h2>Votre adresse</h2><p>Pour préparer vos prochaines commandes.</p></div></div>
+          <div class="op-grid"><label class="op-wide" for="op-address">Adresse<input id="op-address" name="address" value="{{ values.get('address','') }}" maxlength="200" autocomplete="address-line1"></label><label class="op-wide" for="op-address-extra">Complément d’adresse <span class="op-optional">(facultatif)</span><input id="op-address-extra" name="address_extra" value="{{ values.get('address_extra','') }}" maxlength="200" autocomplete="address-line2"></label><label for="op-postal">Code postal<input id="op-postal" name="postal_code" value="{{ values.get('postal_code','') }}" maxlength="20" autocomplete="postal-code"></label><label for="op-city">Ville<input id="op-city" name="city" value="{{ values.get('city','') }}" maxlength="100" autocomplete="address-level2"></label></div>
+        </section>
+      </div><aside class="op-aside">
+        <section class="op-card op-logo-card"><h2>Votre logo</h2><p>Il accompagne vos e-mails stagiaires et vos attestations.</p><div class="op-logo-preview">{% if logo_preview %}<img src="{{ logo_preview }}" alt="Logo de votre organisme">{% else %}<span aria-hidden="true">{{ values.get('name','O')[:1]|upper }}</span><small>Ajoutez votre logo</small>{% endif %}</div><label class="op-upload-label" for="op-logo">{{ 'Remplacer le logo' if logo_preview else 'Choisir votre logo' }}<input id="op-logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp"></label><small>PNG, JPEG ou WebP · 5 Mo maximum.</small>{% if logo_preview %}<label class="op-checkbox"><input type="checkbox" name="remove_logo" value="1">Supprimer le logo actuel</label>{% endif %}</section>
+        <section class="op-login"><h2>Votre connexion</h2><p>Votre identifiant de connexion reste :</p><strong>{{ login_email }}</strong><p>Modifier l’e-mail de contact ne change pas votre identifiant ni votre mot de passe.</p></section>
+      </aside></div>
+      <div class="op-actions"><p>Vos nouvelles coordonnées seront utilisées pour vos prochains échanges.</p>{% if not readonly %}<button class="button primary" type="submit">Enregistrer mon organisme</button>{% else %}<span>Consultation uniquement</span>{% endif %}</div>
+    </fieldset>
+  </form>
+</div>
+{% endblock %}

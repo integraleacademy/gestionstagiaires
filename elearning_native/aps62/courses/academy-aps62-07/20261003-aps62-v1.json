@@ -1,0 +1,2185 @@
+{
+  "format_version": 1,
+  "id": "academy-aps62-07",
+  "version": "20261003-aps62-v1",
+  "title": "APS 07 · Comprendre et apaiser les conflits",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "source": {
+    "type": "academy-aps62",
+    "reviewed_on": "2026-10-03"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false
+  },
+  "theme": {
+    "main_color": "#2860e8",
+    "button_color": "#245bdb",
+    "text_color": "#172b4d"
+  },
+  "planned_minutes": 300,
+  "required_minutes": 300,
+  "regulation": "Annexe II · Analyse et résolution des conflits",
+  "introduction": [],
+  "sections": [
+    {
+      "id": "aps62-07-01",
+      "title": "01 · Repérer la naissance du conflit",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-07-01-comprendre",
+          "title": "Comprendre · Repérer la naissance du conflit",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.01",
+            "title": "Repérer la naissance du conflit",
+            "kind": "lesson",
+            "image": "media/aps62/scene-03.webp",
+            "case": "À l’accueil, une personne attend depuis vingt minutes sans information. Elle élève la voix : « Vous me faites perdre ma journée ». Un collègue la décrit immédiatement comme dangereuse, alors qu’aucune menace ni geste d’agression n’a été observé.",
+            "reason": "Un désaccord devient plus difficile à traiter lorsque frustration, incompréhension et réponse défensive s’alimentent. Décrire les faits aide à choisir une réponse proportionnée. L’agent ne pose pas de diagnostic psychologique ; il cherche ce qui est demandé, ce qui est possible et ce qui ferait monter le risque. Une information fiable sur l’attente peut réduire l’incertitude.",
+            "lessons": [
+              {
+                "ref": "03.01",
+                "title": "Comprendre l'escalade d'un conflit",
+                "page": 142,
+                "diagram": "media/aps62/repere-03.01.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Un désaccord ne devient pas toujours une agression"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un conflit apparaît lorsque des attentes ou intérêts s'opposent. À l'accueil, une personne veut entrer rapidement alors que l'agent doit vérifier un accès. Le désaccord porte d'abord sur une situation. Il peut s'aggraver si la personne se sent ignorée, humiliée ou traitée injustement. Les réactions de chacun influencent alors celles de l'autre : voix plus forte, interruptions, rapprochement, puis menaces éventuelles."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Agir sur ce qui reste maîtrisable"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'agent ne contrôle pas les émotions d'autrui, mais il peut agir sur sa formulation, son rythme, son emplacement et les solutions proposées. Expliquer le motif d'une attente donne un sens à la règle. Offrir une option réelle évite une impasse. À l'inverse, promettre une exception impossible reporte le conflit et détruit la confiance. La désescalade doit rester compatible avec la protection des personnes."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "« Vous n'entrez pas » ferme l'échange sans explication. « Votre contact doit confirmer l'accès ; je l'appelle et vous pouvez attendre ici » rend la suite compréhensible. Si la personne commence à menacer ou bloque une issue, l'agent ne poursuit pas indéfiniment la discussion : il réévalue le risque et demande du soutien."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La prévention du conflit commence souvent avant le premier échange, par une signalétique lisible, une attente organisée et des règles cohérentes entre agents."
+                  }
+                ],
+                "course_page": 143,
+                "practice": {
+                  "background": "Les échanges se dégradent souvent par accumulation : interruption, humiliation, réponse sèche, présence d’un public et impossibilité de trouver une issue. L’agent peut réduire cette pression en expliquant tôt la règle, en annonçant un délai réaliste et en proposant une alternative autorisée. Il ne promet pas ce qu’il ne peut pas obtenir. La prévention commence dans l’organisation du poste : signalétique, file, information et relais disponible. Une difficulté répétée doit remonter afin de corriger sa cause.",
+                  "case": "Un visiteur attend depuis vingt minutes. Personne ne lui a expliqué le retard. Il se plaint vivement au moment où vous lui demandez de déplacer son véhicule. Quels facteurs alimentent le conflit ? Quelle première phrase peut faciliter l’échange ?",
+                  "transfer": "Un visiteur dit « personne ne m’a prévenu ». Quelle information cherchez-vous avant de répéter le refus ?",
+                  "page": 164
+                }
+              },
+              {
+                "ref": "03.02",
+                "title": "Observer un comportement avec précision",
+                "page": 144,
+                "diagram": "media/aps62/repere-03.02.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Séparer trois niveaux"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Le fait est observable : une personne tape sur le comptoir. L'interprétation cherche un sens : elle paraît impatiente. Le jugement attribue une identité : « c'est quelqu'un de violent ». Confondre ces niveaux peut conduire à une mauvaise décision et à une transmission imprécise. L'agent doit décrire les paroles, gestes, déplacements et circonstances qui influencent réellement la sécurité."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Un signe isolé ne suffit pas"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une voix forte peut être liée au bruit ambiant ou à une difficulté auditive. Un regard évitant ne prouve pas une intention malveillante. Observez un ensemble de faits et leur évolution : distances qui diminuent, menaces explicites, objets utilisés, accès bloqué. Le contexte aide à comprendre, sans excuser une agression ni transformer une différence personnelle en danger supposé."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Au PC, « une personne suspecte » permet difficilement d'organiser un renfort. « Entrée B, une personne frappe la vitre depuis deux minutes, menace l'hôtesse et empêche le passage » décrit le lieu, les faits et le risque. Le destinataire peut alors choisir une réponse. La description physique utile à l'identification reste distincte de l'évaluation du comportement."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une observation professionnelle peut être comprise par quelqu'un qui n'était pas présent. Évitez les étiquettes et conservez les paroles exactes lorsqu'elles sont déterminantes."
+                  }
+                ],
+                "course_page": 145,
+                "practice": {
+                  "background": "Une menace explicite, une tentative de rapprochement malgré la demande de distance ou la présence d’un objet dangereux appellent une réévaluation immédiate. Repérez vos possibilités de retrait et les personnes exposées. Informez le poste central avant que la situation ne vous empêche de communiquer. L’objectif n’est pas de deviner la personnalité de l’interlocuteur, mais de décider d’une mesure de protection adaptée. Décrivez les faits au collègue qui vient en renfort.",
+                  "case": "Une personne ne vous regarde pas dans les yeux et répond lentement. Votre collègue y voit une preuve de mensonge. Elle montre ensuite une carte indiquant une difficulté de communication. Quelles hypothèses devez-vous garder ouvertes ? Comment adaptez-vous l’échange ?",
+                  "transfer": "Transformez « le visiteur est pénible » en deux observations possibles, sans les inventer dans un rapport réel.",
+                  "page": 165
+                }
+              }
+            ],
+            "decision": "Identifier les faits, le besoin et les premiers signes de tension.",
+            "pitfall": "Qualifier la personne de violente sur la seule base de son volume de voix.",
+            "objectives": [
+              "Expliquer : repérer la naissance du conflit",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "À l’accueil, une personne attend depuis vingt minutes sans information. Elle élève la voix : « Vous me faites perdre ma journée ». Un collègue la décrit immédiatement comme dangereuse, alors qu’aucune menace ni geste d’agression n’a été observé."
+              ],
+              [
+                "Décision à justifier",
+                "Identifier les faits, le besoin et les premiers signes de tension."
+              ],
+              [
+                "Piège à éviter",
+                "Qualifier la personne de violente sur la seule base de son volume de voix."
+              ],
+              [
+                "Pourquoi ?",
+                "Un désaccord devient plus difficile à traiter lorsque frustration, incompréhension et réponse défensive s’alimentent. Décrire les faits aide à choisir une réponse proportionnée. L’agent ne pose pas de diagnostic psychologique ; il cherche ce qui est demandé, ce qui est possible et ce qui ferait monter le risque. Une information fiable sur l’attente peut réduire l’incertitude."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "À l’accueil, une personne attend depuis vingt minutes sans information."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Un désaccord devient plus difficile à traiter lorsque frustration, incompréhension et réponse défensive s’alimentent."
+              },
+              {
+                "label": "Décider",
+                "text": "Identifier les faits, le besoin et les premiers signes de tension."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Une seconde personne rejoint la réclamation. Comment adapter votre positionnement et votre demande de relais sans dramatiser ?"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-07-01-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-07-01-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-07-01-video",
+                "title": "Repérer la naissance du conflit",
+                "required": true,
+                "src": "media/aps62/aps62-07-01.mp4",
+                "poster": "media/aps62/aps62-07-01.jpg",
+                "captions": "media/aps62/aps62-07-01.vtt",
+                "duration_seconds": 68.385488,
+                "transcript": "La situation : À l’accueil, une personne attend depuis vingt minutes sans information. Elle élève la voix : « Vous me faites perdre ma journée ». Un collègue la décrit immédiatement comme dangereuse, alors qu’aucune menace ni geste d’agression n’a été observé.\n\nÀ vous de décider : Identifier les faits, le besoin et les premiers signes de tension. Ou bien : Qualifier la personne de violente sur la seule base de son volume de voix. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Un désaccord devient plus difficile à traiter lorsque frustration, incompréhension et réponse défensive s’alimentent. Décrire les faits aide à choisir une réponse proportionnée. L’agent ne pose pas de diagnostic psychologique ; il cherche ce qui est demandé, ce qui est possible et ce qui ferait monter le risque. Une information fiable sur l’attente peut réduire l’incertitude.\n\nLe bon relais : Les étapes peuvent être : attente, absence d’information, reproche, réponse sèche, escalade. À l’étape de l’attente, expliquer le délai et vérifier le rendez-vous évite une promesse vide. Le besoin d’information ne justifie pas une menace, mais le reconnaître aide à maintenir l’échange."
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "07.01",
+            "title": "Repérer la naissance du conflit",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Un désaccord ne devient pas toujours une agression",
+                "back": "Un conflit apparaît lorsque des attentes ou intérêts s'opposent. À l'accueil, une personne veut entrer rapidement alors que l'agent doit vérifier un accès. Le désaccord porte d'abord sur une situation. Il peut s'aggraver si la personne se sent ignorée, humiliée ou traitée injustement. Les réactions de chacun influencent alors celles de l'autre : voix plus forte, interruptions, rapprochement, puis menaces éventuelles."
+              },
+              {
+                "front": "Agir sur ce qui reste maîtrisable",
+                "back": "L'agent ne contrôle pas les émotions d'autrui, mais il peut agir sur sa formulation, son rythme, son emplacement et les solutions proposées. Expliquer le motif d'une attente donne un sens à la règle. Offrir une option réelle évite une impasse. À l'inverse, promettre une exception impossible reporte le conflit et détruit la confiance. La désescalade doit rester compatible avec la protection des personnes."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "« Vous n'entrez pas » ferme l'échange sans explication. « Votre contact doit confirmer l'accès ; je l'appelle et vous pouvez attendre ici » rend la suite compréhensible. Si la personne commence à menacer ou bloque une issue, l'agent ne poursuit pas indéfiniment la discussion : il réévalue le risque et demande du soutien."
+              },
+              {
+                "front": "Séparer trois niveaux",
+                "back": "Le fait est observable : une personne tape sur le comptoir. L'interprétation cherche un sens : elle paraît impatiente. Le jugement attribue une identité : « c'est quelqu'un de violent ». Confondre ces niveaux peut conduire à une mauvaise décision et à une transmission imprécise. L'agent doit décrire les paroles, gestes, déplacements et circonstances qui influencent réellement la sécurité."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : À l’accueil, une personne attend depuis vingt minutes sans information. Elle élève la voix : « Vous me faites perdre ma journée ». Un collègue la décrit immédiatement comme dangereuse, alors qu’aucune menace ni geste d’agression n’a été observé.\n\nÀ vous de décider : Identifier les faits, le besoin et les premiers signes de tension. Ou bien : Qualifier la personne de violente sur la seule base de son volume de voix. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Un désaccord devient plus difficile à traiter lorsque frustration, incompréhension et réponse défensive s’alimentent. Décrire les faits aide à choisir une réponse proportionnée. L’agent ne pose pas de diagnostic psychologique ; il cherche ce qui est demandé, ce qui est possible et ce qui ferait monter le risque. Une information fiable sur l’attente peut réduire l’incertitude.\n\nLe bon relais : Les étapes peuvent être : attente, absence d’information, reproche, réponse sèche, escalade. À l’étape de l’attente, expliquer le délai et vérifier le rendez-vous évite une promesse vide. Le besoin d’information ne justifie pas une menace, mais le reconnaître aide à maintenir l’échange."
+          }
+        },
+        {
+          "id": "aps62-07-01-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.01",
+            "title": "Repérer la naissance du conflit",
+            "kind": "workshop",
+            "case": "À l’accueil, une personne attend depuis vingt minutes sans information. Elle élève la voix : « Vous me faites perdre ma journée ». Un collègue la décrit immédiatement comme dangereuse, alors qu’aucune menace ni geste d’agression n’a été observé.",
+            "choices": [
+              {
+                "text": "Qualifier la personne de violente sur la seule base de son volume de voix.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. Un désaccord devient plus difficile à traiter lorsque frustration, incompréhension et réponse défensive s’alimentent. Décrire les faits aide à choisir une réponse proportionnée. L’agent ne pose pas de diagnostic psychologique ; il cherche ce qui est demandé, ce qui est possible et ce qui ferait monter le risque. Une information fiable sur l’attente peut réduire l’incertitude.",
+                "correct": false
+              },
+              {
+                "text": "Ignorer la personne jusqu’à ce qu’elle se calme.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. Les étapes peuvent être : attente, absence d’information, reproche, réponse sèche, escalade. À l’étape de l’attente, expliquer le délai et vérifier le rendez-vous évite une promesse vide. Le besoin d’information ne justifie pas une menace, mais le reconnaître aide à maintenir l’échange.",
+                "correct": false
+              },
+              {
+                "text": "Identifier les faits, le besoin et les premiers signes de tension.",
+                "feedback": "Un désaccord devient plus difficile à traiter lorsque frustration, incompréhension et réponse défensive s’alimentent. Décrire les faits aide à choisir une réponse proportionnée. L’agent ne pose pas de diagnostic psychologique ; il cherche ce qui est demandé, ce qui est possible et ce qui ferait monter le risque. Une information fiable sur l’attente peut réduire l’incertitude.",
+                "correct": true
+              }
+            ],
+            "task": "Reconstituez la montée de tension en cinq étapes et proposez un point d’intervention à chaque étape. Distinguez besoins et comportements.",
+            "model": "Les étapes peuvent être : attente, absence d’information, reproche, réponse sèche, escalade. À l’étape de l’attente, expliquer le délai et vérifier le rendez-vous évite une promesse vide. Le besoin d’information ne justifie pas une menace, mais le reconnaître aide à maintenir l’échange.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ]
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-07-01-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "À l’accueil, une personne attend depuis vingt minutes sans information. Elle élève la voix : « Vous me faites perdre ma journée ». Un collègue la décrit immédiatement comme dangereuse, alors qu’aucune menace ni geste d’agression n’a été observé.",
+          "options": [
+            {
+              "id": "aps62-07-01-a0",
+              "text": "Qualifier la personne de violente sur la seule base de son volume de voix.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-07-01-a1",
+              "text": "Ignorer la personne jusqu’à ce qu’elle se calme.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-07-01-a2",
+              "text": "Identifier les faits, le besoin et les premiers signes de tension.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "Un désaccord devient plus difficile à traiter lorsque frustration, incompréhension et réponse défensive s’alimentent. Décrire les faits aide à choisir une réponse proportionnée. L’agent ne pose pas de diagnostic psychologique ; il cherche ce qui est demandé, ce qui est possible et ce qui ferait monter le risque. Une information fiable sur l’attente peut réduire l’incertitude."
+        },
+        {
+          "id": "aps62-07-01-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-07-01-pair0",
+              "left": "Un désaccord ne devient pas toujours une agression",
+              "right": "Un conflit apparaît lorsque des attentes ou intérêts s'opposent."
+            },
+            {
+              "id": "aps62-07-01-pair1",
+              "left": "Agir sur ce qui reste maîtrisable",
+              "right": "L'agent ne contrôle pas les émotions d'autrui, mais il peut agir sur sa formulation, son rythme, son emplacement et les solutions proposées."
+            },
+            {
+              "id": "aps62-07-01-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "« Vous n'entrez pas » ferme l'échange sans explication."
+            }
+          ],
+          "explanation": "Un désaccord ne devient pas toujours une agression : Un conflit apparaît lorsque des attentes ou intérêts s'opposent. Agir sur ce qui reste maîtrisable : L'agent ne contrôle pas les émotions d'autrui, mais il peut agir sur sa formulation, son rythme, son emplacement et les solutions proposées. EXEMPLE EXPLIQUÉ : « Vous n'entrez pas » ferme l'échange sans explication."
+        },
+        {
+          "id": "aps62-07-01-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.01",
+            "title": "Repérer la naissance du conflit",
+            "kind": "transfer",
+            "case": "Une seconde personne rejoint la réclamation. Comment adapter votre positionnement et votre demande de relais sans dramatiser ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "Un désaccord devient plus difficile à traiter lorsque frustration, incompréhension et réponse défensive s’alimentent. Décrire les faits aide à choisir une réponse proportionnée. L’agent ne pose pas de diagnostic psychologique ; il cherche ce qui est demandé, ce qui est possible et ce qui ferait monter le risque. Une information fiable sur l’attente peut réduire l’incertitude. Les étapes peuvent être : attente, absence d’information, reproche, réponse sèche, escalade. À l’étape de l’attente, expliquer le délai et vérifier le rendez-vous évite une promesse vide. Le besoin d’information ne justifie pas une menace, mais le reconnaître aide à maintenir l’échange.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ]
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-07-01-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.01",
+            "title": "Repérer la naissance du conflit",
+            "kind": "recap",
+            "decision": "Identifier les faits, le besoin et les premiers signes de tension.",
+            "reason": "Un désaccord devient plus difficile à traiter lorsque frustration, incompréhension et réponse défensive s’alimentent. Décrire les faits aide à choisir une réponse proportionnée. L’agent ne pose pas de diagnostic psychologique ; il cherche ce qui est demandé, ce qui est possible et ce qui ferait monter le risque. Une information fiable sur l’attente peut réduire l’incertitude.",
+            "pitfall": "Qualifier la personne de violente sur la seule base de son volume de voix.",
+            "cards": [
+              {
+                "front": "Un désaccord ne devient pas toujours une agression",
+                "back": "Un conflit apparaît lorsque des attentes ou intérêts s'opposent. À l'accueil, une personne veut entrer rapidement alors que l'agent doit vérifier un accès. Le désaccord porte d'abord sur une situation. Il peut s'aggraver si la personne se sent ignorée, humiliée ou traitée injustement. Les réactions de chacun influencent alors celles de l'autre : voix plus forte, interruptions, rapprochement, puis menaces éventuelles."
+              },
+              {
+                "front": "Agir sur ce qui reste maîtrisable",
+                "back": "L'agent ne contrôle pas les émotions d'autrui, mais il peut agir sur sa formulation, son rythme, son emplacement et les solutions proposées. Expliquer le motif d'une attente donne un sens à la règle. Offrir une option réelle évite une impasse. À l'inverse, promettre une exception impossible reporte le conflit et détruit la confiance. La désescalade doit rester compatible avec la protection des personnes."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "« Vous n'entrez pas » ferme l'échange sans explication. « Votre contact doit confirmer l'accès ; je l'appelle et vous pouvez attendre ici » rend la suite compréhensible. Si la personne commence à menacer ou bloque une issue, l'agent ne poursuit pas indéfiniment la discussion : il réévalue le risque et demande du soutien."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "03.01",
+                "page": 143
+              },
+              {
+                "ref": "03.02",
+                "page": 145
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique."
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-07-02",
+      "title": "02 · Écouter, reformuler, vérifier",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-07-02-comprendre",
+          "title": "Comprendre · Écouter, reformuler, vérifier",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.02",
+            "title": "Écouter, reformuler, vérifier",
+            "kind": "lesson",
+            "image": "media/aps62/scene-03.webp",
+            "case": "Un prestataire dit : « On m’a promis que je passerais immédiatement ». Vous n’avez aucune confirmation de rendez-vous et la zone demandée est restreinte. Il interprète votre demande de vérification comme une accusation.",
+            "reason": "Reformuler ne signifie ni approuver toute demande ni promettre un résultat. L’écoute active distingue ce que la personne exprime et ce que vous pouvez engager. Une question courte vérifie la compréhension. Une limite claire assortie d’une prochaine action est plus utile qu’un refus abstrait répété.",
+            "lessons": [
+              {
+                "ref": "03.03",
+                "title": "Écouter pour identifier le besoin",
+                "page": 146,
+                "diagram": "media/aps62/repere-03.03.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "L'écoute active n'est pas un accord"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Écouter consiste à laisser la personne expliquer le problème, à rechercher l'information utile et à montrer que le message est compris. Cela ne signifie pas accepter sa demande. La reformulation reprend le besoin avec des mots simples : « Vous souhaitez rejoindre votre rendez-vous et vous craignez d'être en retard. » Elle permet de corriger un malentendu avant de présenter la règle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Poser des questions qui font avancer"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une question ouverte recueille une explication : « Que s'est-il passé ? » Une question fermée confirme un élément : « Votre rendez-vous est-il au bâtiment B ? » Alternez selon le besoin. Évitez l'interrogatoire ou les questions accusatrices. Laissez le temps de répondre et ne proposez pas plusieurs solutions à la fois à une personne déjà sous tension. Le but est de construire une étape praticable."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un livreur proteste contre une attente. L'agent apprend qu'il transporte un produit sensible et doit repartir rapidement. Il ne supprime pas le contrôle, mais contacte le réceptionnaire compétent et précise l'urgence logistique. L'écoute a révélé une information permettant une meilleure coordination, sans attribuer au livreur un accès non confirmé."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · On peut reconnaître une difficulté tout en maintenant une limite : « Je comprends l'urgence ; je dois obtenir cette confirmation avant l'entrée. »"
+                  }
+                ],
+                "course_page": 147,
+                "practice": {
+                  "background": "Écouter ne signifie pas accepter toute exigence. Après la reformulation, indiquez ce que vous pouvez faire, ce qui doit être validé et ce qui reste interdit. Évitez les débats interminables sur le bien-fondé général de l’organisation. Une réponse courte, cohérente et répétée calmement réduit les contradictions. Si une erreur du service est confirmée, reconnaissez-la et organisez sa correction. N’inventez pas une faute du visiteur pour préserver votre position.",
+                  "case": "Un livreur affirme que son créneau a été modifié. Le planning affiche encore l’ancien horaire. Il craint de perdre sa tournée et interrompt toutes vos explications. Quelle reformulation utilisez-vous ? Quelle vérification évite un débat stérile ?",
+                  "transfer": "Proposez une reformulation à « vous me faites perdre mon temps ».",
+                  "page": 166
+                }
+              },
+              {
+                "ref": "03.04",
+                "title": "Formuler une consigne compréhensible",
+                "page": 148,
+                "diagram": "media/aps62/repere-03.04.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Des mots concrets et une action à la fois"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une personne suit plus facilement une instruction lorsqu'elle sait quoi faire, où et pourquoi. « Attendez derrière la ligne pendant la vérification » est plus précis que « soyez raisonnable ». Le langage doit être professionnel, sans sarcasme ni familiarité imposée. Le ton, le volume et les gestes doivent être cohérents avec le message. Une phrase calme accompagnée d'un doigt menaçant peut être reçue comme une provocation."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Annoncer les options réelles"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Présentez la règle puis la solution possible : contacter le responsable, patienter dans un espace prévu, utiliser un autre accès autorisé. Évitez les menaces que vous ne pouvez pas mettre en œuvre et les débats sur la valeur personnelle de l'interlocuteur. Une limite répétée doit rester stable ; changer d'explication à chaque objection peut donner l'impression que la règle est négociable."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Au lieu de « Vous ne comprenez jamais rien », l'agent dit : « Cet accès est réservé aux salariés. Pour les visiteurs, l'accueil se trouve à droite ; je vous indique le chemin. » Le message traite le problème d'orientation sans humilier. Si l'accès reste contesté, le relais hiérarchique est présenté clairement."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une instruction utile associe une action, un lieu et une raison courte. L'objectif est la compréhension et la sécurité, pas de gagner un duel verbal."
+                  }
+                ],
+                "course_page": 149,
+                "practice": {
+                  "background": "Lorsque l’accès est refusé, séparez la personne de la situation : expliquez la condition manquante et la possibilité de régularisation. Proposez des choix réels, par exemple attendre une validation ou revenir au créneau autorisé. Ne proposez pas une fausse alternative qui humilie. Si la personne ne comprend pas, reformulez plutôt que de parler simplement plus fort. Une menace réelle nécessite protection et alerte ; poursuivre une argumentation ne doit pas retarder le retrait.",
+                  "case": "Un spectateur n’a pas le bon billet et réclame une entrée immédiate. Vous ne pouvez pas résoudre le problème de paiement depuis votre poste. Formulez un refus d’accès respectueux. Quel relais proposez-vous ?",
+                  "transfer": "Réécrivez « vous n’aviez qu’à lire le panneau » pour conserver une relation professionnelle.",
+                  "page": 167
+                }
+              }
+            ],
+            "decision": "Reformuler son besoin puis annoncer une vérification concrète et limitée.",
+            "pitfall": "Répondre qu’il ment puisqu’il n’est pas sur la liste.",
+            "objectives": [
+              "Expliquer : écouter, reformuler, vérifier",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Un prestataire dit : « On m’a promis que je passerais immédiatement ». Vous n’avez aucune confirmation de rendez-vous et la zone demandée est restreinte. Il interprète votre demande de vérification comme une accusation."
+              ],
+              [
+                "Décision à justifier",
+                "Reformuler son besoin puis annoncer une vérification concrète et limitée."
+              ],
+              [
+                "Piège à éviter",
+                "Répondre qu’il ment puisqu’il n’est pas sur la liste."
+              ],
+              [
+                "Pourquoi ?",
+                "Reformuler ne signifie ni approuver toute demande ni promettre un résultat. L’écoute active distingue ce que la personne exprime et ce que vous pouvez engager. Une question courte vérifie la compréhension. Une limite claire assortie d’une prochaine action est plus utile qu’un refus abstrait répété."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Un prestataire dit : « On m’a promis que je passerais immédiatement »."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Reformuler ne signifie ni approuver toute demande ni promettre un résultat."
+              },
+              {
+                "label": "Décider",
+                "text": "Reformuler son besoin puis annoncer une vérification concrète et limitée."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Le référent ne répond pas. Formulez une suite honnête qui conserve la limite d’accès."
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-07-02-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-07-02-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-07-02-video",
+                "title": "Écouter, reformuler, vérifier",
+                "required": true,
+                "src": "media/aps62/aps62-07-02.mp4",
+                "poster": "media/aps62/aps62-07-02.jpg",
+                "captions": "media/aps62/aps62-07-02.vtt",
+                "duration_seconds": 63.399773,
+                "transcript": "La situation : Un prestataire dit : « On m’a promis que je passerais immédiatement ». Vous n’avez aucune confirmation de rendez-vous et la zone demandée est restreinte. Il interprète votre demande de vérification comme une accusation.\n\nÀ vous de décider : Reformuler son besoin puis annoncer une vérification concrète et limitée. Ou bien : Répondre qu’il ment puisqu’il n’est pas sur la liste. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Reformuler ne signifie ni approuver toute demande ni promettre un résultat. L’écoute active distingue ce que la personne exprime et ce que vous pouvez engager. Une question courte vérifie la compréhension. Une limite claire assortie d’une prochaine action est plus utile qu’un refus abstrait répété.\n\nLe bon relais : « Vous avez organisé votre déplacement pour entrer maintenant, c’est bien cela ? Je vérifie votre intervention auprès du référent. Cette zone nécessite son accord ; pouvez-vous me donner la référence du rendez-vous ? » Le dialogue explique la règle, le délai de vérification et l’alternative d’attente."
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "07.02",
+            "title": "Écouter, reformuler, vérifier",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "L'écoute active n'est pas un accord",
+                "back": "Écouter consiste à laisser la personne expliquer le problème, à rechercher l'information utile et à montrer que le message est compris. Cela ne signifie pas accepter sa demande. La reformulation reprend le besoin avec des mots simples : « Vous souhaitez rejoindre votre rendez-vous et vous craignez d'être en retard. » Elle permet de corriger un malentendu avant de présenter la règle."
+              },
+              {
+                "front": "Poser des questions qui font avancer",
+                "back": "Une question ouverte recueille une explication : « Que s'est-il passé ? » Une question fermée confirme un élément : « Votre rendez-vous est-il au bâtiment B ? » Alternez selon le besoin. Évitez l'interrogatoire ou les questions accusatrices. Laissez le temps de répondre et ne proposez pas plusieurs solutions à la fois à une personne déjà sous tension. Le but est de construire une étape praticable."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un livreur proteste contre une attente. L'agent apprend qu'il transporte un produit sensible et doit repartir rapidement. Il ne supprime pas le contrôle, mais contacte le réceptionnaire compétent et précise l'urgence logistique. L'écoute a révélé une information permettant une meilleure coordination, sans attribuer au livreur un accès non confirmé."
+              },
+              {
+                "front": "Des mots concrets et une action à la fois",
+                "back": "Une personne suit plus facilement une instruction lorsqu'elle sait quoi faire, où et pourquoi. « Attendez derrière la ligne pendant la vérification » est plus précis que « soyez raisonnable ». Le langage doit être professionnel, sans sarcasme ni familiarité imposée. Le ton, le volume et les gestes doivent être cohérents avec le message. Une phrase calme accompagnée d'un doigt menaçant peut être reçue comme une provocation."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Un prestataire dit : « On m’a promis que je passerais immédiatement ». Vous n’avez aucune confirmation de rendez-vous et la zone demandée est restreinte. Il interprète votre demande de vérification comme une accusation.\n\nÀ vous de décider : Reformuler son besoin puis annoncer une vérification concrète et limitée. Ou bien : Répondre qu’il ment puisqu’il n’est pas sur la liste. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Reformuler ne signifie ni approuver toute demande ni promettre un résultat. L’écoute active distingue ce que la personne exprime et ce que vous pouvez engager. Une question courte vérifie la compréhension. Une limite claire assortie d’une prochaine action est plus utile qu’un refus abstrait répété.\n\nLe bon relais : « Vous avez organisé votre déplacement pour entrer maintenant, c’est bien cela ? Je vérifie votre intervention auprès du référent. Cette zone nécessite son accord ; pouvez-vous me donner la référence du rendez-vous ? » Le dialogue explique la règle, le délai de vérification et l’alternative d’attente."
+          }
+        },
+        {
+          "id": "aps62-07-02-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.02",
+            "title": "Écouter, reformuler, vérifier",
+            "kind": "workshop",
+            "case": "Un prestataire dit : « On m’a promis que je passerais immédiatement ». Vous n’avez aucune confirmation de rendez-vous et la zone demandée est restreinte. Il interprète votre demande de vérification comme une accusation.",
+            "choices": [
+              {
+                "text": "Promettre l’accès pour apaiser l’échange, puis revenir sur la promesse.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. « Vous avez organisé votre déplacement pour entrer maintenant, c’est bien cela ? Je vérifie votre intervention auprès du référent. Cette zone nécessite son accord ; pouvez-vous me donner la référence du rendez-vous ? » Le dialogue explique la règle, le délai de vérification et l’alternative d’attente.",
+                "correct": false
+              },
+              {
+                "text": "Reformuler son besoin puis annoncer une vérification concrète et limitée.",
+                "feedback": "Reformuler ne signifie ni approuver toute demande ni promettre un résultat. L’écoute active distingue ce que la personne exprime et ce que vous pouvez engager. Une question courte vérifie la compréhension. Une limite claire assortie d’une prochaine action est plus utile qu’un refus abstrait répété.",
+                "correct": true
+              },
+              {
+                "text": "Répondre qu’il ment puisqu’il n’est pas sur la liste.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. Reformuler ne signifie ni approuver toute demande ni promettre un résultat. L’écoute active distingue ce que la personne exprime et ce que vous pouvez engager. Une question courte vérifie la compréhension. Une limite claire assortie d’une prochaine action est plus utile qu’un refus abstrait répété.",
+                "correct": false
+              }
+            ],
+            "task": "Écrivez un dialogue de huit répliques, dont deux reformulations et deux questions ouvertes. Supprimez les accusations et les promesses non vérifiées.",
+            "model": "« Vous avez organisé votre déplacement pour entrer maintenant, c’est bien cela ? Je vérifie votre intervention auprès du référent. Cette zone nécessite son accord ; pouvez-vous me donner la référence du rendez-vous ? » Le dialogue explique la règle, le délai de vérification et l’alternative d’attente.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ]
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-07-02-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Un prestataire dit : « On m’a promis que je passerais immédiatement ». Vous n’avez aucune confirmation de rendez-vous et la zone demandée est restreinte. Il interprète votre demande de vérification comme une accusation.",
+          "options": [
+            {
+              "id": "aps62-07-02-a0",
+              "text": "Promettre l’accès pour apaiser l’échange, puis revenir sur la promesse.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-07-02-a1",
+              "text": "Reformuler son besoin puis annoncer une vérification concrète et limitée.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-07-02-a2",
+              "text": "Répondre qu’il ment puisqu’il n’est pas sur la liste.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "Reformuler ne signifie ni approuver toute demande ni promettre un résultat. L’écoute active distingue ce que la personne exprime et ce que vous pouvez engager. Une question courte vérifie la compréhension. Une limite claire assortie d’une prochaine action est plus utile qu’un refus abstrait répété."
+        },
+        {
+          "id": "aps62-07-02-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-07-02-pair0",
+              "left": "L'écoute active n'est pas un accord",
+              "right": "Écouter consiste à laisser la personne expliquer le problème, à rechercher l'information utile et à montrer que le message est compris."
+            },
+            {
+              "id": "aps62-07-02-pair1",
+              "left": "Poser des questions qui font avancer",
+              "right": "Une question ouverte recueille une explication : « Que s'est-il passé ?"
+            },
+            {
+              "id": "aps62-07-02-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Un livreur proteste contre une attente."
+            }
+          ],
+          "explanation": "L'écoute active n'est pas un accord : Écouter consiste à laisser la personne expliquer le problème, à rechercher l'information utile et à montrer que le message est compris. Poser des questions qui font avancer : Une question ouverte recueille une explication : « Que s'est-il passé ? EXEMPLE EXPLIQUÉ : Un livreur proteste contre une attente."
+        },
+        {
+          "id": "aps62-07-02-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.02",
+            "title": "Écouter, reformuler, vérifier",
+            "kind": "transfer",
+            "case": "Le référent ne répond pas. Formulez une suite honnête qui conserve la limite d’accès.",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "Reformuler ne signifie ni approuver toute demande ni promettre un résultat. L’écoute active distingue ce que la personne exprime et ce que vous pouvez engager. Une question courte vérifie la compréhension. Une limite claire assortie d’une prochaine action est plus utile qu’un refus abstrait répété. « Vous avez organisé votre déplacement pour entrer maintenant, c’est bien cela ? Je vérifie votre intervention auprès du référent. Cette zone nécessite son accord ; pouvez-vous me donner la référence du rendez-vous ? » Le dialogue explique la règle, le délai de vérification et l’alternative d’attente.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ]
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-07-02-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.02",
+            "title": "Écouter, reformuler, vérifier",
+            "kind": "recap",
+            "decision": "Reformuler son besoin puis annoncer une vérification concrète et limitée.",
+            "reason": "Reformuler ne signifie ni approuver toute demande ni promettre un résultat. L’écoute active distingue ce que la personne exprime et ce que vous pouvez engager. Une question courte vérifie la compréhension. Une limite claire assortie d’une prochaine action est plus utile qu’un refus abstrait répété.",
+            "pitfall": "Répondre qu’il ment puisqu’il n’est pas sur la liste.",
+            "cards": [
+              {
+                "front": "L'écoute active n'est pas un accord",
+                "back": "Écouter consiste à laisser la personne expliquer le problème, à rechercher l'information utile et à montrer que le message est compris. Cela ne signifie pas accepter sa demande. La reformulation reprend le besoin avec des mots simples : « Vous souhaitez rejoindre votre rendez-vous et vous craignez d'être en retard. » Elle permet de corriger un malentendu avant de présenter la règle."
+              },
+              {
+                "front": "Poser des questions qui font avancer",
+                "back": "Une question ouverte recueille une explication : « Que s'est-il passé ? » Une question fermée confirme un élément : « Votre rendez-vous est-il au bâtiment B ? » Alternez selon le besoin. Évitez l'interrogatoire ou les questions accusatrices. Laissez le temps de répondre et ne proposez pas plusieurs solutions à la fois à une personne déjà sous tension. Le but est de construire une étape praticable."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un livreur proteste contre une attente. L'agent apprend qu'il transporte un produit sensible et doit repartir rapidement. Il ne supprime pas le contrôle, mais contacte le réceptionnaire compétent et précise l'urgence logistique. L'écoute a révélé une information permettant une meilleure coordination, sans attribuer au livreur un accès non confirmé."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "03.03",
+                "page": 147
+              },
+              {
+                "ref": "03.04",
+                "page": 149
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique."
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-07-03",
+      "title": "03 · Posture, distance et communication non verbale",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-07-03-comprendre",
+          "title": "Comprendre · Posture, distance et communication non verbale",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.03",
+            "title": "Posture, distance et communication non verbale",
+            "kind": "lesson",
+            "image": "media/aps62/scene-03.webp",
+            "case": "Une discussion se tend devant un comptoir. Un chariot réduit le passage et trois personnes se regroupent autour de l’interlocuteur. Votre collègue s’approche très près et pointe le doigt vers son visage.",
+            "reason": "Le message verbal et la posture se répondent. Un ton calme peut être contredit par un geste menaçant ou une proximité excessive. L’espace doit permettre la protection et le retrait, selon le site et la situation ; il n’existe pas une distance magique valable partout. Un renfort bien briefé soutient la gestion, tandis qu’un attroupement peut l’aggraver.",
+            "lessons": [
+              {
+                "ref": "03.05",
+                "title": "Utiliser l'espace pour protéger l'échange",
+                "page": 150,
+                "diagram": "media/aps62/repere-03.05.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "La distance se choisit selon la situation"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une distance adaptée permet de dialoguer, d'observer et de conserver une possibilité de retrait. Elle dépend du lieu, du bruit, de l'affluence et du comportement. Il n'existe pas une distance magique convenant à toutes les personnes. Un comptoir peut servir de séparation, mais il peut aussi enfermer l'agent s'il n'a aucune sortie. L'environnement doit être lu avant que la tension n'augmente."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Une posture disponible et non provocatrice"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Gardez les mains visibles et une attitude stable, sans encercler la personne ni lui barrer inutilement toute sortie. Évitez de vous rapprocher pour imposer votre voix. Si le public s'accumule, demandez à un collègue d'organiser le passage : la pression des témoins peut amplifier le conflit. L'aménagement du poste doit permettre l'appel au renfort et une mise en sécurité."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un visiteur mécontent avance vers un agent installé dans un angle fermé. L'agent se repositionne vers un espace permettant le retrait et appelle du soutien. Il ne transforme pas ce déplacement en défi. Le changement d'emplacement protège tout en maintenant une explication courte."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La communication n'est pas uniquement verbale. Une sortie disponible, un obstacle utile et une bonne visibilité peuvent éviter qu'un désaccord ne devienne une confrontation physique."
+                  }
+                ],
+                "course_page": 151,
+                "practice": {
+                  "background": "Tenez compte des tiers : une file, une porte battante ou la circulation d’un véhicule peuvent modifier le risque. Ne touchez pas une personne pour attirer son attention sans nécessité. Ne bloquez pas une sortie pour gagner un débat. Si le risque augmente, reculez vers une zone sûre, demandez du renfort et faites éloigner le public. Un collègue doit pouvoir comprendre votre position et vous rejoindre sans se placer lui-même dans une impasse. Les exercices de placement se pratiquent sans gestes de contrainte improvisés.",
+                  "case": "Vous discutez avec une personne agitée dans un petit bureau. Elle se trouve près de la porte et vous êtes derrière une table, sans second accès. Elle se lève et réduit la distance. Quels risques identifiez-vous ? Comment réorganiser l’échange ?",
+                  "transfer": "Vous discutez entre le comptoir et une porte fermée. Quel élément de votre position doit être réévalué ?",
+                  "page": 168
+                }
+              },
+              {
+                "ref": "03.06",
+                "title": "Faire face à une agression verbale",
+                "page": 152,
+                "diagram": "media/aps62/repere-03.06.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Distinguer mécontentement et menace"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une plainte peut être vive sans comporter de menace. Une agression verbale peut prendre la forme d'insultes, d'humiliations ou de menaces explicites. L'agent n'a pas à accepter un comportement abusif pour paraître professionnel. Il nomme une limite, reste factuel et adapte la suite à la gravité. Répondre par une insulte rend l'échange moins maîtrisable et fragilise le compte rendu."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Fixer une limite et préparer le relais"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une formulation courte suffit : « Je peux vous expliquer la procédure, mais je ne peux pas poursuivre cet échange avec des menaces. » Évitez de répéter une injonction sans observer l'évolution. Si la personne s'approche, bloque le passage ou annonce une violence, la protection et l'alerte deviennent prioritaires. Le soutien d'un collègue doit réduire la tension, pas constituer un groupe intimidant."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une personne crie contre un refus d'accès puis menace nommément l'hôtesse. L'agent éloigne l'hôtesse si nécessaire, demande du renfort et transmet les mots utiles, le lieu et la situation. Il ne minimise pas en écrivant seulement « client énervé ». La trace permet d'organiser les suites et de protéger les salariés concernés."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Le professionnalisme consiste à poser une limite sans surenchère, puis à utiliser les relais lorsque la sécurité ou la qualité de l'échange ne peuvent plus être garanties."
+                  }
+                ],
+                "course_page": 153,
+                "practice": {
+                  "background": "Répéter calmement une règle est utile tant que l’échange reste possible. Si les menaces deviennent précises ou si le comportement s’aggrave, passez de la discussion à la protection : distance, renfort, éloignement des tiers et alerte adaptée. Ne cherchez pas à gagner devant les témoins. Après les faits, retranscrivez les paroles menaçantes utiles aussi fidèlement que possible, sans recopier inutilement toutes les injures. Faites prendre en compte les suites professionnelles et l’accompagnement nécessaire.",
+                  "case": "Une personne vous insulte devant plusieurs visiteurs et vous filme. Elle attend visiblement une réaction. Elle reste à distance mais menace de revenir avec des amis. Comment évitez-vous l’escalade ? Quelles informations transmettez-vous ?",
+                  "transfer": "Proposez une phrase courte pour interrompre un échange insultant sans menacer la personne.",
+                  "page": 171
+                }
+              },
+              {
+                "ref": "03.07",
+                "title": "Demander un renfort au bon moment",
+                "page": 154,
+                "diagram": "media/aps62/repere-03.07.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Le renfort est une ressource normale"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Demander de l'aide ne signifie pas avoir échoué. Un collègue peut protéger l'accueil, gérer le public, contacter un responsable ou surveiller un accès. L'appel doit intervenir avant que l'agent ne perde sa capacité de communiquer ou de se retirer. Les signes utiles sont la multiplication des personnes impliquées, la menace, la perte de visibilité ou l'impossibilité d'assurer seul plusieurs missions."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Préciser la mission attendue"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Le destinataire doit connaître le lieu exact, les faits et le besoin : présence préventive, soutien à l'accueil, secours ou intervention des forces de l'ordre. Le renfort interne ne remplace pas un appel d'urgence lorsque celui-ci est nécessaire. Évitez les codes improvisés ou les messages trop longs. Une confirmation de réception assure que la demande est prise en compte."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "« PC, entrée livraison : deux personnes menacent le réceptionnaire et bloquent le passage. Demande de soutien immédiat et de prise en charge de l'alerte. Je maintiens une distance. » Ce message explique l'urgence. « Venez vite » sans lieu ni situation risque d'envoyer un collègue mal préparé ou au mauvais endroit."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Après l'appel, continuez à informer si la situation change. Le renfort doit rejoindre une situation actualisée, pas celle qui existait plusieurs minutes plus tôt."
+                  }
+                ],
+                "course_page": 155,
+                "practice": {
+                  "background": "Le renfort n’a pas pour objectif d’intimider par le nombre. Répartissez les rôles : un interlocuteur principal, un agent qui protège la zone et un relais vers le poste central. Évitez que plusieurs personnes donnent des ordres contradictoires. La police, la gendarmerie ou les secours sont sollicités selon la nature du danger. La hiérarchie interne ne doit pas devenir un filtre qui retarde une alerte urgente. Confirmez la réception des messages essentiels.",
+                  "case": "Deux personnes contestent un refus d’accès tandis que la file continue de grossir. Vous disposez d’une radio et d’un collègue à quelques minutes. Quel message radio envoyez-vous ? Quelle mission donnez-vous au collègue à son arrivée ?",
+                  "transfer": "Complétez « viens vite à l’accueil » pour rendre le message exploitable.",
+                  "page": 172
+                }
+              }
+            ],
+            "decision": "Préserver un espace de retrait, réduire la pression de l’échange et demander le relais utile.",
+            "pitfall": "Se rapprocher encore pour montrer votre autorité.",
+            "objectives": [
+              "Expliquer : posture, distance et communication non verbale",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Une discussion se tend devant un comptoir. Un chariot réduit le passage et trois personnes se regroupent autour de l’interlocuteur. Votre collègue s’approche très près et pointe le doigt vers son visage."
+              ],
+              [
+                "Décision à justifier",
+                "Préserver un espace de retrait, réduire la pression de l’échange et demander le relais utile."
+              ],
+              [
+                "Piège à éviter",
+                "Se rapprocher encore pour montrer votre autorité."
+              ],
+              [
+                "Pourquoi ?",
+                "Le message verbal et la posture se répondent. Un ton calme peut être contredit par un geste menaçant ou une proximité excessive. L’espace doit permettre la protection et le retrait, selon le site et la situation ; il n’existe pas une distance magique valable partout. Un renfort bien briefé soutient la gestion, tandis qu’un attroupement peut l’aggraver."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Une discussion se tend devant un comptoir."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Le message verbal et la posture se répondent."
+              },
+              {
+                "label": "Décider",
+                "text": "Préserver un espace de retrait, réduire la pression de l’échange et demander le relais utile."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "La personne se déplace vers une zone interdite. Expliquez comment réévaluer la réponse et maintenir une information claire au PC."
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-07-03-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-07-03-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-07-03-video",
+                "title": "Posture, distance et communication non verbale",
+                "required": true,
+                "src": "media/aps62/aps62-07-03.mp4",
+                "poster": "media/aps62/aps62-07-03.jpg",
+                "captions": "media/aps62/aps62-07-03.vtt",
+                "duration_seconds": 69.426677,
+                "transcript": "La situation : Une discussion se tend devant un comptoir. Un chariot réduit le passage et trois personnes se regroupent autour de l’interlocuteur. Votre collègue s’approche très près et pointe le doigt vers son visage.\n\nÀ vous de décider : Préserver un espace de retrait, réduire la pression de l’échange et demander le relais utile. Ou bien : Se rapprocher encore pour montrer votre autorité. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Le message verbal et la posture se répondent. Un ton calme peut être contredit par un geste menaçant ou une proximité excessive. L’espace doit permettre la protection et le retrait, selon le site et la situation ; il n’existe pas une distance magique valable partout. Un renfort bien briefé soutient la gestion, tandis qu’un attroupement peut l’aggraver.\n\nLe bon relais : La proposition conserve une voie de retrait, évite d’encercler l’interlocuteur et réduit les obstacles. Un seul agent mène le dialogue tandis qu’un autre assure le relais et la sécurité. Le message de renfort précise le lieu, les faits et le besoin, sans demander un « effet de masse »."
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "07.03",
+            "title": "Posture, distance et communication non verbale",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "La distance se choisit selon la situation",
+                "back": "Une distance adaptée permet de dialoguer, d'observer et de conserver une possibilité de retrait. Elle dépend du lieu, du bruit, de l'affluence et du comportement. Il n'existe pas une distance magique convenant à toutes les personnes. Un comptoir peut servir de séparation, mais il peut aussi enfermer l'agent s'il n'a aucune sortie. L'environnement doit être lu avant que la tension n'augmente."
+              },
+              {
+                "front": "Une posture disponible et non provocatrice",
+                "back": "Gardez les mains visibles et une attitude stable, sans encercler la personne ni lui barrer inutilement toute sortie. Évitez de vous rapprocher pour imposer votre voix. Si le public s'accumule, demandez à un collègue d'organiser le passage : la pression des témoins peut amplifier le conflit. L'aménagement du poste doit permettre l'appel au renfort et une mise en sécurité."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un visiteur mécontent avance vers un agent installé dans un angle fermé. L'agent se repositionne vers un espace permettant le retrait et appelle du soutien. Il ne transforme pas ce déplacement en défi. Le changement d'emplacement protège tout en maintenant une explication courte."
+              },
+              {
+                "front": "Distinguer mécontentement et menace",
+                "back": "Une plainte peut être vive sans comporter de menace. Une agression verbale peut prendre la forme d'insultes, d'humiliations ou de menaces explicites. L'agent n'a pas à accepter un comportement abusif pour paraître professionnel. Il nomme une limite, reste factuel et adapte la suite à la gravité. Répondre par une insulte rend l'échange moins maîtrisable et fragilise le compte rendu."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Une discussion se tend devant un comptoir. Un chariot réduit le passage et trois personnes se regroupent autour de l’interlocuteur. Votre collègue s’approche très près et pointe le doigt vers son visage.\n\nÀ vous de décider : Préserver un espace de retrait, réduire la pression de l’échange et demander le relais utile. Ou bien : Se rapprocher encore pour montrer votre autorité. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Le message verbal et la posture se répondent. Un ton calme peut être contredit par un geste menaçant ou une proximité excessive. L’espace doit permettre la protection et le retrait, selon le site et la situation ; il n’existe pas une distance magique valable partout. Un renfort bien briefé soutient la gestion, tandis qu’un attroupement peut l’aggraver.\n\nLe bon relais : La proposition conserve une voie de retrait, évite d’encercler l’interlocuteur et réduit les obstacles. Un seul agent mène le dialogue tandis qu’un autre assure le relais et la sécurité. Le message de renfort précise le lieu, les faits et le besoin, sans demander un « effet de masse »."
+          }
+        },
+        {
+          "id": "aps62-07-03-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.03",
+            "title": "Posture, distance et communication non verbale",
+            "kind": "workshop",
+            "case": "Une discussion se tend devant un comptoir. Un chariot réduit le passage et trois personnes se regroupent autour de l’interlocuteur. Votre collègue s’approche très près et pointe le doigt vers son visage.",
+            "choices": [
+              {
+                "text": "Préserver un espace de retrait, réduire la pression de l’échange et demander le relais utile.",
+                "feedback": "Le message verbal et la posture se répondent. Un ton calme peut être contredit par un geste menaçant ou une proximité excessive. L’espace doit permettre la protection et le retrait, selon le site et la situation ; il n’existe pas une distance magique valable partout. Un renfort bien briefé soutient la gestion, tandis qu’un attroupement peut l’aggraver.",
+                "correct": true
+              },
+              {
+                "text": "Se rapprocher encore pour montrer votre autorité.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. Le message verbal et la posture se répondent. Un ton calme peut être contredit par un geste menaçant ou une proximité excessive. L’espace doit permettre la protection et le retrait, selon le site et la situation ; il n’existe pas une distance magique valable partout. Un renfort bien briefé soutient la gestion, tandis qu’un attroupement peut l’aggraver.",
+                "correct": false
+              },
+              {
+                "text": "Bloquer la seule sortie pour obliger la personne à écouter.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. La proposition conserve une voie de retrait, évite d’encercler l’interlocuteur et réduit les obstacles. Un seul agent mène le dialogue tandis qu’un autre assure le relais et la sécurité. Le message de renfort précise le lieu, les faits et le besoin, sans demander un « effet de masse ».",
+                "correct": false
+              }
+            ],
+            "task": "Dessinez l’espace avec comptoir, issue, chariot et personnes. Proposez deux repositionnements et justifiez leurs avantages et limites.",
+            "model": "La proposition conserve une voie de retrait, évite d’encercler l’interlocuteur et réduit les obstacles. Un seul agent mène le dialogue tandis qu’un autre assure le relais et la sécurité. Le message de renfort précise le lieu, les faits et le besoin, sans demander un « effet de masse ».",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ]
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-07-03-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Une discussion se tend devant un comptoir. Un chariot réduit le passage et trois personnes se regroupent autour de l’interlocuteur. Votre collègue s’approche très près et pointe le doigt vers son visage.",
+          "options": [
+            {
+              "id": "aps62-07-03-a0",
+              "text": "Préserver un espace de retrait, réduire la pression de l’échange et demander le relais utile.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-07-03-a1",
+              "text": "Se rapprocher encore pour montrer votre autorité.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-07-03-a2",
+              "text": "Bloquer la seule sortie pour obliger la personne à écouter.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "Le message verbal et la posture se répondent. Un ton calme peut être contredit par un geste menaçant ou une proximité excessive. L’espace doit permettre la protection et le retrait, selon le site et la situation ; il n’existe pas une distance magique valable partout. Un renfort bien briefé soutient la gestion, tandis qu’un attroupement peut l’aggraver."
+        },
+        {
+          "id": "aps62-07-03-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-07-03-pair0",
+              "left": "La distance se choisit selon la situation",
+              "right": "Une distance adaptée permet de dialoguer, d'observer et de conserver une possibilité de retrait."
+            },
+            {
+              "id": "aps62-07-03-pair1",
+              "left": "Une posture disponible et non provocatrice",
+              "right": "Gardez les mains visibles et une attitude stable, sans encercler la personne ni lui barrer inutilement toute sortie."
+            },
+            {
+              "id": "aps62-07-03-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Un visiteur mécontent avance vers un agent installé dans un angle fermé."
+            }
+          ],
+          "explanation": "La distance se choisit selon la situation : Une distance adaptée permet de dialoguer, d'observer et de conserver une possibilité de retrait. Une posture disponible et non provocatrice : Gardez les mains visibles et une attitude stable, sans encercler la personne ni lui barrer inutilement toute sortie. EXEMPLE EXPLIQUÉ : Un visiteur mécontent avance vers un agent installé dans un angle fermé."
+        },
+        {
+          "id": "aps62-07-03-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.03",
+            "title": "Posture, distance et communication non verbale",
+            "kind": "transfer",
+            "case": "La personne se déplace vers une zone interdite. Expliquez comment réévaluer la réponse et maintenir une information claire au PC.",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "Le message verbal et la posture se répondent. Un ton calme peut être contredit par un geste menaçant ou une proximité excessive. L’espace doit permettre la protection et le retrait, selon le site et la situation ; il n’existe pas une distance magique valable partout. Un renfort bien briefé soutient la gestion, tandis qu’un attroupement peut l’aggraver. La proposition conserve une voie de retrait, évite d’encercler l’interlocuteur et réduit les obstacles. Un seul agent mène le dialogue tandis qu’un autre assure le relais et la sécurité. Le message de renfort précise le lieu, les faits et le besoin, sans demander un « effet de masse ».",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ]
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-07-03-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.03",
+            "title": "Posture, distance et communication non verbale",
+            "kind": "recap",
+            "decision": "Préserver un espace de retrait, réduire la pression de l’échange et demander le relais utile.",
+            "reason": "Le message verbal et la posture se répondent. Un ton calme peut être contredit par un geste menaçant ou une proximité excessive. L’espace doit permettre la protection et le retrait, selon le site et la situation ; il n’existe pas une distance magique valable partout. Un renfort bien briefé soutient la gestion, tandis qu’un attroupement peut l’aggraver.",
+            "pitfall": "Se rapprocher encore pour montrer votre autorité.",
+            "cards": [
+              {
+                "front": "La distance se choisit selon la situation",
+                "back": "Une distance adaptée permet de dialoguer, d'observer et de conserver une possibilité de retrait. Elle dépend du lieu, du bruit, de l'affluence et du comportement. Il n'existe pas une distance magique convenant à toutes les personnes. Un comptoir peut servir de séparation, mais il peut aussi enfermer l'agent s'il n'a aucune sortie. L'environnement doit être lu avant que la tension n'augmente."
+              },
+              {
+                "front": "Une posture disponible et non provocatrice",
+                "back": "Gardez les mains visibles et une attitude stable, sans encercler la personne ni lui barrer inutilement toute sortie. Évitez de vous rapprocher pour imposer votre voix. Si le public s'accumule, demandez à un collègue d'organiser le passage : la pression des témoins peut amplifier le conflit. L'aménagement du poste doit permettre l'appel au renfort et une mise en sécurité."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un visiteur mécontent avance vers un agent installé dans un angle fermé. L'agent se repositionne vers un espace permettant le retrait et appelle du soutien. Il ne transforme pas ce déplacement en défi. Le changement d'emplacement protège tout en maintenant une explication courte."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "03.05",
+                "page": 151
+              },
+              {
+                "ref": "03.06",
+                "page": 153
+              },
+              {
+                "ref": "03.07",
+                "page": 155
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique."
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-07-04",
+      "title": "04 · Agression verbale : poser une limite",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-07-04-comprendre",
+          "title": "Comprendre · Agression verbale : poser une limite",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.04",
+            "title": "Agression verbale : poser une limite",
+            "kind": "lesson",
+            "image": "media/aps62/scene-03.webp",
+            "case": "À la suite d’un refus d’accès, un visiteur vous insulte et exige votre nom personnel et votre adresse. Il n’a pas encore porté de coup. D’autres visiteurs attendent et commencent à filmer.",
+            "reason": "Nommer la limite permet de sortir du duel personnel : l’agent rappelle les conditions de l’échange et la règle d’accès. Il ne confond pas l’identification professionnelle prévue avec la divulgation de sa vie privée. L’évolution du risque guide la demande de renfort ou l’alerte, sans attendre qu’une violence se produise pour réévaluer.",
+            "lessons": [
+              {
+                "ref": "03.06",
+                "title": "Faire face à une agression verbale",
+                "page": 152,
+                "diagram": "media/aps62/repere-03.06.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Distinguer mécontentement et menace"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une plainte peut être vive sans comporter de menace. Une agression verbale peut prendre la forme d'insultes, d'humiliations ou de menaces explicites. L'agent n'a pas à accepter un comportement abusif pour paraître professionnel. Il nomme une limite, reste factuel et adapte la suite à la gravité. Répondre par une insulte rend l'échange moins maîtrisable et fragilise le compte rendu."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Fixer une limite et préparer le relais"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une formulation courte suffit : « Je peux vous expliquer la procédure, mais je ne peux pas poursuivre cet échange avec des menaces. » Évitez de répéter une injonction sans observer l'évolution. Si la personne s'approche, bloque le passage ou annonce une violence, la protection et l'alerte deviennent prioritaires. Le soutien d'un collègue doit réduire la tension, pas constituer un groupe intimidant."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une personne crie contre un refus d'accès puis menace nommément l'hôtesse. L'agent éloigne l'hôtesse si nécessaire, demande du renfort et transmet les mots utiles, le lieu et la situation. Il ne minimise pas en écrivant seulement « client énervé ». La trace permet d'organiser les suites et de protéger les salariés concernés."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Le professionnalisme consiste à poser une limite sans surenchère, puis à utiliser les relais lorsque la sécurité ou la qualité de l'échange ne peuvent plus être garanties."
+                  }
+                ],
+                "course_page": 153,
+                "practice": {
+                  "background": "Répéter calmement une règle est utile tant que l’échange reste possible. Si les menaces deviennent précises ou si le comportement s’aggrave, passez de la discussion à la protection : distance, renfort, éloignement des tiers et alerte adaptée. Ne cherchez pas à gagner devant les témoins. Après les faits, retranscrivez les paroles menaçantes utiles aussi fidèlement que possible, sans recopier inutilement toutes les injures. Faites prendre en compte les suites professionnelles et l’accompagnement nécessaire.",
+                  "case": "Une personne vous insulte devant plusieurs visiteurs et vous filme. Elle attend visiblement une réaction. Elle reste à distance mais menace de revenir avec des amis. Comment évitez-vous l’escalade ? Quelles informations transmettez-vous ?",
+                  "transfer": "Proposez une phrase courte pour interrompre un échange insultant sans menacer la personne.",
+                  "page": 171
+                }
+              },
+              {
+                "ref": "03.04",
+                "title": "Formuler une consigne compréhensible",
+                "page": 148,
+                "diagram": "media/aps62/repere-03.04.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Des mots concrets et une action à la fois"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une personne suit plus facilement une instruction lorsqu'elle sait quoi faire, où et pourquoi. « Attendez derrière la ligne pendant la vérification » est plus précis que « soyez raisonnable ». Le langage doit être professionnel, sans sarcasme ni familiarité imposée. Le ton, le volume et les gestes doivent être cohérents avec le message. Une phrase calme accompagnée d'un doigt menaçant peut être reçue comme une provocation."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Annoncer les options réelles"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Présentez la règle puis la solution possible : contacter le responsable, patienter dans un espace prévu, utiliser un autre accès autorisé. Évitez les menaces que vous ne pouvez pas mettre en œuvre et les débats sur la valeur personnelle de l'interlocuteur. Une limite répétée doit rester stable ; changer d'explication à chaque objection peut donner l'impression que la règle est négociable."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Au lieu de « Vous ne comprenez jamais rien », l'agent dit : « Cet accès est réservé aux salariés. Pour les visiteurs, l'accueil se trouve à droite ; je vous indique le chemin. » Le message traite le problème d'orientation sans humilier. Si l'accès reste contesté, le relais hiérarchique est présenté clairement."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une instruction utile associe une action, un lieu et une raison courte. L'objectif est la compréhension et la sécurité, pas de gagner un duel verbal."
+                  }
+                ],
+                "course_page": 149,
+                "practice": {
+                  "background": "Lorsque l’accès est refusé, séparez la personne de la situation : expliquez la condition manquante et la possibilité de régularisation. Proposez des choix réels, par exemple attendre une validation ou revenir au créneau autorisé. Ne proposez pas une fausse alternative qui humilie. Si la personne ne comprend pas, reformulez plutôt que de parler simplement plus fort. Une menace réelle nécessite protection et alerte ; poursuivre une argumentation ne doit pas retarder le retrait.",
+                  "case": "Un spectateur n’a pas le bon billet et réclame une entrée immédiate. Vous ne pouvez pas résoudre le problème de paiement depuis votre poste. Formulez un refus d’accès respectueux. Quel relais proposez-vous ?",
+                  "transfer": "Réécrivez « vous n’aviez qu’à lire le panneau » pour conserver une relation professionnelle.",
+                  "page": 167
+                }
+              },
+              {
+                "ref": "03.07",
+                "title": "Demander un renfort au bon moment",
+                "page": 154,
+                "diagram": "media/aps62/repere-03.07.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Le renfort est une ressource normale"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Demander de l'aide ne signifie pas avoir échoué. Un collègue peut protéger l'accueil, gérer le public, contacter un responsable ou surveiller un accès. L'appel doit intervenir avant que l'agent ne perde sa capacité de communiquer ou de se retirer. Les signes utiles sont la multiplication des personnes impliquées, la menace, la perte de visibilité ou l'impossibilité d'assurer seul plusieurs missions."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Préciser la mission attendue"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Le destinataire doit connaître le lieu exact, les faits et le besoin : présence préventive, soutien à l'accueil, secours ou intervention des forces de l'ordre. Le renfort interne ne remplace pas un appel d'urgence lorsque celui-ci est nécessaire. Évitez les codes improvisés ou les messages trop longs. Une confirmation de réception assure que la demande est prise en compte."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "« PC, entrée livraison : deux personnes menacent le réceptionnaire et bloquent le passage. Demande de soutien immédiat et de prise en charge de l'alerte. Je maintiens une distance. » Ce message explique l'urgence. « Venez vite » sans lieu ni situation risque d'envoyer un collègue mal préparé ou au mauvais endroit."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Après l'appel, continuez à informer si la situation change. Le renfort doit rejoindre une situation actualisée, pas celle qui existait plusieurs minutes plus tôt."
+                  }
+                ],
+                "course_page": 155,
+                "practice": {
+                  "background": "Le renfort n’a pas pour objectif d’intimider par le nombre. Répartissez les rôles : un interlocuteur principal, un agent qui protège la zone et un relais vers le poste central. Évitez que plusieurs personnes donnent des ordres contradictoires. La police, la gendarmerie ou les secours sont sollicités selon la nature du danger. La hiérarchie interne ne doit pas devenir un filtre qui retarde une alerte urgente. Confirmez la réception des messages essentiels.",
+                  "case": "Deux personnes contestent un refus d’accès tandis que la file continue de grossir. Vous disposez d’une radio et d’un collègue à quelques minutes. Quel message radio envoyez-vous ? Quelle mission donnez-vous au collègue à son arrivée ?",
+                  "transfer": "Complétez « viens vite à l’accueil » pour rendre le message exploitable.",
+                  "page": 172
+                }
+              }
+            ],
+            "decision": "Énoncer une limite professionnelle, préserver les informations personnelles et organiser le relais si nécessaire.",
+            "pitfall": "Répondre sur le même ton pour ne pas perdre la face.",
+            "objectives": [
+              "Expliquer : agression verbale : poser une limite",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "À la suite d’un refus d’accès, un visiteur vous insulte et exige votre nom personnel et votre adresse. Il n’a pas encore porté de coup. D’autres visiteurs attendent et commencent à filmer."
+              ],
+              [
+                "Décision à justifier",
+                "Énoncer une limite professionnelle, préserver les informations personnelles et organiser le relais si nécessaire."
+              ],
+              [
+                "Piège à éviter",
+                "Répondre sur le même ton pour ne pas perdre la face."
+              ],
+              [
+                "Pourquoi ?",
+                "Nommer la limite permet de sortir du duel personnel : l’agent rappelle les conditions de l’échange et la règle d’accès. Il ne confond pas l’identification professionnelle prévue avec la divulgation de sa vie privée. L’évolution du risque guide la demande de renfort ou l’alerte, sans attendre qu’une violence se produise pour réévaluer."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "À la suite d’un refus d’accès, un visiteur vous insulte et exige votre nom personnel et votre adresse."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Nommer la limite permet de sortir du duel personnel : l’agent rappelle les conditions de l’échange et la règle d’accès."
+              },
+              {
+                "label": "Décider",
+                "text": "Énoncer une limite professionnelle, préserver les informations personnelles et organiser le relais si nécessaire."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Le visiteur présente des difficultés de compréhension. Quelles adaptations peuvent être tentées sans abandonner les limites ?"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-07-04-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-07-04-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-07-04-video",
+                "title": "Agression verbale : poser une limite",
+                "required": true,
+                "src": "media/aps62/aps62-07-04.mp4",
+                "poster": "media/aps62/aps62-07-04.jpg",
+                "captions": "media/aps62/aps62-07-04.vtt",
+                "duration_seconds": 67.612472,
+                "transcript": "La situation : À la suite d’un refus d’accès, un visiteur vous insulte et exige votre nom personnel et votre adresse. Il n’a pas encore porté de coup. D’autres visiteurs attendent et commencent à filmer.\n\nÀ vous de décider : Énoncer une limite professionnelle, préserver les informations personnelles et organiser le relais si nécessaire. Ou bien : Répondre sur le même ton pour ne pas perdre la face. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Nommer la limite permet de sortir du duel personnel : l’agent rappelle les conditions de l’échange et la règle d’accès. Il ne confond pas l’identification professionnelle prévue avec la divulgation de sa vie privée. L’évolution du risque guide la demande de renfort ou l’alerte, sans attendre qu’une violence se produise pour réévaluer.\n\nLe bon relais : « Je peux vous expliquer la procédure, mais je vous demande de cesser les insultes. » Puis : « L’accès reste conditionné à cette vérification ; mon responsable va prendre le relais. » Le rapport attribue les paroles utiles, indique le lieu et les actions. Il évite « fou » ou « incontrôlable » sans faits décrits."
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "07.04",
+            "title": "Agression verbale : poser une limite",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Distinguer mécontentement et menace",
+                "back": "Une plainte peut être vive sans comporter de menace. Une agression verbale peut prendre la forme d'insultes, d'humiliations ou de menaces explicites. L'agent n'a pas à accepter un comportement abusif pour paraître professionnel. Il nomme une limite, reste factuel et adapte la suite à la gravité. Répondre par une insulte rend l'échange moins maîtrisable et fragilise le compte rendu."
+              },
+              {
+                "front": "Fixer une limite et préparer le relais",
+                "back": "Une formulation courte suffit : « Je peux vous expliquer la procédure, mais je ne peux pas poursuivre cet échange avec des menaces. » Évitez de répéter une injonction sans observer l'évolution. Si la personne s'approche, bloque le passage ou annonce une violence, la protection et l'alerte deviennent prioritaires. Le soutien d'un collègue doit réduire la tension, pas constituer un groupe intimidant."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Une personne crie contre un refus d'accès puis menace nommément l'hôtesse. L'agent éloigne l'hôtesse si nécessaire, demande du renfort et transmet les mots utiles, le lieu et la situation. Il ne minimise pas en écrivant seulement « client énervé ». La trace permet d'organiser les suites et de protéger les salariés concernés."
+              },
+              {
+                "front": "Des mots concrets et une action à la fois",
+                "back": "Une personne suit plus facilement une instruction lorsqu'elle sait quoi faire, où et pourquoi. « Attendez derrière la ligne pendant la vérification » est plus précis que « soyez raisonnable ». Le langage doit être professionnel, sans sarcasme ni familiarité imposée. Le ton, le volume et les gestes doivent être cohérents avec le message. Une phrase calme accompagnée d'un doigt menaçant peut être reçue comme une provocation."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : À la suite d’un refus d’accès, un visiteur vous insulte et exige votre nom personnel et votre adresse. Il n’a pas encore porté de coup. D’autres visiteurs attendent et commencent à filmer.\n\nÀ vous de décider : Énoncer une limite professionnelle, préserver les informations personnelles et organiser le relais si nécessaire. Ou bien : Répondre sur le même ton pour ne pas perdre la face. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Nommer la limite permet de sortir du duel personnel : l’agent rappelle les conditions de l’échange et la règle d’accès. Il ne confond pas l’identification professionnelle prévue avec la divulgation de sa vie privée. L’évolution du risque guide la demande de renfort ou l’alerte, sans attendre qu’une violence se produise pour réévaluer.\n\nLe bon relais : « Je peux vous expliquer la procédure, mais je vous demande de cesser les insultes. » Puis : « L’accès reste conditionné à cette vérification ; mon responsable va prendre le relais. » Le rapport attribue les paroles utiles, indique le lieu et les actions. Il évite « fou » ou « incontrôlable » sans faits décrits."
+          }
+        },
+        {
+          "id": "aps62-07-04-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.04",
+            "title": "Agression verbale : poser une limite",
+            "kind": "workshop",
+            "case": "À la suite d’un refus d’accès, un visiteur vous insulte et exige votre nom personnel et votre adresse. Il n’a pas encore porté de coup. D’autres visiteurs attendent et commencent à filmer.",
+            "choices": [
+              {
+                "text": "Répondre sur le même ton pour ne pas perdre la face.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. Nommer la limite permet de sortir du duel personnel : l’agent rappelle les conditions de l’échange et la règle d’accès. Il ne confond pas l’identification professionnelle prévue avec la divulgation de sa vie privée. L’évolution du risque guide la demande de renfort ou l’alerte, sans attendre qu’une violence se produise pour réévaluer.",
+                "correct": false
+              },
+              {
+                "text": "Communiquer votre adresse pour prouver que vous n’avez pas peur.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. « Je peux vous expliquer la procédure, mais je vous demande de cesser les insultes. » Puis : « L’accès reste conditionné à cette vérification ; mon responsable va prendre le relais. » Le rapport attribue les paroles utiles, indique le lieu et les actions. Il évite « fou » ou « incontrôlable » sans faits décrits.",
+                "correct": false
+              },
+              {
+                "text": "Énoncer une limite professionnelle, préserver les informations personnelles et organiser le relais si nécessaire.",
+                "feedback": "Nommer la limite permet de sortir du duel personnel : l’agent rappelle les conditions de l’échange et la règle d’accès. Il ne confond pas l’identification professionnelle prévue avec la divulgation de sa vie privée. L’évolution du risque guide la demande de renfort ou l’alerte, sans attendre qu’une violence se produise pour réévaluer.",
+                "correct": true
+              }
+            ],
+            "task": "Rédigez trois formulations graduées : rappel de la règle, limite face aux insultes, demande de relais. Ajoutez un compte rendu sans jugement de valeur.",
+            "model": "« Je peux vous expliquer la procédure, mais je vous demande de cesser les insultes. » Puis : « L’accès reste conditionné à cette vérification ; mon responsable va prendre le relais. » Le rapport attribue les paroles utiles, indique le lieu et les actions. Il évite « fou » ou « incontrôlable » sans faits décrits.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ]
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-07-04-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "À la suite d’un refus d’accès, un visiteur vous insulte et exige votre nom personnel et votre adresse. Il n’a pas encore porté de coup. D’autres visiteurs attendent et commencent à filmer.",
+          "options": [
+            {
+              "id": "aps62-07-04-a0",
+              "text": "Répondre sur le même ton pour ne pas perdre la face.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-07-04-a1",
+              "text": "Communiquer votre adresse pour prouver que vous n’avez pas peur.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-07-04-a2",
+              "text": "Énoncer une limite professionnelle, préserver les informations personnelles et organiser le relais si nécessaire.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "Nommer la limite permet de sortir du duel personnel : l’agent rappelle les conditions de l’échange et la règle d’accès. Il ne confond pas l’identification professionnelle prévue avec la divulgation de sa vie privée. L’évolution du risque guide la demande de renfort ou l’alerte, sans attendre qu’une violence se produise pour réévaluer."
+        },
+        {
+          "id": "aps62-07-04-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-07-04-pair0",
+              "left": "Distinguer mécontentement et menace",
+              "right": "Une plainte peut être vive sans comporter de menace."
+            },
+            {
+              "id": "aps62-07-04-pair1",
+              "left": "Fixer une limite et préparer le relais",
+              "right": "Une formulation courte suffit : « Je peux vous expliquer la procédure, mais je ne peux pas poursuivre cet échange avec des menaces."
+            },
+            {
+              "id": "aps62-07-04-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Une personne crie contre un refus d'accès puis menace nommément l'hôtesse."
+            }
+          ],
+          "explanation": "Distinguer mécontentement et menace : Une plainte peut être vive sans comporter de menace. Fixer une limite et préparer le relais : Une formulation courte suffit : « Je peux vous expliquer la procédure, mais je ne peux pas poursuivre cet échange avec des menaces. EXEMPLE EXPLIQUÉ : Une personne crie contre un refus d'accès puis menace nommément l'hôtesse."
+        },
+        {
+          "id": "aps62-07-04-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.04",
+            "title": "Agression verbale : poser une limite",
+            "kind": "transfer",
+            "case": "Le visiteur présente des difficultés de compréhension. Quelles adaptations peuvent être tentées sans abandonner les limites ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "Nommer la limite permet de sortir du duel personnel : l’agent rappelle les conditions de l’échange et la règle d’accès. Il ne confond pas l’identification professionnelle prévue avec la divulgation de sa vie privée. L’évolution du risque guide la demande de renfort ou l’alerte, sans attendre qu’une violence se produise pour réévaluer. « Je peux vous expliquer la procédure, mais je vous demande de cesser les insultes. » Puis : « L’accès reste conditionné à cette vérification ; mon responsable va prendre le relais. » Le rapport attribue les paroles utiles, indique le lieu et les actions. Il évite « fou » ou « incontrôlable » sans faits décrits.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ]
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-07-04-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.04",
+            "title": "Agression verbale : poser une limite",
+            "kind": "recap",
+            "decision": "Énoncer une limite professionnelle, préserver les informations personnelles et organiser le relais si nécessaire.",
+            "reason": "Nommer la limite permet de sortir du duel personnel : l’agent rappelle les conditions de l’échange et la règle d’accès. Il ne confond pas l’identification professionnelle prévue avec la divulgation de sa vie privée. L’évolution du risque guide la demande de renfort ou l’alerte, sans attendre qu’une violence se produise pour réévaluer.",
+            "pitfall": "Répondre sur le même ton pour ne pas perdre la face.",
+            "cards": [
+              {
+                "front": "Distinguer mécontentement et menace",
+                "back": "Une plainte peut être vive sans comporter de menace. Une agression verbale peut prendre la forme d'insultes, d'humiliations ou de menaces explicites. L'agent n'a pas à accepter un comportement abusif pour paraître professionnel. Il nomme une limite, reste factuel et adapte la suite à la gravité. Répondre par une insulte rend l'échange moins maîtrisable et fragilise le compte rendu."
+              },
+              {
+                "front": "Fixer une limite et préparer le relais",
+                "back": "Une formulation courte suffit : « Je peux vous expliquer la procédure, mais je ne peux pas poursuivre cet échange avec des menaces. » Évitez de répéter une injonction sans observer l'évolution. Si la personne s'approche, bloque le passage ou annonce une violence, la protection et l'alerte deviennent prioritaires. Le soutien d'un collègue doit réduire la tension, pas constituer un groupe intimidant."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Une personne crie contre un refus d'accès puis menace nommément l'hôtesse. L'agent éloigne l'hôtesse si nécessaire, demande du renfort et transmet les mots utiles, le lieu et la situation. Il ne minimise pas en écrivant seulement « client énervé ». La trace permet d'organiser les suites et de protéger les salariés concernés."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "03.06",
+                "page": 153
+              },
+              {
+                "ref": "03.04",
+                "page": 149
+              },
+              {
+                "ref": "03.07",
+                "page": 155
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique."
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-07-05",
+      "title": "05 · Clore le conflit et apprendre",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-07-05-comprendre",
+          "title": "Comprendre · Clore le conflit et apprendre",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.05",
+            "title": "Clore le conflit et apprendre",
+            "kind": "lesson",
+            "image": "media/aps62/scene-03.webp",
+            "case": "Après une dispute apaisée, le responsable souhaite écrire « incident terminé ». La cause initiale, une consigne contradictoire entre deux postes, n’a pas été corrigée. Un agent se sent encore très tendu.",
+            "reason": "Le retour d’expérience s’appuie sur une chronologie, les facteurs contributifs et les décisions. Il ne doit pas devenir une mise en accusation. Une amélioration utile comporte un responsable, une échéance et une vérification. Les conséquences humaines doivent être prises en compte selon les ressources de l’organisation.",
+            "lessons": [
+              {
+                "ref": "03.08",
+                "title": "Adapter l'accueil à une vulnérabilité",
+                "page": 156,
+                "diagram": "media/aps62/repere-03.08.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Ne pas supposer à la place de la personne"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une difficulté peut être liée à l'âge, au handicap, à une maladie, à la langue, à la fatigue ou à une émotion forte. Elle n'est pas toujours visible. L'agent demande simplement quelle aide est utile, sans exiger des détails médicaux sans rapport avec la mission. Il s'adresse directement à la personne, même lorsqu'un accompagnant est présent."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Réduire la charge de l'échange"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Utilisez des phrases courtes, un rythme adapté et une information à la fois. Proposez un endroit moins bruyant si cela est possible. Laissez du temps pour comprendre et répondre. Une aide technique, un fauteuil ou un dispositif médical ne doit pas être déplacé sans échange et sans respecter la procédure. L'adaptation conserve la dignité et les exigences de sécurité ; elle ne consiste pas à décider automatiquement pour autrui."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une personne semble désorientée devant une consigne complexe. L'agent explique d'abord où patienter, puis qui va l'accompagner. Il vérifie la compréhension sans infantiliser. Si les signes font suspecter un malaise, il sollicite les secours adaptés plutôt que de traiter la situation comme une simple indiscipline."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · L'attitude inhabituelle peut traduire un besoin d'aide. Observez les faits, demandez le besoin et mobilisez le relais adapté sans coller d'étiquette."
+                  }
+                ],
+                "course_page": 157,
+                "practice": {
+                  "background": "Si un malaise est possible, faites intervenir un SST ou les secours selon les signes. L’agent ne diagnostique pas une intoxication ou une maladie psychiatrique. Éloignez les curieux, réduisez les stimulations si possible et gardez un espace sûr. Pour un mineur isolé, appliquez la procédure de protection et de recherche d’un accompagnant avec vérification du lien, sans diffuser publiquement des données inutiles. Toute menace immédiate exige une alerte, quels que soient les motifs supposés du comportement.",
+                  "case": "Une personne semble paniquée dans une zone bruyante. Elle se couvre les oreilles et refuse de vous suivre. Aucun danger immédiat n’est visible mais l’attroupement augmente. Que pouvez-vous modifier dans l’environnement ? Comment proposez-vous de l’aide ?",
+                  "transfer": "Une personne comprend mal votre phrase. Citez deux adaptations simples de communication.",
+                  "page": 173
+                }
+              },
+              {
+                "ref": "03.09",
+                "title": "Tirer un enseignement d'un conflit",
+                "page": 158,
+                "diagram": "media/aps62/repere-03.09.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Reconstituer avant de juger"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Le débriefing rassemble les faits, les décisions et leurs effets. Il distingue le déroulement de l'événement et le ressenti des personnes. L'objectif est de comprendre ce qui a facilité ou compliqué la réponse : consigne contradictoire, délai d'attente, poste isolé, radio défaillante ou formulation maladroite. Une recherche immédiate de coupable peut empêcher la remontée des informations utiles."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Transformer le constat en amélioration"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une mesure utile précise ce qui change, qui s'en charge et comment son efficacité sera vérifiée. « Mieux communiquer » est trop vague. Modifier une signalétique, clarifier une exception d'accès ou tester l'appel au renfort produit un résultat observable. Un événement violent nécessite aussi une attention aux personnes : soutien, déclaration et accompagnement selon l'organisation de l'employeur."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Trois conflits surviennent au même portail parce que les convocations indiquent une autre entrée. Le débriefing ne se limite pas à demander plus de patience aux agents. L'organisation corrige les convocations et ajoute une orientation visible. Le nombre d'erreurs d'arrivée est ensuite suivi pour vérifier l'effet de la mesure."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Le compte rendu décrit l'événement ; le retour d'expérience cherche ce qui doit évoluer. Les deux démarches se complètent et doivent respecter la confidentialité."
+                  }
+                ],
+                "course_page": 159,
+                "practice": {
+                  "background": "Le retour d’expérience débouche sur des actions : meilleure signalétique, changement d’emplacement, consigne clarifiée, exercice de communication ou répartition des rôles. Désignez un responsable et un délai de vérification. Préservez la confidentialité et laissez chacun évoquer les difficultés sans humiliation. Après une violence ou une menace importante, le soutien de l’encadrement et des professionnels compétents peut être nécessaire. Les réactions émotionnelles retardées se prennent au sérieux et se signalent, sans imposer un récit collectif détaillé à la personne.",
+                  "case": "Après un incident à l’accueil, l’équipe conclut seulement : « Cette personne était impossible. » Pourtant trois visiteurs avaient déjà contesté la même règle dans la matinée. Quelle cause organisationnelle faut-il explorer ? Quel indicateur montrera une amélioration ?",
+                  "transfer": "Un conflit revient chaque lundi à la même entrée. Quelle piste d’organisation recherchez-vous ?",
+                  "page": 174
+                }
+              }
+            ],
+            "decision": "Distinguer fin de l’échange, traitement de la cause et soutien aux personnes.",
+            "pitfall": "Clore définitivement puisque le visiteur est parti.",
+            "objectives": [
+              "Expliquer : clore le conflit et apprendre",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Après une dispute apaisée, le responsable souhaite écrire « incident terminé ». La cause initiale, une consigne contradictoire entre deux postes, n’a pas été corrigée. Un agent se sent encore très tendu."
+              ],
+              [
+                "Décision à justifier",
+                "Distinguer fin de l’échange, traitement de la cause et soutien aux personnes."
+              ],
+              [
+                "Piège à éviter",
+                "Clore définitivement puisque le visiteur est parti."
+              ],
+              [
+                "Pourquoi ?",
+                "Le retour d’expérience s’appuie sur une chronologie, les facteurs contributifs et les décisions. Il ne doit pas devenir une mise en accusation. Une amélioration utile comporte un responsable, une échéance et une vérification. Les conséquences humaines doivent être prises en compte selon les ressources de l’organisation."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Après une dispute apaisée, le responsable souhaite écrire « incident terminé »."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Le retour d’expérience s’appuie sur une chronologie, les facteurs contributifs et les décisions."
+              },
+              {
+                "label": "Décider",
+                "text": "Distinguer fin de l’échange, traitement de la cause et soutien aux personnes."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Une semaine après, la même contradiction réapparaît. Quel indicateur manquait dans le suivi de la mesure ?"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-07-05-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-07-05-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-07-05-video",
+                "title": "Clore le conflit et apprendre",
+                "required": true,
+                "src": "media/aps62/aps62-07-05.mp4",
+                "poster": "media/aps62/aps62-07-05.jpg",
+                "captions": "media/aps62/aps62-07-05.vtt",
+                "duration_seconds": 67.102946,
+                "transcript": "La situation : Après une dispute apaisée, le responsable souhaite écrire « incident terminé ». La cause initiale, une consigne contradictoire entre deux postes, n’a pas été corrigée. Un agent se sent encore très tendu.\n\nÀ vous de décider : Distinguer fin de l’échange, traitement de la cause et soutien aux personnes. Ou bien : Clore définitivement puisque le visiteur est parti. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Le retour d’expérience s’appuie sur une chronologie, les facteurs contributifs et les décisions. Il ne doit pas devenir une mise en accusation. Une amélioration utile comporte un responsable, une échéance et une vérification. Les conséquences humaines doivent être prises en compte selon les ressources de l’organisation.\n\nLe bon relais : Rubriques : faits, conséquences, ce qui a aidé, ce qui a gêné, actions. Mesure : faire harmoniser les consignes des deux postes avant la prochaine vacation et vérifier leur compréhension lors de la relève. « Prenons un temps pour vérifier comment vous allez et organiser le relais adapté » ouvre un soutien sans diagnostic."
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "07.05",
+            "title": "Clore le conflit et apprendre",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Ne pas supposer à la place de la personne",
+                "back": "Une difficulté peut être liée à l'âge, au handicap, à une maladie, à la langue, à la fatigue ou à une émotion forte. Elle n'est pas toujours visible. L'agent demande simplement quelle aide est utile, sans exiger des détails médicaux sans rapport avec la mission. Il s'adresse directement à la personne, même lorsqu'un accompagnant est présent."
+              },
+              {
+                "front": "Réduire la charge de l'échange",
+                "back": "Utilisez des phrases courtes, un rythme adapté et une information à la fois. Proposez un endroit moins bruyant si cela est possible. Laissez du temps pour comprendre et répondre. Une aide technique, un fauteuil ou un dispositif médical ne doit pas être déplacé sans échange et sans respecter la procédure. L'adaptation conserve la dignité et les exigences de sécurité ; elle ne consiste pas à décider automatiquement pour autrui."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Une personne semble désorientée devant une consigne complexe. L'agent explique d'abord où patienter, puis qui va l'accompagner. Il vérifie la compréhension sans infantiliser. Si les signes font suspecter un malaise, il sollicite les secours adaptés plutôt que de traiter la situation comme une simple indiscipline."
+              },
+              {
+                "front": "Reconstituer avant de juger",
+                "back": "Le débriefing rassemble les faits, les décisions et leurs effets. Il distingue le déroulement de l'événement et le ressenti des personnes. L'objectif est de comprendre ce qui a facilité ou compliqué la réponse : consigne contradictoire, délai d'attente, poste isolé, radio défaillante ou formulation maladroite. Une recherche immédiate de coupable peut empêcher la remontée des informations utiles."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Après une dispute apaisée, le responsable souhaite écrire « incident terminé ». La cause initiale, une consigne contradictoire entre deux postes, n’a pas été corrigée. Un agent se sent encore très tendu.\n\nÀ vous de décider : Distinguer fin de l’échange, traitement de la cause et soutien aux personnes. Ou bien : Clore définitivement puisque le visiteur est parti. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Le retour d’expérience s’appuie sur une chronologie, les facteurs contributifs et les décisions. Il ne doit pas devenir une mise en accusation. Une amélioration utile comporte un responsable, une échéance et une vérification. Les conséquences humaines doivent être prises en compte selon les ressources de l’organisation.\n\nLe bon relais : Rubriques : faits, conséquences, ce qui a aidé, ce qui a gêné, actions. Mesure : faire harmoniser les consignes des deux postes avant la prochaine vacation et vérifier leur compréhension lors de la relève. « Prenons un temps pour vérifier comment vous allez et organiser le relais adapté » ouvre un soutien sans diagnostic."
+          }
+        },
+        {
+          "id": "aps62-07-05-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.05",
+            "title": "Clore le conflit et apprendre",
+            "kind": "workshop",
+            "case": "Après une dispute apaisée, le responsable souhaite écrire « incident terminé ». La cause initiale, une consigne contradictoire entre deux postes, n’a pas été corrigée. Un agent se sent encore très tendu.",
+            "choices": [
+              {
+                "text": "Chercher d’abord un coupable devant toute l’équipe.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. Rubriques : faits, conséquences, ce qui a aidé, ce qui a gêné, actions. Mesure : faire harmoniser les consignes des deux postes avant la prochaine vacation et vérifier leur compréhension lors de la relève. « Prenons un temps pour vérifier comment vous allez et organiser le relais adapté » ouvre un soutien sans diagnostic.",
+                "correct": false
+              },
+              {
+                "text": "Distinguer fin de l’échange, traitement de la cause et soutien aux personnes.",
+                "feedback": "Le retour d’expérience s’appuie sur une chronologie, les facteurs contributifs et les décisions. Il ne doit pas devenir une mise en accusation. Une amélioration utile comporte un responsable, une échéance et une vérification. Les conséquences humaines doivent être prises en compte selon les ressources de l’organisation.",
+                "correct": true
+              },
+              {
+                "text": "Clore définitivement puisque le visiteur est parti.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. Le retour d’expérience s’appuie sur une chronologie, les facteurs contributifs et les décisions. Il ne doit pas devenir une mise en accusation. Une amélioration utile comporte un responsable, une échéance et une vérification. Les conséquences humaines doivent être prises en compte selon les ressources de l’organisation.",
+                "correct": false
+              }
+            ],
+            "task": "Rédigez un RETEX en cinq rubriques et une mesure corrective vérifiable. Ajoutez une phrase d’accueil pour l’agent affecté.",
+            "model": "Rubriques : faits, conséquences, ce qui a aidé, ce qui a gêné, actions. Mesure : faire harmoniser les consignes des deux postes avant la prochaine vacation et vérifier leur compréhension lors de la relève. « Prenons un temps pour vérifier comment vous allez et organiser le relais adapté » ouvre un soutien sans diagnostic.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ]
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-07-05-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Après une dispute apaisée, le responsable souhaite écrire « incident terminé ». La cause initiale, une consigne contradictoire entre deux postes, n’a pas été corrigée. Un agent se sent encore très tendu.",
+          "options": [
+            {
+              "id": "aps62-07-05-a0",
+              "text": "Chercher d’abord un coupable devant toute l’équipe.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-07-05-a1",
+              "text": "Distinguer fin de l’échange, traitement de la cause et soutien aux personnes.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-07-05-a2",
+              "text": "Clore définitivement puisque le visiteur est parti.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "Le retour d’expérience s’appuie sur une chronologie, les facteurs contributifs et les décisions. Il ne doit pas devenir une mise en accusation. Une amélioration utile comporte un responsable, une échéance et une vérification. Les conséquences humaines doivent être prises en compte selon les ressources de l’organisation."
+        },
+        {
+          "id": "aps62-07-05-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-07-05-pair0",
+              "left": "Ne pas supposer à la place de la personne",
+              "right": "Une difficulté peut être liée à l'âge, au handicap, à une maladie, à la langue, à la fatigue ou à une émotion forte."
+            },
+            {
+              "id": "aps62-07-05-pair1",
+              "left": "Réduire la charge de l'échange",
+              "right": "Utilisez des phrases courtes, un rythme adapté et une information à la fois."
+            },
+            {
+              "id": "aps62-07-05-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Une personne semble désorientée devant une consigne complexe."
+            }
+          ],
+          "explanation": "Ne pas supposer à la place de la personne : Une difficulté peut être liée à l'âge, au handicap, à une maladie, à la langue, à la fatigue ou à une émotion forte. Réduire la charge de l'échange : Utilisez des phrases courtes, un rythme adapté et une information à la fois. EXEMPLE EXPLIQUÉ : Une personne semble désorientée devant une consigne complexe."
+        },
+        {
+          "id": "aps62-07-05-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.05",
+            "title": "Clore le conflit et apprendre",
+            "kind": "transfer",
+            "case": "Une semaine après, la même contradiction réapparaît. Quel indicateur manquait dans le suivi de la mesure ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "Le retour d’expérience s’appuie sur une chronologie, les facteurs contributifs et les décisions. Il ne doit pas devenir une mise en accusation. Une amélioration utile comporte un responsable, une échéance et une vérification. Les conséquences humaines doivent être prises en compte selon les ressources de l’organisation. Rubriques : faits, conséquences, ce qui a aidé, ce qui a gêné, actions. Mesure : faire harmoniser les consignes des deux postes avant la prochaine vacation et vérifier leur compréhension lors de la relève. « Prenons un temps pour vérifier comment vous allez et organiser le relais adapté » ouvre un soutien sans diagnostic.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ]
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-07-05-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "07.05",
+            "title": "Clore le conflit et apprendre",
+            "kind": "recap",
+            "decision": "Distinguer fin de l’échange, traitement de la cause et soutien aux personnes.",
+            "reason": "Le retour d’expérience s’appuie sur une chronologie, les facteurs contributifs et les décisions. Il ne doit pas devenir une mise en accusation. Une amélioration utile comporte un responsable, une échéance et une vérification. Les conséquences humaines doivent être prises en compte selon les ressources de l’organisation.",
+            "pitfall": "Clore définitivement puisque le visiteur est parti.",
+            "cards": [
+              {
+                "front": "Ne pas supposer à la place de la personne",
+                "back": "Une difficulté peut être liée à l'âge, au handicap, à une maladie, à la langue, à la fatigue ou à une émotion forte. Elle n'est pas toujours visible. L'agent demande simplement quelle aide est utile, sans exiger des détails médicaux sans rapport avec la mission. Il s'adresse directement à la personne, même lorsqu'un accompagnant est présent."
+              },
+              {
+                "front": "Réduire la charge de l'échange",
+                "back": "Utilisez des phrases courtes, un rythme adapté et une information à la fois. Proposez un endroit moins bruyant si cela est possible. Laissez du temps pour comprendre et répondre. Une aide technique, un fauteuil ou un dispositif médical ne doit pas être déplacé sans échange et sans respecter la procédure. L'adaptation conserve la dignité et les exigences de sécurité ; elle ne consiste pas à décider automatiquement pour autrui."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Une personne semble désorientée devant une consigne complexe. L'agent explique d'abord où patienter, puis qui va l'accompagner. Il vérifie la compréhension sans infantiliser. Si les signes font suspecter un malaise, il sollicite les secours adaptés plutôt que de traiter la situation comme une simple indiscipline."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "03.08",
+                "page": 157
+              },
+              {
+                "ref": "03.09",
+                "page": 159
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique."
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "aps62-07-01-comprendre",
+    "aps62-07-01-memoriser",
+    "aps62-07-01-atelier",
+    "aps62-07-01-q1",
+    "aps62-07-01-q2",
+    "aps62-07-01-transfert",
+    "aps62-07-01-synthese",
+    "aps62-07-02-comprendre",
+    "aps62-07-02-memoriser",
+    "aps62-07-02-atelier",
+    "aps62-07-02-q1",
+    "aps62-07-02-q2",
+    "aps62-07-02-transfert",
+    "aps62-07-02-synthese",
+    "aps62-07-03-comprendre",
+    "aps62-07-03-memoriser",
+    "aps62-07-03-atelier",
+    "aps62-07-03-q1",
+    "aps62-07-03-q2",
+    "aps62-07-03-transfert",
+    "aps62-07-03-synthese",
+    "aps62-07-04-comprendre",
+    "aps62-07-04-memoriser",
+    "aps62-07-04-atelier",
+    "aps62-07-04-q1",
+    "aps62-07-04-q2",
+    "aps62-07-04-transfert",
+    "aps62-07-04-synthese",
+    "aps62-07-05-comprendre",
+    "aps62-07-05-memoriser",
+    "aps62-07-05-atelier",
+    "aps62-07-05-q1",
+    "aps62-07-05-q2",
+    "aps62-07-05-transfert",
+    "aps62-07-05-synthese"
+  ],
+  "counts": {
+    "sections": 5,
+    "activities": 35,
+    "scored_activities": 10,
+    "required_videos": 5,
+    "workbooks": 10,
+    "assets": 25
+  },
+  "assets": [
+    "media/aps62/aps62-07-01.jpg",
+    "media/aps62/aps62-07-01.mp4",
+    "media/aps62/aps62-07-01.vtt",
+    "media/aps62/aps62-07-02.jpg",
+    "media/aps62/aps62-07-02.mp4",
+    "media/aps62/aps62-07-02.vtt",
+    "media/aps62/aps62-07-03.jpg",
+    "media/aps62/aps62-07-03.mp4",
+    "media/aps62/aps62-07-03.vtt",
+    "media/aps62/aps62-07-04.jpg",
+    "media/aps62/aps62-07-04.mp4",
+    "media/aps62/aps62-07-04.vtt",
+    "media/aps62/aps62-07-05.jpg",
+    "media/aps62/aps62-07-05.mp4",
+    "media/aps62/aps62-07-05.vtt",
+    "media/aps62/repere-03.01.webp",
+    "media/aps62/repere-03.02.webp",
+    "media/aps62/repere-03.03.webp",
+    "media/aps62/repere-03.04.webp",
+    "media/aps62/repere-03.05.webp",
+    "media/aps62/repere-03.06.webp",
+    "media/aps62/repere-03.07.webp",
+    "media/aps62/repere-03.08.webp",
+    "media/aps62/repere-03.09.webp",
+    "media/aps62/scene-03.webp"
+  ],
+  "import_warnings": []
+}

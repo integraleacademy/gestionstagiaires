@@ -1,0 +1,939 @@
+{
+  "id": "module-01",
+  "version": "20261007-aps62-v8",
+  "title": "Le cadre de la sécurité privée",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-q-01-01",
+      "prompt": "Quel texte encadre les activités privées de sécurité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le Code de la route uniquement"
+        },
+        {
+          "id": "2",
+          "text": "Le règlement intérieur du seul client"
+        },
+        {
+          "id": "3",
+          "text": "Le livre VI du Code de la sécurité intérieure"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La mission s’inscrit dans un cadre légal qui prime sur les demandes commerciales.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-02",
+      "prompt": "Le client demande de surveiller un ancien salarié dans la rue, hors mission. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Suivre discrètement la personne"
+        },
+        {
+          "id": "2",
+          "text": "Expliquer la limite et saisir son responsable"
+        },
+        {
+          "id": "3",
+          "text": "Déléguer la filature au collègue"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une demande du client ne crée pas un pouvoir général d’enquête ou de surveillance sur la voie publique.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-03",
+      "prompt": "Que vérifie-t-on avant de prendre un poste ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Seulement la présence du client"
+        },
+        {
+          "id": "2",
+          "text": "Les consignes, le périmètre et les moyens d’alerte"
+        },
+        {
+          "id": "3",
+          "text": "Uniquement l’heure de fin du service"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La prise de poste permet de savoir où agir, pour quel objectif et avec quel relais.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-04",
+      "prompt": "Une tenue privée peut-elle entretenir une confusion avec la police ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui si le client le souhaite"
+        },
+        {
+          "id": "2",
+          "text": "Oui pendant les rondes nocturnes"
+        },
+        {
+          "id": "3",
+          "text": "Non, l’identification professionnelle doit rester distincte"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La tenue identifie un service privé et ne doit pas laisser croire à des prérogatives publiques.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-05",
+      "prompt": "La carte professionnelle dispense-t-elle de lire les consignes du site ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui, pour tout site ouvert au public"
+        },
+        {
+          "id": "2",
+          "text": "Oui, après cinq ans d’expérience"
+        },
+        {
+          "id": "3",
+          "text": "Non, elle ne décrit pas la mission locale"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’autorisation d’exercer et l’organisation concrète du poste répondent à des besoins différents.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-06",
+      "prompt": "Un visiteur demande qui commande les forces de police. Quel rôle annoncer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Celui d’officier de police du client"
+        },
+        {
+          "id": "2",
+          "text": "Celui d’adjoint de police temporaire"
+        },
+        {
+          "id": "3",
+          "text": "Celui d’agent de sécurité privée du site"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une présentation exacte évite toute ambiguïté sur les pouvoirs et responsabilités.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-07",
+      "prompt": "Une porte forcée présente aussi des éclats de verre. Que repérer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Un problème de nettoyage seulement"
+        },
+        {
+          "id": "2",
+          "text": "Un possible acte malveillant et un risque de blessure"
+        },
+        {
+          "id": "3",
+          "text": "Un risque de vol seulement"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Un même événement peut associer sûreté et sécurité accidentelle ; les personnes doivent être protégées.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-08",
+      "prompt": "Quel est le rôle de la consigne écrite ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Autoriser toute contrainte jugée utile"
+        },
+        {
+          "id": "2",
+          "text": "Organiser les actions autorisées sur le site"
+        },
+        {
+          "id": "3",
+          "text": "Remplacer les textes légaux"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une consigne précise la mission sans pouvoir élargir les prérogatives de l’agent.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-09",
+      "prompt": "Une consigne paraît contraire à la loi. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’appliquer pour éviter un conflit"
+        },
+        {
+          "id": "2",
+          "text": "La modifier secrètement"
+        },
+        {
+          "id": "3",
+          "text": "Demander clarification et ne pas exécuter l’acte illicite"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Il faut faire remonter l’écart et rechercher une réponse licite, avec traçabilité.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-10",
+      "prompt": "Que distingue l’autorisation de l’entreprise de la carte de l’agent ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La carte individuelle autorise toute entreprise"
+        },
+        {
+          "id": "2",
+          "text": "Ce sont deux noms du même document"
+        },
+        {
+          "id": "3",
+          "text": "L’une concerne la structure, l’autre l’exercice individuel"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Les conditions de l’entreprise et celles du professionnel doivent être vérifiées séparément.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-11",
+      "prompt": "Un badge de visite autorise-t-il l’accès à toutes les zones ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui, pendant les heures ouvrées"
+        },
+        {
+          "id": "2",
+          "text": "Oui, si le badge porte une photo"
+        },
+        {
+          "id": "3",
+          "text": "Seulement aux zones prévues par l’autorisation"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Les droits dépendent du profil et des consignes, pas de la seule possession d’un badge.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-12",
+      "prompt": "Une alarme survient pendant une ronde. Quelle référence utiliser ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La procédure d’alarme et les informations observables"
+        },
+        {
+          "id": "2",
+          "text": "L’habitude d’un autre établissement"
+        },
+        {
+          "id": "3",
+          "text": "Une décision sans contact avec le poste"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La réponse dépend du risque, de l’organisation locale et des moyens disponibles.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-13",
+      "prompt": "Pourquoi vérifier la radio à la relève ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour écouter les conversations privées"
+        },
+        {
+          "id": "2",
+          "text": "Pour pouvoir transmettre et demander un appui"
+        },
+        {
+          "id": "3",
+          "text": "Pour augmenter le volume en permanence"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Un moyen de communication défaillant peut empêcher le relais lors d’un incident.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-14",
+      "prompt": "Le responsable est injoignable et aucun danger immédiat n’existe. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Maintenir les mesures autorisées et utiliser le relais prévu"
+        },
+        {
+          "id": "2",
+          "text": "Créer une nouvelle procédure de fouille"
+        },
+        {
+          "id": "3",
+          "text": "Abandonner le poste"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’absence du responsable ne crée pas de pouvoir supplémentaire ; la chaîne de remplacement sert de relais.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-15",
+      "prompt": "Quel comportement traduit une mission de prévention ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Repérer une issue encombrée et faire traiter l’écart"
+        },
+        {
+          "id": "2",
+          "text": "Déplacer seul une installation technique inconnue"
+        },
+        {
+          "id": "3",
+          "text": "Attendre qu’un accident confirme le danger"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Prévenir consiste à détecter tôt et à organiser une correction adaptée aux compétences.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-16",
+      "prompt": "Un livreur connu a oublié son badge. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le laisser passer par habitude"
+        },
+        {
+          "id": "2",
+          "text": "Vérifier son accès selon la procédure"
+        },
+        {
+          "id": "3",
+          "text": "Lui prêter son badge personnel"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La familiarité ne remplace pas une autorisation vérifiée et traçable.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-17",
+      "prompt": "Qui doit vérifier la validité de son cadre d’exercice ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le client uniquement le jour d’un incident"
+        },
+        {
+          "id": "2",
+          "text": "Le public accueilli"
+        },
+        {
+          "id": "3",
+          "text": "Le professionnel et son employeur selon leurs obligations"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La validité des autorisations doit être anticipée ; elle ne se présume pas à partir de l’expérience.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-18",
+      "prompt": "L’agent peut-il infliger une amende pénale à un visiteur ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non, sa mission privée ne lui donne pas ce pouvoir"
+        },
+        {
+          "id": "2",
+          "text": "Oui avec un reçu du client"
+        },
+        {
+          "id": "3",
+          "text": "Oui si l’infraction est visible"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’agent rend compte aux autorités compétentes ; il ne prononce pas une sanction pénale.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-19",
+      "prompt": "Pourquoi connaître les limites géographiques du poste ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour organiser la surveillance dans le cadre autorisé"
+        },
+        {
+          "id": "2",
+          "text": "Pour pouvoir suivre quiconque quitte le site"
+        },
+        {
+          "id": "3",
+          "text": "Pour éviter tout contact avec l’extérieur"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le périmètre aide à choisir l’action et à éviter de laisser une zone sans surveillance.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-20",
+      "prompt": "Un visiteur conteste le règlement d’accès. Quelle première réponse ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Menacer d’une sanction pénale automatique"
+        },
+        {
+          "id": "2",
+          "text": "Inventer une exception payante"
+        },
+        {
+          "id": "3",
+          "text": "Expliquer la règle et proposer le relais prévu"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une règle expliquée et un recours identifié favorisent un contrôle compréhensible.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-21",
+      "prompt": "Quelle information relève d’une relève utile ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une opinion sur le caractère du client"
+        },
+        {
+          "id": "2",
+          "text": "Une porte défectueuse, les mesures prises et le suivi attendu"
+        },
+        {
+          "id": "3",
+          "text": "Une rumeur sans lien avec le poste"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La relève transmet des faits opérationnels et les actions qui restent à conduire.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-22",
+      "prompt": "Une mission nouvelle nécessite une compétence non détenue. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Signaler la limite avant de l’accepter"
+        },
+        {
+          "id": "2",
+          "text": "Utiliser le matériel sans information"
+        },
+        {
+          "id": "3",
+          "text": "Se former pendant l’incident"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’organisation doit affecter des personnes compétentes avec les moyens adaptés.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-23",
+      "prompt": "Le contrat commercial permet-il de déroger aux libertés fondamentales ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui avec une clause de confidentialité"
+        },
+        {
+          "id": "2",
+          "text": "Non, il reste soumis aux règles applicables"
+        },
+        {
+          "id": "3",
+          "text": "Oui si le montant est élevé"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une clause contractuelle ne légalise pas une atteinte injustifiée aux droits d’une personne.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-24",
+      "prompt": "Pourquoi identifier les zones sensibles du site ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour multiplier les contrôles arbitraires"
+        },
+        {
+          "id": "2",
+          "text": "Pour diffuser leur plan aux visiteurs"
+        },
+        {
+          "id": "3",
+          "text": "Pour adapter l’observation et les accès autorisés"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La connaissance du site sert une prévention ciblée dans le respect des consignes.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-25",
+      "prompt": "Quel élément permet une alerte exploitable ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Un jugement sur les personnes présentes"
+        },
+        {
+          "id": "2",
+          "text": "Le nom du client sans localisation"
+        },
+        {
+          "id": "3",
+          "text": "Le lieu précis, le fait observé et le besoin d’appui"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une alerte doit permettre au destinataire de comprendre et d’agir rapidement.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-26",
+      "prompt": "Un uniforme suffit-il à autoriser une intervention armée ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui si l’agent se sent menacé"
+        },
+        {
+          "id": "2",
+          "text": "Non, les activités armées ont un cadre spécifique"
+        },
+        {
+          "id": "3",
+          "text": "Oui à la demande verbale du client"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Les prérogatives et équipements ne découlent pas de la tenue portée.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-27",
+      "prompt": "Que faire d’un moyen de secours introuvable à la prise de poste ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Signaler l’absence et appliquer la solution de remplacement prévue"
+        },
+        {
+          "id": "2",
+          "text": "Attendre la relève suivante"
+        },
+        {
+          "id": "3",
+          "text": "Valider le contrôle comme conforme"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’écart doit être connu et traité avant qu’une urgence rende le moyen indispensable.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-28",
+      "prompt": "Un collègue propose de prêter sa carte professionnelle. Que répondre ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Accepter uniquement pour une nuit"
+        },
+        {
+          "id": "2",
+          "text": "Refuser, le titre est personnel"
+        },
+        {
+          "id": "3",
+          "text": "Photocopier le titre pour le remplaçant"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’identité et les conditions d’exercice ne sont pas transférables entre agents.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-29",
+      "prompt": "Quel objectif guide la ronde ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Vérifier les points prévus et traiter les anomalies observées"
+        },
+        {
+          "id": "2",
+          "text": "Contrôler les opinions du personnel"
+        },
+        {
+          "id": "3",
+          "text": "Cumuler uniquement des kilomètres"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La ronde sert la prévention du site et nécessite des observations exploitables.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-01-30",
+      "prompt": "Une intervention s’achève. Quelle suite professionnelle ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Effacer les notes pour clore l’incident"
+        },
+        {
+          "id": "2",
+          "text": "Rendre compte des faits, actions et relais"
+        },
+        {
+          "id": "3",
+          "text": "Attendre une plainte pour écrire"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La traçabilité permet le suivi et l’analyse sans réinventer les faits après coup.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    }
+  ],
+  "reviewed_on": "2026-10-04"
+}

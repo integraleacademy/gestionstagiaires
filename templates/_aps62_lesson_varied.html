@@ -1,0 +1,52 @@
+{% from '_aps62_scene.html' import scene %}
+{% macro reference_text(reference) -%}
+  {% for paragraph in reference.paragraphs %}
+    {% if paragraph.kind == 'heading' %}<h3>{{ paragraph.text }}</h3>
+    {% elif paragraph.kind == 'takeaway' %}<p class="aps-takeaway">{{ paragraph.text }}</p>
+    {% else %}<p>{{ paragraph.text }}</p>{% endif %}
+  {% endfor %}
+  {% if reference.background %}<h3>Pour appliquer ce repère</h3><p>{{ reference.background }}</p>{% endif %}
+{%- endmacro %}
+{% macro reference_image(reference) -%}
+  <figure><button type="button" class="aps-page-zoom" data-aps-image="{{ reference.diagram }}" aria-label="Agrandir le repère {{ reference.ref }}"><img src="{{ reference.diagram }}" alt="Fiche illustrée {{ reference.ref }} : {{ reference.title }}" loading="lazy"><span>Agrandir la fiche ↗</span></button><figcaption>Manuel APS · page {{ reference.page }} du fichier</figcaption></figure>
+{%- endmacro %}
+
+{% from '_native_lesson_intro.html' import lesson_intro %}
+{{ lesson_intro('Dossier ' ~ lesson.dossier ~ ' · Comprendre la règle', lesson.title, lesson.intro, lesson.objectives, lesson.pacing|default([]), lesson.pacing_note|default(''), lesson.illustrations.action if lesson.illustrations else none) }}
+
+{% include '_aps62_course_reading.html' %}
+
+{% if lesson.visual_board %}<section class="aps-visual-board" data-aps-lesson-page><span class="aps-label">Le module en un regard</span><h2>{{ lesson.visual_board.title }}</h2><div class="aps-board-grid">{% for step in lesson.visual_board.steps %}<article><span class="aps-board-number">{{ '%02d'|format(loop.index) }}</span><h3>{{ step.label }}</h3><p>{{ step.text }}</p></article>{% endfor %}</div></section>{% endif %}
+
+{% for reference in lesson.lessons %}
+<section class="aps-manual-lesson" data-aps-lesson-page>
+  <header><span class="aps-label">{{ 'Rappel utile' if reference.review_reference else 'Le cours illustré' }} · Repère {{ reference.ref }}</span><h2>{{ reference.title }}</h2></header>
+  {% if reference.review_reference %}
+    {% for paragraph in reference.paragraphs if paragraph.kind == 'takeaway' %}<p class="aps-takeaway">{{ paragraph.text }}</p>{% endfor %}
+    <details class="aps-transcript"><summary>Revoir l’explication et la fiche illustrée</summary><div class="aps-manual-layout"><div>{{ reference_text(reference) }}</div>{{ reference_image(reference) }}</div></details>
+  {% else %}
+    <div class="aps-manual-layout"><div>{{ reference_text(reference) }}</div>{{ reference_image(reference) }}</div>
+  {% endif %}
+</section>
+{% endfor %}
+
+{% if lesson.depth_teaching %}
+<section class="aps-editorial" data-aps-lesson-page>
+  <span class="aps-label">Approfondir le raisonnement</span><h2>{{ lesson.depth_teaching.title }}</h2>
+  {% for paragraph in lesson.depth_teaching.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}
+  <p class="aps-takeaway">Dans le dossier interactif, vous croiserez plusieurs documents, sélectionnerez les réponses adaptées et réexaminerez votre décision lorsque les faits changent. Chaque choix est accompagné d’une explication.</p>
+</section>
+{% endif %}
+
+{% if lesson.deepening %}
+<section class="aps-deepening" data-aps-lesson-group>
+  <span class="aps-label">Appliquer la règle avec discernement</span>
+  {% for part in lesson.deepening %}<div data-aps-lesson-page>
+    <h2>{{ part.title }}</h2>
+    {% if lesson.illustrations and loop.first %}{{ scene(lesson.illustrations.reason) }}{% elif lesson.illustrations and loop.last %}{{ scene(lesson.illustrations.flow) }}{% endif %}
+    {% for paragraph in part.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}
+  </div>{% endfor %}
+</section>
+{% endif %}
+
+{% if lesson.uniform_diagram %}<section class="aps-editorial" data-aps-lesson-page><h2>{{ lesson.uniform_diagram.title }}</h2><p>{{ lesson.uniform_diagram.scope }}</p><img src="{{ lesson.uniform_diagram.src }}" alt="{{ lesson.uniform_diagram.alt }}" style="max-width:100%;height:auto"><p class="aps-small">{{ lesson.uniform_diagram.caption }}</p><ul>{% for point in lesson.uniform_diagram.points %}<li><strong>{{ point.label }} — {{ point.position }} :</strong> {{ point.rule }}</li>{% endfor %}</ul><a href="{{ lesson.uniform_diagram.source_url }}" target="_blank" rel="noopener noreferrer">{{ lesson.uniform_diagram.source_title }}</a></section>{% endif %}

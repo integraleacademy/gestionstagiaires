@@ -1,0 +1,10 @@
+{% macro support_name(item) -%}
+{{ item.name.replace('Recyclage / Remise à niveau ', '') }}
+{%- endmacro %}
+
+{% macro usb_art(item) -%}
+<div class="sf-usb-art" aria-hidden="true" style="--sf-product:{{ item.color }}">
+  <span class="sf-file"><svg viewBox="0 0 36 40" fill="none"><path d="M6 2h16l8 8v27H6z" fill="currentColor" opacity=".12"/><path d="M6 2h16l8 8v27H6zM22 2v9h8" stroke="currentColor" stroke-width="1.6"/><path d="M12 27V16h5a3 3 0 0 1 0 6h-5" stroke="currentColor" stroke-width="2"/></svg></span>
+  <span class="sf-stick"><span class="sf-stick-plug"><i></i><i></i></span><span class="sf-stick-body"><span class="sf-stick-hole"></span><span class="sf-stick-label">{{ support_name(item) }}<small>SUPPORT FORMATEUR</small></span></span></span>
+</div>
+{%- endmacro %}

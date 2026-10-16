@@ -1,0 +1,940 @@
+{
+  "id": "module-04",
+  "version": "20261007-aps62-v9",
+  "title": "Libertés et données personnelles",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-q-04-01",
+      "prompt": "Un collègue veut filmer les écrans de surveillance avec son téléphone personnel. Que faire ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Accepter la copie si le téléphone est verrouillé"
+        },
+        {
+          "id": "3",
+          "text": "Accepter la copie si elle est effacée après le service"
+        },
+        {
+          "id": "1",
+          "text": "Refuser cette copie et rappeler le circuit autorisé"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une copie personnelle échappe au dispositif de protection et à la maîtrise des destinataires.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-02",
+      "prompt": "Qui peut consulter les images du site ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Les salariés du site qui présentent leur badge professionnel"
+        },
+        {
+          "id": "3",
+          "text": "Les responsables de service qui en font la demande orale"
+        },
+        {
+          "id": "2",
+          "text": "Les personnes habilitées pour les besoins de leur fonction"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’accès technique doit correspondre à une autorisation et à un besoin professionnel.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-03",
+      "prompt": "Un visiteur demande les images le concernant. Quel relais proposer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Vérifier son identité puis lui montrer les images"
+        },
+        {
+          "id": "2",
+          "text": "Lui copier les images de son heure de passage"
+        },
+        {
+          "id": "3",
+          "text": "L’orienter vers le responsable ou le contact indiqué"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La demande doit suivre le circuit prévu, avec vérification et protection des tiers.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-04",
+      "prompt": "Quelle donnée inscrire dans un registre d’accès ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Les données disponibles sur la pièce présentée au poste"
+        },
+        {
+          "id": "3",
+          "text": "Les données permettant de recontacter son entourage"
+        },
+        {
+          "id": "2",
+          "text": "Les données utiles prévues par la procédure d’accès"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le recueil doit rester lié à la finalité et proportionné au besoin.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-05",
+      "prompt": "Une caméra peut-elle être orientée librement vers une zone de repos ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui, dès lors que la zone appartient à l’entreprise"
+        },
+        {
+          "id": "2",
+          "text": "Non, le cadrage doit respecter la vie privée et la finalité"
+        },
+        {
+          "id": "3",
+          "text": "Oui, dès lors que les salariés connaissent la caméra"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’existence d’une caméra n’autorise pas toute surveillance des personnes.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-06",
+      "prompt": "La capacité du disque détermine-t-elle seule la durée de conservation ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Non, la durée dépend de la finalité et des règles applicables"
+        },
+        {
+          "id": "1",
+          "text": "Oui, si le système efface les plus anciennes automatiquement"
+        },
+        {
+          "id": "3",
+          "text": "Oui, si l’accès aux enregistrements reste limité au responsable"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La conservation doit être justifiée ; une grande capacité ne crée pas un besoin.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-07",
+      "prompt": "Des images utiles à une procédure doivent être conservées. Comment agir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Copier les images sur un support personnel pour éviter leur perte"
+        },
+        {
+          "id": "3",
+          "text": "Utiliser le circuit d’extraction autorisé et tracer l’opération"
+        },
+        {
+          "id": "2",
+          "text": "Reporter toute demande jusqu’à l’effacement automatique prévu"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La conservation exceptionnelle doit être encadrée et documentée.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-08",
+      "prompt": "Le public doit-il être informé de la vidéoprotection ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui, mais seulement lorsqu’une personne demande une copie"
+        },
+        {
+          "id": "2",
+          "text": "Oui, par une information adaptée et accessible aux personnes"
+        },
+        {
+          "id": "3",
+          "text": "Oui, mais seulement pour les caméras filmant une entrée"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La transparence fait partie du dispositif ; l’agent oriente vers l’information disponible.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-09",
+      "prompt": "Une fiche d’incident contient un diagnostic médical supposé. Que corriger ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Inscrire le diagnostic probable pour guider le relais"
+        },
+        {
+          "id": "1",
+          "text": "Décrire les signes observés sans supposer de diagnostic"
+        },
+        {
+          "id": "3",
+          "text": "Copier l’avis d’un témoin sans en citer la source"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Les informations doivent être pertinentes et factuelles, particulièrement quand elles sont sensibles.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-10",
+      "prompt": "Un fichier de visiteurs est ouvert sur un écran visible du public. Que faire ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Protéger l’affichage et verrouiller le poste quand il est quitté"
+        },
+        {
+          "id": "1",
+          "text": "Réduire la luminosité tout en gardant le registre ouvert"
+        },
+        {
+          "id": "3",
+          "text": "Masquer les noms en laissant visibles les autres coordonnées"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La confidentialité s’applique aussi à ce qu’un passant peut lire.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-11",
+      "prompt": "Un collègue réclame votre mot de passe pour aller plus vite. Que répondre ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Partager l’accès puis changer le mot de passe en fin de service"
+        },
+        {
+          "id": "1",
+          "text": "Conserver des accès individuels sans partager son mot de passe"
+        },
+        {
+          "id": "3",
+          "text": "Autoriser l’accès en restant à proximité pendant son utilisation"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Les comptes individuels permettent de limiter les accès et de tracer les opérations.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-12",
+      "prompt": "Quel objet relève d’une donnée personnelle ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Le nom d’un visiteur associé à son horaire d’entrée"
+        },
+        {
+          "id": "1",
+          "text": "La capacité maximale d’une salle de réunion"
+        },
+        {
+          "id": "3",
+          "text": "La référence d’une porte sur le plan du bâtiment"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une information reliée à une personne identifiable relève de la protection des données.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-13",
+      "prompt": "La main courante est-elle un espace de commentaires privés ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui, si l’accès au registre est réservé à l’équipe sécurité"
+        },
+        {
+          "id": "3",
+          "text": "Non, elle répond à une finalité professionnelle définie"
+        },
+        {
+          "id": "2",
+          "text": "Oui, si ces commentaires ne sont pas repris dans le rapport final"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’accès restreint ne justifie ni propos inutiles ni informations excessives.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-14",
+      "prompt": "Le client demande la liste des visiteurs pour une publicité. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Transmettre la liste dès lors que le client possède le site"
+        },
+        {
+          "id": "2",
+          "text": "Vérifier le cadre de cette demande auprès du responsable"
+        },
+        {
+          "id": "3",
+          "text": "Transmettre les noms en retirant seulement les heures d’accès"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une réutilisation pour une autre finalité ne se décide pas au poste de sécurité.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-15",
+      "prompt": "Une clé USB inconnue est trouvée près du poste. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Signaler la clé trouvée sans la brancher sur le poste"
+        },
+        {
+          "id": "2",
+          "text": "L’ouvrir pour identifier son propriétaire"
+        },
+        {
+          "id": "3",
+          "text": "La tester sur le poste vidéo plutôt qu’à l’accueil"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Un support inconnu peut compromettre les données et les équipements.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-16",
+      "prompt": "Un e-mail demande un export urgent sans vérification d’identité. Que faire ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Répondre au courriel pour obtenir une confirmation écrite"
+        },
+        {
+          "id": "1",
+          "text": "Vérifier la demande par un circuit de contact déjà connu"
+        },
+        {
+          "id": "3",
+          "text": "Envoyer un extrait du fichier avant de transmettre l’ensemble"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’urgence invoquée ne remplace pas l’authentification du destinataire et de son besoin.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-17",
+      "prompt": "Une erreur de nom apparaît dans un rapport validé. Quelle correction ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Procéder à une rectification identifiable et traçable"
+        },
+        {
+          "id": "2",
+          "text": "Remplacer le nom dans la version validée sans garder de trace"
+        },
+        {
+          "id": "3",
+          "text": "Effacer le rapport initial et le recréer avec le même horaire"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La correction doit permettre de comprendre ce qui a changé et pourquoi.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-18",
+      "prompt": "Un visiteur refuse une fouille de bagage consentie. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Procéder à la fouille si un second agent assiste au contrôle"
+        },
+        {
+          "id": "2",
+          "text": "Procéder à la fouille après avoir rappelé le règlement du site"
+        },
+        {
+          "id": "3",
+          "text": "Ne pas imposer la fouille et appliquer la procédure d’accès licite"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le consentement est une condition de la fouille de bagage ; le refus ne prouve pas un délit.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-19",
+      "prompt": "Une inspection visuelle et une fouille de sac sont-elles identiques ?",
+      "options": [
+        {
+          "id": "3",
+          "text": "Non, ce sont des actes distincts avec leurs conditions propres"
+        },
+        {
+          "id": "1",
+          "text": "Oui, dès lors que le propriétaire du bagage reste présent"
+        },
+        {
+          "id": "2",
+          "text": "Oui, dès lors qu’aucun objet n’est retiré du bagage contrôlé"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Il faut distinguer observation du contenu présenté et recherche impliquant une fouille.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-20",
+      "prompt": "Une palpation de sécurité est-elle possible sur simple décision personnelle ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Non, un cadre légal et ses conditions doivent être réunis"
+        },
+        {
+          "id": "1",
+          "text": "Oui, si l’agent motive ensuite sa décision dans le registre"
+        },
+        {
+          "id": "3",
+          "text": "Oui, si le contrôle semble nécessaire pour réduire l’attente"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La palpation ne se déduit ni du badge ni d’une préférence personnelle.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-21",
+      "prompt": "Dans le cadre légal de palpation, quel consentement est requis ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’absence de protestation au début du contrôle"
+        },
+        {
+          "id": "2",
+          "text": "L’accord de l’organisateur pour les visiteurs"
+        },
+        {
+          "id": "3",
+          "text": "Le consentement exprès de la personne concernée"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La personne doit exprimer son consentement ; l’absence de protestation ne suffit pas à le présumer.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-22",
+      "prompt": "La palpation de sécurité doit être pratiquée par qui ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Tout agent disponible dès lors que la personne donne son accord"
+        },
+        {
+          "id": "3",
+          "text": "Tout membre de l’accueil désigné par le responsable de site"
+        },
+        {
+          "id": "2",
+          "text": "Une personne du même sexe dans les conditions légales requises"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Les conditions se cumulent ; la présence d’un agent ne dispense pas de les vérifier.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-23",
+      "prompt": "Un journaliste demande une copie d’un incident filmé. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Montrer les images sans laisser le journaliste les emporter"
+        },
+        {
+          "id": "2",
+          "text": "Décrire les personnes filmées sans transmettre la séquence"
+        },
+        {
+          "id": "3",
+          "text": "Orienter la demande vers le service habilité à communiquer"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’agent ne décide pas d’une diffusion publique des images du site.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-24",
+      "prompt": "Une capture d’écran sans nom peut-elle encore identifier quelqu’un ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui, un visage ou le contexte peut permettre l’identification"
+        },
+        {
+          "id": "2",
+          "text": "Non, si aucun nom n’est ajouté dans le fichier de l’image"
+        },
+        {
+          "id": "3",
+          "text": "Non, si la capture reste dans un échange entre collègues"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’identification peut être indirecte et ne dépend pas uniquement d’un nom écrit.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-25",
+      "prompt": "Pourquoi limiter les destinataires d’un rapport ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Réduire le nombre de lecteurs pour éviter toute demande de correction"
+        },
+        {
+          "id": "3",
+          "text": "Réserver le rapport aux personnes présentes au moment des faits"
+        },
+        {
+          "id": "2",
+          "text": "Réserver les informations aux besoins professionnels autorisés"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une transmission ciblée protège la confidentialité tout en permettant le suivi utile.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-26",
+      "prompt": "Une suspicion de fuite de données doit être portée à qui ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Au responsable prévu par la procédure, sans attendre"
+        },
+        {
+          "id": "1",
+          "text": "Au destinataire du fichier, avant toute information du responsable"
+        },
+        {
+          "id": "3",
+          "text": "À l’ensemble des salariés, afin de rechercher rapidement l’origine"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le signalement permet au responsable d’évaluer l’incident et les actions nécessaires.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-27",
+      "prompt": "Qui décide seul, au poste, de notifier officiellement une violation à la CNIL ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’agent notifie directement dès qu’une erreur de fichier est repérée"
+        },
+        {
+          "id": "2",
+          "text": "L’agent alerte le responsable sans improviser la notification"
+        },
+        {
+          "id": "3",
+          "text": "L’agent attend une plainte avant d’en informer son responsable"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La notification relève du circuit de responsabilité prévu, après évaluation des faits.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-28",
+      "prompt": "Un document nominatif est abandonné sur le comptoir. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Protéger le document et suivre le circuit prévu pour le traiter"
+        },
+        {
+          "id": "2",
+          "text": "Photographier le document pour rechercher son propriétaire en ligne"
+        },
+        {
+          "id": "3",
+          "text": "Laisser le document visible afin que son propriétaire le retrouve"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La protection commence par empêcher une consultation ou diffusion non autorisée.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-29",
+      "prompt": "Pourquoi utiliser des personnages fictifs dans les exercices ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Éviter d’avoir à respecter les consignes pendant l’exercice"
+        },
+        {
+          "id": "2",
+          "text": "Apprendre sans exposer les données de personnes réelles"
+        },
+        {
+          "id": "3",
+          "text": "Remplacer la vérification des faits par une histoire vraisemblable"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Un cas pédagogique peut rester concret tout en limitant les informations personnelles.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-04-30",
+      "prompt": "Quelle question poser avant une transmission de données ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le destinataire travaille-t-il régulièrement dans le bâtiment ?"
+        },
+        {
+          "id": "2",
+          "text": "Le destinataire promet-il de supprimer le fichier après lecture ?"
+        },
+        {
+          "id": "3",
+          "text": "Le destinataire est-il habilité et l’information nécessaire ?"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La pertinence et l’autorisation guident le partage, pas la curiosité ou l’opinion.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ]
+    }
+  ],
+  "reviewed_on": "2026-10-04",
+  "assessment_revision": "20261007-aps62-v9"
+}

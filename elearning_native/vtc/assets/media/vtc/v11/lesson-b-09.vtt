@@ -1,0 +1,128 @@
+WEBVTT
+
+00:00:00.040 --> 00:00:04.518
+La marge sur coûts variables est le chiffre
+d’affaires diminué des charges variables.
+
+00:00:04.518 --> 00:00:08.051
+Son taux est cette marge divisée
+par le chiffre d’affaires.
+
+00:00:08.051 --> 00:00:11.597
+Le seuil de rentabilité correspond aux
+charges fixes divisées par ce taux :
+
+00:00:11.597 --> 00:00:15.220
+c’est le niveau de ventes qui couvre
+les charges retenues dans le modèle.
+
+00:00:15.220 --> 00:00:17.860
+Le point mort exprime le moment
+où ce seuil est atteint,
+
+00:00:17.860 --> 00:00:20.832
+sous une hypothèse
+de répartition des ventes.
+
+00:00:20.832 --> 00:00:23.383
+La méthode ne garantit
+pas un revenu suffisant :
+
+00:00:23.383 --> 00:00:25.067
+il faut vérifier quelles charges,
+
+00:00:25.067 --> 00:00:29.709
+rémunérations et cotisations ont été
+incluses. Une moyenne trop optimiste
+
+00:00:29.709 --> 00:00:34.100
+de courses ou l’oubli des kilomètres
+à vide peut rendre le résultat trompeur.
+
+00:00:34.240 --> 00:00:38.552
+Pour bien comprendre, allons un peu
+plus loin. Le seuil de rentabilité
+
+00:00:38.552 --> 00:00:42.570
+se calcule à partir des charges fixes
+et de la marge sur coûts variables.
+
+00:00:42.570 --> 00:00:45.682
+Avec un prix unitaire et un coût
+variable unitaire constants,
+
+00:00:45.682 --> 00:00:48.807
+la marge unitaire vaut le prix
+moins le coût variable.
+
+00:00:48.807 --> 00:00:51.958
+Le nombre minimal de prestations
+doit couvrir les charges fixes ;
+
+00:00:51.958 --> 00:00:56.014
+lorsqu’il n’est pas entier,
+on arrondit au nombre supérieur.
+
+00:00:56.014 --> 00:01:00.550
+Un résultat arrondi vers le bas laisserait
+une partie des charges non couverte.
+
+00:01:00.690 --> 00:01:05.015
+Prenons un exemple concret. Avec
+neuf cents euros de charges fixes,
+
+00:01:05.015 --> 00:01:08.637
+un prix de soixante euros et un coût
+variable de vingt-quatre euros par course,
+
+00:01:08.637 --> 00:01:11.329
+la marge unitaire est de trente-six euros.
+
+00:01:11.329 --> 00:01:16.163
+Soixante moins vingt-quatre donnent
+trente-six. Neuf cents divisé par trente-six
+
+00:01:16.163 --> 00:01:20.500
+donnent vingt-cinq courses pour couvrir
+les charges fixes dans ce modèle simplifié.
+
+00:01:20.500 --> 00:01:25.347
+Ce modèle suppose un niveau de prix,
+un coût variable et une capacité cohérents.
+
+00:01:25.347 --> 00:01:28.791
+Il ne suffit pas de calculer un nombre
+de courses si le planning ne permet pas
+
+00:01:28.791 --> 00:01:33.370
+de les réaliser. Il faut aussi
+analyser les approches, l’attente,
+
+00:01:33.370 --> 00:01:37.719
+les horaires et la demande. Une marge
+nulle ou négative ne permet pas de couvrir
+
+00:01:37.719 --> 00:01:41.750
+davantage de charges fixes
+en multipliant les mêmes prestations.
+
+00:01:41.890 --> 00:01:46.674
+Pour retenir la méthode, procédez
+en trois étapes. La contribution :
+
+00:01:46.674 --> 00:01:52.503
+Recette moins coûts variables. Les charges
+fixes : Montant à couvrir sur la période.
+
+00:01:52.503 --> 00:01:56.751
+Le seuil : Diviser les charges
+fixes par la contribution unitaire.
+
+00:01:56.751 --> 00:02:02.006
+Le piège à éviter : Le seuil dépend des
+charges retenues. Oublier la rémunération,
+
+00:02:02.006 --> 00:02:05.800
+les cotisations ou des kilomètres
+à vide fausse la conclusion.
+

@@ -1,0 +1,34 @@
+/* A3P shares the APS player, book, catalogue and practice styles.
+   Only content-specific layouts remain here; there is no separate theme. */
+.curriculum-tabs{flex-wrap:wrap}
+.curriculum-tabs a{flex:0 1 auto;min-width:110px;word-break:normal;overflow-wrap:normal}
+.a3p-catalog{margin:24px 0 36px}
+.a3p-syllabus{margin-top:16px;font-size:12px;line-height:1.6}
+.a3p-syllabus summary{cursor:pointer;font-weight:750;color:#2860e8}
+.a3p-syllabus ol{padding:0;list-style:none;max-height:380px;overflow:auto}
+.a3p-syllabus li{border-top:1px solid #dfe7f3}
+.a3p-syllabus a{display:block;padding:9px 0;color:#526583;text-decoration:none}
+.a3p-syllabus b{margin-right:7px}
+.a3p-resource-links{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;font-size:12px}
+.a3p-resource-links a{color:#2860e8;font-weight:750}
+.a3p-reg-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.a3p-catalog a:focus-visible,.a3p-catalog summary:focus-visible{outline:3px solid #2860e8;outline-offset:3px}
+.a3p-grouped-quiz select{display:block!important;width:100%!important;max-width:100%;min-height:48px;height:auto;padding:10px;font:inherit;font-size:14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#172b4d;white-space:normal}
+.a3p-grouped-quiz>p{margin:18px 0 10px}
+.a3p-reasoning{margin:25px 0}
+.a3p-reasoning details{border:1px solid var(--aps-line);border-radius:10px;padding:14px 18px;margin:12px 0}
+.a3p-reasoning summary{cursor:pointer;font-weight:750;color:var(--aps-blue)}
+.a3p-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;list-style:none;padding:0;margin:0 0 24px}
+.a3p-flow li{border:1px solid var(--aps-line);border-radius:10px;padding:18px;background:#f7faff;font-size:14px;line-height:1.6}
+.a3p-flow b{display:block;color:#8aa7e8;font-size:28px}
+.a3p-decision [hidden]{display:none!important}
+.a3p-decision-step{border:1px solid var(--aps-line);border-radius:14px;padding:24px;margin:24px 0;background:#f5f8ff}
+.a3p-decision-options{display:grid;gap:12px}
+.a3p-decision-options button{background:#fff;border:1px solid #cedaf0;border-radius:10px;padding:18px;text-align:left;color:var(--aps-navy);font:inherit;font-size:15px;cursor:pointer;line-height:1.5}
+.a3p-decision-options button:hover{background:#edf3ff}
+.a3p-decision-options .is-correct{border-color:#448568;background:#e7f7ef}
+.a3p-decision-options .is-incorrect{border-color:#d86555;background:#fff4f2}
+.a3p-decision-feedback:empty{display:none}
+.a3p-decision-feedback,.a3p-decision-done{margin-top:20px;font-size:14px;line-height:1.7}
+@media(max-width:800px){.a3p-reg-grid{grid-template-columns:1fr}.a3p-flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.a3p-grouped-quiz select{font-size:13px}.a3p-flow{grid-template-columns:1fr}}

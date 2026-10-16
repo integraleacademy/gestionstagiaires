@@ -1,0 +1,3157 @@
+{
+  "id": "vtc-final",
+  "version": "20261010-vtc-v6-pedagogie",
+  "training_label": "VTC",
+  "title": "VTC · Examen blanc final : 100 situations inédites",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "v6-final-e-14",
+      "prompt": "Le passager vous dit : “I meant the west entrance. Sorry, I gave you the wrong side.” Quelle réponse vérifie utilement la correction ?",
+      "options": [
+        {
+          "id": "choice-ea6a80ccc8c1",
+          "text": "“The east entrance, understood. I will keep the original side.”"
+        },
+        {
+          "id": "choice-b6fa4df9ee8b",
+          "text": "“The west entrance, understood. Let me confirm a safe meeting point there.”"
+        },
+        {
+          "id": "choice-76e6b24082c3",
+          "text": "“You have cancelled the journey, so I will leave.”"
+        }
+      ],
+      "answer": "choice-b6fa4df9ee8b",
+      "explanation": "Le client corrige le côté du bâtiment et s’excuse. Reprendre west vérifie la compréhension ; une correction de lieu ne signifie pas une annulation de la mission.",
+      "module": "E",
+      "lesson_refs": [
+        "E.11"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-f-02",
+      "prompt": "Votre page décrit une voiture de grande capacité, mais plusieurs clients ne savent pas si leurs bagages peuvent y entrer. Quelle amélioration transforme la caractéristique en information utile ?",
+      "options": [
+        {
+          "id": "choice-62c4ec73c707",
+          "text": "Déduire la capacité de bagages du seul nombre maximal de passagers."
+        },
+        {
+          "id": "choice-efdf60c7f8b9",
+          "text": "Indiquer les combinaisons possibles de passagers et de bagages."
+        },
+        {
+          "id": "choice-2bdbb8966e85",
+          "text": "Garantir un grand bagage par passager sans vérifier leur encombrement."
+        }
+      ],
+      "answer": "choice-efdf60c7f8b9",
+      "explanation": "Le nombre de sièges ne suffit pas à déduire l’espace disponible pour les bagages. Des configurations réalistes permettent de vérifier le besoin du client ; les dimensions inhabituelles restent à confirmer.",
+      "module": "F",
+      "lesson_refs": [
+        "F.02"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Construire une offre, vérifier son marché et son modèle économique",
+          "url": "https://bpifrance-creation.fr/moments-de-vie/comment-faire-business-plan-efficace"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-d-06",
+      "prompt": "L’offre précise : « L’attente est incluse uniquement si elle résulte d’un retard du vol indiqué lors de la réservation. » Quelle situation correspond à cette condition ?",
+      "options": [
+        {
+          "id": "choice-f6f2bbc483d3",
+          "text": "Le client décide de déjeuner après l’atterrissage de son vol à l’heure."
+        },
+        {
+          "id": "choice-92c06e5d3681",
+          "text": "Le client remplace son vol par un autre sans modifier la réservation."
+        },
+        {
+          "id": "choice-e13e52f3b462",
+          "text": "Le vol renseigné sur la réservation arrive en retard."
+        }
+      ],
+      "answer": "choice-e13e52f3b462",
+      "explanation": "« Uniquement si » limite l’inclusion à la cause et au vol indiqués. Les deux autres situations ne satisfont pas à elles seules cette condition précise.",
+      "module": "D",
+      "lesson_refs": [
+        "D.06"
+      ],
+      "sources": [
+        {
+          "title": "Référentiel de l’examen VTC — compréhension du français ; textes des exercices originaux",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-09",
+      "prompt": "Un passager malvoyant voyage avec un accompagnant. Il vous répond directement et indique comment présenter la poignée de la porte. À qui adressez-vous les explications du trajet ?",
+      "options": [
+        {
+          "id": "choice-4f2997b6d046",
+          "text": "Exclusivement à l’accompagnant, qui doit prendre toutes les décisions à sa place."
+        },
+        {
+          "id": "choice-b4750113b1fe",
+          "text": "Au passager seulement après que l’accompagnant a validé chacune de ses réponses."
+        },
+        {
+          "id": "choice-af0a0e5902c1",
+          "text": "Au passager lui-même, en tenant compte de ses indications et de l’aide qu’il souhaite."
+        }
+      ],
+      "answer": "choice-af0a0e5902c1",
+      "explanation": "La présence d’un accompagnant ne retire pas l’autonomie du passager. S’adresser directement à lui et suivre l’aide souhaitée permet une relation claire sans présumer d’une incapacité à décider.",
+      "module": "A",
+      "lesson_refs": [
+        "A.09"
+      ],
+      "sources": [
+        {
+          "title": "Service Public — Discrimination : critères et traitement",
+          "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F19448"
+        },
+        {
+          "title": "Référentiel de l’examen VTC — compétences professionnelles",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-02",
+      "prompt": "Une société facture le transport, une application transmet la demande et un salarié conduit. Qui doit organiser la conformité du véhicule utilisé par la société ?",
+      "options": [
+        {
+          "id": "choice-b88fb908dac1",
+          "text": "L’application seule, au titre de son rôle de mise en relation."
+        },
+        {
+          "id": "choice-76def43d06be",
+          "text": "L’entreprise exploitante, avec les contrôles propres au conducteur."
+        },
+        {
+          "id": "choice-e4200b05f635",
+          "text": "Le salarié seul, dès que l’entreprise lui remet les clés du véhicule."
+        }
+      ],
+      "answer": "choice-76def43d06be",
+      "explanation": "Les rôles sont distincts : mise en relation, exploitation et conduite. La transmission d’une demande par une application ne transfère pas à celle-ci toutes les obligations de l’entreprise qui réalise le transport.",
+      "module": "A",
+      "lesson_refs": [
+        "A.02"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-d-02",
+      "prompt": "Message : « Camille coordonne le groupe. Nora reçoit les factures. À l’arrivée, le chauffeur téléphone à Sami, qui ouvre la barrière. » Qui faut-il appeler pour entrer sur le site ?",
+      "options": [
+        {
+          "id": "choice-920a20146fd8",
+          "text": "Camille."
+        },
+        {
+          "id": "choice-e233cc582056",
+          "text": "Sami."
+        },
+        {
+          "id": "choice-79b723749182",
+          "text": "Nora."
+        }
+      ],
+      "answer": "choice-e233cc582056",
+      "explanation": "Le rôle de Sami est explicitement lié à l’ouverture de la barrière. La coordination du groupe et la réception des factures ne font pas de leurs responsables les contacts d’accès.",
+      "module": "D",
+      "lesson_refs": [
+        "D.02"
+      ],
+      "sources": [
+        {
+          "title": "Référentiel de l’examen VTC — compréhension du français ; textes des exercices originaux",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-14",
+      "prompt": "Deux réservations demandent le même trajet. Vous refusez la première parce qu’elle dépasse le nombre de places utilisables, et acceptez la seconde dont le groupe tient dans le véhicule. Quelle justification devez-vous pouvoir établir ?",
+      "options": [
+        {
+          "id": "choice-0f39a81f9a86",
+          "text": "Une préférence générale pour les clients qui ressemblent à votre clientèle habituelle."
+        },
+        {
+          "id": "choice-229923d8fc74",
+          "text": "Une limite réelle de capacité, appliquée de la même façon à tous les groupes comparables."
+        },
+        {
+          "id": "choice-b41536762531",
+          "text": "L’absence d’obligation de motiver toute différence de traitement entre deux demandes."
+        }
+      ],
+      "answer": "choice-229923d8fc74",
+      "explanation": "La capacité utilisable est un critère objectif de faisabilité. Pour qu’il explique réellement la décision, il doit correspondre au véhicule et être appliqué de façon cohérente, sans masquer un critère discriminatoire.",
+      "module": "A",
+      "lesson_refs": [
+        "A.06"
+      ],
+      "sources": [
+        {
+          "title": "Service Public — Discrimination : critères et traitement",
+          "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F19448"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-13",
+      "prompt": "Après une réclamation, la plateforme répond qu’elle ne conduit pas et le conducteur qu’il ne facture pas. Quel travail permet d’éviter que la demande reste sans traitement ?",
+      "options": [
+        {
+          "id": "choice-ff490452b592",
+          "text": "Identifier qui a contracté, facturé et exécuté la prestation, puis orienter la réclamation avec les pièces correspondantes."
+        },
+        {
+          "id": "choice-b544e0cd1a37",
+          "text": "Attribuer tout le traitement au conducteur, sans vérifier les documents du vendeur de la prestation."
+        },
+        {
+          "id": "choice-25579fba5f71",
+          "text": "Clore la réclamation tant que le client n’a pas lui-même qualifié juridiquement chaque intervenant."
+        }
+      ],
+      "answer": "choice-ff490452b592",
+      "explanation": "Les documents et les rôles réels permettent d’identifier les responsabilités et le bon interlocuteur. Une attribution fondée sur la seule présence du conducteur ou une analyse juridique exigée du client ne remplace pas ce travail.",
+      "module": "A",
+      "lesson_refs": [
+        "A.02"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        },
+        {
+          "title": "Service Public — Indemnisation d’un préjudice causé par une autre personne",
+          "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F1422"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-12",
+      "prompt": "Un client réclame la réparation financière d’un dommage causé à son bagage. Il ne demande pas qu’une peine soit prononcée contre le conducteur. Quelle dimension vise d’abord sa demande ?",
+      "options": [
+        {
+          "id": "choice-80de83bcfeae",
+          "text": "La fixation d’une peine pénale au seul montant du bagage."
+        },
+        {
+          "id": "choice-20e01035664f",
+          "text": "Le renouvellement administratif de la carte professionnelle."
+        },
+        {
+          "id": "choice-eba8c1339b03",
+          "text": "La responsabilité civile et l’indemnisation du dommage établi."
+        }
+      ],
+      "answer": "choice-eba8c1339b03",
+      "explanation": "Une demande d’indemnisation relève de la réparation d’un dommage. Elle se distingue d’une sanction pénale ou d’une mesure administrative, même si plusieurs conséquences peuvent coexister selon les faits.",
+      "module": "A",
+      "lesson_refs": [
+        "A.12"
+      ],
+      "sources": [
+        {
+          "title": "Service Public — Indemnisation d’un préjudice causé par une autre personne",
+          "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F1422"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-g-03",
+      "prompt": "Le véhicule envisagé possède trois portes selon ses caractéristiques. Le vendeur met en avant son faible kilométrage, sans invoquer aucun régime particulier. Ce seul faible kilométrage permet-il d’écarter le critère de portes applicable au VTC ?",
+      "options": [
+        {
+          "id": "choice-fb7b84c23d40",
+          "text": "Oui, dès qu’un véhicule a peu roulé, les caractéristiques d’accès ne sont plus examinées."
+        },
+        {
+          "id": "choice-faa49e054b8a",
+          "text": "Oui, si le nombre de places assises est suffisant, quel que soit l’accès à ces places."
+        },
+        {
+          "id": "choice-0552f7d3948d",
+          "text": "Non ; les critères doivent être examinés séparément et le kilométrage ne remplace pas l’exigence de portes."
+        }
+      ],
+      "answer": "choice-0552f7d3948d",
+      "explanation": "Les critères ne se compensent pas librement. Pour une voiture VTC, le nombre de portes doit notamment être vérifié ; un bon état apparent ou un faible kilométrage ne vaut pas exception.",
+      "module": "G",
+      "lesson_refs": [
+        "G.03"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Conditions d’exploitation et véhicule VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-06",
+      "prompt": "Une entreprise assujettie applique, dans cet exercice, 10 % de TVA à une prestation de 121 € TTC. Un salarié propose de calculer la TVA en prenant 10 % de 121 €. Quelle décomposition est correcte ?",
+      "options": [
+        {
+          "id": "choice-083d705bb362",
+          "text": "108,90 € HT et 12,10 € de TVA."
+        },
+        {
+          "id": "choice-0da955e039a2",
+          "text": "121 € HT et 12,10 € de TVA."
+        },
+        {
+          "id": "choice-3803ba86ba99",
+          "text": "110 € HT et 11 € de TVA."
+        }
+      ],
+      "answer": "choice-3803ba86ba99",
+      "explanation": "Le TTC vaut HT × 1,10. Le HT est donc 121 ÷ 1,10 = 110 €, puis la TVA 121 − 110 = 11 €. Le taux porte sur le HT, pas sur le TTC.",
+      "module": "B",
+      "lesson_refs": [
+        "B.06"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Comparer HT, TTC et prévisions financières",
+          "url": "https://bpifrance-creation.fr/encyclopedie/previsions-financieres-business-plan/previsions-financieres/seuil-rentabilite"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-13",
+      "prompt": "Une facture client de 460 € a déjà été comptabilisée mais reste impayée à la clôture. Comment distinguez-vous cette situation d’une somme déjà encaissée ?",
+      "options": [
+        {
+          "id": "choice-5af4031e9004",
+          "text": "La créance figure parmi les actifs, mais les 460 € ne sont pas encore disponibles en banque."
+        },
+        {
+          "id": "choice-0df0fc4ef6f9",
+          "text": "La créance et la banque doivent chacune augmenter de 460 € avant tout paiement."
+        },
+        {
+          "id": "choice-942fd2b08d27",
+          "text": "L’absence de paiement oblige à considérer que la prestation n’a jamais été réalisée."
+        }
+      ],
+      "answer": "choice-5af4031e9004",
+      "explanation": "Une vente et son règlement peuvent intervenir à des dates différentes. La créance représente ce qui est dû ; la trésorerie n’augmente qu’avec l’encaissement réel.",
+      "module": "B",
+      "lesson_refs": [
+        "B.03"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Bilan, actif et passif",
+          "url": "https://bpifrance-creation.fr/bilan"
+        },
+        {
+          "title": "Bpifrance Création — Plan de trésorerie",
+          "url": "https://bpifrance-creation.fr/plan-tresorerie"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-e-12",
+      "prompt": "Le client demande : “Is the old market within walking distance, or do I need another ride?” Que souhaite-t-il savoir ?",
+      "options": [
+        {
+          "id": "choice-bb96cc97da86",
+          "text": "À quelle heure le marché reçoit ses livraisons."
+        },
+        {
+          "id": "choice-c8f57bdf6d9d",
+          "text": "S’il peut payer la course au marché plutôt que dans le véhicule."
+        },
+        {
+          "id": "choice-2ac5fcea84d4",
+          "text": "S’il peut rejoindre l’ancien marché à pied ou s’il doit prévoir un autre trajet."
+        }
+      ],
+      "answer": "choice-2ac5fcea84d4",
+      "explanation": "Within walking distance concerne une distance praticable à pied. Another ride désigne un transport supplémentaire ; la question ne porte ni sur le paiement ni sur les livraisons.",
+      "module": "E",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-08",
+      "prompt": "Lundi, la banque dispose de 700 €. Mardi, 900 € doivent sortir ; jeudi, un client doit payer 1 200 €. Aucun découvert n’est autorisé. Quel problème le total de fin de semaine masque-t-il ?",
+      "options": [
+        {
+          "id": "choice-f027ab7c7392",
+          "text": "Une insuffisance de 900 € jeudi, puisque la dépense doit être comptée une seconde fois."
+        },
+        {
+          "id": "choice-e6523d126ecf",
+          "text": "Un besoin de 200 € mardi, avant l’encaissement du jeudi."
+        },
+        {
+          "id": "choice-d58a042a47fa",
+          "text": "Aucun besoin, car le solde final théorique sera de 1 000 €."
+        }
+      ],
+      "answer": "choice-e6523d126ecf",
+      "explanation": "Mardi, 700 − 900 = −200 € : le paiement n’est pas financé au jour prévu. Le solde final de 1 000 € après l’encaissement n’élimine pas ce décalage.",
+      "module": "B",
+      "lesson_refs": [
+        "B.08"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Plan de trésorerie",
+          "url": "https://bpifrance-creation.fr/plan-tresorerie"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-d-05",
+      "prompt": "Consigne : « Bien que la route principale soit rouverte, le rendez-vous reste à l’entrée nord. » Quelle relation exprime « bien que » ?",
+      "options": [
+        {
+          "id": "choice-cd0148f8f00c",
+          "text": "Une cause : le rendez-vous est maintenu grâce à la réouverture."
+        },
+        {
+          "id": "choice-a231a1abd470",
+          "text": "Une opposition entre la réouverture et le rendez-vous maintenu."
+        },
+        {
+          "id": "choice-2f8da528b03c",
+          "text": "Un but : la route a été rouverte pour maintenir le rendez-vous."
+        }
+      ],
+      "answer": "choice-a231a1abd470",
+      "explanation": "La concession signale qu’une information pourrait faire attendre un changement, mais que celui-ci n’a pas lieu. Le rendez-vous reste donc à l’entrée nord.",
+      "module": "D",
+      "lesson_refs": [
+        "D.05"
+      ],
+      "sources": [
+        {
+          "title": "Référentiel de l’examen VTC — compréhension du français ; textes des exercices originaux",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-e-08",
+      "prompt": "Le devis en anglais dit : “This price covers the outward journey only. The return journey must be booked separately.” Que faut-il expliquer au client ?",
+      "options": [
+        {
+          "id": "choice-819f6c7a9b9f",
+          "text": "Le prix couvre l’aller-retour si le retour a lieu le même jour."
+        },
+        {
+          "id": "choice-6d2df148df39",
+          "text": "Le prix couvre seulement l’aller ; le retour demande une réservation distincte."
+        },
+        {
+          "id": "choice-8653c00f21e2",
+          "text": "Le retour est inclus mais l’aller doit être réservé séparément."
+        }
+      ],
+      "answer": "choice-6d2df148df39",
+      "explanation": "Outward journey désigne l’aller et return journey le retour. Only et separately limitent clairement l’offre ; aucune condition de même jour n’est ajoutée.",
+      "module": "E",
+      "lesson_refs": [
+        "E.08"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-g-08",
+      "prompt": "Vous venez de terminer une course et comptiez rejoindre une réservation suivante. Cette dernière est annulée avant votre départ ; vous n’avez plus de réservation ni de contrat avec un client final. Quelle situation devez-vous désormais appliquer ?",
+      "options": [
+        {
+          "id": "choice-4157fa0e4b67",
+          "text": "L’exception liée à l’ancienne réservation, même après son annulation."
+        },
+        {
+          "id": "choice-726aab594eb5",
+          "text": "La règle de fin de prestation correspondant à l’absence de réservation suivante."
+        },
+        {
+          "id": "choice-53f855827749",
+          "text": "Une autorisation permanente d’attendre des clients sur la chaussée acquise avec la première course."
+        }
+      ],
+      "answer": "choice-726aab594eb5",
+      "explanation": "L’exception dépend d’une réservation ou d’un contrat réel, pas d’une mission qui n’existe plus. Il faut actualiser le repositionnement après l’annulation.",
+      "module": "G",
+      "lesson_refs": [
+        "G.08"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Article L3122-9, fin de prestation",
+          "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029529985/2026-01-27"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-e-02",
+      "prompt": "Vous lisez : “Three adults and one child will travel. The other two guests will stay at the hotel.” Combien de personnes doivent prendre place comme passagers ?",
+      "options": [
+        {
+          "id": "choice-0c28d4934fcb",
+          "text": "Six passengers."
+        },
+        {
+          "id": "choice-eee8edf3d401",
+          "text": "Four passengers."
+        },
+        {
+          "id": "choice-799385dd23d5",
+          "text": "Three passengers."
+        }
+      ],
+      "answer": "choice-eee8edf3d401",
+      "explanation": "Trois adultes et un enfant voyagent, soit quatre passagers. Les deux autres invités restent à l’hôtel ; l’enfant ne doit pas disparaître du décompte.",
+      "module": "E",
+      "lesson_refs": [
+        "E.02"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-06",
+      "prompt": "Un hôtel demande de ne pas envoyer de véhicule aux clients portant un nom qu’il juge « étranger », tout en acceptant les mêmes horaires et moyens de paiement pour les autres. Quelle réponse professionnelle convient ?",
+      "options": [
+        {
+          "id": "choice-774e97a4b1c1",
+          "text": "Appliquer la consigne puisqu’elle provient du client professionnel qui paie les courses."
+        },
+        {
+          "id": "choice-af42f36d3acc",
+          "text": "Remplacer le critère du nom par l’accent pour éviter de le conserver par écrit."
+        },
+        {
+          "id": "choice-3c80c615f80e",
+          "text": "Refuser ce critère et traiter les demandes selon des conditions objectives liées à la prestation."
+        }
+      ],
+      "answer": "choice-3c80c615f80e",
+      "explanation": "Le donneur d’ordre ne rend pas légitime une distinction fondée sur une origine supposée. Changer la façon d’identifier le même critère ne résout pas le problème ; les critères de service doivent être objectifs.",
+      "module": "A",
+      "lesson_refs": [
+        "A.06"
+      ],
+      "sources": [
+        {
+          "title": "Service Public — Discrimination : critères et traitement",
+          "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F19448"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-01",
+      "prompt": "Deux offres d’accompagnement affichent « SASU » pour l’une et « franchise en base de TVA » pour l’autre. Pourquoi cette comparaison ne suffit-elle pas à choisir votre organisation ?",
+      "options": [
+        {
+          "id": "choice-f7d25de3d313",
+          "text": "L’une décrit une forme juridique et l’autre un régime de TVA : elles ne se situent pas au même niveau de décision."
+        },
+        {
+          "id": "choice-dbc8aade7d29",
+          "text": "Ce sont deux formes juridiques concurrentes qui déterminent à elles seules la protection sociale."
+        },
+        {
+          "id": "choice-47427b89ab0c",
+          "text": "La franchise en base interdit de choisir une forme juridique pour l’entreprise."
+        }
+      ],
+      "answer": "choice-f7d25de3d313",
+      "explanation": "La forme juridique organise notamment l’entreprise et son dirigeant ; la franchise en base concerne la TVA. Il faut comparer séparément les dimensions puis vérifier les combinaisons possibles.",
+      "module": "B",
+      "lesson_refs": [
+        "B.01"
+      ],
+      "sources": [
+        {
+          "title": "Guichet des formalités — Types d’entreprises et formes juridiques",
+          "url": "https://formalites.entreprises.gouv.fr/types_entreprises.php"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-12",
+      "prompt": "Pour préparer une embauche, vous connaissez le salaire net souhaité mais aucun autre poste. Quelle estimation manque pour juger le coût de l’emploi pour l’entreprise ?",
+      "options": [
+        {
+          "id": "choice-91efb067496f",
+          "text": "Le salaire brut et les cotisations salariales, à additionner pour obtenir le coût total."
+        },
+        {
+          "id": "choice-2dea4c748002",
+          "text": "Le salaire net et les cotisations patronales, sans tenir compte de l’écart net-brut."
+        },
+        {
+          "id": "choice-98144a550d25",
+          "text": "Le salaire brut, les cotisations patronales et les autres frais liés à l’emploi."
+        }
+      ],
+      "answer": "choice-98144a550d25",
+      "explanation": "Le net ne suffit pas : le coût employeur part du brut et ajoute notamment les cotisations patronales et les frais applicables. Les cotisations salariales sont déjà incluses dans le brut ; les additionner à nouveau le gonflerait artificiellement.",
+      "module": "B",
+      "lesson_refs": [
+        "B.12"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Estimer le coût d’une embauche",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F39132"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-15",
+      "prompt": "Un fichier client conserve le code d’accès temporaire d’un immeuble utilisé une seule fois pour une prise en charge terminée. Aucun besoin actuel ni obligation ne justifie sa conservation. Quelle action convient ?",
+      "options": [
+        {
+          "id": "choice-3e2ea578752f",
+          "text": "La conserver sans limite parce qu’elle a été obtenue dans le cadre d’une réservation."
+        },
+        {
+          "id": "choice-cc527e3b037a",
+          "text": "La transférer dans les notes commerciales pour qu’elle échappe à la suppression des réservations."
+        },
+        {
+          "id": "choice-ebbbad1be222",
+          "text": "Supprimer cette donnée devenue inutile selon la procédure de conservation prévue."
+        }
+      ],
+      "answer": "choice-ebbbad1be222",
+      "explanation": "La nécessité de conserver une donnée s’apprécie selon son usage. Déplacer le code dans un autre champ ne crée pas de finalité ; il faut appliquer une suppression cohérente lorsqu’il n’est plus nécessaire.",
+      "module": "A",
+      "lesson_refs": [
+        "A.10"
+      ],
+      "sources": [
+        {
+          "title": "CNIL — Minimiser les données collectées",
+          "url": "https://www.cnil.fr/fr/minimiser-les-donnees-collectees"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-g-07",
+      "prompt": "L’exploitant d’un parking d’aéroport exige une autorisation d’accès spécifique. Vous avez une réservation VTC valide, mais pas cette autorisation. Quelle distinction devez-vous faire ?",
+      "options": [
+        {
+          "id": "choice-5067b95d0f97",
+          "text": "La réservation de transport et le droit d’accès à ce parking sont deux conditions différentes."
+        },
+        {
+          "id": "choice-323490994315",
+          "text": "La réservation du client remplace toute autorisation locale d’accès."
+        },
+        {
+          "id": "choice-8975b9c1965b",
+          "text": "Le paiement prévu de la course vaut paiement et autorisation du parking."
+        }
+      ],
+      "answer": "choice-5067b95d0f97",
+      "explanation": "Pouvoir justifier une mission ne donne pas accès à toutes les installations. Il faut respecter la condition d’accès locale et organiser la rencontre dans un lieu autorisé.",
+      "module": "G",
+      "lesson_refs": [
+        "G.07"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-02",
+      "prompt": "Vous disposez de 4 000 € en banque et d’un accord oral de prêt de 6 000 €. Des dépenses de démarrage de 7 500 € sont exigibles avant tout versement du prêt. Quelle décision budgétaire est fondée ?",
+      "options": [
+        {
+          "id": "choice-777fc321a158",
+          "text": "Considérer que 2 500 € resteront disponibles dès aujourd’hui, puisque le prêt a été évoqué."
+        },
+        {
+          "id": "choice-16b146d5698a",
+          "text": "Identifier 3 500 € de financement encore indisponible avant d’engager ces paiements."
+        },
+        {
+          "id": "choice-174e1e85c660",
+          "text": "Financer les 7 500 € par le chiffre d’affaires que l’activité devrait produire après son ouverture."
+        }
+      ],
+      "answer": "choice-16b146d5698a",
+      "explanation": "Les liquidités actuelles couvrent 4 000 € des 7 500 € exigibles : il manque 3 500 €. Un accord oral et des recettes futures ne constituent pas des fonds déjà disponibles à cette date.",
+      "module": "B",
+      "lesson_refs": [
+        "B.02"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Plan de trésorerie",
+          "url": "https://bpifrance-creation.fr/plan-tresorerie"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-d-13",
+      "prompt": "Instruction : « Aucun changement de véhicule ne sera confirmé avant réception de l’accord du responsable. » L’accord n’est pas encore arrivé. Quelle conclusion le texte autorise-t-il ?",
+      "options": [
+        {
+          "id": "choice-3d7c6bcfb0eb",
+          "text": "Le changement ne peut pas encore être confirmé."
+        },
+        {
+          "id": "choice-06976b2d2d37",
+          "text": "Le changement est définitivement interdit, même si l’accord arrive ensuite."
+        },
+        {
+          "id": "choice-4bb51fee6d2e",
+          "text": "Le silence du responsable vaut confirmation immédiate."
+        }
+      ],
+      "answer": "choice-3d7c6bcfb0eb",
+      "explanation": "La négation porte sur la confirmation avant un événement. Elle ne transforme ni le silence en accord ni une condition temporaire en interdiction définitive.",
+      "module": "D",
+      "lesson_refs": [
+        "D.06"
+      ],
+      "sources": [
+        {
+          "title": "Référentiel de l’examen VTC — compréhension du français ; textes des exercices originaux",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-f-09",
+      "prompt": "Pour un client régulier, vous savez qu’il préfère recevoir les confirmations par courriel. Il demande de ne pas recevoir d’offres commerciales. Quelle information utile pouvez-vous conserver pour le servir ?",
+      "options": [
+        {
+          "id": "choice-88cab940f668",
+          "text": "Un accord publicitaire permanent, déduit du fait qu’il commande régulièrement."
+        },
+        {
+          "id": "choice-94b314078ac5",
+          "text": "Les coordonnées de ses proches pour poursuivre les offres s’il ne répond pas."
+        },
+        {
+          "id": "choice-a79170975cd1",
+          "text": "Le canal de confirmation demandé et son opposition aux sollicitations commerciales."
+        }
+      ],
+      "answer": "choice-a79170975cd1",
+      "explanation": "La préférence de service et l’opposition exprimée doivent être respectées. La régularité des commandes ne rend pas toutes les réutilisations de coordonnées nécessaires ni acceptées.",
+      "module": "F",
+      "lesson_refs": [
+        "F.09"
+      ],
+      "sources": [
+        {
+          "title": "CNIL — Minimiser les données collectées",
+          "url": "https://www.cnil.fr/fr/minimiser-les-donnees-collectees"
+        },
+        {
+          "title": "CNIL — Prospection électronique et droit d’opposition",
+          "url": "https://www.cnil.fr/fr/la-prospection-commerciale-par-courrier-electronique-sms-mms-et-automate-dappel"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-f-07",
+      "prompt": "Un partenaire souhaite réserver quatre véhicules au même moment pendant un mois, mais peut annuler la veille sans compensation dans son projet de contrat. Quel point devez-vous analyser avant de bloquer ces créneaux ?",
+      "options": [
+        {
+          "id": "choice-5fef58813970",
+          "text": "Évaluer la capacité bloquée et le risque financier des annulations."
+        },
+        {
+          "id": "choice-6f39018c719a",
+          "text": "Retenir le revenu mensuel annoncé, puis déduire les seuls coûts de trajet."
+        },
+        {
+          "id": "choice-9ca4d5f8f788",
+          "text": "Calculer la marge sur les courses prévues comme si elles étaient garanties."
+        }
+      ],
+      "answer": "choice-5fef58813970",
+      "explanation": "Le planning bloqué peut empêcher d’autres ventes sans garantir les recettes attendues. La valeur du partenariat dépend aussi de la certitude des commandes et du partage du risque d’annulation.",
+      "module": "F",
+      "lesson_refs": [
+        "F.07"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Construire une offre, vérifier son marché et son modèle économique",
+          "url": "https://bpifrance-creation.fr/moments-de-vie/comment-faire-business-plan-efficace"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-g-12",
+      "prompt": "Vous trouvez deux versions d’un texte : la première est abrogée, la seconde est en vigueur à la date de la mission. La règle a changé entre les deux. Quelle base utilisez-vous pour la procédure actuelle ?",
+      "options": [
+        {
+          "id": "choice-e6865feeb071",
+          "text": "La version dont le fichier PDF a été téléchargé le plus récemment, même si elle est abrogée."
+        },
+        {
+          "id": "choice-d4878d56710b",
+          "text": "La version la plus favorable au planning sans vérifier sa date d’application."
+        },
+        {
+          "id": "choice-c803567b22a7",
+          "text": "La version en vigueur correspondant à la date et au champ de la mission."
+        }
+      ],
+      "answer": "choice-c803567b22a7",
+      "explanation": "La date de téléchargement n’est pas la date d’effet d’une règle. La veille doit identifier le texte applicable aux faits, conserver la référence et mettre à jour la procédure concernée.",
+      "module": "G",
+      "lesson_refs": [
+        "G.12"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-f-03",
+      "prompt": "Deux missions mobilisent chacune deux heures. La première laisse 64 € après coûts variables, la seconde 78 €, mais entraîne 20 € de frais supplémentaires non comptés. Laquelle contribue le plus, à charges fixes inchangées ?",
+      "options": [
+        {
+          "id": "choice-ae0daa055298",
+          "text": "La seconde, avec 78 €, car les frais supplémentaires ne changent pas la comparaison."
+        },
+        {
+          "id": "choice-5224075865bb",
+          "text": "Les deux, à égalité, puisque leur durée est identique."
+        },
+        {
+          "id": "choice-afd6fb7a00cc",
+          "text": "La première, avec 64 € contre 58 € pour la seconde."
+        }
+      ],
+      "answer": "choice-afd6fb7a00cc",
+      "explanation": "La comparaison doit couvrir le même périmètre : 78 − 20 = 58 €. Les deux heures mobilisées étant identiques, la première laisse 6 € de plus pour couvrir les charges fixes.",
+      "module": "F",
+      "lesson_refs": [
+        "F.03"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Marge sur coûts variables et seuil de rentabilité",
+          "url": "https://bpifrance-creation.fr/encyclopedie/previsions-financieres-business-plan/previsions-financieres/seuil-rentabilite"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-d-08",
+      "prompt": "Le message dit : « Nous avions réservé pour mardi, mais nous partirons mercredi. » Quelle distinction temporelle est correcte ?",
+      "options": [
+        {
+          "id": "choice-4e14287e58cd",
+          "text": "La réservation et le départ sont tous deux présentés comme futurs."
+        },
+        {
+          "id": "choice-1deb37e8f800",
+          "text": "La réservation évoquée est antérieure ; le départ annoncé est futur."
+        },
+        {
+          "id": "choice-96b3d23f2112",
+          "text": "Le départ a déjà eu lieu mercredi."
+        }
+      ],
+      "answer": "choice-1deb37e8f800",
+      "explanation": "« Avions réservé » renvoie à une action antérieure, tandis que « partirons » est au futur. La phrase décrit un changement et ne dit pas que le trajet est déjà réalisé.",
+      "module": "D",
+      "lesson_refs": [
+        "D.08"
+      ],
+      "sources": [
+        {
+          "title": "Référentiel de l’examen VTC — compréhension du français ; textes des exercices originaux",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-f-14",
+      "prompt": "Votre tableau affiche un panier moyen en hausse, mais les kilomètres à vide ont fortement augmenté. Quelle lecture aide à décider ?",
+      "options": [
+        {
+          "id": "choice-69c7a5a881d1",
+          "text": "Comparer le panier moyen au prix catalogue, sans intégrer les trajets à vide."
+        },
+        {
+          "id": "choice-f3779fdeb2e0",
+          "text": "Comparer la contribution aux kilomètres et au temps totaux mobilisés."
+        },
+        {
+          "id": "choice-b08d4ba8f8e8",
+          "text": "Comparer la contribution aux seuls kilomètres parcourus avec des clients."
+        }
+      ],
+      "answer": "choice-f3779fdeb2e0",
+      "explanation": "Le panier moyen décrit les ventes par course. Les trajets non facturés consomment pourtant du temps et des ressources ; ils peuvent absorber l’amélioration apparente.",
+      "module": "F",
+      "lesson_refs": [
+        "F.12"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Marge sur coûts variables et seuil de rentabilité",
+          "url": "https://bpifrance-creation.fr/encyclopedie/previsions-financieres-business-plan/previsions-financieres/seuil-rentabilite"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-c-04",
+      "prompt": "Un autobus à l’arrêt masque une partie du passage piéton qui se trouve devant lui. Aucun piéton n’est encore visible depuis votre position. Quelle anticipation convient ?",
+      "options": [
+        {
+          "id": "choice-213355ee47d7",
+          "text": "Réduire l’allure et se préparer à s’arrêter, car un piéton peut être masqué."
+        },
+        {
+          "id": "choice-fba9b71f1e2e",
+          "text": "Conserver l’allure en considérant l’absence de piéton visible comme une preuve de passage libre."
+        },
+        {
+          "id": "choice-204feb2f7c27",
+          "text": "Accélérer pour dégager la zone avant que les voyageurs descendent."
+        }
+      ],
+      "answer": "choice-213355ee47d7",
+      "explanation": "Le masque visuel réduit l’information disponible. Il faut gérer cette incertitude avant d’atteindre le passage, sans conclure qu’une zone invisible est nécessairement libre.",
+      "module": "C",
+      "lesson_refs": [
+        "C.04"
+      ],
+      "sources": [
+        {
+          "title": "ONISR — Code de la route et partage de la voie publique",
+          "url": "https://www.onisr.securite-routiere.gouv.fr/politique-de-securite-routiere/code-de-la-route"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-05",
+      "prompt": "Une mission de remplacement est proposée à 52 €. Les coûts supplémentaires dus à cette mission sont 18 €, mais elle vous oblige à renoncer à une autre mission qui aurait laissé 40 € après ses coûts variables. Quel effet a le remplacement, à charges fixes inchangées ?",
+      "options": [
+        {
+          "id": "choice-a60e57fd1e15",
+          "text": "Il augmente la contribution de 12 €, en comparant 52 € au montant de 40 €."
+        },
+        {
+          "id": "choice-e227d8095546",
+          "text": "Il réduit la contribution de 6 €, car 52 − 18 = 34 € au lieu de 40 €."
+        },
+        {
+          "id": "choice-9ae3c50bd592",
+          "text": "Il laisse les résultats inchangés, puisque les charges fixes ne changent pas."
+        }
+      ],
+      "answer": "choice-e227d8095546",
+      "explanation": "Il faut comparer deux contributions et non une recette brute à une contribution. La nouvelle mission laisse 34 €, soit 6 € de moins que celle abandonnée.",
+      "module": "B",
+      "lesson_refs": [
+        "B.05"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Marge sur coûts variables et seuil de rentabilité",
+          "url": "https://bpifrance-creation.fr/encyclopedie/previsions-financieres-business-plan/previsions-financieres/seuil-rentabilite"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-d-07",
+      "prompt": "Dans « Merci de différer le départ jusqu’à la confirmation du contact », quel sens a le verbe « différer » ?",
+      "options": [
+        {
+          "id": "choice-6b42a3b5acf6",
+          "text": "Reporter le départ."
+        },
+        {
+          "id": "choice-ad03bbe59da5",
+          "text": "Avancer le départ."
+        },
+        {
+          "id": "choice-af74d51729ee",
+          "text": "Annuler définitivement le transport."
+        }
+      ],
+      "answer": "choice-6b42a3b5acf6",
+      "explanation": "Dans cette phrase, différer signifie remettre à plus tard. Le départ dépend d’une confirmation ; le texte ne prononce pas une annulation définitive.",
+      "module": "D",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "sources": [
+        {
+          "title": "Référentiel de l’examen VTC — compréhension du français ; textes des exercices originaux",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-e-01",
+      "prompt": "Le passager dit : “My assistant booked under her surname, Green. My surname is Cole.” Quelle distinction cet échange établit-il ?",
+      "options": [
+        {
+          "id": "choice-a78bf283f013",
+          "text": "La réservation est au nom de Green ; le passager se nomme Cole."
+        },
+        {
+          "id": "choice-1e6509db592b",
+          "text": "La réservation est au nom de Cole ; la passagère se nomme Green."
+        },
+        {
+          "id": "choice-fdb91d30a57b",
+          "text": "Green et Cole sont deux passagers qui voyagent nécessairement ensemble."
+        }
+      ],
+      "answer": "choice-a78bf283f013",
+      "explanation": "Booked under her surname rattache la réservation au nom de l’assistante, Green. My surname is Cole désigne le passager qui parle ; rien n’indique que l’assistante voyage avec lui.",
+      "module": "E",
+      "lesson_refs": [
+        "E.01"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-c-08",
+      "prompt": "Un médicament que vous venez de commencer porte une mise en garde sur la conduite. Vous vous sentez encore normal avant la première course. Quelle conduite est appropriée ?",
+      "options": [
+        {
+          "id": "choice-0e801d1f39a1",
+          "text": "Conclure à l’absence de risque puisque vous n’avez pas encore ressenti d’effet."
+        },
+        {
+          "id": "choice-282183b49851",
+          "text": "Lire les précautions et demander conseil au professionnel de santé avant de décider de conduire."
+        },
+        {
+          "id": "choice-fbe5eea39698",
+          "text": "Modifier vous-même la prise du traitement pour conserver le planning prévu."
+        }
+      ],
+      "answer": "choice-282183b49851",
+      "explanation": "L’absence de sensation immédiate ne prouve pas la compatibilité avec la conduite. La notice et le conseil d’un professionnel permettent d’évaluer la situation sans modifier seul le traitement.",
+      "module": "C",
+      "lesson_refs": [
+        "C.08"
+      ],
+      "sources": [
+        {
+          "title": "Sécurité routière — Guide du bon conducteur",
+          "url": "https://www.securite-routiere.gouv.fr/sites/default/files/2024-09/dsr_guide_bon_conducteur.pdf"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-10",
+      "prompt": "Pour retrouver un passager au quai, un collègue a besoin de son prénom et de sa référence de réservation. Votre export contient aussi sa date de naissance et ses anciens trajets. Que lui transmettez-vous ?",
+      "options": [
+        {
+          "id": "choice-a204a90baff3",
+          "text": "Les seuls éléments utiles à cette prise en charge, par un canal adapté."
+        },
+        {
+          "id": "choice-1b79c13672c2",
+          "text": "L’export complet, car un collègue peut toujours accéder à toutes les données des clients."
+        },
+        {
+          "id": "choice-9c2797fcb098",
+          "text": "Les anciens trajets plutôt que la référence, pour qu’il puisse deviner où attend le passager."
+        }
+      ],
+      "answer": "choice-a204a90baff3",
+      "explanation": "La finalité est limitée à la rencontre de ce passager. Des données supplémentaires sans utilité pour cette tâche augmentent l’exposition sans améliorer l’identification nécessaire.",
+      "module": "A",
+      "lesson_refs": [
+        "A.10"
+      ],
+      "sources": [
+        {
+          "title": "CNIL — Minimiser les données collectées",
+          "url": "https://www.cnil.fr/fr/minimiser-les-donnees-collectees"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-g-14",
+      "prompt": "Vous changez de mode de détention d’un véhicule : le contrat de location qui justifiait une exemption est terminé, et un nouveau contrat plus court prend effet. Quelle vérification s’impose ?",
+      "options": [
+        {
+          "id": "choice-953c168e47a0",
+          "text": "Conserver l’exemption initiale aussi longtemps que l’immatriculation du véhicule ne change pas."
+        },
+        {
+          "id": "choice-19304cb9b915",
+          "text": "Réexaminer la capacité financière applicable à la nouvelle situation, sans prolonger automatiquement l’ancienne exemption."
+        },
+        {
+          "id": "choice-32c3a829da8f",
+          "text": "Utiliser seulement la date de première inscription au REVTC pour trancher la nouvelle situation."
+        }
+      ],
+      "answer": "choice-19304cb9b915",
+      "explanation": "L’exemption est liée à des conditions et justificatifs. Si ceux-ci changent, la situation du véhicule doit être réévaluée ; une immatriculation inchangée ne conserve pas à elle seule l’ancienne justification.",
+      "module": "G",
+      "lesson_refs": [
+        "G.02"
+      ],
+      "sources": [
+        {
+          "title": "Registre VTC — Informations générales et capacité financière",
+          "url": "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-f-01",
+      "prompt": "Un quartier comprend beaucoup de bureaux, mais vos demandes arrivent surtout avant l’ouverture des transports collectifs. Quel renseignement manque avant de construire une offre ciblée ?",
+      "options": [
+        {
+          "id": "choice-0caf54a82b4b",
+          "text": "Les horaires, fréquences et contraintes réelles des personnes qui ont ce besoin matinal."
+        },
+        {
+          "id": "choice-92f1f01ebbb9",
+          "text": "Le seul nombre de bureaux, à traiter comme autant de commandes déjà acquises."
+        },
+        {
+          "id": "choice-86e06b70e2ed",
+          "text": "Le prix d’un forfait aéroport standard, à appliquer sans vérifier la nature de ces déplacements."
+        }
+      ],
+      "answer": "choice-0caf54a82b4b",
+      "explanation": "Une présence d’entreprises ne mesure pas directement une demande solvable. Les conditions des déplacements matinaux permettent de préciser un segment et une offre adaptés.",
+      "module": "F",
+      "lesson_refs": [
+        "F.01"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Construire une offre, vérifier son marché et son modèle économique",
+          "url": "https://bpifrance-creation.fr/moments-de-vie/comment-faire-business-plan-efficace"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-g-06",
+      "prompt": "Un client a réservé la veille un transport nominatif. Il vous rejoint à pied au point de rendez-vous autorisé situé dans une rue. Un collègue affirme que toute prise en charge sur la voie publique est de la maraude. Quelle distinction corrige son affirmation ?",
+      "options": [
+        {
+          "id": "choice-9c5a0d7a4ab0",
+          "text": "L’arrêt dans une rue reste de la maraude, même avec une réservation nominative."
+        },
+        {
+          "id": "choice-2ad9bc830e26",
+          "text": "La réservation autorise ensuite l’attente dans la rue de clients sans commande."
+        },
+        {
+          "id": "choice-46dbc0a374fd",
+          "text": "Le rendez-vous reste réservé, même si le client vous rejoint dans la rue."
+        }
+      ],
+      "answer": "choice-46dbc0a374fd",
+      "explanation": "Il faut distinguer une prise en charge spontanée à la recherche de clientèle et l’exécution d’une mission réservée. Le point de rencontre peut être sur la voie publique lorsqu’il est autorisé ; les autres règles d’accès et d’arrêt continuent à s’appliquer.",
+      "module": "G",
+      "lesson_refs": [
+        "G.06"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-07",
+      "prompt": "Pendant une mission, un passager multiplie les remarques sexuelles envers une autre passagère qui lui demande d’arrêter. Aucun danger immédiat n’impose une manœuvre urgente. Quelle première réaction est adaptée ?",
+      "options": [
+        {
+          "id": "choice-ac7555102832",
+          "text": "Poser calmement une limite, prendre en compte la personne visée et organiser la suite en sécurité."
+        },
+        {
+          "id": "choice-76a8ca1410c8",
+          "text": "Attendre qu’une plainte officielle soit déposée avant de reconnaître le problème."
+        },
+        {
+          "id": "choice-f8c4af42499e",
+          "text": "Demander uniquement à la personne visée de changer de place pour ne pas contrarier le groupe."
+        }
+      ],
+      "answer": "choice-ac7555102832",
+      "explanation": "Le refus exprimé par la personne doit être pris au sérieux. Une intervention professionnelle peut interrompre les propos et soutenir la personne sans improviser une manœuvre dangereuse ni lui faire porter la responsabilité du comportement subi.",
+      "module": "A",
+      "lesson_refs": [
+        "A.07"
+      ],
+      "sources": [
+        {
+          "title": "Service Public — Alerter et obtenir de l’aide face aux violences sexuelles",
+          "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F1526"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-d-12",
+      "prompt": "Deux questions suivent le même texte : l’une demande une heure écrite explicitement, l’autre la justification d’une décision. Quelle méthode permet de traiter correctement les deux ?",
+      "options": [
+        {
+          "id": "choice-a66b3ae858e3",
+          "text": "Recopier la même phrase horaire pour les deux, puisque le document est identique."
+        },
+        {
+          "id": "choice-508f6bc51da7",
+          "text": "Déduire la justification de son expérience du métier sans relire le texte."
+        },
+        {
+          "id": "choice-153f494f9876",
+          "text": "Relever l’heure pour la première et chercher la cause formulée dans le texte pour la seconde."
+        }
+      ],
+      "answer": "choice-153f494f9876",
+      "explanation": "Une lecture d’examen répond à la demande précise de chaque question. Une information exacte peut être hors sujet ; l’expérience personnelle ne remplace pas la justification présente dans le document.",
+      "module": "D",
+      "lesson_refs": [
+        "D.12"
+      ],
+      "sources": [
+        {
+          "title": "Référentiel de l’examen VTC — compréhension du français ; textes des exercices originaux",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-d-01",
+      "prompt": "Note de service : « Pour cette réunion, les conducteurs entrent par le portail sud. Les livraisons utilisent le portail ouest. L’accueil des visiteurs ouvre à 8 h. » Vous devez trouver l’accès conducteur. Quelle information répond directement au besoin ?",
+      "options": [
+        {
+          "id": "choice-62110e18a49e",
+          "text": "Le portail sud."
+        },
+        {
+          "id": "choice-3611e07528da",
+          "text": "Le portail ouest."
+        },
+        {
+          "id": "choice-9e7b3b8746bf",
+          "text": "L’ouverture de l’accueil à 8 h."
+        }
+      ],
+      "answer": "choice-62110e18a49e",
+      "explanation": "La lecture est guidée par le destinataire de la consigne : les conducteurs. L’horaire et l’accès des livraisons sont présents dans le texte mais répondent à d’autres questions.",
+      "module": "D",
+      "lesson_refs": [
+        "D.01"
+      ],
+      "sources": [
+        {
+          "title": "Référentiel de l’examen VTC — compréhension du français ; textes des exercices originaux",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-e-13",
+      "prompt": "Vous entendez : “The destination is the conference centre, not the company headquarters.” Quelle destination faut-il confirmer ?",
+      "options": [
+        {
+          "id": "choice-af986c8a5c42",
+          "text": "The conference centre."
+        },
+        {
+          "id": "choice-07cde6b622bf",
+          "text": "The company headquarters."
+        },
+        {
+          "id": "choice-7a012b9cbdcb",
+          "text": "The hotel used for the previous booking."
+        }
+      ],
+      "answer": "choice-af986c8a5c42",
+      "explanation": "Le mot not exclut le siège de l’entreprise. Le centre de conférences est la destination annoncée ; le dernier hôtel utilisé n’apparaît pas dans cette demande.",
+      "module": "E",
+      "lesson_refs": [
+        "E.02"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-04",
+      "prompt": "Un tableau de suivi indique trois dates différentes : fin de validité de carte, échéance médicale et fin de contrat d’assurance. Le logiciel ne permet qu’une seule alerte. Quel défaut doit être corrigé ?",
+      "options": [
+        {
+          "id": "choice-fdbe2a6bc280",
+          "text": "Chaque obligation doit conserver son échéance et sa marge d’anticipation propres."
+        },
+        {
+          "id": "choice-54c0e4a68677",
+          "text": "Toutes les échéances peuvent être alignées sur la carte professionnelle, le document le plus visible."
+        },
+        {
+          "id": "choice-0d46bbff0b3b",
+          "text": "La date la plus éloignée suffit dès lors que les trois justificatifs sont archivés."
+        }
+      ],
+      "answer": "choice-fdbe2a6bc280",
+      "explanation": "Archiver un document ne prolonge pas sa validité. Des obligations différentes doivent être suivies séparément pour éviter qu’une échéance plus proche disparaisse derrière celle de la carte.",
+      "module": "A",
+      "lesson_refs": [
+        "A.04"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-04",
+      "prompt": "Le compte de résultat du mois comprend 9 600 € de produits et 7 100 € de charges. La banque reçoit aussi un emprunt de 5 000 €. Quel résultat ressort de ces seules données ?",
+      "options": [
+        {
+          "id": "choice-8b06f0b21f4a",
+          "text": "Un bénéfice de 2 500 € ; l’emprunt finance l’activité sans être un produit."
+        },
+        {
+          "id": "choice-23058b71c9b7",
+          "text": "Un bénéfice de 7 500 €, en ajoutant l’emprunt aux produits."
+        },
+        {
+          "id": "choice-c7f2b08493e1",
+          "text": "Une perte de 2 500 €, parce que l’emprunt devient immédiatement une charge."
+        }
+      ],
+      "answer": "choice-8b06f0b21f4a",
+      "explanation": "Le résultat est 9 600 − 7 100 = 2 500 €. L’emprunt augmente la banque et la dette ; son encaissement ne constitue pas une vente ni une charge du mois.",
+      "module": "B",
+      "lesson_refs": [
+        "B.04"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Bilan, actif et passif",
+          "url": "https://bpifrance-creation.fr/bilan"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-f-12",
+      "prompt": "Une campagne a coûté 180 € et a apporté six nouveaux clients ayant réellement réservé. Les autres demandes n’ont pas abouti. Quel coût d’acquisition par nouveau client obtenez-vous dans ce périmètre ?",
+      "options": [
+        {
+          "id": "choice-ba90b6aa10ff",
+          "text": "6 € par client."
+        },
+        {
+          "id": "choice-3bd519aeaba9",
+          "text": "180 € par client."
+        },
+        {
+          "id": "choice-00244501a731",
+          "text": "30 € par client."
+        }
+      ],
+      "answer": "choice-00244501a731",
+      "explanation": "Le coût d’acquisition retenu ici est 180 ÷ 6 = 30 €. Les demandes non converties ne sont pas des clients acquis ; cet indicateur ne dit pas encore si leur contribution future couvrira le coût.",
+      "module": "F",
+      "lesson_refs": [
+        "F.12"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Construire une offre, vérifier son marché et son modèle économique",
+          "url": "https://bpifrance-creation.fr/moments-de-vie/comment-faire-business-plan-efficace"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-c-06",
+      "prompt": "Trois passagers sont assis à l’arrière. Une grosse valise posée sur la banquette empêche l’un d’eux d’attacher correctement sa ceinture. Le coffre contient encore de la place. Quelle action précède le départ ?",
+      "options": [
+        {
+          "id": "choice-0c559683e00c",
+          "text": "Faire passer la ceinture autour du passager et de la valise pour les retenir."
+        },
+        {
+          "id": "choice-a5186659ab01",
+          "text": "Glisser la valise derrière ses jambes, sans vérifier le bouclage de la ceinture."
+        },
+        {
+          "id": "choice-e0361450f534",
+          "text": "Ranger et immobiliser la valise dans le coffre, puis vérifier chaque ceinture."
+        }
+      ],
+      "answer": "choice-e0361450f534",
+      "explanation": "La place doit permettre un bouclage correct de la ceinture sur le passager. Le bagage doit être rangé et immobilisé séparément : faire passer la ceinture autour de la valise ou déplacer celle-ci sans vérifier l’installation ne résout pas le problème.",
+      "module": "C",
+      "lesson_refs": [
+        "C.06"
+      ],
+      "sources": [
+        {
+          "title": "Service Public — Ceinture et installation des occupants",
+          "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F628"
+        },
+        {
+          "title": "ONISR — Code de la route et partage de la voie publique",
+          "url": "https://www.onisr.securite-routiere.gouv.fr/politique-de-securite-routiere/code-de-la-route"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-f-10",
+      "prompt": "Vous comparez deux semaines : 4 départs tardifs sur 20 courses, puis 6 sur 60. Quel constat est exact ?",
+      "options": [
+        {
+          "id": "choice-432ee0c2120e",
+          "text": "Le nombre de retards augmente, mais leur proportion baisse de 20 % à 10 %."
+        },
+        {
+          "id": "choice-a034dd43d9eb",
+          "text": "La qualité se dégrade nécessairement puisque 6 est supérieur à 4."
+        },
+        {
+          "id": "choice-0d668f3f58eb",
+          "text": "La proportion de retards reste identique puisque les deux semaines ont des retards."
+        }
+      ],
+      "answer": "choice-432ee0c2120e",
+      "explanation": "La première proportion est 4 ÷ 20 = 20 %, la seconde 6 ÷ 60 = 10 %. Il faut distinguer volume et taux ; ces données ne précisent pas encore la gravité de chaque retard.",
+      "module": "F",
+      "lesson_refs": [
+        "F.10"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Construire une offre, vérifier son marché et son modèle économique",
+          "url": "https://bpifrance-creation.fr/moments-de-vie/comment-faire-business-plan-efficace"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-c-11",
+      "prompt": "De nuit, une forte pluie rend les marquages moins lisibles et allonge le temps nécessaire pour distinguer un obstacle. Votre estimation d’arrivée est déjà dépassée. Quelle priorité doit rester inchangée ?",
+      "options": [
+        {
+          "id": "choice-3e366cbcde10",
+          "text": "Conserver l’allure initialement prévue pour ne pas augmenter le retard annoncé."
+        },
+        {
+          "id": "choice-3b5c6a10c3a0",
+          "text": "Adapter l’allure et les distances à la visibilité et à l’adhérence, puis actualiser l’estimation d’arrivée."
+        },
+        {
+          "id": "choice-ea5ef0e1e382",
+          "text": "Réduire la distance de suivi pour profiter davantage des feux du véhicule précédent."
+        }
+      ],
+      "answer": "choice-3b5c6a10c3a0",
+      "explanation": "Le retard ne rend pas la visibilité meilleure. L’allure et l’intervalle doivent être adaptés aux conditions réelles ; l’horaire est ensuite révisé en conséquence.",
+      "module": "C",
+      "lesson_refs": [
+        "C.11"
+      ],
+      "sources": [
+        {
+          "title": "Sécurité routière — Guide du bon conducteur",
+          "url": "https://www.securite-routiere.gouv.fr/sites/default/files/2024-09/dsr_guide_bon_conducteur.pdf"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-f-05",
+      "prompt": "Un relevé de plateforme affiche 780 € de courses, 156 € de commission et 24 € d’autres frais contractuels. Les coûts de véhicule restent à payer séparément. Quelle somme la plateforme doit-elle reverser selon ce relevé ?",
+      "options": [
+        {
+          "id": "choice-47e321c11499",
+          "text": "624 €."
+        },
+        {
+          "id": "choice-0508f7c7a330",
+          "text": "600 €."
+        },
+        {
+          "id": "choice-532f5f53cc95",
+          "text": "780 €."
+        }
+      ],
+      "answer": "choice-0508f7c7a330",
+      "explanation": "Reversement : 780 − 156 − 24 = 600 €. Les 624 € oublieraient les autres frais ; 600 € n’est pas le bénéfice puisque les coûts de véhicule ne sont pas encore déduits.",
+      "module": "F",
+      "lesson_refs": [
+        "F.05"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Marge sur coûts variables et seuil de rentabilité",
+          "url": "https://bpifrance-creation.fr/encyclopedie/previsions-financieres-business-plan/previsions-financieres/seuil-rentabilite"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-f-13",
+      "prompt": "Vous pouvez accepter une commande de groupe à prix réduit pendant un créneau habituellement vide. Les coûts supplémentaires sont couverts, mais aucun contrôle de disponibilité n’a encore été fait. Quelle analyse manque avant de conclure que la commande est intéressante ?",
+      "options": [
+        {
+          "id": "choice-9f18b3b297bd",
+          "text": "Vérifier la capacité disponible et les autres usages possibles du créneau."
+        },
+        {
+          "id": "choice-085bd704f57b",
+          "text": "Valider la commande dès que le prix couvre les seuls coûts supplémentaires."
+        },
+        {
+          "id": "choice-a1dbbd8d4b76",
+          "text": "Écarter la commande dès que sa remise réduit la marge d’une course habituelle."
+        }
+      ],
+      "answer": "choice-9f18b3b297bd",
+      "explanation": "Couvrir les coûts supplémentaires est un repère utile, mais ne valide ni la faisabilité ni l’ensemble des conséquences. La capacité réellement libre et les alternatives doivent être examinées.",
+      "module": "F",
+      "lesson_refs": [
+        "F.03"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Marge sur coûts variables et seuil de rentabilité",
+          "url": "https://bpifrance-creation.fr/encyclopedie/previsions-financieres-business-plan/previsions-financieres/seuil-rentabilite"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-15",
+      "prompt": "Une remise commerciale réduit le prix par course de 50 € à 45 €, tandis que le coût variable reste à 30 €. Quel effet sur le nombre de courses nécessaire pour couvrir 900 € de charges fixes ?",
+      "options": [
+        {
+          "id": "choice-993ed0363081",
+          "text": "Il reste à 45 courses, puisque le coût variable ne change pas."
+        },
+        {
+          "id": "choice-fdb49455e2e6",
+          "text": "Il passe de 60 à 45 courses, parce que le prix baisse."
+        },
+        {
+          "id": "choice-4d3a446a97ae",
+          "text": "Il passe de 45 à 60 courses."
+        }
+      ],
+      "answer": "choice-4d3a446a97ae",
+      "explanation": "Avant remise, la marge unitaire est 20 € : 900 ÷ 20 = 45. Après remise, elle est de 15 € : 900 ÷ 15 = 60. Il faut quinze courses supplémentaires si les autres hypothèses restent inchangées.",
+      "module": "B",
+      "lesson_refs": [
+        "B.09"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Marge sur coûts variables et seuil de rentabilité",
+          "url": "https://bpifrance-creation.fr/encyclopedie/previsions-financieres-business-plan/previsions-financieres/seuil-rentabilite"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-d-11",
+      "prompt": "Vous devez confirmer au client que le véhicule attend rue des Tilleuls, à l’entrée latérale, et lui demander de signaler son arrivée. Quel message transmet ces deux éléments sans ambiguïté ?",
+      "options": [
+        {
+          "id": "choice-f1b0630d6377",
+          "text": "Je suis à côté. Faites comme prévu quand vous arrivez."
+        },
+        {
+          "id": "choice-88030e86a9c8",
+          "text": "Je vous attends à l’entrée latérale, rue des Tilleuls. Prévenez-moi lorsque vous y êtes."
+        },
+        {
+          "id": "choice-7c57eb55f2b4",
+          "text": "Vous devez déjà être à l’entrée principale ; je vous rejoindrai ensuite."
+        }
+      ],
+      "answer": "choice-88030e86a9c8",
+      "explanation": "Le premier message donne le lieu précis et l’action attendue. Le second suppose un repère non explicité ; le troisième modifie le lieu et la personne qui attend.",
+      "module": "D",
+      "lesson_refs": [
+        "D.11"
+      ],
+      "sources": [
+        {
+          "title": "Référentiel de l’examen VTC — compréhension du français ; textes des exercices originaux",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-03",
+      "prompt": "Dans un bilan simplifié, les actifs totalisent 41 000 € et les dettes 29 000 €. Après avoir payé une dette de 3 000 € avec la banque, quel montant de capitaux propres reste, sans autre opération ?",
+      "options": [
+        {
+          "id": "choice-e7f8b38da911",
+          "text": "9 000 €."
+        },
+        {
+          "id": "choice-529a1c561459",
+          "text": "15 000 €."
+        },
+        {
+          "id": "choice-885a3648e4ea",
+          "text": "12 000 €."
+        }
+      ],
+      "answer": "choice-885a3648e4ea",
+      "explanation": "Avant paiement : 41 000 − 29 000 = 12 000 €. Après paiement, actif et dettes diminuent chacun de 3 000 € : 38 000 − 26 000 = 12 000 €. Le paiement ne crée ici ni charge ni produit.",
+      "module": "B",
+      "lesson_refs": [
+        "B.03"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Bilan, actif et passif",
+          "url": "https://bpifrance-creation.fr/bilan"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-c-14",
+      "prompt": "Vous arrivez derrière un accident et une personne blessée reste dans un véhicule. Aucun danger immédiat de feu, d’immersion ou de choc secondaire n’est identifié depuis votre position sûre. Quelle priorité évite un geste inadapté ?",
+      "options": [
+        {
+          "id": "choice-b1f084baead5",
+          "text": "Extraire systématiquement la personne pour l’installer dans votre voiture avant l’appel."
+        },
+        {
+          "id": "choice-cd61ba3f8ad3",
+          "text": "Protéger sans vous exposer, alerter et suivre les consignes plutôt que déplacer spontanément la personne."
+        },
+        {
+          "id": "choice-a909660e1444",
+          "text": "Lui donner à boire puis reprendre la route pour libérer la zone."
+        }
+      ],
+      "answer": "choice-cd61ba3f8ad3",
+      "explanation": "Sans danger immédiat imposant un dégagement, déplacer spontanément une victime peut aggraver ses blessures. L’alerte et les consignes des secours orientent l’aide adaptée.",
+      "module": "C",
+      "lesson_refs": [
+        "C.12"
+      ],
+      "sources": [
+        {
+          "title": "Ministère de l’Intérieur — Que faire en cas de panne ou d’accident",
+          "url": "https://www.interieur.gouv.fr/archive/que-faire-en-cas-de-panne-ou-d-accident"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-e-09",
+      "prompt": "Le client prévient : “The meeting has been brought forward. We need to leave earlier.” Quel changement annonce-t-il ?",
+      "options": [
+        {
+          "id": "choice-a46ad2c80801",
+          "text": "La réunion a été retardée et il faut partir plus tard."
+        },
+        {
+          "id": "choice-88b87fd84e32",
+          "text": "La réunion a changé de salle sans conséquence sur le départ."
+        },
+        {
+          "id": "choice-1c4e93f52d60",
+          "text": "La réunion a été avancée et il faut partir plus tôt."
+        }
+      ],
+      "answer": "choice-1c4e93f52d60",
+      "explanation": "Brought forward signifie avancé dans le temps ; earlier confirme le besoin de partir plus tôt. Le message ne parle pas d’un changement de salle.",
+      "module": "E",
+      "lesson_refs": [
+        "E.09"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-f-11",
+      "prompt": "Un client laisse un avis négatif en affirmant que vous avez changé de destination. Votre réservation indique une modification demandée par son assistant. Quelle réponse traite le différend sans exposer ses données ?",
+      "options": [
+        {
+          "id": "choice-312dabd20f17",
+          "text": "Publier la réservation complète et les coordonnées de l’assistant pour prouver votre version."
+        },
+        {
+          "id": "choice-342bb2971313",
+          "text": "Reconnaître le désaccord, proposer un échange privé et rapprocher les pièces de la modification."
+        },
+        {
+          "id": "choice-86cddc161b47",
+          "text": "Effacer vos traces de modification pour repartir sur un dossier plus simple."
+        }
+      ],
+      "answer": "choice-342bb2971313",
+      "explanation": "Le dossier peut clarifier le désaccord dans un canal adapté. Sa publication exposerait des données sans nécessité ; supprimer les traces empêcherait de vérifier ce qui a été demandé et accepté.",
+      "module": "F",
+      "lesson_refs": [
+        "F.11"
+      ],
+      "sources": [
+        {
+          "title": "CNIL — Minimiser les données collectées",
+          "url": "https://www.cnil.fr/fr/minimiser-les-donnees-collectees"
+        },
+        {
+          "title": "DGCCRF — Comment régler un litige de consommation",
+          "url": "https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/comment-regler-un-litige-de-la-consommation"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-g-13",
+      "prompt": "Une commande est passée par un service de réservation pour une entreprise cliente. Le justificatif ne permet pas de relier le lieu et l’horaire de prise en charge à la mission réellement exécutée. Quelle correction de procédure est nécessaire pour les prochaines courses ?",
+      "options": [
+        {
+          "id": "choice-a39e7692e1f7",
+          "text": "Contrôler avant départ que les informations exigées du justificatif correspondent à chaque mission."
+        },
+        {
+          "id": "choice-80f9704be536",
+          "text": "Utiliser le même justificatif générique pour toutes les courses du contrat annuel."
+        },
+        {
+          "id": "choice-a4a90083acaf",
+          "text": "Attendre qu’un passager demande une facture pour recueillir la première trace de la mission."
+        }
+      ],
+      "answer": "choice-a39e7692e1f7",
+      "explanation": "Un contrat commercial général ne dispense pas d’un justificatif de réservation approprié. La vérification doit être faite avant la prise en charge, avec des informations qui correspondent au trajet exécuté.",
+      "module": "G",
+      "lesson_refs": [
+        "G.05"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-e-03",
+      "prompt": "Au téléphone, le client corrige : “Not seven fifty. Seven fifteen, a quarter past seven, in the morning.” Quelle heure confirmez-vous ?",
+      "options": [
+        {
+          "id": "choice-5e9f20f85698",
+          "text": "7:50 a.m."
+        },
+        {
+          "id": "choice-2d9c1caa7551",
+          "text": "7:45 p.m."
+        },
+        {
+          "id": "choice-00e8b7800305",
+          "text": "7:15 a.m."
+        }
+      ],
+      "answer": "choice-00e8b7800305",
+      "explanation": "Le client oppose explicitement seven fifteen à seven fifty et ajoute a quarter past seven. In the morning confirme le matin ; la correction donne 7 h 15.",
+      "module": "E",
+      "lesson_refs": [
+        "E.03"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Prepositions of time ; exemples professionnels originaux",
+          "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/prepositions-time"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-c-03",
+      "prompt": "Vous suivez une voiture avec une marge suffisante. Un autre véhicule s’insère dans cet intervalle et réduit fortement l’espace devant vous. Quelle réaction reconstitue une marge sûre ?",
+      "options": [
+        {
+          "id": "choice-1044114fc8ae",
+          "text": "Accélérer jusqu’au pare-chocs du véhicule inséré afin de récupérer l’espace perdu."
+        },
+        {
+          "id": "choice-4a80e5b945fe",
+          "text": "Maintenir exactement l’écart réduit puisque vous aviez bien réglé votre distance auparavant."
+        },
+        {
+          "id": "choice-14af149317a7",
+          "text": "Adapter progressivement l’allure pour augmenter de nouveau l’intervalle."
+        }
+      ],
+      "answer": "choice-14af149317a7",
+      "explanation": "La marge s’apprécie après l’insertion, dans la nouvelle situation. Une adaptation progressive permet de la reconstituer sans chercher à défendre une place ni ignorer le nouvel obstacle.",
+      "module": "C",
+      "lesson_refs": [
+        "C.03"
+      ],
+      "sources": [
+        {
+          "title": "ONISR — Code de la route et partage de la voie publique",
+          "url": "https://www.onisr.securite-routiere.gouv.fr/politique-de-securite-routiere/code-de-la-route"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-d-09",
+      "prompt": "Vous envoyez le message « Les factures que j’ai ___ sont jointes à ce courriel ». Quelle forme convient ?",
+      "options": [
+        {
+          "id": "choice-8082829cfb58",
+          "text": "envoyés"
+        },
+        {
+          "id": "choice-adb05795ea61",
+          "text": "envoyer"
+        },
+        {
+          "id": "choice-f318bc8b0cf9",
+          "text": "envoyées"
+        }
+      ],
+      "answer": "choice-f318bc8b0cf9",
+      "explanation": "Le complément direct « que », placé avant le verbe, reprend « les factures », féminin pluriel. Le participe passé employé avec avoir s’accorde donc ici : envoyées.",
+      "module": "D",
+      "lesson_refs": [
+        "D.09"
+      ],
+      "sources": [
+        {
+          "title": "Référentiel de l’examen VTC — compréhension du français ; textes des exercices originaux",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-05",
+      "prompt": "Une attestation garantit la responsabilité civile liée à l’exploitation, mais votre assureur n’a pas confirmé l’usage de la voiture pour le transport rémunéré. Quelle conclusion pouvez-vous tirer ?",
+      "options": [
+        {
+          "id": "choice-4263ac8de3c2",
+          "text": "La responsabilité civile d’exploitation remplace nécessairement toute assurance du véhicule."
+        },
+        {
+          "id": "choice-32550e1bcdc3",
+          "text": "La garantie d’exploitation ne prouve pas à elle seule que le contrat automobile couvre l’usage VTC."
+        },
+        {
+          "id": "choice-78db358fdf99",
+          "text": "La mention de votre numéro SIREN sur l’attestation suffit à étendre le contrat automobile."
+        }
+      ],
+      "answer": "choice-32550e1bcdc3",
+      "explanation": "Les deux risques doivent être distingués : dommages liés à l’exploitation et couverture du véhicule pour son usage réel. Une identification correcte de l’entreprise ne modifie pas le périmètre d’une garantie.",
+      "module": "A",
+      "lesson_refs": [
+        "A.05"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-e-06",
+      "prompt": "Le client dit : “The air conditioning is a little too strong. Could you turn it down?” Quelle demande devez-vous traiter ?",
+      "options": [
+        {
+          "id": "choice-ec1b1598c249",
+          "text": "Augmenter l’intensité de la climatisation."
+        },
+        {
+          "id": "choice-fe024bf63f72",
+          "text": "Baisser le volume de la radio."
+        },
+        {
+          "id": "choice-98011bd2d3ba",
+          "text": "Réduire l’intensité de la climatisation."
+        }
+      ],
+      "answer": "choice-98011bd2d3ba",
+      "explanation": "Turn it down signifie ici réduire le réglage de l’appareil mentionné, la climatisation. Le pronom it ne renvoie pas à une radio absente de l’échange.",
+      "module": "E",
+      "lesson_refs": [
+        "E.06"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-f-08",
+      "prompt": "Une annonce promet une prise en charge immédiate dans toute la région, alors que votre système fonctionne sur réservation et que vos disponibilités varient. Quelle formulation corrige l’écart ?",
+      "options": [
+        {
+          "id": "choice-842436919ec3",
+          "text": "Garder la promesse puis signaler systématiquement après paiement que le véhicule est indisponible."
+        },
+        {
+          "id": "choice-0c4e983fed8e",
+          "text": "Présenter la zone réellement desservie et la confirmation de disponibilité lors de la réservation."
+        },
+        {
+          "id": "choice-722b51de141a",
+          "text": "Retirer toute information de disponibilité mais conserver la promesse d’immédiateté."
+        }
+      ],
+      "answer": "choice-0c4e983fed8e",
+      "explanation": "La communication doit correspondre à un service réalisable. Clarifier la zone et le processus de confirmation permet au client d’organiser son déplacement sans s’appuyer sur une disponibilité non vérifiée.",
+      "module": "F",
+      "lesson_refs": [
+        "F.08"
+      ],
+      "sources": [
+        {
+          "title": "DGCCRF — Information sur les prix et frais supplémentaires",
+          "url": "https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/linformation-sur-les-prix"
+        },
+        {
+          "title": "Bpifrance Création — Construire une offre, vérifier son marché et son modèle économique",
+          "url": "https://bpifrance-creation.fr/moments-de-vie/comment-faire-business-plan-efficace"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-11",
+      "prompt": "Votre entreprise bénéficie de la franchise en base de TVA. Votre suivi montre une facture de 280 €, un acompte encaissé de 80 € et un règlement final encaissé de 200 €. Un export liste les trois lignes. Quel chiffre d’affaires cette seule prestation représente-t-elle ?",
+      "options": [
+        {
+          "id": "choice-990c34446898",
+          "text": "560 €, en additionnant facture et paiements."
+        },
+        {
+          "id": "choice-a82b75327cfa",
+          "text": "280 €, avec deux paiements qui soldent la même prestation."
+        },
+        {
+          "id": "choice-ebf9e4b6b71c",
+          "text": "200 €, car le dernier encaissement remplace le montant de la facture."
+        }
+      ],
+      "answer": "choice-a82b75327cfa",
+      "explanation": "La facture décrit la vente de 280 €, sans TVA facturée dans cette situation de franchise en base. Les paiements 80 + 200 règlent cette même créance ; ils ne représentent pas deux ventes supplémentaires.",
+      "module": "B",
+      "lesson_refs": [
+        "B.11"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Facturation et correction des pièces",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F23208"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-g-09",
+      "prompt": "Un prix fixe a été accepté pour le trajet direct, sans clause permettant une majoration pour embouteillage. Le trafic ralentit mais ni le trajet ni le service demandé ne changent. Quelle décision est cohérente avec cet accord ?",
+      "options": [
+        {
+          "id": "choice-b57fae74ab70",
+          "text": "Ajouter à l’arrivée un supplément de votre choix en invoquant la liberté tarifaire."
+        },
+        {
+          "id": "choice-34acab3367aa",
+          "text": "Appliquer rétroactivement un tarif horaire sans en avoir informé le client."
+        },
+        {
+          "id": "choice-93a6d736186a",
+          "text": "Respecter le prix convenu ; le seul embouteillage ne crée pas une clause de majoration absente de l’accord."
+        }
+      ],
+      "answer": "choice-93a6d736186a",
+      "explanation": "La liberté de fixer un prix s’exerce avec une information et un accord sur les conditions. Elle ne rend pas opposable une modification unilatérale inventée après la prestation.",
+      "module": "G",
+      "lesson_refs": [
+        "G.09"
+      ],
+      "sources": [
+        {
+          "title": "DGCCRF — Information sur les prix et frais supplémentaires",
+          "url": "https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/linformation-sur-les-prix"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-g-10",
+      "prompt": "Une entreprise remplace le conducteur annoncé par un autre conducteur qualifié. Le client attend toujours le premier nom et la réservation affiche l’ancien véhicule. Quel point doit être traité avant la rencontre ?",
+      "options": [
+        {
+          "id": "choice-49751d6f274a",
+          "text": "Vérifier le remplacement et communiquer le bon véhicule et le bon conducteur."
+        },
+        {
+          "id": "choice-c32d136e687f",
+          "text": "Corriger seulement le nom du conducteur, puisque sa qualification suffit à valider la mission."
+        },
+        {
+          "id": "choice-ab1f7a4a3331",
+          "text": "Transmettre les nouvelles informations au client et vérifier les pièces après la course."
+        }
+      ],
+      "answer": "choice-49751d6f274a",
+      "explanation": "Un remplacement doit rester conforme et identifiable. Des informations non mises à jour créent un risque de confusion même si le remplaçant détient le titre requis.",
+      "module": "G",
+      "lesson_refs": [
+        "G.10"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-c-05",
+      "prompt": "Le feu est vert, mais la file située après le carrefour est immobilisée et votre véhicule resterait au milieu de l’intersection. Que faites-vous ?",
+      "options": [
+        {
+          "id": "choice-10dcface1d6f",
+          "text": "Entrer immédiatement, car le vert oblige à occuper le carrefour."
+        },
+        {
+          "id": "choice-c574eba2fe1a",
+          "text": "Attendre avant de vous engager jusqu’à disposer d’un espace de dégagement."
+        },
+        {
+          "id": "choice-2d1ba1d5c9fb",
+          "text": "Entrer et vous arrêter sur le passage piéton pour laisser une partie du carrefour libre."
+        }
+      ],
+      "answer": "choice-c574eba2fe1a",
+      "explanation": "Le feu vert n’autorise pas à bloquer l’intersection. Il faut vérifier qu’on peut la dégager, tout en respectant les piétons et les autres mouvements.",
+      "module": "C",
+      "lesson_refs": [
+        "C.05"
+      ],
+      "sources": [
+        {
+          "title": "ONISR — Code de la route et partage de la voie publique",
+          "url": "https://www.onisr.securite-routiere.gouv.fr/politique-de-securite-routiere/code-de-la-route"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-11",
+      "prompt": "Un contrôleur relève une différence entre le nom de l’exploitant inscrit sur la réservation et celui figurant sur les pièces présentées. Vous ignorez encore la cause. Quelle conduite adoptez-vous ?",
+      "options": [
+        {
+          "id": "choice-6e0127c42dd9",
+          "text": "Corriger d’abord le nom sur la réservation, puis présenter les pièces."
+        },
+        {
+          "id": "choice-6cdd44316c59",
+          "text": "Présenter les pièces et expliquer l’écart, puis vérifier sa cause."
+        },
+        {
+          "id": "choice-abfb99b3ae65",
+          "text": "Présenter le contrat de partenariat comme preuve suffisante de conformité."
+        }
+      ],
+      "answer": "choice-6cdd44316c59",
+      "explanation": "L’écart demande une vérification traçable. Une modification rétroactive effacerait l’information à expliquer ; l’existence d’un partenariat ne démontre pas, à elle seule, la conformité de cette mission.",
+      "module": "A",
+      "lesson_refs": [
+        "A.11"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-e-04",
+      "prompt": "Votre client écrit : “I am across the street from the pharmacy, beside the bookshop.” Où le cherchez-vous d’après ce message ?",
+      "options": [
+        {
+          "id": "choice-299ea88482b0",
+          "text": "En face de la pharmacie, à côté de la librairie."
+        },
+        {
+          "id": "choice-3d502bc0b888",
+          "text": "À l’intérieur de la pharmacie, derrière la librairie."
+        },
+        {
+          "id": "choice-fee9f64206e5",
+          "text": "À côté de la pharmacie, de l’autre côté de la librairie."
+        }
+      ],
+      "answer": "choice-299ea88482b0",
+      "explanation": "Across the street from indique l’autre côté de la rue par rapport à la pharmacie. Beside indique la proximité immédiate de la librairie ; les deux repères doivent être conservés.",
+      "module": "E",
+      "lesson_refs": [
+        "E.04"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-f-06",
+      "prompt": "Vous avez contacté trente entreprises sans distinguer leurs besoins. Les rares réponses viennent de centres de formation qui accueillent tôt le matin. Quelle prochaine action teste cette piste ?",
+      "options": [
+        {
+          "id": "choice-8810d98a0f83",
+          "text": "Envoyer le même message à un fichier plus grand sans identifier les segments."
+        },
+        {
+          "id": "choice-f6106856093d",
+          "text": "Considérer toutes les entreprises contactées comme des clients déjà fidélisés."
+        },
+        {
+          "id": "choice-2216e61574ef",
+          "text": "Préparer un petit lot de contacts comparables, préciser leur besoin matinal et suivre les réponses obtenues."
+        }
+      ],
+      "answer": "choice-2216e61574ef",
+      "explanation": "Les premiers retours suggèrent une hypothèse de cible. Un test limité et suivi permet de l’évaluer ; le volume de messages seul ne prouve pas l’intérêt du segment.",
+      "module": "F",
+      "lesson_refs": [
+        "F.06"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Construire une offre, vérifier son marché et son modèle économique",
+          "url": "https://bpifrance-creation.fr/moments-de-vie/comment-faire-business-plan-efficace"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-01",
+      "prompt": "Un organisateur propose de transporter chaque soir les visiteurs d’un salon. Il veut inscrire chaque demande dans votre planning nominatif avant le trajet. Quel élément permet de rattacher ces missions au fonctionnement VTC ?",
+      "options": [
+        {
+          "id": "choice-9a5415f6f422",
+          "text": "Chaque transport correspond à une réservation préalable identifiable, même si un organisateur commande pour les passagers."
+        },
+        {
+          "id": "choice-ee3542707fdc",
+          "text": "Le seul fait que tous les visiteurs paient le même montant transforme le service en taxi."
+        },
+        {
+          "id": "choice-5094bd46667f",
+          "text": "La clientèle professionnelle dispense de distinguer réservation et prise en charge spontanée."
+        }
+      ],
+      "answer": "choice-9a5415f6f422",
+      "explanation": "Le commanditaire peut réserver pour un passager. Ce sont les conditions concrètes de la mission, notamment sa réservation préalable, qui doivent être établies ; un tarif commun ou une clientèle professionnelle ne suffit pas à changer le régime.",
+      "module": "A",
+      "lesson_refs": [
+        "A.01"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-03",
+      "prompt": "En octobre 2026, un candidat dépose pour la première fois une demande d’accès VTC en invoquant uniquement son expérience de chauffeur. Il n’avait déposé aucun dossier avant le 12 août 2026. Quel parcours doit-il préparer ?",
+      "options": [
+        {
+          "id": "choice-06330ad01ff1",
+          "text": "Une équivalence automatique dès qu’il fournit des fiches de paie de chauffeur."
+        },
+        {
+          "id": "choice-41e8fe9b1658",
+          "text": "Une inscription directe au registre des exploitants tenant lieu de qualification personnelle."
+        },
+        {
+          "id": "choice-d13280609cd5",
+          "text": "La voie de l’examen et les autres conditions d’accès actuellement applicables."
+        }
+      ],
+      "answer": "choice-d13280609cd5",
+      "explanation": "Pour une première demande après le 12 août 2026, l’expérience professionnelle ne remplace plus l’examen. La disposition transitoire concernant les demandes antérieures ne correspond pas à ce candidat.",
+      "module": "A",
+      "lesson_refs": [
+        "A.03"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Accès VTC, disposition du 12 août 2026",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-d-10",
+      "prompt": "Question : « Pour quelle raison le rendez-vous est-il déplacé ? » Texte : « Le hall sera fermé pour nettoyage ; le groupe attendra sous l’auvent. » Quelle réponse est complète et ciblée ?",
+      "options": [
+        {
+          "id": "choice-1307cd3a36d7",
+          "text": "Parce que le hall sera fermé pour nettoyage."
+        },
+        {
+          "id": "choice-17e2f32a83e4",
+          "text": "Parce que le groupe attendra désormais sous l’auvent."
+        },
+        {
+          "id": "choice-6d357fc22f2a",
+          "text": "Parce que le hall est trop étroit pour accueillir le groupe."
+        }
+      ],
+      "answer": "choice-1307cd3a36d7",
+      "explanation": "La question porte sur la raison : le hall ferme pour nettoyage. L’auvent est le nouveau lieu, pas la cause ; un manque de place dans le hall n’est pas évoqué dans le texte.",
+      "module": "D",
+      "lesson_refs": [
+        "D.10"
+      ],
+      "sources": [
+        {
+          "title": "Référentiel de l’examen VTC — compréhension du français ; textes des exercices originaux",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-g-05",
+      "prompt": "Les horaires d’un contrôle sont exprimés dans le même fuseau : prise en charge le 10 octobre à 00 h 05, réservation enregistrée le 9 octobre à 23 h 50. Quelle conclusion peut-on tirer de ces seules heures ?",
+      "options": [
+        {
+          "id": "choice-1e989ee6a13f",
+          "text": "La réservation est postérieure parce que son heure 23 h 50 est supérieure à 00 h 05."
+        },
+        {
+          "id": "choice-d7a18b42e474",
+          "text": "La réservation précède la prise en charge de quinze minutes ; les autres mentions restent à vérifier."
+        },
+        {
+          "id": "choice-9da58affa772",
+          "text": "La réservation n’est valable que si elle porte la même date civile que la prise en charge."
+        }
+      ],
+      "answer": "choice-d7a18b42e474",
+      "explanation": "Le changement de jour doit être pris en compte. Entre 23 h 50 et 00 h 05, quinze minutes s’écoulent ; cette vérification chronologique ne démontre pas à elle seule la complétude du justificatif.",
+      "module": "G",
+      "lesson_refs": [
+        "G.05"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-14",
+      "prompt": "Vous prévoyez 2 400 € de recettes ce mois-ci, dont 600 € versés seulement le mois suivant. Les décaissements du mois sont 1 900 € et le solde initial 350 €. Quel solde de fin de mois donne ce plan de trésorerie ?",
+      "options": [
+        {
+          "id": "choice-36919244e55a",
+          "text": "850 €."
+        },
+        {
+          "id": "choice-d944c8374796",
+          "text": "250 €."
+        },
+        {
+          "id": "choice-b8923fa38805",
+          "text": "−100 €."
+        }
+      ],
+      "answer": "choice-d944c8374796",
+      "explanation": "Les encaissements du mois sont 2 400 − 600 = 1 800 €. Solde final : 350 + 1 800 − 1 900 = 250 €. Les 600 € à recevoir doivent figurer dans la période suivante.",
+      "module": "B",
+      "lesson_refs": [
+        "B.08"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Plan de trésorerie",
+          "url": "https://bpifrance-creation.fr/plan-tresorerie"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-c-02",
+      "prompt": "Vous abordez une rue autorisée à 50 km/h, bordée de camionnettes derrière lesquelles des enfants peuvent apparaître. La chaussée est sèche. Quel facteur doit guider votre allure ?",
+      "options": [
+        {
+          "id": "choice-32d225cddc02",
+          "text": "La seule limite de 50 km/h, qui garantit une marge suffisante sur chaussée sèche."
+        },
+        {
+          "id": "choice-7c8079b5fe13",
+          "text": "La visibilité réellement disponible et les risques prévisibles, même si cela impose de rouler sous 50 km/h."
+        },
+        {
+          "id": "choice-2463c354dc92",
+          "text": "La vitesse du véhicule derrière vous, pour éviter de lui imposer un ralentissement."
+        }
+      ],
+      "answer": "choice-7c8079b5fe13",
+      "explanation": "Une limite réglementaire est un maximum, pas une vitesse adaptée à toute situation. La visibilité masquée et la possibilité d’un débouché exigent une anticipation indépendante de l’impatience du véhicule suiveur.",
+      "module": "C",
+      "lesson_refs": [
+        "C.02"
+      ],
+      "sources": [
+        {
+          "title": "ONISR — Code de la route et partage de la voie publique",
+          "url": "https://www.onisr.securite-routiere.gouv.fr/politique-de-securite-routiere/code-de-la-route"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-c-13",
+      "prompt": "À 17 h, la navigation recommande une voie dont le panneau indique « réservée aux bus de 16 h à 19 h ». Votre véhicule n’a aucune dérogation. Quelle information doit déterminer votre trajectoire ?",
+      "options": [
+        {
+          "id": "choice-67710d1d725f",
+          "text": "La restriction applicable à 17 h, puis un itinéraire autorisé à recalculer en sécurité."
+        },
+        {
+          "id": "choice-3fd1b4317238",
+          "text": "La recommandation numérique, car son temps de trajet est actualisé."
+        },
+        {
+          "id": "choice-038fe74a81d9",
+          "text": "La circulation observée le matin, lorsque la restriction horaire ne s’appliquait pas."
+        }
+      ],
+      "answer": "choice-67710d1d725f",
+      "explanation": "17 h se situe dans la plage de 16 h à 19 h. L’accès observé le matin et le guidage numérique ne constituent pas une dérogation à la restriction actuellement applicable.",
+      "module": "C",
+      "lesson_refs": [
+        "C.05"
+      ],
+      "sources": [
+        {
+          "title": "ONISR — Code de la route et partage de la voie publique",
+          "url": "https://www.onisr.securite-routiere.gouv.fr/politique-de-securite-routiere/code-de-la-route"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-g-11",
+      "prompt": "Votre dossier contient une facture de révision mécanique récente, mais aucun justificatif du contrôle technique spécifique requis n’est disponible. Quelle erreur faut-il éviter ?",
+      "options": [
+        {
+          "id": "choice-3bdc18f03953",
+          "text": "Demander le justificatif du contrôle alors que le véhicule a aussi été entretenu."
+        },
+        {
+          "id": "choice-416b2c1c2283",
+          "text": "Confondre une opération d’entretien avec la preuve du contrôle technique exigé."
+        },
+        {
+          "id": "choice-9c106acd8fb4",
+          "text": "Vérifier séparément les dates des deux interventions."
+        }
+      ],
+      "answer": "choice-416b2c1c2283",
+      "explanation": "L’entretien et le contrôle technique ne sont pas deux noms pour la même démarche. Une facture de révision ne suffit pas à prouver que le contrôle réglementaire requis a été effectué et reste valable.",
+      "module": "G",
+      "lesson_refs": [
+        "G.11"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Conditions d’exploitation et véhicule VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-g-01",
+      "prompt": "Une agence vous propose d’exécuter des courses sous le numéro REVTC d’un autre exploitant, tout en les facturant avec votre propre entreprise non inscrite. Quel point bloque cet arrangement ?",
+      "options": [
+        {
+          "id": "choice-0c70c705be14",
+          "text": "Le numéro d’un partenaire ne constitue pas l’inscription de l’entreprise qui exploite réellement votre activité."
+        },
+        {
+          "id": "choice-370d0ed6ab42",
+          "text": "L’inscription devient inutile dès que le partenaire a une activité depuis plusieurs années."
+        },
+        {
+          "id": "choice-e3d7ed410d93",
+          "text": "Un numéro REVTC peut être partagé librement entre toutes les entreprises d’un même contrat commercial."
+        }
+      ],
+      "answer": "choice-0c70c705be14",
+      "explanation": "Un partenariat ne rend pas les entreprises juridiquement interchangeables. Il faut identifier l’exploitant réel et son inscription, au lieu de considérer le numéro d’un tiers comme un titre transférable.",
+      "module": "G",
+      "lesson_refs": [
+        "G.01"
+      ],
+      "sources": [
+        {
+          "title": "Registre VTC — Informations générales et capacité financière",
+          "url": "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-09",
+      "prompt": "Une activité supporte 1 650 € de charges fixes. Chaque course laisse 22 € après tous les coûts variables retenus. Quel minimum de courses couvre ces charges dans ce modèle ?",
+      "options": [
+        {
+          "id": "choice-687d215d538a",
+          "text": "74 courses."
+        },
+        {
+          "id": "choice-a82466825521",
+          "text": "83 courses."
+        },
+        {
+          "id": "choice-9035cf15e6ff",
+          "text": "75 courses."
+        }
+      ],
+      "answer": "choice-9035cf15e6ff",
+      "explanation": "1 650 ÷ 22 = 75. À 74 courses, la contribution de 1 628 € reste inférieure aux charges fixes de 22 €. Le calcul suppose une contribution identique pour chaque course.",
+      "module": "B",
+      "lesson_refs": [
+        "B.09"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Marge sur coûts variables et seuil de rentabilité",
+          "url": "https://bpifrance-creation.fr/encyclopedie/previsions-financieres-business-plan/previsions-financieres/seuil-rentabilite"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-e-10",
+      "prompt": "Après une tentative de paiement, vous devez dire au client d’attendre la vérification avant de représenter sa carte. Quelle phrase exprime exactement cette consigne ?",
+      "options": [
+        {
+          "id": "choice-5c71cbcaafaf",
+          "text": "“Please wait while I check the payment status before you try again.”"
+        },
+        {
+          "id": "choice-21588f054d72",
+          "text": "“Please try again before I check the payment status.”"
+        },
+        {
+          "id": "choice-1db3a0a1d83c",
+          "text": "“The payment is already confirmed; you can put your card away.”"
+        }
+      ],
+      "answer": "choice-5c71cbcaafaf",
+      "explanation": "While I check demande d’attendre pendant la vérification ; before you try again place une éventuelle nouvelle tentative après celle-ci. Les autres formulations inversent l’ordre ou affirment une confirmation non établie.",
+      "module": "E",
+      "lesson_refs": [
+        "E.10"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-d-04",
+      "prompt": "Lisez : « Les valises sont dans le hall. La réceptionniste les a comptées puis elle a appelé le conducteur. » À quoi renvoie le mot « les » ?",
+      "options": [
+        {
+          "id": "choice-0b2d2e691563",
+          "text": "Aux valises."
+        },
+        {
+          "id": "choice-752152351fe5",
+          "text": "Aux appels."
+        },
+        {
+          "id": "choice-edb5ff136213",
+          "text": "Aux conducteurs."
+        }
+      ],
+      "answer": "choice-0b2d2e691563",
+      "explanation": "Le pronom complément « les » reprend le nom pluriel « les valises ». Le pronom sujet « elle » désigne, lui, la réceptionniste : les deux mots n’ont pas le même référent.",
+      "module": "D",
+      "lesson_refs": [
+        "D.04"
+      ],
+      "sources": [
+        {
+          "title": "Référentiel de l’examen VTC — compréhension du français ; textes des exercices originaux",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-a-08",
+      "prompt": "À l’arrêt dans un lieu sûr, une passagère vous dit qu’elle est suivie et vous demande de l’aider à appeler les secours. Une autre personne insiste pour connaître sa destination. Quelle priorité retenez-vous ?",
+      "options": [
+        {
+          "id": "choice-ab8261f410c2",
+          "text": "Communiquer la destination pour vérifier si la personne qui suit connaît bien la passagère."
+        },
+        {
+          "id": "choice-f99ca4bcf9b3",
+          "text": "Faciliter l’appel et protéger sa localisation, sans transmettre sa destination à l’interlocuteur non autorisé."
+        },
+        {
+          "id": "choice-0bd5d01cee7f",
+          "text": "Conditionner l’appel à la présentation d’une preuve écrite de la menace."
+        }
+      ],
+      "answer": "choice-f99ca4bcf9b3",
+      "explanation": "La demande d’aide et les faits observés guident l’action. Communiquer la destination peut accroître l’exposition de la personne ; on peut faciliter l’alerte depuis un lieu sûr sans exiger une preuve préalable.",
+      "module": "A",
+      "lesson_refs": [
+        "A.08"
+      ],
+      "sources": [
+        {
+          "title": "Service Public — Alerter et obtenir de l’aide face aux violences sexuelles",
+          "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F1526"
+        },
+        {
+          "title": "CNIL — Minimiser les données collectées",
+          "url": "https://www.cnil.fr/fr/minimiser-les-donnees-collectees"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-c-01",
+      "prompt": "Avant une mission, la pression d’un pneu est nettement inférieure à la valeur préconisée et baisse de nouveau après gonflage. Quel contrôle est prioritaire ?",
+      "options": [
+        {
+          "id": "choice-5d2b0e34db1f",
+          "text": "Rechercher et faire traiter la perte de pression avant d’affecter le véhicule à la mission."
+        },
+        {
+          "id": "choice-be900ffd5112",
+          "text": "Régler les quatre pneus sur la valeur la plus basse pour retrouver un équilibre."
+        },
+        {
+          "id": "choice-e88a427dd517",
+          "text": "Se fier uniquement à l’absence de voyant après le gonflage initial."
+        }
+      ],
+      "answer": "choice-5d2b0e34db1f",
+      "explanation": "La baisse répétée indique un problème qui n’est pas résolu par le premier gonflage. Ni l’égalisation sur une pression insuffisante ni l’absence temporaire de voyant ne rétablit la sécurité.",
+      "module": "C",
+      "lesson_refs": [
+        "C.01"
+      ],
+      "sources": [
+        {
+          "title": "Sécurité routière — Guide du bon conducteur",
+          "url": "https://www.securite-routiere.gouv.fr/sites/default/files/2024-09/dsr_guide_bon_conducteur.pdf"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-e-05",
+      "prompt": "Une passagère précise : “Please keep this case flat. There are paintings inside.” Quelle consigne avez-vous comprise ?",
+      "options": [
+        {
+          "id": "choice-4d93d2196150",
+          "text": "Vider la valise avant de la charger, car elle contient des vêtements."
+        },
+        {
+          "id": "choice-1d0c75f12b7e",
+          "text": "Garder cette valise à plat, car elle contient des tableaux."
+        },
+        {
+          "id": "choice-baaf16f9a7c9",
+          "text": "Placer la valise debout, car son contenu ne craint pas les chocs."
+        }
+      ],
+      "answer": "choice-1d0c75f12b7e",
+      "explanation": "Keep flat demande de maintenir à plat. Paintings désigne les tableaux ; la consigne porte sur la position du bagage et ne demande pas de l’ouvrir.",
+      "module": "E",
+      "lesson_refs": [
+        "E.05"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-e-11",
+      "prompt": "Un passager dit : “That suitcase looks like mine, but the luggage tag has another name.” Quelle difficulté signale-t-il ?",
+      "options": [
+        {
+          "id": "choice-bebdb30287b3",
+          "text": "Il reconnaît sa valise, mais constate que son propre nom est mal orthographié."
+        },
+        {
+          "id": "choice-e179dc1d7d1f",
+          "text": "La valise ressemble à la sienne, mais l’étiquette porte un autre nom."
+        },
+        {
+          "id": "choice-44d045f54210",
+          "text": "Il cherche une valise différente, portant la même étiquette que celle-ci."
+        }
+      ],
+      "answer": "choice-e179dc1d7d1f",
+      "explanation": "Looks like exprime une ressemblance, pas une identification certaine. Another name signale un nom différent sur l’étiquette, sans affirmer une faute d’orthographe ni demander une autre valise portant la même étiquette.",
+      "module": "E",
+      "lesson_refs": [
+        "E.11"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-d-14",
+      "prompt": "Compte rendu : « Sur dix clients interrogés, huit ont répondu ; six de ces huit sont satisfaits. » Quelle affirmation respecte le périmètre des réponses ?",
+      "options": [
+        {
+          "id": "choice-e9d2fd07d154",
+          "text": "Six clients satisfaits prouvent que les quatre autres sont insatisfaits."
+        },
+        {
+          "id": "choice-134e6ea87865",
+          "text": "Six répondants sur huit se déclarent satisfaits ; l’avis des deux non-répondants n’est pas connu."
+        },
+        {
+          "id": "choice-98a2840dab8f",
+          "text": "Les huit répondants sont satisfaits puisqu’ils ont pris le temps de répondre."
+        }
+      ],
+      "answer": "choice-134e6ea87865",
+      "explanation": "Il faut distinguer les personnes sollicitées, les répondants et les satisfaits. Une absence de réponse ne doit pas être transformée en avis favorable ou défavorable.",
+      "module": "D",
+      "lesson_refs": [
+        "D.03"
+      ],
+      "sources": [
+        {
+          "title": "Référentiel de l’examen VTC — compréhension du français ; textes des exercices originaux",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-10",
+      "prompt": "Une entreprise ne peut mobiliser que 2 500 € avant livraison. Deux financements portent sur le même véhicule et la même période. A exige 3 000 € au départ puis 24 loyers de 400 €. B exige 24 loyers de 450 € sans apport. Aucun rachat ni frais supplémentaire n’est prévu. Quelle conclusion tient compte du coût total et de cette limite initiale ?",
+      "options": [
+        {
+          "id": "choice-9f737dcf6ad5",
+          "text": "B : 10 800 €, sans apport. A : 12 600 €, avec un apport trop élevé."
+        },
+        {
+          "id": "choice-693ce5865b78",
+          "text": "A : 9 600 €, sans compter l’apport ; B : 10 800 €, donc plus coûteux."
+        },
+        {
+          "id": "choice-6c9523c1360a",
+          "text": "A : 12 600 €, contre 10 800 € pour B ; le plus faible loyer justifie A malgré l’apport."
+        }
+      ],
+      "answer": "choice-9f737dcf6ad5",
+      "explanation": "A : 3 000 + 24 × 400 = 12 600 €. B : 24 × 450 = 10 800 €. L’apport de 3 000 € de A dépasse aussi les 2 500 € mobilisables au départ. Il faut examiner à la fois les dates et le total des paiements.",
+      "module": "B",
+      "lesson_refs": [
+        "B.10"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Plan de trésorerie",
+          "url": "https://bpifrance-creation.fr/plan-tresorerie"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-c-12",
+      "prompt": "Après une panne, le véhicule est immobilisé dans une zone dangereuse et vous devez alerter. Quel message aide le mieux les secours à comprendre la situation ?",
+      "options": [
+        {
+          "id": "choice-bcdea09e81e4",
+          "text": "Le seul numéro de réservation, qui permettra aux secours de rechercher le trajet."
+        },
+        {
+          "id": "choice-c8ecd5184b34",
+          "text": "Une explication détaillée du rendez-vous manqué avant de donner la localisation."
+        },
+        {
+          "id": "choice-e955a53675fa",
+          "text": "La localisation précise, le sens de circulation, le danger et le nombre de personnes concernées."
+        }
+      ],
+      "answer": "choice-e955a53675fa",
+      "explanation": "L’alerte doit permettre de situer et de dimensionner l’intervention. Le service commercial interrompu pourra être traité ensuite ; il ne remplace ni la localisation ni l’état des personnes.",
+      "module": "C",
+      "lesson_refs": [
+        "C.12"
+      ],
+      "sources": [
+        {
+          "title": "Ministère de l’Intérieur — Que faire en cas de panne ou d’accident",
+          "url": "https://www.interieur.gouv.fr/archive/que-faire-en-cas-de-panne-ou-d-accident"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-c-10",
+      "prompt": "Une longue descente approche. Le conducteur qui vous suit roule vite, tandis que vos passagers lisent à l’arrière. Quelle préparation favorise une conduite maîtrisée et souple ?",
+      "options": [
+        {
+          "id": "choice-890fb8025a62",
+          "text": "Adapter l’allure avant la descente et utiliser les moyens de retenue adaptés au véhicule, sans suivre la pression du véhicule arrière."
+        },
+        {
+          "id": "choice-d4d7e146e854",
+          "text": "Attendre de prendre de la vitesse puis enchaîner des freinages tardifs pour rester dans le rythme."
+        },
+        {
+          "id": "choice-87f056bec5da",
+          "text": "Laisser le véhicule prendre de la vitesse pour éviter toute décélération ressentie par les passagers."
+        }
+      ],
+      "answer": "choice-890fb8025a62",
+      "explanation": "La souplesse repose sur l’anticipation, pas sur l’absence de ralentissement. Préparer l’allure réduit les corrections tardives et garde une marge, indépendamment du comportement du suiveur.",
+      "module": "C",
+      "lesson_refs": [
+        "C.10"
+      ],
+      "sources": [
+        {
+          "title": "Sécurité routière — Guide du bon conducteur",
+          "url": "https://www.securite-routiere.gouv.fr/sites/default/files/2024-09/dsr_guide_bon_conducteur.pdf"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-d-03",
+      "prompt": "Le suivi indique : « À 18 h 05, aucun passager n’était présent au rendez-vous. Un appel a été tenté sans réponse. » Quelle phrase reste strictement fidèle aux faits connus ?",
+      "options": [
+        {
+          "id": "choice-97a38b7297d1",
+          "text": "Le passager a volontairement annulé la course sans prévenir."
+        },
+        {
+          "id": "choice-96ea3e5b0ac7",
+          "text": "Le passager ne possède plus de téléphone."
+        },
+        {
+          "id": "choice-c64b17d1c89b",
+          "text": "À 18 h 05, le passager n’était pas sur place et n’a pas répondu à l’appel tenté."
+        }
+      ],
+      "answer": "choice-c64b17d1c89b",
+      "explanation": "Le suivi décrit deux observations, pas leurs causes. Une annulation volontaire ou la perte d’un téléphone sont des interprétations que ces seuls faits ne permettent pas de retenir.",
+      "module": "D",
+      "lesson_refs": [
+        "D.03"
+      ],
+      "sources": [
+        {
+          "title": "Référentiel de l’examen VTC — compréhension du français ; textes des exercices originaux",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-g-02",
+      "prompt": "Un véhicule reste soumis à une garantie financière. La pièce conservée au dossier arrive à échéance avant la prochaine période d’exploitation. Aucune exemption nouvelle n’est justifiée. Quelle action préparez-vous ?",
+      "options": [
+        {
+          "id": "choice-348e274c5f91",
+          "text": "Conserver l’ancienne pièce sans limite puisque la première inscription a déjà été acceptée."
+        },
+        {
+          "id": "choice-db54cabb1e4c",
+          "text": "Assurer la continuité du justificatif exigé et actualiser le dossier avant que l’ancienne pièce ne suffise plus."
+        },
+        {
+          "id": "choice-45d226879eeb",
+          "text": "Remplacer le justificatif par le solde prévisionnel du carnet de commandes."
+        }
+      ],
+      "answer": "choice-db54cabb1e4c",
+      "explanation": "La conformité doit être suivie dans le temps. Une acceptation ancienne ne démontre pas que la condition reste remplie ; des commandes attendues ne remplacent pas le justificatif requis.",
+      "module": "G",
+      "lesson_refs": [
+        "G.02"
+      ],
+      "sources": [
+        {
+          "title": "Registre VTC — Informations générales et capacité financière",
+          "url": "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-f-04",
+      "prompt": "Une entreprise accepte un devis par courriel, puis demande par téléphone une deuxième prise en charge à une autre adresse. Que formalisez-vous avant de la confirmer ?",
+      "options": [
+        {
+          "id": "choice-d1d4248df2e4",
+          "text": "La modification du trajet, des horaires et du prix éventuel, puis l’accord correspondant."
+        },
+        {
+          "id": "choice-6b9c8c6a8762",
+          "text": "Seulement le nom de la nouvelle rue, sans vérifier l’impact sur la première prise en charge."
+        },
+        {
+          "id": "choice-de87669d38c6",
+          "text": "Une nouvelle facture définitive avant de savoir si la modification est acceptée."
+        }
+      ],
+      "answer": "choice-d1d4248df2e4",
+      "explanation": "La demande supplémentaire peut changer le périmètre et la faisabilité. Rapprocher ces éléments de l’accord initial évite d’exécuter une modification dont les conditions restent indéterminées.",
+      "module": "F",
+      "lesson_refs": [
+        "F.04"
+      ],
+      "sources": [
+        {
+          "title": "DGCCRF — Information sur les prix et frais supplémentaires",
+          "url": "https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/linformation-sur-les-prix"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-c-07",
+      "prompt": "Après une nuit très courte, vous acceptez une longue mission nocturne parce que vous connaissez la route par cœur. Quelle faiblesse comporte ce raisonnement ?",
+      "options": [
+        {
+          "id": "choice-a51413b90e19",
+          "text": "Une route connue ne remplace pas le repos nécessaire à la vigilance."
+        },
+        {
+          "id": "choice-9ea27dff1b82",
+          "text": "L’habitude du trajet permet de compenser le manque de sommeil en roulant moins vite."
+        },
+        {
+          "id": "choice-15c558b06c9d",
+          "text": "Le risque vient surtout des erreurs de navigation, que la route connue limite."
+        }
+      ],
+      "answer": "choice-a51413b90e19",
+      "explanation": "Une route connue facilite la navigation, mais ne restaure pas une vigilance altérée par le manque de sommeil. Réduire la vitesse ne remplace pas le repos nécessaire pour organiser cette mission nocturne.",
+      "module": "C",
+      "lesson_refs": [
+        "C.07"
+      ],
+      "sources": [
+        {
+          "title": "Sécurité routière — Fatigue et conduite",
+          "url": "https://modules.securite-routiere.gouv.fr/jsrt/Fatigue/Fatigue.html"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-b-07",
+      "prompt": "Un micro-entrepreneur peut réduire de 100 € une dépense réelle sans modifier ses recettes ni ses autres charges. Il pense que cette économie est inutile parce que ses frais ne sont pas déduits individuellement de sa base fiscale micro. Quelle distinction corrige ce raisonnement ?",
+      "options": [
+        {
+          "id": "choice-9217cab7fd62",
+          "text": "Une dépense moindre peut améliorer la trésorerie disponible même si elle ne change pas le calcul forfaitaire de la base fiscale."
+        },
+        {
+          "id": "choice-4c00b1847a2f",
+          "text": "Une économie réelle de frais est sans effet sur la banque tant que le régime fiscal reste micro."
+        },
+        {
+          "id": "choice-8a1e6e5d061a",
+          "text": "La baisse de dépense doit être ajoutée au chiffre d’affaires déclaré comme une vente supplémentaire."
+        }
+      ],
+      "answer": "choice-9217cab7fd62",
+      "explanation": "Base fiscale forfaitaire et mouvements bancaires ne sont pas la même mesure. Payer 100 € de moins laisse ici 100 € de plus en trésorerie, sans créer une recette de vente ni une déduction individuelle nouvelle.",
+      "module": "B",
+      "lesson_refs": [
+        "B.07"
+      ],
+      "sources": [
+        {
+          "title": "Bpifrance Création — Plan de trésorerie",
+          "url": "https://bpifrance-creation.fr/plan-tresorerie"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-e-07",
+      "prompt": "Vous annoncez : “The riverside route takes longer, but there is no toll.” Le passager répond : “That is fine; I am not in a hurry.” Que choisit-il dans cet échange ?",
+      "options": [
+        {
+          "id": "choice-ea72e86eb4dc",
+          "text": "L’itinéraire le long de la rivière, plus long mais sans péage."
+        },
+        {
+          "id": "choice-aaee5d271801",
+          "text": "L’itinéraire le plus rapide, même avec un péage."
+        },
+        {
+          "id": "choice-4e660d5216cd",
+          "text": "Une annulation du trajet parce que tous les itinéraires sont trop longs."
+        }
+      ],
+      "answer": "choice-ea72e86eb4dc",
+      "explanation": "Le client accepte la proposition et précise qu’il n’est pas pressé. No toll signifie sans péage, pas gratuit pour l’ensemble du transport.",
+      "module": "E",
+      "lesson_refs": [
+        "E.07"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-c-09",
+      "prompt": "Votre guidage vocal cesse de fonctionner. La destination reste enregistrée et vous êtes engagé dans une circulation dense. Quelle solution évite d’ajouter une distraction ?",
+      "options": [
+        {
+          "id": "choice-e2abb8011e85",
+          "text": "Chercher les paramètres de son tout en gardant une main sur le volant."
+        },
+        {
+          "id": "choice-9e8fd645f8b7",
+          "text": "Fixer l’écran en permanence pour remplacer le guidage vocal jusqu’à destination."
+        },
+        {
+          "id": "choice-c1b57f79aec5",
+          "text": "Continuer à conduire en sécurité puis s’arrêter dans un lieu adapté pour vérifier le réglage et l’itinéraire."
+        }
+      ],
+      "answer": "choice-c1b57f79aec5",
+      "explanation": "La panne d’une aide ne justifie pas de déplacer l’attention vers des réglages ou une lecture continue. On prépare la reprise du guidage après avoir sécurisé l’arrêt.",
+      "module": "C",
+      "lesson_refs": [
+        "C.09"
+      ],
+      "sources": [
+        {
+          "title": "Sécurité routière — Distraction au volant",
+          "url": "https://www.securite-routiere.gouv.fr/quand-vous-regardez-votre-telephone-qui-regarde-la-route"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-final-g-04",
+      "prompt": "Après le remplacement d’un pare-brise, la signalétique VTC réglementaire a été perdue. Les documents de l’entreprise sont toujours valides. Quelle préparation faut-il achever avant de réaffecter le véhicule ?",
+      "options": [
+        {
+          "id": "choice-8324853250e4",
+          "text": "Rétablir la signalétique réglementaire selon la procédure et les emplacements prévus."
+        },
+        {
+          "id": "choice-e83f76b405c7",
+          "text": "Remplacer la signalétique par une copie du contrat client collée sur la vitre."
+        },
+        {
+          "id": "choice-c18fd6d5c40b",
+          "text": "Considérer la présence du véhicule dans le planning comme une dispense d’affichage."
+        }
+      ],
+      "answer": "choice-8324853250e4",
+      "explanation": "Les documents d’exploitation et la signalétique visible remplissent des fonctions distinctes. Le remplacement d’une vitre impose de traiter l’élément manquant avant une utilisation conforme.",
+      "module": "G",
+      "lesson_refs": [
+        "G.04"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Article R3122-8, signalétique",
+          "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000034389549/2026-05-03"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    }
+  ],
+  "notice": "100 situations pédagogiques originales, distinctes des examens de module et des annales. Les données et échanges sont fictifs. Les références servent à réviser les règles et notions mobilisées. Le seuil de 80 % et la répartition par matière sont pédagogiques ; ils ne reproduisent pas les coefficients, les QRC écrites ni la notation de l’examen officiel.",
+  "construction": {
+    "origin": "authored-independent-final-v6",
+    "reviewed_on": "2026-10-10",
+    "module_counts": {
+      "A": 15,
+      "B": 15,
+      "C": 14,
+      "D": 14,
+      "E": 14,
+      "F": 14,
+      "G": 14
+    },
+    "rationale": "Répartition pédagogique conservée : A et B 15, C à G 14. Aucun tirage dans la banque des examens de module.",
+    "source_scenarios": "Situations et textes originaux, références externes pour les règles et compétences."
+  }
+}

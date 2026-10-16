@@ -1,0 +1,9 @@
+<div class="mac-choice-questions">
+{% for question in activity.macaps.questions %}
+  <fieldset class="mac-choice-group" data-mac-question="{{ question.id }}">
+    <legend><span>{{ '%02d'|format(loop.index) }}</span>{{ question.prompt }}</legend>
+    <div class="mac-choice-options">{% for option in question.options %}<label><input type="radio" name="{{ question.id }}" value="{{ option.id }}"{% if activity_completed %} disabled{% endif %}><span>{{ option.text }}</span></label>{% endfor %}</div>
+    <select class="native-elearning-blank" data-group-id="{{ question.id }}" aria-label="{{ question.prompt }}" hidden tabindex="-1"{% if activity_completed %} disabled{% endif %}><option value=""></option>{% for option in question.options %}<option value="{{ option.id }}">{{ option.text }}</option>{% endfor %}</select>
+  </fieldset>
+{% endfor %}
+</div>

@@ -1,0 +1,411 @@
+{
+  "id": "sujet-2023-d",
+  "title": "28 mars 2023 · Français",
+  "year": 2023,
+  "source_filename": "SUJET-FRANCAIS-VTC-MARS-2023.pdf",
+  "source_sha256": "dab3b31baeabe97a3d967515e2a00f155fb4a5e61f6302442a780b632ecd6e44",
+  "sections": [
+    {
+      "id": "annales-2023-d",
+      "module": "D",
+      "title": "Français · mars 2023",
+      "minutes": 30,
+      "questions": [
+        {
+          "number": 1,
+          "page": 3,
+          "prompt": "Pourquoi Jorge Sayas a lâché son boulot de gardien de nuit ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "L'essence est quasiment gratuite"
+            },
+            {
+              "id": "b",
+              "text": "Parce que le métro tombe en panne"
+            },
+            {
+              "id": "c",
+              "text": "Son revenu est plus important comme « motorizados »"
+            },
+            {
+              "id": "d",
+              "text": "Pour fêter la victoire d'Hugo Chavez"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "D.02"
+          ],
+          "explanation": "Le texte rapproche les gains de Jorge des revenus locaux : l’activité de moto-taxi lui procure un revenu plus important. L’essence bon marché constitue un élément de contexte, pas la réponse principale sur son changement de métier.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-d-01",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le texte rapproche les gains de Jorge des revenus locaux : l’activité de moto-taxi lui procure un revenu plus important. L’essence bon marché constitue un élément de contexte, pas la réponse principale sur son changement de métier."
+          ],
+          "context": "A Caracas, des nuées de motos-taxis pour répondre à la crise des transports Toute la nuit, des hordes de motos vrombissantes, drapeaux rouges flottant dans le vent, ont parcouru les avenues de Caracas. Les \"motorizados\" fêtent la victoire d'Hugo Chavez. […] . L'ambiance est encore bon enfant. Malgré la \"loi sèche\" qui interdit la vente d'alcool les jours de scrutin, les bouteilles de rhum circulent. En temps normal, la plupart des motorizados de Caracas font le taxi. Pour les habitants de la capitale vénézuélienne, leurs engins sont devenus un moyen de transport courant. Dangereux et cher, certes, mais rapide. A tous les carrefours importants, un troupeau de motos attend le client. Le plus souvent, un panneau cabossé et grossièrement peint à la main informe qu'il s'agit d'une station de moto-taxi. En son absence, l'un des motards vend le service à la criée. Avis aux amateurs de sensations fortes : slalom serré entre les voitures et les piétions, feux rouges brûlés, rues en sens interdit, autoroute interdite aux deux-roues, le tout, évidemment, à vive allure. L'adrénaline est garantie […]. Jorge Sayas, 32 ans, a lâché son boulot de gardien de nuit pour s'acheter une 200 CC, un modèle qui coûte 5 300 bolivars forts (1 950 euros). Il fait une douzaine de courses par jour et gagne en moyenne 250 bolivars (92 euros), le double les bons jours, \"quand le métro tombe en panne à cause des coupures d'électricité\". Le salaire minimum est de 800 bolivars (295 euros). Au Venezuela, l'essence est quasiment gratuite […]. Le nombre de motos neuves a augmenté beaucoup plus vite que les pièces de rechange disponibles sur le marché. Résultat : un trafic de motos volées et revendues en morceaux a vu le jour. \"Le vol des motos est devenu un vrai fléau, assure un policier qui patrouille dans la zone de Chacaito. Les bandits n'hésitent pas à tirer pour s'en procurer une.\" https:/www.lemonde.fr/ameriques/article/2009/02/17"
+        },
+        {
+          "number": 2,
+          "page": 3,
+          "prompt": "Jusqu'à combien Jorge Sayas peut gagner en moyenne par jour, lorsqu'il le métro tombe en panne ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "250 bolivars"
+            },
+            {
+              "id": "b",
+              "text": "500 bolivars"
+            },
+            {
+              "id": "c",
+              "text": "800 bolivars"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "D.02"
+          ],
+          "explanation": "Le texte indique 250 bolivars en moyenne et le double les bons jours, notamment lorsque le métro tombe en panne. Calcul : 250 × 2 = 500. Les 800 bolivars correspondent au salaire minimum mentionné.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-d-02",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le texte indique 250 bolivars en moyenne et le double les bons jours, notamment lorsque le métro tombe en panne. Calcul : 250 × 2 = 500. Les 800 bolivars correspondent au salaire minimum mentionné."
+          ],
+          "context": "A Caracas, des nuées de motos-taxis pour répondre à la crise des transports Toute la nuit, des hordes de motos vrombissantes, drapeaux rouges flottant dans le vent, ont parcouru les avenues de Caracas. Les \"motorizados\" fêtent la victoire d'Hugo Chavez. […] . L'ambiance est encore bon enfant. Malgré la \"loi sèche\" qui interdit la vente d'alcool les jours de scrutin, les bouteilles de rhum circulent. En temps normal, la plupart des motorizados de Caracas font le taxi. Pour les habitants de la capitale vénézuélienne, leurs engins sont devenus un moyen de transport courant. Dangereux et cher, certes, mais rapide. A tous les carrefours importants, un troupeau de motos attend le client. Le plus souvent, un panneau cabossé et grossièrement peint à la main informe qu'il s'agit d'une station de moto-taxi. En son absence, l'un des motards vend le service à la criée. Avis aux amateurs de sensations fortes : slalom serré entre les voitures et les piétions, feux rouges brûlés, rues en sens interdit, autoroute interdite aux deux-roues, le tout, évidemment, à vive allure. L'adrénaline est garantie […]. Jorge Sayas, 32 ans, a lâché son boulot de gardien de nuit pour s'acheter une 200 CC, un modèle qui coûte 5 300 bolivars forts (1 950 euros). Il fait une douzaine de courses par jour et gagne en moyenne 250 bolivars (92 euros), le double les bons jours, \"quand le métro tombe en panne à cause des coupures d'électricité\". Le salaire minimum est de 800 bolivars (295 euros). Au Venezuela, l'essence est quasiment gratuite […]. Le nombre de motos neuves a augmenté beaucoup plus vite que les pièces de rechange disponibles sur le marché. Résultat : un trafic de motos volées et revendues en morceaux a vu le jour. \"Le vol des motos est devenu un vrai fléau, assure un policier qui patrouille dans la zone de Chacaito. Les bandits n'hésitent pas à tirer pour s'en procurer une.\" https:/www.lemonde.fr/ameriques/article/2009/02/17"
+        },
+        {
+          "number": 3,
+          "page": 3,
+          "prompt": "Quel est le synonyme de fléau ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Bonheur"
+            },
+            {
+              "id": "b",
+              "text": "Catastrophe"
+            },
+            {
+              "id": "c",
+              "text": "Aubaine"
+            },
+            {
+              "id": "d",
+              "text": "Bouleversement"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "D.07"
+          ],
+          "explanation": "Un fléau est un grand mal ou une calamité. Parmi ces choix, catastrophe s’en rapproche. Bonheur et aubaine ont un sens positif ; bouleversement n’implique pas nécessairement un dommage.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-d-03",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Un fléau est un grand mal ou une calamité. Parmi ces choix, catastrophe s’en rapproche. Bonheur et aubaine ont un sens positif ; bouleversement n’implique pas nécessairement un dommage."
+          ],
+          "context": "A Caracas, des nuées de motos-taxis pour répondre à la crise des transports Toute la nuit, des hordes de motos vrombissantes, drapeaux rouges flottant dans le vent, ont parcouru les avenues de Caracas. Les \"motorizados\" fêtent la victoire d'Hugo Chavez. […] . L'ambiance est encore bon enfant. Malgré la \"loi sèche\" qui interdit la vente d'alcool les jours de scrutin, les bouteilles de rhum circulent. En temps normal, la plupart des motorizados de Caracas font le taxi. Pour les habitants de la capitale vénézuélienne, leurs engins sont devenus un moyen de transport courant. Dangereux et cher, certes, mais rapide. A tous les carrefours importants, un troupeau de motos attend le client. Le plus souvent, un panneau cabossé et grossièrement peint à la main informe qu'il s'agit d'une station de moto-taxi. En son absence, l'un des motards vend le service à la criée. Avis aux amateurs de sensations fortes : slalom serré entre les voitures et les piétions, feux rouges brûlés, rues en sens interdit, autoroute interdite aux deux-roues, le tout, évidemment, à vive allure. L'adrénaline est garantie […]. Jorge Sayas, 32 ans, a lâché son boulot de gardien de nuit pour s'acheter une 200 CC, un modèle qui coûte 5 300 bolivars forts (1 950 euros). Il fait une douzaine de courses par jour et gagne en moyenne 250 bolivars (92 euros), le double les bons jours, \"quand le métro tombe en panne à cause des coupures d'électricité\". Le salaire minimum est de 800 bolivars (295 euros). Au Venezuela, l'essence est quasiment gratuite […]. Le nombre de motos neuves a augmenté beaucoup plus vite que les pièces de rechange disponibles sur le marché. Résultat : un trafic de motos volées et revendues en morceaux a vu le jour. \"Le vol des motos est devenu un vrai fléau, assure un policier qui patrouille dans la zone de Chacaito. Les bandits n'hésitent pas à tirer pour s'en procurer une.\" https:/www.lemonde.fr/ameriques/article/2009/02/17"
+        },
+        {
+          "number": 4,
+          "page": 3,
+          "prompt": "Quel est un synonyme de « vrombir » ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Trembler"
+            },
+            {
+              "id": "b",
+              "text": "Accélérer"
+            },
+            {
+              "id": "c",
+              "text": "Rugir"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "D.07"
+          ],
+          "explanation": "Vrombir décrit un bruit grave, continu et puissant, comme celui d’un moteur. Rugir est le synonyme le plus proche proposé. Accélérer décrit une action de conduite, trembler un mouvement.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-d-04",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Vrombir décrit un bruit grave, continu et puissant, comme celui d’un moteur. Rugir est le synonyme le plus proche proposé. Accélérer décrit une action de conduite, trembler un mouvement."
+          ],
+          "context": "A Caracas, des nuées de motos-taxis pour répondre à la crise des transports Toute la nuit, des hordes de motos vrombissantes, drapeaux rouges flottant dans le vent, ont parcouru les avenues de Caracas. Les \"motorizados\" fêtent la victoire d'Hugo Chavez. […] . L'ambiance est encore bon enfant. Malgré la \"loi sèche\" qui interdit la vente d'alcool les jours de scrutin, les bouteilles de rhum circulent. En temps normal, la plupart des motorizados de Caracas font le taxi. Pour les habitants de la capitale vénézuélienne, leurs engins sont devenus un moyen de transport courant. Dangereux et cher, certes, mais rapide. A tous les carrefours importants, un troupeau de motos attend le client. Le plus souvent, un panneau cabossé et grossièrement peint à la main informe qu'il s'agit d'une station de moto-taxi. En son absence, l'un des motards vend le service à la criée. Avis aux amateurs de sensations fortes : slalom serré entre les voitures et les piétions, feux rouges brûlés, rues en sens interdit, autoroute interdite aux deux-roues, le tout, évidemment, à vive allure. L'adrénaline est garantie […]. Jorge Sayas, 32 ans, a lâché son boulot de gardien de nuit pour s'acheter une 200 CC, un modèle qui coûte 5 300 bolivars forts (1 950 euros). Il fait une douzaine de courses par jour et gagne en moyenne 250 bolivars (92 euros), le double les bons jours, \"quand le métro tombe en panne à cause des coupures d'électricité\". Le salaire minimum est de 800 bolivars (295 euros). Au Venezuela, l'essence est quasiment gratuite […]. Le nombre de motos neuves a augmenté beaucoup plus vite que les pièces de rechange disponibles sur le marché. Résultat : un trafic de motos volées et revendues en morceaux a vu le jour. \"Le vol des motos est devenu un vrai fléau, assure un policier qui patrouille dans la zone de Chacaito. Les bandits n'hésitent pas à tirer pour s'en procurer une.\" https:/www.lemonde.fr/ameriques/article/2009/02/17"
+        },
+        {
+          "number": 5,
+          "page": 4,
+          "prompt": "Que veut dire ambiance « bon enfant » ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "conviviale"
+            },
+            {
+              "id": "b",
+              "text": "capricieuse"
+            },
+            {
+              "id": "c",
+              "text": "infantile"
+            },
+            {
+              "id": "d",
+              "text": "accommodante"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "D.06"
+          ],
+          "explanation": "Une ambiance bon enfant est simple, détendue et conviviale. Le mot enfant ne doit pas être interprété littéralement comme infantile ou capricieux : il faut comprendre l’expression entière.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-d-05",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Une ambiance bon enfant est simple, détendue et conviviale. Le mot enfant ne doit pas être interprété littéralement comme infantile ou capricieux : il faut comprendre l’expression entière."
+          ],
+          "context": "A Caracas, des nuées de motos-taxis pour répondre à la crise des transports Toute la nuit, des hordes de motos vrombissantes, drapeaux rouges flottant dans le vent, ont parcouru les avenues de Caracas. Les \"motorizados\" fêtent la victoire d'Hugo Chavez. […] . L'ambiance est encore bon enfant. Malgré la \"loi sèche\" qui interdit la vente d'alcool les jours de scrutin, les bouteilles de rhum circulent. En temps normal, la plupart des motorizados de Caracas font le taxi. Pour les habitants de la capitale vénézuélienne, leurs engins sont devenus un moyen de transport courant. Dangereux et cher, certes, mais rapide. A tous les carrefours importants, un troupeau de motos attend le client. Le plus souvent, un panneau cabossé et grossièrement peint à la main informe qu'il s'agit d'une station de moto-taxi. En son absence, l'un des motards vend le service à la criée. Avis aux amateurs de sensations fortes : slalom serré entre les voitures et les piétions, feux rouges brûlés, rues en sens interdit, autoroute interdite aux deux-roues, le tout, évidemment, à vive allure. L'adrénaline est garantie […]. Jorge Sayas, 32 ans, a lâché son boulot de gardien de nuit pour s'acheter une 200 CC, un modèle qui coûte 5 300 bolivars forts (1 950 euros). Il fait une douzaine de courses par jour et gagne en moyenne 250 bolivars (92 euros), le double les bons jours, \"quand le métro tombe en panne à cause des coupures d'électricité\". Le salaire minimum est de 800 bolivars (295 euros). Au Venezuela, l'essence est quasiment gratuite […]. Le nombre de motos neuves a augmenté beaucoup plus vite que les pièces de rechange disponibles sur le marché. Résultat : un trafic de motos volées et revendues en morceaux a vu le jour. \"Le vol des motos est devenu un vrai fléau, assure un policier qui patrouille dans la zone de Chacaito. Les bandits n'hésitent pas à tirer pour s'en procurer une.\" https:/www.lemonde.fr/ameriques/article/2009/02/17"
+        },
+        {
+          "number": 6,
+          "page": 4,
+          "prompt": "Pourquoi le vol des motos est devenu un vrai fléau ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "La pénurie de pièces favorise un trafic de motos volées et démontées, accompagné de violences."
+            },
+            {
+              "id": "b",
+              "text": "La hausse du nombre de motos favorise surtout des importations légales de pièces et réduit les vols."
+            },
+            {
+              "id": "c",
+              "text": "Les prix de l’essence rendent impossible l’achat d’une moto."
+            }
+          ],
+          "original_kind": "qrc",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "D.03",
+            "D.10"
+          ],
+          "explanation": "Le texte relie la hausse du nombre de motos au manque de pièces, puis au développement d’un trafic de motos volées et revendues en morceaux. Une bonne réponse restitue cette chaîne de causes et mentionne les violences associées.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "original_answer": "La pénurie de pièces favorise un trafic de motos volées et démontées, accompagné de violences.",
+          "id": "annales-2023-d-06",
+          "kind": "single",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le texte relie la hausse du nombre de motos au manque de pièces, puis au développement d’un trafic de motos volées et revendues en morceaux. Une bonne réponse restitue cette chaîne de causes et mentionne les violences associées."
+          ],
+          "adaptation_note": "Question ouverte du sujet original, adaptée en choix pédagogiques pour répondre sans rédaction.",
+          "original_answer_origin": "pedagogical",
+          "context": "A Caracas, des nuées de motos-taxis pour répondre à la crise des transports Toute la nuit, des hordes de motos vrombissantes, drapeaux rouges flottant dans le vent, ont parcouru les avenues de Caracas. Les \"motorizados\" fêtent la victoire d'Hugo Chavez. […] . L'ambiance est encore bon enfant. Malgré la \"loi sèche\" qui interdit la vente d'alcool les jours de scrutin, les bouteilles de rhum circulent. En temps normal, la plupart des motorizados de Caracas font le taxi. Pour les habitants de la capitale vénézuélienne, leurs engins sont devenus un moyen de transport courant. Dangereux et cher, certes, mais rapide. A tous les carrefours importants, un troupeau de motos attend le client. Le plus souvent, un panneau cabossé et grossièrement peint à la main informe qu'il s'agit d'une station de moto-taxi. En son absence, l'un des motards vend le service à la criée. Avis aux amateurs de sensations fortes : slalom serré entre les voitures et les piétions, feux rouges brûlés, rues en sens interdit, autoroute interdite aux deux-roues, le tout, évidemment, à vive allure. L'adrénaline est garantie […]. Jorge Sayas, 32 ans, a lâché son boulot de gardien de nuit pour s'acheter une 200 CC, un modèle qui coûte 5 300 bolivars forts (1 950 euros). Il fait une douzaine de courses par jour et gagne en moyenne 250 bolivars (92 euros), le double les bons jours, \"quand le métro tombe en panne à cause des coupures d'électricité\". Le salaire minimum est de 800 bolivars (295 euros). Au Venezuela, l'essence est quasiment gratuite […]. Le nombre de motos neuves a augmenté beaucoup plus vite que les pièces de rechange disponibles sur le marché. Résultat : un trafic de motos volées et revendues en morceaux a vu le jour. \"Le vol des motos est devenu un vrai fléau, assure un policier qui patrouille dans la zone de Chacaito. Les bandits n'hésitent pas à tirer pour s'en procurer une.\" https:/www.lemonde.fr/ameriques/article/2009/02/17"
+        },
+        {
+          "number": 7,
+          "page": 4,
+          "prompt": "Quel avantage les clients trouvent-ils aux motorizados ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Sécurisé"
+            },
+            {
+              "id": "b",
+              "text": "Pas cher"
+            },
+            {
+              "id": "c",
+              "text": "Rapide"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "D.02"
+          ],
+          "explanation": "L’auteur dit « dangereux et cher, certes, mais rapide ». L’avantage retenu est la rapidité. Le connecteur mais oppose cet avantage aux défauts précédents.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-d-07",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "L’auteur dit « dangereux et cher, certes, mais rapide ». L’avantage retenu est la rapidité. Le connecteur mais oppose cet avantage aux défauts précédents."
+          ],
+          "context": "A Caracas, des nuées de motos-taxis pour répondre à la crise des transports Toute la nuit, des hordes de motos vrombissantes, drapeaux rouges flottant dans le vent, ont parcouru les avenues de Caracas. Les \"motorizados\" fêtent la victoire d'Hugo Chavez. […] . L'ambiance est encore bon enfant. Malgré la \"loi sèche\" qui interdit la vente d'alcool les jours de scrutin, les bouteilles de rhum circulent. En temps normal, la plupart des motorizados de Caracas font le taxi. Pour les habitants de la capitale vénézuélienne, leurs engins sont devenus un moyen de transport courant. Dangereux et cher, certes, mais rapide. A tous les carrefours importants, un troupeau de motos attend le client. Le plus souvent, un panneau cabossé et grossièrement peint à la main informe qu'il s'agit d'une station de moto-taxi. En son absence, l'un des motards vend le service à la criée. Avis aux amateurs de sensations fortes : slalom serré entre les voitures et les piétions, feux rouges brûlés, rues en sens interdit, autoroute interdite aux deux-roues, le tout, évidemment, à vive allure. L'adrénaline est garantie […]. Jorge Sayas, 32 ans, a lâché son boulot de gardien de nuit pour s'acheter une 200 CC, un modèle qui coûte 5 300 bolivars forts (1 950 euros). Il fait une douzaine de courses par jour et gagne en moyenne 250 bolivars (92 euros), le double les bons jours, \"quand le métro tombe en panne à cause des coupures d'électricité\". Le salaire minimum est de 800 bolivars (295 euros). Au Venezuela, l'essence est quasiment gratuite […]. Le nombre de motos neuves a augmenté beaucoup plus vite que les pièces de rechange disponibles sur le marché. Résultat : un trafic de motos volées et revendues en morceaux a vu le jour. \"Le vol des motos est devenu un vrai fléau, assure un policier qui patrouille dans la zone de Chacaito. Les bandits n'hésitent pas à tirer pour s'en procurer une.\" https:/www.lemonde.fr/ameriques/article/2009/02/17"
+        },
+        {
+          "number": 8,
+          "page": 4,
+          "prompt": "Qu'est qu'une horde de motos ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Une catégorie de moto"
+            },
+            {
+              "id": "b",
+              "text": "Un groupe de motos"
+            },
+            {
+              "id": "c",
+              "text": "Un club de motos"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "D.07"
+          ],
+          "explanation": "Une horde est ici un groupe nombreux, présenté comme agité. Ce terme ne désigne ni un modèle de moto ni nécessairement une association organisée.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-d-08",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Une horde est ici un groupe nombreux, présenté comme agité. Ce terme ne désigne ni un modèle de moto ni nécessairement une association organisée."
+          ],
+          "context": "A Caracas, des nuées de motos-taxis pour répondre à la crise des transports Toute la nuit, des hordes de motos vrombissantes, drapeaux rouges flottant dans le vent, ont parcouru les avenues de Caracas. Les \"motorizados\" fêtent la victoire d'Hugo Chavez. […] . L'ambiance est encore bon enfant. Malgré la \"loi sèche\" qui interdit la vente d'alcool les jours de scrutin, les bouteilles de rhum circulent. En temps normal, la plupart des motorizados de Caracas font le taxi. Pour les habitants de la capitale vénézuélienne, leurs engins sont devenus un moyen de transport courant. Dangereux et cher, certes, mais rapide. A tous les carrefours importants, un troupeau de motos attend le client. Le plus souvent, un panneau cabossé et grossièrement peint à la main informe qu'il s'agit d'une station de moto-taxi. En son absence, l'un des motards vend le service à la criée. Avis aux amateurs de sensations fortes : slalom serré entre les voitures et les piétions, feux rouges brûlés, rues en sens interdit, autoroute interdite aux deux-roues, le tout, évidemment, à vive allure. L'adrénaline est garantie […]. Jorge Sayas, 32 ans, a lâché son boulot de gardien de nuit pour s'acheter une 200 CC, un modèle qui coûte 5 300 bolivars forts (1 950 euros). Il fait une douzaine de courses par jour et gagne en moyenne 250 bolivars (92 euros), le double les bons jours, \"quand le métro tombe en panne à cause des coupures d'électricité\". Le salaire minimum est de 800 bolivars (295 euros). Au Venezuela, l'essence est quasiment gratuite […]. Le nombre de motos neuves a augmenté beaucoup plus vite que les pièces de rechange disponibles sur le marché. Résultat : un trafic de motos volées et revendues en morceaux a vu le jour. \"Le vol des motos est devenu un vrai fléau, assure un policier qui patrouille dans la zone de Chacaito. Les bandits n'hésitent pas à tirer pour s'en procurer une.\" https:/www.lemonde.fr/ameriques/article/2009/02/17"
+        },
+        {
+          "number": 9,
+          "page": 4,
+          "prompt": "Dans le texte, l'auteur utilise trois mots différents pour définir un groupe de motos : lesquels ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Nuées, hordes et troupeau."
+            },
+            {
+              "id": "b",
+              "text": "Nuées, carrefours et capitale."
+            },
+            {
+              "id": "c",
+              "text": "Hordes, gardien et bandits."
+            }
+          ],
+          "original_kind": "qrc",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "D.07",
+            "D.10"
+          ],
+          "explanation": "Le titre emploie nuées, le premier paragraphe hordes et le deuxième troupeau. Pour une question demandant plusieurs mots du texte, recherchez chaque occurrence et contrôlez le nombre d’éléments attendu.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "original_answer": "Nuées, hordes et troupeau.",
+          "id": "annales-2023-d-09",
+          "kind": "single",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le titre emploie nuées, le premier paragraphe hordes et le deuxième troupeau. Pour une question demandant plusieurs mots du texte, recherchez chaque occurrence et contrôlez le nombre d’éléments attendu."
+          ],
+          "adaptation_note": "Question ouverte du sujet original, adaptée en choix pédagogiques pour répondre sans rédaction.",
+          "original_answer_origin": "pedagogical",
+          "context": "A Caracas, des nuées de motos-taxis pour répondre à la crise des transports Toute la nuit, des hordes de motos vrombissantes, drapeaux rouges flottant dans le vent, ont parcouru les avenues de Caracas. Les \"motorizados\" fêtent la victoire d'Hugo Chavez. […] . L'ambiance est encore bon enfant. Malgré la \"loi sèche\" qui interdit la vente d'alcool les jours de scrutin, les bouteilles de rhum circulent. En temps normal, la plupart des motorizados de Caracas font le taxi. Pour les habitants de la capitale vénézuélienne, leurs engins sont devenus un moyen de transport courant. Dangereux et cher, certes, mais rapide. A tous les carrefours importants, un troupeau de motos attend le client. Le plus souvent, un panneau cabossé et grossièrement peint à la main informe qu'il s'agit d'une station de moto-taxi. En son absence, l'un des motards vend le service à la criée. Avis aux amateurs de sensations fortes : slalom serré entre les voitures et les piétions, feux rouges brûlés, rues en sens interdit, autoroute interdite aux deux-roues, le tout, évidemment, à vive allure. L'adrénaline est garantie […]. Jorge Sayas, 32 ans, a lâché son boulot de gardien de nuit pour s'acheter une 200 CC, un modèle qui coûte 5 300 bolivars forts (1 950 euros). Il fait une douzaine de courses par jour et gagne en moyenne 250 bolivars (92 euros), le double les bons jours, \"quand le métro tombe en panne à cause des coupures d'électricité\". Le salaire minimum est de 800 bolivars (295 euros). Au Venezuela, l'essence est quasiment gratuite […]. Le nombre de motos neuves a augmenté beaucoup plus vite que les pièces de rechange disponibles sur le marché. Résultat : un trafic de motos volées et revendues en morceaux a vu le jour. \"Le vol des motos est devenu un vrai fléau, assure un policier qui patrouille dans la zone de Chacaito. Les bandits n'hésitent pas à tirer pour s'en procurer une.\" https:/www.lemonde.fr/ameriques/article/2009/02/17"
+        },
+        {
+          "number": 10,
+          "page": 4,
+          "prompt": "Que veut dire l'auteur par l'expression « service à la criée » ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Annoncer le service à voix haute pour attirer les clients."
+            },
+            {
+              "id": "b",
+              "text": "Vendre uniquement au client qui propose le prix le plus élevé."
+            },
+            {
+              "id": "c",
+              "text": "Informer les clients exclusivement par un panneau écrit."
+            }
+          ],
+          "original_kind": "qrc",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "D.06",
+            "D.10"
+          ],
+          "explanation": "Vendre un service à la criée signifie l’annoncer à voix haute pour attirer les clients. Il ne s’agit pas ici de vendre aux enchères ni d’établir une réservation écrite.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "original_answer": "Annoncer le service à voix haute pour attirer les clients.",
+          "id": "annales-2023-d-10",
+          "kind": "single",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Vendre un service à la criée signifie l’annoncer à voix haute pour attirer les clients. Il ne s’agit pas ici de vendre aux enchères ni d’établir une réservation écrite."
+          ],
+          "adaptation_note": "Question ouverte du sujet original, adaptée en choix pédagogiques pour répondre sans rédaction.",
+          "original_answer_origin": "pedagogical",
+          "context": "A Caracas, des nuées de motos-taxis pour répondre à la crise des transports Toute la nuit, des hordes de motos vrombissantes, drapeaux rouges flottant dans le vent, ont parcouru les avenues de Caracas. Les \"motorizados\" fêtent la victoire d'Hugo Chavez. […] . L'ambiance est encore bon enfant. Malgré la \"loi sèche\" qui interdit la vente d'alcool les jours de scrutin, les bouteilles de rhum circulent. En temps normal, la plupart des motorizados de Caracas font le taxi. Pour les habitants de la capitale vénézuélienne, leurs engins sont devenus un moyen de transport courant. Dangereux et cher, certes, mais rapide. A tous les carrefours importants, un troupeau de motos attend le client. Le plus souvent, un panneau cabossé et grossièrement peint à la main informe qu'il s'agit d'une station de moto-taxi. En son absence, l'un des motards vend le service à la criée. Avis aux amateurs de sensations fortes : slalom serré entre les voitures et les piétions, feux rouges brûlés, rues en sens interdit, autoroute interdite aux deux-roues, le tout, évidemment, à vive allure. L'adrénaline est garantie […]. Jorge Sayas, 32 ans, a lâché son boulot de gardien de nuit pour s'acheter une 200 CC, un modèle qui coûte 5 300 bolivars forts (1 950 euros). Il fait une douzaine de courses par jour et gagne en moyenne 250 bolivars (92 euros), le double les bons jours, \"quand le métro tombe en panne à cause des coupures d'électricité\". Le salaire minimum est de 800 bolivars (295 euros). Au Venezuela, l'essence est quasiment gratuite […]. Le nombre de motos neuves a augmenté beaucoup plus vite que les pièces de rechange disponibles sur le marché. Résultat : un trafic de motos volées et revendues en morceaux a vu le jour. \"Le vol des motos est devenu un vrai fléau, assure un policier qui patrouille dans la zone de Chacaito. Les bandits n'hésitent pas à tirer pour s'en procurer une.\" https:/www.lemonde.fr/ameriques/article/2009/02/17"
+        }
+      ]
+    }
+  ]
+}

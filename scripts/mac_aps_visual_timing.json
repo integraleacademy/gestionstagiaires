@@ -1,0 +1,3014 @@
+{
+  "schema_version": 1,
+  "revision": "20261012-mac-aps-v2",
+  "semantic_plan_sha256": "1a0c6b80bfde775dbf7a86dd1b619f2bcb786aa906fb0acb12111438d5cfa948",
+  "method": "Recognized speech words matched to the unchanged authored transcript, bounded by original TTS cues; reviewed semantic anchors.",
+  "modules": {
+    "01": {
+      "source_video_sha256": "2de70608d0e33d18c27fcc58cef6f168469ebf3dc3dfc86f3cac07377fee99c5",
+      "canonical_duration_seconds": 398.186,
+      "recognition_model": "faster-whisper-small-int8",
+      "audit": {
+        "cue_count": 107,
+        "compared_cues": 106,
+        "matched_characters_percent": 98.418,
+        "median_speech_start_minus_caption": 0.151,
+        "minimum_speech_start_minus_caption": -0.205,
+        "maximum_speech_start_minus_caption": 0.287,
+        "unmatched_cues": [
+          {
+            "start": 138.057,
+            "end": 139.996,
+            "text": "Quel événement venez-vous de constater ?",
+            "reason": "ASR did not retain the end of this authored sentence"
+          }
+        ],
+        "outliers": [
+          {
+            "cue_start": 68.81,
+            "cue_end": 72.611,
+            "speech_start": 68.96,
+            "speech_end": 73.66,
+            "start_delta": 0.15,
+            "end_delta": 1.049,
+            "skipped": 0
+          }
+        ]
+      },
+      "scenes": [
+        {
+          "scene_index": 0,
+          "title": "Une réponse préparée et coordonnée",
+          "start_seconds": 0.0,
+          "end_seconds": 41.028,
+          "events": [
+            {
+              "anchor": "L’objectif est de reconnaître une situation préoccupante",
+              "active": [],
+              "start_seconds": 10.37,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "L",
+              "recognition_probability": 0.975,
+              "matched_character_skip": 0,
+              "source_cue_start": 10.32,
+              "source_cue_end": 13.33
+            },
+            {
+              "anchor": "de transmettre une alerte exploitable et d’accueillir les secours",
+              "active": [
+                1,
+                2
+              ],
+              "start_seconds": 15.6,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "de",
+              "recognition_probability": 0.999,
+              "matched_character_skip": 0,
+              "source_cue_start": 15.55,
+              "source_cue_end": 18.777
+            },
+            {
+              "anchor": "Cette vidéo accompagne les cours et les exercices",
+              "active": [],
+              "start_seconds": 19.477,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Cette",
+              "recognition_probability": 0.986,
+              "matched_character_skip": 0,
+              "source_cue_start": 19.427,
+              "source_cue_end": 22.259
+            },
+            {
+              "anchor": "ce que vous devez transmettre au professionnel qui prend le relais",
+              "active": [
+                2
+              ],
+              "start_seconds": 37.24,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "ce",
+              "recognition_probability": 0.999,
+              "matched_character_skip": 0,
+              "source_cue_start": 36.213,
+              "source_cue_end": 39.427
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "title": "Avant la prise de poste",
+          "start_seconds": 41.028,
+          "end_seconds": 84.168,
+          "events": [
+            {
+              "anchor": "consultez les consignes de secours",
+              "active": [
+                0
+              ],
+              "start_seconds": 45.84,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "consultez",
+              "recognition_probability": 0.973,
+              "matched_character_skip": 0,
+              "source_cue_start": 44.333,
+              "source_cue_end": 47.586
+            },
+            {
+              "anchor": "vérifiez les moyens d’alerte et repérez le matériel disponible",
+              "active": [
+                1
+              ],
+              "start_seconds": 47.724,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "vérifiez",
+              "recognition_probability": 0.966,
+              "matched_character_skip": 0,
+              "source_cue_start": 47.674,
+              "source_cue_end": 50.94
+            },
+            {
+              "anchor": "Identifiez l’adresse exacte du site",
+              "active": [
+                2
+              ],
+              "start_seconds": 57.482,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Identifiez",
+              "recognition_probability": 0.916,
+              "matched_character_skip": 0,
+              "source_cue_start": 57.432,
+              "source_cue_end": 60.749
+            },
+            {
+              "anchor": "Demandez aussi comment joindre les sauveteurs secouristes du travail présents",
+              "active": [],
+              "start_seconds": 68.86,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Demandez",
+              "recognition_probability": 0.959,
+              "matched_character_skip": 0,
+              "source_cue_start": 68.81,
+              "source_cue_end": 72.611
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "title": "Protéger sans créer une autre victime",
+          "start_seconds": 84.168,
+          "end_seconds": 128.196,
+          "events": [
+            {
+              "anchor": "Face à un événement, commencez par observer l’environnement",
+              "active": [
+                0
+              ],
+              "start_seconds": 84.219,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Face",
+              "recognition_probability": 0.805,
+              "matched_character_skip": 0,
+              "source_cue_start": 84.169,
+              "source_cue_end": 87.524
+            },
+            {
+              "anchor": "Vous ne devez pas vous engager dans une zone dangereuse",
+              "active": [
+                1
+              ],
+              "start_seconds": 96.579,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Vous",
+              "recognition_probability": 0.982,
+              "matched_character_skip": 0,
+              "source_cue_start": 96.529,
+              "source_cue_end": 100.56
+            },
+            {
+              "anchor": "Empêchez d’autres personnes de s’exposer",
+              "active": [
+                1,
+                2
+              ],
+              "start_seconds": 101.26,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Empêchez",
+              "recognition_probability": 0.946,
+              "matched_character_skip": 0,
+              "source_cue_start": 101.21,
+              "source_cue_end": 105.24
+            },
+            {
+              "anchor": "Les décisions particulières se travaillent dans la formation pratique",
+              "active": [],
+              "start_seconds": 122.114,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Les",
+              "recognition_probability": 0.984,
+              "matched_character_skip": 0,
+              "source_cue_start": 122.064,
+              "source_cue_end": 126.172
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "title": "Observer et décrire des faits",
+          "start_seconds": 128.196,
+          "end_seconds": 174.24,
+          "events": [
+            {
+              "anchor": "Une personne vous répond-elle ? Que vous dit-elle ?",
+              "active": [
+                1
+              ],
+              "start_seconds": 134.178,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Une",
+              "recognition_probability": 0.971,
+              "matched_character_skip": 0,
+              "source_cue_start": 134.128,
+              "source_cue_end": 135.672
+            },
+            {
+              "anchor": "Quel événement venez-vous de constater ?",
+              "active": [
+                0
+              ],
+              "start_seconds": 138.107,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Quel",
+              "recognition_probability": 0.874,
+              "matched_character_skip": 0,
+              "source_cue_start": 138.057,
+              "source_cue_end": 139.996
+            },
+            {
+              "anchor": "Décrivez simplement les signes observés et leur évolution.",
+              "active": [
+                0,
+                2
+              ],
+              "start_seconds": 140.709,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "décrivez",
+              "recognition_probability": 0.58,
+              "matched_character_skip": 0,
+              "source_cue_start": 140.659,
+              "source_cue_end": 143.657
+            },
+            {
+              "anchor": "Affirmer qu’elle fait une maladie précise sans compétence médicale",
+              "active": [],
+              "start_seconds": 149.688,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Affirmer",
+              "recognition_probability": 0.898,
+              "matched_character_skip": 0,
+              "source_cue_start": 149.638,
+              "source_cue_end": 153.745
+            },
+            {
+              "anchor": "Si son état change, signalez-le immédiatement",
+              "active": [
+                2
+              ],
+              "start_seconds": 164.701,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Si",
+              "recognition_probability": 0.972,
+              "matched_character_skip": 0,
+              "source_cue_start": 164.651,
+              "source_cue_end": 169.065
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "title": "Une alerte que l’on peut exploiter",
+          "start_seconds": 174.24,
+          "end_seconds": 218.484,
+          "events": [
+            {
+              "anchor": "Lorsque vous appelez les secours, donnez d’abord une localisation précise",
+              "active": [
+                0
+              ],
+              "start_seconds": 174.291,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Lorsque",
+              "recognition_probability": 0.957,
+              "matched_character_skip": 0,
+              "source_cue_start": 174.241,
+              "source_cue_end": 175.951
+            },
+            {
+              "anchor": "Présentez ensuite la situation observée, le nombre de personnes concernées",
+              "active": [
+                1
+              ],
+              "start_seconds": 185.477,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Présentez",
+              "recognition_probability": 0.933,
+              "matched_character_skip": 0,
+              "source_cue_start": 185.427,
+              "source_cue_end": 189.624
+            },
+            {
+              "anchor": "les dangers encore présents et les premières mesures prises",
+              "active": [
+                2
+              ],
+              "start_seconds": 189.801,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "les",
+              "recognition_probability": 0.997,
+              "matched_character_skip": 0,
+              "source_cue_start": 189.751,
+              "source_cue_end": 192.43
+            },
+            {
+              "anchor": "Parlez clairement et laissez l’opérateur poser ses questions",
+              "active": [],
+              "start_seconds": 193.143,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Parlez",
+              "recognition_probability": 0.98,
+              "matched_character_skip": 0,
+              "source_cue_start": 193.093,
+              "source_cue_end": 195.9
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "title": "Distribuer les rôles clairement",
+          "start_seconds": 218.484,
+          "end_seconds": 260.904,
+          "events": [
+            {
+              "anchor": "Une personne reste auprès de la victime",
+              "active": [
+                0
+              ],
+              "start_seconds": 223.127,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Une",
+              "recognition_probability": 0.99,
+              "matched_character_skip": 0,
+              "source_cue_start": 223.077,
+              "source_cue_end": 226.419
+            },
+            {
+              "anchor": "une autre transmet l’alerte",
+              "active": [
+                1
+              ],
+              "start_seconds": 226.481,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "une",
+              "recognition_probability": 0.972,
+              "matched_character_skip": 0,
+              "source_cue_start": 226.431,
+              "source_cue_end": 230.348
+            },
+            {
+              "anchor": "une troisième va accueillir les secours",
+              "active": [
+                2
+              ],
+              "start_seconds": 227.94,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "une",
+              "recognition_probability": 0.987,
+              "matched_character_skip": 0,
+              "source_cue_start": 226.431,
+              "source_cue_end": 230.348
+            },
+            {
+              "anchor": "Adressez-vous à une personne identifiée",
+              "active": [
+                1
+              ],
+              "start_seconds": 231.048,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Adressez",
+              "recognition_probability": 0.787,
+              "matched_character_skip": 0,
+              "source_cue_start": 230.998,
+              "source_cue_end": 234.978
+            },
+            {
+              "anchor": "Le guidage doit conduire les intervenants jusqu’au bon lieu",
+              "active": [
+                2
+              ],
+              "start_seconds": 240.295,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Le",
+              "recognition_probability": 0.964,
+              "matched_character_skip": 0,
+              "source_cue_start": 240.245,
+              "source_cue_end": 243.154
+            },
+            {
+              "anchor": "Vérifiez que les informations essentielles circulent entre les rôles",
+              "active": [
+                1
+              ],
+              "start_seconds": 251.443,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Vérifiez",
+              "recognition_probability": 0.944,
+              "matched_character_skip": 0,
+              "source_cue_start": 251.393,
+              "source_cue_end": 254.71
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "title": "Agir dans ses compétences",
+          "start_seconds": 260.904,
+          "end_seconds": 306.304,
+          "events": [
+            {
+              "anchor": "Les gestes doivent correspondre à votre formation actualisée",
+              "active": [
+                0,
+                1
+              ],
+              "start_seconds": 260.955,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Les",
+              "recognition_probability": 0.958,
+              "matched_character_skip": 0,
+              "source_cue_start": 260.905,
+              "source_cue_end": 263.992
+            },
+            {
+              "anchor": "N’improvisez pas un traitement",
+              "active": [
+                0
+              ],
+              "start_seconds": 267.384,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "N",
+              "recognition_probability": 0.959,
+              "matched_character_skip": 0,
+              "source_cue_start": 267.334,
+              "source_cue_end": 271.046
+            },
+            {
+              "anchor": "Pendant l’attente, restez attentif aux changements",
+              "active": [
+                2
+              ],
+              "start_seconds": 282.256,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "pendant",
+              "recognition_probability": 0.128,
+              "matched_character_skip": 0,
+              "source_cue_start": 282.206,
+              "source_cue_end": 285.65
+            },
+            {
+              "anchor": "Préservez la confidentialité et annoncez calmement ce que vous faites",
+              "active": [],
+              "start_seconds": 293.659,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Préservez",
+              "recognition_probability": 0.877,
+              "matched_character_skip": 0,
+              "source_cue_start": 293.609,
+              "source_cue_end": 297.168
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "title": "Cas : malaise dans le hall",
+          "start_seconds": 306.304,
+          "end_seconds": 350.212,
+          "events": [
+            {
+              "anchor": "Il est conscient, répond à vos questions et demande à s’asseoir",
+              "active": [
+                0
+              ],
+              "start_seconds": 312.796,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Il",
+              "recognition_probability": 0.949,
+              "matched_character_skip": 0,
+              "source_cue_start": 312.746,
+              "source_cue_end": 316.127
+            },
+            {
+              "anchor": "Vous sollicitez un collègue, restez auprès du visiteur",
+              "active": [
+                1
+              ],
+              "start_seconds": 320.079,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Vous",
+              "recognition_probability": 0.978,
+              "matched_character_skip": 0,
+              "source_cue_start": 320.029,
+              "source_cue_end": 324.468
+            },
+            {
+              "anchor": "Votre collègue prépare l’accès",
+              "active": [
+                2
+              ],
+              "start_seconds": 330.947,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Votre",
+              "recognition_probability": 0.991,
+              "matched_character_skip": 0,
+              "source_cue_start": 330.897,
+              "source_cue_end": 332.708
+            },
+            {
+              "anchor": "Vous ne substituez pas cette initiative à l’avis des secours",
+              "active": [
+                1
+              ],
+              "start_seconds": 338.549,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Vous",
+              "recognition_probability": 0.947,
+              "matched_character_skip": 0,
+              "source_cue_start": 338.499,
+              "source_cue_end": 341.535
+            },
+            {
+              "anchor": "Vous surveillez la situation et signalez tout changement à l’opérateur",
+              "active": [
+                2
+              ],
+              "start_seconds": 345.717,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Vous",
+              "recognition_probability": 0.981,
+              "matched_character_skip": 0,
+              "source_cue_start": 345.667,
+              "source_cue_end": 349.175
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "title": "Passer le relais et tirer les enseignements",
+          "start_seconds": 350.212,
+          "end_seconds": 398.112,
+          "events": [
+            {
+              "anchor": "À l’arrivée des intervenants, fournissez une transmission courte",
+              "active": [
+                1
+              ],
+              "start_seconds": 350.263,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "À",
+              "recognition_probability": 0.394,
+              "matched_character_skip": 0,
+              "source_cue_start": 350.213,
+              "source_cue_end": 354.818
+            },
+            {
+              "anchor": "l’événement constaté, les horaires utiles",
+              "active": [
+                0,
+                1
+              ],
+              "start_seconds": 353.74,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "l",
+              "recognition_probability": 0.94,
+              "matched_character_skip": 0,
+              "source_cue_start": 350.213,
+              "source_cue_end": 354.818
+            },
+            {
+              "anchor": "Après l’événement, rédigez le compte rendu prévu",
+              "active": [
+                0
+              ],
+              "start_seconds": 366.283,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Après",
+              "recognition_probability": 0.868,
+              "matched_character_skip": 0,
+              "source_cue_start": 366.233,
+              "source_cue_end": 369.078
+            },
+            {
+              "anchor": "Le retour d’expérience peut révéler",
+              "active": [
+                2
+              ],
+              "start_seconds": 372.891,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Le",
+              "recognition_probability": 0.97,
+              "matched_character_skip": 0,
+              "source_cue_start": 372.841,
+              "source_cue_end": 375.8
+            },
+            {
+              "anchor": "Pour vérifier vos acquis, expliquez maintenant",
+              "active": [],
+              "start_seconds": 383.426,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Pour",
+              "recognition_probability": 0.982,
+              "matched_character_skip": 0,
+              "source_cue_start": 383.376,
+              "source_cue_end": 387.522
+            }
+          ]
+        }
+      ]
+    },
+    "02": {
+      "source_video_sha256": "148f2ed5ea9334475c49ff35c99ae5ebf13ef86075b2f54c5ff2f0cf4fd8a900",
+      "canonical_duration_seconds": 394.793,
+      "recognition_model": "faster-whisper-small-int8",
+      "audit": {
+        "cue_count": 105,
+        "compared_cues": 105,
+        "matched_characters_percent": 99.42,
+        "median_speech_start_minus_caption": 0.105,
+        "minimum_speech_start_minus_caption": -0.769,
+        "maximum_speech_start_minus_caption": 0.219,
+        "unmatched_cues": [],
+        "outliers": [
+          {
+            "cue_start": 56.089,
+            "cue_end": 58.334,
+            "speech_start": 55.32,
+            "speech_end": 58.08,
+            "start_delta": -0.769,
+            "end_delta": -0.254,
+            "skipped": 0
+          }
+        ]
+      },
+      "scenes": [
+        {
+          "scene_index": 0,
+          "title": "Des principes dans les actes quotidiens",
+          "start_seconds": 0.0,
+          "end_seconds": 41.7,
+          "events": [
+            {
+              "anchor": "Dans cette synthèse, nous allons relier les principes de la République",
+              "active": [],
+              "start_seconds": 0.051,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Dans",
+              "recognition_probability": 0.437,
+              "matched_character_skip": 0,
+              "source_cue_start": 0.001,
+              "source_cue_end": 3.93
+            },
+            {
+              "anchor": "Pour chaque situation, posez-vous trois questions",
+              "active": [],
+              "start_seconds": 29.796,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Pour",
+              "recognition_probability": 0.119,
+              "matched_character_skip": 0,
+              "source_cue_start": 29.746,
+              "source_cue_end": 33.777
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "title": "Liberté : des limites définies par le droit",
+          "start_seconds": 41.7,
+          "end_seconds": 86.6,
+          "events": [
+            {
+              "anchor": "La liberté implique le respect des droits d’autrui",
+              "active": [
+                0
+              ],
+              "start_seconds": 41.751,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "La",
+              "recognition_probability": 0.563,
+              "matched_character_skip": 0,
+              "source_cue_start": 41.701,
+              "source_cue_end": 45.235
+            },
+            {
+              "anchor": "Il applique les règles nécessaires à sa mission, dans les limites de ses pouvoirs",
+              "active": [
+                1,
+                2
+              ],
+              "start_seconds": 51.445,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Il",
+              "recognition_probability": 0.985,
+              "matched_character_skip": 0,
+              "source_cue_start": 51.395,
+              "source_cue_end": 55.439
+            },
+            {
+              "anchor": "Si un visiteur critique l’établissement",
+              "active": [
+                0,
+                1
+              ],
+              "start_seconds": 56.139,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Si",
+              "recognition_probability": 0.462,
+              "matched_character_skip": 0,
+              "source_cue_start": 56.089,
+              "source_cue_end": 58.334
+            },
+            {
+              "anchor": "Avant d’intervenir, vérifiez aussi que la consigne reçue est comprise",
+              "active": [
+                1,
+                2
+              ],
+              "start_seconds": 74.965,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Avant",
+              "recognition_probability": 0.989,
+              "matched_character_skip": 0,
+              "source_cue_start": 74.915,
+              "source_cue_end": 79.15
+            },
+            {
+              "anchor": "Un désaccord d’opinion ne doit pas devenir un conflit artificiel",
+              "active": [
+                0
+              ],
+              "start_seconds": 80.705,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Un",
+              "recognition_probability": 0.987,
+              "matched_character_skip": 0,
+              "source_cue_start": 80.655,
+              "source_cue_end": 85.566
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "title": "Égalité : des critères explicables",
+          "start_seconds": 86.6,
+          "end_seconds": 129.0,
+          "events": [
+            {
+              "anchor": "L’égalité demande des critères objectifs",
+              "active": [
+                0
+              ],
+              "start_seconds": 86.651,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "L",
+              "recognition_probability": 0.791,
+              "matched_character_skip": 0,
+              "source_cue_start": 86.601,
+              "source_cue_end": 91.295
+            },
+            {
+              "anchor": "Si l’accès exige un titre valable",
+              "active": [
+                1
+              ],
+              "start_seconds": 91.995,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Si",
+              "recognition_probability": 0.885,
+              "matched_character_skip": 0,
+              "source_cue_start": 91.945,
+              "source_cue_end": 96.55
+            },
+            {
+              "anchor": "expliquer plus lentement à une personne qui comprend mal le français",
+              "active": [
+                2
+              ],
+              "start_seconds": 106.09,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "expliquez",
+              "recognition_probability": 0.793,
+              "matched_character_skip": 0,
+              "source_cue_start": 106.04,
+              "source_cue_end": 109.803
+            },
+            {
+              "anchor": "Si l’explication repose seulement sur une impression, revenez aux faits",
+              "active": [
+                0
+              ],
+              "start_seconds": 124.33,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Si",
+              "recognition_probability": 0.919,
+              "matched_character_skip": 0,
+              "source_cue_start": 124.28,
+              "source_cue_end": 127.979
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "title": "Fraternité et dignité dans la relation",
+          "start_seconds": 129.0,
+          "end_seconds": 174.7,
+          "events": [
+            {
+              "anchor": "Dans votre mission, cela signifie écouter une demande",
+              "active": [
+                0
+              ],
+              "start_seconds": 133.554,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Dans",
+              "recognition_probability": 0.989,
+              "matched_character_skip": 0,
+              "source_cue_start": 133.504,
+              "source_cue_end": 136.642
+            },
+            {
+              "anchor": "et orienter vers l’interlocuteur compétent",
+              "active": [
+                2
+              ],
+              "start_seconds": 138.12,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "et",
+              "recognition_probability": 0.837,
+              "matched_character_skip": 0,
+              "source_cue_start": 136.731,
+              "source_cue_end": 140.29
+            },
+            {
+              "anchor": "Vous pouvez rester ferme sur une règle tout en choisissant des mots respectueux",
+              "active": [
+                1
+              ],
+              "start_seconds": 141.003,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Vous",
+              "recognition_probability": 0.953,
+              "matched_character_skip": 0,
+              "source_cue_start": 140.953,
+              "source_cue_end": 144.652
+            },
+            {
+              "anchor": "Proposez votre aide sans l’imposer",
+              "active": [
+                0,
+                2
+              ],
+              "start_seconds": 156.895,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Proposez",
+              "recognition_probability": 0.971,
+              "matched_character_skip": 0,
+              "source_cue_start": 156.845,
+              "source_cue_end": 160.545
+            },
+            {
+              "anchor": "Une posture professionnelle n’exige ni froideur systématique ni familiarité",
+              "active": [
+                1
+              ],
+              "start_seconds": 165.339,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Une",
+              "recognition_probability": 0.986,
+              "matched_character_skip": 0,
+              "source_cue_start": 165.289,
+              "source_cue_end": 169.422
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "title": "Laïcité : connaître le contexte",
+          "start_seconds": 174.7,
+          "end_seconds": 216.832,
+          "events": [
+            {
+              "anchor": "La laïcité garantit la liberté de conscience",
+              "active": [
+                0
+              ],
+              "start_seconds": 174.751,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "La",
+              "recognition_probability": 0.767,
+              "matched_character_skip": 0,
+              "source_cue_start": 174.701,
+              "source_cue_end": 179.28
+            },
+            {
+              "anchor": "la neutralité de l’État",
+              "active": [
+                1
+              ],
+              "start_seconds": 177.92,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "la",
+              "recognition_probability": 0.997,
+              "matched_character_skip": 0,
+              "source_cue_start": 174.701,
+              "source_cue_end": 179.28
+            },
+            {
+              "anchor": "Elle ne donne pas à un agent privé un pouvoir général",
+              "active": [],
+              "start_seconds": 179.981,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Elle",
+              "recognition_probability": 0.937,
+              "matched_character_skip": 0,
+              "source_cue_start": 179.931,
+              "source_cue_end": 184.153
+            },
+            {
+              "anchor": "Les règles varient selon le cadre",
+              "active": [
+                2
+              ],
+              "start_seconds": 185.708,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Les",
+              "recognition_probability": 0.988,
+              "matched_character_skip": 0,
+              "source_cue_start": 185.658,
+              "source_cue_end": 189.395
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "title": "Identifier une discrimination",
+          "start_seconds": 216.832,
+          "end_seconds": 259.636,
+          "events": [
+            {
+              "anchor": "Une discrimination peut résulter d’une différence de traitement",
+              "active": [
+                0,
+                1
+              ],
+              "start_seconds": 216.883,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Une",
+              "recognition_probability": 0.965,
+              "matched_character_skip": 0,
+              "source_cue_start": 216.833,
+              "source_cue_end": 220.609
+            },
+            {
+              "anchor": "Dans l’accueil et l’accès à un service",
+              "active": [
+                1
+              ],
+              "start_seconds": 223.758,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Dans",
+              "recognition_probability": 0.988,
+              "matched_character_skip": 0,
+              "source_cue_start": 223.708,
+              "source_cue_end": 225.711
+            },
+            {
+              "anchor": "Si un responsable vous demande de filtrer un public sur la base d’un stéréotype",
+              "active": [
+                2
+              ],
+              "start_seconds": 236.985,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Si",
+              "recognition_probability": 0.967,
+              "matched_character_skip": 0,
+              "source_cue_start": 236.935,
+              "source_cue_end": 240.966
+            },
+            {
+              "anchor": "Une trace factuelle des instructions et des faits",
+              "active": [],
+              "start_seconds": 254.332,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Une",
+              "recognition_probability": 0.89,
+              "matched_character_skip": 0,
+              "source_cue_start": 254.282,
+              "source_cue_end": 258.619
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "title": "Handicap : demander avant d’aider",
+          "start_seconds": 259.636,
+          "end_seconds": 303.636,
+          "events": [
+            {
+              "anchor": "Adressez-vous directement à elle",
+              "active": [
+                0
+              ],
+              "start_seconds": 266.881,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Adressez",
+              "recognition_probability": 0.841,
+              "matched_character_skip": 0,
+              "source_cue_start": 266.831,
+              "source_cue_end": 270.62
+            },
+            {
+              "anchor": "et demandez comment vous pouvez faciliter le passage",
+              "active": [
+                1
+              ],
+              "start_seconds": 270.758,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "et",
+              "recognition_probability": 0.998,
+              "matched_character_skip": 0,
+              "source_cue_start": 270.708,
+              "source_cue_end": 273.413
+            },
+            {
+              "anchor": "Une consigne doit rester intelligible",
+              "active": [
+                2
+              ],
+              "start_seconds": 278.386,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Une",
+              "recognition_probability": 0.989,
+              "matched_character_skip": 0,
+              "source_cue_start": 278.336,
+              "source_cue_end": 281.831
+            },
+            {
+              "anchor": "Préservez la confidentialité de ce qu’elle vous explique",
+              "active": [],
+              "start_seconds": 293.59,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Préservez",
+              "recognition_probability": 0.846,
+              "matched_character_skip": 0,
+              "source_cue_start": 293.54,
+              "source_cue_end": 296.512
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "title": "Cas : une instruction de filtrage injustifiée",
+          "start_seconds": 303.636,
+          "end_seconds": 348.672,
+          "events": [
+            {
+              "anchor": "un collègue vous conseille de contrôler systématiquement plus longtemps les personnes ayant un certain accent",
+              "active": [
+                0
+              ],
+              "start_seconds": 307.44,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "un",
+              "recognition_probability": 0.998,
+              "matched_character_skip": 0,
+              "source_cue_start": 305.971,
+              "source_cue_end": 309.862
+            },
+            {
+              "anchor": "Vous appliquez les critères d’accès prévus à tous les visiteurs concernés",
+              "active": [
+                1
+              ],
+              "start_seconds": 318.279,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Vous",
+              "recognition_probability": 0.969,
+              "matched_character_skip": 0,
+              "source_cue_start": 318.229,
+              "source_cue_end": 322.055
+            },
+            {
+              "anchor": "et vous demandez au responsable de clarifier l’instruction problématique",
+              "active": [
+                2
+              ],
+              "start_seconds": 321.46,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "et",
+              "recognition_probability": 0.995,
+              "matched_character_skip": 0,
+              "source_cue_start": 318.229,
+              "source_cue_end": 322.055
+            },
+            {
+              "anchor": "Mettez la vidéo en pause et formulez une réponse professionnelle au collègue",
+              "active": [],
+              "start_seconds": 337.718,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Mettez",
+              "recognition_probability": 0.558,
+              "matched_character_skip": 0,
+              "source_cue_start": 337.668,
+              "source_cue_end": 341.482
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "title": "Justifier et rendre compte",
+          "start_seconds": 348.672,
+          "end_seconds": 394.772,
+          "events": [
+            {
+              "anchor": "constatez les faits",
+              "active": [
+                0
+              ],
+              "start_seconds": 351.2,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "constatez",
+              "recognition_probability": 0.871,
+              "matched_character_skip": 0,
+              "source_cue_start": 348.673,
+              "source_cue_end": 352.194
+            },
+            {
+              "anchor": "identifiez la règle applicable",
+              "active": [
+                1
+              ],
+              "start_seconds": 352.345,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "identifiez",
+              "recognition_probability": 0.953,
+              "matched_character_skip": 0,
+              "source_cue_start": 352.295,
+              "source_cue_end": 356.76
+            },
+            {
+              "anchor": "choisissez une réponse adaptée et préparez le relais",
+              "active": [
+                2
+              ],
+              "start_seconds": 354.22,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "choisissez",
+              "recognition_probability": 0.977,
+              "matched_character_skip": 0,
+              "source_cue_start": 352.295,
+              "source_cue_end": 356.76
+            },
+            {
+              "anchor": "Évitez les étiquettes comme personne bizarre ou public à problème",
+              "active": [],
+              "start_seconds": 362.69,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Évitez",
+              "recognition_probability": 0.434,
+              "matched_character_skip": 0,
+              "source_cue_start": 362.64,
+              "source_cue_end": 366.122
+            },
+            {
+              "anchor": "Lorsque vous doutez de la légalité d’une instruction",
+              "active": [
+                1,
+                2
+              ],
+              "start_seconds": 371.172,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Lorsque",
+              "recognition_probability": 0.98,
+              "matched_character_skip": 0,
+              "source_cue_start": 371.122,
+              "source_cue_end": 373.648
+            }
+          ]
+        }
+      ]
+    },
+    "03": {
+      "source_video_sha256": "fbddde45ec2d904e42b6aa949ac7c99e7605cb1cc406c84817585cb16400bbb2",
+      "canonical_duration_seconds": 385.537,
+      "recognition_model": "faster-whisper-small-int8",
+      "audit": {
+        "cue_count": 109,
+        "compared_cues": 109,
+        "matched_characters_percent": 99.303,
+        "median_speech_start_minus_caption": 0.038,
+        "minimum_speech_start_minus_caption": -0.382,
+        "maximum_speech_start_minus_caption": 0.307,
+        "unmatched_cues": [],
+        "outliers": [
+          {
+            "cue_start": 23.56,
+            "cue_end": 27.17,
+            "speech_start": 23.68,
+            "speech_end": 28.14,
+            "start_delta": 0.12,
+            "end_delta": 0.97,
+            "skipped": 0
+          }
+        ]
+      },
+      "scenes": [
+        {
+          "scene_index": 0,
+          "title": "Une mission privée dans un cadre précis",
+          "start_seconds": 0.0,
+          "end_seconds": 41.2,
+          "events": [
+            {
+              "anchor": "Votre mission est définie",
+              "active": [
+                0
+              ],
+              "start_seconds": 12.895,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Votre",
+              "recognition_probability": 0.989,
+              "matched_character_skip": 0,
+              "source_cue_start": 12.845,
+              "source_cue_end": 17.029
+            },
+            {
+              "anchor": "vos pouvoirs sont limités",
+              "active": [
+                1
+              ],
+              "start_seconds": 14.6,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "vos",
+              "recognition_probability": 0.985,
+              "matched_character_skip": 0,
+              "source_cue_start": 12.845,
+              "source_cue_end": 17.029
+            },
+            {
+              "anchor": "et vos actes peuvent engager votre responsabilité",
+              "active": [
+                2
+              ],
+              "start_seconds": 15.68,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "et",
+              "recognition_probability": 0.997,
+              "matched_character_skip": 0,
+              "source_cue_start": 12.845,
+              "source_cue_end": 17.029
+            },
+            {
+              "anchor": "Le port d’une tenue ou d’une carte professionnelle ne vous transforme pas en policier",
+              "active": [
+                1
+              ],
+              "start_seconds": 18.967,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Le",
+              "recognition_probability": 0.97,
+              "matched_character_skip": 0,
+              "source_cue_start": 18.917,
+              "source_cue_end": 22.093
+            },
+            {
+              "anchor": "Nous allons examiner les conditions d’exercice",
+              "active": [],
+              "start_seconds": 27.883,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Nous",
+              "recognition_probability": 0.042,
+              "matched_character_skip": 0,
+              "source_cue_start": 27.833,
+              "source_cue_end": 31.927
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "title": "Vérifier les conditions d’exercice",
+          "start_seconds": 41.2,
+          "end_seconds": 85.0,
+          "events": [
+            {
+              "anchor": "Avant d’exercer, assurez-vous que votre situation professionnelle",
+              "active": [
+                0
+              ],
+              "start_seconds": 41.251,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Avant",
+              "recognition_probability": 0.785,
+              "matched_character_skip": 0,
+              "source_cue_start": 41.201,
+              "source_cue_end": 45.206
+            },
+            {
+              "anchor": "Sur le poste, vérifiez le périmètre de la mission",
+              "active": [
+                1,
+                2
+              ],
+              "start_seconds": 59.771,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Sur",
+              "recognition_probability": 0.917,
+              "matched_character_skip": 0,
+              "source_cue_start": 59.721,
+              "source_cue_end": 63.561
+            },
+            {
+              "anchor": "Si une tâche nouvelle vous est demandée",
+              "active": [
+                1
+              ],
+              "start_seconds": 66.94,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Si",
+              "recognition_probability": 0.969,
+              "matched_character_skip": 0,
+              "source_cue_start": 66.89,
+              "source_cue_end": 68.893
+            },
+            {
+              "anchor": "Lorsqu’une instruction est ambiguë, demandez une clarification",
+              "active": [
+                2
+              ],
+              "start_seconds": 78.037,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Lorsqu",
+              "recognition_probability": 0.99,
+              "matched_character_skip": 0,
+              "source_cue_start": 77.987,
+              "source_cue_end": 79.786
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "title": "Consigne et règle de droit",
+          "start_seconds": 85.0,
+          "end_seconds": 127.804,
+          "events": [
+            {
+              "anchor": "Une consigne sert à organiser la mission",
+              "active": [
+                1,
+                2
+              ],
+              "start_seconds": 85.051,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Une",
+              "recognition_probability": 0.957,
+              "matched_character_skip": 0,
+              "source_cue_start": 85.001,
+              "source_cue_end": 89.045
+            },
+            {
+              "anchor": "mais elle reste soumise au droit",
+              "active": [
+                0
+              ],
+              "start_seconds": 87.32,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "mais",
+              "recognition_probability": 0.998,
+              "matched_character_skip": 0,
+              "source_cue_start": 85.001,
+              "source_cue_end": 89.045
+            },
+            {
+              "anchor": "Elle précise par exemple un circuit de ronde",
+              "active": [
+                2
+              ],
+              "start_seconds": 89.745,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Elle",
+              "recognition_probability": 0.974,
+              "matched_character_skip": 0,
+              "source_cue_start": 89.695,
+              "source_cue_end": 92.042
+            },
+            {
+              "anchor": "Elle ne peut pas autoriser une violence injustifiée",
+              "active": [
+                0,
+                2
+              ],
+              "start_seconds": 95.446,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Elle",
+              "recognition_probability": 0.985,
+              "matched_character_skip": 0,
+              "source_cue_start": 95.396,
+              "source_cue_end": 98.012
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "title": "Identifier sans contrôler comme la police",
+          "start_seconds": 127.804,
+          "end_seconds": 169.904,
+          "events": [
+            {
+              "anchor": "Dans certains accès, la procédure peut prévoir de présenter un justificatif",
+              "active": [
+                0
+              ],
+              "start_seconds": 127.855,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Dans",
+              "recognition_probability": 0.992,
+              "matched_character_skip": 0,
+              "source_cue_start": 127.805,
+              "source_cue_end": 132.805
+            },
+            {
+              "anchor": "Le refus d’une formalité d’accès se traite selon la procédure",
+              "active": [
+                1
+              ],
+              "start_seconds": 145.878,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Le",
+              "recognition_probability": 0.966,
+              "matched_character_skip": 0,
+              "source_cue_start": 145.828,
+              "source_cue_end": 149.897
+            },
+            {
+              "anchor": "Si une situation dépasse votre mission",
+              "active": [
+                2
+              ],
+              "start_seconds": 158.888,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Si",
+              "recognition_probability": 0.98,
+              "matched_character_skip": 0,
+              "source_cue_start": 158.838,
+              "source_cue_end": 161.045
+            },
+            {
+              "anchor": "Précisez toujours ce que vous avez réellement vérifié",
+              "active": [
+                0
+              ],
+              "start_seconds": 165.368,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "précisez",
+              "recognition_probability": 0.452,
+              "matched_character_skip": 0,
+              "source_cue_start": 165.318,
+              "source_cue_end": 168.839
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "title": "Intervention : nécessité et proportion",
+          "start_seconds": 169.904,
+          "end_seconds": 210.812,
+          "events": [
+            {
+              "anchor": "Il faut notamment apprécier la réalité et l’actualité de l’atteinte injustifiée",
+              "active": [
+                0
+              ],
+              "start_seconds": 178.692,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Il",
+              "recognition_probability": 0.984,
+              "matched_character_skip": 0,
+              "source_cue_start": 178.642,
+              "source_cue_end": 182.558
+            },
+            {
+              "anchor": "la nécessité de la réponse",
+              "active": [
+                1
+              ],
+              "start_seconds": 182.697,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "la",
+              "recognition_probability": 0.997,
+              "matched_character_skip": 0,
+              "source_cue_start": 182.647,
+              "source_cue_end": 185.046
+            },
+            {
+              "anchor": "et sa proportion",
+              "active": [
+                2
+              ],
+              "start_seconds": 183.9,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "et",
+              "recognition_probability": 0.998,
+              "matched_character_skip": 0,
+              "source_cue_start": 182.647,
+              "source_cue_end": 185.046
+            },
+            {
+              "anchor": "Une réaction de vengeance après les faits n’est pas une défense",
+              "active": [
+                0
+              ],
+              "start_seconds": 185.759,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Une",
+              "recognition_probability": 0.989,
+              "matched_character_skip": 0,
+              "source_cue_start": 185.709,
+              "source_cue_end": 188.885
+            },
+            {
+              "anchor": "La protection des biens obéit également à des règles particulières",
+              "active": [],
+              "start_seconds": 189.598,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "La",
+              "recognition_probability": 0.977,
+              "matched_character_skip": 0,
+              "source_cue_start": 189.548,
+              "source_cue_end": 193.451
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "title": "Flagrance : un cadre exceptionnel",
+          "start_seconds": 210.812,
+          "end_seconds": 254.712,
+          "events": [
+            {
+              "anchor": "dans certaines situations de crime flagrant ou de délit flagrant puni d’emprisonnement",
+              "active": [
+                0
+              ],
+              "start_seconds": 214.09,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "dans",
+              "recognition_probability": 0.881,
+              "matched_character_skip": 0,
+              "source_cue_start": 214.04,
+              "source_cue_end": 217.931
+            },
+            {
+              "anchor": "et de le conduire devant l’officier de police judiciaire le plus proche",
+              "active": [
+                1
+              ],
+              "start_seconds": 220.58,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "et",
+              "recognition_probability": 0.977,
+              "matched_character_skip": 0,
+              "source_cue_start": 218.032,
+              "source_cue_end": 222.063
+            },
+            {
+              "anchor": "Une simple suspicion ne suffit pas",
+              "active": [
+                0
+              ],
+              "start_seconds": 229.957,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Une",
+              "recognition_probability": 0.979,
+              "matched_character_skip": 0,
+              "source_cue_start": 229.907,
+              "source_cue_end": 233.913
+            },
+            {
+              "anchor": "Sollicitez les forces de l’ordre et respectez la dignité ainsi que la sécurité des personnes",
+              "active": [
+                1,
+                2
+              ],
+              "start_seconds": 239.511,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Solicitez",
+              "recognition_probability": 0.687,
+              "matched_character_skip": 0,
+              "source_cue_start": 239.461,
+              "source_cue_end": 244.168
+            },
+            {
+              "anchor": "La procédure exacte se travaille lors de la formation encadrée",
+              "active": [],
+              "start_seconds": 250.429,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "La",
+              "recognition_probability": 0.041,
+              "matched_character_skip": 0,
+              "source_cue_start": 250.379,
+              "source_cue_end": 253.645
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "title": "Déontologie et confidentialité",
+          "start_seconds": 254.712,
+          "end_seconds": 298.116,
+          "events": [
+            {
+              "anchor": "La déontologie se voit dans la tenue, les paroles, la maîtrise de soi",
+              "active": [
+                0
+              ],
+              "start_seconds": 254.763,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "La",
+              "recognition_probability": 0.902,
+              "matched_character_skip": 0,
+              "source_cue_start": 254.713,
+              "source_cue_end": 257.622
+            },
+            {
+              "anchor": "Elle implique aussi de protéger les informations obtenues pendant la mission",
+              "active": [
+                1
+              ],
+              "start_seconds": 260.732,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Elle",
+              "recognition_probability": 0.989,
+              "matched_character_skip": 0,
+              "source_cue_start": 260.682,
+              "source_cue_end": 264.318
+            },
+            {
+              "anchor": "Utilisez les outils autorisés et limitez la transmission aux destinataires qui en ont besoin",
+              "active": [
+                2
+              ],
+              "start_seconds": 272.301,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Utiliser",
+              "recognition_probability": 0.879,
+              "matched_character_skip": 0,
+              "source_cue_start": 272.251,
+              "source_cue_end": 276.205
+            },
+            {
+              "anchor": "Dans un compte rendu, séparez les faits constatés des informations rapportées",
+              "active": [
+                1
+              ],
+              "start_seconds": 281.817,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Dans",
+              "recognition_probability": 0.99,
+              "matched_character_skip": 0,
+              "source_cue_start": 281.767,
+              "source_cue_end": 285.644
+            },
+            {
+              "anchor": "Ne modifiez pas une chronologie pour protéger une mauvaise décision",
+              "active": [
+                0
+              ],
+              "start_seconds": 287.773,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Ne",
+              "recognition_probability": 0.877,
+              "matched_character_skip": 0,
+              "source_cue_start": 287.723,
+              "source_cue_end": 291.18
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "title": "Cas : une suspicion à l’accueil",
+          "start_seconds": 298.116,
+          "end_seconds": 340.116,
+          "events": [
+            {
+              "anchor": "Un salarié vous affirme qu’un visiteur a probablement pris un objet",
+              "active": [
+                0
+              ],
+              "start_seconds": 300.578,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Un",
+              "recognition_probability": 0.986,
+              "matched_character_skip": 0,
+              "source_cue_start": 300.528,
+              "source_cue_end": 303.921
+            },
+            {
+              "anchor": "Vous cherchez les éléments objectifs accessibles dans votre mission",
+              "active": [
+                1
+              ],
+              "start_seconds": 315.182,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Vous",
+              "recognition_probability": 0.967,
+              "matched_character_skip": 0,
+              "source_cue_start": 315.132,
+              "source_cue_end": 319.431
+            },
+            {
+              "anchor": "et informez le responsable selon la procédure",
+              "active": [
+                2
+              ],
+              "start_seconds": 318.04,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "et",
+              "recognition_probability": 0.996,
+              "matched_character_skip": 0,
+              "source_cue_start": 315.132,
+              "source_cue_end": 319.431
+            },
+            {
+              "anchor": "Mettez la vidéo en pause et formulez votre premier message radio",
+              "active": [],
+              "start_seconds": 332.198,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Mettez",
+              "recognition_probability": 0.931,
+              "matched_character_skip": 0,
+              "source_cue_start": 332.148,
+              "source_cue_end": 335.464
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "title": "La trace qui permet de comprendre",
+          "start_seconds": 340.116,
+          "end_seconds": 385.56,
+          "events": [
+            {
+              "anchor": "Indiquez les horaires utiles, le lieu précis",
+              "active": [
+                0
+              ],
+              "start_seconds": 345.078,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Indiquez",
+              "recognition_probability": 0.982,
+              "matched_character_skip": 0,
+              "source_cue_start": 345.028,
+              "source_cue_end": 348.906
+            },
+            {
+              "anchor": "les faits constatés",
+              "active": [
+                1
+              ],
+              "start_seconds": 347.8,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "les",
+              "recognition_probability": 0.889,
+              "matched_character_skip": 0,
+              "source_cue_start": 345.028,
+              "source_cue_end": 348.906
+            },
+            {
+              "anchor": "les actions réalisées et les personnes ou services alertés",
+              "active": [
+                2
+              ],
+              "start_seconds": 349.083,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "les",
+              "recognition_probability": 0.999,
+              "matched_character_skip": 0,
+              "source_cue_start": 349.033,
+              "source_cue_end": 351.852
+            },
+            {
+              "anchor": "Évitez les jugements personnels et les formulations vagues",
+              "active": [
+                1
+              ],
+              "start_seconds": 352.552,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Évitez",
+              "recognition_probability": 0.839,
+              "matched_character_skip": 0,
+              "source_cue_start": 352.502,
+              "source_cue_end": 355.347
+            },
+            {
+              "anchor": "Pour poursuivre cette synthèse, choisissez une situation de votre poste",
+              "active": [],
+              "start_seconds": 369.376,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Pour",
+              "recognition_probability": 0.975,
+              "matched_character_skip": 0,
+              "source_cue_start": 369.326,
+              "source_cue_end": 371.061
+            }
+          ]
+        }
+      ]
+    },
+    "04": {
+      "source_video_sha256": "36b72a92b0ad071a755800846004619d3c58d5fdcd2af310e55e7378ff3e5e94",
+      "canonical_duration_seconds": 394.817,
+      "recognition_model": "faster-whisper-small-int8",
+      "audit": {
+        "cue_count": 113,
+        "compared_cues": 112,
+        "matched_characters_percent": 99.04,
+        "median_speech_start_minus_caption": 0.075,
+        "minimum_speech_start_minus_caption": -0.916,
+        "maximum_speech_start_minus_caption": 0.182,
+        "unmatched_cues": [
+          {
+            "start": 111.059,
+            "end": 113.011,
+            "text": "Posez une question utile à la fois."
+          }
+        ],
+        "outliers": [
+          {
+            "cue_start": 113.661,
+            "cue_end": 116.008,
+            "speech_start": 112.96,
+            "speech_end": 115.78,
+            "start_delta": -0.701,
+            "end_delta": -0.228,
+            "skipped": 0
+          },
+          {
+            "cue_start": 249.736,
+            "cue_end": 254.187,
+            "speech_start": 248.82,
+            "speech_end": 253.94,
+            "start_delta": -0.916,
+            "end_delta": -0.247,
+            "skipped": 0
+          }
+        ]
+      },
+      "scenes": [
+        {
+          "scene_index": 0,
+          "title": "Faire comprendre la règle",
+          "start_seconds": 0.0,
+          "end_seconds": 42.948,
+          "events": [
+            {
+              "anchor": "Une règle d’accès peut être justifiée et pourtant mal comprise",
+              "active": [
+                1
+              ],
+              "start_seconds": 5.23,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Une",
+              "recognition_probability": 0.966,
+              "matched_character_skip": 0,
+              "source_cue_start": 5.18,
+              "source_cue_end": 8.509
+            },
+            {
+              "anchor": "Nous allons revoir l’observation de la tension",
+              "active": [
+                0
+              ],
+              "start_seconds": 23.724,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Nous",
+              "recognition_probability": 0.992,
+              "matched_character_skip": 0,
+              "source_cue_start": 23.674,
+              "source_cue_end": 28.279
+            },
+            {
+              "anchor": "l’écoute, l’explication d’un refus",
+              "active": [
+                1
+              ],
+              "start_seconds": 26.06,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "l",
+              "recognition_probability": 0.978,
+              "matched_character_skip": 0,
+              "source_cue_start": 23.674,
+              "source_cue_end": 28.279
+            },
+            {
+              "anchor": "et la demande de renfort",
+              "active": [
+                2
+              ],
+              "start_seconds": 29.62,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "et",
+              "recognition_probability": 0.996,
+              "matched_character_skip": 0,
+              "source_cue_start": 28.394,
+              "source_cue_end": 30.945
+            },
+            {
+              "anchor": "Les techniques d’intervention physique nécessitent un entraînement encadré",
+              "active": [],
+              "start_seconds": 31.645,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Les",
+              "recognition_probability": 0.949,
+              "matched_character_skip": 0,
+              "source_cue_start": 31.595,
+              "source_cue_end": 35.18
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "title": "Repérer ce qui fait monter la tension",
+          "start_seconds": 42.948,
+          "end_seconds": 87.448,
+          "events": [
+            {
+              "anchor": "La tension peut venir d’une attente",
+              "active": [
+                0
+              ],
+              "start_seconds": 42.999,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "L",
+              "recognition_probability": 0.399,
+              "matched_character_skip": 0,
+              "source_cue_start": 42.949,
+              "source_cue_end": 46.661
+            },
+            {
+              "anchor": "Observez les signes concrets",
+              "active": [
+                1
+              ],
+              "start_seconds": 50.091,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Observer",
+              "recognition_probability": 0.91,
+              "matched_character_skip": 0,
+              "source_cue_start": 50.041,
+              "source_cue_end": 54.187
+            },
+            {
+              "anchor": "Examinez aussi votre propre posture",
+              "active": [
+                2
+              ],
+              "start_seconds": 65.308,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Examinez",
+              "recognition_probability": 0.809,
+              "matched_character_skip": 0,
+              "source_cue_start": 65.258,
+              "source_cue_end": 68.345
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "title": "Écouter puis reformuler",
+          "start_seconds": 87.448,
+          "end_seconds": 131.148,
+          "events": [
+            {
+              "anchor": "Commencez par écouter la demande",
+              "active": [
+                0
+              ],
+              "start_seconds": 87.499,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Commencer",
+              "recognition_probability": 0.726,
+              "matched_character_skip": 0,
+              "source_cue_start": 87.449,
+              "source_cue_end": 90.562
+            },
+            {
+              "anchor": "Une reformulation courte montre que vous avez compris",
+              "active": [
+                1
+              ],
+              "start_seconds": 91.275,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Une",
+              "recognition_probability": 0.981,
+              "matched_character_skip": 0,
+              "source_cue_start": 91.225,
+              "source_cue_end": 95.51
+            },
+            {
+              "anchor": "Si la personne parle difficilement français",
+              "active": [
+                2
+              ],
+              "start_seconds": 113.711,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Si",
+              "recognition_probability": 0.027,
+              "matched_character_skip": 0,
+              "source_cue_start": 113.661,
+              "source_cue_end": 116.008
+            },
+            {
+              "anchor": "La reformulation sert aussi à corriger un malentendu",
+              "active": [
+                1
+              ],
+              "start_seconds": 119.451,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "La",
+              "recognition_probability": 0.86,
+              "matched_character_skip": 0,
+              "source_cue_start": 119.401,
+              "source_cue_end": 122.296
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "title": "Annoncer une limite et une solution",
+          "start_seconds": 131.148,
+          "end_seconds": 172.148,
+          "events": [
+            {
+              "anchor": "ce passage est réservé aux personnes inscrites",
+              "active": [
+                0
+              ],
+              "start_seconds": 137.34,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "ce",
+              "recognition_probability": 0.923,
+              "matched_character_skip": 0,
+              "source_cue_start": 136.315,
+              "source_cue_end": 139.516
+            },
+            {
+              "anchor": "votre nom n’apparaît pas sur la liste disponible",
+              "active": [
+                1
+              ],
+              "start_seconds": 139.566,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "«Votre",
+              "recognition_probability": 0.646,
+              "matched_character_skip": 0,
+              "source_cue_start": 139.516,
+              "source_cue_end": 141.876
+            },
+            {
+              "anchor": "je peux joindre l’accueil pour vérifier votre invitation",
+              "active": [
+                2
+              ],
+              "start_seconds": 141.939,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "je",
+              "recognition_probability": 0.958,
+              "matched_character_skip": 0,
+              "source_cue_start": 141.889,
+              "source_cue_end": 144.53
+            },
+            {
+              "anchor": "Évitez les phrases personnelles comme je vous interdis d’entrer",
+              "active": [
+                0
+              ],
+              "start_seconds": 148.814,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "éviter",
+              "recognition_probability": 0.963,
+              "matched_character_skip": 0,
+              "source_cue_start": 148.764,
+              "source_cue_end": 152.68
+            },
+            {
+              "anchor": "Si aucune alternative immédiate n’est possible",
+              "active": [
+                2
+              ],
+              "start_seconds": 153.393,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Si",
+              "recognition_probability": 0.942,
+              "matched_character_skip": 0,
+              "source_cue_start": 153.343,
+              "source_cue_end": 155.792
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "title": "Filtrage : distinguer les opérations",
+          "start_seconds": 172.148,
+          "end_seconds": 214.76,
+          "events": [
+            {
+              "anchor": "Vérifier un titre d’accès",
+              "active": [
+                0
+              ],
+              "start_seconds": 175.783,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Vérifiez",
+              "recognition_probability": 0.926,
+              "matched_character_skip": 0,
+              "source_cue_start": 175.733,
+              "source_cue_end": 180.516
+            },
+            {
+              "anchor": "regarder visuellement l’intérieur d’un bagage présenté",
+              "active": [
+                1
+              ],
+              "start_seconds": 177.58,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "regardez",
+              "recognition_probability": 0.916,
+              "matched_character_skip": 0,
+              "source_cue_start": 175.733,
+              "source_cue_end": 180.516
+            },
+            {
+              "anchor": "et procéder à sa fouille",
+              "active": [
+                2
+              ],
+              "start_seconds": 179.94,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "et",
+              "recognition_probability": 0.995,
+              "matched_character_skip": 0,
+              "source_cue_start": 175.733,
+              "source_cue_end": 180.516
+            },
+            {
+              "anchor": "Dans le cadre prévu pour les agents concernés, l’inspection visuelle",
+              "active": [
+                1
+              ],
+              "start_seconds": 183.462,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Dans",
+              "recognition_probability": 0.994,
+              "matched_character_skip": 0,
+              "source_cue_start": 183.412,
+              "source_cue_end": 185.759
+            },
+            {
+              "anchor": "leur fouille exige le consentement du propriétaire",
+              "active": [
+                2
+              ],
+              "start_seconds": 188.436,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "leur",
+              "recognition_probability": 0.843,
+              "matched_character_skip": 0,
+              "source_cue_start": 188.386,
+              "source_cue_end": 190.976
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "title": "Palpation : des conditions spécifiques",
+          "start_seconds": 214.76,
+          "end_seconds": 259.86,
+          "events": [
+            {
+              "anchor": "La palpation de sécurité obéit à des conditions spécifiques",
+              "active": [
+                0
+              ],
+              "start_seconds": 214.811,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "La",
+              "recognition_probability": 0.897,
+              "matched_character_skip": 0,
+              "source_cue_start": 214.761,
+              "source_cue_end": 218.346
+            },
+            {
+              "anchor": "Le consentement exprès de la personne est nécessaire",
+              "active": [
+                1
+              ],
+              "start_seconds": 230.729,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Le",
+              "recognition_probability": 0.968,
+              "matched_character_skip": 0,
+              "source_cue_start": 230.679,
+              "source_cue_end": 233.295
+            },
+            {
+              "anchor": "et la palpation est réalisée par une personne du même sexe",
+              "active": [
+                2
+              ],
+              "start_seconds": 233.472,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "et",
+              "recognition_probability": 0.998,
+              "matched_character_skip": 0,
+              "source_cue_start": 233.422,
+              "source_cue_end": 236.483
+            },
+            {
+              "anchor": "Ne confondez pas ce cadre avec une fouille corporelle",
+              "active": [
+                0
+              ],
+              "start_seconds": 237.196,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Ne",
+              "recognition_probability": 0.973,
+              "matched_character_skip": 0,
+              "source_cue_start": 237.146,
+              "source_cue_end": 240.948
+            },
+            {
+              "anchor": "Les gestes, la posture et la coordination doivent être appris en situation encadrée",
+              "active": [],
+              "start_seconds": 249.786,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Les",
+              "recognition_probability": 0.046,
+              "matched_character_skip": 0,
+              "source_cue_start": 249.736,
+              "source_cue_end": 254.187
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "title": "Demander du renfort avant la rupture",
+          "start_seconds": 259.86,
+          "end_seconds": 306.36,
+          "events": [
+            {
+              "anchor": "Un renfort demandé suffisamment tôt",
+              "active": [
+                2
+              ],
+              "start_seconds": 259.911,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Un",
+              "recognition_probability": 0.869,
+              "matched_character_skip": 0,
+              "source_cue_start": 259.861,
+              "source_cue_end": 263.879
+            },
+            {
+              "anchor": "L’accumulation d’agents autour d’une personne peut accroître la tension",
+              "active": [
+                0
+              ],
+              "start_seconds": 282.819,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "L",
+              "recognition_probability": 0.953,
+              "matched_character_skip": 0,
+              "source_cue_start": 282.769,
+              "source_cue_end": 286.213
+            },
+            {
+              "anchor": "Si une menace grave apparaît",
+              "active": [
+                2
+              ],
+              "start_seconds": 289.235,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Si",
+              "recognition_probability": 0.977,
+              "matched_character_skip": 0,
+              "source_cue_start": 289.185,
+              "source_cue_end": 293.42
+            },
+            {
+              "anchor": "Le choix de se retirer et de faire intervenir un relais",
+              "active": [
+                1,
+                2
+              ],
+              "start_seconds": 300.574,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Le",
+              "recognition_probability": 0.214,
+              "matched_character_skip": 0,
+              "source_cue_start": 300.524,
+              "source_cue_end": 304.274
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "title": "Cas : refus d’ouverture d’un sac",
+          "start_seconds": 306.36,
+          "end_seconds": 350.196,
+          "events": [
+            {
+              "anchor": "une personne refuse la vérification demandée pour son bagage et élève la voix",
+              "active": [
+                0
+              ],
+              "start_seconds": 310.54,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "une",
+              "recognition_probability": 0.996,
+              "matched_character_skip": 0,
+              "source_cue_start": 309.078,
+              "source_cue_end": 313.491
+            },
+            {
+              "anchor": "expliquez précisément la règle applicable",
+              "active": [
+                1
+              ],
+              "start_seconds": 317.036,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "expliquez",
+              "recognition_probability": 0.961,
+              "matched_character_skip": 0,
+              "source_cue_start": 316.986,
+              "source_cue_end": 321.132
+            },
+            {
+              "anchor": "Vous ne touchez pas son sac par surprise",
+              "active": [
+                2
+              ],
+              "start_seconds": 321.845,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Vous",
+              "recognition_probability": 0.985,
+              "matched_character_skip": 0,
+              "source_cue_start": 321.795,
+              "source_cue_end": 325.672
+            },
+            {
+              "anchor": "Mettez la vidéo en pause et préparez trois phrases",
+              "active": [],
+              "start_seconds": 337.687,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Mettez",
+              "recognition_probability": 0.897,
+              "matched_character_skip": 0,
+              "source_cue_start": 337.637,
+              "source_cue_end": 341.438
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "title": "Après le conflit : remettre le service en ordre",
+          "start_seconds": 350.196,
+          "end_seconds": 394.796,
+          "events": [
+            {
+              "anchor": "Quand la situation est revenue au calme, vérifiez que l’accès et les personnes sont en sécurité",
+              "active": [
+                0
+              ],
+              "start_seconds": 350.247,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Quand",
+              "recognition_probability": 0.972,
+              "matched_character_skip": 0,
+              "source_cue_start": 350.197,
+              "source_cue_end": 352.187
+            },
+            {
+              "anchor": "Transmettez les informations utiles au responsable",
+              "active": [
+                1
+              ],
+              "start_seconds": 355.808,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Transmettez",
+              "recognition_probability": 0.905,
+              "matched_character_skip": 0,
+              "source_cue_start": 355.758,
+              "source_cue_end": 359.904
+            },
+            {
+              "anchor": "Analysez ensuite ce qui aurait pu éviter la tension",
+              "active": [
+                2
+              ],
+              "start_seconds": 368.13,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Analysez",
+              "recognition_probability": 0.722,
+              "matched_character_skip": 0,
+              "source_cue_start": 368.08,
+              "source_cue_end": 371.703
+            },
+            {
+              "anchor": "Pour poursuivre, entraînez-vous avec un collègue",
+              "active": [],
+              "start_seconds": 382.441,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Pour",
+              "recognition_probability": 0.974,
+              "matched_character_skip": 0,
+              "source_cue_start": 382.391,
+              "source_cue_end": 386.218
+            }
+          ]
+        }
+      ]
+    },
+    "05": {
+      "source_video_sha256": "325ac82418ec670cb4d5e56f3ba50a8d20b0ea3926724f26ae3b45e5b8d0f319",
+      "canonical_duration_seconds": 397.269,
+      "recognition_model": "faster-whisper-small-int8",
+      "audit": {
+        "cue_count": 110,
+        "compared_cues": 110,
+        "matched_characters_percent": 99.154,
+        "median_speech_start_minus_caption": 0.13,
+        "minimum_speech_start_minus_caption": -0.285,
+        "maximum_speech_start_minus_caption": 0.272,
+        "unmatched_cues": [],
+        "outliers": []
+      },
+      "scenes": [
+        {
+          "scene_index": 0,
+          "title": "Une vigilance fondée sur les faits",
+          "start_seconds": 0.0,
+          "end_seconds": 43.7,
+          "events": [
+            {
+              "anchor": "Elle porte sur la vigilance, la protection du public et l’alerte",
+              "active": [
+                0,
+                1,
+                2
+              ],
+              "start_seconds": 6.237,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Elle",
+              "recognition_probability": 0.922,
+              "matched_character_skip": 0,
+              "source_cue_start": 6.187,
+              "source_cue_end": 10.027
+            },
+            {
+              "anchor": "Elle ne prépare pas une confrontation armée",
+              "active": [],
+              "start_seconds": 10.74,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Elle",
+              "recognition_probability": 0.855,
+              "matched_character_skip": 0,
+              "source_cue_start": 10.69,
+              "source_cue_end": 13.063
+            },
+            {
+              "anchor": "Votre rôle consiste à repérer des faits préoccupants",
+              "active": [
+                0,
+                1,
+                2
+              ],
+              "start_seconds": 13.775,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Votre",
+              "recognition_probability": 0.979,
+              "matched_character_skip": 0,
+              "source_cue_start": 13.725,
+              "source_cue_end": 18.318
+            },
+            {
+              "anchor": "La vigilance ne consiste pas à suspecter un public",
+              "active": [
+                0
+              ],
+              "start_seconds": 23.661,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "La",
+              "recognition_probability": 0.989,
+              "matched_character_skip": 0,
+              "source_cue_start": 23.611,
+              "source_cue_end": 27.82
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "title": "Connaître le site avant l’événement",
+          "start_seconds": 43.7,
+          "end_seconds": 89.4,
+          "events": [
+            {
+              "anchor": "La préparation commence par les consignes de sûreté actualisées du site",
+              "active": [
+                0
+              ],
+              "start_seconds": 43.751,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "La",
+              "recognition_probability": 0.831,
+              "matched_character_skip": 0,
+              "source_cue_start": 43.701,
+              "source_cue_end": 47.541
+            },
+            {
+              "anchor": "Repérez les accès, les cheminements et les espaces prévus",
+              "active": [
+                1
+              ],
+              "start_seconds": 53.585,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Repérez",
+              "recognition_probability": 0.956,
+              "matched_character_skip": 0,
+              "source_cue_start": 53.535,
+              "source_cue_end": 58.14
+            },
+            {
+              "anchor": "Les exercices encadrés permettent de vérifier la compréhension des rôles",
+              "active": [
+                2
+              ],
+              "start_seconds": 76.034,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Les",
+              "recognition_probability": 0.989,
+              "matched_character_skip": 0,
+              "source_cue_start": 75.984,
+              "source_cue_end": 80.066
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "title": "Décrire une anomalie sans conclure trop vite",
+          "start_seconds": 89.4,
+          "end_seconds": 131.5,
+          "events": [
+            {
+              "anchor": "Une anomalie peut concerner un accès inhabituellement ouvert",
+              "active": [
+                0
+              ],
+              "start_seconds": 89.451,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Une",
+              "recognition_probability": 0.942,
+              "matched_character_skip": 0,
+              "source_cue_start": 89.401,
+              "source_cue_end": 92.361
+            },
+            {
+              "anchor": "Ne cherchez pas à deviner une intention à partir d’un seul détail",
+              "active": [
+                2
+              ],
+              "start_seconds": 103.354,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Ne",
+              "recognition_probability": 0.979,
+              "matched_character_skip": 0,
+              "source_cue_start": 103.304,
+              "source_cue_end": 106.812
+            },
+            {
+              "anchor": "Recoupez les informations disponibles dans le cadre de votre mission",
+              "active": [
+                1
+              ],
+              "start_seconds": 111.237,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Recouper",
+              "recognition_probability": 0.688,
+              "matched_character_skip": 0,
+              "source_cue_start": 111.187,
+              "source_cue_end": 114.644
+            },
+            {
+              "anchor": "Dans votre message, distinguez ce que vous avez vu de ce qu’un tiers vous a rapporté",
+              "active": [
+                0,
+                2
+              ],
+              "start_seconds": 122.474,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Dans",
+              "recognition_probability": 0.989,
+              "matched_character_skip": 0,
+              "source_cue_start": 122.424,
+              "source_cue_end": 126.889
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "title": "Objet suspect : ne pas manipuler",
+          "start_seconds": 131.5,
+          "end_seconds": 176.032,
+          "events": [
+            {
+              "anchor": "Si un objet présente un caractère suspect au regard du contexte",
+              "active": [
+                0
+              ],
+              "start_seconds": 131.551,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Si",
+              "recognition_probability": 0.971,
+              "matched_character_skip": 0,
+              "source_cue_start": 131.501,
+              "source_cue_end": 135.711
+            },
+            {
+              "anchor": "ne l’ouvrez pas, ne le déplacez pas",
+              "active": [
+                1
+              ],
+              "start_seconds": 134.96,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "ne",
+              "recognition_probability": 0.997,
+              "matched_character_skip": 0,
+              "source_cue_start": 131.501,
+              "source_cue_end": 135.711
+            },
+            {
+              "anchor": "Prévenez les personnes de ne pas s’en approcher",
+              "active": [
+                2
+              ],
+              "start_seconds": 139.944,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Prévenez",
+              "recognition_probability": 0.871,
+              "matched_character_skip": 0,
+              "source_cue_start": 139.894,
+              "source_cue_end": 143.835
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "title": "Danger grave : choisir une protection possible",
+          "start_seconds": 176.032,
+          "end_seconds": 216.94,
+          "events": [
+            {
+              "anchor": "s’échapper lorsque cela est possible sans se mettre davantage en danger",
+              "active": [
+                0,
+                1
+              ],
+              "start_seconds": 183.26,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "s",
+              "recognition_probability": 0.996,
+              "matched_character_skip": 0,
+              "source_cue_start": 181.097,
+              "source_cue_end": 185.127
+            },
+            {
+              "anchor": "ou de se cacher lorsque la fuite n’est pas possible",
+              "active": [
+                2
+              ],
+              "start_seconds": 186.84,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "ou",
+              "recognition_probability": 0.998,
+              "matched_character_skip": 0,
+              "source_cue_start": 185.127,
+              "source_cue_end": 189.209
+            },
+            {
+              "anchor": "Le choix dépend de ce qui est réellement observé",
+              "active": [
+                0
+              ],
+              "start_seconds": 189.91,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Le",
+              "recognition_probability": 0.989,
+              "matched_character_skip": 0,
+              "source_cue_start": 189.86,
+              "source_cue_end": 193.814
+            },
+            {
+              "anchor": "Donnez des indications courtes et compréhensibles",
+              "active": [],
+              "start_seconds": 199.501,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Donnez",
+              "recognition_probability": 0.626,
+              "matched_character_skip": 0,
+              "source_cue_start": 199.451,
+              "source_cue_end": 202.908
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "title": "Alerter depuis une position sûre",
+          "start_seconds": 216.94,
+          "end_seconds": 262.24,
+          "events": [
+            {
+              "anchor": "Donnez la localisation exacte",
+              "active": [
+                0
+              ],
+              "start_seconds": 222.157,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Donnez",
+              "recognition_probability": 0.981,
+              "matched_character_skip": 0,
+              "source_cue_start": 222.107,
+              "source_cue_end": 225.181
+            },
+            {
+              "anchor": "les faits constatés, les dangers visibles",
+              "active": [
+                1
+              ],
+              "start_seconds": 224.16,
+              "timing_source": "recognized_word_inside_original_cue",
+              "matched_word": "les",
+              "recognition_probability": 0.82,
+              "matched_character_skip": 0,
+              "source_cue_start": 222.107,
+              "source_cue_end": 225.181
+            },
+            {
+              "anchor": "Indiquez également les mesures de protection déjà engagées",
+              "active": [
+                2
+              ],
+              "start_seconds": 233.687,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Indiquez",
+              "recognition_probability": 0.984,
+              "matched_character_skip": 0,
+              "source_cue_start": 233.637,
+              "source_cue_end": 237.413
+            },
+            {
+              "anchor": "Laissez l’opérateur vous guider",
+              "active": [],
+              "start_seconds": 238.764,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Laissez",
+              "recognition_probability": 0.968,
+              "matched_character_skip": 0,
+              "source_cue_start": 238.714,
+              "source_cue_end": 242.515
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "title": "Accueillir les forces de l’ordre",
+          "start_seconds": 262.24,
+          "end_seconds": 305.84,
+          "events": [
+            {
+              "anchor": "Suivez leurs consignes, gardez les mains visibles et évitez les gestes brusques",
+              "active": [
+                0,
+                1,
+                2
+              ],
+              "start_seconds": 266.564,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Suivez",
+              "recognition_probability": 0.986,
+              "matched_character_skip": 0,
+              "source_cue_start": 266.514,
+              "source_cue_end": 270.711
+            },
+            {
+              "anchor": "N’avancez pas vers elles avec un objet à la main",
+              "active": [
+                1,
+                2
+              ],
+              "start_seconds": 271.424,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "N",
+              "recognition_probability": 0.964,
+              "matched_character_skip": 0,
+              "source_cue_start": 271.374,
+              "source_cue_end": 275.724
+            },
+            {
+              "anchor": "Votre tenue professionnelle ne leur permet pas de connaître immédiatement votre rôle",
+              "active": [],
+              "start_seconds": 276.436,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Votre",
+              "recognition_probability": 0.988,
+              "matched_character_skip": 0,
+              "source_cue_start": 276.386,
+              "source_cue_end": 280.149
+            },
+            {
+              "anchor": "Quand elles vous le demandent, transmettez les informations utiles",
+              "active": [
+                0
+              ],
+              "start_seconds": 281.666,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Quand",
+              "recognition_probability": 0.912,
+              "matched_character_skip": 0,
+              "source_cue_start": 281.616,
+              "source_cue_end": 284.843
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "title": "Cas : une information alarmante au poste",
+          "start_seconds": 305.84,
+          "end_seconds": 348.572,
+          "events": [
+            {
+              "anchor": "Un visiteur rejoint le poste d’accueil et signale un danger grave",
+              "active": [
+                0
+              ],
+              "start_seconds": 308.455,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Un",
+              "recognition_probability": 0.902,
+              "matched_character_skip": 0,
+              "source_cue_start": 308.405,
+              "source_cue_end": 312.346
+            },
+            {
+              "anchor": "Vous recueillez les faits essentiels sans prolonger un interrogatoire",
+              "active": [
+                1
+              ],
+              "start_seconds": 316.911,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Vous",
+              "recognition_probability": 0.969,
+              "matched_character_skip": 0,
+              "source_cue_start": 316.861,
+              "source_cue_end": 320.165
+            },
+            {
+              "anchor": "prévenez immédiatement le responsable et faites déclencher l’alerte adaptée",
+              "active": [
+                2
+              ],
+              "start_seconds": 320.279,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "prévenez",
+              "recognition_probability": 0.974,
+              "matched_character_skip": 0,
+              "source_cue_start": 320.229,
+              "source_cue_end": 323.826
+            },
+            {
+              "anchor": "Vous ne vous rendez pas dans la zone pour vérifier personnellement le récit",
+              "active": [
+                1
+              ],
+              "start_seconds": 324.526,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Vous",
+              "recognition_probability": 0.986,
+              "matched_character_skip": 0,
+              "source_cue_start": 324.476,
+              "source_cue_end": 327.844
+            },
+            {
+              "anchor": "Vous protégez les personnes présentes",
+              "active": [
+                2
+              ],
+              "start_seconds": 328.544,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Vous",
+              "recognition_probability": 0.993,
+              "matched_character_skip": 0,
+              "source_cue_start": 328.494,
+              "source_cue_end": 332.563
+            },
+            {
+              "anchor": "Mettez la vidéo en pause et préparez votre message",
+              "active": [],
+              "start_seconds": 335.585,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Mettez",
+              "recognition_probability": 0.931,
+              "matched_character_skip": 0,
+              "source_cue_start": 335.535,
+              "source_cue_end": 340.038
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "title": "Après l’alerte : préserver et transmettre",
+          "start_seconds": 348.572,
+          "end_seconds": 397.208,
+          "events": [
+            {
+              "anchor": "Suivez les décisions des autorités et des responsables",
+              "active": [
+                0
+              ],
+              "start_seconds": 355.434,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Suivez",
+              "recognition_probability": 0.99,
+              "matched_character_skip": 0,
+              "source_cue_start": 355.384,
+              "source_cue_end": 358.28
+            },
+            {
+              "anchor": "Préservez les éléments utiles sans les manipuler inutilement",
+              "active": [
+                1
+              ],
+              "start_seconds": 358.98,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Préservez",
+              "recognition_probability": 0.925,
+              "matched_character_skip": 0,
+              "source_cue_start": 358.93,
+              "source_cue_end": 361.801
+            },
+            {
+              "anchor": "L’équipe peut ensuite analyser les difficultés de communication",
+              "active": [
+                2
+              ],
+              "start_seconds": 374.465,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "L",
+              "recognition_probability": 0.962,
+              "matched_character_skip": 0,
+              "source_cue_start": 374.415,
+              "source_cue_end": 378.829
+            },
+            {
+              "anchor": "Pour poursuivre votre travail, expliquez les trois priorités de cette synthèse",
+              "active": [],
+              "start_seconds": 386.149,
+              "timing_source": "original_tts_word_boundary",
+              "matched_word": "Pour",
+              "recognition_probability": 0.975,
+              "matched_character_skip": 0,
+              "source_cue_start": 386.099,
+              "source_cue_end": 390.257
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "alignment_review": {
+    "date": "2026-10-12",
+    "original_tts_anchors": 167,
+    "interior_anchors": 27,
+    "forced_alignment_cues_checked": 33,
+    "forced_alignment_model": "faster-whisper 1.2.1 / CTranslate2 4.8.2 / small int8 / authored text, no text decoding",
+    "median_absolute_delta_seconds": 0.022,
+    "maximum_absolute_delta_seconds": 0.077,
+    "median_signed_delta_seconds": 0.001,
+    "interior_anchors_requiring_correction": 0,
+    "note": "Original TTS cue starts remain authoritative; forced alignment first words attach to cropped window edges and are not exact acoustic onsets."
+  }
+}

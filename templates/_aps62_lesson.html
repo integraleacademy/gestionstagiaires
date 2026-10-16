@@ -1,0 +1,41 @@
+  {% from '_aps62_scene.html' import scene %}
+  {% include '_aps62_course_reading.html' %}
+  {% if lesson.visual_guide %}{% include '_aps62_visual.html' %}{% endif %}
+  {% if lesson.plain_course %}
+  <section class="aps-plain-course" data-aps-lesson-group aria-label="Le cours expliqué simplement">
+    <span class="aps-label">Comprendre pas à pas</span>
+    {% for part in lesson.plain_course %}<section data-aps-lesson-page><h2>{{ part.title }}</h2>{% for paragraph in part.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}</section>{% endfor %}
+  </section>
+  {% endif %}
+  <div data-aps-lesson-page>
+  {% if lesson.plain_course %}<h2 class="aps-course-detail-title">Le cours en détail</h2>{% endif %}
+  {% if not lesson.visual_guide %}<div class="aps-lesson-hero">
+    <img src="{{ lesson.image }}" alt="{{ lesson.image_alt|default('Scène professionnelle illustrée du manuel APS') }}" loading="eager">
+    <div><span class="aps-label">Dossier {{ lesson.dossier }} · Observer, comprendre, agir</span><h2>Votre situation de départ</h2><p>{{ lesson.case }}</p></div>
+  </div>{% endif %}
+  {% if lesson.pacing %}<div class="aps-route" aria-label="Organisation du dossier">{% for item in lesson.pacing %}<span><b>{{ item.minutes }} min</b> {{ item.label }}</span>{% endfor %}</div>{% else %}  <div class="aps-route" aria-label="Organisation du dossier : 60 minutes de travail guidé">
+    <span><b>18 min</b> Comprendre</span><span><b>8 min</b> Mémoriser</span><span><b>16 min</b> S’entraîner</span><span><b>8 min</b> Vérifier</span><span><b>10 min</b> Réutiliser et retenir</span>
+  </div>
+{% endif %}
+  {% if lesson.pacing_note %}<p class="aps-small">{{ lesson.pacing_note }}</p>{% endif %}
+  <section class="aps-objectives"><span class="aps-label">À l’issue de ce dossier</span><ul>{% for objective in lesson.objectives %}<li>{{ objective }}</li>{% endfor %}</ul></section>
+  </div>
+  {% if lesson.visual_board %}<section class="aps-visual-board" data-aps-lesson-page><span class="aps-label">Le module en un regard</span><h2>{{ lesson.visual_board.title }}</h2><div class="aps-board-grid">{% for step in lesson.visual_board.steps %}<article><span class="aps-board-number">{{ '%02d'|format(loop.index) }}</span><h3>{{ step.label }}</h3><p>{{ step.text }}</p></article>{% endfor %}</div></section>{% endif %}
+  <section class="aps-editorial" data-aps-lesson-page><span class="aps-label">Le raisonnement professionnel</span><h2>Comprendre ce qui guide la décision</h2>{% if lesson.illustrations %}{{ scene(lesson.illustrations.reason) }}{% endif %}<p>{{ lesson.reason }}</p></section>
+  {% if lesson.deepening %}<section class="aps-deepening" data-aps-lesson-group><span class="aps-label">Approfondir et comprendre les nuances</span>{% for part in lesson.deepening %}<div data-aps-lesson-page><h2>{{ part.title }}</h2>{% for paragraph in part.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}</div>{% endfor %}</section>{% endif %}
+  {% if lesson.uniform_diagram %}<section class="aps-editorial" data-aps-lesson-page><h2>{{ lesson.uniform_diagram.title }}</h2><p>{{ lesson.uniform_diagram.scope }}</p><img src="{{ lesson.uniform_diagram.src }}" alt="{{ lesson.uniform_diagram.alt }}" style="max-width:100%;height:auto"><p class="aps-small">{{ lesson.uniform_diagram.caption }}</p><ul>{% for point in lesson.uniform_diagram.points %}<li><strong>{{ point.label }} - {{ point.position }} :</strong> {{ point.rule }}</li>{% endfor %}</ul><a href="{{ lesson.uniform_diagram.source_url }}" target="_blank" rel="noopener noreferrer">{{ lesson.uniform_diagram.source_title }}</a></section>{% endif %}
+  {% for reference in lesson.lessons %}
+  <section class="aps-manual-lesson" data-aps-lesson-group>
+    <header><span class="aps-label">Le cours illustré · Repère {{ reference.ref }}</span><h2>{{ reference.title }}</h2></header>
+    <div class="aps-manual-layout" data-aps-lesson-page>
+      <div>{% for paragraph in reference.paragraphs %}{% if paragraph.kind == 'heading' %}<h3>{{ paragraph.text }}</h3>{% elif paragraph.kind == 'takeaway' %}<p class="aps-takeaway">{{ paragraph.text }}</p>{% else %}<p>{{ paragraph.text }}</p>{% endif %}{% endfor %}</div>
+      <figure><button type="button" class="aps-page-zoom" data-aps-image="{{ reference.diagram }}" aria-label="Agrandir le repère {{ reference.ref }}"><img src="{{ reference.diagram }}" alt="Fiche illustrée {{ reference.ref }} : {{ reference.title }}" loading="lazy"><span>Agrandir la fiche ↗</span></button><figcaption>Manuel APS · page {{ reference.page }} du fichier</figcaption></figure>
+    </div>
+    {% if reference.practice %}<div class="aps-manual-practice" data-aps-lesson-page><h3>Mettre ce repère à l’épreuve</h3>{% if reference.practice.background %}<p>{{ reference.practice.background }}</p>{% endif %}<div class="aps-case"><b>Un autre cas à analyser</b><p>{{ reference.practice.case }}</p><p><strong>Puis changez de contexte :</strong> {{ reference.practice.transfer }}</p></div><p class="aps-small">Repérez mentalement les faits et la décision adaptée avant de poursuivre. Manuel APS, page {{ reference.practice.page }} du fichier.</p></div>{% endif %}
+  </section>
+  {% endfor %}
+  <section class="aps-editorial" data-aps-lesson-page><span class="aps-label">Relier les notions</span><h2>Du constat à la décision</h2>{% if lesson.illustrations %}{{ scene(lesson.illustrations.flow) }}{% endif %}<div class="aps-flow">{% for step in lesson.flow %}<div><span>{{ '%02d'|format(loop.index) }}</span><h3>{{ step.label }}</h3><p>{{ step.text }}</p></div>{% endfor %}</div></section>
+  <section class="aps-editorial" data-aps-lesson-page><h2>Le tableau de décision</h2><div class="aps-table-wrap"><table><thead><tr><th scope="col">Question</th><th scope="col">Application au cas</th></tr></thead><tbody>{% for row in lesson.table %}<tr><th scope="row">{{ row[0] }}</th><td>{{ row[1] }}</td></tr>{% endfor %}</tbody></table></div></section>
+  <aside class="aps-takeaway" data-aps-lesson-page><b>Le repère à conserver</b><p>{{ lesson.decision }}</p></aside>
+  {% if lesson.sorting %}<section class="aps-sorting" data-aps-sort data-aps-lesson-page><span class="aps-label">À vous de jouer · 3 phrases</span><h2>Que dit cette phrase ?</h2><p>Pour chaque phrase, choisissez ce qu’elle décrit. Ensuite, cliquez sur « Vérifier mes réponses ».</p><div class="aps-sort-example"><b>Un exemple pour comprendre</b><dl><dt>« Une porte est ouverte. »</dt><dd>→ Ce qui se passe : c’est ce que l’agent observe.</dd><dt>« L’agent prévient son responsable. »</dt><dd>→ L’action adaptée : c’est ce qu’il fait pour traiter le problème.</dd><dt>« L’agent quitte son poste sans prévenir. »</dt><dd>→ L’erreur à éviter : c’est un mauvais choix.</dd></dl></div>{% for item in lesson.sorting %}<div class="aps-sort-card" data-category="{{ item.category }}"><label for="apsSort{{ loop.index }}"><b>Phrase {{ loop.index }}</b><span>{{ item.text }}</span></label><select id="apsSort{{ loop.index }}"><option value="">Cette phrase décrit…</option><option value="fait">Ce qui se passe</option><option value="adapte">L’action adaptée</option><option value="ecarter">L’erreur à éviter</option></select><p class="aps-sort-feedback" hidden></p></div>{% endfor %}<button type="button" class="aps-small-button" data-aps-check-sort>Vérifier mes réponses</button><p data-aps-sort-result role="status" aria-live="polite"></p></section>{% endif %}
+  {% if lesson.extra_case %}<section class="aps-extra-case" data-aps-lesson-page><div><span class="aps-label">Étude de cas complémentaire</span><h2>{{ lesson.extra_case.title }}</h2><p>{{ lesson.extra_case.case }}</p></div><div class="aps-case-mission"><h3>Votre mission</h3><p>{{ lesson.extra_case.task }}</p><p class="aps-small">Comparez mentalement les solutions possibles, puis ouvrez les repères pour vérifier votre raisonnement.</p><details class="aps-model"><summary>Comparer mon raisonnement</summary><p>{{ lesson.extra_case.model }}</p></details></div></section>{% endif %}

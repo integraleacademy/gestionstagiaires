@@ -1,0 +1,73 @@
+{
+  "repository": "integraleacademy/gestionstagiaires",
+  "commit": "f224f5f8b4f2f9913b8f724d6d6b5753c6d82f0d",
+  "authentication": "No cookies or Authorization headers; anonymous public reads",
+  "sources": [
+    {
+      "path": "elearning_native/vtc/lesson_video_scripts_v10/A.json",
+      "public_url": "https://raw.githubusercontent.com/integraleacademy/gestionstagiaires/f224f5f8b4f2f9913b8f724d6d6b5753c6d82f0d/elearning_native/vtc/lesson_video_scripts_v10/A.json",
+      "http_status": 200,
+      "sha256": "c4aad08cbdb8955740d52c11fe2fa40d56f7972c3251b3d509b3fbb9e4e20bb5",
+      "bytes": 76881
+    },
+    {
+      "path": "elearning_native/vtc/lesson_video_scripts_v10/B.json",
+      "public_url": "https://raw.githubusercontent.com/integraleacademy/gestionstagiaires/f224f5f8b4f2f9913b8f724d6d6b5753c6d82f0d/elearning_native/vtc/lesson_video_scripts_v10/B.json",
+      "http_status": 200,
+      "sha256": "aecd1184498df5644cda4a2f0119111b847724069aa0122b8c782bd825c66997",
+      "bytes": 78881
+    },
+    {
+      "path": "elearning_native/vtc/lesson_video_scripts_v10/C.json",
+      "public_url": "https://raw.githubusercontent.com/integraleacademy/gestionstagiaires/f224f5f8b4f2f9913b8f724d6d6b5753c6d82f0d/elearning_native/vtc/lesson_video_scripts_v10/C.json",
+      "http_status": 200,
+      "sha256": "fe000d1a5f891c087dfbe515f96a245fecfb7f6f095482eef00a5b865bfd5943",
+      "bytes": 76794
+    },
+    {
+      "path": "elearning_native/vtc/lesson_video_scripts_v10/D.json",
+      "public_url": "https://raw.githubusercontent.com/integraleacademy/gestionstagiaires/f224f5f8b4f2f9913b8f724d6d6b5753c6d82f0d/elearning_native/vtc/lesson_video_scripts_v10/D.json",
+      "http_status": 200,
+      "sha256": "a7608bf7c02fc3142c28d3b25a1354811ba254a903c44348ad330cc667c82ccc",
+      "bytes": 77391
+    },
+    {
+      "path": "elearning_native/vtc/lesson_video_scripts_v10/E.json",
+      "public_url": "https://raw.githubusercontent.com/integraleacademy/gestionstagiaires/f224f5f8b4f2f9913b8f724d6d6b5753c6d82f0d/elearning_native/vtc/lesson_video_scripts_v10/E.json",
+      "http_status": 200,
+      "sha256": "5c533197fdeb47a1431bb5684488ab010399619e93d37ca3a56d2deb7ae35d40",
+      "bytes": 112173
+    },
+    {
+      "path": "elearning_native/vtc/lesson_video_scripts_v10/F.json",
+      "public_url": "https://raw.githubusercontent.com/integraleacademy/gestionstagiaires/f224f5f8b4f2f9913b8f724d6d6b5753c6d82f0d/elearning_native/vtc/lesson_video_scripts_v10/F.json",
+      "http_status": 200,
+      "sha256": "37725b05e84b2128db13ad4e478bec5f3830de29d117d03c8fddd43d8716011c",
+      "bytes": 79909
+    },
+    {
+      "path": "elearning_native/vtc/lesson_video_scripts_v10/G.json",
+      "public_url": "https://raw.githubusercontent.com/integraleacademy/gestionstagiaires/f224f5f8b4f2f9913b8f724d6d6b5753c6d82f0d/elearning_native/vtc/lesson_video_scripts_v10/G.json",
+      "http_status": 200,
+      "sha256": "7d241fb9fcaf1b173d1dabdb8afb0f6d33e8e05a6736cfe0ef3b8e91a7174db5",
+      "bytes": 81951
+    },
+    {
+      "path": "elearning_native/vtc/lesson_video_scripts_v10/H.json",
+      "public_url": "https://raw.githubusercontent.com/integraleacademy/gestionstagiaires/f224f5f8b4f2f9913b8f724d6d6b5753c6d82f0d/elearning_native/vtc/lesson_video_scripts_v10/H.json",
+      "http_status": 200,
+      "sha256": "dc6ac114cc2389b9e82f3ea1071d7886a33c0ad0b041ca25450fed9c2c92a8ba",
+      "bytes": 80513
+    },
+    {
+      "path": "elearning_native/vtc/video_synthesis_scripts_v11.json",
+      "public_url": "https://raw.githubusercontent.com/integraleacademy/gestionstagiaires/f224f5f8b4f2f9913b8f724d6d6b5753c6d82f0d/elearning_native/vtc/video_synthesis_scripts_v11.json",
+      "http_status": 200,
+      "sha256": "ba34317eeaa93322e0f8274ad86dd55e6bb0ce9d913903ddf90f23829826fe8c",
+      "bytes": 294661
+    }
+  ],
+  "narration": "Exact public course words, with voice-only punctuation directions",
+  "learner_data_used": false,
+  "scope": "103 regenerated VTC videos; approved D.02 kept intact"
+}

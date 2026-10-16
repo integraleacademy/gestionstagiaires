@@ -98,7 +98,7 @@ class ApsElearningTests(unittest.TestCase):
             ]
         }
 
-    def test_session_api_persists_option_only_for_aps(self):
+    def test_session_api_persists_option_for_aps_and_vtc(self):
         self._admin_login()
         aps_data = {"sessions": []}
 
@@ -125,8 +125,8 @@ class ApsElearningTests(unittest.TestCase):
             response = self.client.post(
                 "/api/sessions/create",
                 json={
-                    "name": "VTC juin",
-                    "training_type": "VTC",
+                    "name": "SSIAP juin",
+                    "training_type": "SSIAP 1",
                     "aps_elearning_enabled": True,
                 },
             )
@@ -134,7 +134,17 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(self.saved_data["sessions"][0]["aps_elearning_enabled"])
 
-    def test_admin_sessions_cards_show_direct_elearning_checkbox_only_for_aps(self):
+        with patch.object(gestion_app, "load_data", return_value={"sessions": []}), patch.object(
+            gestion_app, "save_data", side_effect=lambda data: setattr(self, "saved_data", data)
+        ):
+            response = self.client.post(
+                "/api/sessions/create",
+                json={"name": "VTC juin", "training_type": "VTC", "aps_elearning_enabled": True},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.saved_data["sessions"][0]["aps_elearning_enabled"])
+
+    def test_admin_sessions_cards_show_elearning_checkbox_for_aps_and_vtc(self):
         self._admin_login()
         future_start = (datetime.date.today() + datetime.timedelta(days=7)).isoformat()
         future_end = (datetime.date.today() + datetime.timedelta(days=14)).isoformat()
@@ -162,7 +172,7 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
         self.assertIn('data-aps-elearning-toggle="S-APS"', html)
-        self.assertNotIn('data-aps-elearning-toggle="S-VTC"', html)
+        self.assertIn('data-aps-elearning-toggle="S-VTC"', html)
         self.assertRegex(
             html,
             r'data-aps-elearning-toggle="S-APS"\s+checked',

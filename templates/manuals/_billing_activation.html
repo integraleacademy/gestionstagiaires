@@ -1,0 +1,13 @@
+{% if configuration.missing_taxes or not configuration.api_configured or not configuration.iban_configured or not configuration.payment_authorized %}
+<div class="notice warning" role="status">
+  <h3>Facture et paiement : activation à terminer</h3>
+  <div class="integration-row"><span>TVA{% if order is defined %} de cette commande{% endif %}</span><strong>{{ 'À renseigner : ' ~ configuration.missing_taxes|join(', ') if configuration.missing_taxes else 'Renseignée' }}</strong></div>
+  <div class="integration-row"><span>Connexion de facturation Qonto</span><strong>{{ 'Configurée' if configuration.api_configured and configuration.iban_configured else 'À configurer' }}</strong></div>
+  <div class="integration-row"><span>Liens de paiement Qonto</span><strong>{{ 'Autorisés' if configuration.payment_authorized else 'Autorisation Qonto manquante' }}</strong></div>
+  <p>Les commandes bloquées par ces réglages seront reprises automatiquement après leur activation.</p>
+  <div class="action-row">
+    <a class="button primary" href="{{ url_for('manuals_shop.commerce_settings') }}">Terminer la configuration</a>
+    {% if not configuration.payment_authorized %}<a class="button secondary" href="{{ url_for('manuals_shop.payment_connection') }}">Autoriser les liens de paiement Qonto</a>{% endif %}
+  </div>
+</div>
+{% endif %}

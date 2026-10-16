@@ -1,0 +1,20 @@
+{% for page in lesson.reading_pages|default([]) %}
+<section class="aps-editorial aps-course-reading" data-aps-lesson-page data-aps-reading="{{ page.kind }}">
+  <span class="aps-label">{{ {'explanation': 'Le cours expliqué', 'comparison': 'Distinguer les notions', 'example': 'Observer une application complète'}[page.kind] }}</span>
+  <h2>{{ page.title }}</h2>
+  {% if page.kind == 'comparison' %}
+    <div class="aps-table-wrap" tabindex="0" role="region" aria-label="{{ page.title }}">
+      <table class="aps-reading-table">
+        <caption>{{ page.title }}</caption>
+        <thead><tr><th scope="col">Repère</th><th scope="col">Ce qu’il signifie</th><th scope="col">Conséquence pour l’agent</th></tr></thead>
+        <tbody>{% for row in page.rows %}<tr><th scope="row">{{ row[0] }}</th><td>{{ row[1] }}</td><td>{{ row[2] }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  {% else %}
+    {% if page.kind == 'example' %}<p class="aps-small">Situation fictive expliquée · Lecture seule, sans réponse à rédiger.</p>{% endif %}
+    {% for paragraph in page.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}
+    {% if page.reasoning %}<div class="aps-reading-reasoning"><h3>Pourquoi cette décision ?</h3><ol>{% for point in page.reasoning %}<li>{{ point }}</li>{% endfor %}</ol></div>{% endif %}
+    {% if page.takeaway %}<p class="aps-takeaway">{{ page.takeaway }}</p>{% endif %}
+  {% endif %}
+</section>
+{% endfor %}

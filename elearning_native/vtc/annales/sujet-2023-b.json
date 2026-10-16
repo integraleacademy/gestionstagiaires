@@ -1,0 +1,754 @@
+{
+  "id": "sujet-2023-b",
+  "title": "28 mars 2023 · Gestion",
+  "year": 2023,
+  "source_filename": "SUJET-GESTION-VTC-MARS-2023.pdf",
+  "source_sha256": "f526131206f3359ab311ea5cf96adec659812d4ef175b829cee4eb31771bc6d1",
+  "sections": [
+    {
+      "id": "annales-2023-b",
+      "module": "B",
+      "title": "Gestion · mars 2023",
+      "minutes": 45,
+      "questions": [
+        {
+          "number": 1,
+          "page": 3,
+          "prompt": "Quelle est la base de calcul des cotisations sociales d'un entrepreneur individuel qui n'est pas sous le régime de l'autoentrepreneur micro-social ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "l'excédent brut d'exploitation"
+            },
+            {
+              "id": "b",
+              "text": "produits et actif"
+            },
+            {
+              "id": "c",
+              "text": "le chiffre d'affaires"
+            },
+            {
+              "id": "d",
+              "text": "le bénéfice réalisé"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "d"
+          ],
+          "lesson_refs": [
+            "B.07",
+            "B.12"
+          ],
+          "explanation": "Dans l’ancien cadre simplifié du sujet, la réponse visée était le bénéfice, contrairement au micro-social assis sur les recettes encaissées. Il faut aujourd’hui distinguer le revenu fiscal de l’assiette sociale des indépendants.",
+          "status": "historical",
+          "update_note": "Réforme applicable aux revenus 2025 : l’assiette sociale unifiée est calculée sur le revenu brut social avec un abattement de 26 %, selon ses règles propres. L’ancienne réponse « bénéfice réalisé » est insuffisante pour enseigner le calcul actuel.",
+          "sources": [
+            {
+              "title": "Réforme de l’assiette sociale · DGFiP",
+              "url": "https://www.impots.gouv.fr/la-reforme-de-lassiette-sociale"
+            }
+          ],
+          "id": "annales-2023-b-01",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Dans l’ancien cadre simplifié du sujet, la réponse visée était le bénéfice, contrairement au micro-social assis sur les recettes encaissées. Il faut aujourd’hui distinguer le revenu fiscal de l’assiette sociale des indépendants."
+          ]
+        },
+        {
+          "number": 2,
+          "page": 3,
+          "prompt": "Expliquez la différence entre une charge fixe et une charge variable.",
+          "options": [
+            {
+              "id": "a",
+              "text": "Une charge fixe dépend peu du volume de courses à court terme ; une charge variable évolue avec l’activité."
+            },
+            {
+              "id": "b",
+              "text": "Une charge fixe est toujours payée comptant ; une charge variable est toujours payée à crédit."
+            },
+            {
+              "id": "c",
+              "text": "Une charge fixe correspond à tout achat de véhicule ; une charge variable correspond à toutes les factures mensuelles."
+            }
+          ],
+          "original_kind": "qrc",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "B.05"
+          ],
+          "explanation": "Une charge fixe varie peu avec le nombre de courses à court terme, par exemple le loyer mensuel du véhicule. Une charge variable évolue avec l’activité, par exemple le carburant lié aux kilomètres. Une charge peut aussi comprendre une part fixe et une part variable.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "original_answer": "Une charge fixe dépend peu du volume de courses à court terme ; une charge variable évolue avec l’activité.",
+          "id": "annales-2023-b-02",
+          "kind": "single",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Une charge fixe varie peu avec le nombre de courses à court terme, par exemple le loyer mensuel du véhicule. Une charge variable évolue avec l’activité, par exemple le carburant lié aux kilomètres. Une charge peut aussi comprendre une part fixe et une part variable."
+          ],
+          "adaptation_note": "Question ouverte du sujet original, adaptée en choix pédagogiques pour répondre sans rédaction.",
+          "original_answer_origin": "pedagogical"
+        },
+        {
+          "number": 3,
+          "page": 3,
+          "prompt": "Dans une entreprise individuelle :",
+          "options": [
+            {
+              "id": "a",
+              "text": "Les biens de l'entreprise et de son fondateur sont confondus."
+            },
+            {
+              "id": "b",
+              "text": "L'entrepreneur individuel est responsable du paiement des dettes de l'entreprise"
+            },
+            {
+              "id": "c",
+              "text": "L'entrepreneur individuel est responsable du paiement des dettes à hauteur du capital"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "B.01"
+          ],
+          "explanation": "L’entrepreneur individuel répond des dettes professionnelles dans le cadre du patrimoine professionnel. L’EI n’a pas de capital social limitant mécaniquement sa responsabilité.",
+          "status": "historical",
+          "update_note": "Depuis 2022, les patrimoines professionnel et personnel sont en principe séparés, avec des exceptions prévues par les textes. L’option affirmant leur confusion est obsolète ; l’option B est trop générale sans préciser ce périmètre. Question étudiée hors score.",
+          "sources": [
+            {
+              "title": "Entrepreneur individuel · Service Public",
+              "url": "https://entreprendre.service-public.fr/vosdroits/F37396"
+            }
+          ],
+          "id": "annales-2023-b-03",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "L’entrepreneur individuel répond des dettes professionnelles dans le cadre du patrimoine professionnel. L’EI n’a pas de capital social limitant mécaniquement sa responsabilité."
+          ]
+        },
+        {
+          "number": 4,
+          "page": 3,
+          "prompt": "L'EBE signifie :",
+          "options": [
+            {
+              "id": "a",
+              "text": "excédent bénéficiaire employé"
+            },
+            {
+              "id": "b",
+              "text": "excédent brut d'exploitation"
+            },
+            {
+              "id": "c",
+              "text": "encaissement brut excédentaire"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "B.04"
+          ],
+          "explanation": "EBE signifie excédent brut d’exploitation. Il sert à apprécier la performance de l’exploitation avant notamment amortissements et éléments financiers. Ce n’est pas le solde du compte bancaire.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-b-04",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "EBE signifie excédent brut d’exploitation. Il sert à apprécier la performance de l’exploitation avant notamment amortissements et éléments financiers. Ce n’est pas le solde du compte bancaire."
+          ]
+        },
+        {
+          "number": 5,
+          "page": 3,
+          "prompt": "Au 1er janvier N, j'achète un véhicule 20 000 € HT amortissable linéairement sur 4 ans et un ordinateur portable 600 € HT amortissable linéairement sur 3 ans. Quel sera le montant de la dotation d'amortissement déductible sur les charges d'entreprise en année N ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "5 200 €"
+            },
+            {
+              "id": "b",
+              "text": "4 198 €"
+            },
+            {
+              "id": "c",
+              "text": "10 400 €"
+            },
+            {
+              "id": "d",
+              "text": "5 300 €"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "B.03",
+            "B.04"
+          ],
+          "explanation": "Dans les hypothèses scolaires données, l’annuité du véhicule est 20 000 ÷ 4 = 5 000 €, celle de l’ordinateur 600 ÷ 3 = 200 €, soit 5 200 €. On raisonne sur une année entière et sur les bases amortissables indiquées, hors particularités fiscales non précisées.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-b-05",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Dans les hypothèses scolaires données, l’annuité du véhicule est 20 000 ÷ 4 = 5 000 €, celle de l’ordinateur 600 ÷ 3 = 200 €, soit 5 200 €. On raisonne sur une année entière et sur les bases amortissables indiquées, hors particularités fiscales non précisées."
+          ]
+        },
+        {
+          "number": 6,
+          "page": 3,
+          "prompt": "Pour une course qui s'élève à 30 € TTC, quel est le montant de la TVA ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "3,00 €"
+            },
+            {
+              "id": "b",
+              "text": "1,96 €"
+            },
+            {
+              "id": "c",
+              "text": "1,65 €"
+            },
+            {
+              "id": "d",
+              "text": "2,73 €"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "d"
+          ],
+          "lesson_refs": [
+            "B.06"
+          ],
+          "explanation": "Pour un transport soumis à 10 % de TVA, le prix HT est 30 ÷ 1,10 = 27,27 €. La TVA vaut 30 − 27,27 = 2,73 €. Calculer 10 % du TTC donnerait à tort 3 €. Vérifiez le taux applicable avant d’utiliser la formule.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "TVA des transports de voyageurs · BOFiP",
+              "url": "https://bofip.impots.gouv.fr/bofip/477-PGP.html"
+            }
+          ],
+          "id": "annales-2023-b-06",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Pour un transport soumis à 10 % de TVA, le prix HT est 30 ÷ 1,10 = 27,27 €. La TVA vaut 30 − 27,27 = 2,73 €. Calculer 10 % du TTC donnerait à tort 3 €. Vérifiez le taux applicable avant d’utiliser la formule."
+          ]
+        },
+        {
+          "number": 7,
+          "page": 3,
+          "prompt": "Quelle est la durée de validité d'un chèque ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "10 ans et 8 jours"
+            },
+            {
+              "id": "b",
+              "text": "1 an et 8 jours"
+            },
+            {
+              "id": "c",
+              "text": "6 mois"
+            },
+            {
+              "id": "d",
+              "text": "3 mois et 5 jours"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "B.08"
+          ],
+          "explanation": "Pour un chèque émis et payable en France métropolitaine, la durée d’encaissement est un an et huit jours à compter de la date inscrite. Cette durée ne doit pas être confondue avec la disponibilité réelle de la provision ni avec la durée de conservation des justificatifs.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "Paiement par chèque · Service Public",
+              "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2402"
+            }
+          ],
+          "id": "annales-2023-b-07",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Pour un chèque émis et payable en France métropolitaine, la durée d’encaissement est un an et huit jours à compter de la date inscrite. Cette durée ne doit pas être confondue avec la disponibilité réelle de la provision ni avec la durée de conservation des justificatifs."
+          ]
+        },
+        {
+          "number": 8,
+          "page": 4,
+          "prompt": "Dans un bilan comptable, un amortissement fait baisser :",
+          "options": [
+            {
+              "id": "a",
+              "text": "le bénéfice"
+            },
+            {
+              "id": "b",
+              "text": "les charges"
+            },
+            {
+              "id": "c",
+              "text": "l'imposition"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a",
+            "c"
+          ],
+          "lesson_refs": [
+            "B.03",
+            "B.04"
+          ],
+          "explanation": "L’amortissement réduit la valeur nette de l’immobilisation au bilan ; sa dotation constitue une charge du compte de résultat. À règles fiscales constantes, une charge déductible diminue le résultat imposable.",
+          "status": "historical",
+          "update_note": "L’énoncé mélange bilan, bénéfice et impôt : le bénéfice relève du compte de résultat et l’impôt ne baisse pas systématiquement. Sans ces hypothèses, les réponses A et C ne constituent pas un corrigé universel ; question étudiée hors score.",
+          "sources": [],
+          "id": "annales-2023-b-08",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "L’amortissement réduit la valeur nette de l’immobilisation au bilan ; sa dotation constitue une charge du compte de résultat. À règles fiscales constantes, une charge déductible diminue le résultat imposable."
+          ]
+        },
+        {
+          "number": 9,
+          "page": 4,
+          "prompt": "Une entreprise artisanale se caractérise notamment par :",
+          "options": [
+            {
+              "id": "a",
+              "text": "son activité"
+            },
+            {
+              "id": "b",
+              "text": "son chiffre d'affaires"
+            },
+            {
+              "id": "c",
+              "text": "sa localisation géographique"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "B.02"
+          ],
+          "explanation": "Le caractère artisanal dépend de la nature de l’activité et de ses conditions d’exercice. Le seul chiffre d’affaires ou la localisation géographique ne suffit pas. Il faut ensuite vérifier les critères d’immatriculation applicables.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-b-09",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le caractère artisanal dépend de la nature de l’activité et de ses conditions d’exercice. Le seul chiffre d’affaires ou la localisation géographique ne suffit pas. Il faut ensuite vérifier les critères d’immatriculation applicables."
+          ]
+        },
+        {
+          "number": 10,
+          "page": 4,
+          "prompt": "Citez 2 modes de transmission d'une entreprise.",
+          "options": [
+            {
+              "id": "a",
+              "text": "La vente et la donation."
+            },
+            {
+              "id": "b",
+              "text": "L’amortissement et la déclaration de TVA."
+            },
+            {
+              "id": "c",
+              "text": "Le paiement d’un fournisseur et le retrait du dirigeant."
+            }
+          ],
+          "original_kind": "qrc",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "B.02"
+          ],
+          "explanation": "La transmission peut être réalisée à titre onéreux par une vente ou à titre gratuit par une donation. Le décès peut aussi conduire à une transmission successorale. Distinguez la transmission d’une activité de sa cessation sans repreneur.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "original_answer": "La vente et la donation.",
+          "id": "annales-2023-b-10",
+          "kind": "single",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "La transmission peut être réalisée à titre onéreux par une vente ou à titre gratuit par une donation. Le décès peut aussi conduire à une transmission successorale. Distinguez la transmission d’une activité de sa cessation sans repreneur."
+          ],
+          "adaptation_note": "Question ouverte du sujet original, adaptée en choix pédagogiques pour répondre sans rédaction.",
+          "original_answer_origin": "pedagogical"
+        },
+        {
+          "number": 11,
+          "page": 4,
+          "prompt": "Les cotisations sociales d'un artisan, en entreprise individuelle au régime réel normal, sont calculées sur :",
+          "options": [
+            {
+              "id": "a",
+              "text": "la totalité du bénéfice"
+            },
+            {
+              "id": "b",
+              "text": "les prélèvements effectués pour se rémunérer"
+            },
+            {
+              "id": "c",
+              "text": "le chiffre d'affaires"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "B.07",
+            "B.12"
+          ],
+          "explanation": "Les prélèvements privés du dirigeant ne constituent pas la base du calcul social ; le chiffre d’affaires brut n’est pas non plus la réponse générale au régime réel.",
+          "status": "historical",
+          "update_note": "L’option « totalité du bénéfice » correspond à une présentation ancienne simplifiée. La réforme de l’assiette sociale applicable aux revenus 2025 impose d’enseigner l’assiette unifiée et l’abattement de 26 % : question historique hors score.",
+          "sources": [
+            {
+              "title": "Réforme de l’assiette sociale · DGFiP",
+              "url": "https://www.impots.gouv.fr/la-reforme-de-lassiette-sociale"
+            }
+          ],
+          "id": "annales-2023-b-11",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Les prélèvements privés du dirigeant ne constituent pas la base du calcul social ; le chiffre d’affaires brut n’est pas non plus la réponse générale au régime réel."
+          ]
+        },
+        {
+          "number": 12,
+          "page": 4,
+          "prompt": "Qui est concerné par le « versement fiscal libératoire » ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "seulement les sociétés"
+            },
+            {
+              "id": "b",
+              "text": "toutes les entreprises au régime réel"
+            },
+            {
+              "id": "c",
+              "text": "les entreprises au régime réel simplifié"
+            },
+            {
+              "id": "d",
+              "text": "les entreprises au régime de la micro-entreprise"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "d"
+          ],
+          "lesson_refs": [
+            "B.07"
+          ],
+          "explanation": "Le versement fiscal libératoire est une option du régime micro, sous conditions, notamment de revenu fiscal de référence. Il ne s’applique ni automatiquement à toutes les micro-entreprises ni aux entreprises relevant du régime réel.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "Régime fiscal de la micro-entreprise · Service Public",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F23267"
+            }
+          ],
+          "id": "annales-2023-b-12",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le versement fiscal libératoire est une option du régime micro, sous conditions, notamment de revenu fiscal de référence. Il ne s’applique ni automatiquement à toutes les micro-entreprises ni aux entreprises relevant du régime réel."
+          ]
+        },
+        {
+          "number": 13,
+          "page": 4,
+          "prompt": "Qu'appelle-t-on TVA collectée ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "la TVA reversée à l'état après déduction de la TVA sur les achats"
+            },
+            {
+              "id": "b",
+              "text": "la TVA acquittée par l'artisan lorsqu'il achète des biens et services"
+            },
+            {
+              "id": "c",
+              "text": "la TVA acquittée par le client lors du règlement de la prestation"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "B.06"
+          ],
+          "explanation": "La TVA collectée est la TVA facturée au client sur les ventes/prestations imposables. Pour une prestation de services, l’exigibilité suit en principe l’encaissement, sauf option ou règle particulière. TVA nette à reverser = TVA collectée exigible − TVA déductible, sous réserve des règles applicables.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "TVA des transports de voyageurs · BOFiP",
+              "url": "https://bofip.impots.gouv.fr/bofip/477-PGP.html"
+            }
+          ],
+          "id": "annales-2023-b-13",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "La TVA collectée est la TVA facturée au client sur les ventes/prestations imposables. Pour une prestation de services, l’exigibilité suit en principe l’encaissement, sauf option ou règle particulière. TVA nette à reverser = TVA collectée exigible − TVA déductible, sous réserve des règles applicables."
+          ]
+        },
+        {
+          "number": 14,
+          "page": 4,
+          "prompt": "Que signifie le sigle SASU ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Société A Simplification Unipersonnelle"
+            },
+            {
+              "id": "b",
+              "text": "Société par Action Simplifiée Unipersonnelle"
+            },
+            {
+              "id": "c",
+              "text": "Société par Action Simplifiée Unique"
+            },
+            {
+              "id": "d",
+              "text": "Société Anonyme Simplifiée et Unipersonnelle"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "B.01"
+          ],
+          "explanation": "SASU signifie société par actions simplifiée unipersonnelle : une société avec un seul associé. La lettre U décrit le nombre d’associés, pas un régime fiscal ni une simplification automatique de toutes les obligations.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-b-14",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "SASU signifie société par actions simplifiée unipersonnelle : une société avec un seul associé. La lettre U décrit le nombre d’associés, pas un régime fiscal ni une simplification automatique de toutes les obligations."
+          ]
+        },
+        {
+          "number": 15,
+          "page": 4,
+          "prompt": "Les achats de carburant figurent :",
+          "options": [
+            {
+              "id": "a",
+              "text": "Au compte de résultat, dans les produits"
+            },
+            {
+              "id": "b",
+              "text": "Au bilan, à l'actif"
+            },
+            {
+              "id": "c",
+              "text": "Au compte de résultat, dans les charges"
+            },
+            {
+              "id": "d",
+              "text": "Au bilan, au passif"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "B.04",
+            "B.05"
+          ],
+          "explanation": "Le carburant consommé dans l’activité est une charge du compte de résultat. Les produits correspondent aux recettes de l’activité. Un solde bancaire, une dette ou un stock relève d’une autre lecture comptable.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-b-15",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le carburant consommé dans l’activité est une charge du compte de résultat. Les produits correspondent aux recettes de l’activité. Un solde bancaire, une dette ou un stock relève d’une autre lecture comptable."
+          ]
+        },
+        {
+          "number": 16,
+          "page": 4,
+          "prompt": "Quel est le taux de TVA applicable sur le transport de personnes ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "5,5 %"
+            },
+            {
+              "id": "b",
+              "text": "20%"
+            },
+            {
+              "id": "c",
+              "text": "10 %"
+            },
+            {
+              "id": "d",
+              "text": "7 %"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "B.06"
+          ],
+          "explanation": "Le transport de voyageurs soumis à TVA relève en principe du taux de 10 % en France métropolitaine. Distinguez le taux du service et la situation d’un exploitant en franchise en base, qui ne facture pas la TVA tant que les conditions sont réunies.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "TVA des transports de voyageurs · BOFiP",
+              "url": "https://bofip.impots.gouv.fr/bofip/477-PGP.html"
+            }
+          ],
+          "id": "annales-2023-b-16",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le transport de voyageurs soumis à TVA relève en principe du taux de 10 % en France métropolitaine. Distinguez le taux du service et la situation d’un exploitant en franchise en base, qui ne facture pas la TVA tant que les conditions sont réunies."
+          ]
+        },
+        {
+          "number": 17,
+          "page": 4,
+          "prompt": "Quelles sont les pièces comptables que vous devez conserver à titre professionnel ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "la taxe d'habitation"
+            },
+            {
+              "id": "b",
+              "text": "la déclaration au répertoire des métiers"
+            },
+            {
+              "id": "c",
+              "text": "les factures émises"
+            },
+            {
+              "id": "d",
+              "text": "les factures de carburant"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c",
+            "d"
+          ],
+          "lesson_refs": [
+            "B.11"
+          ],
+          "explanation": "Les factures émises et les factures de carburant justifient les ventes et les dépenses professionnelles. Elles font partie des pièces comptables à conserver. Le justificatif d’immatriculation est un document d’entreprise d’une autre nature ; la taxe d’habitation personnelle ne justifie pas une course ou un achat de carburant.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-b-17",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Les factures émises et les factures de carburant justifient les ventes et les dépenses professionnelles. Elles font partie des pièces comptables à conserver. Le justificatif d’immatriculation est un document d’entreprise d’une autre nature ; la taxe d’habitation personnelle ne justifie pas une course ou un achat de carburant."
+          ]
+        },
+        {
+          "number": 18,
+          "page": 5,
+          "prompt": "Le dirigeant d'une micro-entreprise :",
+          "options": [
+            {
+              "id": "a",
+              "text": "est soumis à l'impôt sur les sociétés"
+            },
+            {
+              "id": "b",
+              "text": "n'est pas soumis à l'impôt"
+            },
+            {
+              "id": "c",
+              "text": "est soumis à l'impôt sur le revenu"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "B.07"
+          ],
+          "explanation": "Le régime micro-entreprise relève de l’impôt sur le revenu, selon les règles de la catégorie concernée et les options autorisées. Il ne signifie pas absence d’impôt. Une option vers un autre cadre fiscal doit être distinguée du maintien dans le régime micro.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-b-18",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le régime micro-entreprise relève de l’impôt sur le revenu, selon les règles de la catégorie concernée et les options autorisées. Il ne signifie pas absence d’impôt. Une option vers un autre cadre fiscal doit être distinguée du maintien dans le régime micro."
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -76,6 +76,9 @@ from xml.sax.saxutils import escape
 from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
 import afc_import
+import ssiap_pathways
+import manuals_shop
+import public_document_checks as trainee_checks
 from akto_bts import (
     AktoApiError,
     AktoBtsStore,
@@ -211,6 +214,11 @@ _install_shutdown_diagnostics()
 
 
 app = Flask(__name__)
+app.jinja_env.globals["trainee_document_check_token"] = trainee_checks.form_token
+app.jinja_env.globals["document_format_label"] = trainee_checks.format_label
+app.jinja_env.globals["trainee_document_upload_accept"] = trainee_checks.upload_accept
+app.jinja_env.globals["trainee_document_upload_hint"] = trainee_checks.upload_hint
+app.logger.warning("trainee_document_checks configured=%s", bool(os.environ.get("OPENAI_API_KEY", "").strip()))
 DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(DEFAULT_MAX_UPLOAD_BYTES)))
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
@@ -939,7 +947,7 @@ def _contains_invalid_qonto_search_marker(value: Any) -> bool:
     return any(marker.lower() in lowered for marker in INVALID_QONTO_SEARCH_MARKERS)
 
 
-def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None, *, idempotency_key: str = "", use_oauth: bool = False) -> Dict[str, Any]:
     if has_request_context() and (
         _is_external_partner_session()
         or (session.get("assist_partner_id") and _is_super_admin_session())
@@ -950,6 +958,9 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
     endpoint = path if path.startswith("/") else f"/{path}"
     is_webhook_endpoint = endpoint.startswith("/v2/webhook_subscriptions")
     is_sepa_endpoint = endpoint.startswith("/v2/sepa/direct_debit")
+    is_payment_link_endpoint = endpoint.startswith("/v2/payment_links")
+    if use_oauth and not _qonto_oauth_connected():
+        raise QontoConfigurationError("Autorisez la connexion Qonto depuis les réglages des commandes pour activer le paiement en ligne.")
     # Qonto explicitly requires OAuth2 for webhook subscriptions.  Do not let
     # the API-key fallback leak onto these endpoints (it returns HTTP 401).
     if is_webhook_endpoint:
@@ -958,6 +969,10 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
         if not _qonto_oauth_has_scope("webhook"):
             raise QontoConfigurationError("La connexion OAuth actuelle ne possède pas l’autorisation webhook. Réinitialisez puis reconnectez Qonto.")
         _ensure_qonto_oauth_ready()
+    elif is_payment_link_endpoint:
+        needed_scope = "payment_link.read" if method.upper() == "GET" else "payment_link.write"
+        if not _qonto_oauth_connected() or not _qonto_oauth_has_scope(needed_scope):
+            raise QontoConfigurationError("Autorisez les liens de paiement depuis les réglages des commandes, puis activez le prestataire de paiement dans Qonto.")
     elif not is_sepa_endpoint and not _qonto_is_configured():
         raise QontoConfigurationError("Qonto n’est pas connecté")
     cleaned_payload = cleanQontoPayload(payload) if payload is not None else None
@@ -971,8 +986,10 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
         headers = get_qonto_headers()
         if cleaned_payload is not None:
             headers = {**headers, "Content-Type": "application/json"}
-        if is_sepa_endpoint or is_webhook_endpoint:
+        if use_oauth or is_sepa_endpoint or is_webhook_endpoint or is_payment_link_endpoint:
             headers = {"Authorization": f"Bearer {_qonto_oauth_bearer_token()}", "Content-Type": "application/json", "Accept": "application/json"}
+        if idempotency_key:
+            headers["X-Qonto-Idempotency-Key"] = idempotency_key
         # Webhook creation must use a JSON request body.  Keep this explicit so
         # a generic-client argument mismatch cannot silently turn it into query
         # parameters or an empty form body.
@@ -3110,6 +3127,10 @@ def protect_sensitive_routes():
             return jsonify({"ok": False, "error": "invalid_partner_session"}), 401
         return redirect(url_for("admin_login", error="invalid"))
 
+    shop_response = manuals_shop.guard_request(sys.modules[__name__])
+    if shop_response is not None:
+        return shop_response
+
     if path.startswith("/admin/") and path != "/admin/login":
         if not session.get("admin_logged_in"):
             return redirect(url_for("admin_login", next=request.full_path if request.query_string else path))
@@ -3165,6 +3186,8 @@ def protect_sensitive_routes():
 
 @app.context_processor
 def inject_read_only():
+    if request.endpoint == "home" or (request.endpoint or "").startswith("manuals_shop."):
+        return {}
     admin_notifications = {"notifications": [], "unresolved_total": 0}
     wedof_new_requests_count = 0
     sales_today_notification_count = 0
@@ -3256,6 +3279,8 @@ def admin_login():
         "rate_limited": "Trop de tentatives de connexion. Patientez quelques minutes avant de réessayer.",
     }
     activated_message = "Votre compte est activé. Vous pouvez maintenant vous connecter." if request.args.get("activated") == "1" else ""
+    if request.args.get("password_reset") == "1":
+        activated_message = "Votre mot de passe a été modifié. Connectez-vous avec votre nouveau mot de passe."
     return render_template(
         "admin_login.html",
         next_url=next_url,
@@ -3394,6 +3419,7 @@ def admin_login_post():
         session["admin_user_id"] = user.get("id")
         session["admin_role"] = partner_role
         session["partner_id"] = user.get("partner_id")
+        session["manuals_only"] = partner.get("account_type") == "manuals_only"
         _stamp_authenticated_session()
         session.permanent = True
         _clear_partner_login_account_limit(username_normalized)
@@ -3900,8 +3926,7 @@ def _is_partner_data_scope_session() -> bool:
     return bool(
         _is_external_partner_session()
         or (
-            _partner_postgres_active()
-            and session.get("assist_partner_id")
+            session.get("assist_partner_id")
             and _is_super_admin_session()
         )
     )
@@ -3928,6 +3953,15 @@ def _post_login_redirect_target(value: str, default: str) -> str:
     ``/admin/partners/...`` URL would otherwise authenticate successfully and
     immediately land on a 403 page.
     """
+    if session.get("manuals_only"):
+        target = _safe_local_redirect_target(value, url_for("manuals_shop.home"))
+        try:
+            endpoint, _ = app.url_map.bind_to_environ(request.environ).match(urlparse(target).path, method="GET")
+            if endpoint in manuals_shop.CUSTOMER_ENDPOINTS:
+                return target
+        except HTTPException:
+            pass
+        return url_for("manuals_shop.home")
     target = _safe_local_redirect_target(value, default)
     if _is_super_admin_session():
         return target
@@ -4005,9 +4039,9 @@ def _store_partner_auth_index(
     auth_path = os.path.abspath(path or DATA_FILE)
     user_fields = {
         "id", "partner_id", "email", "role", "active", "password_hash",
-        "invitation_activated_at", "last_login_at",
+        "invitation_activated_at", "last_login_at", "password_changed_at",
     }
-    partner_fields = {"id", "name", "status"}
+    partner_fields = {"id", "name", "status", "account_type"}
     invitation_fields = {
         "id", "user_id", "partner_id", "token_hash", "token_encrypted",
         "expires_at", "used_at", "cancelled_at",
@@ -4168,6 +4202,7 @@ def _ensure_multi_partner_payload(data: Dict[str, Any]) -> bool:
 
 
 PARTNER_SCOPED_COLLECTION_KEYS = {
+    "manual_orders",
     "sessions",
     "activity_logs",
     "admin_push_subscriptions",
@@ -4202,6 +4237,7 @@ PARTNER_SCOPED_VALUE_KEYS = {
     "cnaps_tracking_manual_nubs",
 }
 PARTNER_VISIBLE_FIELDS = {
+    "account_type",
     "id", "name", "legal_name", "siret", "activity_declaration_number",
     "address", "address_extra", "postal_code", "city", "country",
     "contact_first_name", "contact_last_name", "contact_role", "email",
@@ -5670,6 +5706,8 @@ def _restore_data_from_backups_if_possible() -> Optional[Dict[str, Any]]:
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 BREVO_SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "ecole@integraleacademy.com")
 BREVO_SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Intégrale Academy")
+# Optional neutral sending address, already verified in the merchant Brevo account.
+ELEARNING_SENDER_EMAIL = os.environ.get("ELEARNING_SENDER_EMAIL", "").strip()
 CNAPS_LOOKUP_ENDPOINT = os.environ.get("CNAPS_LOOKUP_ENDPOINT", "")
 CNAPS_PUBLIC_ANNUAIRE_LEGACY_ENDPOINT = "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/api/annuaire-public"
 CNAPS_PUBLIC_ANNUAIRE_PAGE_URL = "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/app/annuaire-public"
@@ -5693,8 +5731,22 @@ def _normalize_public_student_portal_base(value: str) -> str:
     return raw
 
 
-PUBLIC_STUDENT_PORTAL_BASE = _normalize_public_student_portal_base(
-    os.environ.get("PUBLIC_STUDENT_PORTAL_BASE") or APP_BASE_URL
+def _resolve_public_student_portal_base(configured_value: str, app_base_url: str) -> str:
+    """Honor an explicit portal host while keeping the safe production fallback.
+
+    ``gestionstagiaires-test-v2`` used to be treated as a retired host.  It is
+    now also used as the isolated preproduction environment, so an explicit
+    Render setting must be allowed to keep trainee links on that service.
+    """
+    configured = (configured_value or "").strip().rstrip("/")
+    if configured:
+        return configured
+    return _normalize_public_student_portal_base(app_base_url)
+
+
+PUBLIC_STUDENT_PORTAL_BASE = _resolve_public_student_portal_base(
+    os.environ.get("PUBLIC_STUDENT_PORTAL_BASE") or "",
+    APP_BASE_URL,
 )
 
 PUBLIC_BASE_URL = os.environ.get(
@@ -7564,6 +7616,10 @@ def brevo_send_email(
     attachments: Optional[List[Dict[str, str]]] = None,
     text_content: str = "",
     metadata: Optional[Dict[str, Any]] = None,
+    *,
+    sender_name: Optional[str] = None,
+    sender_email: Optional[str] = None,
+    reply_to: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     to_email = (to_email or "").strip()
     missing = _missing_brevo_config()
@@ -7586,13 +7642,38 @@ def brevo_send_email(
 
     email_attachments = [item for item in (attachments or []) if isinstance(item, dict) and item.get("content") and item.get("name")]
 
+    def identity_name(value):
+        return re.sub(r"[\x00-\x1f\x7f]+", " ", str(value or "")).strip()[:200]
+
+    def valid_identity_email(value):
+        return (isinstance(value, str) and len(value) <= 254
+                and re.fullmatch(r"[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+", value)
+                and not any(ord(character) < 32 or ord(character) == 127 for character in value))
+
+    # Only application-controlled, verified sender addresses may be passed here.
+    # A centre's contact address belongs in Reply-To, never implicitly in From.
+    from_email = sender_email or BREVO_SENDER_EMAIL
+    from_name = identity_name(sender_name) or identity_name(BREVO_SENDER_NAME)
+    reply_identity = None
+    if reply_to is not None:
+        if isinstance(reply_to, dict) and valid_identity_email(reply_to.get("email")):
+            reply_identity = {"email": reply_to["email"], "name": identity_name(reply_to.get("name")) or from_name}
+        else:
+            result = {"ok": False, "not_sent": True, "status_code": None, "message_id": "", "error": "Adresse de réponse invalide."}
+            return result if metadata is not None else False
+    if not valid_identity_email(from_email):
+        result = {"ok": False, "not_sent": True, "status_code": None, "message_id": "", "error": "Adresse d’expédition invalide."}
+        return result if metadata is not None else False
+
     payload = {
-        "sender": {"name": BREVO_SENDER_NAME, "email": BREVO_SENDER_EMAIL},
+        "sender": {"name": from_name, "email": from_email},
         "to": [{"email": to_email}],
         "subject": subject,
         "htmlContent": html,
     }
 
+    if reply_identity:
+        payload["replyTo"] = reply_identity
     if text_content:
         payload["textContent"] = text_content
 
@@ -9102,6 +9183,29 @@ def _send_vtc_credentials_missing_reminders(data: Dict[str, Any]) -> bool:
     return changed
 
 
+def _trainee_training_session(session_obj, trainee):
+    return ssiap_pathways.effective_session(session_obj, trainee)
+
+
+def _trainee_start_date(session_obj, trainee):
+    return _session_start_date(_trainee_training_session(session_obj, trainee))
+
+
+def _ssiap_document_template(session_obj, trainee, kind, fallback):
+    path = ssiap_pathways.resolve(session_obj, trainee, strict=True)
+    if path is None:
+        return fallback(session_obj)
+    names = {"entry": "attestationentreessiap_parcours.docx", "end": "attestationfinssiap_parcours.docx",
+             "convention": "conventionssiap_parcours.docx",
+             "convocation": "convocationssiap_parcours_sst.docx" if path["with_sst"] else "convocationssiap_parcours.docx"}
+    return os.path.join(app.root_path, "templates_word", names[kind])
+
+
+def _ssiap_document_filename(base, session_obj, trainee):
+    revision = ssiap_pathways.revision(session_obj, trainee)
+    return f"{base}_{revision}_{uuid.uuid4().hex[:8]}" if revision else base
+
+
 def _session_start_date(session_obj: Dict[str, Any]) -> Optional[datetime.date]:
     raw = (_session_get(session_obj, "date_start", "") or "").strip()
     if not raw:
@@ -9119,7 +9223,7 @@ def _docs_relance_auto_enabled(session_obj: Dict[str, Any]) -> bool:
 
 
 def _docs_relance_schedule(session_obj, trainee, *, activated_on=None, today=None):
-    start = _session_start_date(session_obj)
+    start = _trainee_start_date(session_obj, trainee)
     if not start or not _docs_relance_auto_enabled(session_obj):
         return []
     today = today or datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
@@ -12704,7 +12808,7 @@ def _log_charles_hebergement_trace(scope: str, message: str, **kwargs: Any) -> N
 # UI enums (for template)
 # =========================
 
-FORMATION_TYPES = ["APS", "A3P", "DIRIGEANT initial", "DIRIGEANT VAE", "SSIAP 1", "CHEF DE POSTE", "VTC"]
+FORMATION_TYPES = ["APS", "MAC APS", "A3P", "DIRIGEANT initial", "DIRIGEANT VAE", "SSIAP 1", "CHEF DE POSTE", "VTC"]
 TSHIRT_SIZES = {"S", "M", "L", "XL", "XXL"}
 AFC_DECISION_OPTIONS = ["RETENU", "NON RETENU"]
 AFC_REFUSAL_REASONS = [
@@ -14529,7 +14633,7 @@ def find_session_by_name(data: Dict[str, Any], session_name: str) -> Optional[Di
 
 @app.get("/")
 def home():
-    return redirect(url_for("admin_wedof_requests"))
+    return manuals_shop.public_home()
 
 
 @app.get("/test-positionnement")
@@ -16573,6 +16677,8 @@ def partner_has_module(module_key: str, partner: Optional[Dict[str, Any]] = None
 
 def _module_for_training_type(training_type: str) -> str:
     raw = (training_type or "").strip().upper()
+    if raw.startswith("MAC APS"):
+        return "training_aps"
     if raw.startswith("APS"):
         return "training_aps"
     if raw.startswith("A3P"):
@@ -16936,35 +17042,17 @@ def admin_partner_new():
 @admin_login_required
 @require_super_admin
 def admin_partner_detail(partner_id: str):
+    import partner_workspace
     if request.method == "POST":
+        manuals_shop.check_csrf()
         def update_partner(data: Dict[str, Any]) -> Dict[str, Any]:
             partner = _partner_or_404(data, partner_id)
-            for key in ("name", "legal_name", "siret", "address", "postal_code", "city", "phone", "email", "contact_first_name", "contact_last_name", "subscription_plan", "internal_notes"):
-                partner[key] = (request.form.get(key) or "").strip()
+            for key in ("name", "legal_name", "siret", "address", "address_extra", "postal_code", "city", "phone", "email", "contact_first_name", "contact_last_name", "internal_notes"):
+                if key in request.form:
+                    partner[key] = (request.form.get(key) or "").strip()
             partner["status"] = (request.form.get("status") or partner.get("status") or "active") if (request.form.get("status") or "") in PARTNER_STATUSES else partner.get("status", "active")
-            partner["enabled_modules"] = [key for key in request.form.getlist("enabled_modules") if key in PARTNER_MODULE_KEYS]
-            normalize_partner_subscription(data, partner)
-            sub = partner.setdefault("subscription", {})
-            sub["plan_name"] = (request.form.get("subscription_plan_name") or sub.get("plan_name") or "Essentiel").strip()
-            sub["status"] = (request.form.get("subscription_status") or sub.get("status") or "active").strip()
-            sub["trainee_unlimited"] = bool(request.form.get("trainee_unlimited"))
-            try:
-                sub["trainee_limit"] = None if sub["trainee_unlimited"] else int(request.form.get("trainee_limit") or 0)
-            except ValueError:
-                sub["trainee_limit"] = None
-            sub["modules"] = {key: (key in request.form.getlist("subscription_modules")) for key in PARTNER_SUBSCRIPTION_MODULE_PRICING}
-            prices = {}
-            for key, cfg in PARTNER_SUBSCRIPTION_MODULE_PRICING.items():
-                try:
-                    prices[key] = int(request.form.get(f"module_price_{key}") or cfg["price"])
-                except ValueError:
-                    prices[key] = cfg["price"]
-            sub["module_prices"] = prices
-            for int_key in ("max_users", "storage_limit"):
-                try:
-                    partner[int_key] = int((request.form.get(int_key) or partner.get(int_key) or 0))
-                except ValueError:
-                    pass
+            # The commercial dossier no longer edits legacy subscription/module
+            # settings. Missing form fields must never revoke existing access.
             partner["updated_at"] = _now_iso()
             _append_activity_log(data, "partner_updated", "partner", partner_id, partner_id)
             return {"ok": True}
@@ -16975,14 +17063,14 @@ def admin_partner_detail(partner_id: str):
             data = load_data()
             update_partner(data)
             save_data(data)
-        return redirect(url_for("admin_partner_detail", partner_id=partner_id))
-    data = load_data()
-    partner = _partner_or_404(data, partner_id)
+        flash("Les informations de l’organisme sont enregistrées.", "success")
+        return redirect(url_for("admin_partner_detail", partner_id=partner_id, tab="information"), code=303)
+    data, partner = partner_workspace.load_partner(sys.modules[__name__], partner_id)
     users = [u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
     invitations = [i for i in data.get("invitations", []) if isinstance(i, dict) and i.get("partner_id") == partner_id and not i.get("cancelled_at")]
     invitations.sort(key=lambda i: i.get("created_at") or "", reverse=True)
-    partner_login_url = f"{_public_base_url()}{url_for('admin_login', next=url_for('admin_sessions'))}"
-    return render_template("admin_partner_detail.html", partner=partner, counts=_partner_counts(data, partner_id), users=users, invitation=invitations[0] if invitations else None, brevo_diag=_brevo_config_diagnostics(), can_copy_test_activation_link=_can_show_test_activation_link(), partner_login_url=partner_login_url, module_catalog=PARTNER_MODULES, enabled_modules=_partner_enabled_modules(partner), subscription_module_pricing=PARTNER_SUBSCRIPTION_MODULE_PRICING)
+    partner_login_url = request.host_url.rstrip("/") + url_for('admin_login', next=url_for('manuals_shop.home'))
+    return render_template("admin_partner_detail.html", title=(partner.get("name") or "Organisme") + " · Fiche partenaire", partner=partner, counts=_partner_counts(data, partner_id), users=users, invitation=invitations[0] if invitations else None, brevo_diag=_brevo_config_diagnostics(), can_copy_test_activation_link=_can_show_test_activation_link(), partner_login_url=partner_login_url, **partner_workspace.context(sys.modules[__name__], data, partner))
 
 
 def _can_show_test_activation_link() -> bool:
@@ -17324,6 +17412,11 @@ def admin_partner_delete(partner_id: str):
         flash(f"Le partenaire {partner_name} et toutes ses données ont été supprimés.", "success")
         return redirect(url_for("admin_partners"))
 
+    # Deletion is a platform operation: do not later save a tenant-filtered
+    # snapshot as the global document after leaving assistance.
+    session.pop("assist_partner_id", None)
+    session.pop("assist_started_at", None)
+    _invalidate_request_data_cache()
     data = load_data()
     partner = _partner_or_404(data, partner_id)
     partner_name = partner.get("name") or partner_id
@@ -17342,18 +17435,16 @@ def admin_partner_delete(partner_id: str):
 @admin_login_required
 @require_super_admin
 def admin_partner_assist(partner_id: str):
-    data = load_data(); _partner_or_404(data, partner_id)
+    _partner_or_404(load_data(), partner_id)
+    def record_start(bundle: Dict[str, Any]) -> Dict[str, Any]:
+        _append_activity_log(bundle, "super_admin_assist_started", "partner", partner_id, partner_id)
+        return {"ok": True}
+    # Record before switching scope: saving a global snapshot inside a tenant
+    # context can otherwise reassign records from other organisations.
+    _atomic_update_data(record_start, partner_id=partner_id)
     session["assist_partner_id"] = partner_id
     session["assist_started_at"] = _now_iso()
-    if _partner_postgres_active() and partner_id != INTEGRALE_PARTNER_ID:
-        def record_start(bundle: Dict[str, Any]) -> Dict[str, Any]:
-            _append_activity_log(bundle, "super_admin_assist_started", "partner", partner_id, partner_id)
-            return {"ok": True}
-        _atomic_update_data(record_start, partner_id=partner_id)
-    else:
-        _append_activity_log(data, "super_admin_assist_started", "partner", partner_id, partner_id)
-        save_data(data)
-    return redirect(url_for("admin_sessions"))
+    return redirect(_safe_local_redirect_target(request.form.get("next", ""), url_for("manuals_shop.home")))
 
 
 @app.post("/admin/partners/assist/exit")
@@ -17361,19 +17452,15 @@ def admin_partner_assist(partner_id: str):
 @require_super_admin
 def admin_partner_assist_exit():
     partner_id = str(session.get("assist_partner_id") or "")
-    data = load_data()
-    session.pop("assist_partner_id", None)
-    started = session.pop("assist_started_at", "")
+    started = session.get("assist_started_at", "")
     if partner_id:
-        if _partner_postgres_active() and partner_id != INTEGRALE_PARTNER_ID:
-            def record_finish(bundle: Dict[str, Any]) -> Dict[str, Any]:
-                _append_activity_log(bundle, "super_admin_assist_finished", "partner", partner_id, partner_id, {"started_at": started})
-                return {"ok": True}
-            _atomic_update_data(record_finish, partner_id=partner_id)
-        else:
-            _append_activity_log(data, "super_admin_assist_finished", "partner", partner_id, partner_id, {"started_at": started})
-            save_data(data)
-    return redirect(url_for("admin_partners"))
+        def record_finish(bundle: Dict[str, Any]) -> Dict[str, Any]:
+            _append_activity_log(bundle, "super_admin_assist_finished", "partner", partner_id, partner_id, {"started_at": started})
+            return {"ok": True}
+        _atomic_update_data(record_finish, partner_id=partner_id)
+    session.pop("assist_partner_id", None)
+    session.pop("assist_started_at", None)
+    return redirect(url_for("admin_partner_detail", partner_id=partner_id) if partner_id else url_for("admin_partners"))
 
 
 @app.route("/activate-account", methods=["GET", "POST"])
@@ -17698,6 +17785,7 @@ def admin_sessions():
             "status_label": status_label,
             "status_key": status_key,
             "training_type_class": training_type_class,
+            "ssiap_pathways": s.get("ssiap_pathways"),
             "jury_notified": jury_notified,
             "jury_pending": jury_counts["pending"],
             "jury_present": jury_counts["present"],
@@ -25468,7 +25556,8 @@ def admin_trainees(session_id: str):
 
     return render_template(
         "admin_trainees.html",
-        session=session_view,
+        session={**session_view, "ssiap_pathways": s.get("ssiap_pathways")},
+        ssiap_supported=ssiap_pathways.supported(s),
         trainees=trainees,
         stats=stats,
         show_hosting=show_hosting,
@@ -26584,7 +26673,7 @@ def api_create_session():
     dirigeant_remote_end = (payload.get("dirigeant_remote_end") or "").strip()
     dirigeant_in_person_start = (payload.get("dirigeant_in_person_start") or "").strip()
     dirigeant_in_person_end = (payload.get("dirigeant_in_person_end") or "").strip()
-    aps_elearning_enabled = bool(payload.get("aps_elearning_enabled")) and training_type.upper().startswith("APS")
+    aps_elearning_enabled = bool(payload.get("aps_elearning_enabled")) and (training_type.upper().startswith("APS") or "VTC" in training_type.upper())
 
     if not name or not training_type:
         return jsonify({"ok": False, "error": "missing_name_or_training_type"}), 400
@@ -26644,6 +26733,14 @@ def api_update_session(session_id: str):
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    if "ssiap_pathways" in payload or (ssiap_pathways.enabled(s) and any(k in payload for k in ("date_start", "date_end"))):
+        try:
+            config = ssiap_pathways.validate({**s, **payload}, payload.get("ssiap_pathways", s.get("ssiap_pathways")))
+            if not config["sst_dates"] and any(ssiap_pathways.selected(t) == "ssiap_sst" for t in _session_trainees_list(s)):
+                raise ValueError("Des stagiaires suivent le SST : conservez au moins une journée SST.")
+            payload["ssiap_pathways"] = config
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 400
     old_dates = (normalize_date(s.get("date_start") or s.get("date_debut")),
                  normalize_date(s.get("date_end") or s.get("date_fin")))
     requested_dates = (normalize_date(payload.get("date_start", old_dates[0])),
@@ -26686,10 +26783,12 @@ def api_update_session(session_id: str):
         s["exclude_from_sales_tracking"] = bool(payload.get("exclude_from_sales_tracking"))
     if "aps_elearning_enabled" in payload:
         training_type = (_session_get(s, "training_type", "") or "").strip().upper()
-        s["aps_elearning_enabled"] = bool(payload.get("aps_elearning_enabled")) and training_type.startswith("APS")
+        s["aps_elearning_enabled"] = bool(payload.get("aps_elearning_enabled")) and (training_type.startswith("APS") or "VTC" in training_type)
     if "cash_payment_alert_dismissed_key" in payload:
         s["cash_payment_alert_dismissed_key"] = (payload.get("cash_payment_alert_dismissed_key") or "").strip()
 
+    if "ssiap_pathways" in payload:
+        s["ssiap_pathways"] = payload["ssiap_pathways"]
     _sync_aps_period_dates(s)
     s["updated_at"] = _now_iso()
     save_data(data)
@@ -26805,6 +26904,17 @@ def api_create_trainee(session_id: str):
     show_vae = (training_type == "DIRIGEANT VAE")
     default_price = default_training_price(training_type)
 
+    pathway_choice = str(payload.get("ssiap_pathway") or "ssiap")
+    if ssiap_pathways.enabled(s) or payload.get("ssiap_pathway"):
+        try:
+            ssiap_pathways.validate_choice(s, pathway_choice)
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 400
+        if ssiap_pathways.enabled(s):
+            proposed_price = ssiap_pathways.settings(s)[pathway_choice + "_price"]
+            if proposed_price != "":
+                default_price = proposed_price
+
     public_token = uuid.uuid4().hex
 
     t = {
@@ -26880,9 +26990,15 @@ def api_create_trainee(session_id: str):
         t["crm_parcours"] = str(crm_payload.get("parcours") or "")
         t["comment"] = str(crm_payload.get("commentaires") or "")
 
+    if ssiap_pathways.enabled(s):
+        t["ssiap_pathway"] = pathway_choice
+
     _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
     ensure_documents_schema_for_trainee(t, training_type)
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
+
+    from elearning_native.vtc_enrolments import mark_new_vtc_enrolment
+    mark_new_vtc_enrolment(s, t)
 
     trainees = _session_trainees_list(s)
     trainees.insert(0, t)
@@ -26925,8 +27041,11 @@ def api_create_trainee(session_id: str):
             sms_ok = brevo_send_sms(phone, sms) if phone else False
         else:
             formation_type = formation_label(training_type)
-            dstart = fr_date(_session_get(s, "date_start", ""))
-            dend = fr_date(_session_get(s, "date_end", ""))
+            pathway = ssiap_pathways.resolve(s, t)
+            if pathway:
+                formation_type = pathway["label"]
+            dstart = fr_date(_session_get(_trainee_training_session(s, t), "date_start", ""))
+            dend = fr_date(_session_get(_trainee_training_session(s, t), "date_end", ""))
 
             subject = "Votre inscription en formation – Intégrale Academy"
 
@@ -27028,6 +27147,7 @@ def api_create_trainee(session_id: str):
         "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id),
         "is_vae": bool(show_vae),
         "training_type": training_type,
+        "ssiap_pathway": t.get("ssiap_pathway", ""),
         "training_price": t.get("training_price", ""),
         "cpf_amount": t.get("cpf_amount", ""),
         "personal_amount": t.get("personal_amount", ""),
@@ -30839,8 +30959,13 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
     try:
-        stored = _store_file(session_id, trainee_id, "documents", f)
+        prepared = trainee_checks.prepare_upload(f, doc_key, MAX_UPLOAD_BYTES)
+        stored = _store_file(session_id, trainee_id, "documents", prepared)
+    except trainee_checks.ConversionError as error:
+        flash(str(error), "document_conversion_error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
     except Exception:
+        flash("Le document n’a pas pu être enregistré. Réessayez dans quelques instants.", "document_conversion_error")
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
     token = _tokenize_path(stored)
@@ -32634,7 +32759,7 @@ def _manual_docs_delivery_result(attempt):
 
 def _manual_docs_preview(session_obj, trainee, *, today=None, automatic_stage=None):
     today = today or datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
-    start_date = _session_start_date(session_obj)
+    start_date = _trainee_start_date(session_obj, trainee)
     if session_obj.get("archived") or _trainee_registration_is_cancelled(trainee):
         return None, "Inscription annulée ou session archivée."
     if trainee.get("force_dossier_complete"):
@@ -33798,7 +33923,8 @@ def public_trainee_space(token):
     show_professional_experience_sheet = _professional_experience_sheet_is_required(training_type, _session_get(s, "date_start", ""))
     show_vtc = ("VTC" in (training_type or "").upper())
     is_aps_training = (training_type or "").strip().upper().startswith("APS")
-    aps_elearning_enabled = is_aps_training and bool(s.get("aps_elearning_enabled"))
+    has_native_elearning = bool(s.get("aps_native_modules") or s.get("aps_native_course_id"))
+    aps_elearning_enabled = (is_aps_training or (show_vtc and has_native_elearning)) and bool(s.get("aps_elearning_enabled"))
     aps_elearning_start_date = _session_start_date(s) if aps_elearning_enabled else None
     aps_elearning_available = bool(
         aps_elearning_enabled
@@ -33807,7 +33933,10 @@ def public_trainee_space(token):
     )
 
     aps_elearning_progress = None
-    if aps_elearning_enabled:
+    # The legacy Digiforma report describes the old APS path only. Native APS
+    # and VTC paths have their own versioned progress and must not inherit its
+    # eight-module / 62-hour completion badge when both systems coexist.
+    if is_aps_training and aps_elearning_enabled and not has_native_elearning:
         tracking = _aps_elearning_tracking(t)
         if tracking.get("file"):
             aps_elearning_progress = aps_elearning_completion(tracking)
@@ -33836,7 +33965,8 @@ def public_trainee_space(token):
 
     return render_template(
         "public_trainee.html",
-        session=s,
+        session=_trainee_training_session(s, t),
+        ssiap_pathway=ssiap_pathways.resolve(s, t),
         trainee=t,
         token=token,
         show_hosting=show_hosting,
@@ -33853,6 +33983,8 @@ def public_trainee_space(token):
         ssiap_medical_from_date=ssiap_medical_from_date,
         public_invoices=public_invoices,
         public_qcus=public_qcus,
+        document_upload_error=session.pop("document_upload_error", None),
+        document_upload_max_bytes=MAX_UPLOAD_BYTES,
     )
 
 
@@ -34427,8 +34559,45 @@ def public_vtc_credentials(token: str):
 
 
 
+@app.post("/espace/<token>/documents/<doc_key>/check")
+def public_doc_check(token: str, doc_key: str):
+    if not _public_is_authed(token):
+        return jsonify({"status": "unauthorized", "message": "Votre session a expiré. Rechargez la page et reconnectez-vous."}), 401
+    if not trainee_checks.valid_request():
+        return jsonify({"status": "unauthorized", "message": "Rechargez la page avant de réessayer."}), 403
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+    training_type = _session_get(s, "training_type", "")
+    _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
+    ensure_documents_schema_for_trainee(t, training_type)
+    if (training_type or "").strip().upper() == "DIRIGEANT VAE":
+        _ensure_livret2_document_entry(t)
+        _ensure_complementary_documents_entry(t)
+        _ensure_public_complementary_documents_upload_entry(t)
+    target = next((d for d in t.get("documents", []) if d.get("key") == doc_key), None)
+    if not target or doc_key not in allowed_doc_keys_for_training(training_type, t):
+        abort(404)
+    uploads = [f for f in (request.files.getlist("files") or request.files.getlist("file")) if f and f.filename]
+    files, failure = trainee_checks.validate_batch(uploads, target, MAX_UPLOAD_BYTES)
+    if failure:
+        return jsonify({"summary": failure, "results": [failure]}), 422
+    existing = trainee_checks.existing_files(target)
+    checked = trainee_checks.check_documents(files, doc_key, target.get("label", ""),
+                                             os.path.join(PERSIST_DIR, "document_checks.sqlite3"), token, existing)
+    receipt = trainee_checks.make_receipt(files, doc_key, token, existing, checked)
+    response = jsonify({**checked, "receipt": receipt})
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @app.post("/espace/<token>/documents/<doc_key>/upload")
 def public_doc_upload(token: str, doc_key: str):
+    if not _public_is_authed(token):
+        return redirect(url_for("public_trainee_login", token=token))
+    if not trainee_checks.valid_request():
+        abort(403)
     data = load_data()
     s, t = find_session_and_trainee_by_token(data, token)
     if not s or not t:
@@ -34487,18 +34656,18 @@ def public_doc_upload(token: str, doc_key: str):
                 save_data(data)
         return redirect(url_for("public_trainee_space", token=token))
 
-    accept = (target.get("accept") or "").lower()
-
-    def _accepts_file(ext: str) -> bool:
-        acc = [a.strip().lower() for a in accept.split(",") if a.strip()]
-        allowed_exts = set()
-        if "application/pdf" in acc:
-            allowed_exts.add(".pdf")
-        if any(a.startswith("image/") for a in acc) or ("image/jpeg" in acc) or ("image/png" in acc):
-            allowed_exts.update({".jpg", ".jpeg", ".png", ".webp"})
-        if allowed_exts:
-            return ext in allowed_exts
-        return ext in ALLOWED_EXT
+    prepared_files, failure = trainee_checks.prepare_batch(incoming_files, target, MAX_UPLOAD_BYTES)
+    if failure:
+        session["document_upload_error"] = {**failure, "doc_key": doc_key}
+        return redirect(url_for("public_trainee_space", token=token) + "#doc_" + doc_key)
+    file_bytes = [trainee_checks.read_upload(f, MAX_UPLOAD_BYTES) for f in prepared_files]
+    previous_files = trainee_checks.existing_files(target)
+    checked = trainee_checks.read_receipt(request.form.get("document_check_receipt", ""), file_bytes,
+                                         doc_key, token, previous_files)
+    if checked is None:
+        # Direct/no-JS uploads receive the same checks; never trust a client status.
+        checked = trainee_checks.check_documents(file_bytes, doc_key, target.get("label", ""),
+                                                 os.path.join(PERSIST_DIR, "document_checks.sqlite3"), token, previous_files)
 
     # ✅ stockage du fichier
     session_id = s.get("id")
@@ -34522,28 +34691,27 @@ def public_doc_upload(token: str, doc_key: str):
                 cur_files = []
             max_files = 2 if doc_key == "id" else (-1 if doc_key in {"livret_2", "complementary_documents"} else 1)
             if max_files < 0:
-                files_to_store = incoming_files
+                files_to_store = prepared_files
             else:
                 remaining_slots = max(max_files - len(cur_files), 0)
-                files_to_store = incoming_files[:remaining_slots] if remaining_slots else []
+                files_to_store = prepared_files[:remaining_slots] if remaining_slots else []
             if not files_to_store:
                 return redirect(url_for("public_trainee_space", token=token))
 
-            for f in files_to_store:
-                ext = _safe_ext(f.filename)
-                if not _accepts_file(ext):
-                    return redirect(url_for("public_trainee_space", token=token))
-
-            for f in files_to_store:
+            analyses = {key: value for key, value in (d.get("auto_checks") or {}).items() if key in cur_files}
+            for index, f in enumerate(files_to_store):
                 if not original_name:
                     original_name = secure_filename(f.filename or "document")
                 stored = _store_file(session_id, trainee_id, "public_documents", f)
                 new_token = _tokenize_path(stored)
                 cur_files.append(new_token)
+                analyses[new_token] = {**checked["results"][index], "checked_at": checked["checked_at"]}
 
             # on garde le premier fichier dans "file" (pour compat template/admin)
             d["files"] = cur_files
             d["file"] = cur_files[0] if cur_files else ""
+            d["auto_checks"] = analyses
+            d["auto_check_summary"] = {**checked["summary"], "checked_at": checked["checked_at"], "files": list(cur_files)}
 
             cur = (d.get("status") or "").strip().upper()
             if cur in ("", "NON DÉPOSÉ", "NON DEPOSE", "NON_DEPOSE") or cur_status in ("NON CONFORME", "NON_CONFORME"):
@@ -37800,7 +37968,7 @@ def _process_due_convocation_after_convention_signed(data: Dict[str, Any]) -> bo
             scheduled_at = _parse_iso_datetime(trainee.get("convocation_auto_scheduled_at"))
             if not scheduled_at or scheduled_at > now:
                 continue
-            session_end_date = _parse_iso_date(str(_session_get(sess, "date_end", "") or ""))
+            session_end_date = _parse_iso_date(str(_session_get(_trainee_training_session(sess, trainee), "date_end", "") or ""))
             if session_end_date and session_end_date < today_paris:
                 # A catch-up can survive for months when a historical session is
                 # missing a document prerequisite.  Never send a convocation after
@@ -37851,7 +38019,7 @@ def _resend_convocation_before_training(
         str(trainee.get("first_name") or ""),
         _session_get(session_obj, "date_start", ""),
         _session_get(session_obj, "date_end", ""),
-        session_obj,
+        session_obj, trainee,
     )
     if not brevo_send_email(
         str(trainee.get("email") or "").strip(),
@@ -37882,12 +38050,11 @@ def run_training_convocation_reminders(data: Optional[Dict[str, Any]] = None) ->
     for sess in data.get("sessions", []):
         if not _is_aps_session(sess):
             continue
-        start_date = _session_start_date(sess)
-        if start_date != due_date:
-            continue
         trainees = _session_trainees_list(sess)
         session_changed = False
         for trainee in trainees:
+            if _trainee_start_date(sess, trainee) != due_date:
+                continue
             if _trainee_registration_is_cancelled(trainee):
                 continue
             if not trainee.get("convocation_aps_sent_at") or trainee.get("convocation_aps_reminder_sent_at"):
@@ -38237,6 +38404,13 @@ def _certificate_realization_duration(session_obj: Dict[str, Any], trainee: Dict
         "hours_completed", "training_duration_hours", "duration_hours", "total_hours",
         "h_total", "heures_realisees", "duree_heures",
     )
+    pathway = ssiap_pathways.resolve(session_obj, trainee)
+    if pathway:
+        for key in hour_keys:
+            rendered = _certificate_realization_quantity(trainee.get(key), "hours")
+            if rendered:
+                return rendered
+        return _certificate_realization_quantity(pathway["total_hours"], "hours")
     for source in (trainee, session_obj):
         for key in hour_keys:
             rendered = _certificate_realization_quantity(source.get(key), "hours")
@@ -38252,6 +38426,7 @@ def _certificate_realization_duration(session_obj: Dict[str, Any], trainee: Dict
 
 
 def _certificate_realization_dates(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Tuple[str, str]:
+    session_obj = _trainee_training_session(session_obj, trainee)
     start = str(
         trainee.get("certificate_realization_start_date")
         or trainee.get("actual_training_start_date")
@@ -38275,6 +38450,9 @@ def _certificate_realization_dates(session_obj: Dict[str, Any], trainee: Dict[st
 
 
 def _certificate_realization_training_title(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> str:
+    pathway = ssiap_pathways.resolve(session_obj, trainee)
+    if pathway:
+        return pathway["title"]
     for value in (
         trainee.get("certificate_realization_title"), trainee.get("formation_nom"), trainee.get("training_name"),
         _session_get(session_obj, "training_title", ""), _session_get(session_obj, "nom_pedagogique", ""),
@@ -38532,20 +38710,24 @@ def _build_aps_entry_attestation_context(session_obj: Dict[str, Any], trainee: D
         raise ValueError("Impossible de générer l’attestation d’entrée APS : nom du stagiaire manquant")
     if not date_start:
         raise ValueError("Impossible de générer l’attestation d’entrée APS : date de début de formation manquante")
-    return {
+    context = {
         "nom_complet": full_name,
         "date_debut_formation": fr_date(date_start),
         "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
     }
+    context.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
+    return context
+
 
 
 def _generate_aps_entry_attestation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
-    template_path = _aps_entry_attestation_template_path(session_obj)
+    template_path = _ssiap_document_template(session_obj, trainee, "entry", _aps_entry_attestation_template_path)
     template_name = os.path.basename(template_path)
     if not template_name or not os.path.exists(template_path):
         raise FileNotFoundError(f"Modèle Word obligatoire manquant : gestionstagiaires/templates_word/{template_name or 'attestation d’entrée'}")
     os.makedirs(APS_ENTRY_ATTESTATION_DIR, exist_ok=True)
     base = _aps_entry_attestation_base_filename(trainee, trainee_id)
+    base = _ssiap_document_filename(base, session_obj, trainee)
     final_docx_path = os.path.join(APS_ENTRY_ATTESTATION_DIR, base + ".docx")
     final_pdf_path = os.path.join(APS_ENTRY_ATTESTATION_DIR, base + ".pdf")
     shutil.copyfile(template_path, final_docx_path)
@@ -38587,21 +38769,25 @@ def _build_aps_end_attestation_context(session_obj: Dict[str, Any], trainee: Dic
         raise ValueError("Impossible de générer l’attestation de fin APS : nom du stagiaire manquant")
     if not date_start or not date_end:
         raise ValueError("Impossible de générer l’attestation de fin APS : dates de formation manquantes")
-    return {
+    context = {
         "nom_complet": full_name,
         "date_debut_formation": fr_date(date_start),
         "date_fin_formation": fr_date(date_end),
         "periode_formation": f"du {fr_date(date_start)} au {fr_date(date_end)}",
         "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
     }
+    context.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
+    return context
+
 
 
 def _generate_aps_end_attestation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
-    template_path = _aps_end_attestation_template_path(session_obj)
+    template_path = _ssiap_document_template(session_obj, trainee, "end", _aps_end_attestation_template_path)
     if not os.path.exists(template_path):
         raise FileNotFoundError("Modèle Word obligatoire manquant : gestionstagiaires/templates_word/attestationfinaps.docx")
     os.makedirs(APS_END_ATTESTATION_DIR, exist_ok=True)
     base = _aps_end_attestation_base_filename(trainee, trainee_id)
+    base = _ssiap_document_filename(base, session_obj, trainee)
     final_docx_path = os.path.join(APS_END_ATTESTATION_DIR, base + ".docx")
     final_pdf_path = os.path.join(APS_END_ATTESTATION_DIR, base + ".pdf")
     shutil.copyfile(template_path, final_docx_path)
@@ -38635,8 +38821,13 @@ def _attestation_email_training_labels(session_obj: Optional[Dict[str, Any]] = N
     return short_label, FORMATION_LONG_LABELS.get(short_label.upper(), short_label)
 
 
-def _build_aps_end_attestation_email(first_name: str, date_end: str = "", session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+def _build_aps_end_attestation_email(first_name: str, date_end: str = "", session_obj: Optional[Dict[str, Any]] = None, trainee: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    pathway = ssiap_pathways.resolve(session_obj or {}, trainee or {}) if trainee is not None else None
+    if pathway:
+        date_start, date_end = pathway["date_start"], pathway["date_end"]
     short_label, long_label = _attestation_email_training_labels(session_obj)
+    if pathway:
+        short_label, long_label = pathway["label"], pathway["title"]
     subject = f"Attestation de fin de formation {short_label} - Intégrale Academy"
     safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
     safe_long_label = html.escape(long_label)
@@ -38651,8 +38842,13 @@ def _build_aps_end_attestation_email(first_name: str, date_end: str = "", sessio
     return subject, html_body
 
 
-def _build_aps_entry_attestation_email(first_name: str, date_start: str = "", session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+def _build_aps_entry_attestation_email(first_name: str, date_start: str = "", session_obj: Optional[Dict[str, Any]] = None, trainee: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    pathway = ssiap_pathways.resolve(session_obj or {}, trainee or {}) if trainee is not None else None
+    if pathway:
+        date_start, date_end = pathway["date_start"], pathway["date_end"]
     short_label, long_label = _attestation_email_training_labels(session_obj)
+    if pathway:
+        short_label, long_label = pathway["label"], pathway["title"]
     subject = f"Attestation d’entrée en formation {short_label} - Intégrale Academy"
     safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
     safe_long_label = html.escape(long_label)
@@ -38748,7 +38944,7 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         _session_get(session_obj, "exam_practice_date", "")
         or _session_get(session_obj, "exam_date", "")
     ).strip()
-    return {
+    context = {
         "civilite": civility, "prenom": first_name, "nom": last_name, "nom_complet": full_name,
         "adresse_ligne1": address_lines[0], "adresse_ligne2": address_lines[1], "adresse_ligne3": address_lines[2], "adresse_ligne4": address_lines[3],
         "code_postal": zip_code, "ville": city, "formation_nom": training_name,
@@ -38774,6 +38970,9 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         "heure_formation_pratique": str(_session_get(session_obj, "practice_training_time", "") or "08h30").strip(),
         "h_elearning": "62", "h_presentiel": "113", "h_total": "175", "duree_exam": "07h00",
     }
+    context.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
+    return context
+
 
 
 def _assert_aps_template_contains_expected_variables(template_path: str) -> None:
@@ -38834,7 +39033,7 @@ def _render_docx_with_python_template(template_path: str, output_docx_path: str,
 
 
 def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
-    template_path = _aps_template_path(session_obj)
+    template_path = _ssiap_document_template(session_obj, trainee, "convocation", _aps_template_path)
     app.logger.info("[CONVOCATION APS] Modèle Word utilisé : %s", template_path)
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"Modèle Word obligatoire manquant : gestionstagiaires/templates_word/{os.path.basename(template_path)}")
@@ -38842,6 +39041,7 @@ def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[s
     app.logger.info("[CONVOCATION APS] Données injectées : stagiaire=%s formation=%s période=%s examen=%s", context.get("nom_complet"), context.get("formation_nom"), context.get("periode_formation"), context.get("date_examen"))
     doc_slug = _automation_document_config(session_obj).get("slug") or "aps"
     base = f"convocation_{_safe_filename_part(doc_slug)}_{_safe_filename_part(trainee.get('id') or trainee_id)}"
+    base = _ssiap_document_filename(base, session_obj, trainee)
     final_docx_path = os.path.join(APS_CONVOCATION_DIR, base + ".docx")
     final_pdf_path = os.path.join(APS_CONVOCATION_DIR, base + ".pdf")
     protected_template_path = os.path.join(APS_CONVOCATION_DIR, base + "_template.docx")
@@ -39066,6 +39266,11 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
     training_type = str(_session_get(session_obj, "training_type", "") or "APS").strip()
     formation_name = _first_non_empty(trainee.get("formation_nom"), trainee.get("training_name"), _session_get(session_obj, "name", ""), training_type, default="APS")
     training_price = _first_non_empty(trainee.get("training_price"), trainee.get("montant_formation"), _session_get(session_obj, "training_price", ""), default=str(default_training_price(training_type) or 1650))
+    pathway = ssiap_pathways.resolve(session_obj, trainee)
+    if pathway:
+        training_price = _first_non_empty(trainee.get("training_price"), trainee.get("montant_formation"), pathway["price"])
+        if training_price == "":
+            raise ValueError("Renseignez le tarif de ce stagiaire avant de générer sa convention.")
     cpf_amount = _first_non_empty(trainee.get("cpf_amount"), trainee.get("montant_cpf"), default="0")
     personal_amount = _first_non_empty(trainee.get("personal_amount"), trainee.get("montant_financement_personnel"), trainee.get("montant_personnel"), default="")
     if personal_amount in (None, ""):
@@ -39107,7 +39312,7 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
         "montant_autre_eur": _format_euro_amount(other_amount),
         "date_debut_formation": date_start,
         "date_fin_formation": date_end,
-        "date_un_mois_avant_debut_formation": _fr_date_offset(_session_get(session_obj, "date_start", ""), months=-1),
+        "date_un_mois_avant_debut_formation": _fr_date_offset(_session_get(_trainee_training_session(session_obj, trainee), "date_start", ""), months=-1),
         "date_15_jours_avant_examen": _fr_date_offset(_first_non_empty(trainee.get("date_examen"), _session_get(session_obj, "exam_date", "")), days=-15),
         "periode_formation": periode,
         "periode_elearning": _first_non_empty(elearning_period, trainee.get("periode_elearning"), _session_get(session_obj, "periode_elearning", ""), periode),
@@ -39134,6 +39339,7 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
         "ville_edition": "Puget-sur-Argens",
         "date_edition": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
     }
+    replacements.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
     return {key: str(replacements.get(key) or "") for key in replacements}
 
 
@@ -39167,7 +39373,7 @@ def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[st
     config = _automation_document_config(session_obj)
     if not config.get("enabled"):
         raise RuntimeError("La convention automatisée n’est pas proposée pour cette formation.")
-    template_path = os.path.abspath(_aps_convention_template_path(session_obj))
+    template_path = os.path.abspath(_ssiap_document_template(session_obj, trainee, "convention", _aps_convention_template_path))
     template_name = os.path.basename(template_path)
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"Modèle Word obligatoire manquant : gestionstagiaires/templates_word/{template_name}")
@@ -39176,6 +39382,7 @@ def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[st
     app.logger.info("Convention APS template utilisé : %s taille=%s sha256=%s", template_path, template_size, template_sha256)
     os.makedirs(YOUSIGN_CONVENTION_DIR, exist_ok=True)
     base = _aps_convention_base_filename(trainee, trainee_id)
+    base = _ssiap_document_filename(base, session_obj, trainee)
     final_docx_path = os.path.join(YOUSIGN_CONVENTION_DIR, base + ".docx")
     final_pdf_path = os.path.join(YOUSIGN_CONVENTION_DIR, base + ".pdf")
     shutil.copyfile(template_path, final_docx_path)
@@ -39233,8 +39440,13 @@ def _convocation_email_training_labels(session_obj: Optional[Dict[str, Any]] = N
     return short_label, long_label
 
 
-def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end: str = "", session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end: str = "", session_obj: Optional[Dict[str, Any]] = None, trainee: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    pathway = ssiap_pathways.resolve(session_obj or {}, trainee or {}) if trainee is not None else None
+    if pathway:
+        date_start, date_end = pathway["date_start"], pathway["date_end"]
     short_label, long_label = _convocation_email_training_labels(session_obj)
+    if pathway:
+        short_label, long_label = pathway["label"], pathway["title"]
     safe_short_label = html.escape(short_label)
     safe_long_label = html.escape(long_label)
     subject = f"Convocation formation {short_label} - Intégrale Academy"
@@ -39250,7 +39462,14 @@ def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end
         if period_label
         else ""
     )
+    if pathway:
+        details = ssiap_pathways.document_context(session_obj, trainee, fr_date)["detail_parcours"]
+        session_line += "<p>" + html.escape(details).replace("\n", "<br>") + "</p>"
     period_sentence = f" qui se déroulera {period_label}" if period_label else ""
+    introduction = (
+        "Votre inscription est prise en compte. Voici les informations pour préparer votre entrée en formation."
+        if pathway else "Nous avons bien reçu votre Convention de formation signée et nous vous en remercions."
+    )
 
     html_body = f'''<!doctype html>
 <html lang="fr">
@@ -39264,7 +39483,7 @@ def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end
         <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="width:88px;padding-right:18px;vertical-align:middle;"><img src="{safe_logo_url}" width="74" alt="Logo Intégrale Academy" style="display:block;width:74px;height:auto;border:0;outline:none;text-decoration:none;background:#ffffff;border-radius:14px;padding:7px;"></td><td style="vertical-align:middle;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convocation formation {safe_short_label}</div></td></tr></table></td></tr>
         <tr><td style="padding:32px 30px 10px 30px;">
           <p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
-          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Nous avons bien reçu votre Convention de formation signée et nous vous en remercions.</p>
+          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">{introduction}</p>
           <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Nous revenons vers vous concernant votre formation <strong>{safe_long_label}</strong>{period_sentence}.</p>
           <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">Vous trouverez en pièce jointe votre convocation officielle.</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f7faff;border:1px solid #dbeafe;border-radius:14px;margin:0 0 28px 0;"><tr><td style="padding:18px 20px;">
@@ -39314,7 +39533,7 @@ def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], train
     docx_path, pdf_path = _generate_aps_convocation_files(session_obj, trainee, session_id, trainee_id)
     with open(pdf_path, "rb") as fh:
         encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
-    subject, html_content = _build_aps_convocation_email(str(trainee.get("first_name") or ""), _session_get(session_obj, "date_start", ""), _session_get(session_obj, "date_end", ""), session_obj)
+    subject, html_content = _build_aps_convocation_email(str(trainee.get("first_name") or ""), _session_get(session_obj, "date_start", ""), _session_get(session_obj, "date_end", ""), session_obj, trainee)
     if not brevo_send_email(str(trainee.get("email") or "").strip(), subject, html_content, trainee=trainee, attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}]):
         raise RuntimeError("Impossible d’envoyer la convocation : échec d’envoi email")
     now = _now_iso()
@@ -39737,7 +39956,10 @@ def admin_trainee_page(session_id: str, trainee_id: str):
 
     return render_template(
         "admin_trainee.html",
-        session=session_view,
+        session={**session_view, "ssiap_pathways": s.get("ssiap_pathways")},
+        ssiap_supported=ssiap_pathways.supported(s),
+        ssiap_pathway=ssiap_pathways.resolve(s, t),
+        training_dates=_trainee_training_session(s, t),
         trainee=t,
         show_vae=show_vae,
         show_professional_experience_sheet=_professional_experience_sheet_is_required(training_type, _session_get(s, "date_start", "")),
@@ -48606,7 +48828,7 @@ def admin_send_aps_entry_attestation(session_id: str, trainee_id: str):
         docx_path, pdf_path = _generate_aps_entry_attestation_files(s, t, session_id, trainee_id)
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
-        subject, html_content = _build_aps_entry_attestation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), s)
+        subject, html_content = _build_aps_entry_attestation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), s, t)
         email_ok = brevo_send_email(str(t.get("email") or "").strip(), subject, html_content, trainee=t, attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}])
         if not email_ok:
             raise RuntimeError("Impossible d’envoyer l’attestation d’entrée : échec d’envoi email")
@@ -48668,7 +48890,7 @@ def admin_send_aps_end_attestation(session_id: str, trainee_id: str):
         docx_path, pdf_path = _generate_aps_end_attestation_files(s, t, session_id, trainee_id)
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
-        subject, html_content = _build_aps_end_attestation_email(str(t.get("first_name") or ""), _session_get(s, "date_end", ""), s)
+        subject, html_content = _build_aps_end_attestation_email(str(t.get("first_name") or ""), _session_get(s, "date_end", ""), s, t)
         email_ok = brevo_send_email(str(t.get("email") or "").strip(), subject, html_content, trainee=t, attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}])
         if not email_ok:
             raise RuntimeError("Impossible d’envoyer l’attestation de fin : échec d’envoi email")
@@ -48760,6 +48982,8 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
+    if (request.get_json(silent=True) or {}).get("skip_if_already_sent") and t.get("convocation_aps_sent_at"):
+        return jsonify(ok=True, skipped=True, status="already_sent")
     is_vtc = str(_automation_document_config(s).get("slug") or "") == "vtc"
     if is_vtc and not t.get("vtc_theory_exam_sent_at"):
         return jsonify({"ok": False, "error": "En attente de réussite à l’examen théorique"}), 400
@@ -48775,7 +48999,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         if is_vtc:
             subject, html_content = build_vtc_practice_convocation_email(str(t.get("first_name") or ""), _session_get(s, "practice_training_date", "") or _session_get(s, "exam_practice_date", ""))
         else:
-            subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""), s)
+            subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""), s, t)
         email_ok = brevo_send_email(
             str(t.get("email") or "").strip(),
             subject,
@@ -55388,6 +55612,8 @@ def admin_exam_official_qcu_answer(session_id: str, attempt_id: str, index: int)
     return {"ok": True, **answer, "completed": attempt["status"] == "completed"}
 
 
+@app.get("/admin")
+@app.get("/admin/")
 @app.get("/admin/sessions/")
 def admin_sessions_slash_redirect():
     return redirect(url_for("admin_sessions"), code=301)
@@ -55408,9 +55634,17 @@ if _partner_postgres_active():
     _verify_partner_postgres_initial_cutover()
 
 
+import ssiap_routes
+ssiap_routes.register(app, sys.modules[__name__])
+
+manuals_shop.register(sys.modules[__name__])
+import partner_workspace
+partner_workspace.register(sys.modules[__name__])
+
 _log_memory_stage("AFTER_ROUTE_REGISTRATION", _APP_IMPORT_STARTED_AT, "-")
 _log_memory_stage("IMPORT_END_REAL", _APP_IMPORT_STARTED_AT, "-")
 
 if __name__ == "__main__":
     debug_enabled = os.environ.get("FLASK_DEBUG", "0") == "1"
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=debug_enabled)
+

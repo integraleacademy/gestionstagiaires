@@ -1,0 +1,434 @@
+{
+  "e-01-1": {
+    "src": "media/vtc/v3/audio/e-01-1.mp3",
+    "duration_seconds": 42.888,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-01-2": {
+    "src": "media/vtc/v3/audio/e-01-2.mp3",
+    "duration_seconds": 43.056,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-01-3": {
+    "src": "media/vtc/v3/audio/e-01-3.mp3",
+    "duration_seconds": 42.936,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-01-4": {
+    "src": "media/vtc/v3/audio/e-01-4.mp3",
+    "duration_seconds": 42.864,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-02-1": {
+    "src": "media/vtc/v3/audio/e-02-1.mp3",
+    "duration_seconds": 34.896,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-02-2": {
+    "src": "media/vtc/v3/audio/e-02-2.mp3",
+    "duration_seconds": 35.112,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-02-3": {
+    "src": "media/vtc/v3/audio/e-02-3.mp3",
+    "duration_seconds": 34.944,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-02-4": {
+    "src": "media/vtc/v3/audio/e-02-4.mp3",
+    "duration_seconds": 34.752,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-03-1": {
+    "src": "media/vtc/v3/audio/e-03-1.mp3",
+    "duration_seconds": 36.912,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-03-2": {
+    "src": "media/vtc/v3/audio/e-03-2.mp3",
+    "duration_seconds": 37.584,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-03-3": {
+    "src": "media/vtc/v3/audio/e-03-3.mp3",
+    "duration_seconds": 37.08,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-03-4": {
+    "src": "media/vtc/v3/audio/e-03-4.mp3",
+    "duration_seconds": 37.08,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-04-1": {
+    "src": "media/vtc/v3/audio/e-04-1.mp3",
+    "duration_seconds": 39.744,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-04-2": {
+    "src": "media/vtc/v3/audio/e-04-2.mp3",
+    "duration_seconds": 39.72,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-04-3": {
+    "src": "media/vtc/v3/audio/e-04-3.mp3",
+    "duration_seconds": 39.624,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-04-4": {
+    "src": "media/vtc/v3/audio/e-04-4.mp3",
+    "duration_seconds": 39.72,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-05-1": {
+    "src": "media/vtc/v3/audio/e-05-1.mp3",
+    "duration_seconds": 37.992,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-05-2": {
+    "src": "media/vtc/v3/audio/e-05-2.mp3",
+    "duration_seconds": 37.992,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-05-3": {
+    "src": "media/vtc/v3/audio/e-05-3.mp3",
+    "duration_seconds": 37.968,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-05-4": {
+    "src": "media/vtc/v3/audio/e-05-4.mp3",
+    "duration_seconds": 38.016,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-06-1": {
+    "src": "media/vtc/v3/audio/e-06-1.mp3",
+    "duration_seconds": 40.512,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-06-2": {
+    "src": "media/vtc/v3/audio/e-06-2.mp3",
+    "duration_seconds": 40.152,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-06-3": {
+    "src": "media/vtc/v3/audio/e-06-3.mp3",
+    "duration_seconds": 40.488,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-06-4": {
+    "src": "media/vtc/v3/audio/e-06-4.mp3",
+    "duration_seconds": 40.176,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-07-1": {
+    "src": "media/vtc/v3/audio/e-07-1.mp3",
+    "duration_seconds": 38.856,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-07-2": {
+    "src": "media/vtc/v3/audio/e-07-2.mp3",
+    "duration_seconds": 38.496,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-07-3": {
+    "src": "media/vtc/v3/audio/e-07-3.mp3",
+    "duration_seconds": 38.856,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-07-4": {
+    "src": "media/vtc/v3/audio/e-07-4.mp3",
+    "duration_seconds": 38.352,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-08-1": {
+    "src": "media/vtc/v3/audio/e-08-1.mp3",
+    "duration_seconds": 37.68,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-08-2": {
+    "src": "media/vtc/v3/audio/e-08-2.mp3",
+    "duration_seconds": 38.4,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-08-3": {
+    "src": "media/vtc/v3/audio/e-08-3.mp3",
+    "duration_seconds": 37.944,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-08-4": {
+    "src": "media/vtc/v3/audio/e-08-4.mp3",
+    "duration_seconds": 39.072,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-09-1": {
+    "src": "media/vtc/v3/audio/e-09-1.mp3",
+    "duration_seconds": 36.936,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-09-2": {
+    "src": "media/vtc/v3/audio/e-09-2.mp3",
+    "duration_seconds": 37.44,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-09-3": {
+    "src": "media/vtc/v3/audio/e-09-3.mp3",
+    "duration_seconds": 37.08,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-09-4": {
+    "src": "media/vtc/v3/audio/e-09-4.mp3",
+    "duration_seconds": 37.872,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-10-1": {
+    "src": "media/vtc/v3/audio/e-10-1.mp3",
+    "duration_seconds": 38.328,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-10-2": {
+    "src": "media/vtc/v3/audio/e-10-2.mp3",
+    "duration_seconds": 38.448,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-10-3": {
+    "src": "media/vtc/v3/audio/e-10-3.mp3",
+    "duration_seconds": 38.256,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-10-4": {
+    "src": "media/vtc/v3/audio/e-10-4.mp3",
+    "duration_seconds": 38.376,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-11-1": {
+    "src": "media/vtc/v3/audio/e-11-1.mp3",
+    "duration_seconds": 38.304,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-11-2": {
+    "src": "media/vtc/v3/audio/e-11-2.mp3",
+    "duration_seconds": 38.448,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-11-3": {
+    "src": "media/vtc/v3/audio/e-11-3.mp3",
+    "duration_seconds": 38.424,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-11-4": {
+    "src": "media/vtc/v3/audio/e-11-4.mp3",
+    "duration_seconds": 38.184,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-12-1": {
+    "src": "media/vtc/v3/audio/e-12-1.mp3",
+    "duration_seconds": 36.984,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-12-2": {
+    "src": "media/vtc/v3/audio/e-12-2.mp3",
+    "duration_seconds": 37.728,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-12-3": {
+    "src": "media/vtc/v3/audio/e-12-3.mp3",
+    "duration_seconds": 37.416,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  },
+  "e-12-4": {
+    "src": "media/vtc/v3/audio/e-12-4.mp3",
+    "duration_seconds": 37.632,
+    "voices": [
+      "en-GB-RyanNeural",
+      "en-GB-SoniaNeural"
+    ],
+    "rate": "-6%"
+  }
+}

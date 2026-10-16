@@ -1,0 +1,2684 @@
+from __future__ import annotations
+
+import base64
+import csv
+import datetime as dt
+import hashlib
+import hmac
+import html
+import json
+import io
+import math
+import os
+import re
+import secrets
+import tempfile
+import time
+import threading
+import unicodedata
+from collections import OrderedDict
+from functools import wraps
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
+
+from flask import (
+    Blueprint,
+    Response,
+    abort,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    session,
+    url_for,
+)
+from markupsafe import Markup
+from werkzeug.exceptions import Conflict
+
+from .videos import activity_playback_policy, activity_videos, course_videos, video_blocker, videos_complete
+from .academy import curriculum_manifest
+from .aps_editorial import question_for_history
+from .aps_workload import summarize as summarize_aps_workload
+from .lesson_timing import lesson_pages
+from . import vtc, a3p, mac_aps
+from .mac_aps_timing import completion_blocker as macaps_completion_blocker
+from .exams import ExamStore, load_exam, public_exam, grade_exam, module_exam_activity_id
+from .aps_final_time import FINAL_COURSE_ID, FINAL_ACTIVITY_ID, final_time, tracking_course
+from .practice import public_practice, grade_practice
+from .production import public_production, production_feedback, normalize_production, normalize_self_review
+from .production_ai import ProductionAIService, ProductionAIError, build_course_references, read_analyses
+from .assessment import describe_history
+from .vtc_adaptive import select_activity as select_vtc_activity
+from .vtc_enrolments import effective_learner_session
+from .vtc_productions import public_production as public_vtc_production
+from .vtc_production_work import VtcWrittenWork, WrittenWorkError, is_vtc_production
+from . import vtc_ai
+from .vtc_cma import learner_attempt_summaries
+from .vtc_105_migration import (resolve_session as resolve_vtc_105_session,
+    read_transition_session, current_progress_rows)
+
+from .importer import (
+    DEFAULT_MAX_ARCHIVE_BYTES,
+    CourseCatalog,
+    CourseImportError,
+    sanitize_course_html,
+)
+from .store import APS_PACED_COURSES, APS_TRACKED_COURSES, NativeElearningStore, TrackingError, idle_timeout_seconds
+from .paths import (
+    allows_free_module_navigation, assigned_modules, course_outline, path_revision, project_course,
+    project_progress, required_activity_order, validate_modules,
+)
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - Windows development fallback
+    fcntl = None
+
+
+ACCESS_TOKEN_TTL_SECONDS = 12 * 60 * 60
+CLIENT_HEARTBEAT_SECONDS = 15
+UPLOAD_CHUNK_BYTES = 5 * 1024 * 1024
+UPLOAD_TTL_SECONDS = 6 * 60 * 60
+_ASSET_ATTRIBUTE_RE = re.compile(r'\b(src|data-src)="(media/[a-zA-Z0-9._/-]+)"')
+_UPLOAD_ID_RE = re.compile(r"^[a-f0-9]{32}$")
+
+
+def _b64encode(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
+
+
+def _b64decode(value: str) -> bytes:
+    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+
+
+def _signing_key() -> bytes:
+    if not current_app.secret_key:
+        raise RuntimeError("SECRET_KEY doit être configurée pour le e-learning natif.")
+    return str(current_app.secret_key).encode("utf-8")
+
+
+def _sign_access(payload: Mapping[str, Any]) -> str:
+    encoded = _b64encode(json.dumps(dict(payload), separators=(",", ":"), sort_keys=True).encode("utf-8"))
+    signature = _b64encode(hmac.new(_signing_key(), encoded.encode("ascii"), hashlib.sha256).digest())
+    return f"{encoded}.{signature}"
+
+
+def _verify_signed(raw_token: Any) -> Dict[str, Any]:
+    token = str(raw_token or "").strip()
+    try:
+        encoded, supplied_signature = token.split(".", 1)
+        expected_signature = _b64encode(
+            hmac.new(_signing_key(), encoded.encode("ascii"), hashlib.sha256).digest()
+        )
+        if not hmac.compare_digest(supplied_signature, expected_signature):
+            raise ValueError
+        payload = json.loads(_b64decode(encoded).decode("utf-8"))
+    except (ValueError, UnicodeDecodeError, json.JSONDecodeError, TypeError):
+        abort(401, "Accès e-learning invalide.")
+    if not isinstance(payload, dict) or int(payload.get("expires_at") or 0) < int(time.time()):
+        abort(401, "L’accès e-learning a expiré. Rechargez la page.")
+    return payload
+
+
+def _verify_access(raw_token: Any) -> Dict[str, Any]:
+    payload = _verify_signed(raw_token)
+    nonce = str(payload.get("nonce") or "")
+    if not nonce or not hmac.compare_digest(nonce, str(session.get("native_elearning_nonce") or "")):
+        abort(401, "Session e-learning expirée.")
+    public_token = str(payload.get("public_token") or "")
+    if not session.get("admin_logged_in") and not session.get(f"public_auth_{public_token}"):
+        abort(401, "Session stagiaire expirée.")
+    for field in ("session_id", "trainee_id", "course_id", "course_version"):
+        if not str(payload.get(field) or "").strip():
+            abort(401, "Contexte e-learning incomplet.")
+    return payload
+
+
+def _asset_access_payload(access: Mapping[str, Any]) -> Dict[str, Any]:
+    return {
+        "kind": "course_asset",
+        "course_id": str(access.get("course_id") or ""),
+        "course_version": str(access.get("course_version") or ""),
+        "nonce": str(access.get("nonce") or ""),
+        "expires_at": int(access.get("expires_at") or 0),
+    }
+
+
+def _verify_asset_access(raw_token: Any) -> Dict[str, Any]:
+    payload = _verify_signed(raw_token)
+    nonce = str(payload.get("nonce") or "")
+    if payload.get("kind") != "course_asset" or not nonce:
+        abort(401, "Accès au média invalide.")
+    if payload.get("admin_preview") and not session.get("admin_logged_in"):
+        abort(401, "Session administrateur expirée.")
+    if not hmac.compare_digest(nonce, str(session.get("native_elearning_nonce") or "")):
+        abort(401, "Session e-learning expirée.")
+    for field in ("course_id", "course_version"):
+        if not str(payload.get(field) or "").strip():
+            abort(401, "Contexte du média incomplet.")
+    return payload
+
+
+def _csrf_token() -> str:
+    token = str(session.get("native_elearning_csrf") or "")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["native_elearning_csrf"] = token
+    return token
+
+
+def _require_csrf() -> None:
+    supplied = str(request.headers.get("X-Elearning-CSRF") or "")
+    expected = str(session.get("native_elearning_csrf") or "")
+    if not supplied or not expected or not hmac.compare_digest(supplied, expected):
+        abort(403, "Jeton de sécurité invalide.")
+
+
+def _require_form_csrf() -> None:
+    supplied = str(request.form.get("native_elearning_csrf") or "")
+    expected = str(session.get("native_elearning_csrf") or "")
+    if not supplied or not expected or not hmac.compare_digest(supplied, expected):
+        abort(403, "Jeton de sécurité invalide.")
+
+
+def _activity_pairs(course: Mapping[str, Any]) -> List[Tuple[Mapping[str, Any], Mapping[str, Any]]]:
+    pairs: List[Tuple[Mapping[str, Any], Mapping[str, Any]]] = []
+    for section in course.get("sections") or []:
+        if not isinstance(section, Mapping):
+            continue
+        for activity in section.get("activities") or []:
+            if isinstance(activity, Mapping):
+                pairs.append((section, activity))
+    return pairs
+
+
+def _scored_activity_ids(course: Mapping[str, Any]) -> List[str]:
+    return [
+        str(activity.get("id"))
+        for _, activity in _activity_pairs(course)
+        if activity.get("scored") and activity.get("optional") is not True
+    ]
+
+
+def _course_access_payload(
+    session_obj: Mapping[str, Any],
+    trainee: Mapping[str, Any],
+    course: Mapping[str, Any],
+    *,
+    public_token: str,
+) -> Dict[str, Any]:
+    nonce = str(session.get("native_elearning_nonce") or "")
+    if not nonce:
+        nonce = secrets.token_urlsafe(24)
+        session["native_elearning_nonce"] = nonce
+    now = int(time.time())
+    return {
+        "session_id": str(session_obj.get("id") or ""),
+        "trainee_id": str(trainee.get("id") or trainee.get("trainee_id") or ""),
+        "course_id": str(course.get("id") or ""),
+        "course_version": str(course.get("version") or ""),
+        "public_token": public_token,
+        "nonce": nonce,
+        "issued_at": now,
+        "expires_at": now + ACCESS_TOKEN_TTL_SECONDS,
+        "path_revision": path_revision(session_obj),
+        "section_ids": [str(section["id"]) for section in course.get("sections") or []],
+        "module_title": str(course.get("title") or ""),
+        "required_minutes": int(course.get("required_minutes") or 0),
+        **({"aps_editorial_revision": course["aps_editorial_revision"]} if course.get("aps_editorial_revision") else {}),
+        **({"aps_depth_revision": course["aps_depth_revision"]} if course.get("aps_depth_revision") else {}),
+        **({"aps_reading_revision": course["aps_reading_revision"]} if course.get("aps_reading_revision") else {}),
+        **({"vtc_media_revision": course["vtc_media_revision"]} if course.get("vtc_media_revision") else {}),
+    }
+
+
+def _next_incomplete(activity_order: Sequence[str], completed: Sequence[str]) -> str:
+    completed_set = set(completed)
+    return next((activity_id for activity_id in activity_order if activity_id not in completed_set), "")
+
+
+def _format_seconds(value: Any) -> str:
+    seconds = max(0, int(float(value or 0)))
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
+def _normalize_fill_blank_text(value: Any) -> str:
+    normalized = unicodedata.normalize("NFKC", str(value or ""))
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
+def _safe_theme(course: Mapping[str, Any]) -> Dict[str, str]:
+    raw = course.get("theme") if isinstance(course.get("theme"), Mapping) else {}
+
+    def color(name: str, fallback: str) -> str:
+        candidate = str(raw.get(name) or "").strip()
+        return candidate.lower() if re.fullmatch(r"#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?", candidate) else fallback
+
+    return {
+        "main_color": color("main_color", "#4f46e5"),
+        "button_color": color("button_color", "#f97316"),
+        "text_color": color("text_color", "#172033"),
+    }
+
+
+def _evaluate_answer(activity: Mapping[str, Any], payload: Mapping[str, Any]) -> Tuple[bool, Dict[str, Any]]:
+    question_type = str(activity.get("question_type") or "")
+    if question_type in {"single_choice", "multiple_choice", "statement"}:
+        raw_selected = payload.get("selected")
+        selected = raw_selected if isinstance(raw_selected, list) else [raw_selected]
+        selected_ids = sorted({str(value) for value in selected if str(value or "")})
+        valid_ids = {str(option.get("id")) for option in activity.get("options") or []}
+        if not selected_ids or any(value not in valid_ids for value in selected_ids):
+            raise TrackingError("Réponse invalide.")
+        if question_type == "single_choice" and len(selected_ids) != 1:
+            raise TrackingError("Une seule réponse est attendue.")
+        expected = sorted(
+            str(option.get("id"))
+            for option in activity.get("options") or []
+            if option.get("is_correct")
+        )
+        return selected_ids == expected, {"selected": selected_ids}
+
+    if question_type == "matching":
+        selected = payload.get("selected")
+        if not isinstance(selected, list):
+            raise TrackingError("Associations invalides.")
+        pairs = [pair for pair in activity.get("pairs") or [] if isinstance(pair, Mapping)]
+        valid_ids = {str(pair.get("id")) for pair in pairs}
+        selected_ids = [str(value or "") for value in selected]
+        if len(selected_ids) != len(pairs) or any(value not in valid_ids for value in selected_ids):
+            raise TrackingError("Toutes les associations sont obligatoires.")
+        expected = [str(pair.get("id")) for pair in pairs]
+        return selected_ids == expected, {"selected": selected_ids}
+
+    if question_type == "fill_blank":
+        groups = payload.get("groups")
+        if not isinstance(groups, Mapping):
+            raise TrackingError("Réponse à compléter invalide.")
+        normalized = {
+            str(key): _normalize_fill_blank_text(value)
+            for key, value in groups.items()
+        }
+        answer_groups = [
+            group
+            for group in (activity.get("answer_groups") or [])
+            if isinstance(group, Mapping)
+        ]
+        expected_group_ids = {str(group.get("id") or "") for group in answer_groups}
+        if (
+            set(normalized) != expected_group_ids
+            or not expected_group_ids
+            or any(not value for value in normalized.values())
+        ):
+            raise TrackingError("Toutes les réponses à compléter sont obligatoires.")
+
+        is_correct = True
+        for group in answer_groups:
+            group_id = str(group.get("id") or "")
+            answers = [answer for answer in group.get("answers") or [] if isinstance(answer, Mapping)]
+            mode = str(group.get("mode") or "choice")
+            submitted = normalized[group_id]
+            if mode == "text":
+                correct_answers = [answer for answer in answers if answer.get("is_correct")]
+                group_is_correct = any(
+                    (
+                        submitted == _normalize_fill_blank_text(answer.get("text"))
+                        if answer.get("match_case")
+                        else submitted.casefold()
+                        == _normalize_fill_blank_text(answer.get("text")).casefold()
+                    )
+                    for answer in correct_answers
+                )
+            elif mode == "choice":
+                valid_ids = {str(answer.get("id") or "") for answer in answers}
+                if submitted not in valid_ids:
+                    raise TrackingError("Toutes les réponses à compléter sont obligatoires.")
+                expected = next(
+                    (str(answer.get("id") or "") for answer in answers if answer.get("is_correct")),
+                    "",
+                )
+                group_is_correct = submitted == expected
+            else:
+                raise TrackingError("Format de réponse à compléter invalide.")
+            is_correct = is_correct and group_is_correct
+        return is_correct, {"groups": normalized}
+
+    raise TrackingError("Ce type de question n’est pas encore pris en charge.")
+
+
+def create_native_elearning_blueprint(
+    *,
+    get_persist_dir: Callable[[], str],
+    load_data: Callable[[], Dict[str, Any]],
+    save_data: Callable[[Dict[str, Any]], None],
+    mutate_data: Callable[[Callable[[Dict[str, Any]], Dict[str, Any]]], Dict[str, Any]],
+    find_session: Callable[[Dict[str, Any], str], Optional[Dict[str, Any]]],
+    find_session_and_trainee_by_token: Callable[[Dict[str, Any], str], Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]],
+    session_trainees: Callable[[Dict[str, Any]], List[Dict[str, Any]]],
+    public_is_authed: Callable[[str], bool],
+    is_aps_elearning_session: Callable[[Dict[str, Any]], bool],
+    session_start_date: Callable[[Dict[str, Any]], Optional[dt.date]],
+) -> Blueprint:
+    blueprint = Blueprint("native_elearning", __name__)
+    # Cache only successful authorization timestamps, never administrative data
+    # or course bodies. Heartbeats must not parse the large data.json every 15s.
+    access_checks: OrderedDict[tuple, float] = OrderedDict()
+    access_checks_lock = threading.Lock()
+
+    @blueprint.after_request
+    def private_exam_responses(response):
+        if str((request.view_args or {}).get("token") or "").startswith("el_"):
+            response.headers['Referrer-Policy'] = 'no-referrer'
+            response.headers['Cache-Control'] = 'private, no-store'
+        if request.endpoint in {'native_elearning.admin_exam', 'native_elearning.admin_exam_submit',
+                                'native_elearning.learner_exam', 'native_elearning.learner_exam_submit',
+                                'native_elearning.admin_final_time', 'native_elearning.admin_final_time_export',
+                                'native_elearning.admin_aps_workload', 'native_elearning.admin_aps_workload_export',
+                                'native_elearning.admin_written_work', 'native_elearning.admin_written_work_export',
+                                'native_elearning.activity_production', 'native_elearning.vtc_production_review'}:
+            response.headers['Cache-Control'] = 'private, no-store'
+        return response
+
+    def root() -> Path:
+        return Path(get_persist_dir()).resolve() / "native_elearning"
+
+    def catalog() -> CourseCatalog:
+        return CourseCatalog(root())
+
+    def store() -> NativeElearningStore:
+        return NativeElearningStore(root() / "tracking.sqlite3")
+
+    production_ai_lock = threading.Lock()
+
+    def production_ai_service():
+        override = current_app.config.get('NATIVE_ELEARNING_PRODUCTION_AI_SERVICE')
+        if override is not None:
+            return override
+        key = str(root())
+        with production_ai_lock:
+            services = current_app.extensions.setdefault('native_production_ai_services', {})
+            if key not in services:
+                services[key] = ProductionAIService(root() / 'production_ai.sqlite3')
+            return services[key]
+
+    def production_ai_config(course, activity_id, *, access_token='', preview=False):
+        prefix = 'native_elearning.admin_production_' if preview else 'native_elearning.activity_production_'
+        kwargs = {'course_id': course['id'], 'version': course['version']} if preview else {}
+        return {'analysisUrl': url_for(prefix+'analysis', activity_id=activity_id, **kwargs),
+                'historyUrl': url_for(prefix+'analyses', activity_id=activity_id, **kwargs),
+                'csrfToken': _csrf_token(), 'accessToken': access_token, 'version': course['version'],
+                'configured': (production_ai_service().configured if
+                    current_app.config.get('NATIVE_ELEARNING_PRODUCTION_AI_SERVICE') is not None else
+                    bool(os.environ.get('OPENAI_API_KEY', '').strip())) and
+                    (not preview or session.get('admin_role') != 'viewer')}
+
+    def production_analysis_response(access, course, activity, *, create, preview=False):
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify(ok=False, error='Requête invalide.'), 400
+        try:
+            service = production_ai_service()
+            if not create:
+                result = service.list_analyses(access, activity['id'])
+                if payload.get('analysis_id'):
+                    job = service.get_analysis(access, str(payload['analysis_id']))
+                    if job is None or job.get('activity_id') != activity['id']:
+                        abort(404)
+                    result['analysis'] = job
+                return jsonify(ok=True, **result)
+            answers = normalize_production(activity['production'], payload.get('production_answers'))
+            if not preview:
+                progress = current_progress(access, course)
+                saved = progress.get('answers', {}).get(activity['id'], {})
+                if activity['id'] in progress.get('completed_activity_ids', []):
+                    if answers != saved.get('production_answers'):
+                        return jsonify(ok=False, error='Cette activité est terminée. Vous pouvez analyser la production enregistrée.'), 409
+                else:
+                    # Capture the work BEFORE any AI or model-answer correction.
+                    store().record_production(access, activity['id'], answers, capture_first=True)
+            job = service.request_analysis(access, activity['production'], answers,
+                activity_id=activity['id'], course_references=build_course_references(course, activity['id']),
+                retry=payload.get('retry') is True)
+            return jsonify(ok=True, analysis=job), 202 if job['status'] in ('queued', 'running') else 200
+        except ProductionAIError as exc:
+            response = jsonify(ok=False, error=str(exc), code=exc.code, retry_after=exc.retry_after)
+            if exc.retry_after:
+                response.headers['Retry-After'] = str(exc.retry_after)
+            return response, exc.http_status
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 400
+
+    def max_archive_bytes() -> int:
+        try:
+            configured = int(
+                os.environ.get(
+                    "NATIVE_ELEARNING_MAX_ARCHIVE_BYTES",
+                    str(DEFAULT_MAX_ARCHIVE_BYTES),
+                )
+            )
+        except (TypeError, ValueError):
+            configured = DEFAULT_MAX_ARCHIVE_BYTES
+        return max(1024 * 1024, min(configured, DEFAULT_MAX_ARCHIVE_BYTES))
+
+    def admin_required(view: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(view)
+        def wrapped(*args: Any, **kwargs: Any) -> Any:
+            if not session.get("admin_logged_in"):
+                if request.path.startswith("/api/"):
+                    return jsonify({"ok": False, "error": "Session administrateur expirée."}), 401
+                return redirect(url_for("admin_login", next=request.full_path.rstrip("?")))
+            return view(*args, **kwargs)
+
+        return wrapped
+
+    def admin_write_required(view: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(view)
+        def wrapped(*args: Any, **kwargs: Any) -> Any:
+            if session.get("admin_role") == "viewer":
+                abort(403)
+            return view(*args, **kwargs)
+
+        return wrapped
+
+    def learner_session(token: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        data = load_data()
+        session_obj, trainee = find_session_and_trainee_by_token(data, token)
+        if not session_obj or not trainee:
+            abort(404)
+        if not public_is_authed(token):
+            abort(401)
+        if not is_aps_elearning_session(session_obj):
+            abort(403)
+        if not session.get("admin_logged_in"):
+            start_date = session_start_date(session_obj)
+            if start_date is None:
+                abort(403)
+            if dt.date.today() < start_date:
+                abort(403)
+        try:
+            session_obj = effective_learner_session(session_obj, trainee)
+            if allows_free_module_navigation(session_obj):
+                session_obj = resolve_vtc_105_session(session_obj, trainee, root() / 'tracking.sqlite3')
+        except CourseImportError as exc:
+            abort(403, str(exc))
+        return session_obj, trainee
+
+    def learner_context(token: str, course_id: str) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+        session_obj, trainee = learner_session(token)
+        modules = assigned_modules(session_obj)
+        module = next((item for item in modules if item.get("course_id") == course_id), None)
+        if module is None:
+            abort(403)
+        previous_modules = [] if allows_free_module_navigation(session_obj) else modules[:modules.index(module)]
+        if previous_modules:
+            rows = store().learner_progress(str(session_obj["id"]), str(trainee.get("id") or trainee.get("trainee_id")))
+            progress_by_key = {(item["course_id"], item["course_version"]): item for item in rows}
+            for previous in previous_modules:
+                try:
+                    prerequisite = project_course(catalog().load_course(previous["course_id"], previous.get("course_version") or None), previous)
+                except CourseImportError:
+                    abort(403, "Un module précédent est indisponible. Contactez l’équipe pédagogique.")
+                progress = project_progress(progress_by_key.get((prerequisite["id"], prerequisite["version"]), {}), prerequisite)
+                if not progress["module_complete"]:
+                    abort(403, f"Terminez d’abord le module « {prerequisite['title']} » et sa durée obligatoire.")
+        try:
+            course = project_course(catalog().load_course(course_id, module.get("course_version") or None), module)
+        except CourseImportError:
+            abort(404)
+        return session_obj, trainee, course
+
+    def course_for_access(access: Mapping[str, Any]) -> Dict[str, Any]:
+        if access.get('course_id') == FINAL_COURSE_ID:
+            if access.get('exam_id') != 'final':
+                abort(403)
+            # Recheck learner entitlement, full-module completion and edition.
+            # The final is never an assignable course or a shortcut to lessons.
+            session_obj, trainee, _exam, _back_url, course = exam_for_learner(
+                str(access.get('public_token') or ''), 'final')
+            if (str(session_obj.get('id')) != str(access.get('session_id'))
+                    or str(trainee.get('id') or trainee.get('trainee_id')) != str(access.get('trainee_id'))
+                    or course['version'] != access.get('course_version')):
+                abort(403)
+            if access.get('path_revision') != path_revision(session_obj):
+                abort(409, 'Le parcours a été modifié. Rechargez la page.')
+            return course
+        cache_key = (str(root()), *(str(access.get(field) or "") for field in (
+            "session_id", "trainee_id", "course_id", "course_version", "path_revision", "nonce", "issued_at",
+        )), bool(session.get("admin_logged_in")))
+        with access_checks_lock:
+            recently_checked = time.monotonic() - access_checks.get(cache_key, float("-inf")) < 60
+        if request.endpoint == "native_elearning.tracking_heartbeat" and recently_checked and access.get("section_ids") and not str(access.get("public_token", "")).startswith("el_"):
+            try:
+                return project_course(catalog().load_course(str(access["course_id"]), str(access["course_version"])),
+                                      {"section_ids": access["section_ids"], "title": access.get("module_title"),
+                                       "required_minutes": access.get("required_minutes", 0)})
+            except CourseImportError:
+                abort(404)
+        session_obj, trainee, course = learner_context(str(access.get("public_token") or ""), str(access.get("course_id") or ""))
+        if (str(session_obj.get("id")) != str(access.get("session_id"))
+                or str(trainee.get("id") or trainee.get("trainee_id")) != str(access.get("trainee_id"))
+                or course["version"] != access.get("course_version")):
+            abort(403)
+        if access.get("path_revision") and access["path_revision"] != path_revision(session_obj):
+            abort(409, "Le parcours a été modifié. Rechargez la page.")
+        with access_checks_lock:
+            access_checks[cache_key] = time.monotonic()
+            access_checks.move_to_end(cache_key)
+            while len(access_checks) > 512:
+                access_checks.popitem(last=False)
+        return course
+
+    def current_progress(access: Mapping[str, Any], course: Mapping[str, Any]) -> Dict[str, Any]:
+        raw = store().get_progress(access, activity_order=course.get("activity_order") or [],
+                                   scored_activity_ids=_scored_activity_ids(course),
+                                   required_activity_ids=required_activity_order(course),
+                                   mastery_score=float(course.get("settings", {}).get("mastery_score", 80)),
+                                   required_seconds=int(course.get("required_minutes") or 0) * 60,
+                                   video_requirements=course_videos(course))
+        return project_progress(raw, course)
+
+    def load_path(session_obj: Mapping[str, Any], cache: Optional[Dict[Any, Any]] = None) -> List[Dict[str, Any]]:
+        cache = cache if cache is not None else {}
+        modules = []
+        for item in assigned_modules(session_obj):
+            key = (str(item.get("course_id") or ""), str(item.get("course_version") or ""))
+            try:
+                if key not in cache:
+                    cache[key] = catalog().load_course(key[0], key[1] or None)
+                source = cache[key]
+                course = project_course(source, item)
+                modules.append({"assignment": item, "course": course, "outline": course_outline(source), "error": ""})
+            except CourseImportError as exc:
+                modules.append({"assignment": item, "error": str(exc), "course": None, "outline": None})
+        return modules
+
+    def asset_url(asset_token: str, course_id: str, asset_name: str) -> str:
+        return url_for(
+            "native_elearning.course_asset",
+            course_id=course_id,
+            asset_name=asset_name,
+            access=asset_token,
+        )
+
+    def prepare_html(value: str, asset_token: str, course_id: str) -> Markup:
+        def replace(match: re.Match[str]) -> str:
+            attribute, name = match.groups()
+            safe_url = html.escape(asset_url(asset_token, course_id, name), quote=True)
+            return f'{attribute}="{safe_url}"'
+
+        # Imported HTML is sanitized when persisted and again here so a damaged
+        # or manually altered course.json can never bypass the boundary.
+        sanitized = sanitize_course_html(str(value or ""))
+        return Markup(_ASSET_ATTRIBUTE_RE.sub(replace, sanitized))  # noqa: S704
+
+    def prepare_block(block: Mapping[str, Any], asset_token: str, course_id: str) -> Dict[str, Any]:
+        public_block = {
+            "id": str(block.get("id") or ""),
+            "type": str(block.get("type") or "html"),
+            "html": prepare_html(str(block.get("html") or ""), asset_token, course_id),
+            "children": [
+                prepare_block(child, asset_token, course_id)
+                for child in (block.get("children") or [])
+                if isinstance(child, Mapping)
+            ],
+        }
+        video = block.get("video")
+        if isinstance(video, Mapping):
+            src = str(video.get("src") or "")
+            poster = str(video.get("poster") or "")
+            public_block["video"] = {
+                "src": asset_url(asset_token, course_id, src) if src else "",
+                "poster": asset_url(asset_token, course_id, poster) if poster else "",
+                "id": str(video.get("id") or block.get("id") or ""),
+                "title": str(video.get("title") or "Vidéo pédagogique"),
+                "required": bool(video.get("required")),
+                "duration_seconds": video.get("duration_seconds") or 0,
+                "captions": asset_url(asset_token, course_id, str(video['captions'])) if video.get('captions') else '',
+                "burned_captions": video.get("burned_captions") is True,
+                "course_only": bool(video.get("course_only")),
+                "chapters": [],
+                "default_playback_rate": video.get("default_playback_rate", 1),
+                "allowed_playback_rates": video.get("allowed_playback_rates", [1]),
+                "learning_pauses": video.get("learning_pauses", []),
+                "lesson_explainer": bool(video.get("lesson_explainer")),
+                "learning_purpose": str(video.get("learning_purpose") or ''),
+                "transcript": str(video.get("transcript") or '') if video.get("lesson_explainer") else '',
+                "presentation": video.get("presentation") if course_id in {f"academy-vtc-{letter}" for letter in "abcdefgh"} else None,
+            }
+            duration = video.get("duration_seconds")
+            chapters = video.get("chapters")
+            if isinstance(duration, (int, float)) and math.isfinite(duration) and isinstance(chapters, list):
+                for chapter in chapters[:100]:
+                    if not isinstance(chapter, Mapping):
+                        continue
+                    start = chapter.get("start_seconds")
+                    if isinstance(start, bool) or not isinstance(start, (int, float)) or not math.isfinite(start) or not 0 <= start < duration:
+                        continue
+                    public_block["video"]["chapters"].append({
+                        "title": str(chapter.get("title") or "Chapitre"),
+                        "start_seconds": start,
+                        "time_label": f"{int(start) // 60:02d}:{int(start) % 60:02d}",
+                    })
+        return public_block
+
+    def prepare_activity(
+        activity: Mapping[str, Any],
+        asset_token: str,
+        course_id: str,
+        *, production_revealed: bool = False,
+    ) -> Dict[str, Any]:
+        public: Dict[str, Any] = {
+            "id": str(activity.get("id") or ""),
+            "title": str(activity.get("title") or ""),
+            "type": str(activity.get("type") or "content"),
+            "question_type": str(activity.get("question_type") or ""),
+            "scored": bool(activity.get("scored")),
+            "optional": activity.get("optional") is True,
+            "planned_minutes": int(activity.get("planned_minutes") or 0),
+            "prompt": str(activity.get("prompt") or ""),
+            "workbook": dict(activity.get("workbook") or {}),
+        }
+        if activity.get('practice'):
+            public['practice'] = public_practice(activity['practice'])
+        if activity.get('production'):
+            def prepare_production_media(value):
+                if isinstance(value, dict):
+                    return {key: prepare_production_media(child) for key, child in value.items()}
+                if isinstance(value, list):
+                    return [prepare_production_media(child) for child in value]
+                if isinstance(value, str) and value.startswith('media/aps62/'):
+                    return asset_url(asset_token, course_id, value)
+                return value
+            production_serializer = public_vtc_production if activity.get('vtc', {}).get('kind') == 'production' else public_production
+            public['production'] = prepare_production_media(production_serializer(
+                activity['production'], reveal=production_revealed))
+        if isinstance(activity.get('easy_glossary'), list):
+            public['easy_glossary'] = [
+                {'term': str(entry.get('term') or ''), 'definition': str(entry.get('definition') or '')}
+                for entry in activity['easy_glossary'] if isinstance(entry, Mapping)
+            ]
+        if isinstance(activity.get('vtc'), Mapping):
+            def prepare_vtc(value):
+                if isinstance(value, dict): return {k: prepare_vtc(v) for k,v in value.items()}
+                if isinstance(value, list): return [prepare_vtc(v) for v in value]
+                if isinstance(value, str) and value.startswith('media/vtc/'):
+                    return asset_url(asset_token, course_id, value)
+                return value
+            public['vtc'] = prepare_vtc(activity['vtc'])
+            if public.get('practice', {}).get('mode') == 'journey':
+                public['practice'] = prepare_vtc(public['practice'])
+        if isinstance(activity.get('a3p'), Mapping):
+            # Authored structured text; Jinja autoescaping remains enabled.
+            public['a3p'] = dict(activity['a3p'])
+        if isinstance(activity.get('macaps'), Mapping):
+            # The authored payload contains lesson text only. Answer groups and
+            # rationales remain server-side until the learner submits a choice.
+            allowed = {'kind', 'ref', 'module', 'title', 'objective', 'mode', 'source_urls',
+                       'sections', 'table', 'flow', 'takeaways', 'example', 'situation', 'question_count', 'questions',
+                       'objective_id', 'pedagogical_scope', 'is_objective_assessment'}
+            public['macaps'] = {key: value for key, value in activity['macaps'].items() if key in allowed}
+        if isinstance(activity.get('academy'), Mapping):
+            # Structured content stays autoescaped by Jinja. Only declared media
+            # paths are converted to the usual signed, session-bound asset URLs.
+            def prepare_academy(value):
+                if isinstance(value, dict):
+                    return {k: prepare_academy(v) for k, v in value.items()}
+                if isinstance(value, list):
+                    return [prepare_academy(v) for v in value]
+                if isinstance(value, str) and value.startswith('media/aps62/'):
+                    return asset_url(asset_token, course_id, value)
+                return value
+            public['academy'] = prepare_academy(dict(activity['academy']))
+        if public["type"] == "content":
+            public["blocks"] = [
+                prepare_block(block, asset_token, course_id)
+                for block in (activity.get("blocks") or [])
+                if isinstance(block, Mapping)
+            ]
+            return public
+
+        question_type = public["question_type"]
+        if question_type in {"single_choice", "multiple_choice", "statement"}:
+            public["options"] = [
+                {"id": str(option.get("id") or ""), "text": str(option.get("text") or "")}
+                for option in (activity.get("options") or [])
+                if isinstance(option, Mapping)
+            ]
+        elif question_type == "matching":
+            pairs = [pair for pair in activity.get("pairs") or [] if isinstance(pair, Mapping)]
+            public["matching_lefts"] = [str(pair.get("left") or "") for pair in pairs]
+            choices = [
+                {"id": str(pair.get("id") or ""), "text": str(pair.get("right") or "")}
+                for pair in pairs
+            ]
+            secrets.SystemRandom().shuffle(choices)
+            public["matching_choices"] = choices
+        elif question_type == "fill_blank":
+            public["prompt_html"] = prepare_html(
+                str(activity.get("prompt_html") or ""), asset_token, course_id
+            )
+        return public
+
+    def navigation_for(
+        course: Mapping[str, Any],
+        progress: Mapping[str, Any],
+        *,
+        token: str,
+        current_activity_id: str,
+        preview: bool = False,
+    ) -> List[Dict[str, Any]]:
+        completed = set(progress.get("completed_activity_ids") or [])
+        order = [str(value) for value in course.get("activity_order") or []]
+        first_incomplete = _next_incomplete(required_activity_order(course), list(completed))
+        first_incomplete_index = order.index(first_incomplete) if first_incomplete in order else len(order)
+        force_navigation = not preview and bool(course.get("settings", {}).get("force_navigation"))
+        result: List[Dict[str, Any]] = []
+        sequence = 0
+        for section in course.get("sections") or []:
+            if not isinstance(section, Mapping):
+                continue
+            items: List[Dict[str, Any]] = []
+            for activity in section.get("activities") or []:
+                if not isinstance(activity, Mapping):
+                    continue
+                activity_id = str(activity.get("id") or "")
+                locked = force_navigation and sequence > first_incomplete_index and activity_id not in completed
+                locked = locked or (not preview and bool(video_blocker(course, progress, activity_id)))
+                items.append(
+                    {
+                        "id": activity_id,
+                        "title": str(activity.get("title") or ""),
+                        "completed": activity_id in completed,
+                        "optional": activity.get("optional") is True,
+                        "current": activity_id == current_activity_id,
+                        "has_video": bool(activity_videos(activity)),
+                        "has_lesson_video": any((b.get('video') or {}).get('lesson_explainer')
+                                                for b in activity.get('blocks', []) if isinstance(b, dict)),
+                        "locked": locked,
+                        "url": url_for(
+                            "native_elearning.admin_preview",
+                            course_id=course.get("id"),
+                            version=course.get("version"),
+                            activity=activity_id,
+                        ) if preview else url_for(
+                            "native_elearning.course_player",
+                            token=token,
+                            course_id=course.get("id"),
+                            activity=activity_id,
+                        ),
+                    }
+                )
+                sequence += 1
+            result.append({"title": str(section.get("title") or ""), "activities": items})
+        return result
+
+    def _is_aps_training(session_obj: Mapping[str, Any]) -> bool:
+        return mac_aps.is_training(session_obj) or str(session_obj.get("training_type") or "").strip().upper().startswith("APS") or any(label in str(session_obj.get("training_type") or "").upper() for label in ("VTC", "A3P"))
+
+    def _training_label(session_obj):
+        ids = [item.get('course_id', '') for item in assigned_modules(session_obj)]
+        if mac_aps.is_training(session_obj) or (ids and all(cid in mac_aps.bundled_course_ids() for cid in ids)):
+            return 'MAC APS'
+        value = str(session_obj.get('training_type') or '').upper()
+        return 'A3P' if 'A3P' in value else 'VTC' if 'VTC' in value else 'APS'
+
+    def _admin_upload_nonce() -> str:
+        nonce = str(session.get("native_elearning_admin_upload_nonce") or "")
+        if not nonce:
+            nonce = secrets.token_urlsafe(24)
+            session["native_elearning_admin_upload_nonce"] = nonce
+        return nonce
+
+    def _upload_paths(upload_id: str) -> Tuple[Path, Path]:
+        if not _UPLOAD_ID_RE.fullmatch(str(upload_id or "")):
+            abort(404)
+        imports_root = root() / "imports"
+        imports_root.mkdir(parents=True, exist_ok=True)
+        return imports_root / f"{upload_id}.part", imports_root / f"{upload_id}.json"
+
+    def _write_upload_metadata(path: Path, metadata: Mapping[str, Any]) -> None:
+        fd, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as target:
+                json.dump(dict(metadata), target, ensure_ascii=False, separators=(",", ":"))
+                target.flush()
+                os.fsync(target.fileno())
+            os.replace(temporary_name, path)
+        except Exception:
+            try:
+                os.unlink(temporary_name)
+            except OSError:
+                pass
+            raise
+
+    def _read_upload_metadata(upload_id: str) -> Tuple[Path, Path, Dict[str, Any]]:
+        part_path, metadata_path = _upload_paths(upload_id)
+        try:
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            abort(404)
+        if not isinstance(metadata, dict):
+            abort(404)
+        expected_nonce = str(metadata.get("owner_nonce") or "")
+        if not expected_nonce or not hmac.compare_digest(expected_nonce, _admin_upload_nonce()):
+            abort(403)
+        if int(metadata.get("expires_at") or 0) < int(time.time()):
+            for path in (part_path, metadata_path):
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
+            abort(410, "Import expiré. Recommencez l’envoi.")
+        return part_path, metadata_path, metadata
+
+    def _cleanup_expired_uploads() -> None:
+        imports_root = root() / "imports"
+        if not imports_root.is_dir():
+            return
+        now = int(time.time())
+        for metadata_path in imports_root.glob("*.json"):
+            try:
+                metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+                expired = int(metadata.get("expires_at") or 0) < now
+            except (OSError, json.JSONDecodeError, TypeError, ValueError):
+                expired = True
+            if expired:
+                part_path = metadata_path.with_suffix(".part")
+                for path in (part_path, metadata_path):
+                    try:
+                        path.unlink()
+                    except OSError:
+                        pass
+        for part_path in imports_root.glob("*.part"):
+            if part_path.with_suffix(".json").exists():
+                continue
+            try:
+                is_stale = time.time() - part_path.stat().st_mtime > UPLOAD_TTL_SECONDS
+            except OSError:
+                continue
+            if is_stale:
+                try:
+                    part_path.unlink()
+                except OSError:
+                    pass
+
+    @blueprint.get("/admin/elearning/mac-aps", endpoint="admin_macaps_catalog")
+    @blueprint.get("/admin/elearning/a3p", endpoint="admin_a3p_catalog")
+    @blueprint.get("/admin/elearning/vtc", endpoint="admin_vtc_catalog")
+    @blueprint.get("/admin/elearning")
+    @admin_required
+    def admin_catalog() -> Any:
+        _cleanup_expired_uploads()
+        data = load_data()
+        aps_sessions_by_id: Dict[str, Dict[str, Any]] = {}
+        for session_obj in data.get("sessions", []) or []:
+            if not isinstance(session_obj, dict) or not _is_aps_training(session_obj):
+                continue
+            session_id = str(session_obj.get("id") or "").strip()
+            if session_id:
+                aps_sessions_by_id.setdefault(session_id, session_obj)
+        aps_sessions = list(aps_sessions_by_id.values())
+        courses = catalog().list_courses()
+        cache = {(course["id"], course["version"]): course for course in courses}
+        path_summaries = {}
+        for session_obj in aps_sessions:
+            modules = load_path(session_obj, cache)
+            path_summaries[session_obj["id"]] = {
+                "modules": len(modules),
+                "sections": sum(item["course"]["counts"]["sections"] for item in modules if item["course"]),
+                "activities": sum(item["course"]["counts"]["activities"] for item in modules if item["course"]),
+                "unavailable": any(item["error"] for item in modules),
+            }
+        return render_template(
+            "admin_native_elearning.html",
+            courses=courses,
+            aps_sessions=aps_sessions,
+            path_summaries=path_summaries,
+            upload_limit_mb=max_archive_bytes() // (1024 * 1024),
+            upload_limit_bytes=max_archive_bytes(),
+            upload_chunk_mb=UPLOAD_CHUNK_BYTES // (1024 * 1024),
+            csrf_token=_csrf_token(),
+            academy_manifest=curriculum_manifest(),
+            selected_curriculum="macaps" if request.path.endswith("/mac-aps") else "a3p" if request.path.endswith("/a3p") else "vtc" if request.path.endswith("/vtc") else "aps",
+            macaps_manifest=mac_aps.curriculum_manifest(),
+            macaps_complements=mac_aps.complement_manifest(),
+            macaps_objectives=mac_aps.legal_objectives(),
+            a3p_manifest=a3p.curriculum_manifest(),
+            vtc_manifest=vtc.curriculum_manifest(),
+            vtc_courses=[c for c in courses if c.get("source",{}).get("type")=="academy-vtc"],
+            academy_courses=[c for c in courses if c.get('source', {}).get('type') == 'academy-aps62'],
+            imported_courses=[c for c in courses if c.get('source', {}).get('type') not in {'academy-aps62','academy-vtc','academy-a3p','academy-macaps'}],
+        )
+
+    def preview_course(course_id: str) -> Dict[str, Any]:
+        try:
+            return catalog().load_course(course_id, request.args.get("version") or None)
+        except CourseImportError:
+            abort(404)
+
+    def exam_for_learner(token, exam_id):
+        course = None
+        if re.fullmatch(r'module-(0[1-9]|1[0-5])', exam_id):
+            session_obj, trainee, course = learner_context(token, 'academy-aps62-' + exam_id[-2:])
+            if course.get('mock_exam_id') != exam_id:
+                abort(404, 'Cet examen n’appartient pas à la version affectée.')
+            exam = load_exam(exam_id, course['version'])
+            back_url = url_for('native_elearning.course_player', token=token, course_id=course['id'])
+        elif re.fullmatch(r'a3p-module-0[2-9]', exam_id):
+            session_obj, trainee, course = learner_context(token, 'academy-a3p-' + exam_id[-2:])
+            if course.get('mock_exam_id') != exam_id: abort(404)
+            exam = load_exam(exam_id, course['version'])
+            back_url = url_for('native_elearning.course_player', token=token, course_id=course['id'])
+        elif re.fullmatch(r'macaps-module-0[1-5]', exam_id):
+            session_obj, trainee, course = learner_context(token, 'academy-macaps-' + exam_id[-2:])
+            if course.get('mock_exam_id') != exam_id:
+                abort(404)
+            exam = load_exam(exam_id, course['version'])
+            back_url = url_for('native_elearning.course_player', token=token, course_id=course['id'])
+        elif re.fullmatch(r'vtc-[a-h]', exam_id):
+            session_obj, trainee, course = learner_context(token, 'academy-' + exam_id)
+            if course.get('mock_exam_id') != exam_id: abort(404)
+            exam = load_exam(exam_id, course['version'])
+            back_url = url_for('native_elearning.course_player', token=token, course_id=course['id'])
+        elif exam_id in {'final','vtc-final','a3p-final','macaps-final'}:
+            session_obj, trainee = learner_session(token)
+            modules = load_path(session_obj)
+            is_vtc = exam_id == 'vtc-final'
+            if exam_id == 'macaps-final':
+                mac_versions = {m['course']['version'] for m in modules if m['course']
+                    and m['course']['id'] in mac_aps.curriculum_ids(mac_aps.LEGACY_VERSION)}
+                if len(mac_versions) != 1 or next(iter(mac_versions)) not in mac_aps.SUPPORTED_VERSIONS:
+                    abort(403, 'Les modules du MAC APS doivent appartenir à la même édition.')
+                final_manifest = mac_aps.curriculum_manifest(next(iter(mac_versions)))
+            else:
+                final_manifest = a3p.curriculum_manifest() if exam_id == 'a3p-final' else vtc.curriculum_manifest() if is_vtc else curriculum_manifest()
+            expected = {m['id'] for m in final_manifest['modules']}
+            academy = [m for m in modules if m['course'] and m['course']['id'] in expected]
+            if {m['course']['id'] for m in academy} != expected:
+                abort(403, ('Le quiz final nécessite l’affectation de tous les modules du parcours ' if is_vtc else 'L’examen final nécessite l’affectation de tous les modules du parcours ') + ('MAC APS.' if exam_id == 'macaps-final' else 'A3P.' if exam_id == 'a3p-final' else 'VTC.' if is_vtc else 'APS.'))
+            versions = {m['course']['version'] for m in academy}
+            if len(versions) != 1:
+                abort(403, 'Les modules de ce quiz doivent appartenir à la même édition.' if is_vtc else 'Les modules de cet examen doivent appartenir à la même édition.')
+            rows = store().learner_progress(str(session_obj['id']), str(trainee.get('id') or trainee.get('trainee_id')))
+            by_key = {(r['course_id'],r['course_version']): r for r in rows}
+            for m in academy:
+                c = m['course']
+                # A selection of only part of a module does not unlock the final.
+                full = catalog().load_course(c['id'],c['version'])
+                if c.get('training_label') == 'A3P':
+                    full = project_course(full, {'required_minutes': full['required_minutes']})
+                if set(c['activity_order']) != set(full['activity_order']) or not project_progress(by_key.get((c['id'],c['version']),{}),c)['module_complete']:
+                    abort(403, 'Terminez tous les modules complets et leurs durées obligatoires pour ouvrir ' + ('le quiz final.' if is_vtc else 'l’examen final.'))
+            exam = load_exam(exam_id, versions.pop())
+            back_url = url_for('native_elearning.learner_path', token=token)
+        else:
+            abort(404)
+        if not exam:
+            abort(404)
+        if exam_id == 'final':
+            course = tracking_course(exam['version'])
+        return session_obj, trainee, exam, back_url, course
+
+    def exam_page(exam, back_url, submit_url, history=None, preview=False, course=None, tracking_config=None):
+        module_context = None
+        if course and module_exam_activity_id(course):
+            module_context = {'title': course['title'], 'required_minutes': course.get('required_minutes', 0),
+                              'study_plan': course.get('study_plan')}
+        return render_template('native_elearning_exam.html', exam=public_exam(exam),
+            back_url=back_url, history=history or [], preview_mode=preview,
+            module_context=module_context, final_time_context=exam['id'] == 'final', tracking_config=tracking_config,
+            exam_config={'exam':public_exam(exam), 'submitUrl':submit_url,
+                         'moduleUrl': back_url if module_context else '',
+                         'csrfToken':_csrf_token(), 'attemptId':secrets.token_hex(16), 'preview':preview})
+
+    def mark_exam(exam):
+        _require_csrf()
+        if request.content_length and request.content_length > 128_000:
+            abort(413)
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or payload.get('version') != exam['version']:
+            abort(409, 'La version de cet examen a changé. Rechargez la page.')
+        return payload, grade_exam(exam,payload.get('answers'))
+
+    def exam_correction_links(result, exam, token=None):
+        questions = {q['id']: q for q in exam['questions']}
+        for correction in result['corrections']:
+            links = []
+            for ref in questions.get(correction['id'], {}).get('lesson_refs', []):
+                if exam['id'].startswith('macaps-') and re.fullmatch(r'macaps-0[1-5]-\d{2}', ref):
+                    cid = 'academy-macaps-' + ref.split('-')[1]
+                    activity = ref + '-cours'
+                elif exam['id'].startswith('a3p-') and re.fullmatch(r'0[2-9]\.\d{2}', ref):
+                    cid = 'academy-a3p-' + ref[:2]
+                    activity = 'a3p-' + ref.replace('.', '-') + '-cours'
+                    if exam['version'] == a3p.VERSION:
+                        related = next((row for row in a3p.current.programme() if row['ref'] == ref), None)
+                        if related:
+                            cid = 'academy-a3p-' + related['uv']
+                            activity = related['id'] + '-cours'
+                elif re.fullmatch(r'[A-H]\.\d{2}', ref):
+                    cid = 'academy-vtc-' + ref[0].lower()
+                    activity = 'vtc-' + ref.lower().replace('.', '-') + '-cours'
+                else:
+                    continue
+                complementary_a3p = exam['id'].startswith('a3p-') and exam['version'] == a3p.VERSION and not any(row['ref'] == ref for row in a3p.current.programme())
+                url = (url_for('native_elearning.a3p_resources' if complementary_a3p else 'native_elearning.course_player',token=token,course_id=cid,activity=activity)
+                       if token else url_for('native_elearning.admin_preview',course_id=cid,version=exam['version'],activity=activity))
+                links.append({'ref': ref, 'url': url})
+            correction['lesson_links'] = links
+        return result
+
+    @blueprint.get('/admin/elearning/exams/<exam_id>')
+    @admin_required
+    def admin_exam(exam_id):
+        exam = load_exam(exam_id, request.args.get('version') or (mac_aps.VERSION if exam_id.startswith('macaps-') else a3p.VERSION if exam_id.startswith('a3p-') else vtc.curriculum_manifest()['version'] if exam_id.startswith('vtc-') else curriculum_manifest()['version']))
+        if not exam:
+            abort(404)
+        course = catalog().load_course('academy-aps62-' + exam_id[-2:], exam['version']) if re.fullmatch(r'module-(0[1-9]|1[0-5])', exam_id) else None
+        back_url = (url_for('native_elearning.admin_preview', course_id=course['id'], version=course['version']) if course else
+            url_for('native_elearning.admin_macaps_catalog' if exam_id.startswith('macaps-') else 'native_elearning.admin_a3p_catalog' if exam_id.startswith('a3p-') else 'native_elearning.admin_vtc_catalog' if exam_id.startswith('vtc-') else 'native_elearning.admin_catalog'))
+        return exam_page(exam, back_url,
+            url_for('native_elearning.admin_exam_submit', exam_id=exam_id, version=exam['version']), preview=True, course=course)
+
+    @blueprint.post('/api/admin/elearning/exams/<exam_id>')
+    @admin_required
+    def admin_exam_submit(exam_id):
+        exam = load_exam(exam_id, request.args.get('version') or (mac_aps.VERSION if exam_id.startswith('macaps-') else a3p.VERSION if exam_id.startswith('a3p-') else vtc.curriculum_manifest()['version'] if exam_id.startswith('vtc-') else curriculum_manifest()['version']))
+        if not exam:
+            abort(404)
+        try:
+            _, result = mark_exam(exam)
+            return jsonify(ok=True, result=exam_correction_links(result, exam))
+        except ValueError as error:
+            return jsonify(ok=False, error=str(error)),400
+
+    @blueprint.get('/espace/<token>/elearning/exams/<exam_id>')
+    def learner_exam(token,exam_id):
+        if not public_is_authed(token):
+            return redirect(url_for('manuals_shop.elearning_access' if token.startswith('el_') else 'public_trainee_login',token=token))
+        session_obj, trainee, exam, back_url, course = exam_for_learner(token,exam_id)
+        history = ExamStore(root()/'tracking.sqlite3').history(session_obj['id'],trainee.get('id') or trainee.get('trainee_id'),exam)
+        tracking_config = None
+        if course and (module_exam_activity_id(course) or course['id'] == FINAL_COURSE_ID):
+            access = _course_access_payload(session_obj, trainee, course, public_token=token)
+            # A signed exam context can only track its own exam; it can
+            # neither complete lessons nor bypass their navigation/video gates.
+            access['exam_id'] = exam_id
+            rows = store().learner_progress(access['session_id'], access['trainee_id'])
+            raw = next((row for row in rows if (row['course_id'], row['course_version']) ==
+                        (course['id'], course['version'])), {})
+            progress = project_progress(raw, course)
+            tracking_config = {
+                'accessToken': _sign_access(access), 'csrfToken': _csrf_token(),
+                'activityId': FINAL_ACTIVITY_ID if course['id'] == FINAL_COURSE_ID else module_exam_activity_id(course),
+                'startUrl': url_for('native_elearning.tracking_start'),
+                'heartbeatUrl': url_for('native_elearning.tracking_heartbeat'),
+                'finishUrl': url_for('native_elearning.tracking_finish'),
+                'heartbeatSeconds': CLIENT_HEARTBEAT_SECONDS,
+                'idleSeconds': int(idle_timeout_seconds(course['id'])),
+                'continueWhenHidden': course['id'] in APS_TRACKED_COURSES,
+                'initialActiveSeconds': progress['active_seconds'],
+                'initialRemainingSeconds': progress['remaining_seconds'],
+                'initialModuleComplete': progress['module_complete'],
+            }
+        return exam_page(exam, back_url, url_for('native_elearning.learner_exam_submit',token=token,exam_id=exam_id),
+                         history, course=course, tracking_config=tracking_config)
+
+    @blueprint.post('/api/espace/<token>/elearning/exams/<exam_id>')
+    def learner_exam_submit(token,exam_id):
+        _require_csrf()
+        session_obj, trainee, exam, _, _course = exam_for_learner(token,exam_id)
+        try:
+            payload,result = mark_exam(exam)
+            result = ExamStore(root()/'tracking.sqlite3').save(session_obj['id'],trainee.get('id') or trainee.get('trainee_id'),exam,payload.get('attempt_id'),result)
+            return jsonify(ok=True,result=exam_correction_links(result, exam, token))
+        except ValueError as error:
+            return jsonify(ok=False,error=str(error)),400
+
+    @blueprint.get("/admin/elearning/courses/<course_id>/preview")
+    @admin_required
+    def admin_preview(course_id: str) -> Any:
+        # Preview never creates a learner context or opens the tracking store.
+        course = preview_course(course_id)
+        order = [str(value) for value in course.get("activity_order") or []]
+        if not order:
+            abort(404, "Ce module ne contient aucune activité.")
+        requested_id = str(request.args.get("activity") or order[0])
+        replacement = course.get('retired_activity_redirects', {}).get(requested_id)
+        if replacement:
+            return redirect(url_for('native_elearning.admin_preview', course_id=course_id,
+                                    version=course['version'], activity=replacement,
+                                    _anchor='exemple-' + requested_id))
+        if requested_id not in order:
+            abort(404, "Activité introuvable.")
+        index = order.index(requested_id)
+        section, raw_activity = next(
+            (section, activity) for section, activity in _activity_pairs(course)
+            if str(activity.get("id")) == requested_id
+        )
+        nonce = str(session.get("native_elearning_nonce") or "")
+        if not nonce:
+            nonce = secrets.token_urlsafe(24)
+            session["native_elearning_nonce"] = nonce
+        asset_token = _sign_access({
+            "kind": "course_asset", "admin_preview": True,
+            "course_id": course_id, "course_version": course["version"],
+            "nonce": nonce, "expires_at": int(time.time()) + ACCESS_TOKEN_TTL_SECONDS,
+        })
+
+        def activity_url(activity_id: str) -> str:
+            return url_for("native_elearning.admin_preview", course_id=course_id,
+                           version=course["version"], activity=activity_id)
+
+        next_required = next((activity_id for activity_id in order[index + 1:]
+                              if activity_id in required_activity_order(course)), "")
+        return render_template(
+            "native_elearning_player.html", preview_mode=True,
+            course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course),
+                    "version": course["version"], "counts": course["counts"], "training_label": course.get("training_label","APS"),
+                    'aps_depth_revision': course.get('aps_depth_revision'), 'aps_reading_revision': course.get('aps_reading_revision'), 'study_plan': course.get('study_plan')},
+            activity=prepare_activity(select_vtc_activity(course, raw_activity, {}), asset_token, course_id),
+            training_url=url_for('native_elearning.training_admin_catalog', course_id=course_id, version=course['version']) if course_id.startswith('academy-vtc-') else '',
+            introduction=[prepare_block(block, asset_token, course_id)
+                          for block in course.get("introduction") or []
+                          if isinstance(block, Mapping)] if index == 0 else [],
+            section_title=str(section.get("title") or ""),
+            progress=project_progress({}, course), activity_completed=False,
+            navigation=navigation_for(course, {}, token="", current_activity_id=requested_id, preview=True),
+            activity_position=index + 1, activity_count=len(order),
+            previous_url=activity_url(order[index - 1]) if index else "",
+            next_url=activity_url(order[index + 1]) if index + 1 < len(order) else "",
+            optional_skip_url=activity_url(next_required) if next_required else "",
+            portal_url=url_for("native_elearning.admin_macaps_catalog" if course.get("training_label") == "MAC APS" else "native_elearning.admin_a3p_catalog" if course.get("training_label") == "A3P" else "native_elearning.admin_vtc_catalog" if course.get("training_label") == "VTC" else "native_elearning.admin_catalog"),
+            preview_config={
+                "questionType": raw_activity.get("question_type") or "",
+                "csrfToken": _csrf_token(),
+                "answerUrl": url_for("native_elearning.admin_preview_answer", course_id=course_id,
+                                     activity_id=requested_id, version=course["version"]),
+            },
+            preview_can_answer=session.get("admin_role") != "viewer",
+            production_ai_config=production_ai_config(course, requested_id, preview=True) if raw_activity.get('production') and not is_vtc_production(course, raw_activity) else None,
+            exam_url=url_for('native_elearning.admin_exam',exam_id=course['mock_exam_id'],version=course['version']) if course.get('mock_exam_id') else '',
+        )
+
+    @blueprint.post("/api/admin/elearning/courses/<course_id>/preview/activities/<activity_id>/answer")
+    @admin_required
+    def admin_preview_answer(course_id: str, activity_id: str) -> Any:
+        _require_csrf()
+        course = preview_course(course_id)
+        activity = next((item for _, item in _activity_pairs(course) if item.get("id") == activity_id), None)
+        if activity and is_vtc_production(course, activity):
+            if session.get('admin_role') == 'viewer':
+                abort(403)
+            if request.content_length and request.content_length > 100_000:
+                abort(413)
+            payload = request.get_json(silent=True)
+            if not isinstance(payload, dict):
+                return jsonify(ok=False, error='Réponse invalide.'), 400
+            try:
+                answers = vtc_ai.normalize_answers(activity['production'], payload.get('production_answers'))
+                result = vtc_ai.grade_written_work(activity['production'], answers)
+            except ValueError as exc:
+                return jsonify(ok=False, error=str(exc)), 400
+            except vtc_ai.VtcAIError as exc:
+                return jsonify(ok=False, error=exc.message, code=exc.code), 503
+            response = jsonify(ok=True, feedback=result, preview=True, history=[])
+            response.headers['Cache-Control'] = 'private, no-store'
+            return response
+        if activity and activity.get('production'):
+            payload = request.get_json(silent=True) or {}
+            try:
+                normalize_production(activity['production'], payload.get('production_answers'))
+            except (ValueError, AttributeError) as exc:
+                return jsonify(ok=False, error=str(exc)), 400
+            response = jsonify(ok=True, feedback=production_feedback(activity['production']))
+            response.headers['Cache-Control'] = 'private, no-store'
+            return response
+        if activity and activity.get('practice'):
+            activity = select_vtc_activity(course, activity, {})
+            payload = request.get_json(silent=True)
+            try:
+                result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None, step=payload.get('practice_step') if isinstance(payload, dict) else None)
+            except ValueError as exc:
+                return jsonify({'ok': False, 'error': str(exc)}), 400
+            response = jsonify({'ok': True, **result})
+            response.headers['Cache-Control'] = 'private, no-store'
+            return response
+        if activity is None or not activity.get("scored"):
+            return jsonify({"ok": False, "error": "Question introuvable."}), 404
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or not isinstance(payload.get("answer"), dict):
+            return jsonify({"ok": False, "error": "Réponse invalide."}), 400
+        try:
+            correct, _answer = _evaluate_answer(activity, payload["answer"])
+        except TrackingError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        # Evaluate with the learner's grading rules, without storing anything.
+        result = {"ok": True, "correct": correct}
+        if activity.get('explanation'):
+            result['explanation'] = str(activity['explanation'])
+        return jsonify(result)
+
+    @blueprint.get("/admin/sessions/<session_id>/elearning")
+    @admin_required
+    def admin_path(session_id: str) -> Any:
+        session_obj = find_session(load_data(), session_id)
+        if not session_obj or not _is_aps_training(session_obj):
+            abort(404)
+        modules = load_path(session_obj)
+        outlines = {(course["id"], course["version"]): course_outline(course) for course in catalog().list_courses() if not course.get("preview_only")}
+        for item in modules:
+            if item["outline"]:
+                outline = item["outline"]
+                outlines[(outline["course_id"], outline["course_version"])] = outline
+        return render_template(
+            "admin_native_elearning_path.html", training_session=session_obj,
+            training_label="MAC APS" if request.args.get("curriculum") == "mac-aps" else _training_label(session_obj),
+            path_config={
+                "catalog": list(outlines.values()), "modules": assigned_modules(session_obj),
+                "revision": path_revision(session_obj), "csrfToken": _csrf_token(),
+                "saveUrl": url_for("native_elearning.admin_save_path", session_id=session_id),
+                "readOnly": session.get("admin_role") == "viewer",
+            },
+        )
+
+    @blueprint.post("/api/admin/sessions/<session_id>/elearning/path")
+    @admin_required
+    @admin_write_required
+    def admin_save_path(session_id: str) -> Any:
+        _require_csrf()
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({"ok": False, "error": "Parcours invalide."}), 400
+        data = load_data()
+        session_obj = find_session(data, session_id)
+        if not session_obj or not _is_aps_training(session_obj):
+            abort(404)
+        if payload.get("revision") != path_revision(session_obj):
+            return jsonify({"ok": False, "error": "Ce parcours a été modifié dans une autre fenêtre. Rechargez la page avant de l’enregistrer."}), 409
+        title = payload.get("title", "")
+        if not isinstance(title, str) or len(title) > 180:
+            return jsonify({"ok": False, "error": "Le titre du parcours est limité à 180 caractères."}), 400
+        try:
+            modules = validate_modules(payload.get("modules"), catalog())
+        except CourseImportError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        def persist_path(canonical: Dict[str, Any]) -> Dict[str, Any]:
+            target = find_session(canonical, session_id)
+            if not target or not _is_aps_training(target):
+                abort(404)
+            # Recheck under the application's canonical storage lock, not just
+            # against the earlier request snapshot. Only this session changes.
+            if payload.get("revision") != path_revision(target):
+                raise Conflict("Ce parcours a été modifié. Rechargez la page avant de l’enregistrer.")
+            target["aps_native_modules"] = modules
+            target["aps_native_path_title"] = title.strip()
+            if modules:
+                target["aps_native_course_id"] = modules[0]["course_id"]
+                target["aps_native_course_version"] = modules[0]["course_version"]
+            else:
+                target.pop("aps_native_course_id", None)
+                target.pop("aps_native_course_version", None)
+            return {"ok": True, "revision": path_revision(target), "modules": modules}
+
+        try:
+            result = mutate_data(persist_path)
+        except Conflict as exc:
+            return jsonify({"ok": False, "error": exc.description}), 409
+        with access_checks_lock:
+            access_checks.clear()
+        return jsonify(result)
+
+    @blueprint.post("/api/admin/elearning/imports")
+    @admin_required
+    @admin_write_required
+    def admin_create_chunked_import() -> Any:
+        _require_csrf()
+        payload = request.get_json(silent=True) or {}
+        if not isinstance(payload, Mapping):
+            return jsonify({"ok": False, "error": "Demande d’import invalide."}), 400
+        raw_filename = str(payload.get("filename") or "").replace("\x00", "").replace("\\", "/")
+        filename = Path(raw_filename).name
+        try:
+            expected_size = int(payload.get("size") or 0)
+        except (TypeError, ValueError):
+            expected_size = 0
+        if not filename.lower().endswith(".zip"):
+            return jsonify({"ok": False, "error": "Sélectionnez un fichier ZIP."}), 400
+        if expected_size <= 0 or expected_size > max_archive_bytes():
+            return jsonify({"ok": False, "error": "La taille du ZIP n’est pas autorisée."}), 400
+
+        upload_id = secrets.token_hex(16)
+        part_path, metadata_path = _upload_paths(upload_id)
+        try:
+            with part_path.open("xb"):
+                pass
+            _write_upload_metadata(
+                metadata_path,
+                {
+                    "upload_id": upload_id,
+                    "filename": filename[:255],
+                    "expected_size": expected_size,
+                    "owner_nonce": _admin_upload_nonce(),
+                    "created_at": int(time.time()),
+                    "expires_at": int(time.time()) + UPLOAD_TTL_SECONDS,
+                },
+            )
+        except OSError:
+            return jsonify({"ok": False, "error": "Impossible de préparer l’import."}), 500
+        return jsonify(
+            {
+                "ok": True,
+                "upload_id": upload_id,
+                "chunk_size": UPLOAD_CHUNK_BYTES,
+                "chunk_url": url_for("native_elearning.admin_upload_chunk", upload_id=upload_id),
+                "complete_url": url_for("native_elearning.admin_complete_chunked_import", upload_id=upload_id),
+            }
+        ), 201
+
+    @blueprint.post("/api/admin/elearning/imports/<upload_id>/chunks")
+    @admin_required
+    @admin_write_required
+    def admin_upload_chunk(upload_id: str) -> Any:
+        _require_csrf()
+        part_path, _metadata_path, metadata = _read_upload_metadata(upload_id)
+        try:
+            offset = int(request.headers.get("X-Upload-Offset") or -1)
+        except (TypeError, ValueError):
+            offset = -1
+        payload = request.stream.read(UPLOAD_CHUNK_BYTES + 1)
+        if offset < 0 or not payload or len(payload) > UPLOAD_CHUNK_BYTES:
+            return jsonify({"ok": False, "error": "Fragment d’import invalide."}), 400
+        expected_size = int(metadata.get("expected_size") or 0)
+
+        with part_path.open("r+b") as target:
+            if fcntl is not None:
+                fcntl.flock(target.fileno(), fcntl.LOCK_EX)
+            target.seek(0, os.SEEK_END)
+            received = target.tell()
+            if received != offset:
+                return jsonify(
+                    {"ok": False, "error": "Décalage d’import invalide.", "received": received}
+                ), 409
+            if received + len(payload) > expected_size:
+                return jsonify({"ok": False, "error": "Le ZIP dépasse la taille annoncée."}), 400
+            target.write(payload)
+            target.flush()
+            os.fsync(target.fileno())
+            received += len(payload)
+
+        return jsonify({"ok": True, "received": received, "total": expected_size})
+
+    @blueprint.post("/api/admin/elearning/imports/<upload_id>/complete")
+    @admin_required
+    @admin_write_required
+    def admin_complete_chunked_import(upload_id: str) -> Any:
+        _require_csrf()
+        part_path, metadata_path, metadata = _read_upload_metadata(upload_id)
+        expected_size = int(metadata.get("expected_size") or 0)
+        try:
+            received_size = part_path.stat().st_size
+        except OSError:
+            received_size = -1
+        if received_size != expected_size:
+            return jsonify(
+                {
+                    "ok": False,
+                    "error": "Le fichier n’est pas encore entièrement reçu.",
+                    "received": max(0, received_size),
+                    "total": expected_size,
+                }
+            ), 409
+        try:
+            imported = catalog().import_zip(part_path, archive_source=True)
+        except CourseImportError as exc:
+            return jsonify({"ok": False, "error": f"Import impossible : {exc}"}), 400
+        finally:
+            for path in (part_path, metadata_path):
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
+        return jsonify(
+            {
+                "ok": True,
+                "course": {
+                    "id": imported.get("id"),
+                    "version": imported.get("version"),
+                    "title": imported.get("title"),
+                    "counts": imported.get("counts", {}),
+                    "warnings": imported.get("import_warnings", []),
+                },
+            }
+        )
+
+    @blueprint.post("/admin/elearning/import")
+    @admin_required
+    @admin_write_required
+    def admin_import_course() -> Any:
+        _require_form_csrf()
+        uploaded = request.files.get("course_zip")
+        if uploaded is None or not str(uploaded.filename or "").lower().endswith(".zip"):
+            flash("Sélectionnez un export Easygenerator manuel au format ZIP.", "error")
+            return redirect(url_for("native_elearning.admin_catalog"))
+        max_bytes = max_archive_bytes()
+        imports_root = root() / "imports"
+        imports_root.mkdir(parents=True, exist_ok=True)
+        fd, temporary_name = tempfile.mkstemp(prefix="easygenerator-", suffix=".zip", dir=str(imports_root))
+        total = 0
+        try:
+            with os.fdopen(fd, "wb") as target:
+                while True:
+                    chunk = uploaded.stream.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    if total > max_bytes:
+                        raise CourseImportError("Le ZIP dépasse la taille maximale autorisée.")
+                    target.write(chunk)
+                target.flush()
+                os.fsync(target.fileno())
+            imported = catalog().import_zip(temporary_name, archive_source=True)
+        except CourseImportError as exc:
+            flash(f"Import impossible : {exc}", "error")
+        else:
+            counts = imported.get("counts", {})
+            flash(
+                f"Cours importé : {imported.get('title')} · {counts.get('sections', 0)} séquences · "
+                f"{counts.get('activities', 0)} activités.",
+                "success",
+            )
+        finally:
+            try:
+                os.unlink(temporary_name)
+            except OSError:
+                pass
+        return redirect(url_for("native_elearning.admin_catalog"))
+
+    @blueprint.post("/admin/sessions/<session_id>/elearning/assign")
+    @admin_required
+    @admin_write_required
+    def admin_assign_course(session_id: str) -> Any:
+        _require_form_csrf()
+        data = load_data()
+        session_obj = find_session(data, session_id)
+        if not session_obj or not _is_aps_training(session_obj):
+            abort(404)
+        if "aps_native_modules" in session_obj:
+            abort(409, "Utilisez le compositeur de parcours pour modifier cette session.")
+        course_id = str(request.form.get("course_id") or "").strip()
+        if not course_id:
+            session_obj.pop("aps_native_course_id", None)
+            session_obj.pop("aps_native_course_version", None)
+            flash("Cours natif retiré de la session.", "success")
+        else:
+            try:
+                course = catalog().load_course(course_id)
+            except CourseImportError:
+                abort(404)
+            if course.get("training_label") in {"A3P", "MAC APS"}:
+                abort(409, "Utilisez le composeur de parcours pour affecter les modules avec leurs durées pédagogiques.")
+            if course.get("preview_only"):
+                abort(409, "Cette édition est disponible uniquement en aperçu pédagogique.")
+            session_obj["aps_native_course_id"] = course["id"]
+            session_obj["aps_native_course_version"] = course["version"]
+            flash(f"Cours « {course.get('title')} » affecté à la session.", "success")
+        save_data(data)
+        return redirect(url_for("native_elearning.admin_catalog"))
+
+    def final_time_report():
+        # Authorize identities using the same tenant-scoped data as module reports.
+        data = load_data()
+        sessions = list(data.get('sessions') or [])
+        for order in data.get('manual_orders') or []:
+            if (isinstance(order, dict) and order.get('order_type') == 'elearning'
+                    and order.get('course_code') == 'aps' and order.get('id')):
+                sessions.append({'id': 'el-' + str(order['id']),
+                    'name': order.get('group_name') or order.get('reference') or 'Accès individuel APS',
+                    'training_type': 'APS', 'aps_native_modules': order.get('modules') or [],
+                    'trainees': order.get('learners') or []})
+        owners = {}
+        for session_obj in sessions:
+            if not isinstance(session_obj, dict):
+                continue
+            for trainee in session_trainees(session_obj):
+                owner = (str(session_obj.get('id') or ''), str(trainee.get('id') or trainee.get('trainee_id') or ''))
+                if all(owner):
+                    owners[owner] = (session_obj, trainee)
+        rows = []
+        tracker = store()
+        for recorded in tracker.live_progress(FINAL_COURSE_ID):
+            owner = (recorded['session_id'], recorded['trainee_id'])
+            if owner not in owners:
+                continue
+            session_obj, trainee = owners[owner]
+            try:
+                assignments = assigned_modules(effective_learner_session(session_obj, trainee))
+            except CourseImportError:
+                continue
+            final = final_time(assignments, [recorded])
+            if not final or final['version'] != recorded['course_version']:
+                continue
+            keys = {(item['course_id'], item.get('course_version')) for item in assignments}
+            module_seconds = sum(float(item.get('active_seconds') or 0)
+                for item in tracker.learner_progress(*owner)
+                if (item['course_id'], item['course_version']) in keys)
+            rows.append({'trainee_name': f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip() or owner[1],
+                'session_name': session_obj.get('name') or owner[0], 'version': final['version'],
+                'module_seconds': module_seconds, 'final_seconds': final['active_seconds'],
+                'total_seconds': module_seconds + final['active_seconds'],
+                'module_time_label': _format_seconds(module_seconds),
+                'final_time_label': _format_seconds(final['active_seconds']),
+                'total_time_label': _format_seconds(module_seconds + final['active_seconds']),
+                'live': recorded.get('live'), 'updated_at': recorded.get('updated_at') or ''})
+        return rows
+
+    @blueprint.get('/admin/elearning/exams/final/time')
+    @admin_required
+    def admin_final_time():
+        return render_template('admin_native_elearning_final_time.html', learners=final_time_report())
+
+    @blueprint.get('/admin/elearning/exams/final/time.csv')
+    @admin_required
+    def admin_final_time_export():
+        output = io.StringIO(newline='')
+        writer = csv.writer(output, delimiter=';')
+        writer.writerow(['Stagiaire', 'Session', 'Édition', 'Temps des modules', 'Examen final et corrigé',
+                         'Temps total du parcours', 'Modules (secondes)', 'Examen final (secondes)',
+                         'Total (secondes)', 'Dernière activité (UTC)'])
+        for row in final_time_report():
+            values = [row[key] for key in ('trainee_name', 'session_name', 'version', 'module_time_label',
+                'final_time_label', 'total_time_label', 'module_seconds', 'final_seconds', 'total_seconds', 'updated_at')]
+            writer.writerow(["'" + str(value) if str(value).lstrip().startswith(('=', '+', '-', '@')) else value for value in values])
+        return Response('\ufeff' + output.getvalue(), content_type='text/csv; charset=utf-8',
+            headers={'Content-Disposition': 'attachment; filename="suivi-examen-final-aps.csv"'})
+
+    def live_payload(course_id: str, *, include_work: bool = False, include_attempts: bool = False) -> Dict[str, Any]:
+        try:
+            course = catalog().load_course(course_id)
+        except CourseImportError:
+            abort(404)
+        rows = store().live_progress(course_id)
+        identities: Dict[Tuple[str, str], Dict[str, str]] = {}
+        session_paths: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        cma_by_owner = {}
+        data = load_data()
+        reporting_sessions = list(data.get("sessions", []) or [])
+        # Purchases use the same tracking store under virtual session IDs. Build
+        # their identities from the tenant-scoped administrative data as well.
+        for order in data.get("manual_orders", []) or []:
+            if not isinstance(order, dict) or order.get("order_type") != "elearning" or not order.get("id"):
+                continue
+            reporting_sessions.append({
+                "id": "el-" + str(order["id"]),
+                "name": order.get("group_name") or order.get("reference") or "Parcours " + str(order.get("course_code") or "").upper(),
+                "training_type": str(order.get("course_code") or "").upper(),
+                "aps_native_path_title": "Mon parcours " + str(order.get("course_code") or "").upper(),
+                "aps_native_modules": order.get("modules") or [],
+                "trainees": order.get("learners") or [],
+            })
+        for session_obj in reporting_sessions:
+            if not isinstance(session_obj, dict):
+                continue
+            assigned_here = any(item.get("course_id") == course_id for item in assigned_modules(session_obj))
+            for trainee in session_trainees(session_obj):
+                trainee_id = str(trainee.get("id") or trainee.get("trainee_id") or "")
+                if not session_obj.get("id") or not trainee_id:
+                    continue
+                if assigned_here:
+                    try:
+                        effective = effective_learner_session(session_obj, trainee)
+                        effective = read_transition_session(effective, trainee, root() / 'tracking.sqlite3')
+                        rows = current_progress_rows(effective, rows)
+                    except CourseImportError as exc:
+                        abort(409, str(exc))
+                    module = next(item for item in assigned_modules(effective) if item.get("course_id") == course_id)
+                    session_paths[(str(session_obj.get("id")), trainee_id)] = module
+                    if include_work and course_id.startswith('academy-vtc-'):
+                        owner = (str(session_obj.get('id')), trainee_id)
+                        cma_by_owner[owner] = learner_attempt_summaries(root() / 'tracking.sqlite3', *owner)
+                        if cma_by_owner[owner] and not any((r['session_id'], r['trainee_id']) == owner for r in rows):
+                            # A CMA-only learner is visible in the report without
+                            # inventing any course progress or tracking record.
+                            rows.append({'session_id': owner[0], 'trainee_id': owner[1],
+                                'course_id': course_id, 'course_version': module.get('course_version') or course['version'],
+                                'answers': {}, 'completed_activity_ids': [], 'video_progress': {},
+                                'active_seconds': 0, 'status': 'not_started', 'current_activity_id': '',
+                                'started_at': None, 'updated_at': None, 'completed_at': None,
+                                'live': False, 'last_seen_seconds_ago': None})
+                identities[(str(session_obj.get("id") or ""), trainee_id)] = {
+                    "trainee_name": f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
+                    "session_name": str(session_obj.get("name") or session_obj.get("id") or ""),
+                }
+        # SQLite is shared by all tenants. An unknown identity is not an
+        # anonymised row: it may contain another centre's answers and analyses.
+        # Authorise the pair before enriching or reading any detailed history.
+        rows = [row for row in rows if (str(row["session_id"]), str(row["trainee_id"])) in identities]
+        versions: Dict[str, Dict[str, Any]] = {str(course.get("version") or ""): course}
+        for row in rows:
+            row_version = str(row.get("course_version") or "")
+            if row_version not in versions:
+                try:
+                    versions[row_version] = catalog().load_course(course_id, row_version)
+                except CourseImportError:
+                    versions[row_version] = course
+            row_course = versions[row_version]
+            module = session_paths.get((row["session_id"], row["trainee_id"]))
+            row['assigned_current'] = bool(module and (not module.get('course_version') or module['course_version'] == row_version))
+            if module and (not module.get("course_version") or module["course_version"] == row_version):
+                try:
+                    row_course = project_course(row_course, module)
+                except CourseImportError:
+                    pass
+            row.update(project_progress(row, row_course))
+            activity_titles = {
+                str(activity.get("id")): str(activity.get("title") or "")
+                for _, activity in _activity_pairs(row_course)
+            }
+            if module_exam_activity_id(row_course):
+                activity_titles[module_exam_activity_id(row_course)] = 'Examen blanc du module · questions et corrigé'
+            row.update(identities.get((row["session_id"], row["trainee_id"]), {}))
+            row["trainee_name"] = row.get("trainee_name") or row["trainee_id"]
+            row["session_name"] = row.get("session_name") or row["session_id"]
+            row["activity_title"] = activity_titles.get(row.get("current_activity_id"), "")
+            row["progress_percent"] = round(row["progress_percent"], 1)
+            row["active_time_label"] = _format_seconds(row.get("active_seconds"))
+            row["required_time_label"] = _format_seconds(row["required_seconds"])
+            row["remaining_time_label"] = _format_seconds(row["remaining_seconds"])
+            if include_attempts:
+                row['assessment_attempts'] = describe_history(row_course, [attempt for attempt in
+                    store().assessment_history(row) if attempt['activity_id'] in row_course.get('activity_order', [])])
+            if include_work:
+                owner = (row['session_id'], row['trainee_id'])
+                row['cma_attempts'] = (cma_by_owner[owner] if owner in cma_by_owner else learner_attempt_summaries(root() / 'tracking.sqlite3', *owner)) if course_id.startswith('academy-vtc-') else []
+                row['written_work'] = [
+                    {'activity_id': item['id'], 'title': item.get('title', ''),
+                     'dossier': section.get('title', ''),
+                     'task': item.get('academy', {}).get('task', ''),
+                     'reflection': row['answers'][item['id']]['reflection'],
+                     'submitted_at': row['answers'][item['id']].get('submitted_at', '')}
+                    for section, item in _activity_pairs(row_course)
+                    if isinstance(row.get('answers', {}).get(item['id']), Mapping)
+                    and isinstance(row['answers'][item['id']].get('reflection'), str)
+                ]
+                for section, item in _activity_pairs(row_course):
+                    production = item.get('production')
+                    saved = row.get('answers', {}).get(item['id'], {})
+                    if not production or not isinstance(saved.get('production_answers'), dict):
+                        continue
+                    def format_production(values):
+                        return '\n\n'.join(field['label'] + '\n' + str(values.get(field['id'], ''))
+                                            for field in production['response_fields'])
+                    row['written_work'].append({
+                        'activity_id': item['id'], 'title': item.get('title', ''),
+                        'dossier': section.get('title', ''), 'task': production['brief'],
+                        'reflection': format_production(saved['production_answers']),
+                        'first_reflection': format_production(saved['production_first_answers']) if saved.get('production_first_answers') else '',
+                        'draft': bool(saved.get('production_draft')), 'production': True,
+                        'self_review': [{'label': criterion['label'], 'needs_help': saved.get('production_self_review', {}).get(criterion['id']) == 'needs_help'}
+                                       for criterion in production['rubric'] if saved.get('production_self_review', {}).get(criterion['id']) in ('checked', 'needs_help')],
+                        'submitted_at': saved.get('submitted_at', saved.get('production_first_submitted_at', '')),
+                        'ai': read_analyses(root() / 'production_ai.sqlite3', row, item['id']) if not is_vtc_production(row_course, item) else {},
+                        'ai_feedback': saved.get('production_ai_feedback'),
+                        'ai_attempt_id': saved.get('production_ai_attempt'),
+                        'ai_history': VtcWrittenWork(store()).history(row, item['id']) if is_vtc_production(row_course, item) else [],
+                    })
+            row.pop("answers", None)
+        return {
+            "ok": True,
+            "course": {"id": course["id"], "version": course["version"], "title": course["title"]},
+            "summary": {"learners": len(rows), "live": sum(1 for row in rows if row.get("live"))},
+            "learners": rows,
+            "server_time": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
+        }
+
+    @blueprint.get("/admin/elearning/courses/<course_id>/live")
+    @admin_required
+    def admin_live(course_id: str) -> Any:
+        payload = live_payload(course_id)
+        return render_template(
+            "admin_native_elearning_live.html",
+            initial=payload,
+            live_url=url_for("native_elearning.admin_live_api", course_id=course_id),
+        )
+
+    def aps_workload_report():
+        reports = []
+        for module in curriculum_manifest()['modules']:
+            course = catalog().load_course(module['id'], module['version'])
+            # live_payload already scopes identities and assignments to the
+            # current centre. Never query shared learner rows in the template.
+            reports.append(summarize_aps_workload(course, live_payload(course['id'])['learners']))
+        return reports
+
+    @blueprint.get('/admin/elearning/calibrage')
+    @admin_required
+    def admin_aps_workload():
+        return render_template('admin_native_elearning_workload.html', reports=aps_workload_report())
+
+    @blueprint.get('/admin/elearning/calibrage/contenus')
+    @admin_required
+    def admin_content_audit():
+        from .content_audit import audit_catalog
+        return render_template('admin_native_elearning_content_audit.html', reports=audit_catalog())
+
+    @blueprint.get('/admin/elearning/calibrage.csv')
+    @admin_required
+    def admin_aps_workload_export():
+        output = io.StringIO(newline='')
+        writer = csv.writer(output, delimiter=';')
+        writer.writerow(['Module', 'Stagiaire', 'Session', 'Édition', 'Activités prévues (min)',
+            'Examen et correction prévus (min)', 'Total prévu (min)', 'Première fin des activités (secondes)',
+            'Temps cumulé du module (secondes)', 'Examen observé depuis la ventilation (secondes)',
+            'Temps historique non ventilé (secondes)', 'Interprétation'])
+        for report in aps_workload_report():
+            for learner in report['learners']:
+                row = [report['title'], learner['trainee_name'], learner['session_name'], learner['version'],
+                    report['plan']['activities_minutes'], report['plan']['exam_minutes'], report['plan']['total_minutes'],
+                    learner['first_seconds'] if learner['first_seconds'] is not None else '', learner['total_seconds'],
+                    learner['exam_seconds'], learner['unallocated_seconds'], learner['reason']]
+                writer.writerow(["'" + str(value) if str(value).lstrip().startswith(('=', '+', '-', '@')) else value for value in row])
+        return Response('\ufeff' + output.getvalue(), content_type='text/csv; charset=utf-8',
+            headers={'Content-Disposition': 'attachment; filename="calibrage-elearning-aps.csv"'})
+
+    @blueprint.get("/api/admin/elearning/courses/<course_id>/live")
+    @admin_required
+    def admin_live_api(course_id: str) -> Any:
+        return jsonify(live_payload(course_id))
+
+    @blueprint.get('/admin/elearning/courses/<course_id>/attempts')
+    @admin_required
+    def admin_course_attempts(course_id):
+        payload = live_payload(course_id, include_attempts=True)
+        return render_template('admin_native_elearning_attempts.html', initial=payload)
+
+    @blueprint.get('/admin/elearning/courses/<course_id>/attempts.csv')
+    @admin_required
+    def admin_course_attempts_export(course_id):
+        payload = live_payload(course_id, include_attempts=True)
+        output = io.StringIO(newline='')
+        writer = csv.writer(output, delimiter=';')
+        writer.writerow(['Stagiaire', 'Session', 'Version', 'Dossier', 'Question ou exercice',
+                         'Type', 'Essai', 'Réponse enregistrée', 'Résultat', 'Date UTC'])
+        def cell(value):
+            value = str(value if value is not None else '')
+            return "'"+value if value.lstrip().startswith(('=', '+', '-', '@')) or value.startswith(('\t', '\r', '\n')) else value
+        for row in payload['learners']:
+            for attempt in row.get('assessment_attempts', []):
+                writer.writerow([cell(value) for value in [row['trainee_name'], row['session_name'],
+                    row['course_version'], attempt['dossier'], attempt['title'], attempt['kind'],
+                    attempt['attempt_number'], attempt['answer_text'],
+                    'Réussi' if attempt['correct'] else 'À revoir', attempt['submitted_at']]])
+        response = Response('\ufeff'+output.getvalue(), content_type='text/csv; charset=utf-8')
+        response.headers['Content-Disposition'] = f'attachment; filename="essais-{course_id}.csv"'
+        return response
+
+    @blueprint.get('/admin/elearning/courses/<course_id>/work')
+    @admin_required
+    def admin_written_work(course_id: str) -> Any:
+        payload = live_payload(course_id, include_work=True)
+        return render_template('admin_native_elearning_work.html', initial=payload,
+                               csrf_token=_csrf_token(),
+                               is_vtc=course_id.startswith('academy-vtc-'),
+                               cma_count=sum(bool(row.get('cma_attempts')) for row in payload['learners']),
+                               work_count=sum(len(row['written_work']) for row in payload['learners']))
+
+    @blueprint.post('/api/admin/elearning/vtc/productions/<attempt_id>/review')
+    @admin_required
+    @admin_write_required
+    def vtc_production_review(attempt_id):
+        _require_csrf()
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or len(attempt_id) != 32:
+            return jsonify(ok=False, error='Demande invalide.'), 400
+        data = load_data()
+        allowed_owners = set()
+        for scoped_session in data.get('sessions', []) or []:
+            if not isinstance(scoped_session, dict):
+                continue
+            for person in session_trainees(scoped_session):
+                allowed_owners.add((str(scoped_session.get('id') or ''), str(person.get('id') or person.get('trainee_id') or '')))
+        for order in data.get('manual_orders', []) or []:
+            if not isinstance(order, dict) or order.get('order_type') != 'elearning':
+                continue
+            for person in order.get('learners', []) or []:
+                if isinstance(person, dict):
+                    allowed_owners.add(('el-' + str(order.get('id') or ''), str(person.get('id') or '')))
+        try:
+            feedback = VtcWrittenWork(store()).trainer_review(attempt_id,
+                comment=payload.get('comment'), outcome=payload.get('outcome'),
+                reviewer=session.get('admin_username') or 'Équipe pédagogique', allowed_owners=allowed_owners)
+        except WrittenWorkError as exc:
+            return jsonify(ok=False, error=str(exc)), exc.status
+        response = jsonify(ok=True, feedback=feedback)
+        response.headers['Cache-Control'] = 'private, no-store'
+        return response
+
+    @blueprint.get('/admin/elearning/courses/<course_id>/work.csv')
+    @admin_required
+    def admin_written_work_export(course_id: str) -> Any:
+        payload = live_payload(course_id, include_work=True)
+        output = io.StringIO(newline='')
+        writer = csv.writer(output, delimiter=';')
+        writer.writerow(['Stagiaire', 'Session', 'Version', 'Dossier', 'Activité', 'Consigne', 'Production', 'Date de remise'])
+        def cell(value):
+            value = str(value or '')
+            return "'" + value if value.lstrip().startswith(('=', '+', '-', '@')) or value.startswith(('\t', '\r', '\n')) else value
+        for row in payload['learners']:
+            for work in row['written_work']:
+                writer.writerow([cell(value) for value in [row['trainee_name'], row['session_name'],
+                    row['course_version'], work['dossier'], work['title'], work['task'],
+                    work['reflection'], work['submitted_at']]])
+        response = Response('\ufeff' + output.getvalue(), content_type='text/csv; charset=utf-8')
+        response.headers['Content-Disposition'] = f'attachment; filename="travaux-{course_id}.csv"'
+        return response
+
+    @blueprint.get("/admin/elearning/courses/<course_id>/export.csv")
+    @admin_required
+    def admin_course_export(course_id: str) -> Any:
+        payload = live_payload(course_id)
+        output = io.StringIO(newline="")
+        writer = csv.writer(output, delimiter=";")
+        writer.writerow(
+            [
+                "Stagiaire",
+                "Session",
+                "Version du cours",
+                "Statut",
+                "Progression (%)",
+                "Score (%)",
+                "Temps actif (secondes)",
+                "Temps actif",
+                "Activité actuelle",
+                "Début du parcours",
+                "Dernière activité",
+                "Fin du parcours",
+                "Durée obligatoire (secondes)",
+                "Temps restant (secondes)",
+                "Durée atteinte",
+                "Premier essai enregistré questions (%)",
+                "Questions avec premier essai enregistré",
+                "Nombre d’essais questions",
+                "Erreurs questions avant correction",
+                "Premier essai enregistré ateliers (%)",
+                "Nombre d’essais ateliers",
+            ]
+        )
+        for row in payload["learners"]:
+            writer.writerow(
+                [
+                    row.get("trainee_name") or "",
+                    row.get("session_name") or "",
+                    row.get("course_version") or "",
+                    row.get("status") or "",
+                    row.get("progress_percent") or 0,
+                    row.get("score_percent") or 0,
+                    round(float(row.get("active_seconds") or 0), 2),
+                    row.get("active_time_label") or "00:00:00",
+                    row.get("activity_title") or "",
+                    row.get("started_at") or "",
+                    row.get("updated_at") or "",
+                    row.get("completed_at") or "",
+                    row["required_seconds"],
+                    row["remaining_seconds"],
+                    "Oui" if row["duration_met"] else "Non",
+                    row['assessment_summary']['first_attempt_score_percent'],
+                    row['assessment_summary']['assessed_items'],
+                    row['assessment_summary']['attempt_count'],
+                    row['assessment_summary']['incorrect_attempt_count'],
+                    row['assessment_summary']['practice']['first_attempt_score_percent'],
+                    row['assessment_summary']['practice']['attempt_count'],
+                ]
+            )
+        response = Response("\ufeff" + output.getvalue(), content_type="text/csv; charset=utf-8")
+        response.headers["Content-Disposition"] = f'attachment; filename="suivi-{course_id}.csv"'
+        return response
+
+    @blueprint.get("/espace/<token>/elearning")
+    def learner_path(token: str) -> Any:
+        if not public_is_authed(token):
+            return redirect(url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_login", token=token))
+        session_obj, trainee = learner_session(token)
+        raw_progress = store().learner_progress(str(session_obj["id"]), str(trainee.get("id") or trainee.get("trainee_id")))
+        progress_by_key = {(item["course_id"], item["course_version"]): item for item in raw_progress}
+        modules = load_path(session_obj)
+        free_module_navigation = allows_free_module_navigation(session_obj)
+        total = completed = seconds = finished = 0
+        resume_url = ""
+        blocker = ""
+        for item in modules:
+            course = item["course"]
+            item["illustration_url"] = ""
+            if course:
+                course_id = str(course.get("id") or "")
+                aps_image = re.fullmatch(r"academy-aps62-(0[1-9]|1[0-5])", course_id)
+                vtc_image = re.fullmatch(r"academy-vtc-([a-h])", course_id)
+                if aps_image:
+                    item["illustration_url"] = url_for("static", filename=f"images/aps62/module-{aps_image.group(1)}.webp")
+                elif vtc_image:
+                    item["illustration_url"] = url_for("static", filename=f"images/vtc/module-{vtc_image.group(1)}.webp")
+                elif course_id in mac_aps.bundled_course_ids():
+                    item["illustration_url"] = url_for("static", filename=f"images/mac-aps/module-{course_id[-2:]}.webp")
+            item["locked"] = bool(blocker) and not free_module_navigation
+            item["lock_reason"] = blocker if item["locked"] else ""
+            if not course:
+                if not free_module_navigation:
+                    blocker = blocker or "Un module précédent est indisponible. Contactez l’équipe pédagogique."
+                continue
+            progress = project_progress(progress_by_key.get((course["id"], course["version"]), {}), course)
+            item["progress"] = progress
+            item["url"] = url_for("native_elearning.course_player", token=token, course_id=course["id"])
+            item['exam_url'] = url_for('native_elearning.learner_exam',token=token,exam_id=course['mock_exam_id']) if course.get('mock_exam_id') else ''
+            item["time_label"] = _format_seconds(progress["active_seconds"])
+            item["required_time_label"] = _format_seconds(progress["required_seconds"])
+            item["remaining_time_label"] = _format_seconds(progress["remaining_seconds"])
+            item["complete"] = progress["module_complete"]
+            total += progress["required_activity_count"]
+            completed += progress["completed_required_activities"]
+            seconds += progress["active_seconds"]
+            finished += int(item["complete"])
+            if not resume_url and not item["complete"] and not item["locked"]:
+                resume_url = item["url"]
+            if not free_module_navigation and not blocker and not item["complete"]:
+                blocker = f"Terminez d’abord le module « {course['title']} »."
+                if progress["remaining_seconds"]:
+                    blocker += f" Temps actif restant : {item['remaining_time_label']}."
+        exam_modules = [m for m in modules if m['course'] and m['course'].get('mock_exam_id')]
+        matched_manifest = next((candidate for candidate in [curriculum_manifest(),vtc.curriculum_manifest(),a3p.curriculum_manifest(),mac_aps.curriculum_manifest(),mac_aps.curriculum_manifest(mac_aps.LEGACY_VERSION)]
+            if {m['course']['id'] for m in exam_modules} == {m['id'] for m in candidate['modules']}
+            and (candidate.get('final_exam_id') != 'macaps-final' or {m['course']['version'] for m in exam_modules} == {candidate['version']})),None)
+        final_available = bool(matched_manifest and len({m['course']['version'] for m in exam_modules}) == 1)
+        final_ready = final_available and all(m.get('complete') and set(m['course']['activity_order']) ==
+            set(project_course(catalog().load_course(m['course']['id'],m['course']['version']), {'required_minutes': m['course']['required_minutes']})['activity_order']) for m in exam_modules)
+        aps_final = final_time(assigned_modules(session_obj), raw_progress)
+        modules_time_label = _format_seconds(seconds)
+        if aps_final:
+            seconds += aps_final['active_seconds']
+            aps_final['time_label'] = _format_seconds(aps_final['active_seconds'])
+        training_label = _training_label(session_obj)
+        macaps_v2 = any(m['course'] and m['course']['id'] in mac_aps.curriculum_ids()
+            and m['course']['version'] == mac_aps.VERSION for m in modules)
+        macaps_full_path = (len(modules) == 3 and macaps_v2
+            and {m['course']['id'] for m in modules if m['course']} == set(mac_aps.curriculum_ids())
+            and all(m['course'] and m['course']['version'] == mac_aps.VERSION for m in modules))
+        macaps_complements = [{**item, 'url': url_for('native_elearning.macaps_resources', token=token, course_id=item['id'])}
+            for item in mac_aps.complement_manifest()['modules']] if macaps_v2 else []
+        return render_template(
+            "native_elearning_path.html", modules=modules,
+            learner_brand=session_obj.get("learner_brand") or {},
+            training_label=training_label,
+            macaps_v2=macaps_v2, macaps_full_path=macaps_full_path, macaps_complements=macaps_complements,
+            free_module_navigation=free_module_navigation,
+            aps_tracking=any(m.get('course') and m['course']['id'] in APS_PACED_COURSES for m in modules),
+            hero_illustration_url=url_for("static", filename="images/mac-aps-cover.webp") if training_label == "MAC APS" else url_for("static", filename="images/learner-welcome-vtc.webp") if training_label == "VTC" else (
+                url_for("static", filename="images/learner-welcome-aps.webp") if any(
+                    m["course"] and str(m["course"].get("id") or "").startswith("academy-aps62-") for m in modules
+                ) else ""
+            ),
+            path_title=session_obj.get("aps_native_path_title") or "Mon parcours " + training_label,
+            session_name=session_obj.get("name") or "Formation " + training_label,
+            learner_name=f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
+            total_activities=total, completed_activities=completed, completed_modules=finished,
+            progress_percent=round(completed / total * 100) if total else 0,
+            active_time_label=_format_seconds(seconds), resume_url=resume_url,
+            aps_final_time=aps_final, modules_time_label=modules_time_label,
+            programme_time_label=_format_seconds(sum(m['course'].get('required_minutes', 0) * 60 for m in modules if m.get('course'))),
+            cma_url=url_for('native_elearning.cma_learner_home', token=token) if {f'academy-vtc-{letter}' for letter in 'abcdefg'}.issubset({m['course']['id'] for m in modules if m.get('course')}) else '',
+            portal_url=url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_space", token=token),
+            final_exam_url=url_for('native_elearning.learner_exam',token=token,exam_id=matched_manifest.get('final_exam_id','final')) if final_available else '',
+            final_exam_unlocked=final_ready,
+            final_module_count=len(exam_modules),
+            annales_url=url_for('native_elearning.annales_learner_catalog',token=token) if any(m['course'] and m['course']['id'].startswith('academy-vtc-') for m in modules) else '',
+            final_exam_description=("Les 10 objectifs du parcours MAC APS de 14 heures" if macaps_v2 else "Les 5 parties de votre édition MAC APS") if training_label == "MAC APS" else "Les 8 unités A3P" if training_label == "A3P" else "Les sept matières théoriques VTC" if training_label == "VTC" else "Les 15 modules APS",
+        )
+
+    def macaps_resource_context(token: str, course_id: str):
+        session_obj, trainee = learner_session(token)
+        assignments = assigned_modules(session_obj)
+        if not any(item.get('course_id') in mac_aps.curriculum_ids()
+                   and item.get('course_version') == mac_aps.VERSION for item in assignments):
+            abort(403)
+        if course_id not in {item['id'] for item in mac_aps.complement_manifest()['modules']}:
+            abort(404)
+        return session_obj, trainee, catalog().load_course(course_id, mac_aps.VERSION)
+
+    @blueprint.get('/espace/<token>/elearning/mac-aps/complements/<course_id>')
+    def macaps_resources(token: str, course_id: str) -> Any:
+        if not public_is_authed(token):
+            return redirect(url_for('manuals_shop.elearning_access' if token.startswith('el_') else 'public_trainee_login', token=token))
+        session_obj, trainee, course = macaps_resource_context(token, course_id)
+        order = course['activity_order']
+        activity_id = request.args.get('activity') or order[0]
+        if activity_id not in order:
+            abort(404)
+        index = order.index(activity_id)
+        section, activity = next((s, a) for s, a in _activity_pairs(course) if a['id'] == activity_id)
+        access = _course_access_payload(session_obj, trainee, course, public_token=token)
+        asset_token = _sign_access(_asset_access_payload(access))
+        def resource_url(aid):
+            return url_for('native_elearning.macaps_resources', token=token, course_id=course_id, activity=aid)
+        navigation = navigation_for(course, {}, token=token, current_activity_id=activity_id, preview=True)
+        for nav, raw in zip(navigation, course['sections']):
+            for item, raw_activity in zip(nav['activities'], raw['activities']):
+                item['url'] = resource_url(raw_activity['id'])
+        return render_template('native_elearning_player.html', preview_mode=True, resource_mode=True,
+            learner_brand=session_obj.get('learner_brand') or {},
+            course={'id': course_id, 'title': course['title'], 'theme': _safe_theme(course),
+                    'version': course['version'], 'counts': course['counts'], 'training_label': 'MAC APS'},
+            activity=prepare_activity(activity, asset_token, course_id), introduction=[],
+            section_title=section['title'], progress=project_progress({}, course), activity_completed=False,
+            navigation=navigation, activity_position=index + 1, activity_count=len(order),
+            previous_url=resource_url(order[index - 1]) if index else '',
+            next_url=resource_url(order[index + 1]) if index + 1 < len(order) else '',
+            portal_url=url_for('native_elearning.learner_path', token=token), preview_can_answer=True,
+            preview_config={'questionType': activity.get('question_type') or '', 'csrfToken': _csrf_token(),
+                'answerUrl': url_for('native_elearning.macaps_resource_answer', token=token,
+                                     course_id=course_id, activity_id=activity_id)})
+
+    @blueprint.post('/api/elearning/mac-aps/<token>/complements/<course_id>/<activity_id>/answer')
+    def macaps_resource_answer(token: str, course_id: str, activity_id: str) -> Any:
+        _require_csrf()
+        _session_obj, _trainee, course = macaps_resource_context(token, course_id)
+        activity = next((a for _s, a in _activity_pairs(course) if a['id'] == activity_id), None)
+        if not activity or not activity.get('scored'):
+            abort(404)
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or not isinstance(payload.get('answer'), dict):
+            return jsonify(ok=False, error='Réponse invalide.'), 400
+        try:
+            correct, _ = _evaluate_answer(activity, payload['answer'])
+        except TrackingError as exc:
+            return jsonify(ok=False, error=str(exc)), 400
+        response = jsonify(ok=True, correct=correct, explanation=activity.get('explanation', ''))
+        response.headers['Cache-Control'] = 'private, no-store'
+        return response
+
+    def a3p_resource_context(token: str, course_id: str):
+        session_obj, trainee, assigned = learner_context(token, course_id)
+        if assigned.get("training_label") != "A3P" or assigned["version"] not in a3p.SUPPORTED_VERSIONS[1:]:
+            abort(404)
+        course = catalog().load_course(course_id, assigned["version"])
+        sections = [section for section in course["sections"] if section.get("delivery") != "distance"]
+        course = {**course, "sections": sections, "required_minutes": 0,
+                  "activity_order": [a["id"] for section in sections for a in section["activities"]]}
+        course["counts"] = {**course["counts"], "sections": len(sections)}
+        return session_obj, trainee, assigned, course
+
+    @blueprint.get("/espace/<token>/elearning/<course_id>/ressources")
+    def a3p_resources(token: str, course_id: str) -> Any:
+        session_obj, trainee, assigned, course = a3p_resource_context(token, course_id)
+        order = course["activity_order"]
+        activity_id = request.args.get("activity") or ("a3p-" + course_id[-2:] + "-video")
+        if activity_id not in order:
+            abort(404)
+        index = order.index(activity_id)
+        section, activity = next((section, activity) for section, activity in _activity_pairs(course) if activity["id"] == activity_id)
+        access = _course_access_payload(session_obj, trainee, assigned, public_token=token)
+        asset_token = _sign_access(_asset_access_payload(access))
+        def resource_url(aid):
+            return url_for("native_elearning.a3p_resources", token=token, course_id=course_id, activity=aid)
+        navigation = navigation_for(course, {}, token=token, current_activity_id=activity_id, preview=True)
+        for nav, raw in zip(navigation, course["sections"]):
+            for item, raw_activity in zip(nav["activities"], raw["activities"]):
+                item["url"] = resource_url(raw_activity["id"])
+        return render_template("native_elearning_player.html", preview_mode=True, resource_mode=True,
+            course={"id": course_id, "title": course["title"], "theme": _safe_theme(course), "version": course["version"], "counts": course["counts"], "training_label": "A3P"},
+            activity=prepare_activity(activity, asset_token, course_id), introduction=[],
+            section_title=section["title"], progress=project_progress({}, course), activity_completed=False,
+            navigation=navigation, activity_position=index + 1, activity_count=len(order),
+            previous_url=resource_url(order[index - 1]) if index else "",
+            next_url=resource_url(order[index + 1]) if index + 1 < len(order) else "",
+            portal_url=url_for("native_elearning.course_player", token=token, course_id=course_id),
+            preview_can_answer=True,
+            preview_config={"questionType": activity.get("question_type") or "", "csrfToken": _csrf_token(),
+                "answerUrl": url_for("native_elearning.a3p_resource_answer", token=token, course_id=course_id, activity_id=activity_id)})
+
+    @blueprint.post("/api/elearning/a3p/<token>/<course_id>/ressources/<activity_id>/answer")
+    def a3p_resource_answer(token: str, course_id: str, activity_id: str) -> Any:
+        _require_csrf()
+        _session_obj, _trainee, _assigned, course = a3p_resource_context(token, course_id)
+        activity = next((a for _s, a in _activity_pairs(course) if a["id"] == activity_id), None)
+        if not activity or not activity.get("scored"):
+            abort(404)
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or not isinstance(payload.get("answer"), dict):
+            return jsonify(ok=False, error="Réponse invalide."), 400
+        try:
+            correct, _ = _evaluate_answer(activity, payload["answer"])
+        except TrackingError as exc:
+            return jsonify(ok=False, error=str(exc)), 400
+        return jsonify(ok=True, correct=correct, explanation=activity.get("explanation", ""))
+
+    @blueprint.get("/espace/<token>/elearning/<course_id>")
+    def course_player(token: str, course_id: str) -> Any:
+        if not public_is_authed(token):
+            return redirect(url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_login", token=token))
+        session_obj, trainee, course = learner_context(token, course_id)
+        access = _course_access_payload(session_obj, trainee, course, public_token=token)
+        access_token = _sign_access(access)
+        asset_token = _sign_access(_asset_access_payload(access))
+        csrf = _csrf_token()
+        order = [str(value) for value in course.get("activity_order") or []]
+        scored_ids = _scored_activity_ids(course)
+        required_order = required_activity_order(course)
+        progress = current_progress(access, course)
+        if not order:
+            abort(404)
+        requested_id = str(request.args.get("activity") or progress.get("current_activity_id") or "")
+        requested_id = course.get('retired_activity_redirects', {}).get(requested_id, requested_id)
+        if course.get("training_label") == "A3P" and request.args.get("activity") and requested_id not in order:
+            abort(404, "Cette ressource ne fait pas partie des objectifs à distance affectés.")
+        if requested_id not in order or (not request.args.get("activity") and requested_id not in required_order):
+            requested_id = (_next_incomplete(required_order, progress.get("completed_activity_ids") or [])
+                            or (required_order[-1] if required_order else order[0]))
+        completed = set(progress.get("completed_activity_ids") or [])
+        requested_id = video_blocker(course, progress, requested_id) or requested_id
+        first_incomplete = _next_incomplete(required_order, list(completed))
+        if course.get("settings", {}).get("force_navigation") and first_incomplete in order:
+            if order.index(requested_id) > order.index(first_incomplete) and requested_id not in completed:
+                requested_id = first_incomplete
+
+        pairs = _activity_pairs(course)
+        index = order.index(requested_id)
+        raw_activity = next(activity for _, activity in pairs if str(activity.get("id")) == requested_id)
+        raw_activity = question_for_history(raw_activity, course, progress)
+        section = next(section for section, activity in pairs if str(activity.get("id")) == requested_id)
+        activity = prepare_activity(select_vtc_activity(course, raw_activity, progress), asset_token, course_id,
+            production_revealed=bool(progress.get('answers', {}).get(requested_id, {}).get('production_feedback_seen')))
+        introduction = [
+            prepare_block(block, asset_token, course_id)
+            for block in (course.get("introduction") or [])
+            if isinstance(block, Mapping)
+        ] if index == 0 else []
+        previous_url = (
+            url_for("native_elearning.course_player", token=token, course_id=course_id, activity=order[index - 1])
+            if index > 0
+            else ""
+        )
+        next_required = next((activity_id for activity_id in order[index + 1:]
+                              if activity_id in required_order), "")
+        next_url = (
+            url_for("native_elearning.course_player", token=token, course_id=course_id, activity=next_required)
+            if next_required
+            else url_for("native_elearning.course_player", token=token, course_id=course_id, activity=requested_id)
+        )
+        modules = assigned_modules(session_obj)
+        module_index = next(index for index, item in enumerate(modules) if item.get("course_id") == course_id)
+        path_url = url_for("native_elearning.learner_path", token=token)
+        next_module = modules[module_index + 1] if module_index + 1 < len(modules) else None
+        end_url = url_for("native_elearning.course_player", token=token, course_id=next_module["course_id"]) if next_module else path_url
+        aps_exam_next = bool(course.get('aps_depth_revision') and course.get('mock_exam_id'))
+        if aps_exam_next:
+            end_url = url_for('native_elearning.learner_exam', token=token, exam_id=course['mock_exam_id'])
+        return render_template(
+            "native_elearning_player.html",
+            course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course), "version": course['version'], "training_label": course.get("training_label","APS"),
+                    'aps_depth_revision': course.get('aps_depth_revision'), 'aps_reading_revision': course.get('aps_reading_revision'), 'study_plan': course.get('study_plan')},
+            learner_name=f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
+            section_title=str(section.get("title") or ""),
+            learner_brand=session_obj.get('learner_brand') or {},
+            activity=activity,
+            vtc_production_history=VtcWrittenWork(store()).history(access, requested_id) if is_vtc_production(course, raw_activity) else [],
+            a3p_resources_url=url_for('native_elearning.a3p_resources', token=token, course_id=course_id) if course.get('training_label') == 'A3P' else '',
+            training_url=url_for('native_elearning.training_learner_catalog', token=token, course_id=course_id) if course_id.startswith('academy-vtc-') else '',
+            introduction=introduction,
+            progress=progress,
+            timed_objective=next((item for item in progress.get('timed_objectives', []) if requested_id in item['activity_ids']), None),
+            navigation=navigation_for(course, progress, token=token, current_activity_id=requested_id),
+            activity_position=index + 1,
+            activity_count=len(order),
+            activity_completed=requested_id in completed,
+            lesson_timing_pages=lesson_pages(course, raw_activity),
+            answer_explanation=str(raw_activity.get('explanation') or '') if requested_id in completed else '',
+            required_videos=activity_videos(raw_activity),
+            videos_completed=videos_complete(progress.get("video_progress", {}).get(requested_id, {}), activity_videos(raw_activity)),
+            previous_url=previous_url,
+            next_url=next_url,
+            optional_skip_url=next_url if next_required else path_url,
+            portal_url=url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_space", token=token),
+            path_url=path_url, end_url=end_url,
+            end_label="Examen blanc et correction" if aps_exam_next else "Module suivant" if next_module else "Retour au parcours",
+            module_position=module_index + 1, module_count=len(modules),
+            has_next_module=bool(next_module),
+            required_time_label=_format_seconds(progress["required_seconds"]),
+            remaining_time_label=_format_seconds(progress["remaining_seconds"]),
+            csrf_token=csrf,
+            access_token=access_token,
+            production_ai_config=production_ai_config(course, requested_id, access_token=access_token) if raw_activity.get('production') and not is_vtc_production(course, raw_activity) else None,
+            heartbeat_seconds=CLIENT_HEARTBEAT_SECONDS,
+            idle_seconds=int(idle_timeout_seconds(course['id'])),
+            continue_when_hidden=course['id'] in APS_PACED_COURSES,
+            is_last_activity=not next_required,
+            exam_url=url_for('native_elearning.learner_exam',token=token,exam_id=course['mock_exam_id']) if course.get('mock_exam_id') else '',
+        )
+
+    @blueprint.get("/elearning/assets/<course_id>/<path:asset_name>")
+    def course_asset(course_id: str, asset_name: str) -> Any:
+        access = _verify_asset_access(request.args.get("access"))
+        if not hmac.compare_digest(str(access.get("course_id")), str(course_id)):
+            abort(403)
+        try:
+            path = catalog().asset_path(course_id, str(access.get("course_version")), asset_name)
+        except CourseImportError:
+            abort(404)
+        response = send_file(path, conditional=True)
+        response.headers["Cache-Control"] = "private, max-age=3600"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Content-Security-Policy"] = "default-src 'none'; sandbox"
+        return response
+
+    def api_context() -> Tuple[Dict[str, Any], Dict[str, Any], List[str], List[str]]:
+        _require_csrf()
+        payload = request.get_json(silent=True) or {}
+        if not isinstance(payload, dict):
+            abort(400)
+        access = _verify_access(payload.get("access_token"))
+        course = course_for_access(access)
+        if access.get('exam_id'):
+            exam_activity = FINAL_ACTIVITY_ID if course['id'] == FINAL_COURSE_ID else module_exam_activity_id(course)
+            if (not exam_activity or access['exam_id'] != course.get('mock_exam_id')
+                    or request.endpoint not in {'native_elearning.tracking_start',
+                        'native_elearning.tracking_heartbeat', 'native_elearning.tracking_finish'}
+                    or payload.get('activity_id') != exam_activity):
+                abort(403, 'Ce suivi est réservé à cet examen blanc.')
+            return access, course, [exam_activity], _scored_activity_ids(course)
+        # An old tab may still close its tracking session on reload. Finishing
+        # records no media sample and releases its active-tab slot normally.
+        if (request.endpoint != "native_elearning.tracking_finish" and course.get("vtc_media_revision")
+                and access.get("vtc_media_revision") != course["vtc_media_revision"]):
+            abort(409, "Les vidéos ont été améliorées. Rechargez la page : votre progression enregistrée est conservée.")
+        # Keep tracking/video time from open tabs, but never grade an old
+        # question or workshop against a changed answer key.
+        if (any(course.get(key) and access.get(key) != course[key]
+                for key in ('aps_editorial_revision', 'aps_depth_revision', 'aps_reading_revision'))
+                and request.endpoint in {"native_elearning.activity_answer",
+                    "native_elearning.activity_practice", "native_elearning.activity_complete"}):
+            response = jsonify(ok=False, error="Les exercices ont été renouvelés. Rechargez la page : votre progression enregistrée est conservée.")
+            response.status_code = 409
+            abort(response)
+        order = [str(value) for value in course.get("activity_order") or []]
+        return access, course, order, _scored_activity_ids(course)
+
+    @blueprint.post("/api/elearning/v1/tracking/start")
+    def tracking_start() -> Any:
+        access, _course, order, scored_ids = api_context()
+        payload = request.get_json(silent=True) or {}
+        activity_id = str(payload.get("activity_id") or "")
+        if activity_id not in order:
+            return jsonify({"ok": False, "error": "Activité inconnue."}), 400
+        if not access.get('exam_id') and not can_complete(_course, current_progress(access, _course), activity_id):
+            return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente et ses vidéos."}), 409
+        try:
+            started = store().start_tracking(
+                access,
+                tab_id=str(payload.get("tab_id") or ""),
+                activity_id=activity_id,
+            )
+            progress = current_progress(access, _course)
+        except TrackingError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        return jsonify({"ok": True, **started, "progress": progress})
+
+    @blueprint.post("/api/elearning/v1/tracking/heartbeat")
+    def tracking_heartbeat() -> Any:
+        access, _course, order, scored_ids = api_context()
+        payload = request.get_json(silent=True) or {}
+        activity_id = str(payload.get("activity_id") or "")
+        if activity_id not in order:
+            return jsonify({"ok": False, "error": "Activité inconnue."}), 400
+        if not access.get('exam_id') and not can_complete(_course, current_progress(access, _course), activity_id):
+            return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente et ses vidéos."}), 409
+        if payload.get("interaction_age_seconds") is None:
+            return jsonify({"ok": False, "error": "Rechargez le lecteur pour activer le suivi d’inactivité."}), 409
+        reading_pages = lesson_pages(_course, next((item for _, item in _activity_pairs(_course)
+                                                  if item.get('id') == activity_id), {}))
+        if reading_pages and not payload.get('lesson_page_id'):
+            return jsonify(ok=False, error='Le cours a été mis à jour. Rechargez la page pour activer le temps de lecture.'), 409
+        try:
+            result = store().heartbeat(
+                access,
+                str(payload.get("tracking_session_id") or ""),
+                activity_id=activity_id,
+                visible=payload.get("visible") is True,
+                focused=payload.get("focused") is True,
+                recent_activity=payload.get("recent_activity") is True,
+                media_playing=payload.get("media_playing") is True,
+                interaction_age_seconds=payload["interaction_age_seconds"],
+                video_requirements=course_videos(_course).get(activity_id, {}),
+                video_playback_policy=activity_playback_policy(_course, activity_id),
+                video_samples=payload.get("videos"),
+                lesson_pages=reading_pages,
+                lesson_page_id=str(payload.get('lesson_page_id') or ''),
+            )
+            result["progress"] = current_progress(access, _course)
+        except TrackingError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 409
+        return jsonify({"ok": True, **result})
+
+    @blueprint.post("/api/elearning/v1/tracking/finish")
+    def tracking_finish() -> Any:
+        access, _course, order, scored_ids = api_context()
+        payload = request.get_json(silent=True) or {}
+        try:
+            result = store().finish_tracking(
+                access,
+                str(payload.get("tracking_session_id") or ""),
+                activity_id=str(payload.get("activity_id") or ""),
+            )
+            result["progress"] = current_progress(access, _course)
+        except TrackingError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 409
+        return jsonify({"ok": True, **result})
+
+    def can_complete(course: Mapping[str, Any], progress: Mapping[str, Any], activity_id: str) -> bool:
+        order = [str(value) for value in course.get("activity_order") or []]
+        if activity_id not in order:
+            return False
+        if video_blocker(course, progress, activity_id):
+            return False
+        if not course.get("settings", {}).get("force_navigation"):
+            return True
+        completed = set(progress.get("completed_activity_ids") or [])
+        required = set(required_activity_order(course))
+        return all(previous in completed for previous in order[: order.index(activity_id)] if previous in required)
+
+    @blueprint.post('/api/elearning/v1/activities/<activity_id>/practice')
+    def activity_practice(activity_id: str) -> Any:
+        access, course, _order, _scored_ids = api_context()
+        activity = next((item for _, item in _activity_pairs(course) if item.get('id') == activity_id), None)
+        if not activity or not activity.get('practice'):
+            return jsonify({'ok': False, 'error': 'Atelier introuvable.'}), 404
+        progress = current_progress(access, course)
+        if not can_complete(course, progress, activity_id):
+            return jsonify({'ok': False, 'error': 'Terminez d’abord l’activité précédente.'}), 409
+        activity = select_vtc_activity(course, activity, progress)
+        payload = request.get_json(silent=True)
+        try:
+            result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None, step=payload.get('practice_step') if isinstance(payload, dict) else None)
+        except ValueError as exc:
+            return jsonify({'ok': False, 'error': str(exc)}), 400
+        for detail in result['feedback']:
+            exercise = next((item for item in activity['practice']['exercises'] if item['id'] == detail['id']), {})
+            detail.setdefault('competency', exercise.get('competency') or activity.get('title', ''))
+        try:
+            store().record_practice_result(access, activity_id, result,
+                request_id=payload.get('request_id', '') if isinstance(payload, dict) else '')
+        except TrackingError as exc:
+            return jsonify(ok=False, error=str(exc)), 409
+        response = jsonify({'ok': True, **result})
+        response.headers['Cache-Control'] = 'private, no-store'
+        return response
+
+    def production_analysis_context(activity_id):
+        access, course, _order, _scored_ids = api_context()
+        activity = next((item for _, item in _activity_pairs(course) if item.get('id') == activity_id), None)
+        if not activity or not activity.get('production') or is_vtc_production(course, activity):
+            abort(404)
+        if not can_complete(course, current_progress(access, course), activity_id):
+            abort(409, 'Terminez d’abord l’activité précédente.')
+        return access, course, activity
+
+    @blueprint.post('/api/elearning/v1/activities/<activity_id>/production-analysis')
+    def activity_production_analysis(activity_id):
+        return production_analysis_response(*production_analysis_context(activity_id), create=True)
+
+    @blueprint.post('/api/elearning/v1/activities/<activity_id>/production-analyses')
+    def activity_production_analyses(activity_id):
+        return production_analysis_response(*production_analysis_context(activity_id), create=False)
+
+    def admin_production_context(course_id, activity_id):
+        _require_csrf()
+        course = preview_course(course_id)
+        activity = next((item for _, item in _activity_pairs(course) if item.get('id') == activity_id), None)
+        if not activity or not activity.get('production') or is_vtc_production(course, activity):
+            abort(404)
+        nonce = str(session.get('native_elearning_nonce') or '')
+        if not nonce:
+            abort(401)
+        access = {'session_id': 'admin-preview', 'trainee_id': hashlib.sha256(nonce.encode()).hexdigest(),
+                  'course_id': course['id'], 'course_version': course['version']}
+        return access, course, activity
+
+    @blueprint.post('/api/admin/elearning/courses/<course_id>/preview/activities/<activity_id>/production-analysis')
+    @admin_required
+    @admin_write_required
+    def admin_production_analysis(course_id, activity_id):
+        return production_analysis_response(*admin_production_context(course_id, activity_id), create=True, preview=True)
+
+    @blueprint.post('/api/admin/elearning/courses/<course_id>/preview/activities/<activity_id>/production-analyses')
+    @admin_required
+    def admin_production_analyses(course_id, activity_id):
+        return production_analysis_response(*admin_production_context(course_id, activity_id), create=False, preview=True)
+
+    @blueprint.post('/api/elearning/v1/activities/<activity_id>/production')
+    def activity_production(activity_id: str) -> Any:
+        access, course, _order, _scored_ids = api_context()
+        activity = next((item for _, item in _activity_pairs(course) if item.get('id') == activity_id), None)
+        if not activity or not activity.get('production'):
+            return jsonify(ok=False, error='Dossier de production introuvable.'), 404
+        if not can_complete(course, current_progress(access, course), activity_id):
+            return jsonify(ok=False, error='Terminez d’abord l’activité précédente.'), 409
+        if is_vtc_production(course, activity):
+            if request.content_length and request.content_length > 100_000:
+                abort(413)
+            payload = request.get_json(silent=True)
+            if not isinstance(payload, dict):
+                return jsonify(ok=False, error='Réponse invalide.'), 400
+            try:
+                result = VtcWrittenWork(store()).submit(access, course, activity, payload, current_progress(access, course))
+            except WrittenWorkError as exc:
+                return jsonify(ok=False, error=str(exc)), exc.status
+            except vtc_ai.VtcAIError as exc:
+                return jsonify(ok=False, error=exc.message, code=exc.code), 503
+            response = jsonify(result)
+            response.headers['Cache-Control'] = 'private, no-store'
+            return response
+        payload = request.get_json(silent=True) or {}
+        stage = payload.get('stage')
+        if stage not in ('draft', 'compare'):
+            return jsonify(ok=False, error='Étape inconnue.'), 400
+        try:
+            answers = normalize_production(activity['production'], payload.get('production_answers'), draft=stage == 'draft')
+            self_review = None
+            if 'production_self_review' in payload:
+                existing = current_progress(access, course).get('answers', {}).get(activity_id, {})
+                if not existing.get('production_feedback_seen'):
+                    raise ValueError('Comparez d’abord votre travail aux repères.')
+                self_review = normalize_self_review(activity['production'], payload['production_self_review'], draft=True)
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 400
+        store().record_production(access, activity_id, answers, compared=stage == 'compare', self_review=self_review)
+        response = jsonify(ok=True, **({'feedback': production_feedback(activity['production'])} if stage == 'compare' else {}))
+        response.headers['Cache-Control'] = 'private, no-store'
+        return response
+
+    @blueprint.post("/api/elearning/v1/activities/<activity_id>/complete")
+    def activity_complete(activity_id: str) -> Any:
+        access, course, order, scored_ids = api_context()
+        activity = next((item for _, item in _activity_pairs(course) if item.get("id") == activity_id), None)
+        if activity is None or activity.get("scored"):
+            return jsonify({"ok": False, "error": "Activité invalide."}), 400
+        current = current_progress(access, course)
+        if not can_complete(course, current, activity_id):
+            return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente."}), 409
+        if objective := macaps_completion_blocker(course, current, activity_id):
+            return jsonify(ok=False, error=f"Poursuivez l’étude de cet objectif : {_format_seconds(objective['remaining_seconds'])} de temps actif restent à effectuer avant sa validation.", progress=current), 409
+        answer = None
+        if is_vtc_production(course, activity):
+            try:
+                answer = VtcWrittenWork(store()).completion_answer(access, activity, request.get_json(silent=True) or {}, current)
+            except WrittenWorkError as exc:
+                return jsonify(ok=False, error=str(exc)), exc.status
+        elif activity.get('production'):
+            existing = current.get('answers', {}).get(activity_id, {})
+            if activity_id in current.get('completed_activity_ids', []):
+                answer = existing
+            else:
+                payload = request.get_json(silent=True) or {}
+                try:
+                    produced = normalize_production(activity['production'], payload.get('production_answers'))
+                    review = normalize_self_review(activity['production'], payload.get('production_self_review'))
+                    if not existing.get('production_feedback_seen'):
+                        raise ValueError('Comparez d’abord votre travail aux repères.')
+                except ValueError as exc:
+                    return jsonify(ok=False, error=str(exc)), 400
+                answer = {**existing, 'production_answers': produced, 'production_self_review': review,
+                    'production_draft': False, 'review_status': 'self_reviewed',
+                    'needs_trainer_help': any(value == 'needs_help' for value in review.values()),
+                    'submitted_at': dt.datetime.now(dt.timezone.utc).isoformat().replace('+00:00', 'Z')}
+        elif activity.get('practice'):
+            if activity_id in current.get('completed_activity_ids', []):
+                # Keep prior written submissions and completed work exactly as stored.
+                answer = current.get('answers', {}).get(activity_id)
+            else:
+                activity = select_vtc_activity(course, activity, current)
+                payload = request.get_json(silent=True)
+                try:
+                    result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None)
+                except ValueError as exc:
+                    return jsonify({'ok': False, 'error': str(exc)}), 400
+                # A direct completion request must preserve errors too, even if
+                # the learner did not use the separate "check" endpoint first.
+                try:
+                    store().record_practice_result(access, activity_id, result)
+                except TrackingError as exc:
+                    return jsonify(ok=False, error=str(exc)), 409
+                if not result['correct']:
+                    return jsonify({'ok': False, 'error': 'Corrigez les exercices indiqués avant de continuer.', 'practice_result': result}), 400
+                answer = {**current.get('answers', {}).get(activity_id, {}), 'practice_draft': False,
+                          'practice_answers': result['answers'], 'practice_revision': result['revision'],
+                          'review_status': 'auto_corrected', 'practice_correct': True,
+                          'submitted_at': dt.datetime.now(dt.timezone.utc).isoformat().replace('+00:00', 'Z')}
+        elif activity.get('workbook'):
+            existing = current.get('answers', {}).get(activity_id)
+            if isinstance(existing, Mapping):
+                answer = existing
+            else:
+                payload = request.get_json(silent=True) or {}
+                reflection = payload.get('reflection') if isinstance(payload, dict) else None
+                minimum = int(activity['workbook'].get('min_chars') or 120)
+                maximum = int(activity['workbook'].get('max_chars') or 12000)
+                if not isinstance(reflection, str) or not minimum <= len(reflection.strip()) <= maximum:
+                    return jsonify({'ok': False, 'error': f'Rédigez votre travail ({minimum} à {maximum} caractères) avant de continuer.'}), 400
+                answer = {'reflection': reflection.strip(), 'review_status': 'to_review',
+                          'submitted_at': dt.datetime.now(dt.timezone.utc).isoformat().replace('+00:00', 'Z')}
+        elif (activity.get('academy', {}).get('reading_revision')
+                and activity_id not in current.get('completed_activity_ids', [])):
+            # A historical reading completion must never be relabelled as the
+            # enriched lesson. This metadata awards neither score nor seconds.
+            answer = {'reading_revision': activity['academy']['reading_revision']}
+        try:
+            result = store().complete_activity(
+                access, activity_id, activity_order=order, scored_activity_ids=scored_ids,
+                required_activity_ids=required_activity_order(course),
+                mastery_score=float(course.get("settings", {}).get("mastery_score") or 80),
+                required_seconds=int(course.get("required_minutes") or 0) * 60,
+                video_requirements=course_videos(course),
+                answer=answer,
+                lesson_requirements=lesson_pages(course, activity),
+            )
+        except TrackingError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 409
+        return jsonify({"ok": True, "progress": project_progress(result, course), "next_activity_id": result.get("current_activity_id")})
+
+    @blueprint.post("/api/elearning/v1/activities/<activity_id>/answer")
+    def activity_answer(activity_id: str) -> Any:
+        access, course, order, scored_ids = api_context()
+        activity = next((item for _, item in _activity_pairs(course) if item.get("id") == activity_id), None)
+        if activity is None or not activity.get("scored"):
+            return jsonify({"ok": False, "error": "Question invalide."}), 400
+        current = current_progress(access, course)
+        if not can_complete(course, current, activity_id):
+            return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente."}), 409
+        if objective := macaps_completion_blocker(course, current, activity_id):
+            return jsonify(ok=False, error=f"Poursuivez l’étude de cet objectif : {_format_seconds(objective['remaining_seconds'])} de temps actif restent à effectuer avant sa validation.", progress=current), 409
+        existing = current.get("answers", {}).get(activity_id)
+        if isinstance(existing, Mapping):
+            activity = question_for_history(activity, course, current)
+            return jsonify({"ok": True, "already_answered": True, "correct": bool(existing.get("correct")), "progress": current,
+                            "explanation": str(activity.get('explanation') or '')})
+        payload = request.get_json(silent=True) or {}
+        answer_payload = payload.get("answer")
+        if not isinstance(answer_payload, Mapping):
+            return jsonify({"ok": False, "error": "Réponse invalide."}), 400
+        try:
+            correct, response_payload = _evaluate_answer(activity, answer_payload)
+        except TrackingError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        if course.get('settings', {}).get('require_correct_answers') and not correct:
+            try:
+                store().record_question_attempt(access, activity_id, response_payload, correct,
+                    request_id=payload.get('request_id', ''), competency=activity.get('title', ''),
+                    revision=activity.get('aps_editorial_question', course['version']))
+            except TrackingError as exc:
+                return jsonify(ok=False, error=str(exc)), 409
+            current = current_progress(access, course)
+            response = jsonify({"ok": True, "already_answered": False, "correct": False,
+                "retry_required": True, "explanation": str(activity.get('explanation') or ''),
+                "progress": current, "next_activity_id": activity_id})
+            response.headers['Cache-Control'] = 'private, no-store'
+            return response
+        answer = {
+            **response_payload,
+            "correct": correct,
+            **({"content_revision": activity["aps_editorial_question"]} if activity.get("aps_editorial_question") else {}),
+            "submitted_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
+        }
+        try:
+            result = store().complete_activity(
+                access, activity_id, activity_order=order, scored_activity_ids=scored_ids,
+                required_activity_ids=required_activity_order(course),
+                mastery_score=float(course.get("settings", {}).get("mastery_score") or 80),
+                required_seconds=int(course.get("required_minutes") or 0) * 60,
+                answer=answer, video_requirements=course_videos(course),
+                assessment_attempt={'answer': response_payload, 'correct': correct,
+                    'request_id': payload.get('request_id', ''), 'competency': activity.get('title', ''),
+                    'revision': activity.get('aps_editorial_question', course['version'])},
+            )
+        except TrackingError as exc:
+            return jsonify(ok=False, error=str(exc)), 409
+        return jsonify(
+            {
+                "ok": True,
+                "already_answered": False,
+                "correct": correct,
+                "explanation": str(activity.get('explanation') or ''),
+                "progress": project_progress(result, course),
+                "next_activity_id": result.get("current_activity_id"),
+            }
+        )
+
+    from .annales_web import register as register_annales
+    register_annales(blueprint, admin_required=admin_required, learner_session=learner_session,
+                     learner_context=learner_context, root=root, csrf_token=_csrf_token,
+                     require_csrf=_require_csrf)
+
+    from .vtc_cma_web import register as register_cma
+    register_cma(blueprint, admin_required=admin_required, learner_context=learner_context,
+                 root=root, csrf_token=_csrf_token, require_csrf=_require_csrf)
+
+    def training_asset_token(course, token=None, session_obj=None, trainee=None):
+        if token:
+            access = _course_access_payload(session_obj, trainee, course, public_token=token)
+            return _sign_access(_asset_access_payload(access))
+        nonce = str(session.get('native_elearning_nonce') or '')
+        if not nonce:
+            nonce = secrets.token_urlsafe(24)
+            session['native_elearning_nonce'] = nonce
+        return _sign_access({'kind': 'course_asset', 'admin_preview': True,
+            'course_id': course['id'], 'course_version': course['version'], 'nonce': nonce,
+            'expires_at': int(time.time()) + ACCESS_TOKEN_TTL_SECONDS})
+
+    from .vtc_training_web import register as register_training
+    register_training(blueprint, admin_required=admin_required, learner_context=learner_context,
+                      csrf_token=_csrf_token, require_csrf=_require_csrf,
+                      prepare_activity=prepare_activity, asset_token_for=training_asset_token)
+    return blueprint
+
+
+

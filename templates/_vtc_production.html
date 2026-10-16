@@ -1,0 +1,44 @@
+{% set production = activity.production %}
+<section class="vtc-production" data-aps-production data-vtc-production>
+  <header class="vtc-production-intro">
+    <span class="vtc-eyebrow">Atelier facultatif · {{ production.estimated_minutes }} minutes prévues</span>
+    <h2>{{ production.title }}</h2>
+    <p>{{ production.brief }}</p>
+    <p>{{ production.instructions }}</p>
+    <p class="vtc-production-note"><strong>Cette production est facultative.</strong> Vous pouvez passer à la suite du parcours sans rédiger ni demander de correction.</p>
+    <p class="vtc-production-note">Si vous choisissez cet atelier, rédigez votre propre réponse à partir du dossier fictif. La correction détaillée vous aide à comprendre vos erreurs et à améliorer votre travail. Vous pouvez reprendre les conseils et relancer la correction à votre rythme.</p>
+    <p class="vtc-production-note">Repère pour progresser dans cet atelier : {{ production.pass_points }} / {{ production.max_points }}. Vous pouvez améliorer votre copie et la soumettre à nouveau à votre rythme.</p>
+  </header>
+  {% if production.work_phases %}<section class="vtc-production-phases" aria-label="Étapes du travail">
+    {% for phase in production.work_phases %}<article><span>{{ loop.index }} · {{ phase.minutes }} min</span><h3>{{ phase.title }}</h3><p>{{ phase.deliverable }}</p></article>{% endfor %}
+  </section>{% endif %}
+  <section aria-label="Documents du dossier" class="vtc-production-documents">
+    {% for doc in production.documents %}<article><span class="vtc-eyebrow">Pièce {{ loop.index }} · Dossier fictif</span><h3>{{ doc.title }}</h3><p>{{ doc.text }}</p></article>{% endfor %}
+  </section>
+  {% if production.rubric_preview %}<details class="vtc-production-rubric"><summary>Sur quoi votre travail sera-t-il évalué ?</summary><ul>{% for criterion in production.rubric_preview %}<li>{{ criterion.label }} <strong>{{ criterion.max_points }} points</strong></li>{% endfor %}</ul></details>{% endif %}
+  <form id="vtcProductionForm">
+    {% for field in production.response_fields %}<div class="vtc-production-field">
+      <label for="vtc-production-{{ field.id }}">{{ field.label }}</label>
+      {% if field.help %}<p id="vtc-production-help-{{ field.id }}">{{ field.help }}</p>{% endif %}
+      <textarea id="vtc-production-{{ field.id }}" data-production-field="{{ field.id }}" name="{{ field.id }}" rows="7"
+        minlength="{{ field.min_chars|default(20) }}" maxlength="{{ field.max_chars|default(3000) }}"
+        {% if field.required|default(true) %}required{% endif %}{% if field.help %} aria-describedby="vtc-production-help-{{ field.id }}"{% endif %}
+        {% if activity_completed %}readonly{% endif %}></textarea>
+    </div>{% endfor %}
+    <p class="vtc-production-note">Utilisez les noms et les données fictives du dossier. La correction s’appuie sur votre réponse, les documents fournis et le barème de l’atelier.</p>
+    <div class="vtc-production-actions"><button type="submit" class="vtc-button"{% if activity_completed or (preview_mode and not preview_can_answer) %} disabled{% endif %}>Obtenir ma correction détaillée</button><span data-vtc-save-status role="status" aria-live="polite"></span></div>
+  </form>
+  <p data-vtc-production-status role="status" aria-live="polite"></p>
+  <section data-vtc-production-feedback class="vtc-production-feedback" hidden aria-label="Votre correction détaillée"></section>
+  <label class="vtc-production-reviewed" data-vtc-review-label hidden><input type="checkbox" data-vtc-reviewed{% if activity_completed %} checked disabled{% endif %}> J’ai lu la correction, compris les points à reprendre et pris connaissance des conseils.</label>
+  <section data-vtc-production-history class="vtc-production-history" hidden aria-label="Historique de vos copies"></section>
+  <script id="vtcProductionConfig" type="application/json">{{ {
+    'production': production, 'completed': activity_completed,
+    'preview': preview_mode|default(false),
+    'saved': progress.answers.get(activity.id, {}),
+    'history': vtc_production_history|default([]),
+    'url': preview_config.answerUrl if preview_mode else url_for('native_elearning.activity_production', activity_id=activity.id),
+    'csrfToken': preview_config.csrfToken if preview_mode else csrf_token,
+    'accessToken': access_token|default('')
+  }|tojson }}</script>
+</section>

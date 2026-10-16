@@ -1,0 +1,3071 @@
+{
+  "format_version": 1,
+  "id": "academy-aps62-13",
+  "version": "20261006-aps62-v3",
+  "title": "APS 13 · La main courante numérique",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "source": {
+    "type": "academy-aps62",
+    "reviewed_on": "2026-10-06"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false,
+    "require_correct_answers": true
+  },
+  "theme": {
+    "main_color": "#2860e8",
+    "button_color": "#245bdb",
+    "text_color": "#172b4d"
+  },
+  "planned_minutes": 120,
+  "required_minutes": 120,
+  "regulation": "Annexe III · Outil informatique et transmission",
+  "introduction": [],
+  "sections": [
+    {
+      "id": "aps62-13-01",
+      "title": "01 · Utiliser la main courante électronique",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-13-01-comprendre",
+          "title": "Comprendre · Utiliser la main courante électronique",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "13.01",
+            "title": "Utiliser la main courante électronique",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-13.webp",
+            "case": "Vous partagez un poste informatique avec plusieurs agents. Un collègue propose d’utiliser le même compte pour gagner du temps et de copier un ancien rapport en changeant seulement la date.",
+            "reason": "L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus.",
+            "lessons": [
+              {
+                "ref": "04.06",
+                "title": "Utiliser un logiciel professionnel",
+                "page": 193,
+                "diagram": "media/aps62/repere-04.06.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Comprendre ce que l'outil enregistre"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Il comporte des comptes, des droits et une traçabilité. Utiliser le compte d'un collègue rend les actions difficiles à attribuer. Avant de valider une saisie, vérifiez le site, la personne et l'événement concernés : une information juste dans le mauvais dossier devient une erreur opérationnelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Prévoir les erreurs et les indisponibilités"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. Un brouillon n'est pas toujours visible par la relève ; un bouton « enregistré » ne signifie pas forcément « transmis ». Une pièce jointe doit être ouverte et contrôlée avant envoi, dans le cadre des règles informatiques. Les informations sensibles ne sont pas transférées vers une messagerie personnelle pour contourner une difficulté."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une main courante numérique devient indisponible. L'agent utilise le support de secours prévu, avec heures et auteur. Au rétablissement, les informations sont intégrées de façon traçable en conservant la distinction entre l'heure des faits et l'heure de saisie. Cette continuité évite une période sans historique."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · L'outil facilite la mission, mais l'agent reste responsable de la qualité de sa saisie et de la vérification de ce qui a réellement été enregistré ou transmis."
+                  }
+                ],
+                "course_page": 194,
+                "practice": {
+                  "background": "Enregistrez dans l’emplacement prévu et vérifiez que l’opération a réussi. Un document ouvert à l’écran n’est pas nécessairement sauvegardé. Ne branchez pas une clé USB inconnue et n’installez pas un logiciel pour contourner une difficulté. Si le système est indisponible, appliquez la procédure de continuité. Les notes temporaires doivent être reprises de manière traçable puis traitées selon les règles de conservation. Demandez une assistance plutôt que de partager votre session ou vos identifiants.",
+                  "case": "Vous préparez un rapport pour le responsable du site. Le logiciel de messagerie propose automatiquement une adresse externe portant presque le même nom. Une pièce jointe contient un registre complet de visiteurs. Quels contrôles empêchent l’erreur ? Que faites-vous si le message est déjà parti ?",
+                  "transfer": "Vous quittez le PC quelques minutes pour un appel. Quelle action protège votre session ?",
+                  "page": 208
+                }
+              },
+              {
+                "ref": "04.04",
+                "title": "Écrire une main courante utile",
+                "page": 189,
+                "diagram": "media/aps62/repere-04.04.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une chronologie du service"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La main courante enregistre les faits et les actions dans l'ordre du temps. Elle permet la continuité entre agents et la reconstitution d'un événement. Chaque entrée doit situer ce qui s'est passé, quand, où, par qui et avec quelle suite. Une main courante interne ne se confond pas avec une déclaration faite auprès d'un service de police."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Des faits, une origine, un état de suivi"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Écrivez ce que vous avez constaté. Lorsqu'une information vient d'un tiers, indiquez-le. Distinguez l'heure de l'événement et celle de sa connaissance si elles diffèrent. Une correction doit rester traçable selon l'outil ; il ne faut pas réécrire discrètement l'histoire. Évitez les jugements, les détails privés inutiles et les formules qui concluent sans preuve, comme « tout est réglé »."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "« 16 h 10 : porte de livraison trouvée ouverte lors de la ronde. 16 h 12 : PC informé ; accès surveillé. 16 h 18 : fermeture réalisée par le responsable technique, contrôle effectué. » La suite est lisible. Si une réparation reste attendue, elle doit être indiquée pour que la relève ne suppose pas le problème clos."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une trace de qualité permet à un autre professionnel de reprendre le dossier sans devoir deviner ce qui a été fait."
+                  }
+                ],
+                "course_page": 190,
+                "practice": {
+                  "background": "Écrivez des faits observables, sans insultes ni diagnostics. Distinguez l’heure de l’événement et l’heure de saisie si elles diffèrent. Une correction doit préserver la traçabilité selon le support ; ne supprimez pas une entrée pour dissimuler une erreur. Sur une main courante électronique, utilisez votre compte, sélectionnez la catégorie adaptée et vérifiez les champs avant validation. Une panne déclenche le support de secours prévu, puis une reprise qui conserve les horaires et l’origine des notes.",
+                  "case": "Vous constatez à 22 h 14 une porte qui ferme mal, prévenez le PC à 22 h 16 et saisissez l’entrée à 22 h 35 après avoir balisé la zone. Quels horaires distinguez-vous ? Quelle information évite une fausse impression de résolution ?",
+                  "transfer": "Qu’ajouter à « 18 h : problème caméra » pour que la relève puisse agir ?",
+                  "page": 204
+                }
+              },
+              {
+                "ref": "02.14",
+                "title": "Protéger une information numérique",
+                "page": 100,
+                "diagram": "media/aps62/repere-02.14.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Trois qualités complémentaires"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La confidentialité limite l'accès aux personnes autorisées. L'intégrité signifie que l'information reste exacte et n'a pas été modifiée sans contrôle. La disponibilité permet de la retrouver au moment nécessaire. Un mot de passe protège l'accès ; une sauvegarde contribue à la disponibilité ; une correction tracée préserve l'historique. Aucune de ces mesures ne remplace les autres."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Les gestes ordinaires sont déterminants"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Utilisez votre compte, verrouillez la session lorsque vous vous éloignez et évitez les supports personnels non autorisés. Vérifiez le destinataire avant un envoi. Une demande urgente de code ou de document peut relever d'une tentative de manipulation : confirmez-la par un canal connu. Si une erreur est découverte, prévenez rapidement selon la procédure ; la supprimer silencieusement ne garantit pas que ses effets disparaissent."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un courriel prétend provenir du directeur et réclame la liste des badges actifs. L'agent vérifie la demande par le numéro habituel du responsable, sans utiliser celui indiqué dans le message suspect. Cette démarche protège la confidentialité tout en permettant de traiter une demande légitime par le circuit approprié."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La sécurité numérique est une continuité de la sécurité du poste. Une porte contrôlée perd de son intérêt si les codes d'accès sont transmis sans vérification."
+                  }
+                ],
+                "course_page": 101,
+                "practice": {
+                  "background": "Sur les outils numériques, utilisez votre compte, verrouillez la session et ne partagez pas de mot de passe. Une demande urgente de code par téléphone doit être vérifiée par un canal connu. N’accédez pas à un système au-delà des droits attribués ; une session ouverte ne vaut pas autorisation. Une erreur, un courriel suspect ou une perte de matériel doit être signalé rapidement. Préservez les traces sans mener votre propre investigation technique et appliquez le plan de continuité prévu.",
+                  "case": "Une personne se présente au téléphone comme technicien et vous demande votre identifiant, votre mot de passe et un code reçu par SMS. Elle affirme que le système va tomber en panne dans cinq minutes. Quels indices vous alertent ? Quelle méthode permet de vérifier la demande ?",
+                  "transfer": "Un collègue vous demande votre mot de passe pour gagner du temps. Quel principe explique votre refus ?",
+                  "page": 125
+                }
+              }
+            ],
+            "decision": "Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies.",
+            "pitfall": "Réutiliser automatiquement l’ancien rapport.",
+            "objectives": [
+              "Expliquer : utiliser la main courante électronique",
+              "Justifier une décision à partir de faits et de limites.",
+              "Choisir une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Vous partagez un poste informatique avec plusieurs agents. Un collègue propose d’utiliser le même compte pour gagner du temps et de copier un ancien rapport en changeant seulement la date."
+              ],
+              [
+                "Décision à justifier",
+                "Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies."
+              ],
+              [
+                "Piège à éviter",
+                "Réutiliser automatiquement l’ancien rapport."
+              ],
+              [
+                "Pourquoi ?",
+                "L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Vous partagez un poste informatique avec plusieurs agents."
+              },
+              {
+                "label": "Vérifier",
+                "text": "L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite."
+              },
+              {
+                "label": "Décider",
+                "text": "Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Une pièce jointe contient les données d’un autre visiteur. Comment signaler et traiter l’erreur sans multiplier les copies ?"
+              }
+            ],
+            "edition": "2026-10-06",
+            "image_alt": "Scène professionnelle illustrée : La main courante numérique",
+            "visual_board": {
+              "title": "Une trace que l’on peut relire",
+              "steps": [
+                {
+                  "label": "Attribuer",
+                  "text": "Auteur identifié et origine des informations."
+                },
+                {
+                  "label": "Dater",
+                  "text": "Heure des faits distinguée de l’heure de saisie."
+                },
+                {
+                  "label": "Décrire",
+                  "text": "Lieu, faits, actions, destinataires et état du suivi."
+                },
+                {
+                  "label": "Rectifier",
+                  "text": "Un complément traçable, sans effacement dissimulé."
+                }
+              ]
+            },
+            "extra_case": {
+              "title": "La panne puis le doublon",
+              "case": "Le réseau coupe à 23 h 50. L’agent note deux incidents sur le support de continuité prévu. À 00 h 20, le logiciel revient et le collègue a déjà saisi l’un des événements avec une heure approximative.",
+              "task": "Préparez la reprise sans doublon et une correction traçable.",
+              "model": "Comparer les événements avant intégration, conserver l’heure réelle et préciser l’heure de saisie. Relier le complément à l’entrée existante et expliquer la rectification. Sécuriser les supports temporaires selon la procédure."
+            },
+            "sorting": [
+              {
+                "text": "Vous partagez un poste informatique avec plusieurs agents. Un collègue propose d’utiliser le même compte pour gagner du temps et de copier un ancien rapport en changeant seulement la date.",
+                "category": "fait"
+              },
+              {
+                "text": "Réutiliser automatiquement l’ancien rapport.",
+                "category": "ecarter"
+              },
+              {
+                "text": "Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies.",
+                "category": "adapte"
+              }
+            ],
+            "pacing": [
+              {
+                "label": "Comprendre et comparer",
+                "minutes": 16
+              },
+              {
+                "label": "Mémoriser",
+                "minutes": 4
+              },
+              {
+                "label": "Mission en cinq décisions",
+                "minutes": 12
+              },
+              {
+                "label": "Vérifier les repères",
+                "minutes": 6
+              },
+              {
+                "label": "Transférer",
+                "minutes": 6
+              },
+              {
+                "label": "Analyser les documents",
+                "minutes": 8
+              },
+              {
+                "label": "Composer la main courante",
+                "minutes": 6
+              },
+              {
+                "label": "Retenir",
+                "minutes": 2
+              }
+            ],
+            "deepening": [
+              {
+                "title": "Utiliser un outil sans perdre la preuve de l'action",
+                "paragraphs": [
+                  "Une main courante électronique associe un utilisateur identifié, un événement, un horodatage et un historique. Le compte individuel permet d'attribuer l'action ; écrire son nom dans une session partagée n'offre pas la même traçabilité. Les droits d'accès limitent les fonctions aux besoins de la mission. Le verrouillage de session et la protection des identifiants évitent qu'une autre personne agisse sous le nom de l'agent.",
+                  "La saisie doit distinguer l'heure de l'événement et celle de l'enregistrement. En cas d'erreur, la correction autorisée conserve l'historique. En cas d'indisponibilité, le mode dégradé préserve les faits et les heures puis organise une reprise attribuable ; il ne sert pas à recréer un historique fictif. Les choix proposés dans la simulation permettent de comparer des entrées plus ou moins fiables."
+                ]
+              },
+              {
+                "title": "Rechercher, mettre en forme et diffuser un document",
+                "paragraphs": [
+                  "L'utilisation d'un traitement de texte comprend le choix du document, la structuration avec titres et paragraphes, la vérification du contenu, l'enregistrement avec un nom et une version explicites, puis l'export dans le format attendu. Renommer une extension ne convertit pas le fichier. Avant envoi, contrôler la pièce jointe et le destinataire réduit les erreurs de version et les diffusions injustifiées.",
+                  "La recherche doit utiliser des critères pertinents, puis vérifier le statut, l'auteur et la date du résultat. Le classement, la conservation et les droits suivent la procédure de l'organisme. Un document validé ne devient pas librement transmissible. Les exercices sans rédaction travaillent ces choix ; une prise en main accompagnée de l'outil professionnel reste nécessaire pour observer l'autonomie informatique et la production effective d'un document."
+                ]
+              },
+              {
+                "title": "Comparer deux moments de la décision",
+                "paragraphs": [
+                  "Dans le nouveau dossier « Le compte partagé », le point de départ est le suivant : La relève propose à l'agent d'utiliser un compte collectif déjà ouvert pour saisir un événement. La procédure prévoit des identifiants individuels et un historique de correction.",
+                  "Le fait établi est : La session ouverte ne permet pas d'attribuer la saisie au bon agent. La première réponse à examiner est : Utiliser son accès individuel ou le mode dégradé autorisé en cas de blocage. L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique.",
+                  "La situation évolue : L'application devient indisponible après le premier enregistrement. La décision doit donc être réexaminée : Appliquer le support de continuité prévu et préparer une reprise traçable. Le mode dégradé doit préserver les faits, les horaires et leur origine lors de la reprise.",
+                  "Comparez les deux moments avant de lancer la mission. Le document à contrôler contient cet écart : Notice informelle : compte commun recommandé pour éviter les oublis de mot de passe. La référence vérifiée est : Procédure : comptes nominatifs, droits limités et continuité documentée."
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-13-01-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 4,
+          "blocks": [
+            {
+              "id": "aps62-13-01-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-13-01-video",
+                "title": "Utiliser la main courante électronique",
+                "required": true,
+                "src": "media/aps62/v2/aps62-13-01.mp4",
+                "poster": "media/aps62/v2/aps62-13-01.jpg",
+                "captions": "media/aps62/v2/aps62-13-01.vtt",
+                "duration_seconds": 73.437663,
+                "transcript": "La situation : Vous partagez un poste informatique avec plusieurs agents. Un collègue propose d’utiliser le même compte pour gagner du temps et de copier un ancien rapport en changeant seulement la date.\n\nÀ vous de décider : Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies. Ou bien : Réutiliser automatiquement l’ancien rapport. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus.\n\nLe bon relais : Chaque entrée identifie lieu, fait, action et suite. La correction indique la donnée rectifiée et le motif sans effacement dissimulé. Le modèle sert de structure ; chaque champ est vérifié. La session informatique est sécurisée au départ et les documents restent dans les espaces autorisés.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "13.01",
+            "title": "Utiliser la main courante électronique",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Comprendre ce que l'outil enregistre",
+                "back": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Il comporte des comptes, des droits et une traçabilité. Utiliser le compte d'un collègue rend les actions difficiles à attribuer. Avant de valider une saisie, vérifiez le site, la personne et l'événement concernés : une information juste dans le mauvais dossier devient une erreur opérationnelle."
+              },
+              {
+                "front": "Prévoir les erreurs et les indisponibilités",
+                "back": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. Un brouillon n'est pas toujours visible par la relève ; un bouton « enregistré » ne signifie pas forcément « transmis ». Une pièce jointe doit être ouverte et contrôlée avant envoi, dans le cadre des règles informatiques. Les informations sensibles ne sont pas transférées vers une messagerie personnelle pour contourner une difficulté."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Une main courante numérique devient indisponible. L'agent utilise le support de secours prévu, avec heures et auteur. Au rétablissement, les informations sont intégrées de façon traçable en conservant la distinction entre l'heure des faits et l'heure de saisie. Cette continuité évite une période sans historique."
+              },
+              {
+                "front": "Une chronologie du service",
+                "back": "La main courante enregistre les faits et les actions dans l'ordre du temps. Elle permet la continuité entre agents et la reconstitution d'un événement. Chaque entrée doit situer ce qui s'est passé, quand, où, par qui et avec quelle suite. Une main courante interne ne se confond pas avec une déclaration faite auprès d'un service de police."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Vous partagez un poste informatique avec plusieurs agents. Un collègue propose d’utiliser le même compte pour gagner du temps et de copier un ancien rapport en changeant seulement la date.\n\nÀ vous de décider : Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies. Ou bien : Réutiliser automatiquement l’ancien rapport. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus.\n\nLe bon relais : Chaque entrée identifie lieu, fait, action et suite. La correction indique la donnée rectifiée et le motif sans effacement dissimulé. Le modèle sert de structure ; chaque champ est vérifié. La session informatique est sécurisée au départ et les documents restent dans les espaces autorisés.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-13-01-atelier",
+          "title": "Mission · Le compte partagé",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "academy": {
+            "kind": "workshop",
+            "dossier": "13.01",
+            "title": "Le compte partagé",
+            "case": "La relève propose à l'agent d'utiliser un compte collectif déjà ouvert pour saisir un événement. La procédure prévoit des identifiants individuels et un historique de correction.",
+            "edition": "2026-10-06"
+          },
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Le compte partagé · cinq décisions successives",
+            "sequential": true,
+            "exercises": [
+              {
+                "id": "constat",
+                "kind": "single",
+                "prompt": "1. Sur quel fait fonder votre analyse ?",
+                "context": "La relève propose à l'agent d'utiliser un compte collectif déjà ouvert pour saisir un événement. La procédure prévoit des identifiants individuels et un historique de correction.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Aucun fait ne mérite une vérification tant qu’aucun dommage n’est visible."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Le récit prouve à lui seul une intention malveillante de toutes les personnes concernées."
+                  },
+                  {
+                    "id": "3",
+                    "text": "La session ouverte ne permet pas d'attribuer la saisie au bon agent."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Le point de départ établi est : La session ouverte ne permet pas d'attribuer la saisie au bon agent. Il ne faut pas compléter ce constat par une supposition.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : Le point de départ établi est : La session ouverte ne permet pas d'attribuer la saisie au bon agent. Il ne faut pas compléter ce constat par une supposition. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix crée une difficulté : Le point de départ établi est : La session ouverte ne permet pas d'attribuer la saisie au bon agent. Il ne faut pas compléter ce constat par une supposition. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite."
+                },
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "decision",
+                "kind": "single",
+                "prompt": "2. Quelle première décision prenez-vous ?",
+                "context": "Le poste doit maintenant choisir une action à partir du constat.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Attendre la fin de la vacation sans transmettre la situation à un interlocuteur."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Saisir sous le compte du collègue puis signer seulement dans le texte."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Utiliser son accès individuel ou le mode dégradé autorisé en cas de blocage."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix crée une difficulté : L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite."
+                },
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Employer la fonction de correction autorisée qui conserve l'historique."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Supprimer l'entrée puis la recréer à l'identique avec une heure choisie."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "3. Une nouvelle information arrive. Que décidez-vous ?",
+                "context": "L'application devient indisponible après le premier enregistrement.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Garder la première décision sans examiner l’information nouvelle."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Considérer que l'indisponibilité dispense de toute trace."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Appliquer le support de continuité prévu et préparer une reprise traçable."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Le mode dégradé doit préserver les faits, les horaires et leur origine lors de la reprise.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : Le mode dégradé doit préserver les faits, les horaires et leur origine lors de la reprise. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix crée une difficulté : Le mode dégradé doit préserver les faits, les horaires et leur origine lors de la reprise. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite."
+                },
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Employer la fonction de correction autorisée qui conserve l'historique."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Supprimer l'entrée puis la recréer à l'identique avec une heure choisie."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique."
+                }
+              },
+              {
+                "id": "consigne",
+                "kind": "single",
+                "prompt": "4. Quel document doit être écarté ou clarifié avant application ?",
+                "context": "Deux documents sont transmis au poste. Comparez-les avec la situation et la règle.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Notice informelle : compte commun recommandé pour éviter les oublis de mot de passe."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Procédure : comptes nominatifs, droits limités et continuité documentée."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Trame validée : identifier les faits, les mesures prises et les interlocuteurs avisés."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique. La note incompatible est : Notice informelle : compte commun recommandé pour éviter les oublis de mot de passe.",
+                "branches": {
+                  "1": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "2": "Ce choix crée une difficulté : L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique. La note incompatible est : Notice informelle : compte commun recommandé pour éviter les oublis de mot de passe. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix crée une difficulté : L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique. La note incompatible est : Notice informelle : compte commun recommandé pour éviter les oublis de mot de passe. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Employer la fonction de correction autorisée qui conserve l'historique."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Supprimer l'entrée puis la recréer à l'identique avec une heure choisie."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              },
+              {
+                "id": "releve",
+                "kind": "single",
+                "prompt": "5. Quelle transmission permet une relève fiable ?",
+                "context": "Le collègue de relève arrive. Il n’a assisté à aucune des étapes précédentes.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Annoncer que toutes les vérifications sont terminées pour simplifier la relève."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Transmettre le constat, l’évolution, les mesures réellement prises et ce qui reste à vérifier."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Transmettre seulement la première décision, sans l’évolution reçue ensuite."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Le relais doit connaître les faits nouveaux et les limites de l’information. Le mode dégradé doit préserver les faits, les horaires et leur origine lors de la reprise.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : Le relais doit connaître les faits nouveaux et les limites de l’information. Le mode dégradé doit préserver les faits, les horaires et leur origine lors de la reprise. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "3": "Ce choix crée une difficulté : Le relais doit connaître les faits nouveaux et les limites de l’information. Le mode dégradé doit préserver les faits, les horaires et leur origine lors de la reprise. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "2",
+                      "text": "La vérification ou le relais prévu : Employer la fonction de correction autorisée qui conserve l'historique."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-13-01-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Vous partagez un poste informatique avec plusieurs agents. Un collègue propose d’utiliser le même compte pour gagner du temps et de copier un ancien rapport en changeant seulement la date.",
+          "options": [
+            {
+              "id": "aps62-13-01-a0",
+              "text": "Réutiliser automatiquement l’ancien rapport.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-13-01-a1",
+              "text": "Laisser la session ouverte afin que la relève n’ait pas à se connecter.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-13-01-a2",
+              "text": "Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus."
+        },
+        {
+          "id": "aps62-13-01-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-13-01-pair0",
+              "left": "Comprendre ce que l'outil enregistre",
+              "right": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes."
+            },
+            {
+              "id": "aps62-13-01-pair1",
+              "left": "Prévoir les erreurs et les indisponibilités",
+              "right": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne."
+            },
+            {
+              "id": "aps62-13-01-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Une main courante numérique devient indisponible."
+            }
+          ],
+          "explanation": "Comprendre ce que l'outil enregistre : Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Prévoir les erreurs et les indisponibilités : Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. EXEMPLE EXPLIQUÉ : Une main courante numérique devient indisponible."
+        },
+        {
+          "id": "aps62-13-01-transfert",
+          "title": "Transférer · comparer de nouvelles situations",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "academy": {
+            "dossier": "13.01",
+            "title": "Utiliser la main courante électronique",
+            "kind": "transfer",
+            "case": "Une pièce jointe contient les données d’un autre visiteur. Comment signaler et traiter l’erreur sans multiplier les copies ?",
+            "model": "L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus. Chaque entrée identifie lieu, fait, action et suite. La correction indique la donnée rectifiée et le motif sans effacement dissimulé. Le modèle sert de structure ; chaque champ est vérifié. La session informatique est sécurisée au départ et les documents restent dans les espaces autorisés.",
+            "edition": "2026-10-04"
+          },
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Transférer le raisonnement et comparer les contextes",
+            "exercises": [
+              {
+                "id": "variante",
+                "kind": "single",
+                "prompt": "Quelle réponse retenir dans cette nouvelle situation ?",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Signaler l’erreur au responsable habilité et suivre la procédure de correction et de restriction d’accès sans diffuser de copies."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Envoyer la pièce à tous les collègues pour demander leur avis."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Supprimer les traces de l’erreur sans prévenir le responsable."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Signaler l’erreur au responsable habilité et suivre la procédure de correction et de restriction d’accès sans diffuser de copies. L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus.",
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Employer la fonction de correction autorisée qui conserve l'historique."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Supprimer l'entrée puis la recréer à l'identique avec une heure choisie."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique."
+                }
+              },
+              {
+                "id": "contre_exemple",
+                "kind": "single",
+                "prompt": "Comparez avec ce cas de référence : quelle conduite lui correspond ?",
+                "context": "Le réseau coupe à 23 h 50. L’agent note deux incidents sur le support de continuité prévu. À 00 h 20, le logiciel revient et le collègue a déjà saisi l’un des événements avec une heure approximative.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Appliquer la même réponse quels que soient les faits et les interlocuteurs."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Comparer les événements avant intégration, conserver l’heure réelle et préciser l’heure de saisie. Relier le complément à l’entrée existante et expliquer la rectification. Sécuriser les supports temporaires selon la procédure."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Saisir sous le compte du collègue puis signer seulement dans le texte."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Comparer les événements avant intégration, conserver l’heure réelle et préciser l’heure de saisie. Relier le complément à l’entrée existante et expliquer la rectification. Sécuriser les supports temporaires selon la procédure.",
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Employer la fonction de correction autorisée qui conserve l'historique."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Supprimer l'entrée puis la recréer à l'identique avec une heure choisie."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique."
+                }
+              },
+              {
+                "id": "methode",
+                "kind": "single",
+                "prompt": "Que faut-il comparer avant de transposer la solution du premier cas ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Seulement le nom du site et l’heure de la vacation."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Les faits, le périmètre, les autorisations, le danger et les relais effectivement disponibles."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Uniquement la première impression laissée par la personne concernée."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Un même principe peut conduire à des actions différentes lorsque les conditions changent. Comparer les événements avant intégration, conserver l’heure réelle et préciser l’heure de saisie. Relier le complément à l’entrée existante et expliquer la rectification. Sécuriser les supports temporaires selon la procédure.",
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-13-01-documents",
+          "title": "Documents · repérer les anomalies",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Croiser trois pièces et rechercher les anomalies",
+            "documents": [
+              {
+                "title": "A · Fiche d’événement 13-01",
+                "text": "La relève propose à l'agent d'utiliser un compte collectif déjà ouvert pour saisir un événement. La procédure prévoit des identifiants individuels et un historique de correction.",
+                "rows": [
+                  [
+                    "09 h 02 · constat au poste",
+                    "La session ouverte ne permet pas d'attribuer la saisie au bon agent."
+                  ],
+                  [
+                    "09 h 04 · action enregistrée par l’agent",
+                    "Utiliser son accès individuel ou le mode dégradé autorisé en cas de blocage."
+                  ],
+                  [
+                    "09 h 07 · nouvelle information reçue",
+                    "L'application devient indisponible après le premier enregistrement."
+                  ],
+                  [
+                    "09 h 10 · état du suivi",
+                    "Réévaluation engagée ; issue finale non confirmée."
+                  ]
+                ]
+              },
+              {
+                "title": "B · Consigne validée pour l’exercice",
+                "text": "Procédure : comptes nominatifs, droits limités et continuité documentée.",
+                "rows": [
+                  [
+                    "Statut",
+                    "Version validée par le responsable pédagogique pour ce cas fictif."
+                  ],
+                  [
+                    "Traçabilité",
+                    "Distinguer les faits, les sources, les horaires, les actions et les suites."
+                  ]
+                ]
+              },
+              {
+                "title": "C · Brouillon reçu, à contrôler",
+                "text": "Notice informelle : compte commun recommandé pour éviter les oublis de mot de passe.",
+                "rows": [
+                  [
+                    "09 h 12 · heure de saisie",
+                    "Entrée saisie au retour au poste."
+                  ],
+                  [
+                    "Heure d’événement indiquée dans le brouillon",
+                    "09 h 12"
+                  ],
+                  [
+                    "Conclusion proposée",
+                    "Toutes les vérifications sont achevées ; aucune suite nécessaire."
+                  ]
+                ]
+              }
+            ],
+            "exercises": [
+              {
+                "id": "anomalie",
+                "kind": "single",
+                "prompt": "Quelle phrase du document C pose un problème de fond ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Notice informelle : compte commun recommandé pour éviter les oublis de mot de passe."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Procédure : comptes nominatifs, droits limités et continuité documentée."
+                  },
+                  {
+                    "id": "3",
+                    "text": "L’entrée a été saisie à 09 h 12."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique.",
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Employer la fonction de correction autorisée qui conserve l'historique."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Supprimer l'entrée puis la recréer à l'identique avec une heure choisie."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              },
+              {
+                "id": "horodatage",
+                "kind": "single",
+                "prompt": "Quelle anomalie chronologique faut-il corriger ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "L’heure de la nouvelle information doit remplacer toutes les autres heures."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Le brouillon utilise l’heure de saisie 09 h 12 comme heure de l’événement signalé à 09 h 02."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Le délai entre constat et saisie prouve que l’événement n’a pas eu lieu."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La pièce A distingue le constat à 09 h 02, l’action à 09 h 04 et l’évolution à 09 h 07. La saisie à 09 h 12 n’efface pas cette chronologie.",
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Le fait est signalé à 11 h 06, puis saisi à 11 h 12. Quelle entrée est fidèle ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Événement à 11 h 12, puisque l’application l’a enregistré à cette heure."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Saisie à 11 h 06, en modifiant l’historique pour faire coïncider les heures."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Événement signalé à 11 h 06 ; saisie à 11 h 12 ; origine de l’information précisée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Distinguer heure de l’événement et heure de saisie préserve la chronologie. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "Distinguer heure de l’événement et heure de saisie préserve la chronologie."
+                }
+              },
+              {
+                "id": "cloture",
+                "kind": "single",
+                "prompt": "Quelle conclusion est réellement étayée par la pièce A ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Tout est définitivement résolu puisque le brouillon l’affirme."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Aucune action n’a été engagée avant la saisie."
+                  },
+                  {
+                    "id": "3",
+                    "text": "La réévaluation est engagée et l’issue finale n’est pas confirmée."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La dernière ligne de A décrit un suivi en cours. La conclusion de C n’est pas étayée.",
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "2",
+                      "text": "La vérification ou le relais prévu : Employer la fonction de correction autorisée qui conserve l'historique."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              },
+              {
+                "id": "statut",
+                "kind": "sort",
+                "prompt": "Attribuez un statut à chaque élément du dossier.",
+                "options": [
+                  {
+                    "id": "fait",
+                    "text": "Fait ou action enregistré dans A"
+                  },
+                  {
+                    "id": "regle",
+                    "text": "Instruction validée dans B"
+                  },
+                  {
+                    "id": "ecart",
+                    "text": "Affirmation du brouillon C à corriger"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "La session ouverte ne permet pas d'attribuer la saisie au bon agent.",
+                    "answer": "fait"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Procédure : comptes nominatifs, droits limités et continuité documentée.",
+                    "answer": "regle"
+                  },
+                  {
+                    "id": "r3",
+                    "text": "Notice informelle : compte commun recommandé pour éviter les oublis de mot de passe.",
+                    "answer": "ecart"
+                  },
+                  {
+                    "id": "r4",
+                    "text": "Action à 09 h 04 : Utiliser son accès individuel ou le mode dégradé autorisé en cas de blocage.",
+                    "answer": "fait"
+                  },
+                  {
+                    "id": "r5",
+                    "text": "Toutes les vérifications sont achevées.",
+                    "answer": "ecart"
+                  }
+                ],
+                "explanation": "Le document d’origine et le statut de l’information comptent autant que sa formulation. A constate, B prescrit, C contient des erreurs.",
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "correction",
+                "kind": "single",
+                "prompt": "Comment corriger ce brouillon avant une transmission autorisée ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Rectifier les horaires, écarter la note incompatible, garder le suivi en cours et tracer la validation."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Supprimer la fiche A pour ne conserver qu’un récit cohérent avec C."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Changer seulement le titre du document, sans contrôler les trois écarts."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La correction doit résoudre les écarts de fond, de chronologie et de statut, sans détruire les sources.",
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Employer la fonction de correction autorisée qui conserve l'historique."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Supprimer l'entrée puis la recréer à l'identique avec une heure choisie."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              }
+            ]
+          },
+          "academy": {
+            "kind": "documents",
+            "dossier": "13.01",
+            "title": "Le compte partagé",
+            "case": "Dossier fictif « Le compte partagé ». Comparez les pièces et justifiez mentalement chaque choix.",
+            "edition": "2026-10-06"
+          }
+        },
+        {
+          "id": "aps62-13-01-journal",
+          "title": "Main courante · composer une entrée",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Composer une main courante fiable, sans rédaction",
+            "journal": true,
+            "documents": [
+              {
+                "title": "A · Fiche d’événement 13-01",
+                "text": "La relève propose à l'agent d'utiliser un compte collectif déjà ouvert pour saisir un événement. La procédure prévoit des identifiants individuels et un historique de correction.",
+                "rows": [
+                  [
+                    "09 h 02 · constat au poste",
+                    "La session ouverte ne permet pas d'attribuer la saisie au bon agent."
+                  ],
+                  [
+                    "09 h 04 · action enregistrée par l’agent",
+                    "Utiliser son accès individuel ou le mode dégradé autorisé en cas de blocage."
+                  ],
+                  [
+                    "09 h 07 · nouvelle information reçue",
+                    "L'application devient indisponible après le premier enregistrement."
+                  ],
+                  [
+                    "09 h 10 · état du suivi",
+                    "Réévaluation engagée ; issue finale non confirmée."
+                  ]
+                ]
+              },
+              {
+                "title": "B · Consigne validée pour l’exercice",
+                "text": "Procédure : comptes nominatifs, droits limités et continuité documentée.",
+                "rows": [
+                  [
+                    "Statut",
+                    "Version validée par le responsable pédagogique pour ce cas fictif."
+                  ],
+                  [
+                    "Traçabilité",
+                    "Distinguer les faits, les sources, les horaires, les actions et les suites."
+                  ]
+                ]
+              },
+              {
+                "title": "Moment de la saisie",
+                "text": "Il est 09 h 12 lorsque vous composez cette entrée. L’heure de saisie ne remplace pas les heures de la fiche A."
+              }
+            ],
+            "exercises": [
+              {
+                "id": "heure",
+                "kind": "single",
+                "prompt": "Heures de l’événement et de la saisie",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Événement à 09 h 04 ; saisie antidatée à 09 h 02."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Constat : 09 h 02 ; action : 09 h 04 ; évolution : 09 h 07 ; saisie : 09 h 12."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Événement et saisie : 09 h 12 ; aucune autre heure utile."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La pièce A et le brouillon donnent des heures de nature différente. Conservez chacune avec sa fonction.",
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Le fait est signalé à 11 h 06, puis saisi à 11 h 12. Quelle entrée est fidèle ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Événement à 11 h 12, puisque l’application l’a enregistré à cette heure."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Saisie à 11 h 06, en modifiant l’historique pour faire coïncider les heures."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Événement signalé à 11 h 06 ; saisie à 11 h 12 ; origine de l’information précisée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Distinguer heure de l’événement et heure de saisie préserve la chronologie. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "Distinguer heure de l’événement et heure de saisie préserve la chronologie."
+                }
+              },
+              {
+                "id": "source",
+                "kind": "single",
+                "prompt": "Origine des informations",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Informations certaines, sans source à conserver."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Tous les éléments ont été personnellement observés au même moment."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Constat et action consignés dans A ; nouvelle information reçue à 09 h 07 ; consigne B identifiée."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Ne transformez pas une information reçue en observation personnelle.",
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "fait",
+                "kind": "single",
+                "prompt": "Constat initial",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "La session ouverte ne permet pas d'attribuer la saisie au bon agent."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Aucun fait précis à conserver dans le registre."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Intention malveillante certaine des personnes concernées."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La formulation fidèle n’ajoute ni intention ni qualification définitive. La session ouverte ne permet pas d'attribuer la saisie au bon agent.",
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "action",
+                "kind": "single",
+                "prompt": "Action réellement enregistrée à 09 h 04",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Saisir sous le compte du collègue puis signer seulement dans le texte."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Aucune action effectuée avant la saisie."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Utiliser son accès individuel ou le mode dégradé autorisé en cas de blocage."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La pièce A enregistre cette action à 09 h 04. L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique.",
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Employer la fonction de correction autorisée qui conserve l'historique."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Supprimer l'entrée puis la recréer à l'identique avec une heure choisie."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "Évolution à transmettre",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Issue définitivement confirmée à 09 h 07 sans autre démarche."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Situation inchangée depuis le constat initial."
+                  },
+                  {
+                    "id": "3",
+                    "text": "L'application devient indisponible après le premier enregistrement."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Cette nouvelle information modifie l’analyse. Le mode dégradé doit préserver les faits, les horaires et leur origine lors de la reprise.",
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Employer la fonction de correction autorisée qui conserve l'historique."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Supprimer l'entrée puis la recréer à l'identique avec une heure choisie."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "L'identité technique, l'horodatage et l'historique participent à la fiabilité de la main courante électronique."
+                }
+              },
+              {
+                "id": "suite",
+                "kind": "single",
+                "prompt": "État du suivi et prochaine décision",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Dossier clos ; aucune vérification ni transmission complémentaire."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Résultat juridique définitif établi par le poste."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Réévaluation engagée, issue non confirmée. Décision à mettre en œuvre : Appliquer le support de continuité prévu et préparer une reprise traçable."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Distinguez ce qui est fait, ce qui est décidé et ce qui reste à confirmer.",
+                "remediation": {
+                  "prompt": "Un agent constate une erreur dans une entrée de la veille. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "2",
+                      "text": "La vérification ou le relais prévu : Employer la fonction de correction autorisée qui conserve l'historique."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Employer la fonction de correction autorisée qui conserve l'historique.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              }
+            ]
+          },
+          "academy": {
+            "kind": "journal",
+            "dossier": "13.01",
+            "title": "Le compte partagé",
+            "case": "Dossier fictif « Le compte partagé ». Comparez les pièces et justifiez mentalement chaque choix.",
+            "edition": "2026-10-06"
+          }
+        },
+        {
+          "id": "aps62-13-01-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "13.01",
+            "title": "Utiliser la main courante électronique",
+            "kind": "recap",
+            "decision": "Utiliser le compte et les accès prévus, vérifier chaque donnée et préserver l’attribution des saisies.",
+            "reason": "L’outil numérique facilite la recherche et la transmission mais peut propager une erreur très vite. L’identité de l’auteur, l’horodatage, les droits et l’historique participent à la fiabilité. Copier un modèle n’autorise pas à reprendre des faits non observés. La protection de la session et des pièces jointes limite les accès non prévus.",
+            "pitfall": "Réutiliser automatiquement l’ancien rapport.",
+            "cards": [
+              {
+                "front": "Comprendre ce que l'outil enregistre",
+                "back": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Il comporte des comptes, des droits et une traçabilité. Utiliser le compte d'un collègue rend les actions difficiles à attribuer. Avant de valider une saisie, vérifiez le site, la personne et l'événement concernés : une information juste dans le mauvais dossier devient une erreur opérationnelle."
+              },
+              {
+                "front": "Prévoir les erreurs et les indisponibilités",
+                "back": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. Un brouillon n'est pas toujours visible par la relève ; un bouton « enregistré » ne signifie pas forcément « transmis ». Une pièce jointe doit être ouverte et contrôlée avant envoi, dans le cadre des règles informatiques. Les informations sensibles ne sont pas transférées vers une messagerie personnelle pour contourner une difficulté."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Une main courante numérique devient indisponible. L'agent utilise le support de secours prévu, avec heures et auteur. Au rétablissement, les informations sont intégrées de façon traçable en conservant la distinction entre l'heure des faits et l'heure de saisie. Cette continuité évite une période sans historique."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "04.06",
+                "page": 194
+              },
+              {
+                "ref": "04.04",
+                "page": 190
+              },
+              {
+                "ref": "02.14",
+                "page": 101
+              }
+            ],
+            "instruction": "Retrouvez mentalement la décision et les limites du dossier, puis consultez les repères pour vérifier. Vous pouvez refaire les ateliers pour réviser.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-13-02",
+      "title": "02 · Documents, recherche et continuité numérique",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-13-02-comprendre",
+          "title": "Comprendre · Documents, recherche et continuité numérique",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "13.02",
+            "title": "Documents, recherche et continuité numérique",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-13.webp",
+            "case": "Le réseau tombe en panne pendant une vacation. Les consignes et contacts utiles n’existent que dans un dossier en ligne. Un agent veut enregistrer tous les documents sur une clé USB personnelle.",
+            "reason": "La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions.",
+            "lessons": [
+              {
+                "ref": "04.06",
+                "title": "Utiliser un logiciel professionnel",
+                "page": 193,
+                "diagram": "media/aps62/repere-04.06.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Comprendre ce que l'outil enregistre"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Il comporte des comptes, des droits et une traçabilité. Utiliser le compte d'un collègue rend les actions difficiles à attribuer. Avant de valider une saisie, vérifiez le site, la personne et l'événement concernés : une information juste dans le mauvais dossier devient une erreur opérationnelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Prévoir les erreurs et les indisponibilités"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. Un brouillon n'est pas toujours visible par la relève ; un bouton « enregistré » ne signifie pas forcément « transmis ». Une pièce jointe doit être ouverte et contrôlée avant envoi, dans le cadre des règles informatiques. Les informations sensibles ne sont pas transférées vers une messagerie personnelle pour contourner une difficulté."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une main courante numérique devient indisponible. L'agent utilise le support de secours prévu, avec heures et auteur. Au rétablissement, les informations sont intégrées de façon traçable en conservant la distinction entre l'heure des faits et l'heure de saisie. Cette continuité évite une période sans historique."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · L'outil facilite la mission, mais l'agent reste responsable de la qualité de sa saisie et de la vérification de ce qui a réellement été enregistré ou transmis."
+                  }
+                ],
+                "course_page": 194,
+                "practice": {
+                  "background": "Enregistrez dans l’emplacement prévu et vérifiez que l’opération a réussi. Un document ouvert à l’écran n’est pas nécessairement sauvegardé. Ne branchez pas une clé USB inconnue et n’installez pas un logiciel pour contourner une difficulté. Si le système est indisponible, appliquez la procédure de continuité. Les notes temporaires doivent être reprises de manière traçable puis traitées selon les règles de conservation. Demandez une assistance plutôt que de partager votre session ou vos identifiants.",
+                  "case": "Vous préparez un rapport pour le responsable du site. Le logiciel de messagerie propose automatiquement une adresse externe portant presque le même nom. Une pièce jointe contient un registre complet de visiteurs. Quels contrôles empêchent l’erreur ? Que faites-vous si le message est déjà parti ?",
+                  "transfer": "Vous quittez le PC quelques minutes pour un appel. Quelle action protège votre session ?",
+                  "page": 208
+                }
+              },
+              {
+                "ref": "04.07",
+                "title": "Réussir une relève",
+                "page": 195,
+                "diagram": "media/aps62/repere-04.07.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Transmettre ce qui continue après vous"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La relève ne consiste pas à raconter toute la vacation. Elle donne au nouvel agent une vision du site, des événements ouverts, des moyens indisponibles et des tâches à venir. Distinguez les faits clos de ceux qui nécessitent une surveillance. La présence d'un écrit ne garantit pas sa lecture ; les points sensibles sont expliqués oralement et confirmés."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Vérifier les moyens remis"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Clés, badges, radio, téléphone, documents et équipements doivent être rapprochés de l'état annoncé. Une clé absente ou une radio déchargée doit être signalée avant que le collègue ne parte. Une consigne temporaire comporte une échéance et un responsable. Les urgences du moment priment sur les détails administratifs, mais la remise des moyens doit ensuite être finalisée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "« Porte C défectueuse depuis 18 h ; elle reste surveillée. Le technicien est attendu à 22 h, contact dans la main courante. Aucun rétablissement confirmé. » Le collègue sait ce qu'il doit maintenir et vérifier. « Porte C vue avec la maintenance » ne permettrait pas de comprendre l'état réel."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La relève est réussie lorsque le nouvel agent peut agir sans dépendre de la mémoire de celui qui part. Une tâche ouverte doit avoir un responsable identifiable."
+                  }
+                ],
+                "course_page": 196,
+                "practice": {
+                  "background": "Le successeur pose des questions, contrôle les éléments critiques et confirme la prise en compte. La relève ne se réduit pas à une signature. Si personne ne se présente ou si un incident empêche une passation normale, alertez l’encadrement et appliquez la procédure. Les consignes transmises oralement doivent rester accessibles après le départ de l’agent. Vérifiez les heures, les stocks sensibles, les moyens de communication et les mesures compensatoires encore en vigueur.",
+                  "case": "Une porte est surveillée par caméra parce que sa fermeture est défectueuse. Le technicien est attendu à 7 h 30. Votre service se termine à 7 h et la main courante contient seulement « problème porte signalé ». Que complétez-vous avant de partir ? Comment vérifiez-vous la compréhension ?",
+                  "transfer": "Une porte reste hors service à la relève. Quelles informations évitent une rupture de surveillance ?",
+                  "page": 209
+                }
+              },
+              {
+                "ref": "08.03",
+                "title": "Organiser les documents du PC",
+                "page": 344,
+                "diagram": "media/aps62/repere-08.03.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Le bon document au bon moment"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Le poste central, ou PC, rassemble les informations utiles à la surveillance et à la coordination. Les documents d'urgence doivent être accessibles rapidement : contacts, accès secours, plans et consignes. Les documents courants concernent notamment les visiteurs, les clés, les interventions et la main courante. Un classement logique évite de rechercher un numéro dans plusieurs classeurs pendant un incident."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Maîtriser les versions"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un document opérationnel doit être identifiable par son objet, sa date et son responsable. Les versions périmées sont retirées du circuit selon la procédure. Les coordonnées doivent être vérifiées régulièrement ; un annuaire présent mais obsolète ne garantit aucune capacité d'alerte. Les informations sensibles restent protégées du public et accessibles seulement aux personnes autorisées. Le classement numérique obéit aux mêmes principes que le papier."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Deux plans montrent des accès différents après des travaux. L'agent signale la contradiction et utilise la version validée par le responsable. Il ne choisit pas le plan le plus récent en apparence sans confirmation. L'ancien exemplaire est identifié pour éviter qu'un collègue le réutilise à la vacation suivante."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Le rangement doit servir l'action. Testez-le simplement : un remplaçant doit pouvoir retrouver rapidement le document essentiel à une situation donnée."
+                  }
+                ],
+                "course_page": 345,
+                "practice": {
+                  "background": "Les documents sensibles ne sont pas exposés au public. Une liste de codes, un plan technique ou les coordonnées personnelles des salariés nécessitent un accès limité. Vérifiez périodiquement les éléments qui changent, notamment les contacts et les itinéraires. Ne modifiez pas seul une procédure validée ; proposez la correction et suivez sa diffusion. En cas de panne informatique, un support de secours maîtrisé doit permettre la continuité des fonctions essentielles, sans constituer une seconde version divergente.",
+                  "case": "Deux classeurs contiennent des numéros différents pour le responsable d’astreinte. L’un porte une date récente, mais le contact ne répond plus depuis plusieurs semaines. Comment vérifiez-vous la référence ? Quelle amélioration évite une nouvelle confusion ?",
+                  "transfer": "Deux plans portent des noms identiques mais des dates différentes. Quelle vérification faites-vous avant de guider une équipe ?",
+                  "page": 398
+                }
+              }
+            ],
+            "decision": "Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires.",
+            "pitfall": "Copier l’ensemble des dossiers sur un support personnel.",
+            "objectives": [
+              "Expliquer : documents, recherche et continuité numérique",
+              "Justifier une décision à partir de faits et de limites.",
+              "Choisir une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Le réseau tombe en panne pendant une vacation. Les consignes et contacts utiles n’existent que dans un dossier en ligne. Un agent veut enregistrer tous les documents sur une clé USB personnelle."
+              ],
+              [
+                "Décision à justifier",
+                "Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires."
+              ],
+              [
+                "Piège à éviter",
+                "Copier l’ensemble des dossiers sur un support personnel."
+              ],
+              [
+                "Pourquoi ?",
+                "La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Le réseau tombe en panne pendant une vacation."
+              },
+              {
+                "label": "Vérifier",
+                "text": "La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé."
+              },
+              {
+                "label": "Décider",
+                "text": "Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Deux versions d’une consigne réapparaissent après la panne. Comment retrouver la version applicable sans choisir au hasard ?"
+              }
+            ],
+            "edition": "2026-10-06",
+            "image_alt": "Scène professionnelle illustrée : La main courante numérique",
+            "sorting": [
+              {
+                "text": "Copier l’ensemble des dossiers sur un support personnel.",
+                "category": "ecarter"
+              },
+              {
+                "text": "Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires.",
+                "category": "adapte"
+              },
+              {
+                "text": "Le réseau tombe en panne pendant une vacation. Les consignes et contacts utiles n’existent que dans un dossier en ligne. Un agent veut enregistrer tous les documents sur une clé USB personnelle.",
+                "category": "fait"
+              }
+            ],
+            "pacing": [
+              {
+                "label": "Comprendre et comparer",
+                "minutes": 16
+              },
+              {
+                "label": "Mémoriser",
+                "minutes": 4
+              },
+              {
+                "label": "Mission en cinq décisions",
+                "minutes": 12
+              },
+              {
+                "label": "Vérifier les repères",
+                "minutes": 6
+              },
+              {
+                "label": "Transférer",
+                "minutes": 6
+              },
+              {
+                "label": "Analyser les documents",
+                "minutes": 8
+              },
+              {
+                "label": "Composer la main courante",
+                "minutes": 6
+              },
+              {
+                "label": "Retenir",
+                "minutes": 2
+              }
+            ],
+            "deepening": [
+              {
+                "title": "Comparer deux moments de la décision",
+                "paragraphs": [
+                  "Dans le nouveau dossier « Le document mal classé », le point de départ est le suivant : Un rapport fictif existe en version brouillon et validée. Le poste doit transmettre la version validée à un responsable habilité. Les noms des fichiers sont presque identiques.",
+                  "Le fait établi est : Deux versions doivent être distinguées avant transmission. La première réponse à examiner est : Vérifier statut, date, auteur, destinataire et pièce jointe avant l'envoi autorisé. Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon.",
+                  "La situation évolue : Le destinataire demande une copie vers une adresse personnelle non prévue. La décision doit donc être réexaminée : Vérifier le canal et l'habilitation avant toute nouvelle transmission. La qualité documentaire inclut le contrôle de la diffusion et des droits, pas seulement la mise en forme.",
+                  "Comparez les deux moments avant de lancer la mission. Le document à contrôler contient cet écart : Pièce jointe préparée : brouillon non validé, destinataire extérieur non autorisé. La référence vérifiée est : Fiche : nommage, version, emplacement approuvé et destinataires habilités."
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-13-02-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 4,
+          "blocks": [
+            {
+              "id": "aps62-13-02-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-13-02-video",
+                "title": "Documents, recherche et continuité numérique",
+                "required": true,
+                "src": "media/aps62/v2/aps62-13-02.mp4",
+                "poster": "media/aps62/v2/aps62-13-02.jpg",
+                "captions": "media/aps62/v2/aps62-13-02.vtt",
+                "duration_seconds": 76.572,
+                "transcript": "La situation : Le réseau tombe en panne pendant une vacation. Les consignes et contacts utiles n’existent que dans un dossier en ligne. Un agent veut enregistrer tous les documents sur une clé USB personnelle.\n\nÀ vous de décider : Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires. Ou bien : Copier l’ensemble des dossiers sur un support personnel. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions.\n\nLe bon relais : Le kit comprend les consignes à jour, les contacts d’urgence, les plans utiles et les supports de traçabilité autorisés. La reprise vérifie les entrées temporaires, leur heure réelle et leur intégration sans doublon, puis sécurise les supports. Le responsable confirme la version de référence et les droits d’accès.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "13.02",
+            "title": "Documents, recherche et continuité numérique",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Comprendre ce que l'outil enregistre",
+                "back": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Il comporte des comptes, des droits et une traçabilité. Utiliser le compte d'un collègue rend les actions difficiles à attribuer. Avant de valider une saisie, vérifiez le site, la personne et l'événement concernés : une information juste dans le mauvais dossier devient une erreur opérationnelle."
+              },
+              {
+                "front": "Prévoir les erreurs et les indisponibilités",
+                "back": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. Un brouillon n'est pas toujours visible par la relève ; un bouton « enregistré » ne signifie pas forcément « transmis ». Une pièce jointe doit être ouverte et contrôlée avant envoi, dans le cadre des règles informatiques. Les informations sensibles ne sont pas transférées vers une messagerie personnelle pour contourner une difficulté."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Une main courante numérique devient indisponible. L'agent utilise le support de secours prévu, avec heures et auteur. Au rétablissement, les informations sont intégrées de façon traçable en conservant la distinction entre l'heure des faits et l'heure de saisie. Cette continuité évite une période sans historique."
+              },
+              {
+                "front": "Transmettre ce qui continue après vous",
+                "back": "La relève ne consiste pas à raconter toute la vacation. Elle donne au nouvel agent une vision du site, des événements ouverts, des moyens indisponibles et des tâches à venir. Distinguez les faits clos de ceux qui nécessitent une surveillance. La présence d'un écrit ne garantit pas sa lecture ; les points sensibles sont expliqués oralement et confirmés."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Le réseau tombe en panne pendant une vacation. Les consignes et contacts utiles n’existent que dans un dossier en ligne. Un agent veut enregistrer tous les documents sur une clé USB personnelle.\n\nÀ vous de décider : Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires. Ou bien : Copier l’ensemble des dossiers sur un support personnel. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions.\n\nLe bon relais : Le kit comprend les consignes à jour, les contacts d’urgence, les plans utiles et les supports de traçabilité autorisés. La reprise vérifie les entrées temporaires, leur heure réelle et leur intégration sans doublon, puis sécurise les supports. Le responsable confirme la version de référence et les droits d’accès.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-13-02-atelier",
+          "title": "Mission · Le document mal classé",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "academy": {
+            "kind": "workshop",
+            "dossier": "13.02",
+            "title": "Le document mal classé",
+            "case": "Un rapport fictif existe en version brouillon et validée. Le poste doit transmettre la version validée à un responsable habilité. Les noms des fichiers sont presque identiques.",
+            "edition": "2026-10-06"
+          },
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Le document mal classé · cinq décisions successives",
+            "sequential": true,
+            "exercises": [
+              {
+                "id": "constat",
+                "kind": "single",
+                "prompt": "1. Sur quel fait fonder votre analyse ?",
+                "context": "Un rapport fictif existe en version brouillon et validée. Le poste doit transmettre la version validée à un responsable habilité. Les noms des fichiers sont presque identiques.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Aucun fait ne mérite une vérification tant qu’aucun dommage n’est visible."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Deux versions doivent être distinguées avant transmission."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Le récit prouve à lui seul une intention malveillante de toutes les personnes concernées."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Le point de départ établi est : Deux versions doivent être distinguées avant transmission. Il ne faut pas compléter ce constat par une supposition.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : Le point de départ établi est : Deux versions doivent être distinguées avant transmission. Il ne faut pas compléter ce constat par une supposition. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "3": "Ce choix crée une difficulté : Le point de départ établi est : Deux versions doivent être distinguées avant transmission. Il ne faut pas compléter ce constat par une supposition. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "decision",
+                "kind": "single",
+                "prompt": "2. Quelle première décision prenez-vous ?",
+                "context": "Le poste doit maintenant choisir une action à partir du constat.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Attendre la fin de la vacation sans transmettre la situation à un interlocuteur."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Vérifier statut, date, auteur, destinataire et pièce jointe avant l'envoi autorisé."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Choisir le premier résultat de recherche."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "3": "Ce choix crée une difficulté : Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Renommer seulement l'extension du fichier pour le transformer."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "3. Une nouvelle information arrive. Que décidez-vous ?",
+                "context": "Le destinataire demande une copie vers une adresse personnelle non prévue.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Garder la première décision sans examiner l’information nouvelle."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Vérifier le canal et l'habilitation avant toute nouvelle transmission."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Envoyer pour rendre service puisque le document existe déjà."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La qualité documentaire inclut le contrôle de la diffusion et des droits, pas seulement la mise en forme.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : La qualité documentaire inclut le contrôle de la diffusion et des droits, pas seulement la mise en forme. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "3": "Ce choix crée une difficulté : La qualité documentaire inclut le contrôle de la diffusion et des droits, pas seulement la mise en forme. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Renommer seulement l'extension du fichier pour le transformer."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon."
+                }
+              },
+              {
+                "id": "consigne",
+                "kind": "single",
+                "prompt": "4. Quel document doit être écarté ou clarifié avant application ?",
+                "context": "Deux documents sont transmis au poste. Comparez-les avec la situation et la règle.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Trame validée : identifier les faits, les mesures prises et les interlocuteurs avisés."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Fiche : nommage, version, emplacement approuvé et destinataires habilités."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Pièce jointe préparée : brouillon non validé, destinataire extérieur non autorisé."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon. La note incompatible est : Pièce jointe préparée : brouillon non validé, destinataire extérieur non autorisé.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon. La note incompatible est : Pièce jointe préparée : brouillon non validé, destinataire extérieur non autorisé. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix crée une difficulté : Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon. La note incompatible est : Pièce jointe préparée : brouillon non validé, destinataire extérieur non autorisé. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite."
+                },
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Renommer seulement l'extension du fichier pour le transformer."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              },
+              {
+                "id": "releve",
+                "kind": "single",
+                "prompt": "5. Quelle transmission permet une relève fiable ?",
+                "context": "Le collègue de relève arrive. Il n’a assisté à aucune des étapes précédentes.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Transmettre seulement la première décision, sans l’évolution reçue ensuite."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Annoncer que toutes les vérifications sont terminées pour simplifier la relève."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Transmettre le constat, l’évolution, les mesures réellement prises et ce qui reste à vérifier."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Le relais doit connaître les faits nouveaux et les limites de l’information. La qualité documentaire inclut le contrôle de la diffusion et des droits, pas seulement la mise en forme.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : Le relais doit connaître les faits nouveaux et les limites de l’information. La qualité documentaire inclut le contrôle de la diffusion et des droits, pas seulement la mise en forme. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix crée une difficulté : Le relais doit connaître les faits nouveaux et les limites de l’information. La qualité documentaire inclut le contrôle de la diffusion et des droits, pas seulement la mise en forme. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite."
+                },
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "La vérification ou le relais prévu : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-13-02-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Le réseau tombe en panne pendant une vacation. Les consignes et contacts utiles n’existent que dans un dossier en ligne. Un agent veut enregistrer tous les documents sur une clé USB personnelle.",
+          "options": [
+            {
+              "id": "aps62-13-02-a0",
+              "text": "Continuer sans consignes en se fiant à la mémoire.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-13-02-a1",
+              "text": "Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-13-02-a2",
+              "text": "Copier l’ensemble des dossiers sur un support personnel.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions."
+        },
+        {
+          "id": "aps62-13-02-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-13-02-pair0",
+              "left": "Comprendre ce que l'outil enregistre",
+              "right": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes."
+            },
+            {
+              "id": "aps62-13-02-pair1",
+              "left": "Prévoir les erreurs et les indisponibilités",
+              "right": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne."
+            },
+            {
+              "id": "aps62-13-02-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Une main courante numérique devient indisponible."
+            }
+          ],
+          "explanation": "Comprendre ce que l'outil enregistre : Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Prévoir les erreurs et les indisponibilités : Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. EXEMPLE EXPLIQUÉ : Une main courante numérique devient indisponible."
+        },
+        {
+          "id": "aps62-13-02-transfert",
+          "title": "Transférer · comparer de nouvelles situations",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "academy": {
+            "dossier": "13.02",
+            "title": "Documents, recherche et continuité numérique",
+            "kind": "transfer",
+            "case": "Deux versions d’une consigne réapparaissent après la panne. Comment retrouver la version applicable sans choisir au hasard ?",
+            "model": "La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions. Le kit comprend les consignes à jour, les contacts d’urgence, les plans utiles et les supports de traçabilité autorisés. La reprise vérifie les entrées temporaires, leur heure réelle et leur intégration sans doublon, puis sécurise les supports. Le responsable confirme la version de référence et les droits d’accès.",
+            "edition": "2026-10-04"
+          },
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Transférer le raisonnement et comparer les contextes",
+            "exercises": [
+              {
+                "id": "variante",
+                "kind": "single",
+                "prompt": "Quelle réponse retenir dans cette nouvelle situation ?",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Vérifier l’auteur, la date de validation et le référentiel officiel du site auprès du responsable."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Appliquer une version au hasard pour ne pas retarder la reprise."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Retenir le fichier dont le nom paraît le plus récent."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Vérifier l’auteur, la date de validation et le référentiel officiel du site auprès du responsable. La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions.",
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Renommer seulement l'extension du fichier pour le transformer."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon."
+                }
+              },
+              {
+                "id": "contre_exemple",
+                "kind": "single",
+                "prompt": "Comparez avec ce cas de référence : quelle conduite lui correspond ?",
+                "context": "Le réseau tombe en panne pendant une vacation. Les consignes et contacts utiles n’existent que dans un dossier en ligne. Un agent veut enregistrer tous les documents sur une clé USB personnelle.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Appliquer la même réponse quels que soient les faits et les interlocuteurs."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Choisir le premier résultat de recherche."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires. La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires. La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions.",
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Renommer seulement l'extension du fichier pour le transformer."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon."
+                }
+              },
+              {
+                "id": "methode",
+                "kind": "single",
+                "prompt": "Que faut-il comparer avant de transposer la solution du premier cas ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Les faits, le périmètre, les autorisations, le danger et les relais effectivement disponibles."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Seulement le nom du site et l’heure de la vacation."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Uniquement la première impression laissée par la personne concernée."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Un même principe peut conduire à des actions différentes lorsque les conditions changent. Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires. La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions.",
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-13-02-documents",
+          "title": "Documents · repérer les anomalies",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Croiser trois pièces et rechercher les anomalies",
+            "documents": [
+              {
+                "title": "A · Fiche d’événement 13-02",
+                "text": "Un rapport fictif existe en version brouillon et validée. Le poste doit transmettre la version validée à un responsable habilité. Les noms des fichiers sont presque identiques.",
+                "rows": [
+                  [
+                    "09 h 02 · constat au poste",
+                    "Deux versions doivent être distinguées avant transmission."
+                  ],
+                  [
+                    "09 h 04 · action enregistrée par l’agent",
+                    "Vérifier statut, date, auteur, destinataire et pièce jointe avant l'envoi autorisé."
+                  ],
+                  [
+                    "09 h 07 · nouvelle information reçue",
+                    "Le destinataire demande une copie vers une adresse personnelle non prévue."
+                  ],
+                  [
+                    "09 h 10 · état du suivi",
+                    "Réévaluation engagée ; issue finale non confirmée."
+                  ]
+                ]
+              },
+              {
+                "title": "B · Consigne validée pour l’exercice",
+                "text": "Fiche : nommage, version, emplacement approuvé et destinataires habilités.",
+                "rows": [
+                  [
+                    "Statut",
+                    "Version validée par le responsable pédagogique pour ce cas fictif."
+                  ],
+                  [
+                    "Traçabilité",
+                    "Distinguer les faits, les sources, les horaires, les actions et les suites."
+                  ]
+                ]
+              },
+              {
+                "title": "C · Brouillon reçu, à contrôler",
+                "text": "Pièce jointe préparée : brouillon non validé, destinataire extérieur non autorisé.",
+                "rows": [
+                  [
+                    "09 h 12 · heure de saisie",
+                    "Entrée saisie au retour au poste."
+                  ],
+                  [
+                    "Heure d’événement indiquée dans le brouillon",
+                    "09 h 12"
+                  ],
+                  [
+                    "Conclusion proposée",
+                    "Toutes les vérifications sont achevées ; aucune suite nécessaire."
+                  ]
+                ]
+              }
+            ],
+            "exercises": [
+              {
+                "id": "anomalie",
+                "kind": "single",
+                "prompt": "Quelle phrase du document C pose un problème de fond ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Pièce jointe préparée : brouillon non validé, destinataire extérieur non autorisé."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Fiche : nommage, version, emplacement approuvé et destinataires habilités."
+                  },
+                  {
+                    "id": "3",
+                    "text": "L’entrée a été saisie à 09 h 12."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon.",
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Renommer seulement l'extension du fichier pour le transformer."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              },
+              {
+                "id": "horodatage",
+                "kind": "single",
+                "prompt": "Quelle anomalie chronologique faut-il corriger ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Le délai entre constat et saisie prouve que l’événement n’a pas eu lieu."
+                  },
+                  {
+                    "id": "2",
+                    "text": "L’heure de la nouvelle information doit remplacer toutes les autres heures."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Le brouillon utilise l’heure de saisie 09 h 12 comme heure de l’événement signalé à 09 h 02."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La pièce A distingue le constat à 09 h 02, l’action à 09 h 04 et l’évolution à 09 h 07. La saisie à 09 h 12 n’efface pas cette chronologie.",
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Le fait est signalé à 11 h 06, puis saisi à 11 h 12. Quelle entrée est fidèle ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Saisie à 11 h 06, en modifiant l’historique pour faire coïncider les heures."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Événement à 11 h 12, puisque l’application l’a enregistré à cette heure."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Événement signalé à 11 h 06 ; saisie à 11 h 12 ; origine de l’information précisée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Distinguer heure de l’événement et heure de saisie préserve la chronologie. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Distinguer heure de l’événement et heure de saisie préserve la chronologie."
+                }
+              },
+              {
+                "id": "cloture",
+                "kind": "single",
+                "prompt": "Quelle conclusion est réellement étayée par la pièce A ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Tout est définitivement résolu puisque le brouillon l’affirme."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Aucune action n’a été engagée avant la saisie."
+                  },
+                  {
+                    "id": "3",
+                    "text": "La réévaluation est engagée et l’issue finale n’est pas confirmée."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La dernière ligne de A décrit un suivi en cours. La conclusion de C n’est pas étayée.",
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "La vérification ou le relais prévu : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              },
+              {
+                "id": "statut",
+                "kind": "sort",
+                "prompt": "Attribuez un statut à chaque élément du dossier.",
+                "options": [
+                  {
+                    "id": "fait",
+                    "text": "Fait ou action enregistré dans A"
+                  },
+                  {
+                    "id": "regle",
+                    "text": "Instruction validée dans B"
+                  },
+                  {
+                    "id": "ecart",
+                    "text": "Affirmation du brouillon C à corriger"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Deux versions doivent être distinguées avant transmission.",
+                    "answer": "fait"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Fiche : nommage, version, emplacement approuvé et destinataires habilités.",
+                    "answer": "regle"
+                  },
+                  {
+                    "id": "r3",
+                    "text": "Pièce jointe préparée : brouillon non validé, destinataire extérieur non autorisé.",
+                    "answer": "ecart"
+                  },
+                  {
+                    "id": "r4",
+                    "text": "Action à 09 h 04 : Vérifier statut, date, auteur, destinataire et pièce jointe avant l'envoi autorisé.",
+                    "answer": "fait"
+                  },
+                  {
+                    "id": "r5",
+                    "text": "Toutes les vérifications sont achevées.",
+                    "answer": "ecart"
+                  }
+                ],
+                "explanation": "Le document d’origine et le statut de l’information comptent autant que sa formulation. A constate, B prescrit, C contient des erreurs.",
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "correction",
+                "kind": "single",
+                "prompt": "Comment corriger ce brouillon avant une transmission autorisée ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Changer seulement le titre du document, sans contrôler les trois écarts."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Rectifier les horaires, écarter la note incompatible, garder le suivi en cours et tracer la validation."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Supprimer la fiche A pour ne conserver qu’un récit cohérent avec C."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La correction doit résoudre les écarts de fond, de chronologie et de statut, sans détruire les sources.",
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Renommer seulement l'extension du fichier pour le transformer."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              }
+            ]
+          },
+          "academy": {
+            "kind": "documents",
+            "dossier": "13.02",
+            "title": "Le document mal classé",
+            "case": "Dossier fictif « Le document mal classé ». Comparez les pièces et justifiez mentalement chaque choix.",
+            "edition": "2026-10-06"
+          }
+        },
+        {
+          "id": "aps62-13-02-journal",
+          "title": "Main courante · composer une entrée",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Composer une main courante fiable, sans rédaction",
+            "journal": true,
+            "documents": [
+              {
+                "title": "A · Fiche d’événement 13-02",
+                "text": "Un rapport fictif existe en version brouillon et validée. Le poste doit transmettre la version validée à un responsable habilité. Les noms des fichiers sont presque identiques.",
+                "rows": [
+                  [
+                    "09 h 02 · constat au poste",
+                    "Deux versions doivent être distinguées avant transmission."
+                  ],
+                  [
+                    "09 h 04 · action enregistrée par l’agent",
+                    "Vérifier statut, date, auteur, destinataire et pièce jointe avant l'envoi autorisé."
+                  ],
+                  [
+                    "09 h 07 · nouvelle information reçue",
+                    "Le destinataire demande une copie vers une adresse personnelle non prévue."
+                  ],
+                  [
+                    "09 h 10 · état du suivi",
+                    "Réévaluation engagée ; issue finale non confirmée."
+                  ]
+                ]
+              },
+              {
+                "title": "B · Consigne validée pour l’exercice",
+                "text": "Fiche : nommage, version, emplacement approuvé et destinataires habilités.",
+                "rows": [
+                  [
+                    "Statut",
+                    "Version validée par le responsable pédagogique pour ce cas fictif."
+                  ],
+                  [
+                    "Traçabilité",
+                    "Distinguer les faits, les sources, les horaires, les actions et les suites."
+                  ]
+                ]
+              },
+              {
+                "title": "Moment de la saisie",
+                "text": "Il est 09 h 12 lorsque vous composez cette entrée. L’heure de saisie ne remplace pas les heures de la fiche A."
+              }
+            ],
+            "exercises": [
+              {
+                "id": "heure",
+                "kind": "single",
+                "prompt": "Heures de l’événement et de la saisie",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Événement à 09 h 04 ; saisie antidatée à 09 h 02."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Constat : 09 h 02 ; action : 09 h 04 ; évolution : 09 h 07 ; saisie : 09 h 12."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Événement et saisie : 09 h 12 ; aucune autre heure utile."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La pièce A et le brouillon donnent des heures de nature différente. Conservez chacune avec sa fonction.",
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Le fait est signalé à 11 h 06, puis saisi à 11 h 12. Quelle entrée est fidèle ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Saisie à 11 h 06, en modifiant l’historique pour faire coïncider les heures."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Événement à 11 h 12, puisque l’application l’a enregistré à cette heure."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Événement signalé à 11 h 06 ; saisie à 11 h 12 ; origine de l’information précisée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Distinguer heure de l’événement et heure de saisie préserve la chronologie. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Distinguer heure de l’événement et heure de saisie préserve la chronologie."
+                }
+              },
+              {
+                "id": "source",
+                "kind": "single",
+                "prompt": "Origine des informations",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Tous les éléments ont été personnellement observés au même moment."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Informations certaines, sans source à conserver."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Constat et action consignés dans A ; nouvelle information reçue à 09 h 07 ; consigne B identifiée."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Ne transformez pas une information reçue en observation personnelle.",
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "fait",
+                "kind": "single",
+                "prompt": "Constat initial",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Intention malveillante certaine des personnes concernées."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Aucun fait précis à conserver dans le registre."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Deux versions doivent être distinguées avant transmission."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La formulation fidèle n’ajoute ni intention ni qualification définitive. Deux versions doivent être distinguées avant transmission.",
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "action",
+                "kind": "single",
+                "prompt": "Action réellement enregistrée à 09 h 04",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Aucune action effectuée avant la saisie."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Vérifier statut, date, auteur, destinataire et pièce jointe avant l'envoi autorisé."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Choisir le premier résultat de recherche."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La pièce A enregistre cette action à 09 h 04. Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon.",
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Renommer seulement l'extension du fichier pour le transformer."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "Évolution à transmettre",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Issue définitivement confirmée à 09 h 07 sans autre démarche."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Le destinataire demande une copie vers une adresse personnelle non prévue."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Situation inchangée depuis le constat initial."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Cette nouvelle information modifie l’analyse. La qualité documentaire inclut le contrôle de la diffusion et des droits, pas seulement la mise en forme.",
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Renommer seulement l'extension du fichier pour le transformer."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "Les fonctions de recherche, de classement et de traitement de document servent une information fiable ; le résultat le plus visible n'est pas forcément le bon."
+                }
+              },
+              {
+                "id": "suite",
+                "kind": "single",
+                "prompt": "État du suivi et prochaine décision",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Résultat juridique définitif établi par le poste."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Dossier clos ; aucune vérification ni transmission complémentaire."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Réévaluation engagée, issue non confirmée. Décision à mettre en œuvre : Vérifier le canal et l'habilitation avant toute nouvelle transmission."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Distinguez ce qui est fait, ce qui est décidé et ce qui reste à confirmer.",
+                "remediation": {
+                  "prompt": "Un rapport doit être exporté en PDF pour préserver sa présentation. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "La vérification ou le relais prévu : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Vérifier le contenu et la version puis utiliser l'export prévu dans l'outil.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              }
+            ]
+          },
+          "academy": {
+            "kind": "journal",
+            "dossier": "13.02",
+            "title": "Le document mal classé",
+            "case": "Dossier fictif « Le document mal classé ». Comparez les pièces et justifiez mentalement chaque choix.",
+            "edition": "2026-10-06"
+          }
+        },
+        {
+          "id": "aps62-13-02-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "13.02",
+            "title": "Documents, recherche et continuité numérique",
+            "kind": "recap",
+            "decision": "Appliquer le mode dégradé prévu et demander un accès autorisé aux documents nécessaires.",
+            "reason": "La continuité se prépare avec des versions contrôlées, des accès adaptés et une procédure de mode dégradé. Une sauvegarde n’est pas un prétexte à extraire toutes les données. Il faut distinguer indisponibilité, perte et incident de sécurité. À la reprise, les traces temporaires sont intégrées selon une procédure qui évite doublons et omissions.",
+            "pitfall": "Copier l’ensemble des dossiers sur un support personnel.",
+            "cards": [
+              {
+                "front": "Comprendre ce que l'outil enregistre",
+                "back": "Un logiciel peut gérer les accès, les événements, les rondes ou les alarmes. Il comporte des comptes, des droits et une traçabilité. Utiliser le compte d'un collègue rend les actions difficiles à attribuer. Avant de valider une saisie, vérifiez le site, la personne et l'événement concernés : une information juste dans le mauvais dossier devient une erreur opérationnelle."
+              },
+              {
+                "front": "Prévoir les erreurs et les indisponibilités",
+                "back": "Apprenez la procédure de correction, les exports autorisés et le fonctionnement en cas de panne. Un brouillon n'est pas toujours visible par la relève ; un bouton « enregistré » ne signifie pas forcément « transmis ». Une pièce jointe doit être ouverte et contrôlée avant envoi, dans le cadre des règles informatiques. Les informations sensibles ne sont pas transférées vers une messagerie personnelle pour contourner une difficulté."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Une main courante numérique devient indisponible. L'agent utilise le support de secours prévu, avec heures et auteur. Au rétablissement, les informations sont intégrées de façon traçable en conservant la distinction entre l'heure des faits et l'heure de saisie. Cette continuité évite une période sans historique."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "04.06",
+                "page": 194
+              },
+              {
+                "ref": "04.07",
+                "page": 196
+              },
+              {
+                "ref": "08.03",
+                "page": 345
+              }
+            ],
+            "instruction": "Retrouvez mentalement la décision et les limites du dossier, puis consultez les repères pour vérifier. Vous pouvez refaire les ateliers pour réviser.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "aps62-13-01-comprendre",
+    "aps62-13-01-memoriser",
+    "aps62-13-01-atelier",
+    "aps62-13-01-q1",
+    "aps62-13-01-q2",
+    "aps62-13-01-transfert",
+    "aps62-13-01-documents",
+    "aps62-13-01-journal",
+    "aps62-13-01-synthese",
+    "aps62-13-02-comprendre",
+    "aps62-13-02-memoriser",
+    "aps62-13-02-atelier",
+    "aps62-13-02-q1",
+    "aps62-13-02-q2",
+    "aps62-13-02-transfert",
+    "aps62-13-02-documents",
+    "aps62-13-02-journal",
+    "aps62-13-02-synthese"
+  ],
+  "counts": {
+    "sections": 2,
+    "activities": 18,
+    "scored_activities": 4,
+    "required_videos": 2,
+    "workbooks": 0,
+    "assets": 12,
+    "interactive_workshops": 8
+  },
+  "assets": [
+    "media/aps62/repere-02.14.webp",
+    "media/aps62/repere-04.04.webp",
+    "media/aps62/repere-04.06.webp",
+    "media/aps62/repere-04.07.webp",
+    "media/aps62/repere-08.03.webp",
+    "media/aps62/v2/aps62-13-01.jpg",
+    "media/aps62/v2/aps62-13-01.mp4",
+    "media/aps62/v2/aps62-13-01.vtt",
+    "media/aps62/v2/aps62-13-02.jpg",
+    "media/aps62/v2/aps62-13-02.mp4",
+    "media/aps62/v2/aps62-13-02.vtt",
+    "media/aps62/v2/module-13.webp"
+  ],
+  "import_warnings": [],
+  "mock_exam_id": "module-13",
+  "mock_exam_questions": 30,
+  "voice": "fr-FR-HenriNeural",
+  "illustration": "images/aps62/module-13.webp",
+  "interaction_revision": "20261006-aps62-v3"
+}

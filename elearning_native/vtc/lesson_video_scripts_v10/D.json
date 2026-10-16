@@ -1,0 +1,1492 @@
+{
+  "revision": 10,
+  "module": "D",
+  "lessons": [
+    {
+      "ref": "D.01",
+      "title": "Lire avec une intention",
+      "objective": "Adapter sa lecture à la question posée.",
+      "image": "media/vtc/module-d.webp",
+      "source_sha256": "1394c17cee9fe40164c1bba8d9208b197847d9b22e9b4d9e7429affd66c773c9",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Une première lecture sert à comprendre le sujet, l’auteur, le contexte et le message principal. La seconde cherche les informations utiles aux questions. Souligner tout le texte ne permet plus de hiérarchiser : repérez seulement les noms, dates, conditions et idées structurantes. Lisez précisément le verbe de la consigne. « Relevez » invite à retrouver un élément ; « expliquez » demande de montrer un sens ou une relation ; « justifiez » exige un appui dans le texte. Ne répondez pas seulement avec vos connaissances du métier si la question porte sur ce que dit l’auteur. Une réponse vraie en général peut ne pas répondre au document."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Une première lecture sert à comprendre le sujet, l’auteur, le contexte et le message principal.",
+              "anchor_text": "Une première lecture sert à comprendre le sujet,"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Lisez précisément le verbe de la consigne.",
+              "anchor_text": "Lisez précisément le verbe de la consigne."
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Adapter sa lecture à la question posée."
+          }
+        },
+        {
+          "title": "Lire pour résoudre une question",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Une lecture efficace commence par le but : retrouver une heure, comprendre une consigne, expliquer une cause ou identifier une condition. Lisez la question avant de chercher l’information, puis revenez au passage qui la justifie. Le titre donne le thème général, mais ne suffit pas à répondre à une question précise."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Lire avec un but : heure, consigne, cause ou condition à retrouver.",
+              "anchor_text": "Une lecture efficace commence par le but :"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Lisez la question avant de chercher l’information, puis revenez au passage qui la justifie.",
+              "anchor_text": "Lisez la question avant de chercher l’information, puis"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Savoir quelle information chercher."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Texte : « Le point de rendez-vous est déplacé devant la porte B en raison de travaux. L’horaire reste inchangé. » À la question « Qu’est-ce qui change ? », la réponse attendue est le lieu, pas l’horaire ni le prix. Les mots tous, certains, uniquement, avant, après et sauf peuvent changer la portée d’une phrase. Une réponse plausible dans la vie courante peut être fausse si le texte dit autre chose. Dans les activités, choisissez la proposition appuyée par le document, sans ajouter une information extérieure."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Rendez-vous déplacé à la porte B ; horaire inchangé.",
+              "anchor_text": "Texte : « Le point de rendez-vous est"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Les mots tous, certains, uniquement, avant, après et sauf peuvent changer la portée d’une phrase.",
+              "anchor_text": "Les mots tous, certains, uniquement, avant, après et"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. La question : Savoir quelle information chercher. Le texte : Lire le passage qui répond au besoin. La réponse : Retenir uniquement ce que le texte permet. Le piège à éviter : Une information vraie en général peut rester hors sujet si elle ne répond pas au document et à la consigne."
+            }
+          ],
+          "points": [
+            {
+              "label": "La question",
+              "text": "Savoir quelle information chercher.",
+              "anchor_text": "La question : Savoir quelle information chercher."
+            },
+            {
+              "label": "Le texte",
+              "text": "Lire le passage qui répond au besoin.",
+              "anchor_text": "Le texte : Lire le passage qui répond"
+            },
+            {
+              "label": "La réponse",
+              "text": "Retenir uniquement ce que le texte permet.",
+              "anchor_text": "La réponse : Retenir uniquement ce que le"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "D.02",
+      "title": "Trouver l’information exacte",
+      "objective": "Répondre aux questions qui, quoi, où, quand et comment.",
+      "image": "media/vtc/module-d.webp",
+      "source_sha256": "642efb2aa24ad8dbdc66420d1d1d5ced8b48a2942af4d756e20d23dce378a9c6",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Les informations explicites figurent directement dans le document. Cherchez le groupe de mots qui répond exactement à la question, puis vérifiez son contexte. Un même texte peut contenir l’heure de réservation, celle de prise en charge et celle d’arrivée : ce sont trois informations différentes. Les tableaux et courriels demandent aussi une lecture des en-têtes et des unités. « 2 adultes + 1 enfant » correspond à trois passagers, sans compter le conducteur. « Départ souhaité » ne signifie pas « arrivée impérative ». Si une information n’est pas indiquée, ne l’inventez pas. À l’examen, l’absence de preuve dans le texte doit vous rendre prudent face à une proposition trop précise."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Les informations explicites figurent directement dans le document.",
+              "anchor_text": "Les informations explicites figurent directement dans le document."
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Les tableaux et courriels demandent aussi une lecture des en-têtes et des unités.",
+              "anchor_text": "Les tableaux et courriels demandent aussi une lecture"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Répondre aux questions qui, quoi, où, quand et comment."
+          }
+        },
+        {
+          "title": "Extraire une information sans la déformer",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Séparez les dates, les heures, les lieux et les personnes. Deux versions d’un message peuvent se corriger : repérez la plus récente et ce qu’elle modifie exactement. Un changement d’heure n’implique pas automatiquement un changement d’adresse. La formulation finale doit conserver l’unité et le contexte."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Séparez les dates, les heures, les lieux et les personnes.",
+              "anchor_text": "Séparez les dates, les heures, les lieux et"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Un changement d’heure n’implique pas automatiquement un changement d’adresse.",
+              "anchor_text": "Un changement d’heure n’implique pas automatiquement un changement"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Nom, lieu, heure ou condition demandée."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. La réservation est effectuée le douze juin à dix-huit heures, pour une prise en charge le treize juin à sept heures trente. À la question portant sur la date de la course, il faut répondre le treize juin. Le douze juin est la date de commande. À la question portant sur l’heure de prise en charge, il faut répondre sept heures trente, et non dix-huit heures. Chaque réponse relie donc un chiffre à son rôle dans le message. Pour un nombre, vérifiez ce qu’il compte : passagers, bagages, véhicules ou euros. Un total de quatre places peut inclure le conducteur alors que quatre passagers ne l’incluent pas. La recherche d’information doit conserver le sens du nombre, pas seulement ses chiffres."
+            }
+          ],
+          "points": [
+            {
+              "label": "La commande",
+              "text": "Réservation : le 12 juin à 18 h.",
+              "anchor_text": "La réservation est effectuée le douze juin"
+            },
+            {
+              "label": "La course",
+              "text": "Prise en charge : le 13 juin à 7 h 30.",
+              "anchor_text": "À la question portant sur la date de"
+            },
+            {
+              "label": "L’unité",
+              "text": "Vérifier ce que compte le nombre : passagers, bagages, véhicules ou euros.",
+              "anchor_text": "Pour un nombre, vérifiez ce qu’il compte"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Les mots clés : Nom, lieu, heure ou condition demandée. La preuve : Retrouver la phrase exacte. Le contrôle : Écarter les réponses qui ajoutent une supposition. Le piège à éviter : Une heure de réservation, une heure de prise en charge et une heure d’arrivée sont trois informations différentes."
+            }
+          ],
+          "points": [
+            {
+              "label": "Les mots clés",
+              "text": "Nom, lieu, heure ou condition demandée.",
+              "anchor_text": "Les mots clés : Nom, lieu, heure ou"
+            },
+            {
+              "label": "La preuve",
+              "text": "Retrouver la phrase exacte.",
+              "anchor_text": "La preuve : Retrouver la phrase exacte."
+            },
+            {
+              "label": "Le contrôle",
+              "text": "Écarter les réponses qui ajoutent une supposition.",
+              "anchor_text": "Le contrôle : Écarter les réponses qui ajoutent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "D.03",
+      "title": "Distinguer fait et interprétation",
+      "objective": "Éviter d’ajouter au texte ce qu’il ne dit pas.",
+      "image": "media/vtc/module-d.webp",
+      "source_sha256": "bc28ec7435e809c964576fbf8235dd51f53927066b4e43ccecfc7f407b830fd4",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un fait est une information présentée comme observable ou vérifiable. Une opinion exprime un jugement. Une hypothèse envisage une possibilité. Les mots « peut-être », « semble », « probablement » ou le conditionnel signalent souvent une incertitude. Ils ne doivent pas disparaître dans votre réponse. Une inférence est une conclusion raisonnable à partir d’indices ; elle doit rester proportionnée. Si un texte dit que la route est fermée, on peut en déduire qu’il faut chercher un autre itinéraire. On ne peut pas déduire sans autre information que le trajet coûtera exactement dix euros de plus. Repérez aussi qui porte le jugement : auteur, client cité ou conducteur."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Un fait est une information présentée comme observable ou vérifiable.",
+              "anchor_text": "Un fait est une information présentée comme observable"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Une inférence est une conclusion raisonnable à partir d’indices ; elle doit rester proportionnée.",
+              "anchor_text": "Une inférence est une conclusion raisonnable à partir"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Éviter d’ajouter au texte ce qu’il ne dit pas."
+          }
+        },
+        {
+          "title": "Distinguer un fait, un propos et une interprétation",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Un fait observable décrit ce qui a été constaté : heure relevée, message reçu, document affiché. Un propos rapporté indique ce qu’une personne dit. Une interprétation propose une explication qui n’est pas nécessairement prouvée. Ces catégories peuvent coexister dans un même récit."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Un fait observable décrit ce qui a été constaté : heure relevée, message reçu, document affiché.",
+              "anchor_text": "Un fait observable décrit ce qui a été"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Une interprétation propose une explication qui n’est pas nécessairement prouvée.",
+              "anchor_text": "Une interprétation propose une explication qui n’est pas"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Ce qui est écrit ou observable."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Le texte indique : « La circulation est dense. Le chauffeur estime qu’un retard de dix minutes est possible et prévient le passager. » La circulation dense est le fait décrit. Le retard est une possibilité annoncée par le chauffeur, pas un retard déjà certain. Écrire « le chauffeur aura dix minutes de retard » supprimerait la nuance. De même, « le client juge l’accueil excellent » rapporte l’opinion de ce client ; cela ne signifie pas que tous les passagers ont donné cet avis. « Le client dit avoir réservé hier » ne prouve pas à lui seul l’heure d’enregistrement. « Le client est de mauvaise foi » est une appréciation. Dans un compte rendu, la précision consiste à attribuer les propos à leur auteur et à ne pas transformer une hypothèse en certitude."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le fait décrit",
+              "text": "La circulation est dense.",
+              "anchor_text": "La circulation dense est le fait décrit."
+            },
+            {
+              "label": "L’hypothèse",
+              "text": "Un retard de 10 minutes est possible, pas déjà certain.",
+              "anchor_text": "Le retard est une possibilité annoncée"
+            },
+            {
+              "label": "L’opinion attribuée",
+              "text": "L’avis d’un client ne représente pas celui de tous les passagers.",
+              "anchor_text": "De même, « le client juge l’accueil excellent"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le fait : Ce qui est écrit ou observable. L’interprétation : Ce que l’on déduit sans preuve suffisante. Le choix : Ne pas confondre constat et opinion. Le piège à éviter : Ne transformez pas une hypothèse en certitude, ni l’avis d’un client en avis de tous les clients."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le fait",
+              "text": "Ce qui est écrit ou observable.",
+              "anchor_text": "Le fait : Ce qui est écrit ou"
+            },
+            {
+              "label": "L’interprétation",
+              "text": "Ce que l’on déduit sans preuve suffisante.",
+              "anchor_text": "L’interprétation : Ce que l’on déduit sans preuve"
+            },
+            {
+              "label": "Le choix",
+              "text": "Ne pas confondre constat et opinion.",
+              "anchor_text": "Le choix : Ne pas confondre constat et"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "D.04",
+      "title": "Suivre les pronoms",
+      "objective": "Identifier à qui ou à quoi renvoie un mot.",
+      "image": "media/vtc/module-d.webp",
+      "source_sha256": "576369b57b5eeb72425f5bc92e1fa25d91e253b70df6dc829877a7aeaf70b464",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Les pronoms évitent de répéter les mêmes noms. Pour comprendre « il », « elle », « ils », « celui-ci », « leur » ou « y », recherchez l’élément repris et vérifiez le sens de la phrase. Le nom le plus proche n’est pas toujours la bonne réponse. Le genre et le nombre aident, mais le contexte reste décisif. Dans « Le chauffeur présente la facture au client, qui la vérifie », « qui » désigne le client et « la » désigne la facture. Dans un message professionnel, une reprise ambiguë peut créer une erreur. Répétez un nom si cela clarifie la responsabilité ou l’action attendue."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Les pronoms évitent de répéter les mêmes noms.",
+              "anchor_text": "Les pronoms évitent de répéter les mêmes noms."
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Le genre et le nombre aident, mais le contexte reste décisif.",
+              "anchor_text": "Le genre et le nombre aident, mais le"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Identifier à qui ou à quoi renvoie un mot."
+          }
+        },
+        {
+          "title": "Retrouver ce que remplacent les pronoms",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Pour trouver ce qu’un pronom remplace, partez du verbe et de l’action. Dans « La cliente appelle le chauffeur. Il lui confirme l’heure », le pronom « il » désigne le chauffeur, qui confirme. Le pronom « lui » désigne la cliente, qui reçoit l’information. Dans « Elle le remercie », les rôles changent : « elle » est la cliente et « le » est le chauffeur. Le genre et le nombre donnent des indices ; le sens de l’action permet de les vérifier."
+            }
+          ],
+          "points": [
+            {
+              "label": "Qui confirme ?",
+              "text": "« il » = le chauffeur, qui confirme.",
+              "anchor_text": "le pronom « il » désigne le chauffeur"
+            },
+            {
+              "label": "À qui ?",
+              "text": "« lui » = la cliente, qui reçoit l’information.",
+              "anchor_text": "Le pronom « lui » désigne la cliente"
+            },
+            {
+              "label": "Qui remercie qui ?",
+              "text": "« Elle le remercie » : la cliente remercie le chauffeur.",
+              "anchor_text": "Dans « Elle le remercie »"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Repérer « il », « elle », « leur » ou « celui-ci »."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Lisons : « Les passagers attendent leurs bagages. Le chauffeur les aide à les charger. » Dans « les aide », le premier « les » renvoie aux passagers : le chauffeur aide des personnes. Dans « les charger », le second « les » renvoie aux bagages : ce sont les bagages qui sont chargés. Un même pronom peut donc désigner deux éléments différents dans la même phrase. Remplacer mentalement chaque pronom par son nom permet de contrôler la compréhension. Quand plusieurs antécédents sont possibles, une formulation professionnelle gagne à répéter un nom. « Elle la lui transmet » peut devenir difficile à suivre. « La réception transmet la réservation au chauffeur » nomme directement les rôles sans demander au lecteur de deviner."
+            }
+          ],
+          "points": [
+            {
+              "label": "La phrase",
+              "text": "« Le chauffeur les aide à les charger. »",
+              "anchor_text": "Le chauffeur les aide à les charger."
+            },
+            {
+              "label": "Le premier « les »",
+              "text": "« les aide » → les passagers.",
+              "anchor_text": "Dans « les aide »"
+            },
+            {
+              "label": "Le second « les »",
+              "text": "« les charger » → les bagages.",
+              "anchor_text": "Dans « les charger »"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le pronom : Repérer « il », « elle », « leur » ou « celui-ci ». Le référent : Chercher de qui ou de quoi il est question. La relecture : Remplacer mentalement le pronom par le nom. Le piège à éviter : Le nom le plus proche n’est pas toujours le bon référent. Vérifiez le verbe, le contexte et le sens."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le pronom",
+              "text": "Repérer « il », « elle », « leur » ou « celui-ci ».",
+              "anchor_text": "Le pronom : Repérer « il », «"
+            },
+            {
+              "label": "Le référent",
+              "text": "Chercher de qui ou de quoi il est question.",
+              "anchor_text": "Le référent : Chercher de qui ou de"
+            },
+            {
+              "label": "La relecture",
+              "text": "Remplacer mentalement le pronom par le nom.",
+              "anchor_text": "La relecture : Remplacer mentalement le pronom par"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "D.05",
+      "title": "Relier les idées",
+      "objective": "Reconnaître cause, conséquence, opposition et but.",
+      "image": "media/vtc/module-d.webp",
+      "source_sha256": "b59ec5b2f11afc06a42c7bf0fbc9514f2b3041d52b6221c3e90af3ab294caadc",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Les connecteurs indiquent comment les idées s’articulent. « Parce que » et « en raison de » introduisent une cause. « Donc » et « par conséquent » annoncent une conséquence. « Pourtant » et « cependant » marquent une opposition. « Afin de » exprime un but. Ne remplacez pas un connecteur au hasard : changer le lien peut renverser le sens. « Le client est arrivé tôt, pourtant la voiture était déjà prête » ne raconte pas exactement la même chose que « Le client est arrivé tôt, donc la voiture était déjà prête ». Dans une réponse courte, un seul connecteur bien choisi suffit souvent à rendre votre raisonnement clair."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Les connecteurs indiquent comment les idées s’articulent.",
+              "anchor_text": "Les connecteurs indiquent comment les idées s’articulent."
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Ne remplacez pas un connecteur au hasard : changer le lien peut renverser le sens.",
+              "anchor_text": "Ne remplacez pas un connecteur au hasard :"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Reconnaître cause, conséquence, opposition et but."
+          }
+        },
+        {
+          "title": "Reconnaître la relation entre deux idées",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Une cause répond à la question « pourquoi ? ». Dans « Le chauffeur change de trajet parce que la rue est fermée », la fermeture explique le changement. Une conséquence décrit ce qui résulte d’une situation. Un but indique ce que l’on cherche à obtenir. Dans « Il part tôt afin d’éviter le retard », partir tôt vise un objectif ; la phrase ne prouve pas qu’il arrivera à l’heure. Relisez donc les deux idées ensemble et demandez-vous si la seconde explique, résulte, s’oppose ou exprime un objectif."
+            }
+          ],
+          "points": [
+            {
+              "label": "La cause",
+              "text": "« Parce que la rue est fermée » explique le changement.",
+              "anchor_text": "Dans « Le chauffeur change de trajet"
+            },
+            {
+              "label": "Le but",
+              "text": "« Afin d’éviter le retard » décrit l’objectif recherché.",
+              "anchor_text": "Dans « Il part tôt afin d’éviter le"
+            },
+            {
+              "label": "La vérification",
+              "text": "Expliquer, résulter, s’opposer ou viser un objectif ?",
+              "anchor_text": "Relisez donc les deux idées ensemble"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Repérer « mais », « car », « donc » ou « si »."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. « Malgré la pluie, le véhicule arrive à l’heure. » Le texte oppose une difficulté à un résultat. Il ne dit pas que la pluie a provoqué la ponctualité. Dans une consigne, distinguez aussi une condition et une chronologie. « Si le client confirme » ne signifie pas qu’il a déjà confirmé. « Après confirmation » impose une étape préalable. Repérer ces relations aide à sélectionner la bonne action dans l’ordre prévu."
+            }
+          ],
+          "points": [
+            {
+              "label": "L’opposition",
+              "text": "« Malgré la pluie, le véhicule arrive à l’heure. »",
+              "anchor_text": "« Malgré la pluie, le véhicule arrive à"
+            },
+            {
+              "label": "La condition",
+              "text": "« Si le client confirme » ne dit pas qu’il a déjà confirmé.",
+              "anchor_text": "« Si le client confirme »"
+            },
+            {
+              "label": "La chronologie",
+              "text": "« Après confirmation » impose une étape préalable.",
+              "anchor_text": "« Après confirmation »"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le connecteur : Repérer « mais », « car », « donc » ou « si ». Le lien : Opposition, cause, conséquence ou condition. Le sens : Relire les deux propositions ensemble. Le piège à éviter : Changer un connecteur peut renverser le raisonnement. Un but recherché n’est pas la preuve d’un résultat obtenu."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le connecteur",
+              "text": "Repérer « mais », « car », « donc » ou « si ».",
+              "anchor_text": "Le connecteur : Repérer « mais », «"
+            },
+            {
+              "label": "Le lien",
+              "text": "Opposition, cause, conséquence ou condition.",
+              "anchor_text": "Le lien : Opposition, cause, conséquence ou condition."
+            },
+            {
+              "label": "Le sens",
+              "text": "Relire les deux propositions ensemble.",
+              "anchor_text": "Le sens : Relire les deux propositions ensemble."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "D.06",
+      "title": "Comprendre les nuances",
+      "objective": "Lire les négations, quantités et conditions.",
+      "image": "media/vtc/module-d.webp",
+      "source_sha256": "646ceb1808184f4e6bbe806460b3811d45b534eb1ae71b79ce8ffcb4288b6daf",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Des mots très courts changent fortement le sens : « tous », « certains », « aucun », « seulement », « sauf », « au moins », « au plus ». « Au moins deux » signifie deux ou davantage ; « au plus deux » signifie deux ou moins. Une proposition qui transforme « certains » en « tous » exagère le texte. Repérez aussi les conditions. « Le chauffeur attend si le client confirme son retard » ne signifie pas qu’il attend toujours. « Ne… que » marque une restriction, pas une négation totale : « il ne transporte que des clients réservés » signifie « seulement des clients réservés ». Relisez la phrase entière avant de sélectionner une réponse."
+            }
+          ],
+          "points": [
+            {
+              "label": "Les bornes",
+              "text": "Au moins 2 : 2 ou plus. Au plus 2 : 2 ou moins.",
+              "anchor_text": "« Au moins deux » signifie"
+            },
+            {
+              "label": "La condition",
+              "text": "Attendre si le client confirme ne signifie pas attendre toujours.",
+              "anchor_text": "« Le chauffeur attend si le client confirme"
+            },
+            {
+              "label": "La restriction",
+              "text": "« Ne… que » signifie « seulement ».",
+              "anchor_text": "« Ne… que » marque une restriction"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Lire les négations, quantités et conditions."
+          }
+        },
+        {
+          "title": "Lire les nuances et le degré de certitude",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Les verbes et les adverbes modifient l’engagement. « Peut » indique une possibilité ; « doit » une obligation dans le contexte ; « devrait » peut exprimer une prévision ou un conseil. « Environ », « probablement » et « sous réserve » signalent une marge ou une condition. Ne les remplacez pas par une certitude. Une phrase introduite par « si », « sauf si » ou « à condition que » peut limiter la règle annoncée. Identifiez le cas général, puis l’exception, sans étendre cette exception à toutes les situations."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Les verbes et les adverbes modifient l’engagement.",
+              "anchor_text": "Les verbes et les adverbes modifient l’engagement."
+            },
+            {
+              "label": "Le point clé",
+              "text": "Ne les remplacez pas par une certitude.",
+              "anchor_text": "Ne les remplacez pas par une certitude."
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Toujours, parfois, seulement ou peut-être ?"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. « Le tarif inclut deux bagages au maximum. » Cette phrase n’oblige pas à voyager avec deux bagages et ne dit pas qu’un troisième est gratuit. Elle fixe une limite à l’inclusion annoncée. Une phrase négative mérite une lecture complète : « aucun supplément sauf attente prévue » n’a pas le même sens que « aucun supplément dans tous les cas ». Les mots au moins et au plus fixent des bornes opposées. Dans les exercices, la bonne réponse respecte la portée exacte du texte."
+            }
+          ],
+          "points": [
+            {
+              "label": "La limite",
+              "text": "Deux bagages au maximum ne signifie ni deux obligatoires ni trois gratuits.",
+              "anchor_text": "« Le tarif inclut deux bagages au maximum."
+            },
+            {
+              "label": "L’exception",
+              "text": "« Aucun supplément sauf attente prévue » : conserver l’exception.",
+              "anchor_text": "Une phrase négative mérite une lecture complète"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le mot précis : Toujours, parfois, seulement ou peut-être ? La portée : Mesurer la force réelle de l’affirmation. La fidélité : Conserver la nuance dans la réponse. Le piège à éviter : Ne remplacez pas « certains » par « tous », ni « au moins » par « au plus »."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le mot précis",
+              "text": "Toujours, parfois, seulement ou peut-être ?",
+              "anchor_text": "Le mot précis : Toujours, parfois, seulement ou"
+            },
+            {
+              "label": "La portée",
+              "text": "Mesurer la force réelle de l’affirmation.",
+              "anchor_text": "La portée : Mesurer la force réelle de"
+            },
+            {
+              "label": "La fidélité",
+              "text": "Conserver la nuance dans la réponse.",
+              "anchor_text": "La fidélité : Conserver la nuance dans la"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "D.07",
+      "title": "Enrichir le vocabulaire utile",
+      "objective": "Comprendre un mot dans son contexte professionnel.",
+      "image": "media/vtc/module-d.webp",
+      "source_sha256": "ed2296f57d4c96a1369778cc3d005c0bcd4748f935540171a88125ef6a1b4634",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un mot peut avoir plusieurs sens. Dans le transport, une « prise en charge » peut désigner le début du service ; dans un autre contexte, elle peut évoquer un remboursement ou un accompagnement. Recherchez les mots voisins avant de choisir un synonyme. Distinguez les termes proches : une réservation prépare une prestation ; un devis présente une offre chiffrée ; une facture constate une somme liée à une prestation ; un reçu atteste un paiement. « Ponctuel » peut signifier à l’heure ou occasionnel selon la phrase. Pour comprendre un mot inconnu, observez sa famille, les exemples et les oppositions, sans supposer qu’un mot familier a toujours le même sens."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Un mot peut avoir plusieurs sens.",
+              "anchor_text": "Un mot peut avoir plusieurs sens."
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Réservation, devis, facture et reçu remplissent des fonctions différentes.",
+              "anchor_text": "Distinguez les termes proches : une réservation prépare"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Comprendre un mot dans son contexte professionnel."
+          }
+        },
+        {
+          "title": "Choisir le mot utile au métier",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Une réservation, un devis, une facture, un reçu, un acompte et un remboursement décrivent des étapes différentes. Un mot voisin n’est pas toujours interchangeable. Recherchez ce que le document ou l’action accomplit réellement. Pour mémoriser un terme, notez une définition simple et une phrase d’usage. Ajoutez un mot à ne pas confondre. L’objectif n’est pas de compliquer les messages, mais de choisir le terme précis. Si un mot technique risque de ne pas être compris par le client, expliquez-le avec un exemple concret."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Identifier l’étape décrite par le mot, sans confondre les termes proches.",
+              "anchor_text": "Une réservation, un devis, une facture, un reçu,"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Pour mémoriser un terme, notez une définition simple et une phrase d’usage.",
+              "anchor_text": "Pour mémoriser un terme, notez une définition simple"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Lire les mots autour du terme inconnu."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. « Cette prestation ponctuelle aura lieu mardi » signifie ici qu’elle est occasionnelle. « Ce chauffeur est ponctuel » renvoie à son respect de l’horaire. La même forme ne porte pas toujours le même sens. Un mot peut avoir plusieurs sens selon le contexte. Une « correspondance » peut être une liaison entre transports ou un échange écrit. Pour choisir, lisez les mots voisins et le but de la phrase. Le vocabulaire s’apprend dans une situation, pas uniquement comme une liste isolée."
+            }
+          ],
+          "points": [
+            {
+              "label": "Occasionnel",
+              "text": "« Cette prestation ponctuelle aura lieu mardi » : occasionnelle.",
+              "anchor_text": "« Cette prestation ponctuelle aura lieu mardi »"
+            },
+            {
+              "label": "À l’heure",
+              "text": "« Ce chauffeur est ponctuel » : il respecte l’horaire.",
+              "anchor_text": "« Ce chauffeur est ponctuel »"
+            },
+            {
+              "label": "Le contexte",
+              "text": "« Correspondance » : liaison de transport ou échange écrit, selon la phrase.",
+              "anchor_text": "Une « correspondance » peut être"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le contexte : Lire les mots autour du terme inconnu. Le sens utile : Choisir le sens adapté au transport. La vérification : Remplacer le mot et relire la phrase. Le piège à éviter : Un synonyme possible dans une phrase peut devenir faux dans une autre. Le contexte décide du sens utile."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le contexte",
+              "text": "Lire les mots autour du terme inconnu.",
+              "anchor_text": "Le contexte : Lire les mots autour du"
+            },
+            {
+              "label": "Le sens utile",
+              "text": "Choisir le sens adapté au transport.",
+              "anchor_text": "Le sens utile : Choisir le sens adapté"
+            },
+            {
+              "label": "La vérification",
+              "text": "Remplacer le mot et relire la phrase.",
+              "anchor_text": "La vérification : Remplacer le mot et relire"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "D.08",
+      "title": "Maîtriser les temps utiles",
+      "objective": "Situer une action dans le passé, le présent ou l’avenir.",
+      "image": "media/vtc/module-d.webp",
+      "source_sha256": "25e766b4b79aadab84c60b59d5731f52b7c75acfd23d1631aee10036a71b72ab",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le présent décrit notamment une situation actuelle ou une habitude. Le passé composé raconte une action accomplie : « J’ai confirmé la réservation. » L’imparfait décrit un contexte : « La circulation était dense. » Le futur simple annonce une action à venir : « Je vous attendrai à l’entrée. » Le conditionnel formule une hypothèse ou une demande polie : « Pourriez-vous préciser l’adresse ? » Il ne faut pas l’utiliser pour rendre floue une information certaine. Distinguez « je serai », futur, et « je serais », conditionnel. Dans un message de retard, précisez l’heure estimée et son caractère prévisionnel plutôt que multiplier les formules vagues."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Le présent décrit notamment une situation actuelle ou une habitude.",
+              "anchor_text": "Le présent décrit notamment une situation actuelle ou"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Le conditionnel exprime notamment une hypothèse ou une demande polie.",
+              "anchor_text": "Le conditionnel formule une hypothèse ou une demande"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Situer une action dans le passé, le présent ou l’avenir."
+          }
+        },
+        {
+          "title": "Situer une action dans le temps",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Hier, aujourd’hui, demain, avant, après et depuis aident à organiser la chronologie. Attention aux messages transférés plusieurs jours plus tard : « demain » renvoie au lendemain du message initial, pas toujours au lendemain de sa lecture. Pour une réservation, une date complète et une heure précise sont plus fiables qu’une indication relative. Reliez ensuite chaque verbe au moment de l’action : une confirmation déjà faite, une vérification en cours et une réponse promise pour plus tard ne décrivent pas le même état du dossier."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Hier, aujourd’hui, demain, avant, après et depuis aident à organiser la chronologie.",
+              "anchor_text": "Hier, aujourd’hui, demain, avant, après et depuis aident"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Une date complète et une heure précise évitent les ambiguïtés de « demain ».",
+              "anchor_text": "Pour une réservation, une date complète et une"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Avant, maintenant ou après ?"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. « Je serai devant l’hôtel à sept heures trente » annonce une présence future : « serai » s’écrit ici sans s final. « Je serais disponible si le vol arrivait plus tôt » exprime une disponibilité conditionnelle : « serais » prend un s final. L’écriture et le contexte permettent de distinguer la présence future annoncée et la condition posée. La présence de « si » invite à vérifier ce qui doit se produire pour que la disponibilité existe. Le conditionnel peut présenter une hypothèse ou une demande courtoise. Une phrase au futur ne prouve pas que l’action est déjà accomplie. Dans une chronologie de réservation, distinguez « j’ai confirmé », « je confirme » et « je confirmerai après vérification »."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le futur",
+              "text": "« Je serai devant l’hôtel à 7 h 30 » : sans s final, présence future annoncée.",
+              "anchor_text": "« Je serai devant l’hôtel à sept heures"
+            },
+            {
+              "label": "Le conditionnel",
+              "text": "« Je serais disponible si… » : avec s final, disponibilité sous condition.",
+              "anchor_text": "« Je serais disponible si le vol arrivait"
+            },
+            {
+              "label": "La vérification",
+              "text": "Une phrase au futur ne prouve pas que l’action est déjà accomplie.",
+              "anchor_text": "Une phrase au futur ne prouve"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le moment : Avant, maintenant ou après ? Le verbe : Identifier le temps et la personne. La cohérence : Vérifier la chronologie de la mission. Le piège à éviter : Une action annoncée au futur n’est pas encore une action accomplie, et une hypothèse n’est pas une confirmation."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le moment",
+              "text": "Avant, maintenant ou après ?",
+              "anchor_text": "Le moment : Avant, maintenant ou après ?"
+            },
+            {
+              "label": "Le verbe",
+              "text": "Identifier le temps et la personne.",
+              "anchor_text": "Le verbe : Identifier le temps et la"
+            },
+            {
+              "label": "La cohérence",
+              "text": "Vérifier la chronologie de la mission.",
+              "anchor_text": "La cohérence : Vérifier la chronologie de la"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "D.09",
+      "title": "Soigner accords et homophones",
+      "objective": "Éliminer les erreurs fréquentes à la relecture.",
+      "image": "media/vtc/module-d.webp",
+      "source_sha256": "4baebbe696318c587d5b2bab202248329f62c31aca2c4f3e63ff83ddbe4b9aa8",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le verbe s’accorde avec son sujet : « Les clients arrivent. » L’adjectif s’accorde avec le nom : « Les valises sont lourdes. » Au passé composé avec être, le participe s’accorde généralement avec le sujet : « Les passagères sont arrivées. » Avec avoir, l’accord dépend notamment de la place du complément d’objet direct. Pour les homophones, utilisez un test simple. Le verbe « a », sans accent, se remplace par « avait » ; la préposition « à », avec accent grave, ne se remplace pas ainsi. « Sont », avec un t final, se remplace par « étaient » ; « son », sans t final, exprime la possession. Pour une terminaison en é accent aigu ou en e r, remplacez le verbe par « vendu » ou « vendre ». Une relecture ciblée est plus efficace qu’une lecture rapide sans objectif."
+            }
+          ],
+          "points": [
+            {
+              "label": "Les accords",
+              "text": "Le verbe avec le sujet ; l’adjectif avec le nom.",
+              "anchor_text": "Le verbe s’accorde avec son sujet"
+            },
+            {
+              "label": "A ou à ?",
+              "text": "« a » → « avait » ; « à » ne permet pas ce remplacement.",
+              "anchor_text": "Le verbe « a », sans accent"
+            },
+            {
+              "label": "Sont ou son ?",
+              "text": "« sont » → « étaient » ; « son » exprime la possession.",
+              "anchor_text": "« Sont », avec un t final"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Éliminer les erreurs fréquentes à la relecture."
+          }
+        },
+        {
+          "title": "Repérer les accords et les homophones utiles",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Posez la question « qui fait l’action ? ». Dans « Les clients du chauffeur attendent », le sujet est « les clients », même si « chauffeur » est plus proche du verbe. Le verbe s’accorde donc au pluriel. Dans un groupe nominal, le déterminant, le nom et l’adjectif doivent rester cohérents : « une réservation confirmée », puis « des réservations confirmées ». Commencez par le nom principal et vérifiez les mots qui s’y rapportent."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le sujet",
+              "text": "Dans « Les clients du chauffeur attendent », le sujet est « les clients ».",
+              "anchor_text": "Dans « Les clients du chauffeur attendent »"
+            },
+            {
+              "label": "Le groupe nominal",
+              "text": "Une réservation confirmée → des réservations confirmées.",
+              "anchor_text": "Dans un groupe nominal"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Qui réalise l’action ?"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. La phrase erronée « Les clients on réservé », avec « on » sans t final, devient « Les clients ont réservé », avec un t final à « ont ». Le test « avaient réservé » fonctionne : il s’agit du verbe avoir. Autre correction : « Merci de confirmé », avec é accent aigu, devient « Merci de confirmer », terminé par e r. On peut dire « Merci de vendre » : il faut donc l’infinitif. Une erreur d’accord ne crée pas toujours une incompréhension, mais une confusion d’heure, de nombre ou de négation peut changer la consigne. Relisez d’abord le sens, puis la forme. Les activités proposent des formulations à sélectionner et à corriger par choix, sans texte à produire."
+            }
+          ],
+          "points": [
+            {
+              "label": "Correction du verbe",
+              "text": "« Les clients ont réservé » : ont avec un t final.",
+              "anchor_text": "devient « Les clients ont réservé »"
+            },
+            {
+              "label": "Le test",
+              "text": "« Avaient réservé » fonctionne : c’est le verbe avoir.",
+              "anchor_text": "Le test « avaient réservé » fonctionne"
+            },
+            {
+              "label": "Correction de l’infinitif",
+              "text": "« Merci de confirmer » : e r, comme « Merci de vendre ».",
+              "anchor_text": "devient « Merci de confirmer »"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le sujet : Qui réalise l’action ? L’accord : Relier le verbe et les mots concernés. Le sens : Vérifier les homophones en contexte. Le piège à éviter : La ressemblance à l’oral ne suffit pas. Utilisez le sujet et les tests de remplacement pour choisir l’écriture."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le sujet",
+              "text": "Qui réalise l’action ?",
+              "anchor_text": "Le sujet : Qui réalise l’action ?"
+            },
+            {
+              "label": "L’accord",
+              "text": "Relier le verbe et les mots concernés.",
+              "anchor_text": "L’accord : Relier le verbe et les mots"
+            },
+            {
+              "label": "Le sens",
+              "text": "Vérifier les homophones en contexte.",
+              "anchor_text": "Le sens : Vérifier les homophones en contexte."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "D.10",
+      "title": "Répondre à une question courte",
+      "objective": "Construire une réponse complète sans hors-sujet.",
+      "image": "media/vtc/module-d.webp",
+      "source_sha256": "1fe70f4fbf677395a45b72d18ee6582bc11c1f19b5f953de73934fa43c576050",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Une réponse courte n’est pas forcément un mot isolé. Elle reprend le sujet et fournit l’information demandée en une ou deux phrases. Si la consigne demande deux raisons, donnez deux raisons distinctes. Une phrase précise vaut mieux qu’un paragraphe qui ajoute des éléments non présents dans le texte. Pour justifier, reliez votre réponse à un fait du document. Vous pouvez reformuler plutôt que copier une longue phrase. Évitez « car oui », les jugements personnels et les abréviations de messagerie. À l’épreuve de français, les fautes d’orthographe sont prises en compte selon le barème : réservez du temps à la relecture des réponses rédigées."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Une réponse courte n’est pas forcément un mot isolé.",
+              "anchor_text": "Une réponse courte n’est pas forcément un mot"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Pour justifier, reliez votre réponse à un fait du document.",
+              "anchor_text": "Pour justifier, reliez votre réponse à un fait"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Construire une réponse complète sans hors-sujet."
+          }
+        },
+        {
+          "title": "Répondre précisément et brièvement",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Une réponse courte doit fournir l’information demandée, avec l’unité ou la condition nécessaire. Une question commençant par pourquoi attend une cause ; combien attend une quantité ; quand attend un moment. Reprendre toute l’histoire n’améliore pas une réponse qui oublie l’élément utile."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Une réponse courte doit fournir l’information demandée, avec l’unité ou la condition nécessaire.",
+              "anchor_text": "Une réponse courte doit fournir l’information demandée, avec"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Pourquoi → cause ; combien → quantité ; quand → moment.",
+              "anchor_text": "Une question commençant par pourquoi attend une cause"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Repérer précisément ce qui est demandé."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. La question est : « Pourquoi le chauffeur appelle-t-il le client ? » Le texte indique que deux hôtels portent le même nom. Une réponse précise est : « Il appelle le client pour confirmer l’adresse, car deux hôtels portent le même nom. » Cette phrase relie l’action à sa cause. Répondre seulement « pour le trajet » resterait trop vague. Ajouter que le prix a changé introduirait une information absente du texte. La plateforme vous fait choisir entre plusieurs formulations. Cet entraînement travaille la compréhension et la précision. Il ne reproduit pas le geste d’écriture des questions à réponse courte de l’examen officiel : il vous aide à reconnaître ce qu’une réponse pertinente doit contenir."
+            }
+          ],
+          "points": [
+            {
+              "label": "La question",
+              "text": "Pourquoi le chauffeur appelle-t-il le client ?",
+              "anchor_text": "La question est : « Pourquoi le chauffeur"
+            },
+            {
+              "label": "La réponse justifiée",
+              "text": "Pour confirmer l’adresse, car deux hôtels portent le même nom.",
+              "anchor_text": "Une réponse précise est"
+            },
+            {
+              "label": "La limite",
+              "text": "Choisir une formulation entraîne la précision, sans reproduire le geste d’écriture.",
+              "anchor_text": "La plateforme vous fait choisir entre plusieurs formulations"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. La demande : Repérer précisément ce qui est demandé. L’information : Sélectionner les éléments nécessaires. La réponse courte : Rester exact sans ajouter d’information inutile. Le piège à éviter : Une réponse courte doit rester complète : conserver la cause, l’unité ou la condition demandée."
+            }
+          ],
+          "points": [
+            {
+              "label": "La demande",
+              "text": "Repérer précisément ce qui est demandé.",
+              "anchor_text": "La demande : Repérer précisément ce qui est"
+            },
+            {
+              "label": "L’information",
+              "text": "Sélectionner les éléments nécessaires.",
+              "anchor_text": "L’information : Sélectionner les éléments nécessaires."
+            },
+            {
+              "label": "La réponse courte",
+              "text": "Rester exact sans ajouter d’information inutile.",
+              "anchor_text": "La réponse courte : Rester exact sans ajouter"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "D.11",
+      "title": "Écrire au client",
+      "objective": "Rédiger un message bref qui permet d’agir.",
+      "image": "media/vtc/module-d.webp",
+      "source_sha256": "524557386e6b36484ef3067badda3e807779477e053d40f7813908b14b74415a",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un message professionnel comporte un objet clair, les informations utiles et l’action attendue. Il indique qui écrit, de quelle réservation il s’agit et ce qui doit être confirmé. La politesse facilite la relation, mais ne doit pas masquer une demande imprécise. Pour annoncer un retard, donnez un horaire estimé et une solution si nécessaire. Évitez d’accuser le client ou de promettre une heure impossible à garantir. Les montants, dates et adresses doivent être relus séparément. Ne transmettez pas une donnée confidentielle dans un groupe. Quand un échange devient complexe, un appel peut aider ; confirmez ensuite les éléments importants par écrit."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Un message professionnel comporte un objet clair, les informations utiles et l’action attendue.",
+              "anchor_text": "Un message professionnel comporte un objet clair, les"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Pour annoncer un retard, donnez un horaire estimé et une solution si nécessaire.",
+              "anchor_text": "Pour annoncer un retard, donnez un horaire estimé"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Rédiger un message bref qui permet d’agir."
+          }
+        },
+        {
+          "title": "Choisir un message professionnel compréhensible",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Un message au client doit rendre visibles l’objet, l’information utile et l’action attendue. La politesse accompagne une réponse concrète ; elle ne remplace pas l’heure ou le lieu de rendez-vous. Évitez les reproches, les sous-entendus et les phrases longues qui mélangent plusieurs demandes."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Un message au client doit rendre visibles l’objet, l’information utile et l’action attendue.",
+              "anchor_text": "Un message au client doit rendre visibles l’objet,"
+            },
+            {
+              "label": "Le point clé",
+              "text": "La politesse accompagne une information concrète et exploitable.",
+              "anchor_text": "La politesse accompagne une réponse concrète ; elle"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Adapter le ton au client."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Voici la consigne : « Le départ est maintenu à huit heures. La réception demande seulement de remplacer la sortie principale par la sortie côté jardin. Merci de confirmer ce point au passager. » Le message au client peut donc préciser : « Votre départ reste prévu à huit heures. Le rendez-vous aura lieu à la sortie côté jardin. Merci de confirmer que vous avez bien reçu ce changement de lieu. » Le message garde l’heure initiale, précise le repère modifié et indique l’action attendue. En cas de retard ou de modification, distinguez ce qui est confirmé et ce qui reste à vérifier. Proposez une prochaine étape réaliste. Une formule comme « je vous confirme une solution dès validation » n’a pas la même portée que « un véhicule arrive dans cinq minutes » sans confirmation."
+            }
+          ],
+          "points": [
+            {
+              "label": "Ce qui change",
+              "text": "Heure maintenue à 8 h ; rendez-vous déplacé côté jardin.",
+              "anchor_text": "Voici la consigne : « Le départ est"
+            },
+            {
+              "label": "Le message",
+              "text": "Préciser l’heure, le nouveau lieu et demander confirmation de réception.",
+              "anchor_text": "Le message au client peut donc préciser"
+            },
+            {
+              "label": "La fiabilité",
+              "text": "Séparer ce qui est confirmé de ce qui reste à vérifier.",
+              "anchor_text": "En cas de retard ou de modification"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le destinataire : Adapter le ton au client. Le message : Présenter le fait et la solution clairement. La relecture : Vérifier noms, horaires et ponctuation. Le piège à éviter : La politesse ne remplace pas une heure, un lieu identifiable ou une demande précise."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le destinataire",
+              "text": "Adapter le ton au client.",
+              "anchor_text": "Le destinataire : Adapter le ton au client."
+            },
+            {
+              "label": "Le message",
+              "text": "Présenter le fait et la solution clairement.",
+              "anchor_text": "Le message : Présenter le fait et la"
+            },
+            {
+              "label": "La relecture",
+              "text": "Vérifier noms, horaires et ponctuation.",
+              "anchor_text": "La relecture : Vérifier noms, horaires et ponctuation."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "D.12",
+      "title": "Réussir la lecture d’examen",
+      "objective": "Utiliser les trente minutes de façon méthodique.",
+      "image": "media/vtc/module-d.webp",
+      "source_sha256": "64e956da8a6597ca12f145eda65692081ab8869fb5c05adf1d62d8217697cab9",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "L’épreuve s’appuie sur un texte de quinze à vingt lignes, avec sept QCM et trois questions à réponses courtes. Toutes les questions ne demandent pas la même lecture : certaines recherchent un détail, d’autres une idée ou un lien logique. Lisez chaque proposition jusqu’au bout, en surveillant les mots absolus comme « toujours » et « jamais ». Une organisation possible consiste à lire le texte, traiter les questions repérables, rédiger les réponses courtes puis relire. Adaptez ce partage à votre rythme ; il ne s’agit pas d’un barème officiel. Vérifiez que vous avez répondu à toutes les consignes et que vos réponses restent cohérentes avec le texte. Plus de cinq fautes dans l’ensemble des réponses courtes entraîne le retrait prévu d’un point."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Texte de 15 à 20 lignes ; 7 QCM et 3 réponses courtes.",
+              "anchor_text": "L’épreuve s’appuie sur un texte de quinze à"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Lire → répondre → rédiger les réponses courtes → relire, selon votre rythme.",
+              "anchor_text": "Une organisation possible consiste à lire le texte,"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Utiliser les trente minutes de façon méthodique."
+          }
+        },
+        {
+          "title": "Organiser sa lecture en situation d’évaluation",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Commencez par repérer le thème, les interlocuteurs et la chronologie. Pour chaque question, cherchez l’indice dans le texte et éliminez les propositions qui ajoutent, inversent ou exagèrent une information. Les distracteurs peuvent reprendre les mêmes mots tout en modifiant la relation logique."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Commencez par repérer le thème, les interlocuteurs et la chronologie.",
+              "anchor_text": "Commencez par repérer le thème, les interlocuteurs et"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Éliminer les réponses qui ajoutent, inversent ou exagèrent une information.",
+              "anchor_text": "Pour chaque question, cherchez l’indice dans le texte"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Lire la consigne et identifier les questions."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Il reste quatre minutes. Les QCM et deux réponses courtes sont traités, mais la dernière question demande deux causes et le brouillon n’en donne qu’une. La priorité est de revenir au passage utile pour retrouver la seconde cause, puis de vérifier que les deux raisons sont distinctes. Une longue introduction ne comblerait pas l’élément manquant. Une question difficile ne doit pas absorber tout le temps au point de laisser une autre réponse accessible vide. Conservez du temps pour une relecture des réponses sensibles : dates, négations, conditions et personnes. Si une question vous bloque, utilisez une méthode de retour prévue dans votre entraînement. Le bilan vous indique les notions à revoir afin d’améliorer la méthode, pas seulement le nombre de réponses mémorisées."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le temps restant",
+              "text": "Il reste 4 minutes pour terminer et vérifier les réponses.",
+              "anchor_text": "Il reste quatre minutes."
+            },
+            {
+              "label": "La priorité",
+              "text": "Retrouver la seconde cause et vérifier que les deux raisons sont distinctes.",
+              "anchor_text": "La priorité est de revenir au passage utile"
+            },
+            {
+              "label": "La relecture",
+              "text": "Contrôler dates, négations, conditions et personnes.",
+              "anchor_text": "Conservez du temps pour une relecture"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le repérage : Lire la consigne et identifier les questions. La recherche : Retrouver les preuves dans le texte. La vérification : Contrôler les réponses et le temps restant. Le piège à éviter : Relire seulement l’orthographe ne suffit pas : vérifiez aussi que chaque consigne et chaque nombre d’éléments sont respectés."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repérage",
+              "text": "Lire la consigne et identifier les questions.",
+              "anchor_text": "Le repérage : Lire la consigne et identifier"
+            },
+            {
+              "label": "La recherche",
+              "text": "Retrouver les preuves dans le texte.",
+              "anchor_text": "La recherche : Retrouver les preuves dans le"
+            },
+            {
+              "label": "La vérification",
+              "text": "Contrôler les réponses et le temps restant.",
+              "anchor_text": "La vérification : Contrôler les réponses et le"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

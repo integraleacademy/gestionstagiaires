@@ -1,0 +1,16 @@
+{% from 'manuals/_faq_macros.html' import faq_panel, faq_item with context %}
+{% set faq_theme = 'teal' if course.code == 'mac-aps' else ('violet' if course.code == 'vtc' else 'blue') %}
+{% call faq_panel('faq', 'cs-faq-title', 'FAQ E-LEARNING ' ~ course.name, 'Les réponses avant de vous lancer.', 'Commande, accès et durée du parcours : préparez sereinement la formation de vos stagiaires.', faq_theme) %}
+  {% call faq_item(1, "Comment accéder au parcours ?") %}
+  <p>Préparez votre commande depuis l’espace organisme, renseignez les stagiaires et validez le règlement. Après confirmation du paiement intégral, cliquez sur « Envoyer les accès e-learning aux stagiaires » depuis votre espace organisme. Un navigateur récent et une connexion Internet sont nécessaires.</p>
+  {% endcall %}
+  {% call faq_item(2, "À quoi correspond la durée affichée ?") %}
+  <p>Les {{ course.duration_label }} correspondent à la durée pédagogique prévue du parcours proposé sur cette plateforme. Elles ne représentent pas à elles seules la durée réglementaire totale d’une formation certifiante.</p>
+  {% endcall %}
+  {% call faq_item(3, "Quelles sont les modalités d’accès ?") %}
+  <p>L’accès est valable 6 mois à compter de l’envoi des identifiants au stagiaire. Les heures de parcours indiquent le volume pédagogique, pas la période de disponibilité. L’organisme organise l’accompagnement pédagogique de ses stagiaires.</p>
+  {% endcall %}
+  {% call faq_item(4, "Que permet cet achat ?") %}
+  <p>L’achat donne accès au parcours numérique. Il ne vaut pas inscription à un examen, certification ni autorisation d’exercer.{% if course.code == 'vtc' %} La préparation théorique ne remplace pas l’entraînement à la conduite ni l’épreuve pratique.{% endif %}</p>
+  {% endcall %}
+{% endcall %}

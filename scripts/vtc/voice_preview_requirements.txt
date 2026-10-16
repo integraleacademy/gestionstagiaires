@@ -1,0 +1,8 @@
+# Build-only environment for the Henri D.02 preview; not application dependencies.
+# Reviewed two-file compatibility patch: https://github.com/rany2/edge-tts/pull/492
+# Pin the exact reviewed revision until an upstream release includes the fix.
+edge-tts @ git+https://github.com/HarryXiaoCN/edge-tts.git@5f9b7e4319d0b70d147b9e63144e64078e3eb858
+Pillow==12.3.0
+av==19.0.1
+imageio-ffmpeg==0.6.0
+certifi

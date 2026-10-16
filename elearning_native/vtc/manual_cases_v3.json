@@ -1,0 +1,442 @@
+{
+  "A.01": {
+    "page": 20,
+    "example": "Un hôtel commande une voiture pour deux clients. Le conducteur facture le trajet : c’est une prestation professionnelle. Un collègue partage les frais de son trajet personnel domicile-travail : le contexte est différent. La qualification dépend des faits, pas du nom choisi sur une annonce.",
+    "situation": "À la sortie d’un salon, trois visiteurs proposent de payer un chauffeur VTC disponible pour rentrer immédiatement. Aucune réservation n’a été enregistrée. Le chauffeur pense afficher « covoiturage » sur son téléphone."
+  },
+  "A.02": {
+    "page": 20,
+    "example": "Nadia conduit pour une société. Sa carte professionnelle est personnelle ; l’inscription REVTC appartient à l’exploitant. Si Nadia crée ensuite sa propre activité, sa carte ne remplace pas les démarches de sa nouvelle entreprise.",
+    "situation": "Une plateforme valide votre compte. Un ami affirme : « Tu as donc toutes les autorisations nécessaires, tu peux commencer avec n’importe quelle voiture assurée. »"
+  },
+  "A.03": {
+    "page": 25,
+    "example": "Un candidat a conduit un véhicule de transport pendant plusieurs années. Il dépose sa première demande en septembre 2026. Il ne peut pas se fonder sur l’ancienne équivalence nationale par expérience ; il suit le parcours applicable à sa situation.",
+    "situation": "Vous avez réussi l’admissibilité théorique. Un exploitant vous propose trois journées de courses dès demain, en attendant votre pratique et votre carte."
+  },
+  "A.04": {
+    "page": 25,
+    "example": "Le véhicule est disponible et des clients attendent, mais la carte a expiré. Une demande en cours n’est pas à considérer spontanément comme une prolongation. Il faut vérifier le titre effectivement valable et organiser un remplacement conforme si nécessaire.",
+    "situation": "Votre tableau indique : carte au 30 novembre, contrôle technique au 10 octobre, assurance payée mensuellement. Nous sommes le 28 septembre."
+  },
+  "A.05": {
+    "page": 30,
+    "example": "Une valise tombe pendant sa manipulation par le chauffeur et endommage un objet du client. La qualification et la garantie mobilisable dépendent des circonstances et du contrat. Il faut décrire les faits précisément et déclarer le sinistre, sans promettre une indemnisation automatique.",
+    "situation": "Vous louez une voiture pour remplacer la vôtre. Le loueur annonce simplement : « Assurance tous risques comprise. » Vous devez transporter des clients payants."
+  },
+  "A.06": {
+    "page": 30,
+    "example": "Un client demande cinq places passagers dans une berline n’en proposant que quatre. Refuser cette configuration répond à une limite matérielle. Refuser un client à cause de son accent répond à un préjugé : la logique n’est pas la même.",
+    "situation": "Un hôtel souhaite que vous refusiez certains voyageurs en raison de leur nationalité. Il affirme que cette demande est une condition du partenariat."
+  },
+  "A.07": {
+    "page": 35,
+    "example": "Un client multiplie les remarques sexuelles envers une autre passagère. Son rire nerveux ne vaut pas accord. Le chauffeur peut poser une limite claire, rechercher un arrêt sûr et solliciter les secours si une menace ou une agression l’exige.",
+    "situation": "Un passager adresse des messages intimes insistants après la course en utilisant votre numéro professionnel. Vous avez déjà demandé l’arrêt de ces messages."
+  },
+  "A.08": {
+    "page": 35,
+    "example": "Une passagère demande de ne pas être déposée devant son domicile car quelqu’un l’y attend pour la menacer. Vous ne discutez pas son ressenti. Vous recherchez avec elle une solution sûre et contactez les forces de l’ordre si le danger le nécessite.",
+    "situation": "Vous êtes arrêté devant un établissement. Une personne vient de subir une agression, tremble et demande de l’aide. L’agresseur reste à proximité."
+  },
+  "A.10": {
+    "page": 45,
+    "example": "Pour retrouver un bagage oublié, vous utilisez les coordonnées de la réservation. Publier le nom du client, son hôtel et son trajet sur un réseau social exposerait inutilement sa vie privée.",
+    "situation": "Un collègue vous demande une capture de vos courses pour comparer les revenus. Elle contient noms, téléphones et adresses."
+  },
+  "A.11": {
+    "page": 45,
+    "example": "Une batterie vide empêche l’ouverture de l’application. Une solution hors ligne sécurisée aurait évité la difficulté. Elle doit rester à jour et ne pas exposer les données des autres clients lors de la présentation.",
+    "situation": "Le justificatif affiche une réservation à 15 h 10 alors que la prise en charge a eu lieu à 15 h. Un collègue conseille de corriger l’heure à la main."
+  },
+  "A.12": {
+    "page": 45,
+    "example": "Après un accident, l’assureur peut intervenir pour un dommage couvert. Une éventuelle infraction routière reste une question distincte. Le paiement d’une franchise ne remplace ni une amende ni les démarches administratives.",
+    "situation": "Un client réclame une indemnisation pour un bagage abîmé. Vous avez aussi reçu un procès-verbal routier pendant cette course."
+  },
+  "B.01": {
+    "page": 75,
+    "example": "Deux chauffeurs réalisent le même chiffre d’affaires. L’un supporte une forte location et souhaite embaucher ; l’autre commence seul avec un véhicule déjà financé. Leur structure de coûts et leur projet peuvent conduire à des choix différents.",
+    "situation": "Un candidat dit : « Je choisis la micro pour récupérer toutes mes dépenses réelles et je passerai automatiquement en SASU si je dépasse le plafond. »"
+  },
+  "B.02": {
+    "page": 75,
+    "example": "Un chauffeur obtient son SIREN. Il peut désormais identifier son entreprise sur ses documents, mais ne doit pas assimiler cette étape à la délivrance de sa carte ou à l’inscription au REVTC.",
+    "situation": "Vous possédez une carte professionnelle valide, mais l’entreprise n’est pas créée et le REVTC n’est pas obtenu. Un premier client veut payer une course demain."
+  },
+  "B.03": {
+    "page": 84,
+    "example": "Actif : véhicule net 18 000 €, clients 2 000 €, banque 4 000 €, soit 24 000 €. Passif : capitaux propres 8 000 €, emprunt 14 000 €, fournisseurs 2 000 €, soit 24 000 €. Le document est équilibré.",
+    "situation": "Dans ce bilan, un client règle 1 000 € par virement. Aucun autre mouvement n’intervient et aucune nouvelle prestation n’est facturée."
+  },
+  "B.04": {
+    "page": 84,
+    "example": "Sur un mois fictif : produits 6 000 €, charges d’exploitation 4 500 €, intérêts 100 €. Le résultat avant impôt est 1 400 €. Un remboursement de capital de 500 € réduit la banque mais n’ajoute pas 500 € de charge.",
+    "situation": "L’entreprise vend pour 5 000 € HT. Ses charges sont de 3 600 € HT, dont 400 € d’amortissement. Tous les clients n’ont pas encore payé."
+  },
+  "B.05": {
+    "page": 84,
+    "example": "Une mission comprend 8 km d’approche, 24 km avec passager et 8 km de retour. À 0,24 € de coût variable par kilomètre, le coût kilométrique est 40 × 0,24 = 9,60 €, pas 24 × 0,24.",
+    "situation": "Une course à 55 € HT demande 50 km totaux. Le coût variable est de 0,26 €/km ; le péage est de 4 €. Aucune commission ne s’applique."
+  },
+  "B.06": {
+    "page": 90,
+    "example": "Une course intérieure facturée 66 € TTC à 10 % contient 60 € HT et 6 € de TVA. Sur une période fictive, 500 € collectés et 180 € déductibles donnent 320 € à reverser, si aucune autre correction ne s’applique.",
+    "situation": "Un devis de transport indique 88 € TTC, TVA 10 %. Le chauffeur annonce que son chiffre d’affaires HT sera de 79,20 €."
+  },
+  "B.07": {
+    "page": 90,
+    "example": "Un exercice suppose 4 000 € encaissés et un taux social pédagogique de 21,2 %, hors autres contributions et dispositifs. Cotisations : 848 €. Après 1 500 € de frais, il reste 1 652 € avant impôt et autres charges. Ce calcul n’est pas un conseil de choix de statut.",
+    "situation": "Un micro-entrepreneur facture 100 € à son client. Une plateforme, simple mandataire d’encaissement dans ce cas, retient 20 € de commission et reverse 80 €."
+  },
+  "B.08": {
+    "page": 100,
+    "example": "Solde initial : 2 000 €. Encaissements : 5 500 €. Décaissements : 6 200 €. Solde final : 1 300 €. Un résultat positif ne changerait pas ce calcul si les clients n’ont pas encore payé.",
+    "situation": "Vous avez 1 200 € en banque. Cette semaine : encaissements attendus 900 €, assurance 300 €, location 800 €, énergie 250 €, cotisations 600 €."
+  },
+  "B.10": {
+    "page": 100,
+    "example": "Location fictive : 700 € par mois sur 36 mois, plus 2 000 € initiaux et 900 € de frais prévus. Coût du scénario : 28 100 €. Une offre à 650 € peut être plus chère si les kilomètres supplémentaires et services exclus dépassent l’écart.",
+    "situation": "Deux offres sur 24 mois : A, 800 €/mois tout compris hors énergie ; B, 650 €/mois plus 4 000 € initiaux et 1 200 € d’entretien estimé. Même kilométrage autorisé."
+  },
+  "B.11": {
+    "page": 106,
+    "example": "Une course est facturée deux fois par erreur. Vous rapprochez réservation, facture et paiement, puis établissez le document correctif approprié. Modifier silencieusement un ancien fichier ferait perdre la traçabilité.",
+    "situation": "Un client professionnel demande une facture de 99 € TTC. La course intérieure est soumise à 10 % de TVA. Le vendeur relève du régime réel avec TVA."
+  },
+  "B.12": {
+    "page": 106,
+    "example": "Un chiffre d’affaires de 3 000 € ne se compare pas directement à un salaire net de 3 000 €. L’indépendant finance avec ses recettes ses frais, cotisations, temps non facturé et risques d’activité.",
+    "situation": "Pour gagner du temps, un exploitant propose à un ami de conduire une semaine « sans déclaration, juste à l’essai ». L’ami possède une carte VTC."
+  },
+  "C.01": {
+    "page": 135,
+    "example": "Une baisse de pression répétée n’est pas résolue par le simple effacement du voyant. Il faut rechercher la cause selon la notice et faire vérifier le pneumatique si nécessaire. Le temps perdu avant le départ évite une panne en service.",
+    "situation": "Vous remarquez une coupure sur le flanc d’un pneu. Votre premier client a un train et vous assure que « dix kilomètres, ce n’est rien »."
+  },
+  "C.02": {
+    "page": 135,
+    "example": "Sur une autoroute habituellement limitée à 130, un chantier impose 90. La pluie ne permet pas de rouler à 110 : la limite locale de 90 reste à respecter, voire une allure inférieure si la situation l’exige.",
+    "situation": "Votre navigation prévoit une arrivée trop tardive. Vous entrez dans une zone 30 bordée d’écoles et de véhicules stationnés."
+  },
+  "C.03": {
+    "page": 144,
+    "example": "À 90 km/h, la voiture parcourt 90 ÷ 3,6 = 25 mètres par seconde. Deux secondes représentent donc environ 50 mètres. Cette valeur illustre l’intervalle, pas une distance d’arrêt universelle.",
+    "situation": "Vous roulez à 72 km/h. Un client vous montre une adresse et vous détournez le regard pendant deux secondes."
+  },
+  "C.04": {
+    "page": 144,
+    "example": "Une camionnette masque le bord d’un passage piéton. Même sans personne visible, vous préparez un ralentissement. L’absence de visibilité n’est pas une preuve d’absence de danger.",
+    "situation": "Une cycliste roule devant vous dans une rue étroite. Un véhicule arrive en face et votre client demande de dépasser immédiatement."
+  },
+  "C.05": {
+    "page": 144,
+    "example": "Le GPS demande de tourner à droite, mais une rue est fermée pour travaux. Vous poursuivez par une voie autorisée puis recalculez. Une instruction numérique n’est pas une autorisation de circulation.",
+    "situation": "À un carrefour, votre feu passe au vert mais la sortie est encombrée. Vous risquez d’immobiliser la voiture au milieu de l’intersection."
+  },
+  "C.06": {
+    "page": 153,
+    "example": "Des parents proposent de garder leur enfant sur les genoux pour un trajet court. Cela ne fournit pas la protection d’un dispositif adapté. Vous expliquez la règle et recherchez une solution avant le départ.",
+    "situation": "Une famille réserve pour deux adultes et un enfant de quatre ans. Aucun siège adapté n’est disponible à l’arrivée."
+  },
+  "C.08": {
+    "page": 153,
+    "example": "Un médicament nouveau porte une mise en garde sur la conduite. Le chauffeur contacte le pharmacien ou le prescripteur pour savoir comment organiser son activité. Il ne teste pas ses réactions avec un client à bord.",
+    "situation": "Après un déjeuner alcoolisé, un collègue pense que deux cafés et une douche lui permettront d’effectuer une course sans risque."
+  },
+  "C.09": {
+    "page": 160,
+    "example": "Une nouvelle course s’affiche pendant un virage. L’intérêt commercial ne justifie pas de quitter la route des yeux pour l’accepter. L’organisation doit prévoir des interactions compatibles avec la sécurité.",
+    "situation": "Le passager change de destination et tend son téléphone au conducteur sur une voie rapide."
+  },
+  "C.10": {
+    "page": 160,
+    "example": "À l’approche d’un feu déjà rouge, relâcher tôt l’accélérateur permet une décélération progressive. Accélérer jusqu’au dernier moment puis freiner fort consomme davantage et dégrade le confort.",
+    "situation": "Deux trajets offrent la même heure d’arrivée : l’un traverse une succession de rues étroites et ralentisseurs ; l’autre utilise un axe fluide légèrement plus long."
+  },
+  "C.11": {
+    "page": 166,
+    "example": "En brouillard épais avec visibilité sous cinquante mètres, le plafond est de cinquante kilomètres par heure, y compris sur autoroute. Une allure plus faible peut rester nécessaire. Il ne faut pas suivre les feux du véhicule précédent de trop près.",
+    "situation": "Une cliente vous demande d’emprunter une route de montagne fermée, car l’application la propose encore. Votre véhicule ne possède pas l’équipement imposé sur la zone."
+  },
+  "C.12": {
+    "page": 166,
+    "example": "Un véhicule tombe en panne sur autoroute. Chercher un objet dans le coffre côté circulation ou rester debout devant la voiture augmente le danger. La sécurité des personnes passe avant la récupération des bagages.",
+    "situation": "Après un choc, un passager est blessé et la voiture gêne la circulation. Vous ne savez pas évaluer la gravité de sa blessure."
+  },
+  "D.01": {
+    "page": 195,
+    "example": "Texte : « Le point de rendez-vous est déplacé devant la porte B en raison de travaux. L’horaire reste inchangé. » À la question « Qu’est-ce qui change ? », la réponse attendue est le lieu, pas l’horaire ni le prix.",
+    "situation": "Message : « Le départ de 8 h 15 est confirmé. Merci de rejoindre l’entrée latérale, la porte principale étant fermée jusqu’à 9 h. »"
+  },
+  "D.02": {
+    "page": 195,
+    "example": "Réservation effectuée le 12 juin à 18 h pour une prise en charge le 13 juin à 7 h 30. La date de course est le 13 juin ; le 12 juin est la date de commande. Confondre les deux peut faire manquer le client.",
+    "situation": "Fiche : réservation par Mme Roy ; passagers M. et Mme Diallo ; départ hôtel des Arts à 6 h 40 ; arrivée souhaitée gare Centrale à 7 h 10 ; deux valises."
+  },
+  "D.03": {
+    "page": 203,
+    "example": "« Le client juge l’accueil excellent » rapporte l’opinion du client. Cela ne signifie pas que tous les passagers ont donné le même avis. La portée du sujet doit rester la même.",
+    "situation": "Texte : « La circulation est dense. Le chauffeur estime qu’un retard de dix minutes est possible et prévient le passager. »"
+  },
+  "D.04": {
+    "page": 203,
+    "example": "« Les passagers attendent leurs bagages. Le chauffeur les aide à les charger. » Le premier « les » renvoie aux passagers ; le second aux bagages. Le verbe permet de résoudre la référence.",
+    "situation": "Phrase : « Sofia remet la réservation à Karim. Il la relit puis lui confirme le lieu de rendez-vous. »"
+  },
+  "D.05": {
+    "page": 203,
+    "example": "« Malgré la pluie, le véhicule arrive à l’heure. » Le texte oppose une difficulté à un résultat. Il ne dit pas que la pluie a provoqué la ponctualité.",
+    "situation": "Complétez : « Le chauffeur vérifie le numéro de vol ... ajuster l’accueil. Le vol est retardé ; ... il actualise l’horaire prévu. »"
+  },
+  "D.06": {
+    "page": 208,
+    "example": "« Le tarif inclut deux bagages au maximum. » Cette phrase n’oblige pas à voyager avec deux bagages et ne dit pas qu’un troisième est gratuit. Elle fixe une limite à l’inclusion annoncée.",
+    "situation": "Consigne : « Toute modification doit être confirmée par écrit, sauf le changement de température dans l’habitacle. »"
+  },
+  "D.07": {
+    "page": 208,
+    "example": "« Cette prestation ponctuelle aura lieu mardi » signifie ici qu’elle est occasionnelle. « Ce chauffeur est ponctuel » renvoie à son respect de l’horaire. La même forme ne porte pas toujours le même sens.",
+    "situation": "Phrase : « Le devis précise les conditions d’annulation. Après la course, une facture sera adressée au client. »"
+  },
+  "D.08": {
+    "page": 213,
+    "example": "« Je serai devant l’hôtel à 7 h 30 » annonce une présence future. « Je serais disponible si le vol arrivait plus tôt » exprime une disponibilité conditionnelle. Le choix du temps change l’engagement.",
+    "situation": "Corrigez ce message : « Hier, je confirme votre réservation. Demain, je vous attendais devant l’hôtel. Pouvez-vous m’envoyé le numéro de vol ? »"
+  },
+  "D.09": {
+    "page": 213,
+    "example": "« Les clients on réservé » devient « Les clients ont réservé », car on peut dire « avaient réservé ». « Merci de confirmé » devient « Merci de confirmer », comme « Merci de vendre », avec l’infinitif.",
+    "situation": "Corrigez : « Les deux cliente sont arrivé. Leur bagages son prêt. Le chauffeur a vérifier l’adresse avant de démarré. »"
+  },
+  "D.10": {
+    "page": 221,
+    "example": "Question : « Pourquoi le chauffeur appelle-t-il le client ? » Texte : « Deux hôtels portent le même nom. » Réponse : « Il appelle le client pour confirmer l’adresse, car deux hôtels portent le même nom. »",
+    "situation": "Texte : « Pour éviter un malentendu, Lina confirme le nombre de passagers et les dimensions du fauteuil pliant. Elle vérifie ensuite la capacité du coffre. »"
+  },
+  "D.12": {
+    "page": 221,
+    "example": "Une question difficile peut absorber plusieurs minutes. Marquez-la dans le cadre autorisé, poursuivez puis revenez-y. Une réponse facile laissée vide par manque de temps coûte aussi des points.",
+    "situation": "Il reste quatre minutes. Vous avez répondu aux QCM et à deux questions courtes. La troisième demande deux causes ; votre brouillon n’en donne qu’une."
+  },
+  "E.01": {
+    "page": 245,
+    "example": "Driver: Good morning. Are you Mr Brown? Passenger: Yes, I am. Driver: I’m Samir, your driver. Welcome. Passenger: Thank you. Driver: We’re going to the Park Hotel, is that correct? Passenger: Yes, that’s right.",
+    "situation": "Il est 18 h. Une cliente nommée Taylor rejoint votre véhicule. Vous vous appelez Alex et devez la conduire à l’hôtel Central."
+  },
+  "E.02": {
+    "page": 245,
+    "example": "Driver: Do you have the booking reference? Passenger: Yes, it’s B42. Driver: Thank you. How many passengers are there? Passenger: Three adults. Driver: And what is the destination? Passenger: The Central Hotel, in Riverside Street.",
+    "situation": "Le client dit : « We have a booking for four passengers. We’re going to the airport. » Le terminal n’est pas indiqué."
+  },
+  "E.03": {
+    "page": 245,
+    "example": "Passenger: Could you pick me up at a quarter to nine? Driver: At eight forty-five tomorrow morning? Passenger: Yes, exactly. Driver: Thank you. I’ll confirm it in writing. La reformulation vérifie à la fois l’heure et le moment de la journée.",
+    "situation": "Message : « Please pick us up on Friday, 12 June, at half past six in the morning. There will be three passengers. »"
+  },
+  "E.04": {
+    "page": 255,
+    "example": "Driver: I’m waiting at the meeting point, next to exit B. Passenger: Is it opposite the café? Driver: Yes. Please stay on the pavement. I’ll meet you there. Le mot « pavement » désigne le trottoir en anglais britannique.",
+    "situation": "Votre point de rencontre est à côté de la porte C, en face d’un café. Le client vous demande : « Where are you? »"
+  },
+  "E.06": {
+    "page": 255,
+    "example": "Passenger: It’s a little cold. Driver: Of course. I’ll adjust the temperature. Passenger: Thank you. Driver: Is this better? Passenger: Yes, that’s fine. Une demande de confort se traite sans détourner l’attention de la route.",
+    "situation": "Avant le départ, un passager n’a pas attaché sa ceinture. Il dit : « It’s only a short journey. »"
+  },
+  "E.07": {
+    "page": 260,
+    "example": "Driver: There is heavy traffic in the city centre. Passenger: Is there another route? Driver: Yes. The motorway is faster, but there is a toll. Passenger: How much is the toll? Driver: Five euros. Would you like to take that route?",
+    "situation": "Le trajet habituel prend environ 40 minutes. Un autre trajet prend 30 minutes avec 4 € de péage, selon les informations disponibles."
+  },
+  "E.08": {
+    "page": 260,
+    "example": "Passenger: Does the price include the toll? Driver: Yes, the toll is included in the agreed fare. Passenger: Are there any extra charges? Driver: Not for this journey as booked. Any change would need to be agreed. La réponse se réfère au trajet réservé.",
+    "situation": "Le devis accepté est de 75 € TTC, péage inclus. Le client demande : « Is the toll extra? »"
+  },
+  "E.09": {
+    "page": 265,
+    "example": "Passenger: Our train is delayed by twenty minutes. Driver: Thank you for letting me know. Please confirm your new arrival time. Passenger: It should arrive at six forty. Driver: Thank you. I’ll update the booking and confirm the arrangements.",
+    "situation": "Vous annoncez une arrivée estimée dans quinze minutes. Il est 14 h. Le client croit que vous arriverez à 15 h."
+  },
+  "E.10": {
+    "page": 265,
+    "example": "Driver: The total is forty-eight euros. Passenger: Can I pay by card? Driver: Yes, of course. Please follow the instructions on the terminal. Passenger: Could I have a receipt? Driver: Certainly. Here you are. Passenger: Thank you.",
+    "situation": "Le terminal n’a pas accepté la transaction. Le client demande : « Has the payment gone through? »"
+  },
+  "E.11": {
+    "page": 270,
+    "example": "Passenger: I don’t feel well. Could we stop? Driver: Of course. I’ll stop in a safe place. Do you need medical help? Passenger: Yes, please. Driver: I’m calling the emergency services. La conduite et l’alerte restent prioritaires sur la conversation.",
+    "situation": "Un client écrit : « I think I left my small black bag in your car. Could you check, please? »"
+  },
+  "E.12": {
+    "page": 270,
+    "example": "Passenger: Is there a restaurant near the hotel? Driver: Yes, there are several restaurants on the next street. Passenger: Are they open tonight? Driver: I’m not sure. I can help you check when we arrive. La réponse distingue localisation connue et horaires à vérifier.",
+    "situation": "Un visiteur demande si un musée est ouvert demain. Vous connaissez son emplacement mais pas son calendrier actuel."
+  },
+  "F.01": {
+    "page": 292,
+    "example": "Près d’un centre de congrès, les arrivées se concentrent le matin et les départs en fin d’après-midi. Il faut mesurer les temps d’attente et de repositionnement ; multiplier le nombre de visiteurs par un prix moyen ne constitue pas une prévision fiable de ventes.",
+    "situation": "Vous envisagez les transferts familiaux d’aéroport. Vous disposez d’une berline et travaillez surtout en journée."
+  },
+  "F.02": {
+    "page": 292,
+    "example": "Caractéristique : « suivi du numéro de vol ». Bénéfice : « ajuster l’accueil au vol annoncé et informer le client du point de rencontre ». La seconde formulation explique l’utilité sans promettre d’éliminer tous les retards.",
+    "situation": "Votre annonce indique « transport premium, service parfait, tarif imbattable ». Elle ne précise ni capacité ni zone ni réservation."
+  },
+  "F.03": {
+    "page": 301,
+    "example": "Mission fictive : coût kilométrique 18 €, temps valorisé 30 €, contribution aux frais fixes 12 €. Objectif avant commission : 60 € HT. Avec 20 % de commission sur le HT, prix nécessaire : 75 € HT, soit 82,50 € TTC à 10 % dans cet exemple.",
+    "situation": "Vous voulez conserver 72 € HT avant les autres charges d’une mission. Une commission de 10 % du prix HT est prévue."
+  },
+  "F.04": {
+    "page": 301,
+    "example": "« Transfert hôtel-gare : 66 € TTC ; péage non applicable ; dix minutes d’attente incluses ; attente supplémentaire selon le tarif accepté. » L’exemple doit être complété par les identités, horaires et autres conditions, plutôt qu’envoyé comme une simple ligne de prix.",
+    "situation": "Un client accepte un transfert à 80 € TTC. Il ajoute ensuite un arrêt de trente minutes et une seconde destination."
+  },
+  "F.05": {
+    "page": 306,
+    "example": "Relevé fictif : prestations 500 €, commission 100 €, versement 400 €. Le revenu disponible n’est pas 400 € si énergie, location, assurances, cotisations et impôts restent à couvrir. Selon le montage contractuel, le CA déclaré peut être le montant brut des prestations.",
+    "situation": "Deux plateformes proposent la même recette nette moyenne par course. La première exige 8 km d’approche en moyenne ; la seconde, 3 km."
+  },
+  "F.06": {
+    "page": 306,
+    "example": "Pour un hôtel, la question utile est : « Quelles difficultés rencontrez-vous pour les départs matinaux ? » Elle ouvre un besoin concret. Envoyer seulement une liste de véhicules ne montre pas comment votre service aidera l’établissement.",
+    "situation": "Vous voulez contacter une entreprise qui organise chaque mois des déplacements de salariés. Vous connaissez son adresse professionnelle publique."
+  },
+  "F.08": {
+    "page": 314,
+    "example": "Un formulaire demande seulement date, lieu, destination, nombre de passagers, bagages et coordonnées utiles. Il indique que la demande sera confirmée avant réalisation. Le client comprend qu’un formulaire envoyé n’est pas forcément une réservation acceptée.",
+    "situation": "Une publicité annonce « Dès 25 € » sans expliquer trajet, conditions ni disponibilité. Plusieurs clients s’attendent à ce tarif pour l’aéroport situé à 70 km."
+  },
+  "F.09": {
+    "page": 314,
+    "example": "Un voyageur demande un véhicule calme pour travailler. Vous pouvez respecter cette demande pour la mission. Il n’est pas nécessaire d’enregistrer sa conversation, son employeur ou le contenu de ses dossiers.",
+    "situation": "Après une course, vous souhaitez envoyer chaque semaine une offre promotionnelle à tous les numéros de votre historique."
+  },
+  "F.10": {
+    "page": 321,
+    "example": "Sur vingt courses, quatre clients ne trouvent pas le point de rencontre. Au lieu de répéter « les clients ne lisent pas », testez un message plus précis avec une porte et un repère. Comparez ensuite le nombre d’appels de localisation.",
+    "situation": "Trois avis mentionnent un véhicule propre mais des frais d’attente mal compris."
+  },
+  "F.11": {
+    "page": 321,
+    "example": "Un client conteste 12 € d’attente. Le devis prévoit dix minutes incluses, mais aucun relevé fiable ne montre le début de l’attente supplémentaire. L’entreprise doit examiner les faits avant de maintenir une somme non justifiée.",
+    "situation": "Un client indique que le chauffeur n’était pas au rendez-vous. Votre historique affiche une présence à l’autre entrée du bâtiment."
+  },
+  "F.12": {
+    "page": 321,
+    "example": "Sur 40 devis, 18 sont acceptés : taux de transformation 45 %. Sur 1 000 km parcourus, 650 sont réalisés avec passager : taux de kilomètres chargés 65 %. Aucun de ces ratios ne constitue à lui seul un bénéfice.",
+    "situation": "Canal A : 300 € de contribution pour 10 heures totales. Canal B : 240 € pour 6 heures. Les montants sont calculés sur le même périmètre de coûts."
+  },
+  "G.01": {
+    "page": 343,
+    "example": "Une société inscrite remplace durablement une voiture par une autre. Le nouveau véhicule ne devient pas conforme au dossier simplement parce qu’il porte le même logo. Il faut vérifier son éligibilité et réaliser les mises à jour nécessaires.",
+    "situation": "Votre inscription arrive à échéance dans quatre mois. Vous avez changé d’adresse et ajouté un second véhicule sans vérifier le dossier en ligne."
+  },
+  "G.02": {
+    "page": 343,
+    "example": "Un exploitant possède une voiture et loue une seconde sur douze mois. Pour chacune, il peut présenter la preuve correspondante au lieu de supposer qu’une garantie de 1 500 € est systématiquement due en plus.",
+    "situation": "Une entreprise utilise régulièrement trois voitures : une possédée, une louée neuf mois, une louée trois mois. Elle retient la garantie pour la troisième, sans autre justification disponible."
+  },
+  "G.03": {
+    "page": 349,
+    "example": "Une berline thermique de huit ans, non de collection, ne satisfait pas l’exigence ordinaire de moins de sept ans, même si elle est luxueuse, bien entretenue et acceptée dans une ancienne annonce commerciale.",
+    "situation": "Fiche d’une voiture thermique non de collection : six ans, cinq places, quatre portes, 4,60 m × 1,80 m, puissance 80 kW."
+  },
+  "G.04": {
+    "page": 349,
+    "example": "Le véhicule porte un logo d’entreprise très visible. Ce marquage commercial ne remplace pas les vignettes réglementaires. Inversement, les vignettes ne dispensent pas d’afficher la carte personnelle du conducteur en service.",
+    "situation": "Un chauffeur change de voiture et transfère une ancienne vignette portant l’immatriculation précédente. Il ajoute un voyant de toit « disponible »."
+  },
+  "G.06": {
+    "page": 358,
+    "example": "Un passant fait signe au véhicule. Le chauffeur explique qu’il travaille sur réservation et ne négocie pas une course immédiate de rue. Créer ensuite un document antidaté ne corrigerait pas la situation.",
+    "situation": "Un chauffeur attend devant un restaurant avec une pancarte « disponible, montez ». Il assure que le paiement sera enregistré sur son application une fois le client installé."
+  },
+  "G.07": {
+    "page": 358,
+    "example": "La prise en charge est prévue à 16 h. Arriver à 13 h et attendre dans la zone de prise en charge n’est pas justifié par la seule existence de la réservation. Il faut organiser une attente dans un lieu autorisé adapté aux règles applicables.",
+    "situation": "Un vol annoncé à 17 h arrive à 18 h 30. Le client demande une prise en charge à 19 h après récupération des bagages."
+  },
+  "G.08": {
+    "page": 363,
+    "example": "Après une dépose, une réservation confirmée prévoit un autre client à proximité. Le conducteur peut rejoindre cette mission avec son justificatif. Sans nouvelle réservation, il organise un retour ou une attente dans le cadre autorisé.",
+    "situation": "Vous terminez une course en centre-ville. Aucun autre client n’est réservé. Un parking hors chaussée autorise le stationnement, à cinq minutes."
+  },
+  "G.09": {
+    "page": 363,
+    "example": "Un forfait accepté de 90 € TTC inclut le péage pour le trajet réservé. L’exploitant ne doit pas ajouter ce même péage une seconde fois sur la facture. Un changement de destination se discute avant d’être exécuté.",
+    "situation": "Un passager pense que le VTC doit appliquer exactement le tarif d’un taxi affiché à la gare."
+  },
+  "G.10": {
+    "page": 371,
+    "example": "Le frère d’un chauffeur possède un permis B mais pas de carte VTC. Il ne peut pas assurer la course payante « juste une fois » en utilisant la carte de son frère. Le caractère exceptionnel ne transforme pas la règle.",
+    "situation": "Votre véhicule est immobilisé. Un autre exploitant propose d’assurer le transfert déjà réservé."
+  },
+  "G.11": {
+    "page": 371,
+    "example": "Le contrôle technique expire le 10 octobre. Fixer un rendez-vous au 20 octobre ne prolonge pas sa validité. Le planning commercial doit tenir compte de l’indisponibilité éventuelle avant le renouvellement.",
+    "situation": "La voiture a passé son contrôle il y a deux mois. Aujourd’hui, un voyant de freinage s’allume et la pédale vous paraît anormale."
+  },
+  "G.12": {
+    "page": 371,
+    "example": "Une fiche de 2023 indique une ancienneté maximale ordinaire différente pour le véhicule. Vous consultez l’arrêté consolidé, puis corrigez la grille d’achat. Le fait qu’un document soit bien présenté ne prouve pas son actualité.",
+    "situation": "Un modèle de bon de réservation ne comporte pas le SIREN et mentionne un ancien registre. Il est toujours utilisé en septembre 2026."
+  },
+  "H.01": {
+    "page": 393,
+    "example": "Mission : quatre passagers, trois grandes valises, départ gare à 18 h. Votre berline peut accueillir quatre passagers mais son coffre n’accepte pas les trois valises. La capacité en sièges ne suffit donc pas à valider la mission.",
+    "situation": "Un hôtel réserve pour « M. Martin, demain matin, aéroport ». Aucun horaire ni terminal ni numéro de vol n’est précisé."
+  },
+  "H.02": {
+    "page": 393,
+    "example": "Parcours A : 12 km, 35 min, sans péage. Parcours B : 18 km, 25 min, péage 3 €. Pour un rendez-vous proche, B peut convenir si le client accepte les conditions ; il faut encore intégrer le temps de dépose et la marge.",
+    "situation": "La destination est sur une place piétonne. Le GPS affiche une entrée dans une rue interdite aux véhicules non autorisés."
+  },
+  "H.03": {
+    "page": 398,
+    "example": "Un siège trop éloigné oblige à tendre la jambe et peut réduire la précision des commandes. Corriger le réglage après avoir quitté le stationnement détourne l’attention. Le temps de préparation fait partie de la prestation.",
+    "situation": "Vous prenez un véhicule inconnu. La pluie commence, et vous ne savez pas où se trouve la commande de désembuage."
+  },
+  "H.04": {
+    "page": 398,
+    "example": "« Bonjour Madame Diallo, je suis Lina, votre chauffeur. Nous allons bien à la gare Centrale ? Souhaitez-vous de l’aide pour cette valise ? » Trois phrases suffisent pour créer un accueil clair avant les vérifications de départ.",
+    "situation": "Deux personnes portant le même nom attendent devant un hôtel. Vous avez une réservation pour une destination précise."
+  },
+  "H.05": {
+    "page": 408,
+    "example": "Dans un carrefour complexe, un passager demande le détail d’une facture. Vous pouvez dire : « Je vous l’expliquerai dès que nous serons arrêtés en sécurité. » Vous protégez la qualité de la conduite et donnez une suite à sa demande.",
+    "situation": "Vous manquez une sortie. Le client insiste pour que vous vous rabattiez immédiatement sur une voie déjà occupée."
+  },
+  "H.07": {
+    "page": 408,
+    "example": "« Sur votre droite se trouve le musée de la ville. Il présente l’histoire locale. Si vous souhaitez le visiter, je vous invite à vérifier ses horaires du jour. » L’explication reste utile sans promettre une ouverture non confirmée.",
+    "situation": "Un client demande un restaurant ouvert ce soir, accessible avec un fauteuil, proche de son hôtel. Vous connaissez un établissement mais pas ses conditions actuelles."
+  },
+  "H.08": {
+    "page": 413,
+    "example": "Une route ferme pendant le trajet. Vous poursuivez jusqu’à un endroit permettant de vérifier l’alternative, informez le passager du délai estimé et traitez les conséquences contractuelles. Vous ne consultez pas plusieurs applications en conduisant.",
+    "situation": "Le client ajoute une attente de quarante minutes. Votre prochaine réservation commence dans trente minutes à vingt minutes de trajet."
+  },
+  "H.09": {
+    "page": 413,
+    "example": "Exercice : entreprise redevable de TVA, transport intérieur au taux de 10 %, prix HT 70 €. TVA 7 €, TTC 77 €. Si le client paie 100 € en espèces, la monnaie est de 23 €. Ce calcul ne modifie pas le prix accepté.",
+    "situation": "Le sujet prévoit 50 € HT de transfert et 10 € HT d’attente acceptée, tous deux traités au taux de 10 % dans l’exercice. Le client règle par carte."
+  },
+  "H.10": {
+    "page": 421,
+    "example": "Un téléphone reste sur la banquette. Vous contactez le client par le canal de réservation si possible et organisez la restitution. Il n’est pas nécessaire d’ouvrir ses messages pour chercher une identité.",
+    "situation": "Après une course d’hôtel, vous découvrez un portefeuille fermé sous le siège. Votre prochaine réservation est dans vingt minutes."
+  },
+  "H.11": {
+    "page": 421,
+    "example": "Un candidat obtient 2/3, 7/10, 4/5 et 1/2 : total 14/20. Ce calcul illustre le barème ; il ne permet pas d’ignorer une intervention éliminatoire ou une condition de recevabilité prévue par le règlement.",
+    "situation": "Un camarade révise une ancienne grille indiquant deux points pour le parcours et six pour la relation client."
+  },
+  "H.12": {
+    "page": 421,
+    "example": "Observation : le candidat règle son GPS après le départ. Objectif suivant : saisir et vérifier la destination avant toute mise en mouvement. Le prochain exercice mesure cet objectif, sans multiplier dix corrections simultanées.",
+    "situation": "Votre entraînement est correct en conduite, mais vous oubliez de confirmer le prix et de vérifier le coffre à l’arrivée."
+  }
+}

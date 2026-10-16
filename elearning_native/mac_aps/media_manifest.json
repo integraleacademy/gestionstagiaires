@@ -1,0 +1,1943 @@
+{
+  "schema_version": 1,
+  "revision": "20261013-mac-aps-v3",
+  "voice": "fr-FR-HenriNeural",
+  "rate": "-2%",
+  "usage": "Support de révision et de préparation ; ne vaut ni attestation MAC, ni validation de gestes pratiques, ni relevé de présence réglementaire.",
+  "total_duration_seconds": 1970.602,
+  "videos": {
+    "01": {
+      "id": "mac-aps-module-01-video",
+      "module": "01",
+      "title": "Synthèse vidéo · Organiser les premiers secours",
+      "src": "media/mac-aps/v3/module-01.mp4",
+      "poster": "media/mac-aps/v3/module-01.jpg",
+      "captions": "media/mac-aps/v3/module-01.vtt",
+      "duration_seconds": 398.186,
+      "narration_seconds": 395.376,
+      "voice": "fr-FR-HenriNeural",
+      "rate": "-2%",
+      "burned_captions": true,
+      "required": false,
+      "transcript": "Bienvenue dans cette synthèse du maintien et de l’actualisation des compétences de l’agent de prévention et de sécurité. Nous allons revoir l’organisation des premiers secours sur un site. L’objectif est de reconnaître une situation préoccupante, de protéger les personnes sans s’exposer, de transmettre une alerte exploitable et d’accueillir les secours. Cette vidéo accompagne les cours et les exercices. Les gestes de secours demandent un apprentissage et une évaluation avec un formateur qualifié. Regarder une vidéo ne valide pas une compétence pratique. Tout au long de cette séquence, distinguez ce que vous avez réellement observé, ce que vous avez fait et ce que vous devez transmettre au professionnel qui prend le relais.\n\nUne intervention efficace commence avant l’accident. À la prise de poste, consultez les consignes de secours, vérifiez les moyens d’alerte et repérez le matériel disponible. Sachez où se trouvent la trousse de secours et le défibrillateur, comment les atteindre et qui peut vous aider. Identifiez l’adresse exacte du site, le nom des bâtiments, les accès utilisables et les obstacles éventuels. Un portail fermé ou une entrée mal indiquée peut retarder l’équipe de secours. Demandez aussi comment joindre les sauveteurs secouristes du travail présents. Si un moyen manque ou semble indisponible, signalez-le immédiatement selon la procédure. Une habitude personnelle ne remplace jamais une organisation connue et partagée par l’équipe.\n\nFace à un événement, commencez par observer l’environnement. La circulation, une installation électrique, un objet instable, une fumée ou un comportement violent peuvent menacer la victime et les intervenants. Vous ne devez pas vous engager dans une zone dangereuse simplement pour agir plus vite. Empêchez d’autres personnes de s’exposer dans la mesure de vos possibilités et demandez les moyens adaptés. Supprimer un danger n’a de sens que si cela peut être réalisé sans risque et dans votre champ de compétence. Si ce n’est pas possible, gardez vos distances et transmettez la nature du danger. Ne déplacez pas une victime par confort ou pour dégager la vue. Les décisions particulières se travaillent dans la formation pratique et avec les indications des secours.\n\nUne fois l’accès suffisamment sûr, recherchez les informations utiles sans poser de diagnostic. Une personne vous répond-elle ? Que vous dit-elle ? Quel événement venez-vous de constater ? Décrivez simplement les signes observés et leur évolution. Dire que la personne répond à vos questions mais semble très pâle donne une information concrète. Affirmer qu’elle fait une maladie précise sans compétence médicale peut orienter à tort les échanges. Écoutez la personne, rassurez-la et préservez autant que possible son intimité. Ne la filmez pas et ne diffusez aucune image sur un groupe de discussion. Si son état change, signalez-le immédiatement à l’interlocuteur des secours. Votre rôle est de fournir des faits fiables et de suivre les consignes reçues.\n\nLorsque vous appelez les secours, donnez d’abord une localisation précise et un numéro permettant de vous rappeler. Indiquez l’adresse, le bâtiment, l’étage si nécessaire et le meilleur accès. Présentez ensuite la situation observée, le nombre de personnes concernées, les dangers encore présents et les premières mesures prises. Parlez clairement et laissez l’opérateur poser ses questions. Le quinze permet de joindre l’aide médicale urgente ; le dix-huit les sapeurs-pompiers ; le cent douze constitue le numéro d’urgence européen. Utilisez le numéro prévu pour la situation et les consignes du site. Un appel interne au poste de sécurité ne doit pas retarder une alerte externe nécessaire. Ne raccrochez pas avant d’y avoir été invité et restez disponible.\n\nQuand plusieurs agents ou témoins sont présents, donnez des missions précises. Une personne reste auprès de la victime si les conditions le permettent ; une autre transmet l’alerte ; une troisième va accueillir les secours au point convenu. Adressez-vous à une personne identifiée et demandez-lui de confirmer qu’elle a compris. Une consigne générale lancée à la foule risque de n’être suivie par personne. Le guidage doit conduire les intervenants jusqu’au bon lieu, avec les moyens d’accès nécessaires. Les autres agents maintiennent une circulation adaptée et éloignent les curieux sans entraver les secours. Vérifiez que les informations essentielles circulent entre les rôles. Si vous êtes seul, indiquez-le à l’opérateur : il vous aide à hiérarchiser les actions.\n\nLes gestes doivent correspondre à votre formation actualisée, à l’état de la personne et aux instructions des secours. N’improvisez pas un traitement et ne proposez pas un médicament personnel. L’utilisation d’un défibrillateur s’accompagne des indications données par l’appareil et des gestes appris lors de la formation. Cette synthèse ne remplace pas leur démonstration ni leur entraînement. Pendant l’attente, restez attentif aux changements et transmettez-les. Une personne initialement capable de parler peut se dégrader ; l’alerte doit alors être mise à jour sans attendre l’arrivée des intervenants. Préservez la confidentialité et annoncez calmement ce que vous faites. La présence, l’écoute et une coordination stable sont utiles, même lorsqu’aucun geste technique ne relève immédiatement de votre rôle.\n\nPrenons une situation fictive. Dans le hall, un visiteur vous indique qu’il se sent très mal. Il est conscient, répond à vos questions et demande à s’asseoir. L’environnement ne présente pas de danger immédiat. Vous sollicitez un collègue, restez auprès du visiteur et faites contacter les secours selon la situation. Vous transmettez l’adresse exacte, ce que dit la personne et ce que vous observez. Votre collègue prépare l’accès. Une autre personne propose de conduire elle-même le visiteur à l’hôpital pour gagner du temps. Vous ne substituez pas cette initiative à l’avis des secours : vous expliquez qu’une évaluation et des consignes adaptées sont en cours. Vous surveillez la situation et signalez tout changement à l’opérateur.\n\nÀ l’arrivée des intervenants, fournissez une transmission courte : l’événement constaté, les horaires utiles, les signes observés, les changements et les actions réalisées. Ne multipliez pas les interprétations. Suivez leurs demandes et facilitez leur intervention. Après l’événement, rédigez le compte rendu prévu, avec seulement les données nécessaires et dans les outils autorisés. Le retour d’expérience peut révéler une adresse imprécise, un portail difficile à ouvrir ou une répartition des rôles mal comprise. Ces éléments servent à améliorer l’organisation. Pour vérifier vos acquis, expliquez maintenant comment vous donneriez l’alerte depuis votre propre poste, qui guiderait les secours et quels risques pourraient gêner leur accès. Reprenez les exercices avec le formateur pour transformer ces repères en comportements maîtrisés.",
+      "words": 1033,
+      "chapters": [
+        {
+          "title": "Une réponse préparée et coordonnée",
+          "start_seconds": 0.0,
+          "end_seconds": 41.028
+        },
+        {
+          "title": "Avant la prise de poste",
+          "start_seconds": 41.028,
+          "end_seconds": 84.168
+        },
+        {
+          "title": "Protéger sans créer une autre victime",
+          "start_seconds": 84.168,
+          "end_seconds": 128.196
+        },
+        {
+          "title": "Observer et décrire des faits",
+          "start_seconds": 128.196,
+          "end_seconds": 174.24
+        },
+        {
+          "title": "Une alerte que l’on peut exploiter",
+          "start_seconds": 174.24,
+          "end_seconds": 218.484
+        },
+        {
+          "title": "Distribuer les rôles clairement",
+          "start_seconds": 218.484,
+          "end_seconds": 260.904
+        },
+        {
+          "title": "Agir dans ses compétences",
+          "start_seconds": 260.904,
+          "end_seconds": 306.304
+        },
+        {
+          "title": "Cas : malaise dans le hall",
+          "start_seconds": 306.304,
+          "end_seconds": 350.212
+        },
+        {
+          "title": "Passer le relais et tirer les enseignements",
+          "start_seconds": 350.212,
+          "end_seconds": 398.112
+        }
+      ],
+      "caption_cues": 103,
+      "render_revision": "20261013-mac-aps-v3",
+      "source_sha256": "071cb07b92bd71be2efd5a1576fbf17301228385249889a3efc28a34435658fb",
+      "video_sha256": "281ea35551c59175df9d5e980377c534fcdddf700782b1f73ff16ea9d3e29957",
+      "source_video_sha256": "2de70608d0e33d18c27fcc58cef6f168469ebf3dc3dfc86f3cac07377fee99c5",
+      "audio_preserved": true,
+      "audio_packet_sha256": "ca66418c4692aedf9c1577fa4493b6bc35fab69d6d06081eb4cdd54d31a41531",
+      "playback_duration_seconds": 398.2,
+      "subtitle_font_pixels": 38,
+      "subtitle_bottom_margin_pixels": 22,
+      "subtitle_band_pixels": 128,
+      "frame_rate": 25,
+      "visual_sync": [
+        {
+          "scene_index": 0,
+          "events": [
+            {
+              "start_seconds": 10.37,
+              "active": [],
+              "anchor": "L’objectif est de reconnaître une situation préoccupante"
+            },
+            {
+              "start_seconds": 15.6,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "de transmettre une alerte exploitable et d’accueillir les secours"
+            },
+            {
+              "start_seconds": 19.477,
+              "active": [],
+              "anchor": "Cette vidéo accompagne les cours et les exercices"
+            },
+            {
+              "start_seconds": 37.24,
+              "active": [
+                2
+              ],
+              "anchor": "ce que vous devez transmettre au professionnel qui prend le relais"
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "events": [
+            {
+              "start_seconds": 45.84,
+              "active": [
+                0
+              ],
+              "anchor": "consultez les consignes de secours"
+            },
+            {
+              "start_seconds": 47.724,
+              "active": [
+                1
+              ],
+              "anchor": "vérifiez les moyens d’alerte et repérez le matériel disponible"
+            },
+            {
+              "start_seconds": 57.482,
+              "active": [
+                2
+              ],
+              "anchor": "Identifiez l’adresse exacte du site"
+            },
+            {
+              "start_seconds": 68.86,
+              "active": [],
+              "anchor": "Demandez aussi comment joindre les sauveteurs secouristes du travail présents"
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "events": [
+            {
+              "start_seconds": 84.219,
+              "active": [
+                0
+              ],
+              "anchor": "Face à un événement, commencez par observer l’environnement"
+            },
+            {
+              "start_seconds": 96.579,
+              "active": [
+                1
+              ],
+              "anchor": "Vous ne devez pas vous engager dans une zone dangereuse"
+            },
+            {
+              "start_seconds": 101.26,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Empêchez d’autres personnes de s’exposer"
+            },
+            {
+              "start_seconds": 122.114,
+              "active": [],
+              "anchor": "Les décisions particulières se travaillent dans la formation pratique"
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "events": [
+            {
+              "start_seconds": 134.178,
+              "active": [
+                1
+              ],
+              "anchor": "Une personne vous répond-elle ? Que vous dit-elle ?"
+            },
+            {
+              "start_seconds": 138.107,
+              "active": [
+                0
+              ],
+              "anchor": "Quel événement venez-vous de constater ?"
+            },
+            {
+              "start_seconds": 140.709,
+              "active": [
+                0,
+                2
+              ],
+              "anchor": "Décrivez simplement les signes observés et leur évolution."
+            },
+            {
+              "start_seconds": 149.688,
+              "active": [],
+              "anchor": "Affirmer qu’elle fait une maladie précise sans compétence médicale"
+            },
+            {
+              "start_seconds": 164.701,
+              "active": [
+                2
+              ],
+              "anchor": "Si son état change, signalez-le immédiatement"
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "events": [
+            {
+              "start_seconds": 174.291,
+              "active": [
+                0
+              ],
+              "anchor": "Lorsque vous appelez les secours, donnez d’abord une localisation précise"
+            },
+            {
+              "start_seconds": 185.477,
+              "active": [
+                1
+              ],
+              "anchor": "Présentez ensuite la situation observée, le nombre de personnes concernées"
+            },
+            {
+              "start_seconds": 189.801,
+              "active": [
+                2
+              ],
+              "anchor": "les dangers encore présents et les premières mesures prises"
+            },
+            {
+              "start_seconds": 193.143,
+              "active": [],
+              "anchor": "Parlez clairement et laissez l’opérateur poser ses questions"
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "events": [
+            {
+              "start_seconds": 223.127,
+              "active": [
+                0
+              ],
+              "anchor": "Une personne reste auprès de la victime"
+            },
+            {
+              "start_seconds": 226.481,
+              "active": [
+                1
+              ],
+              "anchor": "une autre transmet l’alerte"
+            },
+            {
+              "start_seconds": 227.94,
+              "active": [
+                2
+              ],
+              "anchor": "une troisième va accueillir les secours"
+            },
+            {
+              "start_seconds": 231.048,
+              "active": [
+                1
+              ],
+              "anchor": "Adressez-vous à une personne identifiée"
+            },
+            {
+              "start_seconds": 240.295,
+              "active": [
+                2
+              ],
+              "anchor": "Le guidage doit conduire les intervenants jusqu’au bon lieu"
+            },
+            {
+              "start_seconds": 251.443,
+              "active": [
+                1
+              ],
+              "anchor": "Vérifiez que les informations essentielles circulent entre les rôles"
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "events": [
+            {
+              "start_seconds": 260.955,
+              "active": [
+                0,
+                1
+              ],
+              "anchor": "Les gestes doivent correspondre à votre formation actualisée"
+            },
+            {
+              "start_seconds": 267.384,
+              "active": [
+                0
+              ],
+              "anchor": "N’improvisez pas un traitement"
+            },
+            {
+              "start_seconds": 282.256,
+              "active": [
+                2
+              ],
+              "anchor": "Pendant l’attente, restez attentif aux changements"
+            },
+            {
+              "start_seconds": 293.659,
+              "active": [],
+              "anchor": "Préservez la confidentialité et annoncez calmement ce que vous faites"
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "events": [
+            {
+              "start_seconds": 312.796,
+              "active": [
+                0
+              ],
+              "anchor": "Il est conscient, répond à vos questions et demande à s’asseoir"
+            },
+            {
+              "start_seconds": 320.079,
+              "active": [
+                1
+              ],
+              "anchor": "Vous sollicitez un collègue, restez auprès du visiteur"
+            },
+            {
+              "start_seconds": 330.947,
+              "active": [
+                2
+              ],
+              "anchor": "Votre collègue prépare l’accès"
+            },
+            {
+              "start_seconds": 338.549,
+              "active": [
+                1
+              ],
+              "anchor": "Vous ne substituez pas cette initiative à l’avis des secours"
+            },
+            {
+              "start_seconds": 345.717,
+              "active": [
+                2
+              ],
+              "anchor": "Vous surveillez la situation et signalez tout changement à l’opérateur"
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "events": [
+            {
+              "start_seconds": 350.263,
+              "active": [
+                1
+              ],
+              "anchor": "À l’arrivée des intervenants, fournissez une transmission courte"
+            },
+            {
+              "start_seconds": 353.74,
+              "active": [
+                0,
+                1
+              ],
+              "anchor": "l’événement constaté, les horaires utiles"
+            },
+            {
+              "start_seconds": 366.283,
+              "active": [
+                0
+              ],
+              "anchor": "Après l’événement, rédigez le compte rendu prévu"
+            },
+            {
+              "start_seconds": 372.891,
+              "active": [
+                2
+              ],
+              "anchor": "Le retour d’expérience peut révéler"
+            },
+            {
+              "start_seconds": 383.426,
+              "active": [],
+              "anchor": "Pour vérifier vos acquis, expliquez maintenant"
+            }
+          ]
+        }
+      ]
+    },
+    "02": {
+      "id": "mac-aps-module-02-video",
+      "module": "02",
+      "title": "Synthèse vidéo · Appliquer les principes de la République",
+      "src": "media/mac-aps/v3/module-02.mp4",
+      "poster": "media/mac-aps/v3/module-02.jpg",
+      "captions": "media/mac-aps/v3/module-02.vtt",
+      "duration_seconds": 394.793,
+      "narration_seconds": 391.944,
+      "voice": "fr-FR-HenriNeural",
+      "rate": "-2%",
+      "burned_captions": true,
+      "required": false,
+      "transcript": "Dans cette synthèse, nous allons relier les principes de la République aux situations quotidiennes de l’agent de prévention et de sécurité. Ces principes prennent une forme concrète dans l’accueil, l’application d’une consigne et la manière de rendre compte. Vous rencontrez des personnes aux parcours, aux convictions et aux besoins différents. Votre mission repose sur le respect de leur dignité et sur des décisions justifiables. Une tenue, un accent ou une opinion supposée ne constituent pas, à eux seuls, un comportement dangereux. Pour chaque situation, posez-vous trois questions : quel fait ai-je constaté, quelle règle légitime dois-je appliquer et comment l’expliquer sans humilier la personne ? C’est ce raisonnement que nous allons travailler.\n\nLa liberté implique le respect des droits d’autrui et du cadre légal. Un agent privé n’a pas à autoriser les opinions des visiteurs ni à imposer ses propres convictions. Il applique les règles nécessaires à sa mission, dans les limites de ses pouvoirs. Si un visiteur critique l’établissement, cette critique ne suffit pas à justifier une mesure de sécurité. Vous recherchez un éventuel comportement concret qui nécessite une réponse : menace, obstruction d’un passage ou refus d’une règle d’accès licite, par exemple. La réponse doit porter sur ce comportement. Avant d’intervenir, vérifiez aussi que la consigne reçue est comprise et applicable au contexte. Un désaccord d’opinion ne doit pas devenir un conflit artificiel avec le service de sécurité.\n\nL’égalité demande des critères objectifs et un traitement cohérent de situations comparables. Si l’accès exige un titre valable, vous vérifiez ce titre selon la procédure prévue. Vous ne durcissez pas le contrôle parce qu’une personne paraît différente ou vous déplaît. Lorsque des situations sont différentes, une adaptation peut être nécessaire : expliquer plus lentement à une personne qui comprend mal le français ou proposer un chemin accessible ne signifie pas lui accorder un privilège arbitraire. L’objectif demeure l’accès au service dans des conditions sûres et respectueuses. Une décision solide doit pouvoir être expliquée à la personne concernée, à un collègue et au responsable. Si l’explication repose seulement sur une impression, revenez aux faits.\n\nLa fraternité se traduit notamment par l’entraide et le respect de la personne. Dans votre mission, cela signifie écouter une demande, reconnaître une difficulté et orienter vers l’interlocuteur compétent. Vous pouvez rester ferme sur une règle tout en choisissant des mots respectueux. Évitez les moqueries, les commentaires sur le physique et les échanges humiliants devant le public. Une personne perdue, âgée ou en difficulté peut avoir besoin d’une explication supplémentaire. Proposez votre aide sans l’imposer et demandez-lui ce qui lui serait utile. Si une tension apparaît, préservez un espace de dialogue. Une posture professionnelle n’exige ni froideur systématique ni familiarité : elle combine une règle claire, une attitude calme et le respect de l’autonomie de chacun.\n\nLa laïcité garantit la liberté de conscience et organise notamment la neutralité de l’État. Elle ne donne pas à un agent privé un pouvoir général d’interdire toute expression religieuse dans tout lieu. Les règles varient selon le cadre : service public, entreprise, établissement concerné et mission confiée. Il faut donc connaître le contexte et demander une clarification au responsable en cas de doute. Une consigne ne doit pas être inventée au contrôle d’accès. Vous n’engagez pas de débat religieux avec les visiteurs et vous n’interprétez pas un signe personnel comme un indice de danger. Si une règle particulière s’applique légalement à la situation, expliquez-la de façon précise et respectueuse, avec le relais prévu par l’organisation.\n\nUne discrimination peut résulter d’une différence de traitement fondée sur un critère interdit dans une situation visée par le droit. Dans l’accueil et l’accès à un service, soyez notamment attentif aux décisions liées à l’origine, au sexe, à la religion, au handicap ou à l’état de santé. Ces exemples ne constituent pas la liste complète des critères protégés. Si un responsable vous demande de filtrer un public sur la base d’un stéréotype, ne transformez pas cette instruction en pratique habituelle. Demandez la règle précise et signalez le problème selon le circuit approprié. L’ancienneté d’une habitude ou la demande d’un client ne suffisent pas à la rendre légitime. Une trace factuelle des instructions et des faits facilite le traitement de la difficulté.\n\nLe handicap peut être visible ou invisible. Ne déduisez pas les capacités d’une personne de son apparence. Adressez-vous directement à elle, même lorsqu’un accompagnant est présent, et demandez comment vous pouvez faciliter le passage. Ne saisissez pas un fauteuil ou un équipement d’assistance sans accord. Une consigne doit rester intelligible : formulez une phrase à la fois, indiquez clairement le chemin et vérifiez la compréhension si nécessaire. Si un accès est indisponible, cherchez avec le responsable une solution adaptée au lieu de renvoyer automatiquement la personne. Préservez la confidentialité de ce qu’elle vous explique. Vous n’avez pas besoin d’un diagnostic médical détaillé pour reconnaître un besoin concret d’aide ou d’orientation.\n\nVoici un cas fictif. À l’entrée d’un événement, un collègue vous conseille de contrôler systématiquement plus longtemps les personnes ayant un certain accent. Il affirme que cela a toujours été fait. Vous ne reprenez pas cette habitude. Vous appliquez les critères d’accès prévus à tous les visiteurs concernés et vous demandez au responsable de clarifier l’instruction problématique. Si un comportement précis pose difficulté, vous le décrivez indépendamment de l’origine supposée. Votre compte rendu mentionne les faits utiles et les paroles pertinentes, sans qualifier inutilement les personnes. Mettez la vidéo en pause et formulez une réponse professionnelle au collègue. Elle doit rappeler la règle objective, maintenir une coopération calme et permettre le signalement de l’écart.\n\nPour terminer, retenez une méthode simple : constatez les faits, identifiez la règle applicable, choisissez une réponse adaptée et préparez le relais. Un compte rendu indique ce qui s’est produit, les explications données et la suite apportée. Évitez les étiquettes comme personne bizarre ou public à problème. Elles n’aident pas à comprendre une situation et peuvent entretenir des préjugés. Lorsque vous doutez de la légalité d’une instruction, demandez une vérification au bon niveau. Votre professionnalisme se mesure aussi à cette capacité de recul. Pour poursuivre, prenez une règle de votre poste et expliquez comment vous l’appliqueriez à trois visiteurs ayant des besoins différents. La sécurité, la dignité et la cohérence des décisions doivent rester visibles dans chacune de vos réponses.",
+      "words": 1039,
+      "chapters": [
+        {
+          "title": "Des principes dans les actes quotidiens",
+          "start_seconds": 0.0,
+          "end_seconds": 41.7
+        },
+        {
+          "title": "Liberté : des limites définies par le droit",
+          "start_seconds": 41.7,
+          "end_seconds": 86.6
+        },
+        {
+          "title": "Égalité : des critères explicables",
+          "start_seconds": 86.6,
+          "end_seconds": 129.0
+        },
+        {
+          "title": "Fraternité et dignité dans la relation",
+          "start_seconds": 129.0,
+          "end_seconds": 174.7
+        },
+        {
+          "title": "Laïcité : connaître le contexte",
+          "start_seconds": 174.7,
+          "end_seconds": 216.832
+        },
+        {
+          "title": "Identifier une discrimination",
+          "start_seconds": 216.832,
+          "end_seconds": 259.636
+        },
+        {
+          "title": "Handicap : demander avant d’aider",
+          "start_seconds": 259.636,
+          "end_seconds": 303.636
+        },
+        {
+          "title": "Cas : une instruction de filtrage injustifiée",
+          "start_seconds": 303.636,
+          "end_seconds": 348.672
+        },
+        {
+          "title": "Justifier et rendre compte",
+          "start_seconds": 348.672,
+          "end_seconds": 394.772
+        }
+      ],
+      "caption_cues": 101,
+      "render_revision": "20261013-mac-aps-v3",
+      "source_sha256": "0f90d3507fdce04b8ef52d607fe499bf817ffd86f7f34174bb9076395f196f3c",
+      "video_sha256": "a7b65024eb558b780b5572b5408f2730bffa4f6d8d4eefdbc5e10a49692f7930",
+      "source_video_sha256": "148f2ed5ea9334475c49ff35c99ae5ebf13ef86075b2f54c5ff2f0cf4fd8a900",
+      "audio_preserved": true,
+      "audio_packet_sha256": "d347e8d56f2cad644e26312f6da690a8d47ee67104010efdadb51059ede836c8",
+      "playback_duration_seconds": 394.8,
+      "subtitle_font_pixels": 38,
+      "subtitle_bottom_margin_pixels": 22,
+      "subtitle_band_pixels": 128,
+      "frame_rate": 25,
+      "visual_sync": [
+        {
+          "scene_index": 0,
+          "events": [
+            {
+              "start_seconds": 0.051,
+              "active": [],
+              "anchor": "Dans cette synthèse, nous allons relier les principes de la République"
+            },
+            {
+              "start_seconds": 29.796,
+              "active": [],
+              "anchor": "Pour chaque situation, posez-vous trois questions"
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "events": [
+            {
+              "start_seconds": 41.751,
+              "active": [
+                0
+              ],
+              "anchor": "La liberté implique le respect des droits d’autrui"
+            },
+            {
+              "start_seconds": 51.445,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Il applique les règles nécessaires à sa mission, dans les limites de ses pouvoirs"
+            },
+            {
+              "start_seconds": 56.139,
+              "active": [
+                0,
+                1
+              ],
+              "anchor": "Si un visiteur critique l’établissement"
+            },
+            {
+              "start_seconds": 74.965,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Avant d’intervenir, vérifiez aussi que la consigne reçue est comprise"
+            },
+            {
+              "start_seconds": 80.705,
+              "active": [
+                0
+              ],
+              "anchor": "Un désaccord d’opinion ne doit pas devenir un conflit artificiel"
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "events": [
+            {
+              "start_seconds": 86.651,
+              "active": [
+                0
+              ],
+              "anchor": "L’égalité demande des critères objectifs"
+            },
+            {
+              "start_seconds": 91.995,
+              "active": [
+                1
+              ],
+              "anchor": "Si l’accès exige un titre valable"
+            },
+            {
+              "start_seconds": 106.09,
+              "active": [
+                2
+              ],
+              "anchor": "expliquer plus lentement à une personne qui comprend mal le français"
+            },
+            {
+              "start_seconds": 124.33,
+              "active": [
+                0
+              ],
+              "anchor": "Si l’explication repose seulement sur une impression, revenez aux faits"
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "events": [
+            {
+              "start_seconds": 133.554,
+              "active": [
+                0
+              ],
+              "anchor": "Dans votre mission, cela signifie écouter une demande"
+            },
+            {
+              "start_seconds": 138.12,
+              "active": [
+                2
+              ],
+              "anchor": "et orienter vers l’interlocuteur compétent"
+            },
+            {
+              "start_seconds": 141.003,
+              "active": [
+                1
+              ],
+              "anchor": "Vous pouvez rester ferme sur une règle tout en choisissant des mots respectueux"
+            },
+            {
+              "start_seconds": 156.895,
+              "active": [
+                0,
+                2
+              ],
+              "anchor": "Proposez votre aide sans l’imposer"
+            },
+            {
+              "start_seconds": 165.339,
+              "active": [
+                1
+              ],
+              "anchor": "Une posture professionnelle n’exige ni froideur systématique ni familiarité"
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "events": [
+            {
+              "start_seconds": 174.751,
+              "active": [
+                0
+              ],
+              "anchor": "La laïcité garantit la liberté de conscience"
+            },
+            {
+              "start_seconds": 177.92,
+              "active": [
+                1
+              ],
+              "anchor": "la neutralité de l’État"
+            },
+            {
+              "start_seconds": 179.981,
+              "active": [],
+              "anchor": "Elle ne donne pas à un agent privé un pouvoir général"
+            },
+            {
+              "start_seconds": 185.708,
+              "active": [
+                2
+              ],
+              "anchor": "Les règles varient selon le cadre"
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "events": [
+            {
+              "start_seconds": 216.883,
+              "active": [
+                0,
+                1
+              ],
+              "anchor": "Une discrimination peut résulter d’une différence de traitement"
+            },
+            {
+              "start_seconds": 223.758,
+              "active": [
+                1
+              ],
+              "anchor": "Dans l’accueil et l’accès à un service"
+            },
+            {
+              "start_seconds": 236.985,
+              "active": [
+                2
+              ],
+              "anchor": "Si un responsable vous demande de filtrer un public sur la base d’un stéréotype"
+            },
+            {
+              "start_seconds": 254.332,
+              "active": [],
+              "anchor": "Une trace factuelle des instructions et des faits"
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "events": [
+            {
+              "start_seconds": 266.881,
+              "active": [
+                0
+              ],
+              "anchor": "Adressez-vous directement à elle"
+            },
+            {
+              "start_seconds": 270.758,
+              "active": [
+                1
+              ],
+              "anchor": "et demandez comment vous pouvez faciliter le passage"
+            },
+            {
+              "start_seconds": 278.386,
+              "active": [
+                2
+              ],
+              "anchor": "Une consigne doit rester intelligible"
+            },
+            {
+              "start_seconds": 293.59,
+              "active": [],
+              "anchor": "Préservez la confidentialité de ce qu’elle vous explique"
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "events": [
+            {
+              "start_seconds": 307.44,
+              "active": [
+                0
+              ],
+              "anchor": "un collègue vous conseille de contrôler systématiquement plus longtemps les personnes ayant un certain accent"
+            },
+            {
+              "start_seconds": 318.279,
+              "active": [
+                1
+              ],
+              "anchor": "Vous appliquez les critères d’accès prévus à tous les visiteurs concernés"
+            },
+            {
+              "start_seconds": 321.46,
+              "active": [
+                2
+              ],
+              "anchor": "et vous demandez au responsable de clarifier l’instruction problématique"
+            },
+            {
+              "start_seconds": 337.718,
+              "active": [],
+              "anchor": "Mettez la vidéo en pause et formulez une réponse professionnelle au collègue"
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "events": [
+            {
+              "start_seconds": 351.2,
+              "active": [
+                0
+              ],
+              "anchor": "constatez les faits"
+            },
+            {
+              "start_seconds": 352.345,
+              "active": [
+                1
+              ],
+              "anchor": "identifiez la règle applicable"
+            },
+            {
+              "start_seconds": 354.22,
+              "active": [
+                2
+              ],
+              "anchor": "choisissez une réponse adaptée et préparez le relais"
+            },
+            {
+              "start_seconds": 362.69,
+              "active": [],
+              "anchor": "Évitez les étiquettes comme personne bizarre ou public à problème"
+            },
+            {
+              "start_seconds": 371.172,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Lorsque vous doutez de la légalité d’une instruction"
+            }
+          ]
+        }
+      ]
+    },
+    "03": {
+      "id": "mac-aps-module-03-video",
+      "module": "03",
+      "title": "Synthèse vidéo · Décider dans le cadre juridique",
+      "src": "media/mac-aps/v3/module-03.mp4",
+      "poster": "media/mac-aps/v3/module-03.jpg",
+      "captions": "media/mac-aps/v3/module-03.vtt",
+      "duration_seconds": 385.537,
+      "narration_seconds": 382.704,
+      "voice": "fr-FR-HenriNeural",
+      "rate": "-2%",
+      "burned_captions": true,
+      "required": false,
+      "transcript": "Cette synthèse rappelle comment prendre une décision professionnelle dans le cadre juridique de la sécurité privée. L’expérience ne dispense pas de vérifier les règles : les pratiques, les textes et les situations de site peuvent évoluer. Votre mission est définie, vos pouvoirs sont limités et vos actes peuvent engager votre responsabilité. Le port d’une tenue ou d’une carte professionnelle ne vous transforme pas en policier. Une consigne du client ne peut pas créer un pouvoir que la loi ne prévoit pas. Nous allons examiner les conditions d’exercice, les limites de l’intervention, le respect de la personne et la qualité des transmissions. L’objectif est de savoir quand agir, quand s’abstenir et quand demander un relais compétent.\n\nAvant d’exercer, assurez-vous que votre situation professionnelle et les documents requis correspondent à l’activité réalisée. Le renouvellement de la carte professionnelle et le maintien des compétences sont des démarches distinctes de la simple consultation d’un cours. N’attendez pas la fin de validité pour signaler un problème à votre employeur. Sur le poste, vérifiez le périmètre de la mission, les horaires, les contacts utiles et les consignes particulières. Si une tâche nouvelle vous est demandée, examinez si elle relève réellement de votre activité et de votre formation. Une autorisation interne ne suffit pas à élargir une compétence réglementée. Lorsqu’une instruction est ambiguë, demandez une clarification avant qu’un incident rende la décision plus difficile.\n\nUne consigne sert à organiser la mission, mais elle reste soumise au droit. Elle précise par exemple un circuit de ronde, une procédure d’accès ou un destinataire d’alerte. Elle ne peut pas autoriser une violence injustifiée, une discrimination ou une atteinte arbitraire à la vie privée. Lorsqu’un écart apparaît, ne vous contentez pas de dire que vous obéissiez aux ordres. Vérifiez les faits, demandez une explication et utilisez le circuit de signalement prévu. Cette démarche doit rester proportionnée à la situation : une urgence exige de protéger immédiatement les personnes, tandis qu’une procédure mal rédigée peut être clarifiée avant sa prochaine application. Conservez une trace utile des instructions reçues et des difficultés rencontrées.\n\nDans certains accès, la procédure peut prévoir de présenter un justificatif ou de vérifier un nom sur une liste. Expliquez la finalité de cette vérification et appliquez la règle licite du site. Vous ne disposez pas pour autant d’un pouvoir général de contrôle d’identité comparable à celui des forces de l’ordre. Le refus d’une formalité d’accès se traite selon la procédure et le cadre applicable ; il n’autorise pas une contrainte arbitraire. Préservez aussi les documents confiés momentanément à l’accueil : évitez les copies et les rétentions inutiles. Si une situation dépasse votre mission, demandez l’intervention du responsable ou des autorités compétentes. Précisez toujours ce que vous avez réellement vérifié et ce que vous ignorez.\n\nLa légitime défense répond à des conditions précises. Elle ne constitue pas une autorisation générale de régler un conflit par la force. Il faut notamment apprécier la réalité et l’actualité de l’atteinte injustifiée, la nécessité de la réponse et sa proportion. Une réaction de vengeance après les faits n’est pas une défense. La protection des biens obéit également à des règles particulières qui ne se confondent pas avec celles applicables à la protection des personnes. Dans la pratique, privilégiez la prévention, la mise à distance et le recours aux secours ou aux forces de l’ordre quand cela est adapté. Les techniques et les limites de l’intervention se travaillent avec un formateur ; une vidéo ne valide pas un geste.\n\nL’article soixante-treize du code de procédure pénale prévoit, dans certaines situations de crime flagrant ou de délit flagrant puni d’emprisonnement, la possibilité pour toute personne d’appréhender l’auteur et de le conduire devant l’officier de police judiciaire le plus proche. Ce cadre ne vous donne pas un pouvoir général d’enquête, d’interrogatoire ou de sanction. Une simple suspicion ne suffit pas à transformer une personne en auteur constaté d’une infraction. La décision doit tenir compte des conditions légales et des risques. Sollicitez les forces de l’ordre et respectez la dignité ainsi que la sécurité des personnes. N’utilisez jamais cette référence pour justifier un enfermement de convenance ou obtenir des aveux. La procédure exacte se travaille lors de la formation encadrée.\n\nLa déontologie se voit dans la tenue, les paroles, la maîtrise de soi et le respect des personnes. Elle implique aussi de protéger les informations obtenues pendant la mission. Un incident, une photographie ou une donnée issue d’un contrôle n’a pas à circuler sur un téléphone personnel ou un réseau social. Utilisez les outils autorisés et limitez la transmission aux destinataires qui en ont besoin. Un collègue curieux n’est pas automatiquement un destinataire légitime. Dans un compte rendu, séparez les faits constatés des informations rapportées et précisez leur origine. Ne modifiez pas une chronologie pour protéger une mauvaise décision. Une erreur signalée peut être traitée ; une information falsifiée compromet le suivi et la confiance.\n\nAnalysons un cas fictif. Un salarié vous affirme qu’un visiteur a probablement pris un objet, mais il n’a pas vu les faits. Le visiteur se dirige vers la sortie. Vous ne présentez pas une hypothèse comme une infraction établie et vous ne l’enfermez pas pour mener un interrogatoire. Vous cherchez les éléments objectifs accessibles dans votre mission et informez le responsable selon la procédure. Si des faits nouveaux justifient un appel aux forces de l’ordre, vous leur transmettez exactement ce qui est connu et ce qui reste incertain. La communication avec le visiteur doit rester mesurée. Mettez la vidéo en pause et formulez votre premier message radio : il doit décrire la situation sans transformer le soupçon en certitude.\n\nUn compte rendu professionnel permet à un lecteur absent de comprendre ce qui s’est passé. Indiquez les horaires utiles, le lieu précis, les faits constatés, les actions réalisées et les personnes ou services alertés. Évitez les jugements personnels et les formulations vagues. Si une information vient d’un témoin, dites-le. Si vous ne savez pas quelque chose, ne comblez pas le manque par une supposition. Relisez enfin la cohérence entre le récit, les décisions et les pièces disponibles. Pour poursuivre cette synthèse, choisissez une situation de votre poste et expliquez sa limite juridique : ce que vous pouvez faire, les conditions à respecter et le moment où un relais devient nécessaire. C’est cette capacité à justifier l’action qui sécurise votre pratique quotidienne.",
+      "words": 1047,
+      "chapters": [
+        {
+          "title": "Une mission privée dans un cadre précis",
+          "start_seconds": 0.0,
+          "end_seconds": 41.2
+        },
+        {
+          "title": "Vérifier les conditions d’exercice",
+          "start_seconds": 41.2,
+          "end_seconds": 85.0
+        },
+        {
+          "title": "Consigne et règle de droit",
+          "start_seconds": 85.0,
+          "end_seconds": 127.804
+        },
+        {
+          "title": "Identifier sans contrôler comme la police",
+          "start_seconds": 127.804,
+          "end_seconds": 169.904
+        },
+        {
+          "title": "Intervention : nécessité et proportion",
+          "start_seconds": 169.904,
+          "end_seconds": 210.812
+        },
+        {
+          "title": "Flagrance : un cadre exceptionnel",
+          "start_seconds": 210.812,
+          "end_seconds": 254.712
+        },
+        {
+          "title": "Déontologie et confidentialité",
+          "start_seconds": 254.712,
+          "end_seconds": 298.116
+        },
+        {
+          "title": "Cas : une suspicion à l’accueil",
+          "start_seconds": 298.116,
+          "end_seconds": 340.116
+        },
+        {
+          "title": "La trace qui permet de comprendre",
+          "start_seconds": 340.116,
+          "end_seconds": 385.56
+        }
+      ],
+      "caption_cues": 103,
+      "render_revision": "20261013-mac-aps-v3",
+      "source_sha256": "d5bf971276b500a4be1adcd48b756815f300887a5753f8f5e12f8794e476c489",
+      "video_sha256": "b1ab78686d7a8c769a10719a7ebddc912881c07ad2c6feb4948b5f993d503a15",
+      "source_video_sha256": "fbddde45ec2d904e42b6aa949ac7c99e7605cb1cc406c84817585cb16400bbb2",
+      "audio_preserved": true,
+      "audio_packet_sha256": "a58fc1026baac8a18509dc247b4e42639dce418638eabfa9819a2145e7c81807",
+      "playback_duration_seconds": 385.56,
+      "subtitle_font_pixels": 38,
+      "subtitle_bottom_margin_pixels": 22,
+      "subtitle_band_pixels": 128,
+      "frame_rate": 25,
+      "visual_sync": [
+        {
+          "scene_index": 0,
+          "events": [
+            {
+              "start_seconds": 12.895,
+              "active": [
+                0
+              ],
+              "anchor": "Votre mission est définie"
+            },
+            {
+              "start_seconds": 14.6,
+              "active": [
+                1
+              ],
+              "anchor": "vos pouvoirs sont limités"
+            },
+            {
+              "start_seconds": 15.68,
+              "active": [
+                2
+              ],
+              "anchor": "et vos actes peuvent engager votre responsabilité"
+            },
+            {
+              "start_seconds": 18.967,
+              "active": [
+                1
+              ],
+              "anchor": "Le port d’une tenue ou d’une carte professionnelle ne vous transforme pas en policier"
+            },
+            {
+              "start_seconds": 27.883,
+              "active": [],
+              "anchor": "Nous allons examiner les conditions d’exercice"
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "events": [
+            {
+              "start_seconds": 41.251,
+              "active": [
+                0
+              ],
+              "anchor": "Avant d’exercer, assurez-vous que votre situation professionnelle"
+            },
+            {
+              "start_seconds": 59.771,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Sur le poste, vérifiez le périmètre de la mission"
+            },
+            {
+              "start_seconds": 66.94,
+              "active": [
+                1
+              ],
+              "anchor": "Si une tâche nouvelle vous est demandée"
+            },
+            {
+              "start_seconds": 78.037,
+              "active": [
+                2
+              ],
+              "anchor": "Lorsqu’une instruction est ambiguë, demandez une clarification"
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "events": [
+            {
+              "start_seconds": 85.051,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Une consigne sert à organiser la mission"
+            },
+            {
+              "start_seconds": 87.32,
+              "active": [
+                0
+              ],
+              "anchor": "mais elle reste soumise au droit"
+            },
+            {
+              "start_seconds": 89.745,
+              "active": [
+                2
+              ],
+              "anchor": "Elle précise par exemple un circuit de ronde"
+            },
+            {
+              "start_seconds": 95.446,
+              "active": [
+                0,
+                2
+              ],
+              "anchor": "Elle ne peut pas autoriser une violence injustifiée"
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "events": [
+            {
+              "start_seconds": 127.855,
+              "active": [
+                0
+              ],
+              "anchor": "Dans certains accès, la procédure peut prévoir de présenter un justificatif"
+            },
+            {
+              "start_seconds": 145.878,
+              "active": [
+                1
+              ],
+              "anchor": "Le refus d’une formalité d’accès se traite selon la procédure"
+            },
+            {
+              "start_seconds": 158.888,
+              "active": [
+                2
+              ],
+              "anchor": "Si une situation dépasse votre mission"
+            },
+            {
+              "start_seconds": 165.368,
+              "active": [
+                0
+              ],
+              "anchor": "Précisez toujours ce que vous avez réellement vérifié"
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "events": [
+            {
+              "start_seconds": 178.692,
+              "active": [
+                0
+              ],
+              "anchor": "Il faut notamment apprécier la réalité et l’actualité de l’atteinte injustifiée"
+            },
+            {
+              "start_seconds": 182.697,
+              "active": [
+                1
+              ],
+              "anchor": "la nécessité de la réponse"
+            },
+            {
+              "start_seconds": 183.9,
+              "active": [
+                2
+              ],
+              "anchor": "et sa proportion"
+            },
+            {
+              "start_seconds": 185.759,
+              "active": [
+                0
+              ],
+              "anchor": "Une réaction de vengeance après les faits n’est pas une défense"
+            },
+            {
+              "start_seconds": 189.598,
+              "active": [],
+              "anchor": "La protection des biens obéit également à des règles particulières"
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "events": [
+            {
+              "start_seconds": 214.09,
+              "active": [
+                0
+              ],
+              "anchor": "dans certaines situations de crime flagrant ou de délit flagrant puni d’emprisonnement"
+            },
+            {
+              "start_seconds": 220.58,
+              "active": [
+                1
+              ],
+              "anchor": "et de le conduire devant l’officier de police judiciaire le plus proche"
+            },
+            {
+              "start_seconds": 229.957,
+              "active": [
+                0
+              ],
+              "anchor": "Une simple suspicion ne suffit pas"
+            },
+            {
+              "start_seconds": 239.511,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Sollicitez les forces de l’ordre et respectez la dignité ainsi que la sécurité des personnes"
+            },
+            {
+              "start_seconds": 250.429,
+              "active": [],
+              "anchor": "La procédure exacte se travaille lors de la formation encadrée"
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "events": [
+            {
+              "start_seconds": 254.763,
+              "active": [
+                0
+              ],
+              "anchor": "La déontologie se voit dans la tenue, les paroles, la maîtrise de soi"
+            },
+            {
+              "start_seconds": 260.732,
+              "active": [
+                1
+              ],
+              "anchor": "Elle implique aussi de protéger les informations obtenues pendant la mission"
+            },
+            {
+              "start_seconds": 272.301,
+              "active": [
+                2
+              ],
+              "anchor": "Utilisez les outils autorisés et limitez la transmission aux destinataires qui en ont besoin"
+            },
+            {
+              "start_seconds": 281.817,
+              "active": [
+                1
+              ],
+              "anchor": "Dans un compte rendu, séparez les faits constatés des informations rapportées"
+            },
+            {
+              "start_seconds": 287.773,
+              "active": [
+                0
+              ],
+              "anchor": "Ne modifiez pas une chronologie pour protéger une mauvaise décision"
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "events": [
+            {
+              "start_seconds": 300.578,
+              "active": [
+                0
+              ],
+              "anchor": "Un salarié vous affirme qu’un visiteur a probablement pris un objet"
+            },
+            {
+              "start_seconds": 315.182,
+              "active": [
+                1
+              ],
+              "anchor": "Vous cherchez les éléments objectifs accessibles dans votre mission"
+            },
+            {
+              "start_seconds": 318.04,
+              "active": [
+                2
+              ],
+              "anchor": "et informez le responsable selon la procédure"
+            },
+            {
+              "start_seconds": 332.198,
+              "active": [],
+              "anchor": "Mettez la vidéo en pause et formulez votre premier message radio"
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "events": [
+            {
+              "start_seconds": 345.078,
+              "active": [
+                0
+              ],
+              "anchor": "Indiquez les horaires utiles, le lieu précis"
+            },
+            {
+              "start_seconds": 347.8,
+              "active": [
+                1
+              ],
+              "anchor": "les faits constatés"
+            },
+            {
+              "start_seconds": 349.083,
+              "active": [
+                2
+              ],
+              "anchor": "les actions réalisées et les personnes ou services alertés"
+            },
+            {
+              "start_seconds": 352.552,
+              "active": [
+                1
+              ],
+              "anchor": "Évitez les jugements personnels et les formulations vagues"
+            },
+            {
+              "start_seconds": 369.376,
+              "active": [],
+              "anchor": "Pour poursuivre cette synthèse, choisissez une situation de votre poste"
+            }
+          ]
+        }
+      ]
+    },
+    "04": {
+      "id": "mac-aps-module-04-video",
+      "module": "04",
+      "title": "Synthèse vidéo · Prévenir les conflits et sécuriser l’accès",
+      "src": "media/mac-aps/v3/module-04.mp4",
+      "poster": "media/mac-aps/v3/module-04.jpg",
+      "captions": "media/mac-aps/v3/module-04.vtt",
+      "duration_seconds": 394.817,
+      "narration_seconds": 391.944,
+      "voice": "fr-FR-HenriNeural",
+      "rate": "-2%",
+      "burned_captions": true,
+      "required": false,
+      "transcript": "Cette synthèse porte sur la prévention des conflits et la conduite professionnelle du filtrage. Une règle d’accès peut être justifiée et pourtant mal comprise. La manière de l’annoncer influence la réaction de la personne. Votre objectif est d’obtenir une situation sûre, compréhensible et maîtrisée, dans le cadre de votre mission. Vous n’avez pas à gagner un duel verbal ni à imposer une humiliation. Nous allons revoir l’observation de la tension, l’écoute, l’explication d’un refus, le respect du consentement et la demande de renfort. Les techniques d’intervention physique nécessitent un entraînement encadré. Ici, nous travaillons surtout les décisions et les paroles qui permettent de prévenir une escalade et de protéger les personnes.\n\nLa tension peut venir d’une attente, d’une information contradictoire, d’un refus inattendu ou d’un sentiment d’injustice. Observez les signes concrets : hausse du volume de voix, gestes plus rapides, interruption répétée ou rapprochement insistant. Ces signes ne permettent pas à eux seuls de prédire une agression. Ils invitent à adapter la communication et à surveiller l’évolution. Examinez aussi votre propre posture : bras fermés, ironie ou réponse brusque peuvent alimenter le conflit. Gardez une distance adaptée au lieu et une possibilité de retrait. Ne vous placez pas volontairement dans un angle sans issue. Si plusieurs personnes parlent en même temps, proposez un interlocuteur principal et demandez du calme sans adopter un ton provocateur.\n\nCommencez par écouter la demande quand la situation le permet. Une reformulation courte montre que vous avez compris sans valider une exigence incompatible avec la règle. Vous pouvez dire : vous avez attendu longtemps et vous souhaitez savoir pourquoi l’accès est refusé. Évitez les formules qui minimisent la difficulté, comme ce n’est rien, ou celles qui donnent un ordre émotionnel, comme calmez-vous, sans explication. Posez une question utile à la fois. Si la personne parle difficilement français, utilisez des mots simples et vérifiez la compréhension. La reformulation sert aussi à corriger un malentendu : un visiteur peut chercher un autre bâtiment ou posséder un document différent de celui attendu. Clarifier le besoin évite parfois tout conflit.\n\nPour annoncer une limite, formulez la règle, son motif utile et la suite possible. Par exemple : ce passage est réservé aux personnes inscrites ; votre nom n’apparaît pas sur la liste disponible ; je peux joindre l’accueil pour vérifier votre invitation. Cette formulation laisse une issue sans promettre un résultat que vous ne maîtrisez pas. Évitez les phrases personnelles comme je vous interdis d’entrer parce que je l’ai décidé. Si aucune alternative immédiate n’est possible, expliquez le circuit de réclamation ou l’interlocuteur compétent. Restez cohérent avec vos collègues afin de ne pas multiplier les consignes contradictoires. Une explication claire n’exige pas de débattre indéfiniment : lorsque l’échange tourne en boucle, préparez un relais calme.\n\nAu filtrage, ne confondez pas les opérations. Vérifier un titre d’accès, regarder visuellement l’intérieur d’un bagage présenté et procéder à sa fouille ne sont pas des actes identiques. Dans le cadre prévu pour les agents concernés, l’inspection visuelle des bagages à main est possible ; leur fouille exige le consentement du propriétaire. Expliquez ce qui est demandé et la manière dont l’opération va se dérouler. Vous n’avez pas à arracher un sac ou à l’ouvrir de force parce qu’une personne refuse. Le refus se traite selon les règles licites d’accès et les consignes du site, avec un relais si nécessaire. Il ne constitue pas automatiquement une preuve d’infraction. Restez attentif à la confidentialité des effets personnels.\n\nLa palpation de sécurité obéit à des conditions spécifiques. Elle n’est pas une formalité librement décidée à chaque entrée. Il faut vérifier le cadre légal applicable, les habilitations ou conditions particulières requises pour la mission et l’organisation de l’opération. Le consentement exprès de la personne est nécessaire, et la palpation est réalisée par une personne du même sexe. Ne confondez pas ce cadre avec une fouille corporelle relevant d’autres pouvoirs. Si l’une des conditions manque, vous n’improvisez pas une solution en dehors du droit : vous sollicitez le responsable et appliquez la procédure adaptée. Les gestes, la posture et la coordination doivent être appris en situation encadrée. Cette vidéo ne constitue pas une habilitation ni une validation pratique.\n\nUn renfort demandé suffisamment tôt peut éviter une intervention précipitée. Décrivez au poste de sécurité ce qui se passe, où vous êtes, combien de personnes sont concernées et quel soutien est nécessaire. Évitez les messages dramatiques ou imprécis. Le collègue qui arrive doit comprendre son rôle : observer, reprendre l’explication, protéger un accès ou faciliter le retrait. L’accumulation d’agents autour d’une personne peut accroître la tension ; adaptez le dispositif au risque réel. Si une menace grave apparaît, la priorité devient la protection et l’appel aux services compétents. Ne poursuivez pas une discussion pour démontrer votre autorité alors que les conditions se dégradent. Le choix de se retirer et de faire intervenir un relais peut être la décision la plus professionnelle.\n\nVoici une situation fictive. À l’entrée d’un événement, une personne refuse la vérification demandée pour son bagage et élève la voix. Vous gardez une distance adaptée, expliquez précisément la règle applicable et présentez la suite prévue en cas de refus. Vous ne touchez pas son sac par surprise et ne présentez pas ce refus comme une preuve de culpabilité. Un collègue prévient le responsable tandis que vous maintenez un dialogue simple. La personne demande à parler à quelqu’un d’autre : ce relais peut être utile si les conditions restent sûres. Mettez la vidéo en pause et préparez trois phrases : une reformulation, une explication de la règle et une proposition de suite. Chacune doit pouvoir être prononcée calmement, sans menace ni humiliation.\n\nQuand la situation est revenue au calme, vérifiez que l’accès et les personnes sont en sécurité. Transmettez les informations utiles au responsable et rédigez le compte rendu prévu. Mentionnez le motif initial, les faits observés, les explications données, les relais sollicités et l’issue de l’événement. Analysez ensuite ce qui aurait pu éviter la tension : signalétique, information avant l’arrivée, cohérence de la liste d’accès ou répartition des rôles. L’objectif n’est pas de chercher un coupable dans l’équipe, mais de comprendre les points d’amélioration. Pour poursuivre, entraînez-vous avec un collègue à annoncer un refus d’accès, puis échangez les rôles. Le formateur pourra corriger la posture, le vocabulaire et les limites à respecter en situation réelle.",
+      "words": 1046,
+      "chapters": [
+        {
+          "title": "Faire comprendre la règle",
+          "start_seconds": 0.0,
+          "end_seconds": 42.948
+        },
+        {
+          "title": "Repérer ce qui fait monter la tension",
+          "start_seconds": 42.948,
+          "end_seconds": 87.448
+        },
+        {
+          "title": "Écouter puis reformuler",
+          "start_seconds": 87.448,
+          "end_seconds": 131.148
+        },
+        {
+          "title": "Annoncer une limite et une solution",
+          "start_seconds": 131.148,
+          "end_seconds": 172.148
+        },
+        {
+          "title": "Filtrage : distinguer les opérations",
+          "start_seconds": 172.148,
+          "end_seconds": 214.76
+        },
+        {
+          "title": "Palpation : des conditions spécifiques",
+          "start_seconds": 214.76,
+          "end_seconds": 259.86
+        },
+        {
+          "title": "Demander du renfort avant la rupture",
+          "start_seconds": 259.86,
+          "end_seconds": 306.36
+        },
+        {
+          "title": "Cas : refus d’ouverture d’un sac",
+          "start_seconds": 306.36,
+          "end_seconds": 350.196
+        },
+        {
+          "title": "Après le conflit : remettre le service en ordre",
+          "start_seconds": 350.196,
+          "end_seconds": 394.796
+        }
+      ],
+      "caption_cues": 106,
+      "render_revision": "20261013-mac-aps-v3",
+      "source_sha256": "1d69fdb4c9b5e3dd73c44b60f910ce79cfa54d3e8072204cf2627d5d5324834e",
+      "video_sha256": "552972266c5bd6758155377fac46d55fc2c80828c21420876e8e9d504fa04528",
+      "source_video_sha256": "36b72a92b0ad071a755800846004619d3c58d5fdcd2af310e55e7378ff3e5e94",
+      "audio_preserved": true,
+      "audio_packet_sha256": "56b8bdff7adb117b20154bc6c66a9321601a14506421426783d0b96eb36a48e2",
+      "playback_duration_seconds": 394.84,
+      "subtitle_font_pixels": 38,
+      "subtitle_bottom_margin_pixels": 22,
+      "subtitle_band_pixels": 128,
+      "frame_rate": 25,
+      "visual_sync": [
+        {
+          "scene_index": 0,
+          "events": [
+            {
+              "start_seconds": 5.23,
+              "active": [
+                1
+              ],
+              "anchor": "Une règle d’accès peut être justifiée et pourtant mal comprise"
+            },
+            {
+              "start_seconds": 23.724,
+              "active": [
+                0
+              ],
+              "anchor": "Nous allons revoir l’observation de la tension"
+            },
+            {
+              "start_seconds": 26.06,
+              "active": [
+                1
+              ],
+              "anchor": "l’écoute, l’explication d’un refus"
+            },
+            {
+              "start_seconds": 29.62,
+              "active": [
+                2
+              ],
+              "anchor": "et la demande de renfort"
+            },
+            {
+              "start_seconds": 31.645,
+              "active": [],
+              "anchor": "Les techniques d’intervention physique nécessitent un entraînement encadré"
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "events": [
+            {
+              "start_seconds": 42.999,
+              "active": [
+                0
+              ],
+              "anchor": "La tension peut venir d’une attente"
+            },
+            {
+              "start_seconds": 50.091,
+              "active": [
+                1
+              ],
+              "anchor": "Observez les signes concrets"
+            },
+            {
+              "start_seconds": 65.308,
+              "active": [
+                2
+              ],
+              "anchor": "Examinez aussi votre propre posture"
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "events": [
+            {
+              "start_seconds": 87.499,
+              "active": [
+                0
+              ],
+              "anchor": "Commencez par écouter la demande"
+            },
+            {
+              "start_seconds": 91.275,
+              "active": [
+                1
+              ],
+              "anchor": "Une reformulation courte montre que vous avez compris"
+            },
+            {
+              "start_seconds": 113.711,
+              "active": [
+                2
+              ],
+              "anchor": "Si la personne parle difficilement français"
+            },
+            {
+              "start_seconds": 119.451,
+              "active": [
+                1
+              ],
+              "anchor": "La reformulation sert aussi à corriger un malentendu"
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "events": [
+            {
+              "start_seconds": 137.34,
+              "active": [
+                0
+              ],
+              "anchor": "ce passage est réservé aux personnes inscrites"
+            },
+            {
+              "start_seconds": 139.566,
+              "active": [
+                1
+              ],
+              "anchor": "votre nom n’apparaît pas sur la liste disponible"
+            },
+            {
+              "start_seconds": 141.939,
+              "active": [
+                2
+              ],
+              "anchor": "je peux joindre l’accueil pour vérifier votre invitation"
+            },
+            {
+              "start_seconds": 148.814,
+              "active": [
+                0
+              ],
+              "anchor": "Évitez les phrases personnelles comme je vous interdis d’entrer"
+            },
+            {
+              "start_seconds": 153.393,
+              "active": [
+                2
+              ],
+              "anchor": "Si aucune alternative immédiate n’est possible"
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "events": [
+            {
+              "start_seconds": 175.783,
+              "active": [
+                0
+              ],
+              "anchor": "Vérifier un titre d’accès"
+            },
+            {
+              "start_seconds": 177.58,
+              "active": [
+                1
+              ],
+              "anchor": "regarder visuellement l’intérieur d’un bagage présenté"
+            },
+            {
+              "start_seconds": 179.94,
+              "active": [
+                2
+              ],
+              "anchor": "et procéder à sa fouille"
+            },
+            {
+              "start_seconds": 183.462,
+              "active": [
+                1
+              ],
+              "anchor": "Dans le cadre prévu pour les agents concernés, l’inspection visuelle"
+            },
+            {
+              "start_seconds": 188.436,
+              "active": [
+                2
+              ],
+              "anchor": "leur fouille exige le consentement du propriétaire"
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "events": [
+            {
+              "start_seconds": 214.811,
+              "active": [
+                0
+              ],
+              "anchor": "La palpation de sécurité obéit à des conditions spécifiques"
+            },
+            {
+              "start_seconds": 230.729,
+              "active": [
+                1
+              ],
+              "anchor": "Le consentement exprès de la personne est nécessaire"
+            },
+            {
+              "start_seconds": 233.472,
+              "active": [
+                2
+              ],
+              "anchor": "et la palpation est réalisée par une personne du même sexe"
+            },
+            {
+              "start_seconds": 237.196,
+              "active": [
+                0
+              ],
+              "anchor": "Ne confondez pas ce cadre avec une fouille corporelle"
+            },
+            {
+              "start_seconds": 249.786,
+              "active": [],
+              "anchor": "Les gestes, la posture et la coordination doivent être appris en situation encadrée"
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "events": [
+            {
+              "start_seconds": 259.911,
+              "active": [
+                2
+              ],
+              "anchor": "Un renfort demandé suffisamment tôt"
+            },
+            {
+              "start_seconds": 282.819,
+              "active": [
+                0
+              ],
+              "anchor": "L’accumulation d’agents autour d’une personne peut accroître la tension"
+            },
+            {
+              "start_seconds": 289.235,
+              "active": [
+                2
+              ],
+              "anchor": "Si une menace grave apparaît"
+            },
+            {
+              "start_seconds": 300.574,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "Le choix de se retirer et de faire intervenir un relais"
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "events": [
+            {
+              "start_seconds": 310.54,
+              "active": [
+                0
+              ],
+              "anchor": "une personne refuse la vérification demandée pour son bagage et élève la voix"
+            },
+            {
+              "start_seconds": 317.036,
+              "active": [
+                1
+              ],
+              "anchor": "expliquez précisément la règle applicable"
+            },
+            {
+              "start_seconds": 321.845,
+              "active": [
+                2
+              ],
+              "anchor": "Vous ne touchez pas son sac par surprise"
+            },
+            {
+              "start_seconds": 337.687,
+              "active": [],
+              "anchor": "Mettez la vidéo en pause et préparez trois phrases"
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "events": [
+            {
+              "start_seconds": 350.247,
+              "active": [
+                0
+              ],
+              "anchor": "Quand la situation est revenue au calme, vérifiez que l’accès et les personnes sont en sécurité"
+            },
+            {
+              "start_seconds": 355.808,
+              "active": [
+                1
+              ],
+              "anchor": "Transmettez les informations utiles au responsable"
+            },
+            {
+              "start_seconds": 368.13,
+              "active": [
+                2
+              ],
+              "anchor": "Analysez ensuite ce qui aurait pu éviter la tension"
+            },
+            {
+              "start_seconds": 382.441,
+              "active": [],
+              "anchor": "Pour poursuivre, entraînez-vous avec un collègue"
+            }
+          ]
+        }
+      ]
+    },
+    "05": {
+      "id": "mac-aps-module-05-video",
+      "module": "05",
+      "title": "Synthèse vidéo · Prévenir le risque terroriste",
+      "src": "media/mac-aps/v3/module-05.mp4",
+      "poster": "media/mac-aps/v3/module-05.jpg",
+      "captions": "media/mac-aps/v3/module-05.vtt",
+      "duration_seconds": 397.269,
+      "narration_seconds": 394.44,
+      "voice": "fr-FR-HenriNeural",
+      "rate": "-2%",
+      "burned_captions": true,
+      "required": false,
+      "transcript": "Cette synthèse aborde la prévention du risque terroriste dans la mission de l’agent de prévention et de sécurité. Elle porte sur la vigilance, la protection du public et l’alerte. Elle ne prépare pas une confrontation armée. Votre rôle consiste à repérer des faits préoccupants, appliquer les consignes de sûreté, limiter l’exposition des personnes et transmettre une information utile aux services compétents. La vigilance ne consiste pas à suspecter un public en raison de son origine, de sa religion ou de sa tenue. Un comportement s’analyse dans son contexte, avec prudence et sans accusation hâtive. Nous allons examiner la préparation du site, les anomalies, les choix de protection et la manière de communiquer pendant un événement grave.\n\nLa préparation commence par les consignes de sûreté actualisées du site. Identifiez les moyens d’alerte, les responsables et les contacts des services d’urgence. Repérez les accès, les cheminements et les espaces prévus par l’organisation pour protéger les personnes. Ces repères doivent être connus sans être diffusés publiquement. Vérifiez que les portes, les moyens de communication et les dispositifs prévus sont utilisables selon la procédure. Une anomalie technique doit être signalée avant de devenir un obstacle en situation d’urgence. Les exercices encadrés permettent de vérifier la compréhension des rôles et l’adaptation du message au public. Ils doivent aussi prendre en compte les personnes ayant des difficultés de déplacement, d’audition, de vision ou de compréhension.\n\nUne anomalie peut concerner un accès inhabituellement ouvert, un objet dont la présence interroge ou un comportement qui s’écarte nettement de la situation attendue. Commencez par des faits : le lieu, l’heure, ce qui est visible et ce qui a changé. Ne cherchez pas à deviner une intention à partir d’un seul détail. Une personne stressée peut avoir de nombreuses raisons de l’être. Recoupez les informations disponibles dans le cadre de votre mission, sans vous exposer et sans mener une enquête improvisée. Signalez ce qui nécessite une vérification à l’interlocuteur prévu. Dans votre message, distinguez ce que vous avez vu de ce qu’un tiers vous a rapporté. Cette distinction aide à décider du niveau de réponse.\n\nSi un objet présente un caractère suspect au regard du contexte, ne l’ouvrez pas, ne le déplacez pas et ne cherchez pas à vérifier vous-même son contenu. Prévenez les personnes de ne pas s’en approcher et appliquez les consignes de mise à distance et d’alerte du site. Les modalités précises sont définies avec les responsables et les services compétents ; elles ne se remplacent pas par une estimation personnelle. Transmettez l’emplacement exact, l’aspect visible et les circonstances de découverte, depuis une position adaptée. Ne revenez pas auprès de l’objet pour prendre une meilleure photographie. Si une intervention spécialisée est nécessaire, facilitez l’accès des services et évitez les rassemblements de curieux. Votre priorité est la protection, pas l’identification technique de l’objet.\n\nFace à une attaque ou à un danger grave, cherchez d’abord à réduire l’exposition. Les consignes publiques rappellent l’importance de s’échapper lorsque cela est possible sans se mettre davantage en danger, ou de se cacher lorsque la fuite n’est pas possible. Le choix dépend de ce qui est réellement observé et des consignes adaptées au site. Ne dirigez pas automatiquement le public vers un chemin dont la sécurité est inconnue. Donnez des indications courtes et compréhensibles et adaptez l’aide aux personnes présentes. Vous ne partez pas à la recherche de l’auteur et vous ne vous rapprochez pas pour confirmer une information. La protection d’un groupe repose sur une décision prudente, une communication claire et une réévaluation de la situation.\n\nDès que les conditions le permettent, alertez les forces de l’ordre au dix-sept ou au cent douze. Donnez la localisation exacte, les faits constatés, les dangers visibles et les informations utiles sur les personnes exposées. Si un détail est incertain, annoncez cette incertitude. Indiquez également les mesures de protection déjà engagées et les difficultés d’accès connues. Laissez l’opérateur vous guider et restez disponible lorsque cela est possible sans accroître le risque. Ne retardez pas l’appel pour obtenir une description parfaite. Un message partiel mais fiable peut déjà être utile. À l’intérieur de l’équipe, partagez seulement les informations nécessaires, sur les canaux prévus, en évitant les rumeurs et les messages contradictoires qui désorganisent le public.\n\nÀ l’arrivée des forces de l’ordre, adoptez un comportement lisible. Suivez leurs consignes, gardez les mains visibles et évitez les gestes brusques. N’avancez pas vers elles avec un objet à la main pour tenter d’expliquer plus vite la situation. Votre tenue professionnelle ne leur permet pas de connaître immédiatement votre rôle ou vos intentions. Quand elles vous le demandent, transmettez les informations utiles : localisation des personnes, faits observés et mesures prises. Ne gênez pas leur progression et ne revenez pas dans une zone pour récupérer des affaires ou chercher un collègue sans instruction. La coordination avec les services compétents prime sur l’initiative individuelle. Continuez à protéger les personnes dans le cadre des consignes reçues et de ce qui reste possible.\n\nPrenons une situation fictive. Un visiteur rejoint le poste d’accueil et signale un danger grave dans une autre partie du bâtiment. Il est très inquiet et son récit reste incomplet. Vous recueillez les faits essentiels sans prolonger un interrogatoire, prévenez immédiatement le responsable et faites déclencher l’alerte adaptée. Vous ne vous rendez pas dans la zone pour vérifier personnellement le récit. Vous protégez les personnes présentes selon les possibilités réelles et les consignes connues, tout en demandant le relais des forces de l’ordre. Mettez la vidéo en pause et préparez votre message : où se trouve le danger rapporté, qui l’a observé, ce qui reste incertain et ce que vous avez déjà fait. Une transmission honnête permet une réponse mieux orientée.\n\nAprès une alerte grave, ne considérez pas qu’un retour au calme apparent autorise automatiquement la reprise du service. Suivez les décisions des autorités et des responsables. Préservez les éléments utiles sans les manipuler inutilement, protégez la confidentialité et abstenez-vous de diffuser des images ou des commentaires sur les réseaux sociaux. Le compte rendu distingue les faits observés, les informations rapportées, les horaires et les actions réalisées. L’équipe peut ensuite analyser les difficultés de communication et les moyens de protection, dans un cadre adapté à l’événement. Certaines personnes auront besoin d’un accompagnement après une situation éprouvante. Pour poursuivre votre travail, expliquez les trois priorités de cette synthèse : une vigilance factuelle, la protection des personnes et une alerte fiable depuis une position aussi sûre que possible.",
+      "words": 1065,
+      "chapters": [
+        {
+          "title": "Une vigilance fondée sur les faits",
+          "start_seconds": 0.0,
+          "end_seconds": 43.7
+        },
+        {
+          "title": "Connaître le site avant l’événement",
+          "start_seconds": 43.7,
+          "end_seconds": 89.4
+        },
+        {
+          "title": "Décrire une anomalie sans conclure trop vite",
+          "start_seconds": 89.4,
+          "end_seconds": 131.5
+        },
+        {
+          "title": "Objet suspect : ne pas manipuler",
+          "start_seconds": 131.5,
+          "end_seconds": 176.032
+        },
+        {
+          "title": "Danger grave : choisir une protection possible",
+          "start_seconds": 176.032,
+          "end_seconds": 216.94
+        },
+        {
+          "title": "Alerter depuis une position sûre",
+          "start_seconds": 216.94,
+          "end_seconds": 262.24
+        },
+        {
+          "title": "Accueillir les forces de l’ordre",
+          "start_seconds": 262.24,
+          "end_seconds": 305.84
+        },
+        {
+          "title": "Cas : une information alarmante au poste",
+          "start_seconds": 305.84,
+          "end_seconds": 348.572
+        },
+        {
+          "title": "Après l’alerte : préserver et transmettre",
+          "start_seconds": 348.572,
+          "end_seconds": 397.208
+        }
+      ],
+      "caption_cues": 103,
+      "render_revision": "20261013-mac-aps-v3",
+      "source_sha256": "f6c333b9269ce801b1d83827099a2fcce45116dfd98ce062ad1069c02fa664ee",
+      "video_sha256": "3c67e44aa496c7fad5f668606a99b8050956751347f654b12f347cc629c39eb8",
+      "source_video_sha256": "325ac82418ec670cb4d5e56f3ba50a8d20b0ea3926724f26ae3b45e5b8d0f319",
+      "audio_preserved": true,
+      "audio_packet_sha256": "c1ce569ee29c22bcf3bfec442ada13ee4c4478bc3b3ca2e4e1e0e3a5bc11a968",
+      "playback_duration_seconds": 397.28,
+      "subtitle_font_pixels": 38,
+      "subtitle_bottom_margin_pixels": 22,
+      "subtitle_band_pixels": 128,
+      "frame_rate": 25,
+      "visual_sync": [
+        {
+          "scene_index": 0,
+          "events": [
+            {
+              "start_seconds": 6.237,
+              "active": [
+                0,
+                1,
+                2
+              ],
+              "anchor": "Elle porte sur la vigilance, la protection du public et l’alerte"
+            },
+            {
+              "start_seconds": 10.74,
+              "active": [],
+              "anchor": "Elle ne prépare pas une confrontation armée"
+            },
+            {
+              "start_seconds": 13.775,
+              "active": [
+                0,
+                1,
+                2
+              ],
+              "anchor": "Votre rôle consiste à repérer des faits préoccupants"
+            },
+            {
+              "start_seconds": 23.661,
+              "active": [
+                0
+              ],
+              "anchor": "La vigilance ne consiste pas à suspecter un public"
+            }
+          ]
+        },
+        {
+          "scene_index": 1,
+          "events": [
+            {
+              "start_seconds": 43.751,
+              "active": [
+                0
+              ],
+              "anchor": "La préparation commence par les consignes de sûreté actualisées du site"
+            },
+            {
+              "start_seconds": 53.585,
+              "active": [
+                1
+              ],
+              "anchor": "Repérez les accès, les cheminements et les espaces prévus"
+            },
+            {
+              "start_seconds": 76.034,
+              "active": [
+                2
+              ],
+              "anchor": "Les exercices encadrés permettent de vérifier la compréhension des rôles"
+            }
+          ]
+        },
+        {
+          "scene_index": 2,
+          "events": [
+            {
+              "start_seconds": 89.451,
+              "active": [
+                0
+              ],
+              "anchor": "Une anomalie peut concerner un accès inhabituellement ouvert"
+            },
+            {
+              "start_seconds": 103.354,
+              "active": [
+                2
+              ],
+              "anchor": "Ne cherchez pas à deviner une intention à partir d’un seul détail"
+            },
+            {
+              "start_seconds": 111.237,
+              "active": [
+                1
+              ],
+              "anchor": "Recoupez les informations disponibles dans le cadre de votre mission"
+            },
+            {
+              "start_seconds": 122.474,
+              "active": [
+                0,
+                2
+              ],
+              "anchor": "Dans votre message, distinguez ce que vous avez vu de ce qu’un tiers vous a rapporté"
+            }
+          ]
+        },
+        {
+          "scene_index": 3,
+          "events": [
+            {
+              "start_seconds": 131.551,
+              "active": [
+                0
+              ],
+              "anchor": "Si un objet présente un caractère suspect au regard du contexte"
+            },
+            {
+              "start_seconds": 134.96,
+              "active": [
+                1
+              ],
+              "anchor": "ne l’ouvrez pas, ne le déplacez pas"
+            },
+            {
+              "start_seconds": 139.944,
+              "active": [
+                2
+              ],
+              "anchor": "Prévenez les personnes de ne pas s’en approcher"
+            }
+          ]
+        },
+        {
+          "scene_index": 4,
+          "events": [
+            {
+              "start_seconds": 183.26,
+              "active": [
+                0,
+                1
+              ],
+              "anchor": "s’échapper lorsque cela est possible sans se mettre davantage en danger"
+            },
+            {
+              "start_seconds": 186.84,
+              "active": [
+                2
+              ],
+              "anchor": "ou de se cacher lorsque la fuite n’est pas possible"
+            },
+            {
+              "start_seconds": 189.91,
+              "active": [
+                0
+              ],
+              "anchor": "Le choix dépend de ce qui est réellement observé"
+            },
+            {
+              "start_seconds": 199.501,
+              "active": [],
+              "anchor": "Donnez des indications courtes et compréhensibles"
+            }
+          ]
+        },
+        {
+          "scene_index": 5,
+          "events": [
+            {
+              "start_seconds": 222.157,
+              "active": [
+                0
+              ],
+              "anchor": "Donnez la localisation exacte"
+            },
+            {
+              "start_seconds": 224.16,
+              "active": [
+                1
+              ],
+              "anchor": "les faits constatés, les dangers visibles"
+            },
+            {
+              "start_seconds": 233.687,
+              "active": [
+                2
+              ],
+              "anchor": "Indiquez également les mesures de protection déjà engagées"
+            },
+            {
+              "start_seconds": 238.764,
+              "active": [],
+              "anchor": "Laissez l’opérateur vous guider"
+            }
+          ]
+        },
+        {
+          "scene_index": 6,
+          "events": [
+            {
+              "start_seconds": 266.564,
+              "active": [
+                0,
+                1,
+                2
+              ],
+              "anchor": "Suivez leurs consignes, gardez les mains visibles et évitez les gestes brusques"
+            },
+            {
+              "start_seconds": 271.424,
+              "active": [
+                1,
+                2
+              ],
+              "anchor": "N’avancez pas vers elles avec un objet à la main"
+            },
+            {
+              "start_seconds": 276.436,
+              "active": [],
+              "anchor": "Votre tenue professionnelle ne leur permet pas de connaître immédiatement votre rôle"
+            },
+            {
+              "start_seconds": 281.666,
+              "active": [
+                0
+              ],
+              "anchor": "Quand elles vous le demandent, transmettez les informations utiles"
+            }
+          ]
+        },
+        {
+          "scene_index": 7,
+          "events": [
+            {
+              "start_seconds": 308.455,
+              "active": [
+                0
+              ],
+              "anchor": "Un visiteur rejoint le poste d’accueil et signale un danger grave"
+            },
+            {
+              "start_seconds": 316.911,
+              "active": [
+                1
+              ],
+              "anchor": "Vous recueillez les faits essentiels sans prolonger un interrogatoire"
+            },
+            {
+              "start_seconds": 320.279,
+              "active": [
+                2
+              ],
+              "anchor": "prévenez immédiatement le responsable et faites déclencher l’alerte adaptée"
+            },
+            {
+              "start_seconds": 324.526,
+              "active": [
+                1
+              ],
+              "anchor": "Vous ne vous rendez pas dans la zone pour vérifier personnellement le récit"
+            },
+            {
+              "start_seconds": 328.544,
+              "active": [
+                2
+              ],
+              "anchor": "Vous protégez les personnes présentes"
+            },
+            {
+              "start_seconds": 335.585,
+              "active": [],
+              "anchor": "Mettez la vidéo en pause et préparez votre message"
+            }
+          ]
+        },
+        {
+          "scene_index": 8,
+          "events": [
+            {
+              "start_seconds": 355.434,
+              "active": [
+                0
+              ],
+              "anchor": "Suivez les décisions des autorités et des responsables"
+            },
+            {
+              "start_seconds": 358.98,
+              "active": [
+                1
+              ],
+              "anchor": "Préservez les éléments utiles sans les manipuler inutilement"
+            },
+            {
+              "start_seconds": 374.465,
+              "active": [
+                2
+              ],
+              "anchor": "L’équipe peut ensuite analyser les difficultés de communication"
+            },
+            {
+              "start_seconds": 386.149,
+              "active": [],
+              "anchor": "Pour poursuivre votre travail, expliquez les trois priorités de cette synthèse"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

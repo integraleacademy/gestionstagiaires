@@ -1,0 +1,4271 @@
+{
+  "revision": 9,
+  "source_transcript_sha256": {
+    "A": "64ed32c71d988aeb1e66ff439a3b1f2576bf1ecdcb0ae28bd5385244e2bd9eff",
+    "B": "7313b3aefd616805a26ba6e33ef6c0fb7cacd83454eb4a92fff7087612543650",
+    "C": "ad1e76859881d29056d4fe7c6e1a9e232b9431aa965e33229cacf9f71d689a1b",
+    "D": "e87ac7f030e53c80bba99c5b671b287aefa0eec2c89a72cbfbd35687f665f47a",
+    "E": "213cd3f5fc891d3c65618b31269652091e1ff79b58eb8be2abdf39d58dc41bae",
+    "F": "7e0450c885cf6c95c6619c91f51fbefc70750e81df58d7989dfe387f1c13f9a1",
+    "G": "8a73ed3b45fe7128e7996d58513450ae3082f4ad942ec580726940a060239867",
+    "H": "47118aba1cdc2c928549c0c5320725f91a94eea51ed3725e760a62cedadbab2d"
+  },
+  "modules": {
+    "A": {
+      "scenes": [
+        {
+          "ref": "A.01",
+          "title": "Le transport public particulier",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE SERVICE",
+              "text": "Transport rémunéré, à la demande, en petite capacité.",
+              "anchor_text": "Le T3P est"
+            },
+            {
+              "label": "LES CATÉGORIES",
+              "text": "Taxis, VTC et véhicules motorisés à deux ou trois roues.",
+              "anchor_text": "Il regroupe"
+            },
+            {
+              "label": "LE MOT « PUBLIC »",
+              "text": "Il ne signifie pas « véhicule d’une collectivité ».",
+              "anchor_text": "Le mot"
+            }
+          ]
+        },
+        {
+          "ref": "A.01",
+          "title": "Le transport public particulier",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La prestation",
+              "text": "Un VTC : un service convenu à l’avance.",
+              "anchor_text": "Un VTC fournit"
+            },
+            {
+              "title": "Les autres cadres",
+              "text": "Transport collectif, sanitaire et covoiturage : d’autres règles.",
+              "anchor_text": "Le transport collectif"
+            },
+            {
+              "title": "Le partage de frais",
+              "text": "Il ne doit pas masquer une activité professionnelle lucrative.",
+              "anchor_text": "Le partage de frais"
+            }
+          ]
+        },
+        {
+          "ref": "A.02",
+          "title": "Qui fait quoi ?",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE CONDUCTEUR",
+              "text": "Il réalise le transport et remplit les conditions d’exercice.",
+              "anchor_text": "Le conducteur"
+            },
+            {
+              "label": "L’EXPLOITANT",
+              "text": "Il organise l’activité et figure au registre VTC.",
+              "anchor_text": "L’exploitant"
+            },
+            {
+              "label": "DEUX FONCTIONS",
+              "text": "Elles restent distinctes, même chez un indépendant.",
+              "anchor_text": "Ces fonctions"
+            }
+          ]
+        },
+        {
+          "ref": "A.02",
+          "title": "Qui fait quoi ?",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La plateforme",
+              "text": "Son contrôle ne remplace pas vos obligations.",
+              "anchor_text": "Une plateforme"
+            },
+            {
+              "title": "Les titres",
+              "text": "Préfecture : carte. Ministère des transports : REVTC.",
+              "anchor_text": "La préfecture"
+            },
+            {
+              "title": "Les formalités",
+              "text": "CMA : examen. Guichet unique : création d’entreprise.",
+              "anchor_text": "La CMA"
+            }
+          ]
+        },
+        {
+          "ref": "A.03",
+          "title": "Accéder à la profession",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "L’ACCÈS ORDINAIRE",
+              "text": "Permis hors période probatoire, aptitude, honorabilité, examen.",
+              "anchor_text": "L’accès ordinaire"
+            },
+            {
+              "label": "LE BULLETIN N° 2",
+              "text": "Pas de condamnation incompatible prévue par les textes.",
+              "anchor_text": "Le bulletin n° 2"
+            },
+            {
+              "label": "LA DISTINCTION",
+              "text": "Cela n’impose pas toujours un casier entièrement vierge.",
+              "anchor_text": "Il ne s’agit pas"
+            }
+          ]
+        },
+        {
+          "ref": "A.03",
+          "title": "Accéder à la profession",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Depuis le 12 août 2026",
+              "text": "Voie nationale par expérience : supprimée pour les nouvelles demandes.",
+              "anchor_text": "Depuis le 12 août 2026"
+            },
+            {
+              "title": "Les autres dossiers",
+              "text": "Dossiers antérieurs conservés ; qualifications UE/EEE : voie distincte.",
+              "anchor_text": "Les dossiers déposés"
+            },
+            {
+              "title": "Avant l’exercice",
+              "text": "Préparer l’examen n’autorise pas encore le transport de clients.",
+              "anchor_text": "Préparer l’examen"
+            }
+          ]
+        },
+        {
+          "ref": "A.04",
+          "title": "Entretenir son droit d’exercer",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES ÉCHÉANCES",
+              "text": "Les justificatifs n’ont pas tous la même validité.",
+              "anchor_text": "Les justificatifs"
+            },
+            {
+              "label": "CARTE ET FORMATION",
+              "text": "Cycle de 5 ans ; formation continue de 14 heures.",
+              "anchor_text": "La carte VTC"
+            },
+            {
+              "label": "L’APTITUDE MÉDICALE",
+              "text": "Sa durée dépend notamment de l’âge et de la décision médicale.",
+              "anchor_text": "La validité médicale"
+            }
+          ]
+        },
+        {
+          "ref": "A.04",
+          "title": "Entretenir son droit d’exercer",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Avant l’échéance",
+              "text": "Suspension, retrait ou assurance interrompue : activité compromise.",
+              "anchor_text": "Une suspension"
+            },
+            {
+              "title": "Le suivi",
+              "text": "Alerte anticipée, dépôt du dossier, preuve de réception.",
+              "anchor_text": "Utilisez un calendrier"
+            },
+            {
+              "title": "Pendant l’activité",
+              "text": "Carte apposée ; photographie visible de l’extérieur.",
+              "anchor_text": "Pendant l’activité"
+            }
+          ]
+        },
+        {
+          "ref": "A.05",
+          "title": "Assurer le conducteur et l’activité",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "L’USAGE ASSURÉ",
+              "text": "Couvrir le transport de personnes à titre onéreux.",
+              "anchor_text": "L’assurance automobile"
+            },
+            {
+              "label": "LA LIMITE",
+              "text": "Une assurance privée ou domicile-travail ne suffit pas.",
+              "anchor_text": "Une assurance destinée"
+            },
+            {
+              "label": "LE JUSTIFICATIF",
+              "text": "Il reste à présenter lors d’un contrôle.",
+              "anchor_text": "Le conducteur doit"
+            }
+          ]
+        },
+        {
+          "ref": "A.05",
+          "title": "Assurer le conducteur et l’activité",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La RC d’exploitation",
+              "text": "Selon le contrat : dommages professionnels hors circulation.",
+              "anchor_text": "La responsabilité civile"
+            },
+            {
+              "title": "Le contrat",
+              "text": "Examiner les exclusions et déclarer l’usage réel du véhicule.",
+              "anchor_text": "Franchise"
+            },
+            {
+              "title": "La portée",
+              "text": "Indemniser un dommage n’efface ni infraction ni sanction pénale.",
+              "anchor_text": "Une responsabilité civile"
+            }
+          ]
+        },
+        {
+          "ref": "A.06",
+          "title": "Accueillir sans discriminer",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA DISCRIMINATION",
+              "text": "Traitement défavorable lié à un critère protégé.",
+              "anchor_text": "Une discrimination"
+            },
+            {
+              "label": "LE REFUS DE SERVICE",
+              "text": "Origine, handicap, sexe, religion, orientation sexuelle : refus interdit.",
+              "anchor_text": "Refuser un service"
+            },
+            {
+              "label": "D’AUTRES CRITÈRES",
+              "text": "Âge, santé, grossesse, apparence, résidence, entre autres.",
+              "anchor_text": "Le Code pénal"
+            }
+          ]
+        },
+        {
+          "ref": "A.06",
+          "title": "Accueillir sans discriminer",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La contrainte réelle",
+              "text": "Distinguer le motif discriminatoire de l’impossibilité objective.",
+              "anchor_text": "Il faut distinguer"
+            },
+            {
+              "title": "La réponse",
+              "text": "Expliquer les faits, proposer une solution, tracer la décision.",
+              "anchor_text": "Expliquer les faits"
+            },
+            {
+              "title": "Le motif illégitime",
+              "text": "Ni préférence personnelle ni demande discriminatoire d’un partenaire.",
+              "anchor_text": "Une préférence personnelle"
+            }
+          ]
+        },
+        {
+          "ref": "A.07",
+          "title": "Prévenir les violences sexistes et sexuelles",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES COMPORTEMENTS",
+              "text": "Propos ou gestes sexistes : dignité et sécurité en jeu.",
+              "anchor_text": "Un propos"
+            },
+            {
+              "label": "LES QUALIFICATIONS",
+              "text": "Outrage, harcèlement, agression sexuelle et viol sont distincts.",
+              "anchor_text": "L’outrage"
+            },
+            {
+              "label": "LE HARCÈLEMENT",
+              "text": "Répétition ou pression grave, même unique, pour un acte sexuel.",
+              "anchor_text": "Le harcèlement"
+            }
+          ]
+        },
+        {
+          "ref": "A.07",
+          "title": "Prévenir les violences sexistes et sexuelles",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le consentement",
+              "text": "Libre, éclairé, spécifique, préalable et révocable.",
+              "anchor_text": "Depuis novembre 2025"
+            },
+            {
+              "title": "La relation",
+              "text": "Distance respectueuse : ni remarque intime ni contact imposé.",
+              "anchor_text": "Dans la relation professionnelle"
+            },
+            {
+              "title": "Aucune supposition",
+              "text": "Tenue, alcool et gentillesse ne valent pas consentement.",
+              "anchor_text": "Une tenue"
+            }
+          ]
+        },
+        {
+          "ref": "A.08",
+          "title": "Aider une personne en danger",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA PRIORITÉ",
+              "text": "Assurer la sécurité, sans mener l’enquête.",
+              "anchor_text": "Votre priorité"
+            },
+            {
+              "label": "L’ÉCOUTE",
+              "text": "Ne pas culpabiliser ; demander les besoins ; éviter le danger.",
+              "anchor_text": "Si une personne"
+            },
+            {
+              "label": "EN CIRCULATION",
+              "text": "Stabiliser la conduite, puis chercher un arrêt sûr.",
+              "anchor_text": "En circulation"
+            }
+          ]
+        },
+        {
+          "ref": "A.08",
+          "title": "Aider une personne en danger",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Les urgences",
+              "text": "17 ou 112 ; 15 pour une urgence médicale.",
+              "anchor_text": "Pour une urgence"
+            },
+            {
+              "title": "Le 114",
+              "text": "Accessible notamment par SMS lorsqu’il est impossible de parler.",
+              "anchor_text": "Le 114"
+            },
+            {
+              "title": "L’information",
+              "text": "3919 : violences faites aux femmes. 116 006 : aide aux victimes.",
+              "anchor_text": "Le 3919"
+            }
+          ]
+        },
+        {
+          "ref": "A.09",
+          "title": "Adapter le service au handicap",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE HANDICAP",
+              "text": "Il peut être visible ou invisible.",
+              "anchor_text": "Un handicap"
+            },
+            {
+              "label": "LE PASSAGER",
+              "text": "S’adresser à lui et demander avant de toucher ou d’aider.",
+              "anchor_text": "Adressez-vous"
+            },
+            {
+              "label": "LES BESOINS",
+              "text": "Communication, temps, espace : questionner sans supposer.",
+              "anchor_text": "Les besoins"
+            }
+          ]
+        },
+        {
+          "ref": "A.09",
+          "title": "Adapter le service au handicap",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le chien d’assistance",
+              "text": "Droit d’accès dans les conditions légales, sans supplément.",
+              "anchor_text": "Les chiens guides"
+            },
+            {
+              "title": "Le véhicule",
+              "text": "Un VTC classique ne permet pas toujours de rester dans son fauteuil.",
+              "anchor_text": "Un VTC classique"
+            },
+            {
+              "title": "La réservation",
+              "text": "Vérifier les possibilités techniques et chercher une solution adaptée.",
+              "anchor_text": "Vérifiez les possibilités"
+            }
+          ]
+        },
+        {
+          "ref": "A.10",
+          "title": "Protéger les données des passagers",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES DONNÉES",
+              "text": "Nom, téléphone, adresse et horaires sont personnels.",
+              "anchor_text": "Une réservation"
+            },
+            {
+              "label": "LA FINALITÉ",
+              "text": "Définir le besoin, les accès et la durée de conservation.",
+              "anchor_text": "Définissez pourquoi"
+            },
+            {
+              "label": "LA NÉCESSITÉ",
+              "text": "Une copie d’identité sans nécessité n’est pas une bonne habitude.",
+              "anchor_text": "Collecter une copie"
+            }
+          ]
+        },
+        {
+          "ref": "A.10",
+          "title": "Protéger les données des passagers",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Les accès",
+              "text": "Verrouiller les appareils ; limiter les accès et les diffusions.",
+              "anchor_text": "Verrouillez les appareils"
+            },
+            {
+              "title": "L’incident",
+              "text": "Documenter et traiter ; notifier si le risque le nécessite.",
+              "anchor_text": "Un incident"
+            },
+            {
+              "title": "La caméra",
+              "text": "Respecter l’information et la protection des données.",
+              "anchor_text": "Une caméra embarquée"
+            }
+          ]
+        },
+        {
+          "ref": "A.11",
+          "title": "Réagir à un contrôle",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE PÉRIMÈTRE",
+              "text": "Conducteur, véhicule, exploitant et réservation.",
+              "anchor_text": "Un contrôle"
+            },
+            {
+              "label": "LES DOCUMENTS",
+              "text": "Carte, assurances, véhicule et réservation préalable.",
+              "anchor_text": "Les agents"
+            },
+            {
+              "label": "L’ACCÈS AUX PREUVES",
+              "text": "Prévoir un dossier accessible même sans réseau.",
+              "anchor_text": "Un écran d’application"
+            }
+          ]
+        },
+        {
+          "ref": "A.11",
+          "title": "Réagir à un contrôle",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La réponse",
+              "text": "Rester courtois et répondre précisément aux agents.",
+              "anchor_text": "Restez courtois"
+            },
+            {
+              "title": "Les preuves",
+              "text": "Ne pas inventer de réservation ou modifier les heures.",
+              "anchor_text": "Vous ne devez"
+            },
+            {
+              "title": "Les suites",
+              "text": "Conserver les références et respecter les délais indiqués.",
+              "anchor_text": "Conservez ensuite"
+            }
+          ]
+        },
+        {
+          "ref": "A.12",
+          "title": "Comprendre les responsabilités",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "CIVIL",
+              "text": "Réparation d’un dommage.",
+              "anchor_text": "La responsabilité civile"
+            },
+            {
+              "label": "PÉNAL",
+              "text": "Infraction et sanction.",
+              "anchor_text": "La responsabilité pénale"
+            },
+            {
+              "label": "ADMINISTRATIF",
+              "text": "Suspension ou retrait d’un titre selon les conditions prévues.",
+              "anchor_text": "L’autorité administrative"
+            }
+          ]
+        },
+        {
+          "ref": "A.12",
+          "title": "Comprendre les responsabilités",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La réservation préalable",
+              "text": "Son non-respect est sévèrement sanctionné.",
+              "anchor_text": "Le non-respect"
+            },
+            {
+              "title": "Les faits visés par le texte",
+              "text": "Jusqu’à 3 ans et 45 000 € pour une personne physique.",
+              "anchor_text": "Depuis le 27 juin 2026"
+            },
+            {
+              "title": "La qualification",
+              "text": "Ne pas confondre chaque irrégularité documentaire avec ce délit.",
+              "anchor_text": "Il faut consulter"
+            }
+          ]
+        }
+      ]
+    },
+    "B": {
+      "scenes": [
+        {
+          "ref": "B.01",
+          "title": "Choisir un cadre juridique",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "ENTREPRISE INDIVIDUELLE",
+              "text": "Elle permet d’exercer en nom propre.",
+              "anchor_text": "L’entreprise individuelle"
+            },
+            {
+              "label": "EURL ET SASU",
+              "text": "Sociétés à associé unique, avec une personnalité juridique distincte.",
+              "anchor_text": "L’EURL"
+            },
+            {
+              "label": "MICRO-ENTREPRISE",
+              "text": "Un régime simplifié, pas une société supplémentaire.",
+              "anchor_text": "La micro-entreprise"
+            }
+          ]
+        },
+        {
+          "ref": "B.01",
+          "title": "Choisir un cadre juridique",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Quatre dimensions",
+              "text": "Responsabilités, administration, fiscalité et protection sociale.",
+              "anchor_text": "Comparez quatre dimensions"
+            },
+            {
+              "title": "Les limites",
+              "text": "Le capital n’est pas un revenu ; le risque personnel peut subsister.",
+              "anchor_text": "Le capital"
+            },
+            {
+              "title": "Le choix",
+              "text": "Préparer un prévisionnel, avec un professionnel si nécessaire.",
+              "anchor_text": "Aucun statut"
+            }
+          ]
+        },
+        {
+          "ref": "B.02",
+          "title": "Créer et organiser l’activité",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE PROJET",
+              "text": "Estimer le marché, les coûts et les financements.",
+              "anchor_text": "Le projet"
+            },
+            {
+              "label": "LE GUICHET UNIQUE",
+              "text": "Il centralise les formalités d’entreprise.",
+              "anchor_text": "Les formalités"
+            },
+            {
+              "label": "LE DOSSIER VTC",
+              "text": "Un volet entreprise et un volet métier.",
+              "anchor_text": "L’immatriculation"
+            }
+          ]
+        },
+        {
+          "ref": "B.02",
+          "title": "Créer et organiser l’activité",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Les identifiants",
+              "text": "SIREN : entreprise. SIRET : établissement. APE : activité statistique.",
+              "anchor_text": "Le SIREN"
+            },
+            {
+              "title": "Le classement",
+              "text": "Contrats, attestations, identifiants et accès professionnels.",
+              "anchor_text": "Classez les contrats"
+            },
+            {
+              "title": "Les organismes",
+              "text": "INPI : guichet. Urssaf : social. Fisc : impôts. CMA : métier et examen.",
+              "anchor_text": "Les organismes"
+            }
+          ]
+        },
+        {
+          "ref": "B.03",
+          "title": "Lire un bilan",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA DATE",
+              "text": "Le bilan est une photographie à une date donnée.",
+              "anchor_text": "Le bilan"
+            },
+            {
+              "label": "L’ACTIF",
+              "text": "Les emplois : véhicule, créances clients, banque.",
+              "anchor_text": "L’actif"
+            },
+            {
+              "label": "LE PASSIF",
+              "text": "Les ressources : capitaux propres, emprunts et dettes.",
+              "anchor_text": "Le passif"
+            }
+          ]
+        },
+        {
+          "ref": "B.03",
+          "title": "Lire un bilan",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Créance et dette",
+              "text": "Créance : le client doit payer. Dette : l’entreprise doit payer.",
+              "anchor_text": "Une créance"
+            },
+            {
+              "title": "Le véhicule durable",
+              "text": "Immobilisation ; valeur comptable diminuée par l’amortissement.",
+              "anchor_text": "Un véhicule"
+            },
+            {
+              "title": "La banque",
+              "text": "Un poste du bilan, qui ne résume ni la valeur ni le bénéfice.",
+              "anchor_text": "Le solde bancaire"
+            }
+          ]
+        },
+        {
+          "ref": "B.04",
+          "title": "Lire le résultat",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA PÉRIODE",
+              "text": "Le compte de résultat décrit une période.",
+              "anchor_text": "Le compte de résultat"
+            },
+            {
+              "label": "LE RÉSULTAT",
+              "text": "Comparer produits et charges : bénéfice ou perte.",
+              "anchor_text": "Les produits"
+            },
+            {
+              "label": "LES CHARGES",
+              "text": "Consommations, assurances, services, cotisations, amortissements.",
+              "anchor_text": "Les charges"
+            }
+          ]
+        },
+        {
+          "ref": "B.04",
+          "title": "Lire le résultat",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le véhicule",
+              "text": "L’amortissement répartit le coût sur la durée d’utilisation comptable.",
+              "anchor_text": "Au régime réel"
+            },
+            {
+              "title": "L’emprunt",
+              "text": "Capital remboursé : pas une charge. Intérêts : en principe une charge.",
+              "anchor_text": "Le remboursement"
+            },
+            {
+              "title": "La distinction",
+              "text": "Résultat et trésorerie ne varient pas toujours ensemble.",
+              "anchor_text": "Ces différences"
+            }
+          ]
+        },
+        {
+          "ref": "B.05",
+          "title": "Classer les coûts",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "CHARGE FIXE",
+              "text": "Relativement stable : abonnement, assurance, location mensuelle.",
+              "anchor_text": "Une charge fixe"
+            },
+            {
+              "label": "CHARGE VARIABLE",
+              "text": "Liée au volume : énergie, commission, frais des trajets.",
+              "anchor_text": "Une charge variable"
+            },
+            {
+              "label": "LE CLASSEMENT",
+              "text": "Il dépend du contrat et de la période ; un coût peut être mixte.",
+              "anchor_text": "La classification"
+            }
+          ]
+        },
+        {
+          "ref": "B.05",
+          "title": "Classer les coûts",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Les kilomètres",
+              "text": "Compter le trajet, l’approche et le retour sans client.",
+              "anchor_text": "Pour calculer"
+            },
+            {
+              "title": "Le temps",
+              "text": "Inclure attente, préparation et administration.",
+              "anchor_text": "Ajoutez le temps"
+            },
+            {
+              "title": "Les dépenses oubliées",
+              "text": "Préparer entretien, pneus, nettoyage et renouvellement du véhicule.",
+              "anchor_text": "Ne confondez pas"
+            }
+          ]
+        },
+        {
+          "ref": "B.06",
+          "title": "Comprendre la TVA",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "TVA COLLECTÉE",
+              "text": "La TVA des ventes n’appartient pas à l’entreprise.",
+              "anchor_text": "La TVA collectée"
+            },
+            {
+              "label": "TVA DÉDUCTIBLE",
+              "text": "Certains achats réduisent la TVA à reverser, sous conditions.",
+              "anchor_text": "La TVA déductible"
+            },
+            {
+              "label": "L’EXEMPLE DU MANUEL",
+              "text": "Transport intérieur de voyageurs : 10 % si l’entreprise est redevable.",
+              "anchor_text": "Dans les exemples"
+            }
+          ]
+        },
+        {
+          "ref": "B.06",
+          "title": "Comprendre la TVA",
+          "kind": "method",
+          "points": [
+            {
+              "title": "HT vers TTC",
+              "text": "TTC = HT × (1 + taux).",
+              "anchor_text": "Pour obtenir le TTC"
+            },
+            {
+              "title": "TTC vers HT",
+              "text": "HT = TTC ÷ (1 + taux). Retirer 10 % du TTC ne suffit pas.",
+              "anchor_text": "Pour retrouver le HT"
+            },
+            {
+              "title": "Franchise en base",
+              "text": "Pas de TVA facturée ni déduite. Régime micro et franchise sont distincts.",
+              "anchor_text": "En franchise en base"
+            }
+          ]
+        },
+        {
+          "ref": "B.07",
+          "title": "Piloter le régime micro",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES COTISATIONS",
+              "text": "Calculées sur le chiffre d’affaires encaissé, au taux applicable.",
+              "anchor_text": "En micro-BIC"
+            },
+            {
+              "label": "LE BÉNÉFICE IMPOSABLE",
+              "text": "Déterminé par un abattement forfaitaire, hors option particulière.",
+              "anchor_text": "le bénéfice imposable"
+            },
+            {
+              "label": "LES DÉPENSES",
+              "text": "Elles restent à payer, sans déduction une à une pour ce calcul fiscal.",
+              "anchor_text": "Les dépenses réelles"
+            }
+          ]
+        },
+        {
+          "ref": "B.07",
+          "title": "Piloter le régime micro",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le seuil micro",
+              "text": "83 600 € en 2026–2028, sous règles d’appréciation et de prorata.",
+              "anchor_text": "Pour les prestations"
+            },
+            {
+              "title": "La franchise de TVA",
+              "text": "Cas général étudié : 37 500 € année passée ; 41 250 € année en cours.",
+              "anchor_text": "Les seuils de franchise"
+            },
+            {
+              "title": "Le suivi",
+              "text": "Anticiper avec le SIE ; distinguer plafond micro et franchise de TVA.",
+              "anchor_text": "Anticipez tout"
+            }
+          ]
+        },
+        {
+          "ref": "B.08",
+          "title": "Construire la trésorerie",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE PLAN",
+              "text": "Suivre les encaissements et décaissements, mois par mois.",
+              "anchor_text": "Un plan"
+            },
+            {
+              "label": "LE SOLDE FINAL",
+              "text": "Solde initial + entrées − sorties.",
+              "anchor_text": "On part du solde initial"
+            },
+            {
+              "label": "LE MOIS SUIVANT",
+              "text": "Reprendre le solde final comme nouveau solde de départ.",
+              "anchor_text": "Le mois suivant"
+            }
+          ]
+        },
+        {
+          "ref": "B.08",
+          "title": "Construire la trésorerie",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le client",
+              "text": "Une course facturée aujourd’hui peut être réglée plus tard.",
+              "anchor_text": "Une course facturée"
+            },
+            {
+              "title": "Les sorties",
+              "text": "Énergie, véhicule et cotisations sont à financer entre-temps.",
+              "anchor_text": "Entre-temps"
+            },
+            {
+              "title": "Le décalage",
+              "text": "Le besoin en fonds de roulement reflète notamment ces délais.",
+              "anchor_text": "Le besoin en fonds"
+            }
+          ]
+        },
+        {
+          "ref": "B.09",
+          "title": "Atteindre le seuil de rentabilité",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA MARGE SUR COÛTS VARIABLES",
+              "text": "Chiffre d’affaires − charges variables.",
+              "anchor_text": "La marge sur coûts variables"
+            },
+            {
+              "label": "SON TAUX",
+              "text": "Marge sur coûts variables ÷ chiffre d’affaires.",
+              "anchor_text": "Son taux"
+            },
+            {
+              "label": "LE SEUIL DE RENTABILITÉ",
+              "text": "Charges fixes ÷ taux de marge sur coûts variables.",
+              "anchor_text": "Le seuil de rentabilité"
+            }
+          ]
+        },
+        {
+          "ref": "B.09",
+          "title": "Atteindre le seuil de rentabilité",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le point mort",
+              "text": "Moment où le seuil est atteint, selon la répartition des ventes.",
+              "anchor_text": "Le point mort"
+            },
+            {
+              "title": "Le périmètre",
+              "text": "Vérifier charges, rémunérations et cotisations incluses.",
+              "anchor_text": "La méthode"
+            },
+            {
+              "title": "Les hypothèses",
+              "text": "Trop de courses prévues ou des kilomètres oubliés faussent le résultat.",
+              "anchor_text": "Une moyenne"
+            }
+          ]
+        },
+        {
+          "ref": "B.10",
+          "title": "Financer le véhicule",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "L’ACHAT COMPTANT",
+              "text": "Il mobilise immédiatement la trésorerie.",
+              "anchor_text": "L’achat comptant"
+            },
+            {
+              "label": "L’EMPRUNT",
+              "text": "Il répartit les paiements et ajoute intérêts et frais.",
+              "anchor_text": "L’emprunt"
+            },
+            {
+              "label": "LA LOCATION",
+              "text": "Examiner conditions et coût total, au-delà de la mensualité.",
+              "anchor_text": "La location"
+            }
+          ]
+        },
+        {
+          "ref": "B.10",
+          "title": "Financer le véhicule",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La comparaison",
+              "text": "Mêmes durées, kilomètres et services ; distinguer revente et option.",
+              "anchor_text": "Comparez des durées"
+            },
+            {
+              "title": "L’amortissement",
+              "text": "Il décrit l’utilisation comptable, pas le remboursement bancaire.",
+              "anchor_text": "L’amortissement comptable"
+            },
+            {
+              "title": "La TVA",
+              "text": "La déduction dépend du régime et de l’usage du véhicule.",
+              "anchor_text": "Les règles de déduction"
+            }
+          ]
+        },
+        {
+          "ref": "B.11",
+          "title": "Facturer et conserver les preuves",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA FACTURE",
+              "text": "Vendeur, client, date, numéro, prestation, montants et taxes.",
+              "anchor_text": "La facture"
+            },
+            {
+              "label": "LES MENTIONS",
+              "text": "Elles varient selon le statut et le client.",
+              "anchor_text": "Les mentions"
+            },
+            {
+              "label": "LE CLIENT PROFESSIONNEL",
+              "text": "Traiter paiement, pénalités et indemnité de recouvrement.",
+              "anchor_text": "Pour un professionnel"
+            }
+          ]
+        },
+        {
+          "ref": "B.11",
+          "title": "Facturer et conserver les preuves",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La correction",
+              "text": "Garder une trace : avoir ou facture rectificative.",
+              "anchor_text": "Une facture ne"
+            },
+            {
+              "title": "La réforme",
+              "text": "Réception : septembre 2026. PME/micro : émission en septembre 2027.",
+              "anchor_text": "Depuis septembre 2026"
+            },
+            {
+              "title": "Le format",
+              "text": "Un PDF envoyé par courriel ne suffit pas à lui seul.",
+              "anchor_text": "Un PDF"
+            }
+          ]
+        },
+        {
+          "ref": "B.12",
+          "title": "Organiser le travail et les obligations",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "L’INDÉPENDANT",
+              "text": "Il organise son activité dans son cadre contractuel et réglementaire.",
+              "anchor_text": "Un indépendant"
+            },
+            {
+              "label": "LE SALARIÉ",
+              "text": "Il travaille sous subordination, avec contrat et obligations sociales.",
+              "anchor_text": "Un salarié"
+            },
+            {
+              "label": "LA RELATION RÉELLE",
+              "text": "Les conditions d’exécution comptent, au-delà de l’étiquette.",
+              "anchor_text": "L’étiquette choisie"
+            }
+          ]
+        },
+        {
+          "ref": "B.12",
+          "title": "Organiser le travail et les obligations",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’employeur",
+              "text": "Formalités, rémunération, temps de travail et prévention.",
+              "anchor_text": "L’entreprise qui embauche"
+            },
+            {
+              "title": "L’indépendant",
+              "text": "Prévoir cotisations, impôt, CFE éventuelle et échéances.",
+              "anchor_text": "Pour l’indépendant"
+            },
+            {
+              "title": "Les interlocuteurs",
+              "text": "CMA, Urssaf, SIE et professionnels : chacun son domaine.",
+              "anchor_text": "La CMA"
+            }
+          ]
+        }
+      ]
+    },
+    "C": {
+      "scenes": [
+        {
+          "ref": "C.01",
+          "title": "Préparer le départ",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "L’OBSERVATION",
+              "text": "Pneus, feux, vitres, essuie-glaces, niveaux et voyants.",
+              "anchor_text": "Avant la première course"
+            },
+            {
+              "label": "LE CONTRÔLE QUOTIDIEN",
+              "text": "Le contrôle technique ne remplace pas l’observation avant départ.",
+              "anchor_text": "Le contrôle technique"
+            },
+            {
+              "label": "L’ANOMALIE",
+              "text": "Voyant rouge, fuite ou pneu abîmé : le départ peut être impossible.",
+              "anchor_text": "Un voyant rouge"
+            }
+          ]
+        },
+        {
+          "ref": "C.01",
+          "title": "Préparer le départ",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le poste de conduite",
+              "text": "Régler siège, appuie-tête, volant et rétroviseurs ; ranger les objets.",
+              "anchor_text": "Dans l’habitacle"
+            },
+            {
+              "title": "Les équipements",
+              "text": "Préparer la navigation à l’arrêt et vérifier le matériel passagers.",
+              "anchor_text": "Préparez la navigation"
+            },
+            {
+              "title": "La décision",
+              "text": "Ne pas neutraliser une alerte ; protéger et organiser une solution.",
+              "anchor_text": "Ne neutralisez pas"
+            }
+          ]
+        },
+        {
+          "ref": "C.02",
+          "title": "Choisir la bonne vitesse",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE PRINCIPE",
+              "text": "La limitation est un maximum, pas une vitesse à atteindre.",
+              "anchor_text": "La limitation"
+            },
+            {
+              "label": "PAR TEMPS SEC",
+              "text": "Autoroute : 130. Chaussées séparées : 110. Sans séparateur : 80 km/h.",
+              "anchor_text": "En règle générale"
+            },
+            {
+              "label": "LES PARTICULARITÉS",
+              "text": "Certains tronçons : 90. En ville : 50, avec de nombreuses zones à 30.",
+              "anchor_text": "certains tronçons"
+            }
+          ]
+        },
+        {
+          "ref": "C.02",
+          "title": "Choisir la bonne vitesse",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Sous la pluie",
+              "text": "Plafonds usuels : 110 / 100 / 80 km/h selon le type de route.",
+              "anchor_text": "Sous la pluie"
+            },
+            {
+              "title": "Visibilité inférieure à 50 m",
+              "text": "50 km/h maximum sur tous les réseaux.",
+              "anchor_text": "Si la visibilité"
+            },
+            {
+              "title": "La limite applicable",
+              "text": "Respecter toute limitation plus basse ; ralentir encore si nécessaire.",
+              "anchor_text": "La signalisation"
+            }
+          ]
+        },
+        {
+          "ref": "C.03",
+          "title": "Garder une marge de sécurité",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA DISTANCE D’ARRÊT",
+              "text": "Distance de réaction + distance de freinage.",
+              "anchor_text": "La distance d’arrêt"
+            },
+            {
+              "label": "LES FACTEURS",
+              "text": "Fatigue et distraction : réaction. Pneus, route, vitesse : freinage.",
+              "anchor_text": "La fatigue"
+            },
+            {
+              "label": "LA VITESSE",
+              "text": "Vitesse doublée ≈ freinage multiplié par 4, à conditions comparables.",
+              "anchor_text": "À conditions comparables"
+            }
+          ]
+        },
+        {
+          "ref": "C.03",
+          "title": "Garder une marge de sécurité",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’intervalle",
+              "text": "Au moins 2 secondes ; davantage si les conditions se dégradent.",
+              "anchor_text": "L’intervalle minimal"
+            },
+            {
+              "title": "Le repère fixe",
+              "text": "Le véhicule précédent passe le repère : commencer à compter.",
+              "anchor_text": "Pour l’évaluer"
+            },
+            {
+              "title": "Le passage",
+              "text": "Compter jusqu’à atteindre le même repère à votre tour.",
+              "anchor_text": "quand le véhicule précédent"
+            }
+          ]
+        },
+        {
+          "ref": "C.04",
+          "title": "Observer et partager la route",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "Le regard",
+              "text": "Observer loin devant, sur les côtés et dans les rétroviseurs.",
+              "anchor_text": "Balayez le regard"
+            },
+            {
+              "label": "Les indices",
+              "text": "Vélo, porte entrouverte, piéton masqué ou bus à l’arrêt.",
+              "anchor_text": "Cherchez les indices"
+            },
+            {
+              "label": "L’angle mort",
+              "text": "Le contrôler avant de se déporter ; les aides ne remplacent pas le regard.",
+              "anchor_text": "L’angle mort"
+            }
+          ]
+        },
+        {
+          "ref": "C.04",
+          "title": "Observer et partager la route",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le piéton",
+              "text": "Laisser passer celui qui est engagé ou manifeste son intention.",
+              "anchor_text": "Laissez passer"
+            },
+            {
+              "title": "Le cycliste",
+              "text": "Écart latéral minimal : 1 m en ville ; 1,50 m hors agglomération.",
+              "anchor_text": "Pour dépasser un cycle"
+            },
+            {
+              "title": "L’espace",
+              "text": "Attendre si la marge manque, même si le client est pressé.",
+              "anchor_text": "Si l’espace manque"
+            }
+          ]
+        },
+        {
+          "ref": "C.05",
+          "title": "Priorités et signalisation",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "L’ORGANISATION",
+              "text": "Agents, feux et signalisation organisent la circulation.",
+              "anchor_text": "Les indications"
+            },
+            {
+              "label": "LA VÉRIFICATION",
+              "text": "Même prioritaire, vérifier que la voie est libre.",
+              "anchor_text": "Un panneau de priorité"
+            },
+            {
+              "label": "L’ARRÊT",
+              "text": "Stop : arrêt effectif. Cédez-le-passage : arrêt si nécessaire.",
+              "anchor_text": "Au stop"
+            }
+          ]
+        },
+        {
+          "ref": "C.05",
+          "title": "Priorités et signalisation",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le giratoire",
+              "text": "Avec cédez-le-passage : priorité aux véhicules sur l’anneau.",
+              "anchor_text": "Un carrefour"
+            },
+            {
+              "title": "Le rond-point",
+              "text": "Sans ce régime : la priorité à droite peut s’appliquer.",
+              "anchor_text": "Un rond-point"
+            },
+            {
+              "title": "La signalisation réelle",
+              "text": "Le GPS n’autorise ni sens interdit ni voie réservée non autorisée.",
+              "anchor_text": "Une flèche du GPS"
+            }
+          ]
+        },
+        {
+          "ref": "C.06",
+          "title": "Installer les passagers",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA PLACE",
+              "text": "Chaque occupant : place autorisée et retenue adaptée.",
+              "anchor_text": "Chaque occupant"
+            },
+            {
+              "label": "LES MINEURS",
+              "text": "Le conducteur doit s’assurer qu’ils sont attachés.",
+              "anchor_text": "Le conducteur"
+            },
+            {
+              "label": "MOINS DE 10 ANS",
+              "text": "Siège homologué adapté selon le Code ; exemption taxi ≠ VTC.",
+              "anchor_text": "Pour un enfant"
+            }
+          ]
+        },
+        {
+          "ref": "C.06",
+          "title": "Installer les passagers",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La réservation",
+              "text": "Préparer le dispositif de retenue à l’avance.",
+              "anchor_text": "Préparez le dispositif"
+            },
+            {
+              "title": "L’installation",
+              "text": "Respecter les notices du siège et du véhicule, notamment pour l’airbag.",
+              "anchor_text": "L’installation"
+            },
+            {
+              "title": "Les bagages",
+              "text": "Garder la visibilité et retenir les objets lourds.",
+              "anchor_text": "Chargez les bagages"
+            }
+          ]
+        },
+        {
+          "ref": "C.07",
+          "title": "Prévenir la fatigue",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES SIGNES",
+              "text": "Bâillements, paupières lourdes, trajectoire ou souvenirs imprécis.",
+              "anchor_text": "La somnolence"
+            },
+            {
+              "label": "LE REPOS",
+              "text": "Fenêtre ouverte, musique et café ne le remplacent pas.",
+              "anchor_text": "Ouvrir la fenêtre"
+            },
+            {
+              "label": "L’HABITUDE",
+              "text": "L’expérience du métier ne protège pas de l’endormissement.",
+              "anchor_text": "L’habitude"
+            }
+          ]
+        },
+        {
+          "ref": "C.07",
+          "title": "Prévenir la fatigue",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’organisation",
+              "text": "Prévoir pauses et sommeil selon les horaires de service.",
+              "anchor_text": "Planifiez les pauses"
+            },
+            {
+              "title": "Le repère",
+              "text": "Pause au moins toutes les 2 heures ; plus tôt dès les signes de fatigue.",
+              "anchor_text": "Une pause"
+            },
+            {
+              "title": "L’arrêt sûr",
+              "text": "Se reposer dans un lieu sûr, pas sur la bande d’arrêt d’urgence.",
+              "anchor_text": "En cas de somnolence"
+            }
+          ]
+        },
+        {
+          "ref": "C.08",
+          "title": "Alcool, drogues et médicaments",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES EFFETS",
+              "text": "L’alcool altère jugement, perception et réaction.",
+              "anchor_text": "L’alcool"
+            },
+            {
+              "label": "LES SEUILS ÉNONCÉS",
+              "text": "0,5 g/L de sang ; 0,2 g/L pour les catégories concernées.",
+              "anchor_text": "Le seuil général"
+            },
+            {
+              "label": "LA PRÉVENTION",
+              "text": "La pratique la plus sûre : ne pas boire avant de conduire.",
+              "anchor_text": "La pratique professionnelle"
+            }
+          ]
+        },
+        {
+          "ref": "C.08",
+          "title": "Alcool, drogues et médicaments",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Les stupéfiants",
+              "text": "La conduite après usage est interdite.",
+              "anchor_text": "La conduite après usage"
+            },
+            {
+              "title": "Les médicaments",
+              "text": "Lire pictogrammes et notice ; demander conseil au professionnel de santé.",
+              "anchor_text": "Certains médicaments"
+            },
+            {
+              "title": "Les mélanges",
+              "text": "Ils peuvent aggraver les effets ; pas d’élimination rapide garantie.",
+              "anchor_text": "Les mélanges"
+            }
+          ]
+        },
+        {
+          "ref": "C.09",
+          "title": "Éviter les distractions",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE TÉLÉPHONE",
+              "text": "Tenu en main : interdit au conducteur en circulation.",
+              "anchor_text": "Le téléphone tenu"
+            },
+            {
+              "label": "LE DISPOSITIF À L’OREILLE",
+              "text": "Émission de son à l’oreille : interdite, sauf exceptions prévues.",
+              "anchor_text": "Le port à l’oreille"
+            },
+            {
+              "label": "LE MAINS LIBRES",
+              "text": "Un système intégré ne supprime pas la distraction mentale.",
+              "anchor_text": "Un système intégré"
+            }
+          ]
+        },
+        {
+          "ref": "C.09",
+          "title": "Éviter les distractions",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Avant le départ",
+              "text": "Régler trajet, musique et notifications.",
+              "anchor_text": "Réglez le trajet"
+            },
+            {
+              "title": "Un arrêt sûr",
+              "text": "Adresse, réservation et messages attendent un arrêt autorisé.",
+              "anchor_text": "Une adresse ambiguë"
+            },
+            {
+              "title": "Feu rouge et bouchon",
+              "text": "Ce ne sont pas des stationnements pour manipuler le téléphone.",
+              "anchor_text": "Un feu rouge"
+            }
+          ]
+        },
+        {
+          "ref": "C.10",
+          "title": "Conduire avec souplesse",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "L’ANTICIPATION",
+              "text": "Lever le pied tôt et éviter les freinages tardifs.",
+              "anchor_text": "Une conduite souple"
+            },
+            {
+              "label": "LA DOUCEUR",
+              "text": "Elle n’impose ni lenteur excessive ni hésitation.",
+              "anchor_text": "La douceur"
+            },
+            {
+              "label": "LE CONFORT",
+              "text": "Garder une marge et réduire les variations ressenties.",
+              "anchor_text": "Elle permet"
+            }
+          ]
+        },
+        {
+          "ref": "C.10",
+          "title": "Conduire avec souplesse",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Les commandes",
+              "text": "Adapter accélération, freinage et virages aux conditions.",
+              "anchor_text": "Adaptez l’accélération"
+            },
+            {
+              "title": "Le véhicule",
+              "text": "Pas de roue libre au point mort ; pression et charges à vérifier.",
+              "anchor_text": "Ne roulez pas"
+            },
+            {
+              "title": "L’électrique",
+              "text": "Anticiper autonomie réelle, météo et recharge.",
+              "anchor_text": "Sur un véhicule électrique"
+            }
+          ]
+        },
+        {
+          "ref": "C.11",
+          "title": "Météo, nuit et adhérence",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES CONDITIONS",
+              "text": "Pluie, brouillard, neige, verglas et nuit réduisent les marges.",
+              "anchor_text": "La pluie"
+            },
+            {
+              "label": "L’ADAPTATION",
+              "text": "Réduire l’allure et augmenter les distances ; choisir les feux adaptés.",
+              "anchor_text": "Diminuez l’allure"
+            },
+            {
+              "label": "L’ADHÉRENCE",
+              "text": "Éviter les gestes brusques si elle devient incertaine.",
+              "anchor_text": "Si l’adhérence"
+            }
+          ]
+        },
+        {
+          "ref": "C.11",
+          "title": "Météo, nuit et adhérence",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Avant le départ",
+              "text": "Vérifier restrictions, équipements hivernaux, fermetures et météo.",
+              "anchor_text": "Vérifiez avant"
+            },
+            {
+              "title": "Les aides",
+              "text": "Transmission intégrale et électronique n’annulent pas le freinage.",
+              "anchor_text": "Une transmission intégrale"
+            },
+            {
+              "title": "La décision",
+              "text": "Interrompre ou reporter le trajet si les conditions l’exigent.",
+              "anchor_text": "Si les conditions"
+            }
+          ]
+        },
+        {
+          "ref": "C.12",
+          "title": "Gérer panne et accident",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE SURACCIDENT",
+              "text": "Immobiliser au mieux, feux de détresse, gilet si sortie sûre.",
+              "anchor_text": "En cas d’incident"
+            },
+            {
+              "label": "SUR AUTOROUTE",
+              "text": "Rejoindre un refuge accessible derrière la glissière.",
+              "anchor_text": "Sur autoroute"
+            },
+            {
+              "label": "LE TRIANGLE",
+              "text": "Ne pas le poser si cela met votre vie en danger.",
+              "anchor_text": "Ne vous exposez pas"
+            }
+          ]
+        },
+        {
+          "ref": "C.12",
+          "title": "Gérer panne et accident",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’alerte",
+              "text": "112 ou moyen d’urgence : lieu, sens, repère, dangers et victimes.",
+              "anchor_text": "Alertez par le 112"
+            },
+            {
+              "title": "Les blessés",
+              "text": "Ne pas déplacer, sauf danger immédiat évitable sans s’exposer.",
+              "anchor_text": "Ne déplacez pas"
+            },
+            {
+              "title": "Le constat",
+              "text": "Lire avant de signer ; ne pas modifier seul un document signé.",
+              "anchor_text": "Le constat amiable"
+            }
+          ]
+        }
+      ]
+    },
+    "D": {
+      "scenes": [
+        {
+          "ref": "D.01",
+          "title": "Lire avec une intention",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "PREMIÈRE LECTURE",
+              "text": "Comprendre sujet, auteur, contexte et message principal.",
+              "anchor_text": "Une première lecture"
+            },
+            {
+              "label": "SECONDE LECTURE",
+              "text": "Chercher les informations utiles aux questions.",
+              "anchor_text": "La seconde"
+            },
+            {
+              "label": "LE REPÉRAGE",
+              "text": "Sélectionner noms, dates, conditions et idées structurantes.",
+              "anchor_text": "Souligner tout"
+            }
+          ]
+        },
+        {
+          "ref": "D.01",
+          "title": "Lire avec une intention",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Relever",
+              "text": "Retrouver un élément du document.",
+              "anchor_text": "« Relevez »"
+            },
+            {
+              "title": "Expliquer et justifier",
+              "text": "Montrer le sens ou le lien ; appuyer la réponse sur le texte.",
+              "anchor_text": "« expliquez »"
+            },
+            {
+              "title": "Rester dans le texte",
+              "text": "Une vérité générale ne répond pas forcément à la question posée.",
+              "anchor_text": "Ne répondez pas"
+            }
+          ]
+        },
+        {
+          "ref": "D.02",
+          "title": "Trouver l’information exacte",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "L’EXPLICITE",
+              "text": "L’information figure directement dans le document.",
+              "anchor_text": "Les informations explicites"
+            },
+            {
+              "label": "LA RECHERCHE",
+              "text": "Trouver les mots exacts, puis vérifier le contexte.",
+              "anchor_text": "Cherchez le groupe"
+            },
+            {
+              "label": "LES HORAIRES",
+              "text": "Réservation, prise en charge et arrivée sont trois données différentes.",
+              "anchor_text": "Un même texte"
+            }
+          ]
+        },
+        {
+          "ref": "D.02",
+          "title": "Trouver l’information exacte",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Les en-têtes",
+              "text": "Lire les intitulés et les unités des tableaux et courriels.",
+              "anchor_text": "Les tableaux"
+            },
+            {
+              "title": "Les voyageurs",
+              "text": "2 adultes + 1 enfant = 3 passagers, sans le conducteur.",
+              "anchor_text": "« 2 adultes"
+            },
+            {
+              "title": "La preuve",
+              "text": "Si l’information manque, ne pas l’inventer.",
+              "anchor_text": "Si une information"
+            }
+          ]
+        },
+        {
+          "ref": "D.03",
+          "title": "Distinguer fait et interprétation",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE FAIT",
+              "text": "Information présentée comme observable ou vérifiable.",
+              "anchor_text": "Un fait"
+            },
+            {
+              "label": "L’OPINION",
+              "text": "Elle exprime un jugement.",
+              "anchor_text": "Une opinion"
+            },
+            {
+              "label": "L’HYPOTHÈSE",
+              "text": "Une possibilité : conserver les mots qui indiquent l’incertitude.",
+              "anchor_text": "Une hypothèse"
+            }
+          ]
+        },
+        {
+          "ref": "D.03",
+          "title": "Distinguer fait et interprétation",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’inférence",
+              "text": "Une conclusion raisonnable et proportionnée aux indices.",
+              "anchor_text": "Une inférence"
+            },
+            {
+              "title": "La route fermée",
+              "text": "On peut en déduire qu’il faut chercher un autre itinéraire.",
+              "anchor_text": "Si un texte"
+            },
+            {
+              "title": "La limite",
+              "text": "On ne peut pas en déduire exactement 10 € de supplément.",
+              "anchor_text": "On ne peut pas"
+            }
+          ]
+        },
+        {
+          "ref": "D.04",
+          "title": "Suivre les pronoms",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE PRONOM",
+              "text": "Il évite de répéter le même nom.",
+              "anchor_text": "Les pronoms"
+            },
+            {
+              "label": "LE RÉFÉRENT",
+              "text": "Rechercher l’élément repris et vérifier le sens.",
+              "anchor_text": "Pour comprendre"
+            },
+            {
+              "label": "LA PROXIMITÉ",
+              "text": "Le nom le plus proche n’est pas toujours la réponse.",
+              "anchor_text": "Le nom le plus proche"
+            }
+          ]
+        },
+        {
+          "ref": "D.04",
+          "title": "Suivre les pronoms",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La phrase",
+              "text": "« Le chauffeur présente la facture au client, qui la vérifie »",
+              "anchor_text": "Dans « Le chauffeur"
+            },
+            {
+              "title": "Les référents",
+              "text": "« qui » = le client ; « la » = la facture.",
+              "anchor_text": "« qui » désigne"
+            },
+            {
+              "title": "La clarté",
+              "text": "Répéter un nom si le pronom rend la responsabilité ambiguë.",
+              "anchor_text": "Dans un message"
+            }
+          ]
+        },
+        {
+          "ref": "D.05",
+          "title": "Relier les idées",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA CAUSE",
+              "text": "« Parce que », « en raison de ».",
+              "anchor_text": "« Parce que »"
+            },
+            {
+              "label": "LA CONSÉQUENCE",
+              "text": "« Donc », « par conséquent ».",
+              "anchor_text": "« Donc »"
+            },
+            {
+              "label": "OPPOSITION ET BUT",
+              "text": "Opposition : « pourtant », « cependant ». But : « afin de ».",
+              "anchor_text": "« Pourtant »"
+            }
+          ]
+        },
+        {
+          "ref": "D.05",
+          "title": "Relier les idées",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Avec « pourtant »",
+              "text": "« Le client est arrivé tôt, pourtant la voiture était déjà prête »",
+              "anchor_text": "« Le client est arrivé tôt, pourtant"
+            },
+            {
+              "title": "Avec « donc »",
+              "text": "« Le client est arrivé tôt, donc la voiture était déjà prête »",
+              "anchor_text": "« Le client est arrivé tôt, donc"
+            },
+            {
+              "title": "Le lien logique",
+              "text": "Changer le connecteur change le sens ; choisir le lien utile.",
+              "anchor_text": "Dans une réponse courte"
+            }
+          ]
+        },
+        {
+          "ref": "D.06",
+          "title": "Comprendre les nuances",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES MOTS DE NUANCE",
+              "text": "Tous, certains, aucun, seulement, sauf, au moins, au plus.",
+              "anchor_text": "Des mots très courts"
+            },
+            {
+              "label": "LES BORNES",
+              "text": "Au moins 2 : 2 ou davantage. Au plus 2 : 2 ou moins.",
+              "anchor_text": "« Au moins deux »"
+            },
+            {
+              "label": "LA PORTÉE",
+              "text": "Remplacer « certains » par « tous » exagère le texte.",
+              "anchor_text": "Une proposition"
+            }
+          ]
+        },
+        {
+          "ref": "D.06",
+          "title": "Comprendre les nuances",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La condition",
+              "text": "« Le chauffeur attend si le client confirme son retard »",
+              "anchor_text": "« Le chauffeur attend"
+            },
+            {
+              "title": "La restriction",
+              "text": "« Ne… que » = seulement : des clients réservés.",
+              "anchor_text": "« Ne… que »"
+            },
+            {
+              "title": "La lecture complète",
+              "text": "Relire la phrase entière avant de choisir.",
+              "anchor_text": "Relisez la phrase entière"
+            }
+          ]
+        },
+        {
+          "ref": "D.07",
+          "title": "Enrichir le vocabulaire utile",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "PLUSIEURS SENS",
+              "text": "Un même mot peut prendre plusieurs sens.",
+              "anchor_text": "Un mot"
+            },
+            {
+              "label": "LA PRISE EN CHARGE",
+              "text": "Début de service, remboursement ou accompagnement selon le contexte.",
+              "anchor_text": "Dans le transport"
+            },
+            {
+              "label": "LE SYNONYME",
+              "text": "Examiner les mots voisins avant de le choisir.",
+              "anchor_text": "Recherchez les mots voisins"
+            }
+          ]
+        },
+        {
+          "ref": "D.07",
+          "title": "Enrichir le vocabulaire utile",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Les documents",
+              "text": "Réservation : service. Devis : offre. Facture : somme. Reçu : paiement.",
+              "anchor_text": "Distinguez les termes proches"
+            },
+            {
+              "title": "« Ponctuel »",
+              "text": "À l’heure ou occasionnel, selon la phrase.",
+              "anchor_text": "« Ponctuel »"
+            },
+            {
+              "title": "Le mot inconnu",
+              "text": "Observer sa famille, les exemples et les oppositions.",
+              "anchor_text": "Pour comprendre un mot inconnu"
+            }
+          ]
+        },
+        {
+          "ref": "D.08",
+          "title": "Maîtriser les temps utiles",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE PRÉSENT",
+              "text": "Situation actuelle ou habitude.",
+              "anchor_text": "Le présent"
+            },
+            {
+              "label": "LES TEMPS DU PASSÉ",
+              "text": "« J’ai confirmé la réservation. » / « La circulation était dense. »",
+              "anchor_text": "Le passé composé"
+            },
+            {
+              "label": "LE FUTUR SIMPLE",
+              "text": "« Je vous attendrai à l’entrée. »",
+              "anchor_text": "Le futur simple"
+            }
+          ]
+        },
+        {
+          "ref": "D.08",
+          "title": "Maîtriser les temps utiles",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La demande polie",
+              "text": "« Pourriez-vous préciser l’adresse ? »",
+              "anchor_text": "Le conditionnel"
+            },
+            {
+              "title": "Deux formes",
+              "text": "« Je serai » : futur. « Je serais » : conditionnel.",
+              "anchor_text": "Distinguez « je serai »"
+            },
+            {
+              "title": "Le retard",
+              "text": "Donner une heure estimée et indiquer qu’elle est prévisionnelle.",
+              "anchor_text": "Dans un message de retard"
+            }
+          ]
+        },
+        {
+          "ref": "D.09",
+          "title": "Soigner accords et homophones",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE VERBE",
+              "text": "« Les clients arrivent. » → accord avec le sujet.",
+              "anchor_text": "Le verbe"
+            },
+            {
+              "label": "L’ADJECTIF",
+              "text": "« Les valises sont lourdes. » → accord avec le nom.",
+              "anchor_text": "L’adjectif"
+            },
+            {
+              "label": "LE PARTICIPE",
+              "text": "Être : généralement avec le sujet. Avoir : vérifier la place du COD.",
+              "anchor_text": "Au passé composé"
+            }
+          ]
+        },
+        {
+          "ref": "D.09",
+          "title": "Soigner accords et homophones",
+          "kind": "method",
+          "points": [
+            {
+              "title": "« a » ou « à »",
+              "text": "« a » peut se remplacer par « avait ».",
+              "anchor_text": "« a » se remplace"
+            },
+            {
+              "title": "« sont » ou « son »",
+              "text": "« sont » → « étaient ». « son » exprime la possession.",
+              "anchor_text": "« sont » se remplace"
+            },
+            {
+              "title": "« -é » ou « -er »",
+              "text": "Faire le test : « vendu » ou « vendre ».",
+              "anchor_text": "Pour « -é »"
+            }
+          ]
+        },
+        {
+          "ref": "D.10",
+          "title": "Répondre à une question courte",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA FORME",
+              "text": "Une ou deux phrases, avec le sujet et l’information demandée.",
+              "anchor_text": "Une réponse courte"
+            },
+            {
+              "label": "LA CONSIGNE",
+              "text": "Deux raisons demandées : deux raisons distinctes.",
+              "anchor_text": "Si la consigne"
+            },
+            {
+              "label": "LA PRÉCISION",
+              "text": "Éviter les ajouts absents du texte.",
+              "anchor_text": "Une phrase précise"
+            }
+          ]
+        },
+        {
+          "ref": "D.10",
+          "title": "Répondre à une question courte",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La justification",
+              "text": "Relier la réponse à un fait du document ; reformuler si utile.",
+              "anchor_text": "Pour justifier"
+            },
+            {
+              "title": "Les formulations",
+              "text": "Éviter « car oui », jugements personnels et abréviations de messagerie.",
+              "anchor_text": "Évitez « car oui »"
+            },
+            {
+              "title": "L’orthographe",
+              "text": "Prévoir du temps pour relire les réponses rédigées.",
+              "anchor_text": "À l’épreuve de français"
+            }
+          ]
+        },
+        {
+          "ref": "D.11",
+          "title": "Écrire au client",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA STRUCTURE",
+              "text": "Objet clair, informations utiles et action attendue.",
+              "anchor_text": "Un message professionnel"
+            },
+            {
+              "label": "LES REPÈRES",
+              "text": "Qui écrit ? Quelle réservation ? Que faut-il confirmer ?",
+              "anchor_text": "Il indique"
+            },
+            {
+              "label": "LA POLITESSE",
+              "text": "Elle ne doit pas cacher une demande imprécise.",
+              "anchor_text": "La politesse"
+            }
+          ]
+        },
+        {
+          "ref": "D.11",
+          "title": "Écrire au client",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le retard",
+              "text": "Annoncer un horaire estimé et une solution si nécessaire.",
+              "anchor_text": "Pour annoncer un retard"
+            },
+            {
+              "title": "La relecture",
+              "text": "Contrôler montants, dates et adresses ; préserver la confidentialité.",
+              "anchor_text": "Les montants"
+            },
+            {
+              "title": "L’échange complexe",
+              "text": "Un appel peut aider ; confirmer les éléments importants par écrit.",
+              "anchor_text": "Quand un échange"
+            }
+          ]
+        },
+        {
+          "ref": "D.12",
+          "title": "Réussir la lecture d’examen",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "L’ÉPREUVE",
+              "text": "Texte de 15 à 20 lignes ; 7 QCM et 3 réponses courtes.",
+              "anchor_text": "L’épreuve s’appuie"
+            },
+            {
+              "label": "LA QUESTION",
+              "text": "Cherche-t-elle un détail, une idée ou un lien logique ?",
+              "anchor_text": "Toutes les questions"
+            },
+            {
+              "label": "LA PROPOSITION",
+              "text": "Lire jusqu’au bout ; surveiller « toujours » et « jamais ».",
+              "anchor_text": "Lisez chaque proposition"
+            }
+          ]
+        },
+        {
+          "ref": "D.12",
+          "title": "Réussir la lecture d’examen",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Une organisation possible",
+              "text": "Lire, repérer, rédiger les réponses courtes, puis relire.",
+              "anchor_text": "Une organisation possible"
+            },
+            {
+              "title": "Votre rythme",
+              "text": "Adapter l’organisation ; vérifier toutes les consignes.",
+              "anchor_text": "Adaptez ce partage"
+            },
+            {
+              "title": "L’orthographe",
+              "text": "Plus de 5 fautes dans les réponses courtes : retrait prévu de 1 point.",
+              "anchor_text": "Plus de cinq fautes"
+            }
+          ]
+        }
+      ]
+    },
+    "E": {
+      "scenes": [
+        {
+          "ref": "E.01",
+          "title": "Welcome on board",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "ACCUEILLIR",
+              "text": "Good morning / Good afternoon / Good evening.",
+              "anchor_text": "« Good morning »"
+            },
+            {
+              "label": "PRENDRE CONGÉ",
+              "text": "Good night : avant la nuit, pas pour accueillir.",
+              "anchor_text": "« Good night »"
+            },
+            {
+              "label": "SE PRÉSENTER",
+              "text": "My name is Lina. I’m your driver.",
+              "anchor_text": "My name is Lina."
+            }
+          ]
+        },
+        {
+          "ref": "E.01",
+          "title": "Welcome on board",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le verbe « be »",
+              "text": "I am / you are / he is / she is / we are / they are.",
+              "anchor_text": "Le verbe be"
+            },
+            {
+              "title": "La question",
+              "text": "Are you Mr Green?",
+              "anchor_text": "Are you Mr Green?"
+            },
+            {
+              "title": "La réponse courte",
+              "text": "Yes, I am.",
+              "anchor_text": "Yes, I am."
+            }
+          ]
+        },
+        {
+          "ref": "E.02",
+          "title": "Check the booking",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES MOTS INTERROGATIFS",
+              "text": "Who : qui. Where : où. When : quand. What : quoi/quel.",
+              "anchor_text": "Les mots interrogatifs"
+            },
+            {
+              "label": "LA DESTINATION",
+              "text": "Where are you going?",
+              "anchor_text": "Where are you going?"
+            },
+            {
+              "label": "LE NOMBRE DE PASSAGERS",
+              "text": "How many passengers are there?",
+              "anchor_text": "How many passengers are there?"
+            }
+          ]
+        },
+        {
+          "ref": "E.02",
+          "title": "Check the booking",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Avec « do »",
+              "text": "Do you have a booking?",
+              "anchor_text": "Do you have a booking?"
+            },
+            {
+              "title": "Avec « does »",
+              "text": "Does your colleague need a receipt?",
+              "anchor_text": "Does your colleague need a receipt?"
+            },
+            {
+              "title": "La réservation",
+              "text": "Booking : réservation. Book : réserver.",
+              "anchor_text": "« Booking »"
+            }
+          ]
+        },
+        {
+          "ref": "E.03",
+          "title": "Numbers, dates and times",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES HEURES",
+              "text": "Half past seven : 7 h 30. A quarter past seven : 7 h 15.",
+              "anchor_text": "Half past seven"
+            },
+            {
+              "label": "UNE AUTRE FAÇON",
+              "text": "A quarter to eight : 7 h 45. Seven thirty : 7 h 30.",
+              "anchor_text": "a quarter to eight"
+            },
+            {
+              "label": "LES REPÈRES",
+              "text": "12 June. At eight on Monday.",
+              "anchor_text": "Pour éviter l’ambiguïté"
+            }
+          ]
+        },
+        {
+          "ref": "E.03",
+          "title": "Numbers, dates and times",
+          "kind": "method",
+          "points": [
+            {
+              "title": "13 et 30",
+              "text": "Thirteen = 13 ; thirty = 30.",
+              "anchor_text": "Thirteen"
+            },
+            {
+              "title": "14 et 40",
+              "text": "Fourteen = 14 ; forty = 40.",
+              "anchor_text": "fourteen"
+            },
+            {
+              "title": "15 et 50",
+              "text": "Fifteen = 15 ; fifty = 50.",
+              "anchor_text": "fifteen"
+            }
+          ]
+        },
+        {
+          "ref": "E.04",
+          "title": "Find the meeting point",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA POSITION",
+              "text": "In : dans. At : à un point. Next to : à côté de.",
+              "anchor_text": "Les prépositions"
+            },
+            {
+              "label": "LES REPÈRES",
+              "text": "Opposite : en face de. Between : entre.",
+              "anchor_text": "opposite"
+            },
+            {
+              "label": "DEVANT ET DERRIÈRE",
+              "text": "In front of : devant. Behind : derrière.",
+              "anchor_text": "In front of"
+            }
+          ]
+        },
+        {
+          "ref": "E.04",
+          "title": "Find the meeting point",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Guider",
+              "text": "Turn left. Go straight ahead. Wait by the entrance.",
+              "anchor_text": "Turn left"
+            },
+            {
+              "title": "Préciser la position",
+              "text": "I’m waiting outside the terminal.",
+              "anchor_text": "I’m waiting outside the terminal"
+            },
+            {
+              "title": "Le rendez-vous",
+              "text": "Donner un point de rencontre autorisé et identifiable.",
+              "anchor_text": "Donnez le point de rencontre"
+            }
+          ]
+        },
+        {
+          "ref": "E.05",
+          "title": "Luggage and assistance",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES BAGAGES",
+              "text": "Luggage / baggage : généralement indénombrables.",
+              "anchor_text": "« Luggage »"
+            },
+            {
+              "label": "COMPTER",
+              "text": "Two bags / two suitcases / two pieces of luggage.",
+              "anchor_text": "On compte"
+            },
+            {
+              "label": "LE VOCABULAIRE",
+              "text": "Hand luggage : bagage à main. Boot / trunk : coffre.",
+              "anchor_text": "« Hand luggage »"
+            }
+          ]
+        },
+        {
+          "ref": "E.05",
+          "title": "Luggage and assistance",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Proposer de l’aide",
+              "text": "May I help you with your bags? / Would you like some help?",
+              "anchor_text": "May I help you with your bags?"
+            },
+            {
+              "title": "Attendre la réponse",
+              "text": "Demander avant de prendre un objet ou de toucher un équipement.",
+              "anchor_text": "Attendez la réponse"
+            },
+            {
+              "title": "« can » et « may »",
+              "text": "Can : capacité notamment. May : permission plus formelle.",
+              "anchor_text": "« Can »"
+            }
+          ]
+        },
+        {
+          "ref": "E.06",
+          "title": "Comfort and safety",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA CEINTURE",
+              "text": "Please fasten your seat belt.",
+              "anchor_text": "Please fasten your seat belt"
+            },
+            {
+              "label": "LA TEMPÉRATURE",
+              "text": "Is the temperature comfortable?",
+              "anchor_text": "Is the temperature comfortable?"
+            },
+            {
+              "label": "LA CLIMATISATION",
+              "text": "Would you like the air conditioning on?",
+              "anchor_text": "Would you like the air conditioning on?"
+            }
+          ]
+        },
+        {
+          "ref": "E.06",
+          "title": "Comfort and safety",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Une règle courtoise",
+              "text": "For your safety, please keep your seat belt fastened.",
+              "anchor_text": "For your safety"
+            },
+            {
+              "title": "La négation avec « be »",
+              "text": "It isn’t safe.",
+              "anchor_text": "It isn’t safe."
+            },
+            {
+              "title": "La consigne",
+              "text": "Please don’t open the door yet.",
+              "anchor_text": "Please don’t open the door yet."
+            }
+          ]
+        },
+        {
+          "ref": "E.07",
+          "title": "Explain the route",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA DURÉE ESTIMÉE",
+              "text": "It takes about thirty minutes. → Environ 30 minutes.",
+              "anchor_text": "It takes about thirty minutes"
+            },
+            {
+              "label": "DURÉE OU DISTANCE ?",
+              "text": "How long does it take? / How far is it?",
+              "anchor_text": "How long does it take?"
+            },
+            {
+              "label": "LA CIRCULATION",
+              "text": "There is a lot of traffic.",
+              "anchor_text": "There is a lot of traffic."
+            }
+          ]
+        },
+        {
+          "ref": "E.07",
+          "title": "Explain the route",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Comparer",
+              "text": "Faster : plus rapide. Shorter : plus court. More comfortable : plus confortable.",
+              "anchor_text": "Pour comparer"
+            },
+            {
+              "title": "Avec « than »",
+              "text": "This route is faster than the other one.",
+              "anchor_text": "This route is faster than the other one."
+            },
+            {
+              "title": "Informer",
+              "text": "Préciser péage et prix ; éviter une durée garantie si le trafic est incertain.",
+              "anchor_text": "Donnez l’information utile"
+            }
+          ]
+        },
+        {
+          "ref": "E.08",
+          "title": "Prices and quotations",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES PRIX",
+              "text": "Fare : prix du transport. Price : prix au sens général.",
+              "anchor_text": "« Fare »"
+            },
+            {
+              "label": "LE DEVIS",
+              "text": "Quote / quotation : devis. Included : inclus. Extra : supplément.",
+              "anchor_text": "« Quote »"
+            },
+            {
+              "label": "LE MONTANT TTC",
+              "text": "The fare is sixty euros, including tax.",
+              "anchor_text": "The fare is sixty euros, including tax"
+            }
+          ]
+        },
+        {
+          "ref": "E.08",
+          "title": "Prices and quotations",
+          "kind": "method",
+          "points": [
+            {
+              "title": "« How much »",
+              "text": "Un prix ou une quantité indénombrable.",
+              "anchor_text": "« How much »"
+            },
+            {
+              "title": "« How many »",
+              "text": "Des éléments que l’on peut compter.",
+              "anchor_text": "« How many »"
+            },
+            {
+              "title": "L’exemple contractuel",
+              "text": "Waiting time is included for the first ten minutes.",
+              "anchor_text": "Waiting time is included for the first ten minutes."
+            }
+          ]
+        },
+        {
+          "ref": "E.09",
+          "title": "Delays and changes",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE CHANGEMENT",
+              "text": "Delayed : retardé. Cancelled : annulé.",
+              "anchor_text": "« Delayed »"
+            },
+            {
+              "label": "LES EXCUSES",
+              "text": "I’m sorry for the delay.",
+              "anchor_text": "I’m sorry for the delay"
+            },
+            {
+              "label": "LE VOL",
+              "text": "The flight has been delayed. / The flight is late.",
+              "anchor_text": "The flight has been delayed"
+            }
+          ]
+        },
+        {
+          "ref": "E.09",
+          "title": "Delays and changes",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Une action à venir",
+              "text": "I will wait at the meeting point.",
+              "anchor_text": "I will wait at the meeting point."
+            },
+            {
+              "title": "Le délai",
+              "text": "I’ll arrive in ten minutes. « At ten » = à dix heures.",
+              "anchor_text": "I’ll arrive in ten minutes"
+            },
+            {
+              "title": "La compréhension",
+              "text": "Demander de répéter ou d’écrire l’information à l’arrêt.",
+              "anchor_text": "Si vous ne comprenez pas"
+            }
+          ]
+        },
+        {
+          "ref": "E.10",
+          "title": "Payment and receipts",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE RÈGLEMENT",
+              "text": "Pay by card : carte. Pay in cash : espèces.",
+              "anchor_text": "« Pay by card »"
+            },
+            {
+              "label": "LES DOCUMENTS",
+              "text": "Receipt : reçu. Invoice : facture. Change : monnaie à rendre.",
+              "anchor_text": "« Receipt »"
+            },
+            {
+              "label": "LE PAIEMENT ACCEPTÉ",
+              "text": "The payment has gone through.",
+              "anchor_text": "The payment has gone through"
+            }
+          ]
+        },
+        {
+          "ref": "E.10",
+          "title": "Payment and receipts",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le reçu",
+              "text": "Would you like a receipt?",
+              "anchor_text": "Would you like a receipt?"
+            },
+            {
+              "title": "La facture",
+              "text": "Which name should I put on the invoice?",
+              "anchor_text": "Which name should I put on the invoice?"
+            },
+            {
+              "title": "Le paiement refusé",
+              "text": "The payment hasn’t gone through.",
+              "anchor_text": "The payment hasn’t gone through"
+            }
+          ]
+        },
+        {
+          "ref": "E.11",
+          "title": "Handle a problem",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "L’AIDE",
+              "text": "I feel sick. / I need some help.",
+              "anchor_text": "I feel sick"
+            },
+            {
+              "label": "LE TÉLÉPHONE PERDU",
+              "text": "I’ve lost my phone.",
+              "anchor_text": "I’ve lost my phone"
+            },
+            {
+              "label": "LE SAC OUBLIÉ",
+              "text": "I left my bag in the car.",
+              "anchor_text": "I left my bag in the car"
+            }
+          ]
+        },
+        {
+          "ref": "E.11",
+          "title": "Handle a problem",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Faire répéter",
+              "text": "Could you speak more slowly, please? / Could you repeat that?",
+              "anchor_text": "Could you speak more slowly, please?"
+            },
+            {
+              "title": "L’urgence",
+              "text": "D’abord un arrêt sûr et une alerte adaptée, sans retarder les secours.",
+              "anchor_text": "Une urgence"
+            },
+            {
+              "title": "L’appel",
+              "text": "I’m calling the emergency services.",
+              "anchor_text": "I’m calling the emergency services"
+            }
+          ]
+        },
+        {
+          "ref": "E.12",
+          "title": "Talk about the city",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "SITUER UN LIEU",
+              "text": "There is : singulier. There are : pluriel.",
+              "anchor_text": "Pour situer un lieu"
+            },
+            {
+              "label": "L’EXEMPLE",
+              "text": "There is a museum near the hotel.",
+              "anchor_text": "There is a museum near the hotel."
+            },
+            {
+              "label": "L’OUVERTURE",
+              "text": "It opens at ten. Vérifier les horaires avant de les affirmer.",
+              "anchor_text": "It opens at ten."
+            }
+          ]
+        },
+        {
+          "ref": "E.12",
+          "title": "Talk about the city",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Proposer",
+              "text": "Would you like some information about the area?",
+              "anchor_text": "Would you like some information about the area?"
+            },
+            {
+              "title": "Le vocabulaire",
+              "text": "Historic : importance historique. Historical : relatif à l’histoire.",
+              "anchor_text": "Distinguez « historic »"
+            },
+            {
+              "title": "En cas de doute",
+              "text": "I’m not sure. I can check when we stop.",
+              "anchor_text": "I’m not sure. I can check when we stop."
+            }
+          ]
+        }
+      ]
+    },
+    "F": {
+      "scenes": [
+        {
+          "ref": "F.01",
+          "title": "Comprendre son marché",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE MARCHÉ",
+              "text": "Observer demande, concurrence et contraintes d’exploitation.",
+              "anchor_text": "Une étude de marché"
+            },
+            {
+              "label": "LES FLUX",
+              "text": "Vérifier pôles d’activité, horaires, saisonnalité et accès.",
+              "anchor_text": "Repérez les pôles"
+            },
+            {
+              "label": "LA ZONE DE CHALANDISE",
+              "text": "Origine de clients potentiels, sans garantie de réservation.",
+              "anchor_text": "Une zone de chalandise"
+            }
+          ]
+        },
+        {
+          "ref": "F.01",
+          "title": "Comprendre son marché",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Les segments",
+              "text": "Regrouper des besoins, sans catégories fondées sur les préjugés.",
+              "anchor_text": "Segmenter"
+            },
+            {
+              "title": "Les preuves",
+              "text": "Préférer entretiens et données disponibles à l’intuition.",
+              "anchor_text": "Les entretiens"
+            },
+            {
+              "title": "Les moyens",
+              "text": "Langue, véhicule, disponibilité, partenaires et budget.",
+              "anchor_text": "Analysez aussi vos ressources"
+            }
+          ]
+        },
+        {
+          "ref": "F.02",
+          "title": "Construire une offre lisible",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "L’OFFRE",
+              "text": "À qui s’adresse-t-elle ? Que comprend-elle ? Sous quelles conditions ?",
+              "anchor_text": "Une offre"
+            },
+            {
+              "label": "L’ATTENTE CLIENT",
+              "text": "Fiabilité, sécurité, information et confort.",
+              "anchor_text": "Le véhicule"
+            },
+            {
+              "label": "LA PROMESSE",
+              "text": "Annoncer des engagements réalistes et une organisation concrète.",
+              "anchor_text": "Une promesse"
+            }
+          ]
+        },
+        {
+          "ref": "F.02",
+          "title": "Construire une offre lisible",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le périmètre",
+              "text": "Distinguer service de base, options et limites.",
+              "anchor_text": "Distinguez service de base"
+            },
+            {
+              "title": "L’équipement",
+              "text": "Ne pas promettre un équipement non confirmé.",
+              "anchor_text": "Ne promettez pas"
+            },
+            {
+              "title": "La marque",
+              "text": "Cohérence entre communication, véhicule, présentation et comportement.",
+              "anchor_text": "L’image de marque"
+            }
+          ]
+        },
+        {
+          "ref": "F.03",
+          "title": "Fixer un prix soutenable",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE PRIX LIBRE",
+              "text": "Respecter l’information du client et les conditions convenues.",
+              "anchor_text": "Le prix VTC"
+            },
+            {
+              "label": "LE BESOIN FINANCIER",
+              "text": "Couvrir la mission, contribuer aux charges fixes et au revenu visé.",
+              "anchor_text": "Il doit couvrir"
+            },
+            {
+              "label": "LA CONCURRENCE",
+              "text": "Son prix est un repère, pas le calcul de vos coûts.",
+              "anchor_text": "Le prix des concurrents"
+            }
+          ]
+        },
+        {
+          "ref": "F.03",
+          "title": "Fixer un prix soutenable",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La mission complète",
+              "text": "Approche, course, retour, attente et frais spécifiques.",
+              "anchor_text": "Calculez l’approche"
+            },
+            {
+              "title": "L’exemple à 20 %",
+              "text": "Pour conserver 60 € : 60 ÷ 0,80 = 75 €, et non 60 + 20 %.",
+              "anchor_text": "Pour conserver 60 €"
+            },
+            {
+              "title": "La base contractuelle",
+              "text": "Vérifier si la commission porte sur HT, TTC ou une autre base.",
+              "anchor_text": "Vérifiez toujours"
+            }
+          ]
+        },
+        {
+          "ref": "F.04",
+          "title": "Rédiger un devis clair",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE SERVICE",
+              "text": "Date, horaires, lieux, passagers, bagages et options.",
+              "anchor_text": "Le devis décrit"
+            },
+            {
+              "label": "LES CONDITIONS",
+              "text": "Prix, attente, péage, annulation, modification, règlement et validité.",
+              "anchor_text": "Il présente le prix"
+            },
+            {
+              "label": "LE CONSOMMATEUR",
+              "text": "Informer clairement sur le montant total, notamment TTC.",
+              "anchor_text": "Pour un consommateur"
+            }
+          ]
+        },
+        {
+          "ref": "F.04",
+          "title": "Rédiger un devis clair",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’accord",
+              "text": "Le conserver ; confirmer les modifications importantes avant exécution.",
+              "anchor_text": "L’accord doit"
+            },
+            {
+              "title": "La facture",
+              "text": "Elle constate la prestation, sans révéler des frais jamais annoncés.",
+              "anchor_text": "Une facture vient"
+            },
+            {
+              "title": "La réservation",
+              "text": "Le devis ne dispense pas du justificatif réglementaire.",
+              "anchor_text": "Le devis ne dispense"
+            }
+          ]
+        },
+        {
+          "ref": "F.05",
+          "title": "Travailler avec une plateforme",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "L’APPORT",
+              "text": "Réservations, outils de paiement et visibilité.",
+              "anchor_text": "Une plateforme"
+            },
+            {
+              "label": "LA CONTREPARTIE",
+              "text": "Services facturés ou commission selon le contrat.",
+              "anchor_text": "Elle facture"
+            },
+            {
+              "label": "LES RÔLES",
+              "text": "Qui contracte, encaisse, facture et verse les fonds ?",
+              "anchor_text": "Examinez qui"
+            }
+          ]
+        },
+        {
+          "ref": "F.05",
+          "title": "Travailler avec une plateforme",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La rentabilité",
+              "text": "Comparer CA, commissions, temps connecté, kilomètres à vide et dépenses.",
+              "anchor_text": "Comparez le chiffre"
+            },
+            {
+              "title": "Le bonus",
+              "text": "Un revenu irrégulier ne finance pas prudemment une charge permanente.",
+              "anchor_text": "Un bonus"
+            },
+            {
+              "title": "La dépendance",
+              "text": "Un seul apporteur expose aux changements ou à l’interruption du compte.",
+              "anchor_text": "La dépendance"
+            }
+          ]
+        },
+        {
+          "ref": "F.06",
+          "title": "Prospecter avec méthode",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA PROSPECTION",
+              "text": "Identifier un besoin, le bon contact et une réponse adaptée.",
+              "anchor_text": "Prospecter consiste"
+            },
+            {
+              "label": "LA LISTE QUALIFIÉE",
+              "text": "Activité, zone, besoins possibles et contact autorisé.",
+              "anchor_text": "Préparez une liste"
+            },
+            {
+              "label": "LE MESSAGE",
+              "text": "Bref et pertinent, avec une cible précise.",
+              "anchor_text": "Un message bref"
+            }
+          ]
+        },
+        {
+          "ref": "F.06",
+          "title": "Prospecter avec méthode",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La proposition",
+              "text": "Expliquer, questionner, puis proposer un échange, un devis ou un test.",
+              "anchor_text": "Expliquez votre service"
+            },
+            {
+              "title": "Les règles",
+              "text": "Respecter la prospection et les demandes d’opposition.",
+              "anchor_text": "Respectez les règles"
+            },
+            {
+              "title": "Le consentement",
+              "text": "Un numéro utilisé pour une course n’autorise pas toute promotion.",
+              "anchor_text": "Un numéro utilisé"
+            }
+          ]
+        },
+        {
+          "ref": "F.07",
+          "title": "Créer un partenariat",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE PARTENAIRE",
+              "text": "Hôtel, agence ou entreprise : prescripteur ou client régulier.",
+              "anchor_text": "Un hôtel"
+            },
+            {
+              "label": "LES RÔLES",
+              "text": "Qui réserve, paie, informe et traite les modifications ?",
+              "anchor_text": "Le partenariat"
+            },
+            {
+              "label": "LES ENGAGEMENTS",
+              "text": "Délais, capacité et remplacement doivent être réalistes.",
+              "anchor_text": "Les délais"
+            }
+          ]
+        },
+        {
+          "ref": "F.07",
+          "title": "Créer un partenariat",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Les conditions",
+              "text": "Finances, confidentialité, marque et annulation.",
+              "anchor_text": "Négociez aussi"
+            },
+            {
+              "title": "Le volume",
+              "text": "Une promesse de volume n’est pas une commande ferme.",
+              "anchor_text": "Une promesse de volume"
+            },
+            {
+              "title": "La sous-traitance",
+              "text": "Vérifier les autorisations ; ne jamais prêter carte ou identité.",
+              "anchor_text": "Une éventuelle sous-traitance"
+            }
+          ]
+        },
+        {
+          "ref": "F.08",
+          "title": "Communiquer en ligne",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA COMPRÉHENSION",
+              "text": "Service, zone, réservation et contact doivent être clairs.",
+              "anchor_text": "Votre site"
+            },
+            {
+              "label": "LES INFORMATIONS",
+              "text": "Prix, identité, conditions et médiation accessibles selon les règles.",
+              "anchor_text": "Les informations"
+            },
+            {
+              "label": "LE PARCOURS",
+              "text": "Une belle image ne compense pas une réservation confuse.",
+              "anchor_text": "Une belle image"
+            }
+          ]
+        },
+        {
+          "ref": "F.08",
+          "title": "Communiquer en ligne",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’authenticité",
+              "text": "Contenus exacts, vrais avis et usage approprié des photos clients.",
+              "anchor_text": "Publiez des contenus"
+            },
+            {
+              "title": "La publicité",
+              "text": "Elle doit être identifiable, avec des promesses vérifiables.",
+              "anchor_text": "Une publicité"
+            },
+            {
+              "title": "Le mobile",
+              "text": "Vérifier contact, formulaire, confirmation et montants.",
+              "anchor_text": "Vérifiez aussi les appareils mobiles"
+            }
+          ]
+        },
+        {
+          "ref": "F.09",
+          "title": "Fidéliser avec discrétion",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA FIABILITÉ",
+              "text": "Confirmation, ponctualité, conduite, propreté et suivi.",
+              "anchor_text": "La fidélisation"
+            },
+            {
+              "label": "LES PRÉFÉRENCES",
+              "text": "Recueillir et conserver uniquement de manière justifiée.",
+              "anchor_text": "Les petites préférences"
+            },
+            {
+              "label": "LA DISCRÉTION",
+              "text": "Ne pas constituer un dossier intime sur le client.",
+              "anchor_text": "Ne constituez pas"
+            }
+          ]
+        },
+        {
+          "ref": "F.09",
+          "title": "Fidéliser avec discrétion",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le suivi utile",
+              "text": "Historique nécessaire, demandes de service et autorisations de contact.",
+              "anchor_text": "Un suivi client"
+            },
+            {
+              "title": "Le message",
+              "text": "Distinguer information pratique et promotion ; permettre l’opposition.",
+              "anchor_text": "Distinguez un message"
+            },
+            {
+              "title": "La réclamation",
+              "text": "Une réponse adaptée peut préserver la relation, sans remise systématique.",
+              "anchor_text": "Une réclamation"
+            }
+          ]
+        },
+        {
+          "ref": "F.10",
+          "title": "Mesurer la qualité du service",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES ÉTAPES",
+              "text": "Confirmation, accueil, trajet, règlement et suivi.",
+              "anchor_text": "La qualité"
+            },
+            {
+              "label": "LES CRITÈRES",
+              "text": "Horaire convenu, prix clair, documents : observer des faits.",
+              "anchor_text": "Choisissez des critères"
+            },
+            {
+              "label": "L’AVIS GLOBAL",
+              "text": "Un signal qui n’explique pas toujours la cause.",
+              "anchor_text": "Un avis global"
+            }
+          ]
+        },
+        {
+          "ref": "F.10",
+          "title": "Mesurer la qualité du service",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La cause",
+              "text": "Un retard peut venir d’un planning trop serré.",
+              "anchor_text": "Cherchez les écarts"
+            },
+            {
+              "title": "La correction",
+              "text": "Ajouter une marge de transfert, revoir un message ou contrôler le coffre.",
+              "anchor_text": "Une action corrective"
+            },
+            {
+              "title": "La vérification",
+              "text": "Mesurer à nouveau après le changement, avec confidentialité.",
+              "anchor_text": "Mesurez à nouveau"
+            }
+          ]
+        },
+        {
+          "ref": "F.11",
+          "title": "Traiter une réclamation",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "L’ÉCOUTE",
+              "text": "Ne pas interrompre ni promettre aussitôt un remboursement.",
+              "anchor_text": "Accueillez la réclamation"
+            },
+            {
+              "label": "LA VÉRIFICATION",
+              "text": "Reformuler, retrouver les pièces et comparer convenu et réalisé.",
+              "anchor_text": "Reformulez le problème"
+            },
+            {
+              "label": "LA NATURE DU PROBLÈME",
+              "text": "Désaccord de prix, défaut de service ou dommage à déclarer.",
+              "anchor_text": "Séparez un désaccord"
+            }
+          ]
+        },
+        {
+          "ref": "F.11",
+          "title": "Traiter une réclamation",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La réponse",
+              "text": "Délai annoncé, explication et solution proportionnée si justifiée.",
+              "anchor_text": "Répondez dans un délai"
+            },
+            {
+              "title": "La médiation",
+              "text": "Le consommateur doit accéder au dispositif après la démarche préalable.",
+              "anchor_text": "Un consommateur"
+            },
+            {
+              "title": "L’avis honnête",
+              "text": "Sa suppression ne doit pas conditionner un droit du client.",
+              "anchor_text": "Ne demandez pas"
+            }
+          ]
+        },
+        {
+          "ref": "F.12",
+          "title": "Lire son tableau de bord",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE TABLEAU DE BORD",
+              "text": "Relier ventes, coûts, temps et satisfaction.",
+              "anchor_text": "Un tableau de bord"
+            },
+            {
+              "label": "LES INDICATEURS",
+              "text": "CA/course, contribution/heure, kilomètres à vide, devis et récurrence.",
+              "anchor_text": "Le chiffre d’affaires"
+            },
+            {
+              "label": "LA COMPARAISON",
+              "text": "Choisir des périodes de même nature.",
+              "anchor_text": "Comparez des périodes"
+            }
+          ]
+        },
+        {
+          "ref": "F.12",
+          "title": "Lire son tableau de bord",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La transformation",
+              "text": "Nombre de devis acceptés ÷ nombre de devis émis.",
+              "anchor_text": "Le taux de transformation"
+            },
+            {
+              "title": "CA et marge",
+              "text": "Une hausse du CA peut s’accompagner d’une baisse de marge.",
+              "anchor_text": "Une hausse du CA"
+            },
+            {
+              "title": "L’action",
+              "text": "Tester, puis vérifier le résultat sans sacrifier la sécurité.",
+              "anchor_text": "Utilisez les données"
+            }
+          ]
+        }
+      ]
+    },
+    "G": {
+      "scenes": [
+        {
+          "ref": "G.01",
+          "title": "S’inscrire au REVTC",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE REGISTRE",
+              "text": "Le REVTC est tenu par le ministère chargé des transports.",
+              "anchor_text": "L’exploitant de voitures"
+            },
+            {
+              "label": "L’EXPLOITANT",
+              "text": "L’inscription concerne l’entreprise qui exploite l’activité.",
+              "anchor_text": "Cette inscription"
+            },
+            {
+              "label": "LA DISTINCTION",
+              "text": "Elle ne remplace ni carte du conducteur ni immatriculation de l’entreprise.",
+              "anchor_text": "Elle ne remplace"
+            }
+          ]
+        },
+        {
+          "ref": "G.01",
+          "title": "S’inscrire au REVTC",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le dossier",
+              "text": "Exploitant, conducteurs, véhicules, assurances et capacité financière.",
+              "anchor_text": "Le dossier"
+            },
+            {
+              "title": "L’échéance",
+              "text": "Renouvellement tous les 5 ans.",
+              "anchor_text": "L’inscription"
+            },
+            {
+              "title": "La mise à jour",
+              "text": "Déclarer les changements et rattacher correctement les moyens utilisés.",
+              "anchor_text": "Les changements"
+            }
+          ]
+        },
+        {
+          "ref": "G.02",
+          "title": "Justifier la capacité financière",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA PROPRIÉTÉ",
+              "text": "Elle peut justifier la capacité pour un véhicule utilisé régulièrement.",
+              "anchor_text": "par sa propriété"
+            },
+            {
+              "label": "LA LOCATION",
+              "text": "Un contrat d’au moins 6 mois.",
+              "anchor_text": "un contrat de location"
+            },
+            {
+              "label": "LA GARANTIE",
+              "text": "Garantie financière réglementaire de 1 500 € par véhicule.",
+              "anchor_text": "ou une garantie financière"
+            }
+          ]
+        },
+        {
+          "ref": "G.02",
+          "title": "Justifier la capacité financière",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La garantie",
+              "text": "Ce n’est pas un prix d’achat du droit de conduire.",
+              "anchor_text": "La garantie n’est pas"
+            },
+            {
+              "title": "La durée de location",
+              "text": "Une semaine ne correspond pas à une location d’au moins 6 mois.",
+              "anchor_text": "Une location d’une semaine"
+            },
+            {
+              "title": "Le dossier",
+              "text": "Vérifier pièces et périmètre avec le gestionnaire du registre.",
+              "anchor_text": "Vérifiez les pièces"
+            }
+          ]
+        },
+        {
+          "ref": "G.03",
+          "title": "Choisir un véhicule éligible",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA CAPACITÉ",
+              "text": "4 à 9 places, conducteur compris.",
+              "anchor_text": "Le véhicule VTC"
+            },
+            {
+              "label": "LE RÉGIME ORDINAIRE",
+              "text": "Moins de 7 ans ; ≥ 4 portes ; ≥ 4,50 m de long, 1,70 m de large ; ≥ 84 kW.",
+              "anchor_text": "Pour le régime ordinaire"
+            },
+            {
+              "label": "L’ANCIENNETÉ",
+              "text": "Une exception vise notamment les véhicules de collection.",
+              "anchor_text": "L’exception d’ancienneté"
+            }
+          ]
+        },
+        {
+          "ref": "G.03",
+          "title": "Choisir un véhicule éligible",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Les catégories visées",
+              "text": "Hybrides et électriques : exception aux dispositions de l’article 1.",
+              "anchor_text": "L’article 2"
+            },
+            {
+              "title": "Les règles conservées",
+              "text": "4 à 9 places ; sécurité, assurance et contrôle toujours applicables.",
+              "anchor_text": "Cela ne supprime pas"
+            },
+            {
+              "title": "Avant l’achat",
+              "text": "Vérifier la catégorie et les pièces, au-delà du filtre d’une plateforme.",
+              "anchor_text": "Avant un achat"
+            }
+          ]
+        },
+        {
+          "ref": "G.04",
+          "title": "Afficher la bonne signalétique",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA SIGNALÉTIQUE",
+              "text": "Elle identifie l’activité et contient les références prévues.",
+              "anchor_text": "La signalétique réglementaire"
+            },
+            {
+              "label": "LA PROCÉDURE",
+              "text": "Obtenir le support officiel correspondant au véhicule et à l’exploitant.",
+              "anchor_text": "Elle doit être obtenue"
+            },
+            {
+              "label": "LA LIMITE",
+              "text": "Une image trouvée en ligne ne permet pas de fabriquer une vignette conforme.",
+              "anchor_text": "Un autocollant"
+            }
+          ]
+        },
+        {
+          "ref": "G.04",
+          "title": "Afficher la bonne signalétique",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Les vignettes",
+              "text": "Avant : en bas côté conducteur. Arrière : en bas du côté opposé.",
+              "anchor_text": "Les vignettes"
+            },
+            {
+              "title": "La carte",
+              "text": "Photographie visible de l’extérieur pendant l’activité.",
+              "anchor_text": "La carte professionnelle"
+            },
+            {
+              "title": "La confusion taxi",
+              "text": "Un dispositif lumineux extérieur créant cette confusion est interdit.",
+              "anchor_text": "Un dispositif lumineux"
+            }
+          ]
+        },
+        {
+          "ref": "G.05",
+          "title": "Prouver la réservation préalable",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA CHRONOLOGIE",
+              "text": "Réservation avant prise en charge.",
+              "anchor_text": "La réservation précède"
+            },
+            {
+              "label": "LE SUPPORT",
+              "text": "Papier ou électronique avec les mentions réglementaires.",
+              "anchor_text": "Elle peut être justifiée"
+            },
+            {
+              "label": "L’ACCESSIBILITÉ",
+              "text": "Le conducteur doit pouvoir présenter le justificatif aux agents.",
+              "anchor_text": "Le justificatif"
+            }
+          ]
+        },
+        {
+          "ref": "G.05",
+          "title": "Prouver la réservation préalable",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’exploitant",
+              "text": "Identité, coordonnées, REVTC et SIREN.",
+              "anchor_text": "L’arrêté du 6 août 2025"
+            },
+            {
+              "title": "La mission",
+              "text": "Client ; dates/heures de réservation et de prise en charge ; lieu.",
+              "anchor_text": "le nom et le téléphone du client"
+            },
+            {
+              "title": "Le contact",
+              "text": "Sans les coordonnées prévues : moyen de contact sans délai pour le contrôle.",
+              "anchor_text": "Si les coordonnées client"
+            }
+          ]
+        },
+        {
+          "ref": "G.06",
+          "title": "Distinguer réservation et maraude",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA MARAUDE",
+              "text": "Recherche ou prise de clients sur la voie publique dans le cadre des taxis.",
+              "anchor_text": "La maraude"
+            },
+            {
+              "label": "LE VTC",
+              "text": "Pas de stationnement ou circulation en quête de passagers non réservés.",
+              "anchor_text": "Un VTC ne peut"
+            },
+            {
+              "label": "L’APPLICATION",
+              "text": "Payer par application ne rend pas toute rencontre de rue conforme.",
+              "anchor_text": "Le fait qu’un client"
+            }
+          ]
+        },
+        {
+          "ref": "G.06",
+          "title": "Distinguer réservation et maraude",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Avant réservation",
+              "text": "Localisation + disponibilité d’un véhicule situé sur la voie publique.",
+              "anchor_text": "Le Code interdit"
+            },
+            {
+              "title": "La condition à retenir",
+              "text": "Sans l’autorisation de stationnement concernée ; lire le cadre complet.",
+              "anchor_text": "sans l’autorisation de stationnement"
+            },
+            {
+              "title": "Les outils conformes",
+              "text": "Cette règle ne signifie pas que toute application est interdite.",
+              "anchor_text": "Il faut comprendre"
+            }
+          ]
+        },
+        {
+          "ref": "G.07",
+          "title": "Accueillir en gare et à l’aéroport",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE CLIENT RÉSERVÉ",
+              "text": "Attendre aux abords des gares et aérogares dans les conditions autorisées.",
+              "anchor_text": "Aux abords"
+            },
+            {
+              "label": "LE DÉLAI ÉNONCÉ",
+              "text": "Maximum 1 heure avant la prise en charge souhaitée, dans le champ de la règle.",
+              "anchor_text": "Le délai maximal"
+            },
+            {
+              "label": "L’EMPLACEMENT",
+              "text": "Ce délai n’autorise pas n’importe quelle voie ou place réservée aux taxis.",
+              "anchor_text": "Il ne donne pas"
+            }
+          ]
+        },
+        {
+          "ref": "G.07",
+          "title": "Accueillir en gare et à l’aéroport",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’accès au site",
+              "text": "Zones, parkings, dépose-minute, badges et durée autorisée.",
+              "anchor_text": "Consultez les règles d’accès"
+            },
+            {
+              "title": "Le vol retardé",
+              "text": "Actualiser l’organisation, sans attente illimitée sur la chaussée.",
+              "anchor_text": "Un vol retardé"
+            },
+            {
+              "title": "Le rendez-vous",
+              "text": "Terminal, porte, repère, heure et contact ; prévoir marche et bagages.",
+              "anchor_text": "Précisez terminal"
+            }
+          ]
+        },
+        {
+          "ref": "G.08",
+          "title": "Organiser la fin de course",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE LIEU D’ÉTABLISSEMENT",
+              "text": "Après la prestation réservée, retourner chez l’exploitant…",
+              "anchor_text": "Après la prestation réservée"
+            },
+            {
+              "label": "LE STATIONNEMENT",
+              "text": "… ou dans un lieu autorisé hors de la chaussée…",
+              "anchor_text": "ou dans un lieu hors de la chaussée"
+            },
+            {
+              "label": "L’EXCEPTION JUSTIFIÉE",
+              "text": "… sauf nouvelle réservation préalable ou contrat avec le client final.",
+              "anchor_text": "sauf s’il justifie"
+            }
+          ]
+        },
+        {
+          "ref": "G.08",
+          "title": "Organiser la fin de course",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le contrat",
+              "text": "Plateforme et client final : deux contrats à ne pas confondre.",
+              "anchor_text": "Un contrat"
+            },
+            {
+              "title": "L’attente dans la rue",
+              "text": "Elle reste soumise aux règles de fin de course et de maraude.",
+              "anchor_text": "Une attente"
+            },
+            {
+              "title": "L’organisation",
+              "text": "Préparer des lieux autorisés, avec coût et accès connus.",
+              "anchor_text": "Préparez des lieux"
+            }
+          ]
+        },
+        {
+          "ref": "G.09",
+          "title": "Convenir du prix et du service",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA LIBERTÉ DU PRIX",
+              "text": "Le prix VTC n’est pas le tarif préfectoral des taxis.",
+              "anchor_text": "Le prix VTC"
+            },
+            {
+              "label": "L’ACCORD",
+              "text": "Le prix est déterminé librement dans le cadre convenu.",
+              "anchor_text": "Il est déterminé"
+            },
+            {
+              "label": "LA MÉTHODE",
+              "text": "Prix fixé ou calcul annoncé à l’avance ; frais compréhensibles.",
+              "anchor_text": "Il peut être fixé"
+            }
+          ]
+        },
+        {
+          "ref": "G.09",
+          "title": "Convenir du prix et du service",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’accord initial",
+              "text": "Un prix libre n’autorise pas à changer seul l’accord après la course.",
+              "anchor_text": "Ne confondez pas"
+            },
+            {
+              "title": "Les conditions",
+              "text": "Attente, péage, arrêt supplémentaire et annulation : appliquer l’accord.",
+              "anchor_text": "Attente, péage"
+            },
+            {
+              "title": "L’estimation",
+              "text": "Faire comprendre ce qui est garanti et ce qui peut varier.",
+              "anchor_text": "Une application"
+            }
+          ]
+        },
+        {
+          "ref": "G.10",
+          "title": "Remplacer un véhicule ou un conducteur",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES OBLIGATIONS",
+              "text": "Panne ou absence ne les suspend pas.",
+              "anchor_text": "Une panne"
+            },
+            {
+              "label": "LE VÉHICULE",
+              "text": "Vérifier éligibilité, assurance, contrôle, registre et signalétique.",
+              "anchor_text": "Avant de remplacer"
+            },
+            {
+              "label": "LE TEMPORAIRE",
+              "text": "Un prêt amical n’est pas automatiquement utilisable.",
+              "anchor_text": "Les cas temporaires"
+            }
+          ]
+        },
+        {
+          "ref": "G.10",
+          "title": "Remplacer un véhicule ou un conducteur",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le conducteur",
+              "text": "Titres personnels valides et accord de l’assurance et du contrat.",
+              "anchor_text": "Un conducteur remplaçant"
+            },
+            {
+              "title": "L’autre exploitant",
+              "text": "Vérifier son droit d’exercer et les responsabilités.",
+              "anchor_text": "Si la mission"
+            },
+            {
+              "title": "Le client",
+              "text": "Informer du changement utile et ne partager que les données nécessaires.",
+              "anchor_text": "Informez le client"
+            }
+          ]
+        },
+        {
+          "ref": "G.11",
+          "title": "Suivre le véhicule dans le temps",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE CONTRÔLE TECHNIQUE",
+              "text": "Un régime spécifique pour les véhicules de transport public particulier.",
+              "anchor_text": "Le contrôle technique"
+            },
+            {
+              "label": "LA PÉRIODICITÉ",
+              "text": "Annuelle pour les voitures concernées.",
+              "anchor_text": "avec une périodicité annuelle"
+            },
+            {
+              "label": "ENTRE DEUX CONTRÔLES",
+              "text": "Entretien constructeur, vérifications quotidiennes et réparation des défauts.",
+              "anchor_text": "L’entretien constructeur"
+            }
+          ]
+        },
+        {
+          "ref": "G.11",
+          "title": "Suivre le véhicule dans le temps",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le planning",
+              "text": "Kilométrage, échéances, interventions, pneus et anomalies.",
+              "anchor_text": "Un planning utile"
+            },
+            {
+              "title": "Les justificatifs",
+              "text": "Facture de garage et procès-verbal de contrôle sont différents.",
+              "anchor_text": "Une facture de garage"
+            },
+            {
+              "title": "La capacité",
+              "text": "Anticiper immobilisation, assurance et remplacement avant d’accepter.",
+              "anchor_text": "Anticipez l’immobilisation"
+            }
+          ]
+        },
+        {
+          "ref": "G.12",
+          "title": "Faire une veille utile",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES CHANGEMENTS",
+              "text": "Examen, accès, réservation, fiscalité ou circulation locale.",
+              "anchor_text": "Les règles peuvent changer"
+            },
+            {
+              "label": "LES ANCIENS SUPPORTS",
+              "text": "Une fiche ou une vidéo peut rester en ligne après une modification.",
+              "anchor_text": "Une ancienne fiche"
+            },
+            {
+              "label": "LA VÉRIFICATION",
+              "text": "Identifier le texte, sa version en vigueur et sa date d’application.",
+              "anchor_text": "Identifiez le texte"
+            }
+          ]
+        },
+        {
+          "ref": "G.12",
+          "title": "Faire une veille utile",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’action",
+              "text": "Mettre à jour un modèle, une procédure ou un calendrier.",
+              "anchor_text": "La veille doit"
+            },
+            {
+              "title": "Les sources",
+              "text": "Textes officiels, administrations compétentes et gestionnaires des accès.",
+              "anchor_text": "Les sources prioritaires"
+            },
+            {
+              "title": "La trace",
+              "text": "Noter les changements et les destinataires de l’information.",
+              "anchor_text": "Notez ce qui a changé"
+            }
+          ]
+        }
+      ]
+    },
+    "H": {
+      "scenes": [
+        {
+          "ref": "H.01",
+          "title": "Lire la mission avant de partir",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA MISSION",
+              "text": "Client, horaire, lieux, passagers, bagages, équipements et conditions.",
+              "anchor_text": "Avant de démarrer"
+            },
+            {
+              "label": "LES MANQUES",
+              "text": "Repérer les informations absentes ou incohérentes.",
+              "anchor_text": "Repérez ce qui manque"
+            },
+            {
+              "label": "L’ADRESSE",
+              "text": "Sans commune ou numéro, le point de prise en charge peut être erroné.",
+              "anchor_text": "Une adresse"
+            }
+          ]
+        },
+        {
+          "ref": "H.01",
+          "title": "Lire la mission avant de partir",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La faisabilité",
+              "text": "Temps et capacité ; marge pour l’approche et l’accueil.",
+              "anchor_text": "Vérifiez la faisabilité"
+            },
+            {
+              "title": "Le repli",
+              "text": "Préparer un contact et un plan de repli.",
+              "anchor_text": "Préparez un contact"
+            },
+            {
+              "title": "L’ordre de mission",
+              "text": "Le rendre cohérent avec la réservation, sans données inutilement exposées.",
+              "anchor_text": "L’ordre de mission"
+            }
+          ]
+        },
+        {
+          "ref": "H.02",
+          "title": "Préparer un itinéraire",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES LIEUX",
+              "text": "Localiser départ et destination, puis comparer les trajets.",
+              "anchor_text": "Localisez départ"
+            },
+            {
+              "label": "LES CONTRAINTES",
+              "text": "Distance, durée, péage, travaux, accès et dépose.",
+              "anchor_text": "Relevez distance"
+            },
+            {
+              "label": "LE COMPROMIS",
+              "text": "Plus court n’est pas toujours plus rapide, confortable ou au même prix.",
+              "anchor_text": "Un trajet plus court"
+            }
+          ]
+        },
+        {
+          "ref": "H.02",
+          "title": "Préparer un itinéraire",
+          "kind": "method",
+          "points": [
+            {
+              "title": "À l’arrêt",
+              "text": "Préparer la navigation et le point exact d’arrivée.",
+              "anchor_text": "Préparez la navigation"
+            },
+            {
+              "title": "L’alternative",
+              "text": "Repérer les axes et un autre trajet pour ne pas dépendre d’un écran.",
+              "anchor_text": "Repérez les principaux axes"
+            },
+            {
+              "title": "L’erreur de trajet",
+              "text": "Poursuivre jusqu’à une manœuvre autorisée ; expliquer brièvement.",
+              "anchor_text": "Si une erreur"
+            }
+          ]
+        },
+        {
+          "ref": "H.03",
+          "title": "Installer son poste de conduite",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES RÉGLAGES",
+              "text": "À l’arrêt : siège, dossier, appuie-tête, volant et rétroviseurs.",
+              "anchor_text": "À l’arrêt"
+            },
+            {
+              "label": "LA VÉRIFICATION",
+              "text": "Mouvements libres, champ de vision et ceinture.",
+              "anchor_text": "Vérifiez la liberté"
+            },
+            {
+              "label": "L’OBJECTIF",
+              "text": "Posture stable et bonne maîtrise des commandes.",
+              "anchor_text": "Les réglages"
+            }
+          ]
+        },
+        {
+          "ref": "H.03",
+          "title": "Installer son poste de conduite",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Les commandes",
+              "text": "Éclairage, essuie-glaces, désembuage, frein, détresse et aides.",
+              "anchor_text": "Repérez les commandes"
+            },
+            {
+              "title": "Le véhicule inhabituel",
+              "text": "Se familiariser avant la mise en circulation.",
+              "anchor_text": "Un véhicule d’examen"
+            },
+            {
+              "title": "L’attention",
+              "text": "Préparer ou régler à l’arrêt sûr ce qui détourne durablement l’attention.",
+              "anchor_text": "Les actions sur navigation"
+            }
+          ]
+        },
+        {
+          "ref": "H.04",
+          "title": "Réussir l’accueil",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE POINT CONVENU",
+              "text": "Arriver au lieu autorisé, avec une présentation adaptée.",
+              "anchor_text": "Arrivez au point"
+            },
+            {
+              "label": "LA PRÉSENTATION",
+              "text": "Saluer, se présenter et vérifier discrètement l’identité réservée.",
+              "anchor_text": "Saluez"
+            },
+            {
+              "label": "LA DESTINATION",
+              "text": "Confirmer les informations utiles sans exposer les données personnelles.",
+              "anchor_text": "Confirmez destination"
+            }
+          ]
+        },
+        {
+          "ref": "H.04",
+          "title": "Réussir l’accueil",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’aide consentie",
+              "text": "Proposer l’aide, attendre l’accord ; surveiller circulation et portières.",
+              "anchor_text": "Proposez l’aide"
+            },
+            {
+              "title": "L’installation",
+              "text": "Vérifier la retenue adaptée de chacun avant le départ.",
+              "anchor_text": "Vérifiez que chacun"
+            },
+            {
+              "title": "Le respect",
+              "text": "Être attentif sans intrusion ; respecter l’autonomie.",
+              "anchor_text": "Une attitude professionnelle"
+            }
+          ]
+        },
+        {
+          "ref": "H.05",
+          "title": "Conduire avec une attention disponible",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LE REGARD",
+              "text": "Observer loin, contrôler les côtés, garder les intervalles.",
+              "anchor_text": "Votre regard"
+            },
+            {
+              "label": "LA MANŒUVRE",
+              "text": "L’annoncer et ne s’engager que si la situation le permet.",
+              "anchor_text": "Annoncez les manœuvres"
+            },
+            {
+              "label": "L’ANTICIPATION",
+              "text": "La souplesse se prépare avant le danger.",
+              "anchor_text": "Une conduite souple"
+            }
+          ]
+        },
+        {
+          "ref": "H.05",
+          "title": "Conduire avec une attention disponible",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La demande client",
+              "text": "Répondre brièvement si la conduite le permet.",
+              "anchor_text": "Le client peut"
+            },
+            {
+              "title": "Le bon moment",
+              "text": "Différer avec courtoisie et vérifier à l’arrêt si nécessaire.",
+              "anchor_text": "Il est préférable"
+            },
+            {
+              "title": "La décision",
+              "text": "Les aides et le GPS ne la remplacent pas.",
+              "anchor_text": "Les aides et le GPS"
+            }
+          ]
+        },
+        {
+          "ref": "H.06",
+          "title": "Manœuvrer et déposer",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "L’ENVIRONNEMENT",
+              "text": "Piétons, cycles, obstacles bas et zones masquées.",
+              "anchor_text": "Avant une manœuvre"
+            },
+            {
+              "label": "L’ALLURE",
+              "text": "Avancer lentement et pouvoir s’arrêter.",
+              "anchor_text": "Avancez lentement"
+            },
+            {
+              "label": "LES CONTRÔLES",
+              "text": "Capteurs et caméras sont partiels ; chercher une autre solution si besoin.",
+              "anchor_text": "Les capteurs"
+            }
+          ]
+        },
+        {
+          "ref": "H.06",
+          "title": "Manœuvrer et déposer",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La dépose",
+              "text": "Choisir un arrêt autorisé permettant une sortie sûre.",
+              "anchor_text": "La dépose doit"
+            },
+            {
+              "title": "La double file",
+              "text": "Même « pour trente secondes », elle peut gêner et exposer le passager.",
+              "anchor_text": "Une double file"
+            },
+            {
+              "title": "Le point décalé",
+              "text": "Prévenir le client et accompagner la fin du service selon ses besoins.",
+              "anchor_text": "Prévenez-le"
+            }
+          ]
+        },
+        {
+          "ref": "H.07",
+          "title": "Informer sur le territoire",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA ZONE",
+              "text": "Connaître gares, terminaux, hôpitaux, entreprises, hôtels et lieux culturels.",
+              "anchor_text": "Un chauffeur connaît"
+            },
+            {
+              "label": "LA FICHE LOCALE",
+              "text": "Préparer accès, déposes et informations pratiques vérifiables.",
+              "anchor_text": "Préparez une fiche locale"
+            },
+            {
+              "label": "LE VISITEUR",
+              "text": "L’aider à comprendre le lieu, au-delà d’une récitation de dates.",
+              "anchor_text": "La connaissance touristique"
+            }
+          ]
+        },
+        {
+          "ref": "H.07",
+          "title": "Informer sur le territoire",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’intérêt du client",
+              "text": "Demander s’il veut des informations ; rester bref et adapté.",
+              "anchor_text": "Demandez s’il souhaite"
+            },
+            {
+              "title": "La précision",
+              "text": "Vérifier les données variables ; ne pas inventer de réponse.",
+              "anchor_text": "Les horaires"
+            },
+            {
+              "title": "La conduite complexe",
+              "text": "Reporter l’explication pour garder l’attention sur la route.",
+              "anchor_text": "En conduite complexe"
+            }
+          ]
+        },
+        {
+          "ref": "H.08",
+          "title": "Gérer un imprévu de service",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LES PRIORITÉS",
+              "text": "Sécurité, santé et protection passent d’abord.",
+              "anchor_text": "Commencez par"
+            },
+            {
+              "label": "LES FAITS",
+              "text": "Clarifier puis chercher une solution réaliste.",
+              "anchor_text": "Ensuite, clarifiez"
+            },
+            {
+              "label": "L’INFORMATION",
+              "text": "Expliquer au client les conséquences utiles.",
+              "anchor_text": "Expliquez les conséquences"
+            }
+          ]
+        },
+        {
+          "ref": "H.08",
+          "title": "Gérer un imprévu de service",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Le changement",
+              "text": "Prix, durée et courses suivantes peuvent être affectés.",
+              "anchor_text": "Un retard"
+            },
+            {
+              "title": "La confirmation",
+              "text": "Confirmer les changements importants et garder une trace.",
+              "anchor_text": "Confirmez les changements"
+            },
+            {
+              "title": "L’agressivité",
+              "text": "Garder distance et calme ; rechercher sécurité et aide si menace.",
+              "anchor_text": "Face à une agressivité"
+            }
+          ]
+        },
+        {
+          "ref": "H.09",
+          "title": "Facturer pendant la pratique",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA MISSION RÉALISÉE",
+              "text": "À l’arrêt : reprendre prix convenu et modifications acceptées.",
+              "anchor_text": "À l’arrêt et après"
+            },
+            {
+              "label": "LES MONTANTS",
+              "text": "Présenter régime de TVA applicable et total clairement.",
+              "anchor_text": "Présentez clairement"
+            },
+            {
+              "label": "LE CALCUL",
+              "text": "Conserver les unités et arrondir au bon stade.",
+              "anchor_text": "Les calculs"
+            }
+          ]
+        },
+        {
+          "ref": "H.09",
+          "title": "Facturer pendant la pratique",
+          "kind": "method",
+          "points": [
+            {
+              "title": "Facture et paiement",
+              "text": "« Acquittée » suppose que le paiement ait été reçu.",
+              "anchor_text": "Distinguez facture"
+            },
+            {
+              "title": "Les données du sujet",
+              "text": "Ne pas inventer de TVA pour une entreprise fictive en franchise.",
+              "anchor_text": "Pour l’examen"
+            },
+            {
+              "title": "La cohérence",
+              "text": "Contrôler coordonnées, dates, numéro et description.",
+              "anchor_text": "Les coordonnées"
+            }
+          ]
+        },
+        {
+          "ref": "H.10",
+          "title": "Terminer la prestation",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA SORTIE",
+              "text": "Vérifier le lieu, sécuriser la sortie et restituer les bagages.",
+              "anchor_text": "Vérifiez le lieu"
+            },
+            {
+              "label": "L’HABITACLE",
+              "text": "Rechercher un objet oublié avant de repartir.",
+              "anchor_text": "Avant de repartir"
+            },
+            {
+              "label": "LA FIN DU SERVICE",
+              "text": "Remercier et indiquer le canal pour une demande ultérieure.",
+              "anchor_text": "Remerciez"
+            }
+          ]
+        },
+        {
+          "ref": "H.10",
+          "title": "Terminer la prestation",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’objet retrouvé",
+              "text": "Conserver et tracer : description, date, course et contact discret.",
+              "anchor_text": "Un objet retrouvé"
+            },
+            {
+              "title": "La confidentialité",
+              "text": "Ne pas publier de photo contenant des données personnelles.",
+              "anchor_text": "Ne publiez pas"
+            },
+            {
+              "title": "Le repositionnement",
+              "text": "Appliquer les règles VTC, sans chercher des clients non réservés.",
+              "anchor_text": "Après la dépose"
+            }
+          ]
+        },
+        {
+          "ref": "H.11",
+          "title": "Comprendre l’épreuve pratique",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA CONDUITE",
+              "text": "Phase de conduite en circulation : au moins 20 minutes.",
+              "anchor_text": "L’épreuve d’admission"
+            },
+            {
+              "label": "LE BARÈME SUR 20",
+              "text": "Parcours : 3. Conduite : 10. Relation/tourisme : 5. Facturation : 2.",
+              "anchor_text": "Le barème VTC"
+            },
+            {
+              "label": "L’ADMISSION",
+              "text": "Au moins 12 sur 20.",
+              "anchor_text": "L’admission demande"
+            }
+          ]
+        },
+        {
+          "ref": "H.11",
+          "title": "Comprendre l’épreuve pratique",
+          "kind": "method",
+          "points": [
+            {
+              "title": "L’intervention",
+              "text": "Double commande ou volant : arrêt de l’épreuve et ajournement.",
+              "anchor_text": "Toute intervention"
+            },
+            {
+              "title": "La convocation",
+              "text": "Vérifier véhicule, pièces, outils autorisés et heure de présentation.",
+              "anchor_text": "Consultez la convocation"
+            },
+            {
+              "title": "Les 20 minutes",
+              "text": "Le minimum concerne la conduite, pas tout le rendez-vous.",
+              "anchor_text": "Le minimum de vingt minutes"
+            }
+          ]
+        },
+        {
+          "ref": "H.12",
+          "title": "S’entraîner et progresser",
+          "kind": "concept",
+          "points": [
+            {
+              "label": "LA MISSION",
+              "text": "Reproduire une mission cohérente puis obtenir un retour précis.",
+              "anchor_text": "Un entraînement utile"
+            },
+            {
+              "label": "L’OBSERVATION",
+              "text": "Noter des faits sur la préparation, la conduite et le service.",
+              "anchor_text": "L’observateur"
+            },
+            {
+              "label": "LE RETOUR CONCRET",
+              "text": "« La destination a été confirmée avant le départ » décrit une action.",
+              "anchor_text": "« C’était bien »"
+            }
+          ]
+        },
+        {
+          "ref": "H.12",
+          "title": "S’entraîner et progresser",
+          "kind": "method",
+          "points": [
+            {
+              "title": "La priorité",
+              "text": "Choisir un point de travail et un exercice adapté.",
+              "anchor_text": "Choisissez ensuite"
+            },
+            {
+              "title": "La répétition",
+              "text": "Travailler avec le formateur dans un cadre sûr, puis vérifier le progrès.",
+              "anchor_text": "Répétez dans un cadre sécurisé"
+            },
+            {
+              "title": "Le cadre",
+              "text": "Respecter autorisations, assurances et encadrement de l’entraînement.",
+              "anchor_text": "L’entraînement en circulation"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

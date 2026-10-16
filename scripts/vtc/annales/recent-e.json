@@ -1,0 +1,264 @@
+[
+  {
+    "number": 1,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "E.12"
+    ],
+    "explanation": "« Watch » convient pour suivre attentivement un match ; « look » s’emploie avec « at ». « See a game » peut aussi désigner le fait d’assister à un match.",
+    "status": "historical",
+    "update_note": "Le contexte « take me to the stadium » permet aussi « see the game ». Sans corrigé fourni, cette question ne départage pas équitablement les choix B et C : elle est étudiée hors score.",
+    "sources": []
+  },
+  {
+    "number": 2,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "E.02"
+    ],
+    "explanation": "Le client veut vérifier l’identité du chauffeur réservé. « If you are Mr Martin, yes I am your driver » confirme la réservation en vérifiant le nom. « Book » est ici le verbe réserver, pas le nom livre.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 3,
+    "answers": [
+      "a"
+    ],
+    "lesson_refs": [
+      "E.03"
+    ],
+    "explanation": "« How long » interroge une durée. « Planning to stay » signifie compter rester. « How often » interrogerait la fréquence et « how » seul la manière.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 4,
+    "answers": [
+      "a"
+    ],
+    "lesson_refs": [
+      "E.11"
+    ],
+    "explanation": "« To demand » signifie exiger. Pour demander poliment, utilisez plutôt « to ask » ou « could you…? ». C’est un faux ami : il ne faut pas traduire automatiquement demander par demand.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 5,
+    "answers": [
+      "a",
+      "b",
+      "c"
+    ],
+    "lesson_refs": [
+      "E.04"
+    ],
+    "explanation": "Les trois phrases peuvent demander comment aller au cinéma ; « Can you tell me the way to…? » est une demande d’itinéraire particulièrement claire et polie.",
+    "status": "historical",
+    "update_note": "Les choix se recouvrent : « how do you go » peut aussi porter sur le moyen de transport. Cette formulation ne permet pas de fixer un corrigé unique sans précision ; entraînement hors score.",
+    "sources": []
+  },
+  {
+    "number": 6,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "E.05"
+    ],
+    "explanation": "« Handbag » désigne un sac à main. « Hand luggage » signifie bagage à main ; « suitcase » est une valise. Repérez le type d’objet plutôt que le seul mot hand.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 7,
+    "answers": [
+      "a"
+    ],
+    "lesson_refs": [
+      "E.06"
+    ],
+    "explanation": "« Fasten your seat belt » demande d’attacher sa ceinture. « Unfasten » signifie détacher et « sit on » s’asseoir sur. Ajoutez « please » pour une consigne courtoise.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 8,
+    "answers": [
+      "b"
+    ],
+    "lesson_refs": [
+      "E.11"
+    ],
+    "explanation": "« A flat tyre » est un pneu crevé ou dégonflé. « Wheel » est la roue complète et « tired » signifie fatigué. Exemple : « We have a flat tyre; I will stop somewhere safe. »",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 9,
+    "answers": [
+      "b"
+    ],
+    "lesson_refs": [
+      "E.07"
+    ],
+    "explanation": "« Choose the route » signifie choisir l’itinéraire ou le parcours. La destination se demande avec « Where would you like to go? ». Ne confondez pas le lieu d’arrivée et le chemin emprunté.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 10,
+    "answers": [
+      "b"
+    ],
+    "lesson_refs": [
+      "E.04"
+    ],
+    "explanation": "« Where » demande un lieu : une adresse répond à la question. « I used to… » évoque une ancienne habitude et « I like… » une préférence, sans fournir la destination demandée.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 11,
+    "answers": [
+      "b"
+    ],
+    "lesson_refs": [
+      "E.03"
+    ],
+    "explanation": "« Twenty past ten » signifie 10 h 20 ; « twenty to ten » signifie 9 h 40. « Tomorrow morning » désigne demain matin. Vérifiez séparément jour, moment de la journée et heure.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 12,
+    "answers": [
+      "a"
+    ],
+    "lesson_refs": [
+      "E.03"
+    ],
+    "explanation": "« How many people » demande un nombre de personnes. « No more than 3 » signifie pas plus de trois. « Since » introduit un point de départ dans le temps, « on Monday » un jour.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 13,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "E.06"
+    ],
+    "explanation": "« Safety » est la sécurité. Expliquez la raison professionnelle : « Please fasten your seat belt for your safety. » « Goodness » ne signifie pas sécurité et une règle personnelle ne répond pas à la raison demandée.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 14,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "E.09"
+    ],
+    "explanation": "La traduction la plus précise est « J’ai laissé ma carte de crédit à l’hôtel. Pourrions-nous y retourner, s’il vous plaît ? ». « Go back » signifie retourner ; cela ne prescrit pas une manœuvre immédiate de demi-tour.",
+    "status": "historical",
+    "update_note": "Plusieurs propositions reformulent une demande très voisine. Sans indication demandant la traduction la plus littérale et sans corrigé fourni, cette question est étudiée hors score.",
+    "sources": []
+  },
+  {
+    "number": 15,
+    "answers": [
+      "a"
+    ],
+    "lesson_refs": [
+      "E.07"
+    ],
+    "explanation": "« Rush hour » désigne l’heure de pointe ; au pluriel, « rush hours ». Pour prévenir d’un ralentissement : « It is rush hour; the journey may take longer. »",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 16,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "E.12"
+    ],
+    "explanation": "« Lots of » se construit avec des noms dénombrables au pluriel comme places. « Many places » conviendrait aussi, mais « a many » et « a much » sont incorrects.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 17,
+    "answers": [
+      "b"
+    ],
+    "lesson_refs": [
+      "E.11"
+    ],
+    "explanation": "À la station-service, « Fill it up, please » demande le plein. Pour remplir un formulaire on emploie « fill in » ou « fill out the form ». Le contexte permet de choisir le sens.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 18,
+    "answers": [
+      "a"
+    ],
+    "lesson_refs": [
+      "E.12"
+    ],
+    "explanation": "« Better than » est le comparatif de good : meilleur que. « In English » précise le domaine comparé. La phrase ne parle ni de voyages en Angleterre ni de fautes plus nombreuses.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 19,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "E.09"
+    ],
+    "explanation": "« Don’t worry » rassure : ne vous inquiétez pas, pas de souci. « I can drive you there » signifie je peux vous y conduire. « Pas de quoi » répond plutôt à un remerciement.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 20,
+    "answers": [
+      "b"
+    ],
+    "lesson_refs": [
+      "E.07"
+    ],
+    "explanation": "« Buy » signifie acheter, « bye » au revoir et « by » par/près de. Après « need to », on emploie le verbe à sa base : « need to buy a map ».",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  }
+]

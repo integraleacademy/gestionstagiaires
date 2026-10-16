@@ -1,0 +1,51 @@
+name: APS - préparer la voix naturelle pour vérification
+
+on:
+  push:
+    branches: [codex/aps-natural-voice-20261013]
+    paths:
+      - scripts/restore_aps_natural_voice.py
+      - .github/workflows/aps-natural-voice-review.yml
+
+permissions: {}
+
+concurrency:
+  group: aps-natural-voice-review
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    if: github.repository == 'integraleacademy/gestionstagiaires'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/restore_aps_natural_voice.py
+            /elearning_native/aps62/video_manifest_v8.json
+            /elearning_native/aps62/video_manifest_v9.json
+            /elearning_native/aps62/assets/media/aps62/v8/
+            /elearning_native/aps62/assets/media/aps62/v9/
+      - name: Préparer les outils
+        run: |
+          if ! command -v ffmpeg; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
+      - name: Restaurer et contrôler les 62 narrations
+        env:
+          APS_NATURAL_WORKERS: '2'
+        run: python3 scripts/restore_aps_natural_voice.py
+      - name: Enregistrer les médias sur la branche de préparation
+        run: |
+          test "${GITHUB_REF_NAME}" = "codex/aps-natural-voice-20261013"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --sparse elearning_native/aps62/natural_voice_v13.json elearning_native/aps62/assets/media/aps62/v13
+          git commit -m "Préparer les 62 narrations APS au débit d'origine pour vérification"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

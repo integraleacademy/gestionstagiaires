@@ -1,0 +1,288 @@
+{
+  "reviewed_on": "2026-10-10",
+  "status": "admin_preparation_only",
+  "certifying_minutes": 0,
+  "legal_eligible_minimum_minutes": 9450,
+  "eligible_objectives": [
+    {
+      "annex": "II",
+      "objective": "Livre VI du CSI",
+      "minimum_minutes": 240,
+      "modules": "02"
+    },
+    {
+      "annex": "II",
+      "objective": "Code pénal et limites de l’intervention",
+      "minimum_minutes": 180,
+      "modules": "02"
+    },
+    {
+      "annex": "II",
+      "objective": "Article 73 du CPP",
+      "minimum_minutes": 120,
+      "modules": "02"
+    },
+    {
+      "annex": "II",
+      "objective": "Libertés publiques",
+      "minimum_minutes": 60,
+      "modules": "02"
+    },
+    {
+      "annex": "II",
+      "objective": "Principes de la République",
+      "minimum_minutes": 180,
+      "modules": "02"
+    },
+    {
+      "annex": "II",
+      "objective": "Déontologie",
+      "minimum_minutes": 240,
+      "modules": "02"
+    },
+    {
+      "annex": "II",
+      "objective": "Analyse des conflits",
+      "minimum_minutes": 180,
+      "modules": "03"
+    },
+    {
+      "annex": "II",
+      "objective": "Résolution des conflits",
+      "minimum_minutes": 120,
+      "modules": "03"
+    },
+    {
+      "annex": "II",
+      "objective": "Consignes",
+      "minimum_minutes": 120,
+      "modules": "04"
+    },
+    {
+      "annex": "II",
+      "objective": "Remontée d’informations",
+      "minimum_minutes": 180,
+      "modules": "04"
+    },
+    {
+      "annex": "XI",
+      "objective": "Cadre légal européen et mondial",
+      "minimum_minutes": 240,
+      "modules": "02,06"
+    },
+    {
+      "annex": "XI",
+      "objective": "Article 73 : application spécifique",
+      "minimum_minutes": 60,
+      "modules": "02"
+    },
+    {
+      "annex": "XI",
+      "objective": "Organisation des juridictions",
+      "minimum_minutes": 240,
+      "modules": "02"
+    },
+    {
+      "annex": "XI",
+      "objective": "Libertés et convention de branche",
+      "minimum_minutes": 180,
+      "modules": "02"
+    },
+    {
+      "annex": "XI",
+      "objective": "Définition du risque terroriste",
+      "minimum_minutes": 45,
+      "modules": "05"
+    },
+    {
+      "annex": "XI",
+      "objective": "Menaces terroristes",
+      "minimum_minutes": 45,
+      "modules": "05"
+    },
+    {
+      "annex": "XI",
+      "objective": "Niveaux de risque",
+      "minimum_minutes": 60,
+      "modules": "05"
+    },
+    {
+      "annex": "XI",
+      "objective": "Matériels utilisés par les auteurs",
+      "minimum_minutes": 60,
+      "modules": "05"
+    },
+    {
+      "annex": "XI",
+      "objective": "Réflexes de prévention",
+      "minimum_minutes": 60,
+      "modules": "05"
+    },
+    {
+      "annex": "XI",
+      "objective": "Détection de comportements suspects",
+      "minimum_minutes": 60,
+      "modules": "05"
+    },
+    {
+      "annex": "XI",
+      "objective": "Culture de sécurité",
+      "minimum_minutes": 30,
+      "modules": "05"
+    },
+    {
+      "annex": "XI",
+      "objective": "Blessures liées au terrorisme",
+      "minimum_minutes": 30,
+      "modules": "05,09"
+    },
+    {
+      "annex": "XI",
+      "objective": "Alerte des secours en contexte terroriste",
+      "minimum_minutes": 30,
+      "modules": "05,09"
+    },
+    {
+      "annex": "XI",
+      "objective": "Fondamentaux de la protection physique",
+      "minimum_minutes": 840,
+      "modules": "06"
+    },
+    {
+      "annex": "XI",
+      "objective": "Mise en œuvre d’une mission",
+      "minimum_minutes": 1260,
+      "modules": "06"
+    },
+    {
+      "annex": "XI",
+      "objective": "Observation et détection",
+      "minimum_minutes": 120,
+      "modules": "06,07"
+    },
+    {
+      "annex": "XI",
+      "objective": "Mise en sûreté d’un lieu",
+      "minimum_minutes": 420,
+      "modules": "06"
+    },
+    {
+      "annex": "XI",
+      "objective": "Utilisation de la moto en protection physique",
+      "minimum_minutes": 120,
+      "modules": "06"
+    },
+    {
+      "annex": "XI",
+      "objective": "Gestion d’une évacuation d’autorité",
+      "minimum_minutes": 720,
+      "modules": "06"
+    },
+    {
+      "annex": "XI",
+      "objective": "Application des consignes et comptes rendus",
+      "minimum_minutes": 240,
+      "modules": "04,06"
+    },
+    {
+      "annex": "XI",
+      "objective": "Communications de mission",
+      "minimum_minutes": 240,
+      "modules": "04,06"
+    },
+    {
+      "annex": "XI",
+      "objective": "Identification des blessures : secours tactique",
+      "minimum_minutes": 30,
+      "modules": "09"
+    },
+    {
+      "annex": "XI",
+      "objective": "Risques des transports",
+      "minimum_minutes": 480,
+      "modules": "08"
+    },
+    {
+      "annex": "XI",
+      "objective": "Gestion du stress",
+      "minimum_minutes": 300,
+      "modules": "03,08"
+    },
+    {
+      "annex": "XI",
+      "objective": "Capacités de réponse",
+      "minimum_minutes": 300,
+      "modules": "08"
+    },
+    {
+      "annex": "XI",
+      "objective": "Stratégies d’intervention",
+      "minimum_minutes": 240,
+      "modules": "08"
+    },
+    {
+      "annex": "XI",
+      "objective": "Grands événements",
+      "minimum_minutes": 240,
+      "modules": "08"
+    },
+    {
+      "annex": "XI",
+      "objective": "Malveillance",
+      "minimum_minutes": 420,
+      "modules": "08"
+    },
+    {
+      "annex": "XI",
+      "objective": "Outils informatiques",
+      "minimum_minutes": 120,
+      "modules": "04,07"
+    },
+    {
+      "annex": "XI",
+      "objective": "Surveillance et détection",
+      "minimum_minutes": 600,
+      "modules": "07"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Arrêté du 1er septembre 2025 — texte et annexes II / XI",
+      "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000052197461/"
+    },
+    {
+      "title": "ADEF — modalités à vérifier pour une certification",
+      "url": "https://adef-securite.fr/comment-choisir-un-organisme-de-formation-en-securite-privee-les-7-criteres-a-verifier/"
+    },
+    {
+      "title": "ADEF — cahier des charges A3P, version septembre 2024 (à confronter aux exigences actuelles)",
+      "url": "https://web35.adef-securite.fr/DOCS/DOCSGENERAUX/CAA3P008/CDC%20TFP%20A3P%20V4%20applicable%2009-2024.pdf"
+    }
+  ],
+  "notes": [
+    "Le texte réglementaire est applicable depuis le 1er octobre 2025. Il distingue des objectifs réalisables à distance et des séquences à maintenir en présentiel.",
+    "La somme des durées minimales des lignes marquées OUI est de 27 h pour le tronc commun et 130 h 30 pour l’annexe XI. Ce calcul de lecture (157 h 30) n’est ni un volume autorisé par l’ADEF pour le TFP A3P, ni une durée réalisée sur cette plateforme.",
+    "L’ADEF indique, à la date de consultation, que seuls les TFP APS et DSP peuvent comporter des séquences à distance. L’ouverture certifiante A3P reste donc désactivée.",
+    "Les UV 02 à 09 reprennent la structure pédagogique du manuel fourni. Ce classement ne constitue pas une nouvelle nomenclature réglementaire.",
+    "Le programme TFP A3P actualisé au 01/05/2023 est une source historique fournie par l’organisme ; il ne remplace pas le texte de 2025 ni le référentiel actuel du certificateur.",
+    "Le SST (UV 01) exige une formation pratique et une évaluation dédiées ; il n’est pas converti en cours certifiant à distance. Les révisions de secours UV 09 ne le remplacent pas.",
+    "Le contenu textuel de 94 leçons du manuel a été adapté pour l’écran. Les illustrations originales ne sont pas toutes reproduites. Les synthèses vidéo reprennent des extraits expliqués des leçons et des situations professionnelles. Leur durée réelle est distincte des heures réglementaires.",
+    "Les QCM et l’examen blanc utilisent un seuil pédagogique interne de 80 %. Ils ne reproduisent pas une banque officielle ni les modalités de certification ADEF."
+  ],
+  "in_person": [
+    "SST et évaluation pratique du secourisme",
+    "Mises en situation de conflit et de protection face à une attaque",
+    "Accompagnement à pied, embarquement, dispositifs motorisés et conduite",
+    "Gestes techniques, capacités physiques et entraînement sportif",
+    "Manipulation des matériels de secours, extraction, secourisme tactique",
+    "Incendie : apprentissage et manipulation encadrés",
+    "Séquences de protection des informations classées NON par l’annexe XI"
+  ],
+  "release_requirements": [
+    "Confirmer par écrit auprès du certificateur les modalités autorisées pour le TFP A3P.",
+    "Vérifier l’agrément de l’organisme, du site, des formateurs et le référentiel applicable.",
+    "Faire valider les objectifs, les contenus, les durées, l’accompagnement et les évaluations par l’équipe pédagogique.",
+    "Organiser les séquences présentielles obligatoires et les évaluations pratiques.",
+    "Définir et vérifier l’identification, l’assistance, la traçabilité et les justificatifs avant toute activation stagiaire."
+  ]
+}

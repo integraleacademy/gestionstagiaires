@@ -1,0 +1,939 @@
+{
+  "id": "module-13",
+  "version": "20261007-aps62-v7",
+  "title": "La main courante numérique",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-q-13-01",
+      "prompt": "À quoi sert la main courante numérique ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "À tracer les événements, actions et suites du service"
+        },
+        {
+          "id": "2",
+          "text": "À prononcer des sanctions pénales"
+        },
+        {
+          "id": "3",
+          "text": "À remplacer toute alerte urgente"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Elle constitue un outil de continuité et de suivi, sans se substituer aux autorités.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-02",
+      "prompt": "Quel compte utiliser pour saisir une main courante ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le compte partagé d’un ancien collègue"
+        },
+        {
+          "id": "2",
+          "text": "Un compte trouvé ouvert"
+        },
+        {
+          "id": "3",
+          "text": "Son compte professionnel individuel autorisé"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’identification de l’auteur contribue à la fiabilité de la trace.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-03",
+      "prompt": "Quelle heure faut-il distinguer si la saisie est différée ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Seulement l’heure du repas"
+        },
+        {
+          "id": "2",
+          "text": "Une heure moyenne"
+        },
+        {
+          "id": "3",
+          "text": "L’heure des faits et celle de la saisie"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La distinction évite une chronologie trompeuse.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-04",
+      "prompt": "Une erreur est découverte dans une entrée validée. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Effacer l’historique discrètement"
+        },
+        {
+          "id": "2",
+          "text": "La rectifier avec une trace selon les fonctions prévues"
+        },
+        {
+          "id": "3",
+          "text": "Modifier le nom de l’auteur"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La correction doit préserver la compréhension de la version initiale et de la rectification.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-05",
+      "prompt": "Quelle formulation est factuelle ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une personne est forcément dangereuse"
+        },
+        {
+          "id": "2",
+          "text": "À 11 h 08, une personne frappe trois fois la porte fermée"
+        },
+        {
+          "id": "3",
+          "text": "Une personne anormale fait encore des histoires"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La description d’un comportement observable est plus exploitable qu’un jugement.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-06",
+      "prompt": "Un incident est signalé par téléphone. Comment mentionner sa source ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Écrire qu’il a été vu par l’agent"
+        },
+        {
+          "id": "2",
+          "text": "Indiquer qu’il est rapporté et par quel relais utile"
+        },
+        {
+          "id": "3",
+          "text": "Supprimer toute indication d’origine"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le lecteur doit pouvoir distinguer le constat direct de l’information reçue.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-07",
+      "prompt": "Une alerte vitale survient pendant une saisie. Quelle priorité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Terminer obligatoirement tous les champs"
+        },
+        {
+          "id": "2",
+          "text": "Protéger et alerter, puis compléter la trace"
+        },
+        {
+          "id": "3",
+          "text": "Fermer le logiciel et quitter le site"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’outil de traçabilité ne doit pas retarder une action urgente.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-08",
+      "prompt": "Une photo est jointe à un événement. Que vérifier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Qu’elle soit intéressante à partager"
+        },
+        {
+          "id": "2",
+          "text": "Qu’elle montre le plus de visages possible"
+        },
+        {
+          "id": "3",
+          "text": "Sa nécessité, son autorisation et les informations qu’elle expose"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La pièce jointe doit servir le suivi tout en respectant les personnes.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-09",
+      "prompt": "La main courante peut-elle accueillir des rumeurs privées ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non, sans nécessité professionnelle et vérification adaptée"
+        },
+        {
+          "id": "2",
+          "text": "Oui si elles sont populaires"
+        },
+        {
+          "id": "3",
+          "text": "Oui après la relève"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La collecte doit rester pertinente pour la mission.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-10",
+      "prompt": "Un compte rendu se limite à « RAS ». Que manque-t-il souvent ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le contexte des contrôles effectivement réalisés"
+        },
+        {
+          "id": "2",
+          "text": "Un jugement sur les visiteurs"
+        },
+        {
+          "id": "3",
+          "text": "La promesse d’une absence de risque future"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le périmètre et les vérifications permettent de comprendre ce que couvre le constat.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-11",
+      "prompt": "Pourquoi indiquer le destinataire d’une alerte ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour remplacer la description des faits"
+        },
+        {
+          "id": "2",
+          "text": "Pour fermer automatiquement l’incident"
+        },
+        {
+          "id": "3",
+          "text": "Pour savoir qui a été informé et organiser la suite"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’envoi d’une information ne prouve pas à lui seul sa prise en charge.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-12",
+      "prompt": "Un incident reste ouvert en fin de service. Que saisir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une clôture fictive"
+        },
+        {
+          "id": "2",
+          "text": "Rien jusqu’au lendemain"
+        },
+        {
+          "id": "3",
+          "text": "L’état, les actions en attente et le relais"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La continuité dépend des informations laissées à l’équipe suivante.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-13",
+      "prompt": "Une entrée est copiée du service précédent. Quel risque ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Supprimer toute erreur de date"
+        },
+        {
+          "id": "2",
+          "text": "Présenter comme réalisés des contrôles non effectués"
+        },
+        {
+          "id": "3",
+          "text": "Améliorer toujours la fiabilité"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La saisie doit refléter le service réel, pas un texte reproduit par habitude.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-14",
+      "prompt": "Que faire d’une connexion laissée ouverte en quittant le poste ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Verrouiller ou se déconnecter selon la procédure"
+        },
+        {
+          "id": "2",
+          "text": "Écrire son mot de passe sur l’écran"
+        },
+        {
+          "id": "3",
+          "text": "Laisser le prochain agent utiliser le compte"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La protection de la session évite les accès et saisies attribués à tort.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-15",
+      "prompt": "Une personne veut consulter toutes les entrées la concernant. Quel relais ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le responsable ou circuit prévu pour les demandes de droits"
+        },
+        {
+          "id": "2",
+          "text": "Un refus automatique sans orientation"
+        },
+        {
+          "id": "3",
+          "text": "Une copie immédiate de toute la base"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La demande doit être examinée en protégeant les droits des autres personnes.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-16",
+      "prompt": "Le réseau tombe pendant une saisie. Quelle action ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Inventer ultérieurement les horaires"
+        },
+        {
+          "id": "2",
+          "text": "Suivre la procédure de continuité puis réintégrer avec traçabilité"
+        },
+        {
+          "id": "3",
+          "text": "Utiliser un réseau social personnel"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Un mode dégradé doit préserver la confidentialité et la chronologie.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-17",
+      "prompt": "Pourquoi vérifier la date lors d’un service de nuit ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Parce que toute heure de nuit est approximative"
+        },
+        {
+          "id": "2",
+          "text": "Pour regrouper tous les faits au premier jour"
+        },
+        {
+          "id": "3",
+          "text": "Parce que les événements peuvent franchir minuit"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une date erronée peut fausser l’ensemble de la chronologie.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-18",
+      "prompt": "Une entrée contient une accusation non établie. Que privilégier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’opinion majoritaire de l’équipe"
+        },
+        {
+          "id": "2",
+          "text": "Les faits observés et les éléments encore incertains"
+        },
+        {
+          "id": "3",
+          "text": "Un qualificatif pénal présenté comme verdict"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le rapport ne remplace pas la décision d’une autorité judiciaire.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-19",
+      "prompt": "Une action corrective a été réalisée par le technicien. Que noter ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’information reçue et la vérification effectuée dans son rôle"
+        },
+        {
+          "id": "2",
+          "text": "Que tout le site est sûr pour toujours"
+        },
+        {
+          "id": "3",
+          "text": "Que l’agent a lui-même réparé"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Il faut attribuer les actions et limiter les conclusions à ce qui a été vérifié.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-20",
+      "prompt": "Quelle donnée personnelle peut être supprimée d’un brouillon avant validation ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le lieu du danger"
+        },
+        {
+          "id": "2",
+          "text": "L’heure des faits"
+        },
+        {
+          "id": "3",
+          "text": "Un détail privé inutile à la compréhension de l’incident"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La minimisation améliore la pertinence et réduit une exposition inutile.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-21",
+      "prompt": "Pourquoi attribuer un identifiant à un incident ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour relier les mises à jour sans confusion"
+        },
+        {
+          "id": "2",
+          "text": "Pour remplacer toute description"
+        },
+        {
+          "id": "3",
+          "text": "Pour empêcher la relève d’y accéder"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Un repère commun facilite le suivi de plusieurs actions.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-22",
+      "prompt": "La confidentialité interdit-elle toute transmission aux autorités compétentes ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui si le client préfère éviter une enquête"
+        },
+        {
+          "id": "2",
+          "text": "Non, les transmissions prévues ou autorisées suivent leur cadre"
+        },
+        {
+          "id": "3",
+          "text": "Oui sans exception"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La confidentialité professionnelle doit être articulée avec les obligations et demandes légalement fondées.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-23",
+      "prompt": "Un export de main courante est demandé. Que vérifier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le destinataire, le périmètre, le motif et le canal autorisé"
+        },
+        {
+          "id": "2",
+          "text": "La rapidité de téléchargement"
+        },
+        {
+          "id": "3",
+          "text": "Seulement le format du fichier"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’export peut exposer de nombreuses informations et doit rester maîtrisé.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-24",
+      "prompt": "Peut-on modifier les heures pour faire paraître une alerte plus rapide ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non"
+        },
+        {
+          "id": "2",
+          "text": "Oui si l’incident est clos"
+        },
+        {
+          "id": "3",
+          "text": "Oui à la demande du client"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La falsification détruit la fiabilité du suivi et peut masquer une difficulté à corriger.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-25",
+      "prompt": "Un texte saisi comporte des fautes sans ambiguïté factuelle. Quelle priorité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Supprimer les noms des intervenants utiles"
+        },
+        {
+          "id": "2",
+          "text": "Corriger la forme sans changer les faits ni leur trace"
+        },
+        {
+          "id": "3",
+          "text": "Réécrire l’événement pour le rendre plus valorisant"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La lisibilité doit servir la fidélité du récit.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-26",
+      "prompt": "Pourquoi indiquer une absence de réponse à un appel important ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour humilier systématiquement le destinataire"
+        },
+        {
+          "id": "2",
+          "text": "Pour éviter toute autre tentative"
+        },
+        {
+          "id": "3",
+          "text": "Pour expliquer le relais suivant et les délais"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une information factuelle sur les tentatives éclaire la chaîne d’alerte.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-27",
+      "prompt": "Une consigne change au cours de l’incident. Que consigner ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’auteur, l’heure, le contenu utile et son application"
+        },
+        {
+          "id": "2",
+          "text": "Une version commune inventée"
+        },
+        {
+          "id": "3",
+          "text": "Uniquement la consigne finale"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La chronologie des décisions permet de comprendre l’évolution de l’action.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-28",
+      "prompt": "Comment nommer une pièce jointe utile ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Avec un repère d’incident et une description claire selon la procédure"
+        },
+        {
+          "id": "2",
+          "text": "Avec un mot de passe confidentiel"
+        },
+        {
+          "id": "3",
+          "text": "Avec un surnom humiliant"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le nom doit permettre de retrouver la pièce sans exposer inutilement des données.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-29",
+      "prompt": "Un agent découvre une entrée suspecte attribuée à son compte. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Signaler l’anomalie et préserver les éléments utiles"
+        },
+        {
+          "id": "2",
+          "text": "Effacer l’entrée immédiatement"
+        },
+        {
+          "id": "3",
+          "text": "Partager son mot de passe pour vérifier"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une attribution douteuse peut révéler un problème d’accès ou de sécurité nécessitant investigation.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-13-30",
+      "prompt": "Quel critère permet une bonne clôture d’incident ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le formulaire ne contient plus de zone vide"
+        },
+        {
+          "id": "2",
+          "text": "Le résultat connu, les vérifications et les suites restantes sont explicités"
+        },
+        {
+          "id": "3",
+          "text": "Le client ne téléphone plus"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une clôture est une information opérationnelle, pas seulement un statut informatique.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    }
+  ],
+  "reviewed_on": "2026-10-04"
+}

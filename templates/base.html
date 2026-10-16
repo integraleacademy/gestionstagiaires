@@ -25,8 +25,10 @@
     "admin_qonto_settings", "admin_wedof_requests", "admin_wedof", "admin_wedof_matching_preview", "admin_wedof_matching_sync_exact", "admin_cnaps_unknown", "admin_cnaps_tracking",
     "admin_afc", "admin_sessions_conventions", "admin_sessions_automations",
     "admin_sessions_billing", "admin_direct_debits", "admin_sessions_archived", "admin_cash_payments",
-    "admin_trainees", "admin_trainee_page", "admin_vtc_trainees_all",
-    "admin_sales_tracking", "admin_cancellation_tracking", "admin_exams", "admin_exam_detail"
+    "admin_ssiap_pathways", "admin_ssiap_trainee_pathway", "admin_ssiap_convocations", "admin_trainees", "admin_trainee_page", "admin_vtc_trainees_all",
+    "admin_sales_tracking", "admin_cancellation_tracking", "admin_exams", "admin_exam_detail",
+    "native_elearning.admin_catalog", "native_elearning.admin_vtc_catalog",
+    "native_elearning.admin_a3p_catalog", "native_elearning.admin_macaps_catalog", "native_elearning.admin_live"
   ] %}
   {% set show_admin_sidebar = is_admin_logged_in and not is_partner_space and (request.endpoint in admin_sidebar_endpoints) %}
   {% if show_admin_sidebar %}<script>document.body.classList.add('admin-sidebar-active');</script>{% endif %}
@@ -133,7 +135,7 @@
               </div>
             {% endif %}
             <a href="{{ url_for('admin_positioning_tests') }}" class="btn topbar-slim-link">Tests de positionnement</a>
-            {% if is_super_admin %}<a href="{{ url_for('admin_partners') }}" class="btn topbar-slim-link">Gérer les partenaires</a>{% endif %}
+            {% if is_super_admin %}<a href="{{ url_for('admin_partners') }}" class="btn topbar-slim-link">Organismes de formation</a><a href="{{ url_for('manuals_shop.admin_orders') }}" class="btn topbar-slim-link">Commandes de manuels</a>{% endif %}
             <a href="{{ url_for('admin_logout') }}" class="btn topbar-slim-link">Déconnexion</a>
           {% else %}
             <button type="button" class="partner-sidebar-toggle" data-sidebar-open aria-controls="partnerSidebar" aria-expanded="false">☰ Menu</button>
@@ -630,7 +632,7 @@
       const values = defaults || {};
       const normalizedTrainingType = String(trainingType || values.training_type || "").toUpperCase();
       let defaultTrainingPrice = values.training_price || "";
-      if(normalizedTrainingType.includes("SSIAP") && parseAmount(defaultTrainingPrice) <= 0){
+      if(normalizedTrainingType.includes("SSIAP") && !values.ssiap_pathway && parseAmount(defaultTrainingPrice) <= 0){
         const withAps = window.AppModal
           ? await window.AppModal.confirm({
               type: "info",

@@ -1,0 +1,920 @@
+{
+  "id": "vtc-e",
+  "version": "20261007-vtc-v5-annales",
+  "training_label": "VTC",
+  "title": "VTC · Accueillir en anglais · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "exam-annales-2023-e-02",
+      "prompt": "I booked a car, are you my driver?",
+      "options": [
+        {
+          "id": "a",
+          "text": "I booked the car too"
+        },
+        {
+          "id": "b",
+          "text": "There is no book in my car"
+        },
+        {
+          "id": "c",
+          "text": "If you are Mr Martin, yes I am your driver"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le client veut vérifier l’identité du chauffeur réservé. « If you are Mr Martin, yes I am your driver » confirme la réservation en vérifiant le nom. « Book » est ici le verbe réserver, pas le nom livre.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-02",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 2,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-03",
+      "prompt": "How long are you planning to stay in France?",
+      "options": [
+        {
+          "id": "a",
+          "text": "combien de temps comptez-vous rester en France ?"
+        },
+        {
+          "id": "b",
+          "text": "comment comptez-vous rester en France ?"
+        },
+        {
+          "id": "c",
+          "text": "combien de fois êtes-vous venu en France ?"
+        }
+      ],
+      "answer": "a",
+      "explanation": "« How long » interroge une durée. « Planning to stay » signifie compter rester. « How often » interrogerait la fréquence et « how » seul la manière.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-03",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 2,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-04",
+      "prompt": "\"To demand\" signifie :",
+      "options": [
+        {
+          "id": "a",
+          "text": "exiger"
+        },
+        {
+          "id": "b",
+          "text": "supplier"
+        },
+        {
+          "id": "c",
+          "text": "demander"
+        }
+      ],
+      "answer": "a",
+      "explanation": "« To demand » signifie exiger. Pour demander poliment, utilisez plutôt « to ask » ou « could you…? ». C’est un faux ami : il ne faut pas traduire automatiquement demander par demand.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-04",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 2,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-06",
+      "prompt": "Quelle est la bonne traduction de « sac à main »?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Hand luggage"
+        },
+        {
+          "id": "b",
+          "text": "Suitcase"
+        },
+        {
+          "id": "c",
+          "text": "Handbag"
+        }
+      ],
+      "answer": "c",
+      "explanation": "« Handbag » désigne un sac à main. « Hand luggage » signifie bagage à main ; « suitcase » est une valise. Repérez le type d’objet plutôt que le seul mot hand.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-06",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 2,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-07",
+      "prompt": "Mettez votre ceinture de sécurité :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Fasten your seat belt"
+        },
+        {
+          "id": "b",
+          "text": "Unfasten your seat belt"
+        },
+        {
+          "id": "c",
+          "text": "Sit on your seat belt"
+        }
+      ],
+      "answer": "a",
+      "explanation": "« Fasten your seat belt » demande d’attacher sa ceinture. « Unfasten » signifie détacher et « sit on » s’asseoir sur. Ajoutez « please » pour une consigne courtoise.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.06"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-07",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 2,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-08",
+      "prompt": "Pneu crevé :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Flat wheel"
+        },
+        {
+          "id": "b",
+          "text": "Flat tyre"
+        },
+        {
+          "id": "c",
+          "text": "Fat tired"
+        }
+      ],
+      "answer": "b",
+      "explanation": "« A flat tyre » est un pneu crevé ou dégonflé. « Wheel » est la roue complète et « tired » signifie fatigué. Exemple : « We have a flat tyre; I will stop somewhere safe. »",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-08",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 2,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-09",
+      "prompt": "Do you want to choose the route?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Voulez-vous m'indiquer où vous voulez vous rendre ?"
+        },
+        {
+          "id": "b",
+          "text": "Voulez-vous choisir le parcours ?"
+        },
+        {
+          "id": "c",
+          "text": "Voulez-vous que je vous indique la route ?"
+        }
+      ],
+      "answer": "b",
+      "explanation": "« Choose the route » signifie choisir l’itinéraire ou le parcours. La destination se demande avec « Where would you like to go? ». Ne confondez pas le lieu d’arrivée et le chemin emprunté.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.07"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-09",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-10",
+      "prompt": "Where would you like to go?",
+      "options": [
+        {
+          "id": "a",
+          "text": "I used to go to the swimming pool"
+        },
+        {
+          "id": "b",
+          "text": "23 Chanzy avenue, please"
+        },
+        {
+          "id": "c",
+          "text": "I like coming to London"
+        }
+      ],
+      "answer": "b",
+      "explanation": "« Where » demande un lieu : une adresse répond à la question. « I used to… » évoque une ancienne habitude et « I like… » une préférence, sans fournir la destination demandée.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-10",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-11",
+      "prompt": "J'ai un avion demain matin à 10h20",
+      "options": [
+        {
+          "id": "a",
+          "text": "I have a plane tomorrow morning at twenty to ten"
+        },
+        {
+          "id": "b",
+          "text": "I have a plane tomorrow morning at twenty past ten"
+        },
+        {
+          "id": "c",
+          "text": "I had a plane tomorrow evening at twenty past ten"
+        }
+      ],
+      "answer": "b",
+      "explanation": "« Twenty past ten » signifie 10 h 20 ; « twenty to ten » signifie 9 h 40. « Tomorrow morning » désigne demain matin. Vérifiez séparément jour, moment de la journée et heure.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-11",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-12",
+      "prompt": "How many people can you take in your car?",
+      "options": [
+        {
+          "id": "a",
+          "text": "No more than 3"
+        },
+        {
+          "id": "b",
+          "text": "Since the beginning"
+        },
+        {
+          "id": "c",
+          "text": "On monday"
+        }
+      ],
+      "answer": "a",
+      "explanation": "« How many people » demande un nombre de personnes. « No more than 3 » signifie pas plus de trois. « Since » introduit un point de départ dans le temps, « on Monday » un jour.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-12",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-13",
+      "prompt": "Vous demandez à votre client de mettre sa ceinture de sécurité, il vous demande pourquoi :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Because it's for your goodness"
+        },
+        {
+          "id": "b",
+          "text": "Because it's my rule"
+        },
+        {
+          "id": "c",
+          "text": "Because it's for your safety"
+        }
+      ],
+      "answer": "c",
+      "explanation": "« Safety » est la sécurité. Expliquez la raison professionnelle : « Please fasten your seat belt for your safety. » « Goodness » ne signifie pas sécurité et une règle personnelle ne répond pas à la raison demandée.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.06"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-13",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-15",
+      "prompt": "Les heures de pointe :",
+      "options": [
+        {
+          "id": "a",
+          "text": "The rush hour"
+        },
+        {
+          "id": "b",
+          "text": "The peak of a clock"
+        },
+        {
+          "id": "c",
+          "text": "The point's hours"
+        }
+      ],
+      "answer": "a",
+      "explanation": "« Rush hour » désigne l’heure de pointe ; au pluriel, « rush hours ». Pour prévenir d’un ralentissement : « It is rush hour; the journey may take longer. »",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.07"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-15",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-16",
+      "prompt": "France has …… places to visit:",
+      "options": [
+        {
+          "id": "a",
+          "text": "a much"
+        },
+        {
+          "id": "b",
+          "text": "a many"
+        },
+        {
+          "id": "c",
+          "text": "lots of"
+        }
+      ],
+      "answer": "c",
+      "explanation": "« Lots of » se construit avec des noms dénombrables au pluriel comme places. « Many places » conviendrait aussi, mais « a many » et « a much » sont incorrects.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-16",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-17",
+      "prompt": "Fill it up, please:",
+      "options": [
+        {
+          "id": "a",
+          "text": "Remplissez la fiche s'il vous plait"
+        },
+        {
+          "id": "b",
+          "text": "Le plein s'il vous plait"
+        },
+        {
+          "id": "c",
+          "text": "Garder le moral"
+        }
+      ],
+      "answer": "b",
+      "explanation": "À la station-service, « Fill it up, please » demande le plein. Pour remplir un formulaire on emploie « fill in » ou « fill out the form ». Le contexte permet de choisir le sens.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-17",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-18",
+      "prompt": "You're better than me in English :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Tu es meilleur que moi en anglais"
+        },
+        {
+          "id": "b",
+          "text": "Tu pars souvent en Angleterre"
+        },
+        {
+          "id": "c",
+          "text": "Tu fais plus de faute que moi en anglais"
+        }
+      ],
+      "answer": "a",
+      "explanation": "« Better than » est le comparatif de good : meilleur que. « In English » précise le domaine comparé. La phrase ne parle ni de voyages en Angleterre ni de fautes plus nombreuses.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-18",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-19",
+      "prompt": "Don't worry, I can drive you there :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Pas d'ennui, je peux vous y conduire"
+        },
+        {
+          "id": "b",
+          "text": "Pas de quoi, je peux vous y conduire"
+        },
+        {
+          "id": "c",
+          "text": "Pas de soucis, je peux vous y conduire"
+        }
+      ],
+      "answer": "c",
+      "explanation": "« Don’t worry » rassure : ne vous inquiétez pas, pas de souci. « I can drive you there » signifie je peux vous y conduire. « Pas de quoi » répond plutôt à un remerciement.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.09"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-19",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-20",
+      "prompt": "My GPS isn't working, I need to ……….a map:",
+      "options": [
+        {
+          "id": "a",
+          "text": "bye"
+        },
+        {
+          "id": "b",
+          "text": "buy"
+        },
+        {
+          "id": "c",
+          "text": "by"
+        }
+      ],
+      "answer": "b",
+      "explanation": "« Buy » signifie acheter, « bye » au revoir et « by » par/près de. Après « need to », on emploie le verbe à sa base : « need to buy a map ».",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.07"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-20",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2022-e-01",
+      "prompt": "I need a taxi for tomorrow afternoon :",
+      "options": [
+        {
+          "id": "a",
+          "text": "J'ai besoin d'un taxi pour demain après-midi"
+        },
+        {
+          "id": "b",
+          "text": "J'ai besoin d'un taxi pour demain"
+        },
+        {
+          "id": "c",
+          "text": "J'ai besoin d'un taxi pour cet après-midi"
+        }
+      ],
+      "answer": "a",
+      "explanation": "« I need » signifie « j’ai besoin » et « tomorrow afternoon » signifie « demain après-midi ». Conserver la précision de l’après-midi évite de transformer la réservation en simple demande pour demain ou pour aujourd’hui.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.02",
+        "E.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-01",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 12,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-02",
+      "prompt": "Est-ce qu'il y a un musée dans votre ville ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "is there museum on your town ?"
+        },
+        {
+          "id": "b",
+          "text": "whats a museum in your town ?"
+        },
+        {
+          "id": "c",
+          "text": "is there a museum in your town ?"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Pour demander si un musée existe dans une ville, utiliser « Is there a museum in your town? ». Le singulier dénombrable museum demande ici l’article a ; la localisation se construit avec in.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-02",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 12,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-03",
+      "prompt": "Pouvez-vous attendre quelques minutes ? Mon ami arrive.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Could you wait a couple of minutes ? My friend would arrive"
+        },
+        {
+          "id": "b",
+          "text": "Could you wait a couple of minutes ? My friend is coming"
+        },
+        {
+          "id": "c",
+          "text": "Are you waiting a couple of minutes ? My friend is coming"
+        }
+      ],
+      "answer": "b",
+      "explanation": "« Could you wait a couple of minutes? » formule une demande polie d’attente. « My friend is coming » indique que l’ami est en train d’arriver ; « would arrive » exprimerait une autre modalité et « Are you waiting » n’est pas la même demande.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.09"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-03",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 12,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-04",
+      "prompt": "Souhaitez-vous un reçu ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "do you want a ticket?"
+        },
+        {
+          "id": "b",
+          "text": "would you like a receipt?"
+        },
+        {
+          "id": "c",
+          "text": "did you want a bill?"
+        }
+      ],
+      "answer": "b",
+      "explanation": "« Would you like a receipt? » signifie « Souhaitez-vous un reçu ? ». Receipt est la preuve de paiement ; bill désigne plutôt l’addition ou la facture. « Would you like » rend la proposition polie.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.10"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-04",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 12,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-05",
+      "prompt": "Ma voiture ne démarre pas :",
+      "options": [
+        {
+          "id": "a",
+          "text": "my car shouldn't start"
+        },
+        {
+          "id": "b",
+          "text": "my car didn't start"
+        },
+        {
+          "id": "c",
+          "text": "my car doesn't start"
+        }
+      ],
+      "answer": "c",
+      "explanation": "« My car doesn’t start » exprime le problème actuel : ma voiture ne démarre pas. « Didn’t start » le situe dans le passé et « shouldn’t start » signifie qu’elle ne devrait pas démarrer.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-05",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 12,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-06",
+      "prompt": "What is the translation of « driving »?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Conduire"
+        },
+        {
+          "id": "b",
+          "text": "Partir"
+        },
+        {
+          "id": "c",
+          "text": "Construire"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Dans le contexte routier, driving renvoie à l’action de conduire. « Partir » se traduit par exemple par leave et « construire » par build ; le contexte aide à reconnaître le sens du mot.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.07"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-06",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 12,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-07",
+      "prompt": "Quelle est la marque de votre voiture ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "What brand is your car?"
+        },
+        {
+          "id": "b",
+          "text": "How is your car?"
+        },
+        {
+          "id": "c",
+          "text": "Is that your car?"
+        }
+      ],
+      "answer": "a",
+      "explanation": "« What brand is your car? » demande la marque du véhicule. « How is your car? » porte sur son état et « Is that your car? » demande si ce véhicule est le vôtre. La formulation fréquente « What make is your car? » convient aussi.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-07",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 12,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-08",
+      "prompt": "Are you free?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Êtes-vous disponible ?"
+        },
+        {
+          "id": "b",
+          "text": "Êtes-vous prêt ?"
+        },
+        {
+          "id": "c",
+          "text": "Êtes-vous gratuit ?"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Dans une demande de transport, « Are you free? » signifie « Êtes-vous disponible ? ». Free peut aussi signifier gratuit dans d’autres contextes, mais cette question porte ici sur la disponibilité du chauffeur.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-08",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 12,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-10",
+      "prompt": "Can you take us to the airport before 4 pm?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Pouvez-vous nous conduire à l'aéroport avant 4h de l'après midi ?"
+        },
+        {
+          "id": "b",
+          "text": "Pouvez-vous aller à l'aéroport à 4h de l'après midi ?"
+        },
+        {
+          "id": "c",
+          "text": "Peux-tu nous prendre à l'aéroport à 4h ?"
+        }
+      ],
+      "answer": "a",
+      "explanation": "« Take us to the airport » veut dire nous conduire à l’aéroport ; « before 4 pm » signifie avant 16 heures. Il faut conserver nous, la destination et avant : à 16 heures n’exprime pas la même contrainte.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.03",
+        "E.07"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-10",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 12,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-11",
+      "prompt": "I am so sorry, I lost my wallet. What can we do ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Je suis désolé, j'ai perdu mon sac à main. Que pouvons-nous faire ?"
+        },
+        {
+          "id": "b",
+          "text": "Je suis désolé, j'ai perdu mon portefeuille. Que pouvons-nous faire ?"
+        },
+        {
+          "id": "c",
+          "text": "Je suis désolé, j'ai perdu mon portefeuille. Que pouvez-vous faire ?"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Wallet signifie portefeuille et « What can we do? » signifie « Que pouvons-nous faire ? ». La source distingue correctement portefeuille de sac à main et we de you ; ces deux détails changent le sens de la demande d’aide.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-11",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 13,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-12",
+      "prompt": "Do you have a business card?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Avez-vous une carte professionnelle?"
+        },
+        {
+          "id": "b",
+          "text": "Avez-vous une carte des entreprises ?"
+        },
+        {
+          "id": "c",
+          "text": "Avez-vous une carte de visite ?"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Business card signifie carte de visite. Une carte professionnelle autorisant l’exercice du VTC est un autre document ; traduire mot à mot business par entreprise produirait ici un contresens.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-12",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 13,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-13",
+      "prompt": "I can't go through, the road is blocked.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Je peux traverser, la circulation n'est pas bloquée"
+        },
+        {
+          "id": "b",
+          "text": "Je ne peux pas y aller, la route est bloquée"
+        },
+        {
+          "id": "c",
+          "text": "Je peux y aller, la route n'est pas bloquée"
+        }
+      ],
+      "answer": "b",
+      "explanation": "« I can’t go through » exprime l’impossibilité de passer ; « the road is blocked » précise que la route est bloquée. Il faut conserver la négation can’t et ne pas annoncer au client que le passage est possible.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.07",
+        "E.09"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-13",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 13,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-14",
+      "prompt": "There seems to be traffic jams on the motorway, do you know another way ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Il semble que les routes soient bloquées, pouvez-vous prendre l'autoroute ?"
+        },
+        {
+          "id": "b",
+          "text": "Il semblerait qu'il faille prendre l'autoroute pour éviter les bouchons ?"
+        },
+        {
+          "id": "c",
+          "text": "Apparemment, il y a des bouchons sur l'autoroute, connaissez-vous une autre route ?"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Traffic jams signifie embouteillages, motorway autoroute et another way un autre itinéraire. La phrase demande une alternative parce que l’autoroute semble encombrée ; elle ne demande pas de prendre l’autoroute pour éviter les bouchons.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.07",
+        "E.09"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-14",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 13,
+      "correction_origin": "source"
+    }
+  ],
+  "notice": "Entraînement pédagogique à choix unique. Les questions historiques et celles nécessitant un visuel absent sont exclues. La correction renvoie aux leçons à revoir ; ce bilan ne remplace pas le barème de l’examen officiel.",
+  "construction": {
+    "reviewed_on": "2026-10-07",
+    "independent_of_workshops": true,
+    "annales_questions": 30,
+    "original_questions": 0
+  }
+}

@@ -1,0 +1,30 @@
+<section class="sf-section sf-previews" id="apercus" aria-labelledby="sf-preview-title" data-support-previews><div class="sf-shell">
+  <div class="sf-section-head"><div><p class="sf-kicker">À L’INTÉRIEUR DES SUPPORTS</p><h2 id="sf-preview-title">Des repères, des méthodes.<br>Et des situations concrètes.</h2></div><p>{{ 'Trois aperçus pour découvrir les thèmes de cette formation.' if book else 'Trois aperçus pour chacune de nos 14 formations.' }} Ouvrez une diapositive pour la lire en grand.</p></div>
+  {% if not book %}
+  <div class="sf-preview-picker" data-preview-picker hidden><div><label for="support-preview-choice">Quelle formation souhaitez-vous découvrir ?</label><select id="support-preview-choice" data-preview-select>{% for item in books %}<option value="{{ item.code }}">{{ item.name }}</option>{% endfor %}</select></div><p>14 formations<br><strong>3 aperçus par support</strong></p></div>
+  {% endif %}
+  {% for item in books if item.usb_price is not none and (not book or item.code == book.code) %}
+  {% set preview = support_previews[item.code] %}
+  <div class="sf-preview-group" data-preview-group="{{ item.code }}" aria-labelledby="preview-title-{{ item.code }}">
+    <div class="sf-preview-heading"><div><span class="sf-preview-badge">{{ 'Extraits du PowerPoint' if preview.capture else 'Aperçus pédagogiques' }}</span><h3 id="preview-title-{{ item.code }}">{{ support_name(item) }}{% if 'recyclage' in item.code %}<small>Recyclage / Remise à niveau</small>{% endif %}</h3></div><p>{{ preview.description }}</p></div>
+    <div class="sf-preview-grid">
+      {% for slide in preview.slides %}{% set slide_number = loop.index %}
+      <figure id="apercu-{{ item.code }}-{{ loop.index }}">
+        <a href="{% if preview.capture %}{{ url_for('static', filename='manuals/powerpoint-previews/' ~ slide.image) }}{% else %}#apercu-{{ item.code }}-{{ loop.index }}{% endif %}" data-support-preview data-preview-caption="{{ item.name }} · {{ slide.title }}" aria-label="Agrandir {{ item.name }} : {{ slide.title }}">
+          {% if preview.capture %}<div class="sf-slide-frame"><img class="sf-slide-capture" src="{{ url_for('static', filename='manuals/powerpoint-previews/' ~ slide.image) }}" alt="Extrait du PowerPoint {{ item.name }} : {{ slide.title }}" width="1440" height="810" loading="lazy"></div>{% else %}{% include 'manuals/_usb_slide.html' %}{% endif %}
+          <span class="sf-preview-open"><span>0{{ loop.index }} / 03</span>Agrandir ↗</span>
+        </a>
+        <figcaption>{{ slide.title }}</figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+    <p class="sf-note">{% if preview.capture %}Extraits du PowerPoint {{ item.name }}. Seules ces trois diapositives sont consultables ici.{% else %}Diapositives de présentation des thèmes {{ item.name }}, créées à partir du manuel de la collection. Elles illustrent les sujets abordés ; la mise en page du PowerPoint livré peut différer.{% endif %}</p>
+    {% if not book %}<a class="sf-link sf-preview-product" href="{{ url_for('manuals_shop.usb_detail', code=item.code) }}">Découvrir ce support · {{ item.usb_price|manuals_money }} TTC →</a>{% endif %}
+  </div>
+  {% endfor %}
+</div></section>
+<dialog class="sf-preview-dialog" aria-labelledby="sf-preview-caption">
+  <div class="sf-preview-toolbar"><span>Aperçu du support formateur</span><button type="button" data-preview-zoom aria-pressed="false">Zoom +</button><form method="dialog"><button type="submit" aria-label="Fermer l’aperçu" autofocus>Fermer ×</button></form></div>
+  <div class="sf-preview-viewport" tabindex="0" aria-label="Diapositive agrandie, zone défilable avec le zoom"><div data-preview-stage></div></div>
+  <div class="sf-preview-navigation"><button type="button" data-preview-previous aria-label="Diapositive précédente">←</button><p id="sf-preview-caption" aria-live="polite"></p><button type="button" data-preview-next aria-label="Diapositive suivante">→</button></div>
+</dialog>

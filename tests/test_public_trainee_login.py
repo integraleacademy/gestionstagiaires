@@ -38,6 +38,24 @@ class PublicTraineeLoginTests(unittest.TestCase):
             "https://gestionstagiaires-r5no.onrender.com",
         )
 
+    def test_explicit_public_student_portal_base_can_target_preproduction(self):
+        self.assertEqual(
+            gestion_app._resolve_public_student_portal_base(
+                "https://gestionstagiaires-test-v2.onrender.com/",
+                "https://gestionstagiaires-r5no.onrender.com",
+            ),
+            "https://gestionstagiaires-test-v2.onrender.com",
+        )
+
+    def test_public_student_portal_base_without_override_keeps_safe_fallback(self):
+        self.assertEqual(
+            gestion_app._resolve_public_student_portal_base(
+                "",
+                "https://gestionstagiaires-test-v2.onrender.com/",
+            ),
+            "https://gestionstagiaires-r5no.onrender.com",
+        )
+
     def test_404_unknown_space_token_links_to_global_login(self):
         with patch.object(gestion_app, "load_data", return_value=self.data):
             response = self.client.get("/espace/UNKNOWN-TOKEN", follow_redirects=False)

@@ -1,0 +1,748 @@
+"""Self-service training centres and an isolated, persistent manuals shop.
+
+Accounts reuse the partner store (JSON or PostgreSQL). A persisted account_type
+enforces a positive route allowlist; hiding menu links is not an access control.
+Orders are quoted exclusively on the server, then confirmed with a one-use draft
+identifier. Network delivery only happens after durable account/order creation.
+"""
+from __future__ import annotations
+
+import datetime as dt
+import hmac
+import io
+import os
+import re
+import secrets
+import time
+import uuid
+from functools import wraps
+from pathlib import Path
+from urllib.parse import urlparse, urlencode, parse_qsl, urlunparse
+
+from flask import Blueprint, abort, flash, g, redirect, render_template, request, send_file, session, url_for
+from PIL import Image, UnidentifiedImageError
+import manuals_commerce as commerce
+import elearning_orders
+import elearning_groups
+import elearning_reporting
+import organisme_profile
+import elearning_demo
+import mac_aps_demo
+import manuals_accounts
+import manuals_public
+import manuals_fulfillment
+import manuals_metrics
+import manuals_previews
+from manuals_presentation import presentation_books
+
+
+from manuals_catalogue import CATALOGUE, CATEGORIES
+
+STATUSES = {"received": "Reçue", "confirmed": "Confirmée", "production": "En préparation", "shipped": "Expédiée", "cancelled": "Annulée"}
+PUBLIC_ENDPOINTS = {"home", "manuals_shop.public_presentation", "manuals_shop.public_manual_detail", "manuals_shop.register_account", "manuals_shop.registration_complete", "manuals_shop.resend_welcome"}
+CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.order_options", "manuals_shop.orders_history", "manuals_shop.elearning_soon", "manuals_shop.presentation", "manuals_shop.manual_detail", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo", "manuals_shop.order_payment", "manuals_shop.order_payment_status"}
+PUBLIC_ENDPOINTS |= manuals_public.PUBLIC_ENDPOINTS | manuals_accounts.PUBLIC_ENDPOINTS | organisme_profile.PUBLIC_ENDPOINTS | elearning_demo.PUBLIC_ENDPOINTS | mac_aps_demo.PUBLIC_ENDPOINTS
+CUSTOMER_ENDPOINTS |= manuals_metrics.CUSTOMER_ENDPOINTS | manuals_fulfillment.CUSTOMER_ENDPOINTS | elearning_orders.CUSTOMER_ENDPOINTS | elearning_groups.CUSTOMER_ENDPOINTS | elearning_reporting.CUSTOMER_ENDPOINTS | organisme_profile.CUSTOMER_ENDPOINTS
+CUSTOMER_ENDPOINTS |= {'native_module_signatures.' + name for name in (
+    'index', 'order_modules', 'prepare_order', 'reissue', 'snapshot_pdf', 'send', 'refresh', 'signed_pdf', 'audit_archive')}
+SAFE_ENDPOINTS = {"static", "admin_login", "admin_login_post", "admin_logout", "manuals_shop.elearning_access"} | PUBLIC_ENDPOINTS | CUSTOMER_ENDPOINTS
+MAX_LOGO_BYTES = 5 * 1024 * 1024
+
+
+def money(cents):
+    return f"{int(cents) / 100:,.2f}".replace(",", "\u202f").replace(".", ",") + " €"
+
+
+def public_home():
+    """Public editorial content only: no partner, order or negotiated-price data."""
+    return render_template("manuals/storefront.html", public=True, staff=False,
+                           books=CATALOGUE, categories=CATEGORIES,
+                           courses=elearning_orders.COURSES)
+
+
+def csrf_token():
+    if not session.get("manuals_csrf"):
+        session["manuals_csrf"] = secrets.token_urlsafe(32)
+    return session["manuals_csrf"]
+
+
+def check_csrf():
+    expected = session.get("manuals_csrf", "")
+    supplied = request.form.get("csrf_token", "")
+    if not expected or not supplied or not hmac.compare_digest(str(expected), str(supplied)):
+        abort(400, "Le formulaire a expiré. Rechargez la page avant de réessayer.")
+
+
+def guard_request(host):
+    """Protect *every* namespace, including future API routes and CRM routes."""
+    if request.endpoint == "static" or not host._is_external_partner_session():
+        return None
+    auth = host._load_partner_auth_data()
+    partner = next((p for p in auth.get("partners", []) if p.get("id") == session.get("partner_id")), None)
+    user = next((u for u in auth.get("users", []) if u.get("id") == session.get("user_id") and u.get("partner_id") == session.get("partner_id")), None)
+    if user and user.get("password_changed_at") and str(session.get(host.SESSION_ISSUED_AT_KEY) or "") < user["password_changed_at"]:
+        session.clear()
+        return redirect(url_for("admin_login", password_reset="1"))
+    restricted = session.get("manuals_only") or (partner or {}).get("account_type") == "manuals_only"
+    if not restricted:
+        return None
+    user = next((u for u in auth.get("users", []) if u.get("id") == session.get("user_id") and u.get("partner_id") == session.get("partner_id")), None)
+    if not partner or not user or not user.get("active", True) or partner.get("status") not in {"active", "trial"}:
+        session.clear()
+        if host._request_expects_json():
+            return {"ok": False, "error": "session_expired"}, 401
+        return redirect(url_for("admin_login", error="inactive"))
+    g.manuals_partner = partner
+    session["manuals_only"] = True
+    if request.endpoint in SAFE_ENDPOINTS:
+        return None
+    if request.method in {"GET", "HEAD"} and not host._request_expects_json():
+        return redirect(url_for("manuals_shop.home"))
+    return {"ok": False, "error": "manuals_only", "message": "Ce service n’est pas disponible dans votre espace organisme."}, 403
+
+
+def quote_items(form):
+    """Money is integer cents. Browser totals, names and partner IDs are ignored."""
+    lines = []
+    for book in CATALOGUE:
+        for kind in ("manual", "usb"):
+            raw = str(form.get(f"{kind}_{book['code']}") or "0").strip()
+            if not re.fullmatch(r"[0-9]{1,5}", raw):
+                raise ValueError(f"Quantité invalide pour {book['name']}.")
+            qty = int(raw)
+            if qty == 0:
+                continue
+            if (kind == "manual" and not 50 <= qty <= 10000) or (kind == "usb" and not 1 <= qty <= 100):
+                raise ValueError(f"{book['name']} : choisissez de 50 à 10 000 manuels, ou de 1 à 100 clés USB.")
+            if kind == "usb" and book["usb_price"] is None:
+                raise ValueError(f"Le support USB {book['name']} n’est pas proposé dans le catalogue.")
+            price = (book["bulk_price"] if qty >= 100 else book["price"]) if kind == "manual" else book["usb_price"]
+            lines.append({"code": book["code"], "kind": kind, "label": ("Manuel " if kind == "manual" else "PowerPoint sur clé USB — ") + book["name"], "quantity": qty, "unit_cents": price, "total_cents": qty * price})
+    if not lines:
+        raise ValueError("Choisissez au moins un manuel ou un support PowerPoint.")
+    return lines
+
+
+def valid_siret(value):
+    if not re.fullmatch(r"[0-9]{14}", value) or len(set(value)) == 1:
+        return False
+    # La Poste uses the published alternate check for its establishments.
+    if value.startswith("356000000"):
+        return sum(map(int, value)) % 5 == 0
+    return sum((int(c) * 2 // 10 + int(c) * 2 % 10) if i % 2 == 0 else int(c) for i, c in enumerate(value)) % 10 == 0
+
+
+def base_url(host):
+    # Render's service URL keeps test-v2 welcome links on test-v2 even when the
+    # legacy student-portal configuration deliberately points at production.
+    for value in (os.getenv("MANUALS_BASE_URL"), os.getenv("RENDER_EXTERNAL_URL"), host._public_base_url()):
+        parsed = urlparse(value or "")
+        if parsed.scheme == "https" and parsed.hostname and not parsed.username and not parsed.password:
+            return f"https://{parsed.netloc}"
+    raise ValueError("Adresse publique de l’espace non configurée")
+
+
+def save_logo(host, upload, partner_id, draft_id):
+    if not upload or not upload.filename:
+        return ""
+    raw = upload.stream.read(MAX_LOGO_BYTES + 1)
+    if len(raw) > MAX_LOGO_BYTES:
+        raise ValueError("Le logo doit peser moins de 5 Mo.")
+    try:
+        with Image.open(io.BytesIO(raw)) as im:
+            if im.format not in {"PNG", "JPEG", "WEBP"} or im.width * im.height > 16000000:
+                raise ValueError("Choisissez un logo PNG, JPEG ou WebP de 16 mégapixels maximum.")
+            im.load()
+            im = im.convert("RGBA")
+            root = Path(host.get_partner_storage_path(partner_id, "logos"))
+            name = f"manuals-{draft_id}.png"
+            im.save(root / name, format="PNG")
+            return name
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+        raise ValueError("Ce fichier n’est pas une image valide. Choisissez un logo PNG, JPEG ou WebP.") from exc
+
+
+def register(host):
+    app = host.app
+    manuals_previews.register(app)
+    # Partners can read their own negotiated prices, but cannot write them
+    # through the general profile editor (not in PARTNER_SELF_EDITABLE_FIELDS).
+    host.PARTNER_VISIBLE_FIELDS.add("elearning_pricing")
+    bp = Blueprint("manuals_shop", __name__)
+    app.add_template_filter(money, "manuals_money")
+    app.add_template_filter(elearning_orders.course_label, "elearning_label")
+    app.jinja_env.globals["elearning_courses"] = elearning_orders.COURSES
+    kick_worker = commerce.install_worker(host)
+
+    @app.before_request
+    def start_order_worker():
+        if request.endpoint != "static" and request.endpoint not in mac_aps_demo.PUBLIC_ENDPOINTS:
+            kick_worker(notify=False)
+
+    @bp.after_request
+    def private_pages(response):
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        if host._is_super_admin_session() and request.args.get("embed") == "1" and response.status_code in {302, 303}:
+            destination = urlparse(response.headers.get("Location", ""))
+            if not destination.scheme and not destination.netloc and destination.path.startswith("/admin/"):
+                query = dict(parse_qsl(destination.query))
+                query["embed"] = "1"
+                response.headers["Location"] = urlunparse(destination._replace(query=urlencode(query)))
+        return response
+
+    def page(template, **context):
+        header = None
+        assisting = bool(host._is_super_admin_session() and session.get("assist_partner_id"))
+        context.setdefault("embedded", host._is_super_admin_session() and request.args.get("embed") == "1")
+        if assisting:
+            assisted = host._current_partner(host.load_data()) or {}
+            context["assisted_partner_name"] = assisted.get("name", "Organisme")
+        if not context.get("public") and session.get("admin_logged_in") and (host._is_external_partner_session() or assisting) and not context.get("staff"):
+            partner = context.get("partner") or {}
+            if partner.get("id") != host._current_partner_id():
+                partner = host._current_partner(host.load_data()) or {}
+            if partner.get("id") == host._current_partner_id():
+                header = {"name": str(partner.get("name") or "Mon organisme"),
+                          "logo_url": url_for("manuals_shop.organisme_logo_preview") if organisme_profile.logo_path(host, partner) else ""}
+        return render_template("manuals/" + template, csrf_token=("" if context.get("public") and request.endpoint in manuals_public.CACHEABLE else csrf_token()), statuses=STATUSES, payment_labels=commerce.PAYMENT_LABELS,
+                               organisme_header=header, categories=CATEGORIES, **context)
+
+    def customer(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if not session.get("admin_logged_in"):
+                return redirect(url_for("admin_login", next=request.full_path.rstrip("?")))
+            assisting = bool(host._is_super_admin_session() and session.get("assist_partner_id"))
+            if not (host._is_external_partner_session() or assisting):
+                if host._is_super_admin_session():
+                    if view.__name__.startswith("elearning_progress") and request.method in {"GET", "HEAD"}:
+                        return view(*args, **kwargs)
+                    if view.__name__.startswith("elearning"):
+                        return redirect(url_for("manuals_shop.elearning_admin"))
+                    if view.__name__ == "order_detail":
+                        order = find_order(host.load_data(), kwargs["order_id"])
+                        return redirect(url_for("manuals_shop.admin_order", partner_id=order["partner_id"], order_id=order["id"]))
+                    return redirect(url_for("manuals_shop.admin_orders"))
+                abort(403)
+            if session.get("admin_role") == "viewer" and request.method == "POST":
+                abort(403)
+            return view(*args, **kwargs)
+        return wrapped
+
+    def partner_data():
+        data = host.load_data()
+        partner = host._current_partner(data)
+        if not partner or partner.get("status") not in {"active", "trial"}:
+            abort(403)
+        return data, partner
+
+    def send_welcome(partner_id, user_id):
+        now = host._now_iso()
+        def claim(data):
+            partner = host._partner_or_404(data, partner_id)
+            user = next((u for u in data.get("users", []) if u.get("id") == user_id and u.get("partner_id") == partner_id), None)
+            if not user:
+                abort(404)
+            delivery = partner.get("welcome_email", {})
+            if delivery.get("status") == "sent":
+                return {"sent": True}
+            if delivery.get("last_attempt_at") and (dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(delivery["last_attempt_at"].replace("Z", "+00:00"))).total_seconds() < 60:
+                return {"sent": False}
+            partner["welcome_email"] = {"status": "sending", "last_attempt_at": now}
+            return {"partner": dict(partner), "user": dict(user)}
+        claimed = host._atomic_update_data(claim, partner_id=partner_id)
+        if "partner" not in claimed:
+            return claimed.get("sent", False)
+        partner, user = claimed["partner"], claimed["user"]
+        try:
+            login_url = base_url(host) + url_for("admin_login", next=url_for("manuals_shop.home"))
+            body = render_template("manuals/welcome_email.html", partner=partner, user=user, login_url=login_url)
+            result = host.brevo_send_email(user["email"], "Votre espace organisme de formation est créé", body,
+                text_content=f"Bonjour {user['first_name']},\nVotre espace organisme de formation {partner['name']} a bien été créé.\nConnectez-vous avec votre adresse e-mail et le mot de passe choisi : {login_url}\nRetrouvez vos manuels personnalisés, vos commandes et vos accès e-learning APS, MAC APS et VTC.\nIntégrale Academy — 04 22 47 07 68",
+                metadata={"partner_id": partner_id, "user_id": user_id, "purpose": "manuals_welcome"})
+        except Exception:
+            app.logger.exception("manuals_welcome_failed partner_id=%s", partner_id)
+            result = {"ok": False}
+        def record(data):
+            p = host._partner_or_404(data, partner_id)
+            p["welcome_email"] = {"status": "sent" if result.get("ok") else "failed", "last_attempt_at": now, "message_id": result.get("message_id", "")}
+            return {}
+        host._atomic_update_data(record, partner_id=partner_id)
+        return bool(result.get("ok"))
+
+    @bp.route("/creer-mon-espace", methods=["GET", "POST"])
+    def register_account():
+        if session.get("admin_logged_in"):
+            return redirect(url_for("manuals_shop.home"))
+        next_url = host._safe_local_redirect_target(request.values.get("next", ""), url_for("manuals_shop.home"))
+        values = {k: (request.form.get(k) or "").strip() for k in ("centre", "siret", "first_name", "last_name", "email")}
+        errors = []
+        status = 200
+        if request.method == "POST":
+            check_csrf()
+            if host._partner_login_is_rate_limited("registration:" + values["email"].lower()):
+                return page("register.html", next_url=next_url, values=values, errors=["Trop de tentatives. Patientez quelques minutes avant de réessayer."]), 429
+            values["email"] = values["email"].lower()
+            values["siret"] = re.sub(r"\s", "", values["siret"])
+            password = request.form.get("password", "")
+            if not 2 <= len(values["centre"]) <= 160:
+                errors.append("Indiquez le nom du centre (2 à 160 caractères).")
+            if not valid_siret(values["siret"]):
+                errors.append("Vérifiez votre SIRET : il doit comporter 14 chiffres valides.")
+            if any(not 1 <= len(values[k]) <= 100 for k in ("first_name", "last_name")):
+                errors.append("Indiquez votre nom et votre prénom (100 caractères maximum chacun).")
+            if len(values["email"]) > 254 or not re.fullmatch(r"[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+", values["email"]):
+                errors.append("Indiquez une adresse e-mail valide.")
+            if len(password) < 12 or len(password) > 128:
+                errors.append("Choisissez un mot de passe de 12 à 128 caractères.")
+            if password != request.form.get("password_confirmation", ""):
+                errors.append("Les deux mots de passe doivent être identiques.")
+            if request.form.get("website_url"):
+                errors.append("Le formulaire n’a pas pu être envoyé.")
+            reserved = {str(host.ADMIN_USER or "").lower(), str(host.SECRETARY_USER or "").lower(), str(host.SCOTIA_USER or "").lower()}
+            if not errors and (values["email"] in reserved or host._find_user_by_email(host._load_partner_auth_data(), values["email"])):
+                errors.append("Cette adresse e-mail est déjà utilisée. Connectez-vous à votre espace ou contactez-nous.")
+            if not errors:
+                pid, uid, now = str(uuid.uuid4()), str(uuid.uuid4()), host._now_iso()
+                partner = {"id": pid, "name": values["centre"], "legal_name": values["centre"], "siret": values["siret"], "email": values["email"], "contact_first_name": values["first_name"], "contact_last_name": values["last_name"], "status": "active", "account_type": "manuals_only", "subscription_plan": "manuels", "enabled_modules": [], "max_users": 1, "created_at": now, "updated_at": now}
+                user = {"id": uid, "partner_id": pid, "email": values["email"], "first_name": values["first_name"], "last_name": values["last_name"], "role": "partner_admin", "active": True, "password_hash": host._hash_password(password), "invitation_activated_at": now, "created_at": now, "updated_at": now}
+                def create(data):
+                    if host._find_user_by_email(data, values["email"]):
+                        raise host.PartnerPostgresDuplicateEmail("duplicate_email")
+                    data.setdefault("partners", []).append(partner)
+                    data.setdefault("users", []).append(user)
+                    host._append_activity_log(data, "manuals_account_created", "partner", pid, pid)
+                    return {}
+                try:
+                    host._atomic_update_data(create, partner_id=pid, seed_bundle={"partners": [], "users": [], "invitations": [], "activity_logs": [], "manual_orders": []})
+                except host.PartnerPostgresDuplicateEmail:
+                    errors.append("Cette adresse e-mail est déjà utilisée. Connectez-vous à votre espace.")
+                else:
+                    manuals_metrics.increment(host, "account_created")
+                    session.clear()
+                    session["manuals_registration"] = {"partner_id": pid, "user_id": uid, "name": values["centre"], "email": values["email"], "next": next_url}
+                    session["manuals_welcome_sent"] = send_welcome(pid, uid)
+                    return redirect(url_for("manuals_shop.registration_complete"), code=303)
+            status = 400
+        return page("register.html", values=values, errors=errors, next_url=next_url), status
+
+    @bp.get("/espace-cree")
+    def registration_complete():
+        if not session.get("manuals_registration"):
+            return redirect(url_for("manuals_shop.register_account"))
+        return page("registered.html", account=session["manuals_registration"], welcome_sent=session.get("manuals_welcome_sent"))
+
+    @bp.post("/espace-cree/renvoyer-email")
+    def resend_welcome():
+        check_csrf()
+        account = session.get("manuals_registration")
+        if not account:
+            abort(403)
+        session["manuals_welcome_sent"] = send_welcome(account["partner_id"], account["user_id"])
+        return redirect(url_for("manuals_shop.registration_complete"), code=303)
+
+    @bp.get("/admin/organisme")
+    @customer
+    def home():
+        data, partner = partner_data()
+        orders = sorted((o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft" and not elearning_orders.is_record(o)), key=lambda o: o.get("submitted_at", ""), reverse=True)
+        return page("home.html", partner=partner, orders=orders, order_count=len(orders), elearning_prices=elearning_orders.prices(partner), books=CATALOGUE)
+
+    @bp.get("/admin/organisme/commander")
+    @customer
+    def order_options():
+        _, partner = partner_data()
+        return page("order_options.html", partner=partner, books=CATALOGUE,
+                    elearning_prices=elearning_orders.prices(partner))
+
+    @bp.get("/admin/organisme/commandes")
+    @customer
+    def orders_history():
+        data, partner = partner_data()
+        purchases = sorted(
+            (order for order in data.get("manual_orders", [])
+             if order.get("partner_id") == partner["id"] and order.get("status") != "draft"
+             and order.get("order_type") != "elearning_group"),
+            key=lambda order: order.get("submitted_at") or order.get("created_at") or "",
+            reverse=True,
+        )
+        return page("orders_history.html", partner=partner,
+                    orders=[order for order in purchases if not elearning_orders.is_record(order)],
+                    elearning_purchases=[order for order in purchases if elearning_orders.is_order(order)])
+
+    @bp.get("/admin/organisme/e-learning")
+    @customer
+    def elearning_soon():
+        data, partner = partner_data()
+        view = request.args.get("view", "groups")
+        if view not in {"groups", "catalogue", "orders"}:
+            view = "groups"
+        orders = sorted((o for o in data.get("manual_orders", []) if elearning_orders.is_order(o) and o.get("partner_id") == partner["id"]), key=lambda o: o.get("created_at", ""), reverse=True)
+        groups = elearning_groups.dashboard(data, partner)
+        return page("elearning_catalogue.html", dashboard_view=view, partner=partner, courses=elearning_orders.prices(partner), groups=groups, orders=orders, values=partner, rows=[], request_id=secrets.token_hex(16), errors=[], **elearning_groups.dashboard_filter(groups, request.args))
+
+    def presentation_context():
+        # Staff can inspect the same editorial pages without impersonating a
+        # customer or exposing any customer/order data.
+        staff = host._is_super_admin_session()
+        if not staff:
+            if not host._is_external_partner_session():
+                abort(403)
+            partner_data()
+        return {"staff": staff, "books": presentation_books(CATALOGUE)}
+
+    @bp.get("/manuels")
+    def public_presentation():
+        return page("presentation.html", public=True, staff=False, books=presentation_books(CATALOGUE))
+
+    @bp.get("/manuels/<code>")
+    def public_manual_detail(code):
+        books = presentation_books(CATALOGUE)
+        book = next((b for b in books if b["code"] == code), None)
+        if not book:
+            abort(404)
+        return page("manual_detail.html", public=True, staff=False, book=book, books=books)
+
+    @bp.get("/admin/manuels/presentation")
+    @host.admin_login_required
+    def presentation():
+        return page("presentation.html", **presentation_context())
+
+    @bp.get("/admin/manuels/presentation/<code>")
+    @host.admin_login_required
+    def manual_detail(code):
+        context = presentation_context()
+        book = next((b for b in context["books"] if b["code"] == code), None)
+        if not book:
+            abort(404)
+        return page("manual_detail.html", book=book, **context)
+
+    @bp.get("/admin/manuels")
+    @customer
+    def catalogue():
+        data, partner = partner_data()
+        orders = sorted((o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft" and not elearning_orders.is_record(o)), key=lambda o: o.get("created_at", ""), reverse=True)
+        values = {}
+        if request.args.get("article"):
+            article = request.args["article"]
+            allowed = {f"{kind}_{b['code']}": (50 if kind == 'manual' else 1) for b in CATALOGUE for kind in ('manual', 'usb') if kind == 'manual' or b['usb_price']}
+            if article in allowed:
+                values[article] = allowed[article]
+        if request.args.get("draft"):
+            draft = find_order(data, request.args["draft"])
+            if draft["status"] != "draft":
+                return redirect(url_for("manuals_shop.order_detail", order_id=draft["id"]))
+            values = dict(draft["delivery"])
+            values.update({key: draft.get(key, "") for key in ("notes", "session_date", "personalization")})
+            if draft.get("billing") and draft["billing"].get("different"):
+                values["billing_different"] = "yes"
+                values.update({"billing_" + k: v for k, v in draft["billing"].items() if k in {"address", "address_extra", "postal_code", "city"}})
+            values["draft_id"] = draft["id"]
+            values["existing_logo"] = bool(draft.get("logo_filename"))
+            for line in draft["items"]:
+                values[f"{line['kind']}_{line['code']}"] = line["quantity"]
+        drafts = sorted((o for o in data.get("manual_orders", []) if o.get("status") == "draft" and not elearning_orders.is_record(o)), key=lambda o: o.get("created_at", ""), reverse=True)
+        return page("catalogue.html", partner=partner, books=CATALOGUE, orders=orders, drafts=drafts, values=values, errors=[])
+
+    @bp.post("/admin/manuels/recapitulatif")
+    @customer
+    def checkout():
+        check_csrf()
+        data, partner = partner_data()
+        values = {k: (request.form.get(k) or "").strip() for k in ("recipient", "phone", "address", "address_extra", "postal_code", "city", "country", "notes", "session_date", "personalization", "billing_different", "billing_address", "billing_address_extra", "billing_postal_code", "billing_city")}
+        values.update({f"{kind}_{b['code']}": request.form.get(f"{kind}_{b['code']}", "0") for b in CATALOGUE for kind in ("manual", "usb")})
+        previous = None
+        if request.form.get("draft_id"):
+            previous = find_order(data, request.form["draft_id"])
+            if previous["status"] != "draft":
+                return redirect(url_for("manuals_shop.order_detail", order_id=previous["id"]), code=303)
+            values["draft_id"] = previous["id"]
+            values["existing_logo"] = bool(previous.get("logo_filename"))
+        draft_id = previous["id"] if previous else str(uuid.uuid4())
+        new_logo = ""
+        try:
+            lines = quote_items(request.form)
+            for key, label, maximum in (("recipient", "le destinataire", 160), ("phone", "le téléphone", 30), ("address", "l’adresse de livraison", 200), ("postal_code", "le code postal", 20), ("city", "la ville", 100), ("country", "le pays", 80)):
+                if not 1 <= len(values[key]) <= maximum:
+                    raise ValueError(f"Renseignez {label} (maximum {maximum} caractères).")
+            if len(values["notes"]) > 2000 or len(values["address_extra"]) > 200:
+                raise ValueError("Le commentaire ou le complément d’adresse est trop long.")
+            if values["session_date"]:
+                try:
+                    dt.date.fromisoformat(values["session_date"])
+                except ValueError:
+                    raise ValueError("La date de session n’est pas valide.")
+            different = values["billing_different"] == "yes"
+            billing = {k: values[("billing_" if different else "") + k] for k in ("address", "address_extra", "postal_code", "city")}
+            for key, maximum in (("address", 200), ("postal_code", 20), ("city", 100)):
+                if not 1 <= len(billing[key]) <= maximum:
+                    raise ValueError("Vérifiez votre adresse de facturation.")
+            if len(billing["address_extra"]) > 200:
+                raise ValueError("Le complément d’adresse de facturation est trop long.")
+            if not different and values["country"].casefold() not in {"fr", "france"}:
+                raise ValueError("Pour une livraison hors de France, indiquez séparément l’adresse de facturation française de votre organisme.")
+            billing.update(country="France", country_code="FR", different=different)
+            has_manual = any(line["kind"] == "manual" for line in lines)
+            personalization = values["personalization"] if has_manual else "none"
+            if has_manual and personalization not in {"upload", "later"}:
+                raise ValueError("Choisissez comment nous transmettre votre logo.")
+            new_logo = save_logo(host, request.files.get("logo"), partner["id"], str(uuid.uuid4())) if personalization == "upload" else ""
+            logo = (new_logo or (previous or {}).get("logo_filename", "")) if personalization == "upload" else ""
+            if personalization == "upload" and not logo:
+                raise ValueError("Ajoutez votre logo ou choisissez de l’envoyer plus tard.")
+        except ValueError as exc:
+            orders = [o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft" and not elearning_orders.is_record(o)]
+            return page("catalogue.html", partner=partner, books=CATALOGUE, orders=orders, values=values, errors=[str(exc)]), 400
+        order = {"id": draft_id, "partner_id": partner["id"], "created_by": session.get("user_id"), "status": "draft", "created_at": host._now_iso(), "items": lines, "total_cents": sum(line["total_cents"] for line in lines), "shipping_cents": 0, "tariff_version": "2026", "billing": billing, "centre": {k: partner.get(k, "") for k in ("name", "siret", "email", "contact_first_name", "contact_last_name")}, "delivery": {k: values[k] for k in ("recipient", "phone", "address", "address_extra", "postal_code", "city", "country")}, "notes": values["notes"], "session_date": values["session_date"], "personalization": personalization, "logo_filename": logo}
+        def persist(data):
+            orders = data.setdefault("manual_orders", [])
+            current = next((o for o in orders if o.get("id") == draft_id), None)
+            if current:
+                if current["status"] != "draft":
+                    abort(409, "Cette commande a déjà été confirmée.")
+                current.update(order)
+            else:
+                if sum(1 for o in orders if o.get("partner_id") == partner["id"] and o.get("status") == "draft" and not elearning_orders.is_record(o)) >= 30:
+                    abort(429, "Trop de brouillons. Reprenez un récapitulatif déjà ouvert ou contactez-nous.")
+                orders.append(order)
+            return {}
+        try:
+            host._atomic_update_data(persist)
+        except Exception:
+            if new_logo:
+                (Path(host.get_partner_storage_path(partner["id"], "logos")) / new_logo).unlink(missing_ok=True)
+            raise
+        if previous and previous.get("logo_filename") and previous["logo_filename"] != logo:
+            old_name = previous["logo_filename"]
+            if re.fullmatch(r"manuals-[a-f0-9-]{36}\.png", old_name):
+                (Path(host.get_partner_storage_path(partner["id"], "logos")) / old_name).unlink(missing_ok=True)
+        return redirect(url_for("manuals_shop.order_detail", order_id=draft_id), code=303)
+
+    def find_order(data, order_id):
+        order = next((o for o in data.get("manual_orders", []) if o.get("id") == order_id), None)
+        if not order or elearning_orders.is_record(order):
+            abort(404)
+        if not host._is_super_admin_session() and order.get("partner_id") != host._current_partner_id():
+            abort(404)
+        return order
+
+    @bp.get("/admin/manuels/commandes/<order_id>")
+    @customer
+    def order_detail(order_id):
+        data, partner = partner_data()
+        return page("order.html", partner=partner, order=find_order(data, order_id), staff=False)
+
+    def payment_state(order):
+        # Read persisted, merchant-verified results only: no Qonto calls or
+        # payment creation in the customer's HTTP/session context.
+        state = order.get("commerce", {})
+        stopped = (order["status"] in {"draft", "cancelled"}
+                   or state.get("invoice_status") == "canceled"
+                   or state.get("payment_status") in {"paid", "processing", "partially_paid", "canceled"})
+        payable = (not stopped and state.get("status") in {"ready", "waiting_payment"}
+                   and state.get("payment_status") == "unpaid" and state.get("payment_link_status") == "open")
+        return {"payment_url": commerce.safe_payment_url(state.get("payment_url")) if payable else "",
+                "waiting": not stopped and state.get("status") in {"pending", "processing"}}
+
+    @bp.get("/admin/manuels/commandes/<order_id>/paiement")
+    @customer
+    def order_payment(order_id):
+        data, partner = partner_data()
+        order = find_order(data, order_id)
+        checkout = payment_state(order)
+        if not checkout["payment_url"] and not checkout["waiting"]:
+            return redirect(url_for("manuals_shop.order_detail", order_id=order_id), code=303)
+        return page("payment.html", partner=partner, order=order, checkout=checkout, staff=False)
+
+    @bp.get("/admin/manuels/commandes/<order_id>/paiement/statut")
+    @customer
+    def order_payment_status(order_id):
+        data, _ = partner_data()
+        return payment_state(find_order(data, order_id))
+
+    @bp.post("/admin/manuels/commandes/<order_id>/confirmer")
+    @customer
+    def confirm_order(order_id):
+        check_csrf()
+        if request.form.get("confirm") != "yes":
+            abort(400, "Confirmez avoir vérifié les quantités et les coordonnées.")
+        terms = manuals_public.acceptance(host)
+        def confirm(data):
+            order = find_order(data, order_id)
+            if order["status"] != "draft":
+                return {"created": False, "id": order_id}
+            order["terms_acceptance"] = terms
+            order.update(status="received", reference="MAN-" + dt.datetime.now().strftime("%Y") + "-" + order_id[:8].upper(), submitted_at=host._now_iso(), commerce={"queued": True, "status": "pending", "flow": "payment_first", "attempts": 0, "emails": {}})
+            host._append_activity_log(data, "manual_order_submitted", "manual_order", order_id, order["partner_id"], {"reference": order["reference"], "total_cents": order["total_cents"]})
+            return {"created": True, "id": order_id}
+        host._atomic_update_data(confirm)
+        session["manuals_cart_completed"] = order_id
+        kick_worker()
+        return redirect(url_for("manuals_shop.order_payment", order_id=order_id), code=303)
+
+    @bp.post("/admin/manuels/commandes/<order_id>/actualiser")
+    @customer
+    def refresh_order(order_id):
+        check_csrf()
+        data, partner = partner_data()
+        order = find_order(data, order_id)
+        if order["status"] != "draft" and (order.get("commerce", {}).get("payment_id") or order.get("commerce", {}).get("invoice_id")):
+            state = order.get("commerce", {})
+            # Invoice creation/configuration retries stay under administrator control.
+            if state.get("status") in {"ready", "waiting_payment"}:
+                commerce.queue_again(host, partner["id"], order_id, throttle=True)
+                kick_worker()
+        flash("Le suivi sera actualisé dans quelques instants.", "success")
+        return redirect(url_for("manuals_shop.order_detail", order_id=order_id), code=303)
+
+    @bp.get("/admin/manuels/commandes/<order_id>/logo")
+    @host.admin_login_required
+    def order_logo(order_id):
+        order = find_order(host.load_data(), order_id)
+        name = order.get("logo_filename", "")
+        if not re.fullmatch(r"manuals-[a-f0-9-]{36}\.png", name):
+            abort(404)
+        path = Path(host.get_partner_storage_path(order["partner_id"], "logos")) / name
+        if not path.is_file():
+            abort(404)
+        response = send_file(path, mimetype="image/png", as_attachment=True, download_name="logo-centre.png")
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
+
+    @bp.get("/admin/commandes-manuels")
+    @host.admin_login_required
+    @host.require_super_admin
+    def admin_orders():
+        data = host.load_data()
+        orders = sorted((o for o in data.get("manual_orders", []) if o.get("status") != "draft" and not elearning_orders.is_record(o)), key=lambda o: o.get("submitted_at", ""), reverse=True)
+        return page("admin_orders.html", orders=orders, staff=True, configuration=commerce.configuration_status(host, data))
+
+    @bp.route("/admin/commandes-manuels/<partner_id>/<order_id>", methods=["GET", "POST"])
+    @host.admin_login_required
+    @host.require_super_admin
+    def admin_order(partner_id, order_id):
+        if request.method == "POST":
+            check_csrf()
+            if request.form.get("action") == "retry":
+                order = find_order(host.load_data(), order_id)
+                if order["partner_id"] != partner_id:
+                    abort(404)
+                commerce.queue_again(host, partner_id, order_id)
+                kick_worker()
+                flash("Le traitement des e-mails et de la facturation a été relancé.", "success")
+                return redirect(url_for("manuals_shop.admin_order", partner_id=partner_id, order_id=order_id), code=303)
+            status = request.form.get("status")
+            if status not in STATUSES:
+                abort(400)
+            def update(data):
+                order = find_order(data, order_id)
+                if order["partner_id"] != partner_id or order["status"] == "draft":
+                    abort(404)
+                if status == "cancelled" and order.get("commerce", {}).get("status") == "processing":
+                    abort(409, "Patientez jusqu’à la fin de la préparation de la facture avant d’annuler la commande.")
+                manuals_fulfillment.validate_status(order, status)
+                order["status"] = status
+                if status == "cancelled" and order.get("commerce"):
+                    order["commerce"]["queued"] = False
+                order["updated_at"] = host._now_iso()
+                host._append_activity_log(data, "manual_order_status_changed", "manual_order", order_id, partner_id, {"status": status})
+                return {}
+            host._atomic_update_data(update, partner_id=partner_id)
+            flash("Le statut de la commande a été mis à jour.", "success")
+            return redirect(url_for("manuals_shop.admin_order", partner_id=partner_id, order_id=order_id), code=303)
+        data = host.load_data()
+        order = find_order(data, order_id)
+        if order["partner_id"] != partner_id or order["status"] == "draft":
+            abort(404)
+        return page("order.html", order=order, partner=order["centre"], staff=True, configuration=commerce.configuration_status(host, data, order))
+
+    @bp.route("/admin/commandes-manuels/reglages", methods=["GET", "POST"])
+    @host.admin_login_required
+    @host.require_super_admin
+    def commerce_settings():
+        if host._is_partner_data_scope_session():
+            abort(403, "Quittez l’assistance d’un organisme pour modifier les réglages de la plateforme.")
+        errors = []
+        data = host.load_data()
+        settings = commerce.settings_from(data)
+        if request.method == "POST":
+            check_csrf()
+            try:
+                settings = commerce.validate_settings(request.form)
+                def save(current):
+                    current["manuals_commerce_settings"] = dict(settings, updated_at=host._now_iso())
+                    for order in current.get("manual_orders", []):
+                        state = order.get("commerce", {})
+                        if state.get("status") == "needs_setup" and order.get("status") != "cancelled":
+                            state.update(queued=True, next_attempt=0, attempts=0)
+                    return {}
+                host._atomic_update_data(save)
+                kick_worker()
+                flash("Les réglages de facturation sont enregistrés.", "success")
+                return redirect(url_for("manuals_shop.commerce_settings"), code=303)
+            except ValueError as exc:
+                errors = [str(exc)]
+        configuration = commerce.configuration_status(host, data)
+        return page("commerce_settings.html", staff=True, settings=settings, errors=errors, **configuration, payment_callback=base_url(host) + url_for("manuals_shop.payment_connection_callback")), (400 if errors else 200)
+
+    @bp.get("/admin/commandes-manuels/connexion-paiement")
+    @host.admin_login_required
+    @host.require_super_admin
+    def payment_connection():
+        if host._is_partner_data_scope_session():
+            abort(403)
+        if not host._qonto_oauth_is_configured():
+            flash("Renseignez QONTO_OAUTH_CLIENT_ID et QONTO_OAUTH_CLIENT_SECRET sur ce service Render.", "error")
+            return redirect(url_for("manuals_shop.commerce_settings"))
+        callback = base_url(host) + url_for("manuals_shop.payment_connection_callback")
+        state = secrets.token_urlsafe(32)
+        session["manuals_payment_connection"] = {"state": state, "created": time.time(), "callback": callback}
+        params = {"client_id": host._qonto_oauth_client_id(), "redirect_uri": callback,
+                  "response_type": "code", "scope": host.QONTO_OAUTH_SCOPE + " payment_link.read payment_link.write", "state": state}
+        return redirect(host._qonto_oauth_base_url() + "/oauth2/auth?" + urlencode(params))
+
+    @bp.get("/api/commerce/connexion-paiement/retour")
+    @host.admin_login_required
+    @host.require_super_admin
+    def payment_connection_callback():
+        if host._is_partner_data_scope_session():
+            abort(403)
+        saved = session.pop("manuals_payment_connection", {})
+        supplied = request.args.get("state", "")
+        if not supplied or not saved.get("state") or not hmac.compare_digest(supplied, saved["state"]) or time.time() - saved.get("created", 0) > 600:
+            abort(400, "La demande de connexion a expiré. Recommencez depuis les réglages des commandes.")
+        if request.args.get("error") or not request.args.get("code"):
+            flash("L’autorisation Qonto n’a pas été accordée.", "error")
+        else:
+            try:
+                tokens = host._exchange_qonto_oauth_token({"client_id": host._qonto_oauth_client_id(), "client_secret": host._qonto_oauth_client_secret(), "grant_type": "authorization_code", "redirect_uri": saved["callback"], "code": request.args["code"]})
+                host._store_qonto_oauth_tokens(host.load_data(), tokens)
+                def resume(data):
+                    for order in data.get("manual_orders", []):
+                        state = order.get("commerce", {})
+                        if state.get("status") == "needs_setup" and order.get("status") != "cancelled":
+                            state.update(queued=True, next_attempt=0, attempts=0)
+                    return {}
+                host._atomic_update_data(resume)
+                kick_worker()
+                flash("Connexion Qonto enregistrée. Les commandes en attente de configuration vont être reprises.", "success")
+            except Exception as exc:
+                app.logger.warning("manuals_payment_connection_failed type=%s", type(exc).__name__)
+                flash("La connexion Qonto a échoué. Vérifiez les réglages OAuth de ce service et réessayez.", "error")
+        return redirect(url_for("manuals_shop.commerce_settings"))
+
+    elearning_orders.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, kick_worker=kick_worker)
+    elearning_groups.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, kick_worker=kick_worker)
+    elearning_reporting.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data)
+    organisme_profile.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf)
+    elearning_demo.register_routes(host, bp)
+    mac_aps_demo.register_routes(host, bp)
+    manuals_fulfillment.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, find_order=find_order, save_logo=save_logo, quote_items=quote_items, base_url=base_url)
+    manuals_metrics.register_routes(host, bp, page=page, customer=customer, check_csrf=check_csrf)
+    manuals_public.register_routes(host, bp, page=page)
+    manuals_accounts.register_routes(host, bp, page=page, check_csrf=check_csrf, base_url=base_url)
+    app.register_blueprint(bp)
+
+

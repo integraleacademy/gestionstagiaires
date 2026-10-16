@@ -1,0 +1,739 @@
+{
+  "id": "sujet-2023-e",
+  "title": "28 mars 2023 · Anglais",
+  "year": 2023,
+  "source_filename": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+  "source_sha256": "061c70acfa686e280eb7dcbef5806701d6aeae59fa6c2defb331689e9c737502",
+  "sections": [
+    {
+      "id": "annales-2023-e",
+      "module": "E",
+      "title": "Anglais · mars 2023",
+      "minutes": 30,
+      "questions": [
+        {
+          "number": 1,
+          "page": 2,
+          "prompt": "I'm going to ……… the game, take me to the stadium:",
+          "options": [
+            {
+              "id": "a",
+              "text": "look"
+            },
+            {
+              "id": "b",
+              "text": "see"
+            },
+            {
+              "id": "c",
+              "text": "watch"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "E.12"
+          ],
+          "explanation": "« Watch » convient pour suivre attentivement un match ; « look » s’emploie avec « at ». « See a game » peut aussi désigner le fait d’assister à un match.",
+          "status": "historical",
+          "update_note": "Le contexte « take me to the stadium » permet aussi « see the game ». Sans corrigé fourni, cette question ne départage pas équitablement les choix B et C : elle est étudiée hors score.",
+          "sources": [],
+          "id": "annales-2023-e-01",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« Watch » convient pour suivre attentivement un match ; « look » s’emploie avec « at ». « See a game » peut aussi désigner le fait d’assister à un match."
+          ]
+        },
+        {
+          "number": 2,
+          "page": 2,
+          "prompt": "I booked a car, are you my driver?",
+          "options": [
+            {
+              "id": "a",
+              "text": "I booked the car too"
+            },
+            {
+              "id": "b",
+              "text": "There is no book in my car"
+            },
+            {
+              "id": "c",
+              "text": "If you are Mr Martin, yes I am your driver"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "E.02"
+          ],
+          "explanation": "Le client veut vérifier l’identité du chauffeur réservé. « If you are Mr Martin, yes I am your driver » confirme la réservation en vérifiant le nom. « Book » est ici le verbe réserver, pas le nom livre.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-02",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le client veut vérifier l’identité du chauffeur réservé. « If you are Mr Martin, yes I am your driver » confirme la réservation en vérifiant le nom. « Book » est ici le verbe réserver, pas le nom livre."
+          ]
+        },
+        {
+          "number": 3,
+          "page": 2,
+          "prompt": "How long are you planning to stay in France?",
+          "options": [
+            {
+              "id": "a",
+              "text": "combien de temps comptez-vous rester en France ?"
+            },
+            {
+              "id": "b",
+              "text": "comment comptez-vous rester en France ?"
+            },
+            {
+              "id": "c",
+              "text": "combien de fois êtes-vous venu en France ?"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "E.03"
+          ],
+          "explanation": "« How long » interroge une durée. « Planning to stay » signifie compter rester. « How often » interrogerait la fréquence et « how » seul la manière.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-03",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« How long » interroge une durée. « Planning to stay » signifie compter rester. « How often » interrogerait la fréquence et « how » seul la manière."
+          ]
+        },
+        {
+          "number": 4,
+          "page": 2,
+          "prompt": "\"To demand\" signifie :",
+          "options": [
+            {
+              "id": "a",
+              "text": "exiger"
+            },
+            {
+              "id": "b",
+              "text": "supplier"
+            },
+            {
+              "id": "c",
+              "text": "demander"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "E.11"
+          ],
+          "explanation": "« To demand » signifie exiger. Pour demander poliment, utilisez plutôt « to ask » ou « could you…? ». C’est un faux ami : il ne faut pas traduire automatiquement demander par demand.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-04",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« To demand » signifie exiger. Pour demander poliment, utilisez plutôt « to ask » ou « could you…? ». C’est un faux ami : il ne faut pas traduire automatiquement demander par demand."
+          ]
+        },
+        {
+          "number": 5,
+          "page": 2,
+          "prompt": "Comment se rend-on au cinéma ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "how can I go to the cinema?"
+            },
+            {
+              "id": "b",
+              "text": "can you tell me the way to the cinema?"
+            },
+            {
+              "id": "c",
+              "text": "how do you go to the cinema?"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a",
+            "b",
+            "c"
+          ],
+          "lesson_refs": [
+            "E.04"
+          ],
+          "explanation": "Les trois phrases peuvent demander comment aller au cinéma ; « Can you tell me the way to…? » est une demande d’itinéraire particulièrement claire et polie.",
+          "status": "historical",
+          "update_note": "Les choix se recouvrent : « how do you go » peut aussi porter sur le moyen de transport. Cette formulation ne permet pas de fixer un corrigé unique sans précision ; entraînement hors score.",
+          "sources": [],
+          "id": "annales-2023-e-05",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Les trois phrases peuvent demander comment aller au cinéma ; « Can you tell me the way to…? » est une demande d’itinéraire particulièrement claire et polie."
+          ]
+        },
+        {
+          "number": 6,
+          "page": 2,
+          "prompt": "Quelle est la bonne traduction de « sac à main »?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Hand luggage"
+            },
+            {
+              "id": "b",
+              "text": "Suitcase"
+            },
+            {
+              "id": "c",
+              "text": "Handbag"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "E.05"
+          ],
+          "explanation": "« Handbag » désigne un sac à main. « Hand luggage » signifie bagage à main ; « suitcase » est une valise. Repérez le type d’objet plutôt que le seul mot hand.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-06",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« Handbag » désigne un sac à main. « Hand luggage » signifie bagage à main ; « suitcase » est une valise. Repérez le type d’objet plutôt que le seul mot hand."
+          ]
+        },
+        {
+          "number": 7,
+          "page": 2,
+          "prompt": "Mettez votre ceinture de sécurité :",
+          "options": [
+            {
+              "id": "a",
+              "text": "Fasten your seat belt"
+            },
+            {
+              "id": "b",
+              "text": "Unfasten your seat belt"
+            },
+            {
+              "id": "c",
+              "text": "Sit on your seat belt"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "E.06"
+          ],
+          "explanation": "« Fasten your seat belt » demande d’attacher sa ceinture. « Unfasten » signifie détacher et « sit on » s’asseoir sur. Ajoutez « please » pour une consigne courtoise.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-07",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« Fasten your seat belt » demande d’attacher sa ceinture. « Unfasten » signifie détacher et « sit on » s’asseoir sur. Ajoutez « please » pour une consigne courtoise."
+          ]
+        },
+        {
+          "number": 8,
+          "page": 2,
+          "prompt": "Pneu crevé :",
+          "options": [
+            {
+              "id": "a",
+              "text": "Flat wheel"
+            },
+            {
+              "id": "b",
+              "text": "Flat tyre"
+            },
+            {
+              "id": "c",
+              "text": "Fat tired"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "E.11"
+          ],
+          "explanation": "« A flat tyre » est un pneu crevé ou dégonflé. « Wheel » est la roue complète et « tired » signifie fatigué. Exemple : « We have a flat tyre; I will stop somewhere safe. »",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-08",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« A flat tyre » est un pneu crevé ou dégonflé. « Wheel » est la roue complète et « tired » signifie fatigué. Exemple : « We have a flat tyre; I will stop somewhere safe. »"
+          ]
+        },
+        {
+          "number": 9,
+          "page": 3,
+          "prompt": "Do you want to choose the route?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Voulez-vous m'indiquer où vous voulez vous rendre ?"
+            },
+            {
+              "id": "b",
+              "text": "Voulez-vous choisir le parcours ?"
+            },
+            {
+              "id": "c",
+              "text": "Voulez-vous que je vous indique la route ?"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "E.07"
+          ],
+          "explanation": "« Choose the route » signifie choisir l’itinéraire ou le parcours. La destination se demande avec « Where would you like to go? ». Ne confondez pas le lieu d’arrivée et le chemin emprunté.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-09",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« Choose the route » signifie choisir l’itinéraire ou le parcours. La destination se demande avec « Where would you like to go? ». Ne confondez pas le lieu d’arrivée et le chemin emprunté."
+          ]
+        },
+        {
+          "number": 10,
+          "page": 3,
+          "prompt": "Where would you like to go?",
+          "options": [
+            {
+              "id": "a",
+              "text": "I used to go to the swimming pool"
+            },
+            {
+              "id": "b",
+              "text": "23 Chanzy avenue, please"
+            },
+            {
+              "id": "c",
+              "text": "I like coming to London"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "E.04"
+          ],
+          "explanation": "« Where » demande un lieu : une adresse répond à la question. « I used to… » évoque une ancienne habitude et « I like… » une préférence, sans fournir la destination demandée.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-10",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« Where » demande un lieu : une adresse répond à la question. « I used to… » évoque une ancienne habitude et « I like… » une préférence, sans fournir la destination demandée."
+          ]
+        },
+        {
+          "number": 11,
+          "page": 3,
+          "prompt": "J'ai un avion demain matin à 10h20",
+          "options": [
+            {
+              "id": "a",
+              "text": "I have a plane tomorrow morning at twenty to ten"
+            },
+            {
+              "id": "b",
+              "text": "I have a plane tomorrow morning at twenty past ten"
+            },
+            {
+              "id": "c",
+              "text": "I had a plane tomorrow evening at twenty past ten"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "E.03"
+          ],
+          "explanation": "« Twenty past ten » signifie 10 h 20 ; « twenty to ten » signifie 9 h 40. « Tomorrow morning » désigne demain matin. Vérifiez séparément jour, moment de la journée et heure.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-11",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« Twenty past ten » signifie 10 h 20 ; « twenty to ten » signifie 9 h 40. « Tomorrow morning » désigne demain matin. Vérifiez séparément jour, moment de la journée et heure."
+          ]
+        },
+        {
+          "number": 12,
+          "page": 3,
+          "prompt": "How many people can you take in your car?",
+          "options": [
+            {
+              "id": "a",
+              "text": "No more than 3"
+            },
+            {
+              "id": "b",
+              "text": "Since the beginning"
+            },
+            {
+              "id": "c",
+              "text": "On monday"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "E.03"
+          ],
+          "explanation": "« How many people » demande un nombre de personnes. « No more than 3 » signifie pas plus de trois. « Since » introduit un point de départ dans le temps, « on Monday » un jour.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-12",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« How many people » demande un nombre de personnes. « No more than 3 » signifie pas plus de trois. « Since » introduit un point de départ dans le temps, « on Monday » un jour."
+          ]
+        },
+        {
+          "number": 13,
+          "page": 3,
+          "prompt": "Vous demandez à votre client de mettre sa ceinture de sécurité, il vous demande pourquoi :",
+          "options": [
+            {
+              "id": "a",
+              "text": "Because it's for your goodness"
+            },
+            {
+              "id": "b",
+              "text": "Because it's my rule"
+            },
+            {
+              "id": "c",
+              "text": "Because it's for your safety"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "E.06"
+          ],
+          "explanation": "« Safety » est la sécurité. Expliquez la raison professionnelle : « Please fasten your seat belt for your safety. » « Goodness » ne signifie pas sécurité et une règle personnelle ne répond pas à la raison demandée.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-13",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« Safety » est la sécurité. Expliquez la raison professionnelle : « Please fasten your seat belt for your safety. » « Goodness » ne signifie pas sécurité et une règle personnelle ne répond pas à la raison demandée."
+          ]
+        },
+        {
+          "number": 14,
+          "page": 3,
+          "prompt": "I've left my credit card at the hotel. Could we go back please?",
+          "options": [
+            {
+              "id": "a",
+              "text": "J'ai laissé ma carte de crédit à l'hôtel. Pouvez-vous faire demi-tour s'il vous plait ?"
+            },
+            {
+              "id": "b",
+              "text": "J'ai oublié ma carte de crédit à l'hôtel. Pouvez-vous faire demi-tour s'il vous plait ?"
+            },
+            {
+              "id": "c",
+              "text": "J'ai laissé ma carte de crédit à l'hôtel. Pourrions-nous y retourner s'il vous plait ?"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "E.09"
+          ],
+          "explanation": "La traduction la plus précise est « J’ai laissé ma carte de crédit à l’hôtel. Pourrions-nous y retourner, s’il vous plaît ? ». « Go back » signifie retourner ; cela ne prescrit pas une manœuvre immédiate de demi-tour.",
+          "status": "historical",
+          "update_note": "Plusieurs propositions reformulent une demande très voisine. Sans indication demandant la traduction la plus littérale et sans corrigé fourni, cette question est étudiée hors score.",
+          "sources": [],
+          "id": "annales-2023-e-14",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "La traduction la plus précise est « J’ai laissé ma carte de crédit à l’hôtel. Pourrions-nous y retourner, s’il vous plaît ? ». « Go back » signifie retourner ; cela ne prescrit pas une manœuvre immédiate de demi-tour."
+          ]
+        },
+        {
+          "number": 15,
+          "page": 3,
+          "prompt": "Les heures de pointe :",
+          "options": [
+            {
+              "id": "a",
+              "text": "The rush hour"
+            },
+            {
+              "id": "b",
+              "text": "The peak of a clock"
+            },
+            {
+              "id": "c",
+              "text": "The point's hours"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "E.07"
+          ],
+          "explanation": "« Rush hour » désigne l’heure de pointe ; au pluriel, « rush hours ». Pour prévenir d’un ralentissement : « It is rush hour; the journey may take longer. »",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-15",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« Rush hour » désigne l’heure de pointe ; au pluriel, « rush hours ». Pour prévenir d’un ralentissement : « It is rush hour; the journey may take longer. »"
+          ]
+        },
+        {
+          "number": 16,
+          "page": 3,
+          "prompt": "France has …… places to visit:",
+          "options": [
+            {
+              "id": "a",
+              "text": "a much"
+            },
+            {
+              "id": "b",
+              "text": "a many"
+            },
+            {
+              "id": "c",
+              "text": "lots of"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "E.12"
+          ],
+          "explanation": "« Lots of » se construit avec des noms dénombrables au pluriel comme places. « Many places » conviendrait aussi, mais « a many » et « a much » sont incorrects.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-16",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« Lots of » se construit avec des noms dénombrables au pluriel comme places. « Many places » conviendrait aussi, mais « a many » et « a much » sont incorrects."
+          ]
+        },
+        {
+          "number": 17,
+          "page": 3,
+          "prompt": "Fill it up, please:",
+          "options": [
+            {
+              "id": "a",
+              "text": "Remplissez la fiche s'il vous plait"
+            },
+            {
+              "id": "b",
+              "text": "Le plein s'il vous plait"
+            },
+            {
+              "id": "c",
+              "text": "Garder le moral"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "E.11"
+          ],
+          "explanation": "À la station-service, « Fill it up, please » demande le plein. Pour remplir un formulaire on emploie « fill in » ou « fill out the form ». Le contexte permet de choisir le sens.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-17",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "À la station-service, « Fill it up, please » demande le plein. Pour remplir un formulaire on emploie « fill in » ou « fill out the form ». Le contexte permet de choisir le sens."
+          ]
+        },
+        {
+          "number": 18,
+          "page": 3,
+          "prompt": "You're better than me in English :",
+          "options": [
+            {
+              "id": "a",
+              "text": "Tu es meilleur que moi en anglais"
+            },
+            {
+              "id": "b",
+              "text": "Tu pars souvent en Angleterre"
+            },
+            {
+              "id": "c",
+              "text": "Tu fais plus de faute que moi en anglais"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "E.12"
+          ],
+          "explanation": "« Better than » est le comparatif de good : meilleur que. « In English » précise le domaine comparé. La phrase ne parle ni de voyages en Angleterre ni de fautes plus nombreuses.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-18",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« Better than » est le comparatif de good : meilleur que. « In English » précise le domaine comparé. La phrase ne parle ni de voyages en Angleterre ni de fautes plus nombreuses."
+          ]
+        },
+        {
+          "number": 19,
+          "page": 3,
+          "prompt": "Don't worry, I can drive you there :",
+          "options": [
+            {
+              "id": "a",
+              "text": "Pas d'ennui, je peux vous y conduire"
+            },
+            {
+              "id": "b",
+              "text": "Pas de quoi, je peux vous y conduire"
+            },
+            {
+              "id": "c",
+              "text": "Pas de soucis, je peux vous y conduire"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "E.09"
+          ],
+          "explanation": "« Don’t worry » rassure : ne vous inquiétez pas, pas de souci. « I can drive you there » signifie je peux vous y conduire. « Pas de quoi » répond plutôt à un remerciement.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-19",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« Don’t worry » rassure : ne vous inquiétez pas, pas de souci. « I can drive you there » signifie je peux vous y conduire. « Pas de quoi » répond plutôt à un remerciement."
+          ]
+        },
+        {
+          "number": 20,
+          "page": 4,
+          "prompt": "My GPS isn't working, I need to ……….a map:",
+          "options": [
+            {
+              "id": "a",
+              "text": "bye"
+            },
+            {
+              "id": "b",
+              "text": "buy"
+            },
+            {
+              "id": "c",
+              "text": "by"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "E.07"
+          ],
+          "explanation": "« Buy » signifie acheter, « bye » au revoir et « by » par/près de. Après « need to », on emploie le verbe à sa base : « need to buy a map ».",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-e-20",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "« Buy » signifie acheter, « bye » au revoir et « by » par/près de. Après « need to », on emploie le verbe à sa base : « need to buy a map »."
+          ]
+        }
+      ]
+    }
+  ]
+}

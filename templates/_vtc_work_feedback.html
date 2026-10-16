@@ -1,0 +1,31 @@
+{% if ai_feedback %}
+{% set feedback_score_valid = ai_feedback.score is number and ai_feedback.score is not boolean and ai_feedback.max_score is number and ai_feedback.max_score is not boolean and ai_feedback.max_score > 0 and ai_feedback.max_score - ai_feedback.max_score == 0 and ai_feedback.score >= 0 and ai_feedback.score <= ai_feedback.max_score %}
+{% set feedback_check = namespace(valid=feedback_score_valid and ai_feedback.status == 'corrected' and ai_feedback.needs_human_review is sameas false and ai_feedback.human_review_reasons|default([]) == [], points=0, maximum=0) %}
+{% if ai_feedback.criteria is not sequence or ai_feedback.criteria is string or ai_feedback.criteria is mapping or not ai_feedback.criteria %}{% set feedback_check.valid = false %}{% else %}
+{% for criterion in ai_feedback.criteria %}
+  {% if criterion is not mapping or criterion.status == 'uncertain' or criterion.uncertain|default(false) is not sameas false or criterion.points is not number or criterion.points is boolean or criterion.max_points is not number or criterion.max_points is boolean or criterion.max_points <= 0 or criterion.max_points - criterion.max_points != 0 or not (criterion.points >= 0 and criterion.points <= criterion.max_points) %}{% set feedback_check.valid = false %}{% else %}{% set feedback_check.points = feedback_check.points + criterion.points %}{% set feedback_check.maximum = feedback_check.maximum + criterion.max_points %}{% endif %}
+{% endfor %}{% endif %}
+{% set feedback_confirmed = feedback_check.valid and (feedback_check.points - ai_feedback.score)|abs < 0.0000001 and (feedback_check.maximum - ai_feedback.max_score)|abs < 0.0000001 %}
+{% set feedback_archived = feedback_completed|default(false) and feedback_score_valid and ai_feedback.status == 'trainer_reviewed' and ai_feedback.needs_human_review is sameas false and ai_feedback.trainer_review and ai_feedback.trainer_review.outcome == 'reviewed' %}
+<section class="vtc-work-feedback" style="border:1px solid #d9c8e9;background:#faf7fe;border-radius:12px;padding:18px;margin:16px 0">
+  {% if feedback_confirmed or feedback_archived %}
+  <h3>{{ 'Résultat conservé de cet atelier terminé' if feedback_archived else 'Correction enregistrée' }} · {{ ai_feedback.score }} / {{ ai_feedback.max_score }}</h3>
+  {% if feedback_confirmed %}
+  {% if ai_feedback.summary %}<p>{{ ai_feedback.summary }}</p>{% endif %}
+  {% if ai_feedback.strengths %}<h4>Points forts</h4><ul>{% for item in ai_feedback.strengths %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+  {% for criterion in ai_feedback.criteria|default([]) %}<article style="border-top:1px solid #e1d5ed;padding:10px 0"><h4>{{ criterion.label }} · {{ criterion.points }} / {{ criterion.max_points }}</h4><p>{{ criterion.feedback }}</p>{% if criterion.evidence %}<p style="white-space:pre-wrap;color:#63566e">{{ criterion.evidence }}</p>{% endif %}{% if criterion.improvement %}<p>{{ criterion.improvement }}</p>{% endif %}</article>{% endfor %}
+  {% for error in ai_feedback.errors|default([]) %}<p>{% if error.excerpt %}<strong>« {{ error.excerpt }} » :</strong> {% endif %}{{ error.explanation }}{% if error.correction %}<br>{{ error.correction }}{% endif %}</p>{% endfor %}
+  {% if ai_feedback.model_response %}<details><summary>Réponses de référence</summary>{% for field_id, answer in ai_feedback.model_response.items() %}<p style="white-space:pre-wrap">{{ answer }}</p>{% endfor %}</details>{% endif %}
+  {% if ai_feedback.next_steps %}<h4>Conseils pour progresser</h4><ul>{% for item in ai_feedback.next_steps %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+  {% endif %}
+  {% if feedback_completed|default(false) and ai_feedback.trainer_review %}<details><summary>Commentaire conservé avec ce résultat</summary><p style="white-space:pre-wrap">{{ ai_feedback.trainer_review.comment }}</p><p>{{ ai_feedback.trainer_review.reviewed_at }}</p></details>{% endif %}
+  {% elif feedback_completed|default(false) %}
+  <h3>Atelier terminé · résultat conservé</h3>
+  <p>Cet atelier a déjà été validé. La copie et son état d’avancement sont conservés.</p>
+  {% else %}
+  <h3>Correction à relancer</h3>
+  <p>Cette correction n’est pas confirmée. Vous pouvez relancer la correction depuis l’atelier. La copie reste enregistrée et la production reste facultative.</p>
+  {% endif %}
+  <p class="muted">Retour pédagogique sur cet atelier facultatif. Ce résultat est distinct de l’examen officiel.</p>
+</section>
+{% endif %}

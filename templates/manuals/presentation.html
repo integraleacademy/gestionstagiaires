@@ -1,0 +1,30 @@
+{% extends 'manuals/layout.html' %}
+{% from 'manuals/_showcase_macros.html' import icon, book_card %}
+{% block title %}Découvrez nos manuels de formation{% endblock %}
+{% block description %}15 manuels de formation illustrés, avec des extraits à feuilleter. Votre logo sur la couverture et la livraison sont inclus, dès 50 exemplaires par titre.{% endblock %}
+{% block extra_styles %}{% if public %}<link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-catalogue.css', v='20261013-1') }}">{% endif %}{% endblock %}
+{% block content %}
+{% if public %}{% include 'manuals/_manuals_catalogue.html' %}{% else %}
+<div class="shop-wrap manuals-showcase">
+  <nav class="manual-breadcrumb" aria-label="Fil d’Ariane"><a href="{{ url_for('home') if public else (url_for('manuals_shop.admin_orders') if staff else url_for('manuals_shop.home')) }}">{{ 'Accueil' if public else ('Commandes reçues' if staff else 'Mon espace organisme') }}</a><span aria-hidden="true">/</span><span>Les manuels de formation</span></nav>
+  <section class="discovery-hero">
+    <div class="discovery-hero-copy"><span class="eyebrow">LA COLLECTION INTÉGRALE ACADEMY</span><h1>Des manuels qui donnent<br><em>envie d’apprendre.</em></h1><p>Offrez à vos stagiaires un support professionnel, illustré et personnalisé aux couleurs de votre organisme. Un livre pour suivre les cours, comprendre et réviser.</p><div class="manual-actions"><a class="button primary" href="#collection">Découvrir les {{ books|length }} manuels <span aria-hidden="true">↓</span></a><a class="discovery-link" href="/personnalisation-livraison">Votre logo sur la couverture →</a></div></div>
+    <div class="discovery-books" aria-label="Aperçu des manuels APS, SSIAP 1 et A3P">
+      {% for code in ['aps','ssiap1','a3p'] %}<img src="{{ url_for('static', filename='manuals/' ~ code ~ '.webp') }}" alt="Manuel {{ code|upper }} personnalisable" width="212" height="300">{% endfor %}
+      <span class="discovery-stamp">Le contenu est prêt.<br><strong>La signature, c’est la vôtre.</strong></span>
+    </div>
+  </section>
+  <div class="manual-reassurance"><span>{{ icon('logo') }} <span><strong>Votre logo inclus</strong><small>Sur la couverture de vos livres</small></span></span><span>{{ icon('book') }} <span><strong>Dès 50 exemplaires</strong><small>Par titre de la collection</small></span></span><span>{{ icon('truck') }} <span><strong>Livraison incluse</strong><small>Des tarifs affichés en TTC</small></span></span></div>
+
+  <section id="collection" class="discovery-section" aria-labelledby="collection-title"><div class="discovery-heading"><span class="eyebrow blue">15 MANUELS · 5 DOMAINES DE FORMATION</span><h2 id="collection-title">Trouvez le manuel de votre formation.</h2><p>Découvrez les points forts et les tarifs de chaque manuel. Retrouvez les aperçus disponibles et les spécimens PDF pour découvrir le contenu avant de commander.</p></div><div data-catalogue>{% include 'manuals/_catalogue_filters.html' %}
+    {% for code, label in categories %}{% set category_books = books|selectattr('category', 'equalto', code)|list %}
+    <section class="catalogue-category" data-catalogue-group aria-labelledby="category-{{ code }}">
+      <div class="catalogue-category-heading"><h3 id="category-{{ code }}">{{ label }}</h3><span data-category-count>{{ category_books|length }} manuel{{ 's' if category_books|length != 1 else '' }}</span></div>
+      <div class="discovery-grid" data-catalogue-grid>{% for book in category_books %}{{ book_card(book) }}{% endfor %}</div>
+    </section>{% endfor %}
+  </div></section>
+
+  <section class="form-card catalogue-practical"><h2>Préparer votre commande</h2><details><summary>Votre logo et le bon à tirer</summary><p>La couverture de chaque manuel est personnalisée avec votre logo. Transmettez-le lors de la commande ou depuis son suivi. Vérifiez puis validez le bon à tirer avant l’impression.</p><a class="text-link" href="/personnalisation-livraison">Personnalisation et délais →</a></details><details><summary>Les supports PowerPoint pour vos formateurs</summary><p>14 références sur clé USB, à 99 € ou 199 € TTC selon la formation. Achat unique, sans abonnement. Les supports sont vendus séparément des manuels.</p><a class="text-link" href="/supports-formateurs">Voir les supports formateurs →</a></details><details id="sur-mesure"><summary>Un manuel pour une autre formation</summary><p>Notre équipe peut étudier un support adapté à votre programme, à votre public et à votre organisme. Indiquez-nous les quantités envisagées et la date de votre prochaine session.</p><a class="text-link" href="mailto:clement@integraleacademy.com?subject=Projet%20de%20manuel%20sur%20mesure">Présenter mon projet →</a></details><p><a class="button primary" href="{{ url_for('manuals_shop.catalogue') }}">Préparer ma commande →</a></p></section>
+</div>
+{% endif %}
+{% endblock %}

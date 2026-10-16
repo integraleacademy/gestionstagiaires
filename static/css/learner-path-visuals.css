@@ -1,0 +1,51 @@
+/* Learner-only presentation. The shared path editor keeps its existing layout. */
+.np-learner-body{background:#f5f7fb;color:#18324f;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.np-brandbar{background:#fff;border-bottom:1px solid #e1e8f0}
+.np-brandbar-inner{max-width:1120px;margin:auto;padding:18px 25px;display:flex;align-items:center;justify-content:space-between;gap:24px;box-sizing:border-box}
+.np-brand{display:flex;align-items:center;gap:18px;min-width:0}
+.np-brand-logo{display:block;width:144px;height:60px;object-fit:contain;flex-shrink:0}
+.np-brand-initial{display:grid;place-items:center;width:48px;height:48px;flex-shrink:0;background:#eaf1fa;border-radius:14px;font-size:22px;font-weight:800;color:#2863a6}
+.np-brand strong{display:block;font-size:16px;line-height:1.4;overflow-wrap:anywhere}
+.np-brand span:not(.np-brand-initial){display:block;margin-top:4px;font-size:12px;color:#708198}
+.np-brand-course{flex-shrink:0;background:#eef4fc;border:1px solid #dbe6f5;border-radius:20px;padding:8px 13px;color:#376491;font-size:11px;font-weight:750;letter-spacing:.05em}
+.np-learner-shell .np-back{margin-bottom:18px}
+.np-welcome{display:grid;grid-template-columns:1.08fr 1fr;overflow:hidden;border:1px solid #dce7f3;border-radius:22px;background:#edf4fc;margin-bottom:22px}
+.np-welcome--text{grid-template-columns:1fr}
+.np-welcome-copy{padding:30px 32px;align-self:center}
+.np-welcome .np-eyebrow{color:#366696}
+.np-welcome h1{font-size:clamp(27px,3vw,37px);color:#193957;margin-top:10px}
+.np-welcome p{max-width:420px;font-size:14px;line-height:1.7;color:#5a718a}
+.np-welcome .np-greeting{font-weight:700;color:#294b6d;margin:15px 0 5px}
+.np-welcome .np-button{min-height:46px;margin-top:11px;padding:12px 18px}
+.np-welcome-art{display:flex;align-items:center;background:#e6eff9}
+.np-welcome-art img{width:100%;height:auto;display:block;object-fit:contain}
+.np-learner-shell .np-button--primary{background:#2863a6;border-color:#2863a6;box-shadow:0 5px 12px #2863a615}
+.np-learner-shell .np-button--primary:hover{background:#20538e;border-color:#20538e}
+.np-learner-shell .np-overview{border-top:3px solid #4682b8;border-radius:16px;gap:22px}
+.np-learner-shell .np-overview strong{color:#254b71}
+.np-learner-shell .np-progress i{background:linear-gradient(90deg,#2863a6,#6c9aca)}
+.np-section-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:34px 0 18px}
+.np-section-heading h2{font-size:23px;margin-top:4px;color:#193957}
+.np-section-heading .np-eyebrow{color:#5e7e9b}
+.np-module-count{flex-shrink:0;font-size:12px;font-weight:700;color:#617c96;background:#e9f0f8;padding:7px 12px;border-radius:20px}
+.np-learner-shell .np-learner-modules{gap:20px}
+.np-learner-shell .np-learner-module{padding:22px;border-color:#dce5ef;box-shadow:0 4px 16px #17365405}
+.np-module-intro{display:grid;grid-template-columns:190px minmax(0,1fr);align-items:center;gap:24px}
+.np-module-intro--text{grid-template-columns:1fr}
+.np-module-illustration{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:contain;border-radius:12px;background:#edf3fa}
+.np-learner-shell .np-module-heading{flex-wrap:nowrap;align-items:flex-start}
+.np-learner-shell .np-number{background:#eaf1fa;color:#2863a6}
+.np-learner-shell .np-module-heading .np-eyebrow{color:#557da4}
+.np-learner-shell .np-module-heading h2{margin-top:4px;color:#1e3b57;line-height:1.35}
+.np-learner-shell .np-totals span{background:#f0f5fa;border-color:#e1e9f2;color:#496987}
+.np-learner-shell .np-duration-progress,.np-learner-shell .np-lock-reason{background:#f2f5fa;color:#5d7188!important}
+.np-learner-shell .np-learner-module.is-locked{background:#fff}
+.np-learner-shell .np-learner-sequences summary{color:#2863a6}
+.np-learner-shell :focus-visible,.np-brandbar :focus-visible{outline:3px solid #7ca8dc;outline-offset:4px}
+.np-support{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-top:30px;padding:24px 0 5px;border-top:1px solid #dce5ef;font-size:13px;line-height:1.6;color:#3e5a75}
+.np-support p{margin:4px 0 0}
+.np-support-contact{display:grid;gap:3px;text-align:right;overflow-wrap:anywhere;min-width:0}
+.np-support-contact a{color:#2863a6;text-decoration:none}
+.np-support-contact a:hover{text-decoration:underline}
+@media(max-width:850px){.np-welcome-copy{padding:25px}.np-welcome h1{font-size:29px}.np-brand-logo{width:120px}.np-module-intro{grid-template-columns:165px minmax(0,1fr);gap:18px}}
+@media(max-width:620px){.np-brandbar-inner{padding:15px 18px;gap:12px}.np-brand{gap:12px}.np-brand-logo{width:96px;height:48px}.np-brand strong{font-size:13px}.np-brand span:not(.np-brand-initial){font-size:10px}.np-brand-course{display:none}.np-welcome{grid-template-columns:1fr;border-radius:18px}.np-welcome-copy{padding:25px 23px}.np-welcome-art img{max-height:240px}.np-welcome .np-button{width:100%}.np-section-heading{margin-top:28px;align-items:flex-start}.np-section-heading h2{font-size:20px}.np-module-count{font-size:10px;padding:6px 9px}.np-learner-shell .np-learner-module{padding:17px}.np-module-intro{grid-template-columns:1fr;gap:17px}.np-module-illustration{max-height:220px}.np-learner-shell .np-module-heading h2{font-size:19px}.np-learner-shell .np-overview{gap:18px 12px}.np-learner-shell .np-overview strong{font-size:23px}.np-support{flex-direction:column;gap:14px}.np-support-contact{text-align:left}}

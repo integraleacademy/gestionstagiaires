@@ -1,0 +1,223 @@
+"""Version-pinned session paths; imported courses remain immutable."""
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+from typing import Any, Dict, List, Mapping
+
+from .importer import CourseCatalog, CourseImportError
+from .videos import course_videos, videos_complete
+from .video_compatibility import compatible_progress
+from .assessment import summary_for
+from .mac_aps_timing import FIXED_MINUTES, is_timed_course, objective_progress
+
+
+MAX_PATH_MODULES = 100
+MAX_REQUIRED_MINUTES = 60_000
+
+
+def allows_free_module_navigation(session_obj: Mapping[str, Any]) -> bool:
+    """VTC learners may open assigned modules in any order, without completing them."""
+    training_type = str(session_obj.get("training_type") or session_obj.get("type_formation") or "")
+    return "VTC" in training_type.upper()
+
+
+def assigned_modules(session_obj: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    # An explicit empty path must not fall back to the old single-course field.
+    if isinstance(session_obj.get("aps_native_modules"), list):
+        return [dict(item) for item in session_obj["aps_native_modules"] if isinstance(item, Mapping)]
+    if session_obj.get("aps_native_course_id"):
+        return [{
+            "course_id": str(session_obj["aps_native_course_id"]),
+            "course_version": str(session_obj.get("aps_native_course_version") or ""),
+        }]
+    return []
+
+
+def path_revision(session_obj: Mapping[str, Any]) -> str:
+    raw = {"title": session_obj.get("aps_native_path_title") or "", "modules": assigned_modules(session_obj)}
+    return hashlib.sha256(json.dumps(raw, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def required_activity_order(course: Mapping[str, Any]) -> List[str]:
+    """Keep optional work accessible without making it a completion condition."""
+    optional = {str(activity["id"]) for section in course.get("sections") or []
+                for activity in section.get("activities") or [] if activity.get("optional") is True}
+    return [str(activity_id) for activity_id in course.get("activity_order") or []
+            if str(activity_id) not in optional]
+
+
+def project_course(course: Mapping[str, Any], module: Mapping[str, Any]) -> Dict[str, Any]:
+    """Select/order sequences without changing activity IDs, content or answers."""
+    if course.get("preview_only"):
+        raise CourseImportError("Le parcours A3P est en préparation pédagogique. Son affectation certifiante nécessite une validation du certificateur.")
+    if course.get('training_label') == 'MAC APS' and course.get('pedagogical_scope') == 'complement':
+        raise CourseImportError("Les compléments MAC APS sont accessibles séparément depuis le parcours ; ils ne s’ajoutent pas aux modules obligatoires de 14 heures.")
+    required_minutes = module.get("required_minutes", 0)
+    if type(required_minutes) is not int or not 0 <= required_minutes <= MAX_REQUIRED_MINUTES:
+        raise CourseImportError("La durée obligatoire doit être un nombre entier de minutes, entre 0 et 1 000 heures.")
+    sections_source = course.get("sections") or []
+    a3p_distance = course.get("training_label") == "A3P" and not course.get("preview_only")
+    if a3p_distance:
+        sections_source = [section for section in sections_source if section.get("delivery") == "distance"]
+        minimum = int(course.get("required_minutes") or 0)
+        if required_minutes < minimum:
+            raise CourseImportError(f"Ce module A3P requiert au moins {minimum} minutes pour ses objectifs à distance.")
+    by_id = {str(section["id"]): section for section in sections_source}
+    section_ids = module.get("section_ids")
+    if section_ids is None:
+        section_ids = list(by_id)
+    if (not isinstance(section_ids, list) or not section_ids
+            or any(not isinstance(value, str) for value in section_ids)
+            or len(set(section_ids)) != len(section_ids)
+            or any(value not in by_id for value in section_ids)):
+        raise CourseImportError("Séquences invalides : choisissez au moins une séquence par module.")
+    if a3p_distance and set(section_ids) != set(by_id):
+        raise CourseImportError("Le module A3P doit conserver toutes ses fractions à distance et leurs questionnaires.")
+    if is_timed_course(course):
+        minimum = FIXED_MINUTES[course["id"]]
+        if required_minutes != minimum:
+            raise CourseImportError(f"La durée de cette édition MAC APS est fixée à {minimum} minutes, réparties par objectif.")
+        if section_ids != list(by_id):
+            raise CourseImportError("Cette édition MAC APS conserve tous ses objectifs, leurs questionnaires et leur ordre pédagogique.")
+    sections = [by_id[value] for value in section_ids]
+    activities = [activity for section in sections for activity in section.get("activities") or []]
+    if not activities:
+        raise CourseImportError("Le module doit contenir au moins une activité.")
+    if course.get('version') == '20261012-vtc-v12-cma-105h':
+        # Preserve the 105-hour study envelope, including practice chosen by the
+        # learner. Optional submissions are not completion requirements, and
+        # time still comes exclusively from active-time heartbeats.
+        required_minutes = max(required_minutes, sum(int(item.get('planned_minutes') or 0) for item in activities))
+    required = [str(activity["id"]) for activity in activities if activity.get("optional") is not True]
+    return {
+        **course,
+        "title": str(module.get("title") or course.get("title") or "Module"),
+        "required_minutes": required_minutes,
+        "sections": sections,
+        "activity_order": [str(activity["id"]) for activity in activities],
+        "required_activity_ids": required,
+        "counts": {**course.get("counts", {}), "sections": len(sections),
+                   "activities": len(activities),
+                   "required_activities": len(required),
+                   "optional_activities": len(activities) - len(required),
+                   "scored_activities": sum(bool(activity.get("scored")) for activity in activities
+                                            if activity.get("optional") is not True)},
+    }
+
+
+def validate_modules(raw: Any, catalog: CourseCatalog) -> List[Dict[str, Any]]:
+    if not isinstance(raw, list) or len(raw) > MAX_PATH_MODULES:
+        raise CourseImportError(f"Le parcours doit contenir au maximum {MAX_PATH_MODULES} modules.")
+    validated = []
+    seen = set()
+    for item in raw:
+        if not isinstance(item, dict) or not isinstance(item.get("course_id"), str):
+            raise CourseImportError("Module invalide.")
+        course_id = item["course_id"]
+        if course_id in seen:
+            raise CourseImportError("Un même module ne peut apparaître qu’une fois dans le parcours.")
+        seen.add(course_id)
+        version = item.get("course_version")
+        if version is not None and not isinstance(version, str):
+            raise CourseImportError("Version de module invalide.")
+        course = catalog.load_course(course_id, version or None)
+        title = item.get("title", "")
+        if not isinstance(title, str) or len(title) > 180:
+            raise CourseImportError("Le titre du module est limité à 180 caractères.")
+        projected = project_course(course, item)
+        validated.append({
+            "course_id": course["id"], "course_version": course["version"],
+            "title": title.strip(),
+            "required_minutes": projected["required_minutes"],
+            "section_ids": [str(section["id"]) for section in projected["sections"]],
+        })
+    mac_versions = {item['course_version'] for item in validated if item['course_id'].startswith('academy-macaps-')}
+    if len(mac_versions) > 1:
+        raise CourseImportError("Un parcours MAC APS doit conserver une seule édition. Utilisez le bouton de l’édition 14 heures pour remplacer les anciens modules sans transférer leurs résultats.")
+    return validated
+
+
+def course_outline(course: Mapping[str, Any]) -> Dict[str, Any]:
+    """Only descriptive metadata may be sent to the path composer/browser."""
+    return {
+        "course_id": course["id"], "course_version": course["version"], "title": course["title"],
+        "planned_minutes": int(course.get("planned_minutes") or 0),
+        "academy": course.get("source", {}).get("type") == "academy-aps62",
+        "vtc": course.get("source", {}).get("type") == "academy-vtc",
+        "a3p": course.get("source", {}).get("type") == "academy-a3p",
+        "macaps": course.get("source", {}).get("type") == "academy-macaps",
+        "macaps_fixed": is_timed_course(course),
+        "pedagogical_scope": course.get("pedagogical_scope") or "",
+        "fixed_minutes": FIXED_MINUTES.get(course["id"]) if is_timed_course(course) else None,
+        "sections": [{
+            "id": str(section["id"]), "title": str(section.get("title") or "Séquence"),
+            "activities": [{"title": str(activity.get("title") or "Activité"),
+                            "scored": bool(activity.get("scored")),
+                            "optional": activity.get("optional") is True}
+                           for activity in section.get("activities") or []],
+        } for section in course.get("sections") or [] if course.get("training_label") != "A3P" or section.get("delivery") == "distance"],
+    }
+
+
+def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> Dict[str, Any]:
+    """Compute completion against the current selection, retaining stored history."""
+    order = course.get("activity_order") or []
+    required = required_activity_order(course)
+    required_set = set(required)
+    completed = set(progress.get("completed_activity_ids") or []) & set(order)
+    requirements = course_videos(course)
+    video_progress = compatible_progress(progress.get("video_progress") or {}, requirements)
+    for activity_id, videos in requirements.items():
+        if not videos_complete(video_progress.get(activity_id, {}), videos):
+            completed.discard(activity_id)
+    scored = [activity["id"] for section in course.get("sections") or []
+              for activity in section.get("activities") or []
+              if activity.get("scored") and activity["id"] in required_set]
+    answers = {key: value for key, value in (progress.get("answers") or {}).items() if key in order}
+    raw_diagnostics = progress.get('assessment_diagnostics') or {}
+    diagnostics = {kind: {key: value for key, value in (raw_diagnostics.get(kind) or {}).items() if key in order}
+                   for kind in ('question', 'practice')}
+    correct = sum(bool(answers.get(key, {}).get("correct")) for key in scored)
+    score = round(correct / len(scored) * 100, 2) if scored else 100.0
+    completed_required = [key for key in required if key in completed]
+    finished = bool(order) and len(completed_required) == len(required)
+    active_seconds = float(progress.get("active_seconds") or 0)
+    required_seconds = int(course.get("required_minutes") or 0) * 60
+    remaining_seconds = max(0, math.ceil(required_seconds - active_seconds))
+    timed_objectives = objective_progress(course, {**progress, "completed_activity_ids": list(completed)})
+    objectives_duration_met = (bool(timed_objectives) and all(item["duration_met"] for item in timed_objectives)) if is_timed_course(course) else True
+    if timed_objectives:
+        remaining_seconds = max(remaining_seconds, sum(item["remaining_seconds"] for item in timed_objectives))
+    duration_met = remaining_seconds == 0 and objectives_duration_met
+    status = ("passed" if score >= float(course.get("settings", {}).get("mastery_score", 80)) else "failed") if finished and duration_met else (
+        "awaiting_time" if finished else
+        "in_progress" if progress.get("started_at") else "not_started"
+    )
+    return {
+        **progress, "answers": answers, "completed_activity_ids": [key for key in order if key in completed],
+        "assessment_diagnostics": diagnostics, "assessment_summary": summary_for(diagnostics),
+        "completed_required_activity_ids": completed_required,
+        "required_activity_count": len(required),
+        "completed_required_activities": len(completed_required),
+        "optional_activity_count": len(order) - len(required),
+        "progress_percent": round(len(completed_required) / len(required) * 100, 2) if required else (100 if order else 0),
+        "score_percent": score, "correct_answers": correct, "scored_activities": len(scored),
+        "status": status, "active_seconds": active_seconds,
+        "required_seconds": required_seconds, "remaining_seconds": remaining_seconds,
+        "duration_met": duration_met, "activities_completed": finished,
+        "duration_percent": round(min(100 if duration_met else 99.99, active_seconds / required_seconds * 100), 2) if required_seconds else 100,
+        "timed_objectives": timed_objectives, "objectives_duration_met": objectives_duration_met,
+        "module_complete": finished and duration_met,
+        "video_progress": video_progress,
+        "required_video_count": sum(len(videos) for activity_id, videos in requirements.items()
+                                    if activity_id in required_set),
+        "completed_video_count": sum(videos_complete(video_progress.get(activity_id, {}), {video_id: duration})
+                                     for activity_id, videos in requirements.items()
+                                     if activity_id in required_set
+                                     for video_id, duration in videos.items()),
+        "completed_at": progress.get("completed_at") if finished and duration_met else None,
+    }
+
+

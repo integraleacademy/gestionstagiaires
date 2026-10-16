@@ -1,0 +1,65 @@
+{% from '_native_lesson_intro.html' import lesson_intro %}
+<div class="a3p-lesson"{% if activity.a3p.kind == 'lesson' %} data-aps-lesson-group{% endif %}>
+{% if activity.a3p.delivery and activity.a3p.delivery != 'distance' %}<p class="aps-small">{{ 'Préparation du présentiel · hors volume à distance' if activity.a3p.delivery == 'presentiel' else 'Ressource complémentaire · hors volume à distance' }}</p>{% endif %}
+{% if activity.a3p.kind == 'lesson' %}
+  {% set first_page = activity.a3p.pages|first %}
+  {% set title = activity.a3p.title|default((first_page.components|selectattr('kind', 'equalto', 'heading')|map(attribute='text')|list|first)|default('Repères du cours')) %}
+  {{ lesson_intro('Dossier ' ~ activity.a3p.ref ~ ' · Comprendre la règle', title, activity.a3p.intro|default([]), [activity.a3p.objective], activity.a3p.display_pacing|default(activity.a3p.pacing|default([])), activity.a3p.pacing_note|default(''), activity.a3p.illustration|default(none)) }}
+  {% for page in activity.a3p.pages %}
+  {% set heading = (page.components|selectattr('kind', 'equalto', 'heading')|map(attribute='text')|list|first)|default('Repères du cours') %}
+  <section class="aps-editorial aps-course-reading a3p-reading" data-aps-lesson-page id="a3p-page-{{ page.page }}" aria-labelledby="a3p-page-title-{{ page.page }}">
+    <span class="aps-label">Le cours expliqué · Repère {{ '%02d'|format(loop.index) }}</span>
+    <h2 id="a3p-page-title-{{ page.page }}">{{ heading }}</h2>
+    {% for component in page.components %}
+      {% if component.kind == 'heading' %}{% if component.text != heading %}<h3>{{ component.text }}</h3>{% endif %}
+      {% elif component.kind == 'table' %}<div class="aps-table-wrap" role="region" aria-label="{{ heading }}" tabindex="0"><table class="aps-reading-table"><caption>{{ heading }}</caption><tbody>{% for row in component.rows %}{% set header_row = loop.first %}<tr>{% for cell in row %}{% if header_row %}<th scope="col">{{ cell }}</th>{% else %}<td>{{ cell }}</td>{% endif %}{% endfor %}</tr>{% endfor %}</tbody></table></div>
+      {% else %}<p>{{ component.text }}</p>{% endif %}
+    {% endfor %}
+    <p class="aps-small">{{ page.source_label if page.source_label else 'Arrêté · annexe XI' if page.page == 'XI' else 'Manuel A3P · page ' ~ page.page }}</p>
+  </section>
+  {% endfor %}
+  <p class="aps-small">{% if activity.a3p.delivery == 'presentiel' %}Cette lecture prépare la compréhension. Les gestes, déplacements, matériels et mises en situation se travaillent avec un formateur ; ils ne sont pas validés à l’écran.{% elif activity.a3p.ref == '09.15' %}Source : arrêté du 1er septembre 2025, annexe XI, reconnaissance des blessures spécifiques.{% else %}Source : manuel A3P Intégrale Academy, leçon {{ activity.a3p.ref }}.{% endif %}</p>
+{% elif activity.a3p.kind == 'application' %}
+  {% if activity.practice %}
+  {% set lesson = activity.a3p %}
+  {% include '_aps62_practice.html' %}
+  {% else %}
+  <span class="aps-label">Mettre le cours en relation avec le terrain</span><h2>Observer la situation et expliquer la décision</h2>
+  <section class="aps-case">{% for paragraph in activity.a3p.example.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}</section>
+  <div class="a3p-reasoning"><h3>Trois angles pour relire l’exemple</h3><p>Avant d’ouvrir chaque repère, formulez votre réponse mentalement. Aucune rédaction n’est demandée.</p>
+  <details><summary>1 · Quel est l’objectif de l’agent ?</summary><p>{{ activity.a3p.objective }}</p></details>
+  <details><summary>2 · Quelle règle guide la décision ?</summary><p>{{ activity.a3p.points[0] }}</p></details>
+  <details><summary>3 · Quel repère réutiliser dans une autre situation ?</summary><p>{{ activity.a3p.points[-1] }}</p></details></div>
+  <p class="aps-small">{{ 'Repères de l’arrêté · annexe XI.' if activity.a3p.example.page == 'XI' else 'Exemple adapté du manuel · page ' ~ activity.a3p.example.page ~ '.' }} Poursuivez avec le questionnaire du chapitre.</p>
+  {% endif %}
+{% elif activity.a3p.kind == 'recap' %}
+  <section class="aps-editorial"><span class="aps-label">Je retiens et je réutilise</span><h2>La décision à savoir expliquer</h2>
+    {% for point in activity.a3p.points %}<p{% if loop.first %} class="aps-takeaway"{% endif %}>{{ point }}</p>{% endfor %}
+    <div class="aps-objectives"><span class="aps-label">L’objectif à savoir expliquer</span><p>{{ activity.a3p.objective }}</p></div>
+  </section>
+  {% if activity.a3p.regulatory_objectives %}<details class="aps-transcript"><summary>Repères du manuel et sources de référence</summary><p>Manuel A3P · leçon {{ activity.a3p.ref }}.</p><ul>{% for objective in activity.a3p.regulatory_objectives %}<li>{{ objective }}</li>{% endfor %}</ul></details>{% endif %}
+{% elif activity.a3p.kind == 'video' %}
+  {% if activity.a3p.delivery == 'distance' %}<p>Observez l’application du cours dans ce cas professionnel expliqué avec Henri, puis poursuivez avec le dossier à résoudre. Les sous-titres sont intégrés à l’image.</p>{% else %}<p>Une synthèse avec Henri pour revoir les thèmes du module. Les sous-titres sont intégrés à l’image. Cette ressource complémentaire ne remplace pas les cours, les questionnaires et les séances présentielles.</p>{% endif %}
+{% elif activity.a3p.kind == 'case' %}
+  {% set case = activity.a3p.case %}
+  <ol class="a3p-flow" aria-label="Démarche de raisonnement">{% for step in activity.a3p.flow %}<li><b>{{ loop.index }}</b><span>{{ step }}</span></li>{% endfor %}</ol>
+  <section class="aps-case"><span class="aps-label">Situation fictive</span><p>{{ case.situation }}</p></section>
+  <h2>Choisir et justifier une décision</h2>
+  <p>Trois étapes pour analyser la situation. Choisissez une réponse, lisez l’explication puis poursuivez. Vous pouvez réessayer ; aucune rédaction n’est demandée.</p>
+  <div class="a3p-decision" data-a3p-decision>
+  {% for step in case.steps %}
+    <section class="a3p-decision-step" data-answer="{{ step.answer }}"{% if not loop.first %} hidden{% endif %}>
+      <span class="aps-label">Décision {{ loop.index }} / {{ case.steps|length }}</span>
+      <h3>{{ step.prompt }}</h3>
+      <div class="a3p-decision-options">{% for option in step.options %}<button type="button" data-choice="{{ loop.index0 }}">{{ option }}</button>{% endfor %}</div>
+      <p class="a3p-decision-feedback" role="status" aria-live="polite" data-explanation="{{ step.feedback }}"></p>
+      <button class="native-button native-button--primary" type="button" data-next hidden>{{ 'Voir le bilan' if loop.last else 'Décision suivante →' }}</button>
+    </section>
+  {% endfor %}
+  <p class="a3p-decision-done" role="status" hidden>Les trois décisions sont terminées. Comparez votre raisonnement avec les critères ci-dessous.</p>
+  </div>
+  <details class="aps-transcript"><summary>Comparer avec les critères et la proposition de réponse</summary><h3>Critères de relecture</h3><ul>{% for criterion in case.criteria %}<li>{{ criterion }}</li>{% endfor %}</ul><h3>Une réponse possible</h3><p>{{ case.example }}</p><p class="aps-small">{{ case.debrief }}</p></details>
+{% endif %}
+</div>
+
+<dialog class="aps-image-dialog" id="apsImageDialog"><button type="button" data-aps-close aria-label="Fermer la fiche agrandie">Fermer ×</button><img alt="Repère A3P en grand format"></dialog>

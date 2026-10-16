@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning-path.css', v='20260908-2') }}">
+<div class="np-shell" id="nativePathBuilder">
+  <a class="np-back" href="{{ url_for('native_elearning.admin_macaps_catalog' if training_label == 'MAC APS' else 'native_elearning.admin_a3p_catalog' if training_label == 'A3P' else 'native_elearning.admin_vtc_catalog' if training_label == 'VTC' else 'native_elearning.admin_catalog') }}">← Bibliothèque et sessions</a>
+  <header class="np-header">
+    <div><span class="np-eyebrow">Ingénierie pédagogique · {{ training_label }}</span><h1>Composer le parcours</h1><p>{{ training_session.name or training_session.id }} · {{ training_session.date_start or 'Date à renseigner' }}</p></div>
+    <span class="np-badge">{{ 'Accès ouvert après affectation et à la date de début' if training_label in ['A3P', 'MAC APS'] else 'E-learning activé' if training_session.aps_elearning_enabled else 'E-learning à activer dans la session' }}</span>
+  </header>
+  <div class="np-layout">
+    <aside class="np-library np-panel">
+      <span class="np-eyebrow">1 · Ajouter</span><h2>Vos modules disponibles</h2>
+      {% if training_label == 'MAC APS' %}<div class="aps-preset"><button class="np-button np-button--primary" id="macapsAddPath" type="button"{% if path_config.readOnly %} disabled{% endif %}>Utiliser l’édition MAC APS · 3 modules · 14 h</button><p>République 3 h, cadre juridique 4 h, prévention du terrorisme 7 h : durées verrouillées par objectif. Les compléments restent hors des 14 heures. L’ancienne édition et ses progressions sont conservées. Ce support numérique ne vaut ni autorisation de FOAD en 2026 ni attestation réglementaire de stage.</p></div>{% elif training_label == 'A3P' %}<div class="aps-preset"><button class="np-button np-button--primary" id="a3pAddPath" type="button"{% if path_config.readOnly %} disabled{% endif %}>Ajouter le parcours A3P à distance · 157 h 30</button><p>Objectifs OUI des annexes II et XI. Les préparations présentielles sont exclues. Chaque fraction comporte un questionnaire à valider ; les durées sont des minima à effectuer, jamais des heures créditées automatiquement.</p></div>{% elif training_label == 'VTC' %}<div class="aps-preset"><button class="np-button np-button--primary" id="vtcAddPath" type="button"{% if path_config.readOnly %} disabled{% endif %}>Ajouter le parcours VTC complet · 8 modules</button><p>96 leçons et leurs ateliers, 8 vidéos et les examens blancs. Base de 60 h pédagogiques : ajustez les durées avant d’enregistrer selon votre organisation.</p></div>{% else %}<div class="aps-preset"><button class="np-button np-button--primary" id="aps62AddPath" type="button"{% if path_config.readOnly %} disabled{% endif %}>Ajouter le parcours illustré · 62 h</button><p>Ajoute les 15 modules et leurs durées. Pour le TFP APS ADEF, adaptez la sélection aux 50 h 30 de séquences autorisées à distance. L’enregistrement reste nécessaire.</p></div>{% endif %}
+      <p>Un ZIP importé devient un module. Ajoutez-en autant que nécessaire, jusqu’à 100 par parcours.</p>
+      <label class="np-field">Rechercher un module<input type="search" id="nativeModuleSearch" placeholder="Ex. cadre légal, intervention…"></label>
+      <div id="nativeModuleLibrary" class="np-library-list"></div>
+      <a class="np-back" href="{{ url_for('native_elearning.admin_catalog') }}">Importer un autre ZIP →</a>
+    </aside>
+    <main class="np-editor">
+      <section class="np-panel">
+        <span class="np-eyebrow">2 · Organiser</span>
+        <label class="np-field np-title-field">Nom du parcours<input id="nativePathTitle" maxlength="180" value="{{ training_session.aps_native_path_title or 'Parcours ' + training_label }}"{% if path_config.readOnly %} disabled{% endif %}></label>
+        <p>Les modules se débloquent dans l’ordre affiché. Dépliez chaque module pour fixer sa durée obligatoire, choisir et ordonner ses séquences. Le temps déjà suivi reste acquis.</p>
+        <div class="np-totals" id="nativePathTotals" aria-live="polite"></div>
+      </section>
+      <div id="nativePathModules" class="np-modules"></div>
+      <div class="np-savebar">
+        <div><strong id="nativePathSaveState" role="status" aria-live="polite">Parcours enregistré</strong><p>Versions conservées · Progressions existantes préservées</p></div>
+        <button class="np-button np-button--primary" id="nativePathSave" type="button"{% if path_config.readOnly %} disabled{% endif %}>Enregistrer le parcours</button>
+      </div>
+      <p class="np-hint">Les changements s’appliquent à cette session après enregistrement. Retirer un module ou une séquence ne supprime ni les réponses ni le temps déjà enregistré. Les stagiaires ayant une page ouverte devront la recharger.</p>
+      <noscript><p class="np-error">Activez JavaScript pour composer et enregistrer ce parcours.</p></noscript>
+    </main>
+  </div>
+</div>
+<script id="nativePathConfig" type="application/json">{{ path_config|tojson }}</script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-catalog.css', v='20261003-1') }}">
+<script src="{{ url_for('static', filename='js/native-elearning-path.js', v='20261012-macaps-v2') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,902 @@
+{
+  "id": "vtc-f",
+  "version": "20261010-vtc-v10-lecons-video",
+  "training_label": "VTC",
+  "title": "VTC · Développer son activité VTC · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "exam-annales-2022-f-01",
+      "prompt": "Le prix psychologique correspond :",
+      "options": [
+        {
+          "id": "a",
+          "text": "au prix dont se souvient le consommateur"
+        },
+        {
+          "id": "b",
+          "text": "au prix que le consommateur est prêt à payer pour acheter le produit/la prestation"
+        },
+        {
+          "id": "c",
+          "text": "au prix de référence pour une catégorie de produits/prestations"
+        },
+        {
+          "id": "d",
+          "text": "au prix perçu par le consommateur"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le prix psychologique est le prix que le client est prêt à accepter pour le produit ou le service. Il s’analyse avec le coût de revient et les prix du marché ; un prix simplement mémorisé ou affiché par un concurrent n’est pas sa définition.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-f-01",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 16,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-f-02",
+      "prompt": "Quelle affirmation est vraie ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Lorsque la demande est supérieure à l'offre, les prix augmentent"
+        },
+        {
+          "id": "b",
+          "text": "Lorsque la demande est supérieure à l'offre, les prix baissent"
+        },
+        {
+          "id": "c",
+          "text": "Lorsque la demande est inférieure à l'offre, les prix augmentent"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Toutes choses égales par ailleurs, une demande supérieure à l’offre exerce une pression à la hausse sur les prix. Cette tendance économique ne constitue pas une obligation de modifier chaque tarif : contrats, capacité, concurrence et information du client restent déterminants.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.01",
+        "F.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-f-02",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 16,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-f-03",
+      "prompt": "De manière générale, quelle est l'attitude à adopter lors de l'approche du lieu de destination?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Informer le client de votre arrivée prochaine"
+        },
+        {
+          "id": "b",
+          "text": "Préparer la mission suivante"
+        },
+        {
+          "id": "c",
+          "text": "Demander à votre client de rassembler ses effets personnels"
+        }
+      ],
+      "answer": "a",
+      "explanation": "À l’approche de la destination, informer le client lui permet de préparer sereinement la fin de course. Garder l’attention sur la circulation et la dépose ; la mission suivante se prépare au moment approprié, sans précipiter le passager.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "H.10",
+        "F.09"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-f-03",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 16,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-f-06",
+      "prompt": "Pour prendre en charge un client dans un hôtel, il convient de :",
+      "options": [
+        {
+          "id": "a",
+          "text": "klaxonner pour informer de l'arrivée du véhicule"
+        },
+        {
+          "id": "b",
+          "text": "l'attendre devant la porte d'entrée de l'hôtel"
+        },
+        {
+          "id": "c",
+          "text": "se faire annoncer auprès de la réception de l'hôtel"
+        }
+      ],
+      "answer": "c",
+      "explanation": "À l’hôtel, se faire annoncer à la réception facilite la rencontre discrète avec le client et le respect des accès. Klaxonner n’est pas un mode d’accueil professionnel ; attendre sans coordination peut faire manquer la prise en charge.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "H.04",
+        "F.07"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-f-06",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 16,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-f-07",
+      "prompt": "Quelle est la première étape d'une stratégie commerciale d'un chauffeur VTC ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le marketing mix"
+        },
+        {
+          "id": "b",
+          "text": "Le plan d'action"
+        },
+        {
+          "id": "c",
+          "text": "L'étude de marché"
+        }
+      ],
+      "answer": "c",
+      "explanation": "L’étude de marché précède le choix détaillé des actions commerciales : identifier clients, besoins, concurrence et territoire. Le marketing mix organise ensuite l’offre, le prix, la distribution et la communication ; le plan d’action met la stratégie en œuvre.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-f-07",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 16,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-f-08",
+      "prompt": "Votre client oublie son portefeuille dans votre véhicule. Que faites-vous ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Attendre la prochaine réservation de ce client avant de le prévenir."
+        },
+        {
+          "id": "b",
+          "text": "Sécuriser le portefeuille, contacter rapidement le client et organiser une restitution sûre."
+        },
+        {
+          "id": "c",
+          "text": "Confier immédiatement le portefeuille au prochain passager qui reconnaît son propriétaire."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Après avoir sécurisé le portefeuille et identifié la course, contacter rapidement le client de façon discrète, puis convenir d’une restitution sûre. Ne pas exposer les documents personnels ou publier leur photographie ; conserver une trace limitée de la restitution.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "H.10",
+        "F.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-f-08",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 16,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-f-12",
+      "prompt": "Quelles sont les méthodes de prospection existantes ? Citez un exemple de chaque.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Prospection directe, par exemple téléphone ou rendez-vous ; prospection numérique, par exemple site web ou réseaux sociaux."
+        },
+        {
+          "id": "b",
+          "text": "Uniquement les centrales de réservation ; les autres contacts ne relèvent jamais de la prospection."
+        },
+        {
+          "id": "c",
+          "text": "Uniquement la facturation des clients actuels et le classement des achats."
+        }
+      ],
+      "answer": "a",
+      "explanation": "La prospection peut utiliser des contacts directs (rendez-vous, téléphone) ou des canaux numériques (site, courriel, réseaux sociaux, plateformes). Choisir le canal selon la clientèle visée, préparer une proposition utile et suivre les résultats ; les coordonnées personnelles ne sont pas une ressource à utiliser sans règles.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.06",
+        "F.08"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-f-12",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 17,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-f-13",
+      "prompt": "Dans la formule monôme, l'élément pris en compte pour le calcul du coût de revient est :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Un terme journalier fixe"
+        },
+        {
+          "id": "b",
+          "text": "Un terme horaire de conducteur"
+        },
+        {
+          "id": "c",
+          "text": "Un terme kilométrique"
+        }
+      ],
+      "answer": "c",
+      "explanation": "La formule monôme exprime le coût par un seul terme, ici le kilomètre. Pour estimer un prix soutenable, le coût kilométrique doit intégrer les charges retenues et être multiplié par tous les kilomètres concernés ; les formules à plusieurs termes séparent notamment temps et distance.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.03",
+        "B.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-f-13",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 17,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-f-16",
+      "prompt": "Vous avez réussi votre examen avec succès et décidez d'acheter un véhicule pour réaliser votre activité. Sur quels points allez-vous être attentifs concernant l'achat de celui-ci ? Citez-en 3.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Couleur et prestige uniquement, le coût d’usage n’intervenant pas dans le choix."
+        },
+        {
+          "id": "b",
+          "text": "Montant de la mensualité uniquement, sans tenir compte de l’apport ni de la durée."
+        },
+        {
+          "id": "c",
+          "text": "Énergie et conformité ; prix et coût de financement ; confort, entretien et assurance."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Comparer un véhicule sur son coût total : achat, financement, énergie, entretien et assurance, puis sur sa conformité VTC, sa capacité, son confort et son adéquation à la clientèle. Un prix d’achat attractif ne suffit pas si l’usage est coûteux ou le véhicule inéligible.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "B.10",
+        "G.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-f-16",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 17,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-f-01",
+      "prompt": "Vous connaissez un VTC qui va démarrer son activité avec des prix très bas afin d'attirer un maximum de clients. Que pensez-vous de cette politique tarifaire ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le prix risque de réduire la rentabilité et d’altérer la perception de la qualité."
+        },
+        {
+          "id": "b",
+          "text": "Le volume de clients suffit toujours à rendre rentable une course vendue sous son coût."
+        },
+        {
+          "id": "c",
+          "text": "Le prix très bas garantit à lui seul une clientèle fidèle et solvable."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Un prix très bas peut attirer des clients sans couvrir le coût complet de la prestation. Avant une remise, calculer la marge après approche, retour, commission et charges ; vérifier aussi l'effet possible du tarif sur l'image du service.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-f-01",
+      "source_title": "Annales VTC 2021",
+      "source_page": 14,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-f-03",
+      "prompt": "Dans le mix marketing, à quoi correspondent les 4P ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Prix - Produit - Place - Promotion"
+        },
+        {
+          "id": "b",
+          "text": "Prix - Produit - Parrainage - Personnalisation"
+        },
+        {
+          "id": "c",
+          "text": "Plateforme - Présentation - Place - Promotion"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Les 4P du marketing mix sont Product, Price, Place et Promotion : produit ou service, prix, distribution et communication. Place ne désigne pas ici une place assise mais la manière de rendre l'offre accessible aux clients.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-f-03",
+      "source_title": "Annales VTC 2021",
+      "source_page": 14,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-f-05",
+      "prompt": "Quelle est la première étape d'une stratégie commerciale ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le marketing mix"
+        },
+        {
+          "id": "b",
+          "text": "Le plan d'action"
+        },
+        {
+          "id": "c",
+          "text": "L'analyse du marché"
+        }
+      ],
+      "answer": "c",
+      "explanation": "La stratégie commerciale commence par l'analyse du marché : clients visés, besoins, concurrence et contraintes locales. Le positionnement, le marketing mix puis le plan d'action se construisent à partir de cette analyse.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-f-05",
+      "source_title": "Annales VTC 2021",
+      "source_page": 14,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-f-06",
+      "prompt": "En cas de retard très important du client, que faites-vous ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Contacter le client, réévaluer l’attente et proposer un remplaçant si les engagements suivants l’exigent."
+        },
+        {
+          "id": "b",
+          "text": "Partir sans contacter le client dès que l’horaire est dépassé."
+        },
+        {
+          "id": "c",
+          "text": "Accepter de l’attendre sans limite sans vérifier les autres réservations."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Si le client est fortement retardé, le contacter pour estimer son heure d'arrivée et vérifier les engagements suivants. Si l'attente compromet une autre course, proposer avec son accord une solution de remplacement ; expliquer les conditions d'attente convenues et garder une trace du nouvel accord.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.10",
+        "H.08"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-f-06",
+      "source_title": "Annales VTC 2021",
+      "source_page": 14,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-f-08",
+      "prompt": "Le montant d'une prestation s'élève à 75 € TTC. Calculez le montant de la TVA et le prix HT, en détaillant vos calculs.",
+      "options": [
+        {
+          "id": "a",
+          "text": "HT = 75 ÷ 1,10 = 68,18 € ; TVA = 75 − 68,18 = 6,82 €."
+        },
+        {
+          "id": "b",
+          "text": "TVA = 75 × 10 % = 7,50 € ; HT = 67,50 €."
+        },
+        {
+          "id": "c",
+          "text": "HT = 75 × 1,10 = 82,50 € ; TVA = 7,50 €."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Avec un taux de TVA de 10 %, le HT se calcule en divisant le TTC par 1,10. Pour 75 € TTC : 75 ÷ 1,10 = 68,18 € HT après arrondi ; la TVA est 75 − 68,18 = 6,82 €. Soustraire directement 10 % de 75 € donnerait un résultat erroné.",
+      "module": "F",
+      "sources": [
+        {
+          "title": "Taux de TVA, transport de voyageurs — DGFiP",
+          "url": "https://www.impots.gouv.fr/international-professionnel/fiscalite-des-entreprises"
+        }
+      ],
+      "lesson_refs": [
+        "B.06",
+        "F.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-f-08",
+      "source_title": "Annales VTC 2021",
+      "source_page": 14,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-f-10",
+      "prompt": "En déposant une cliente, de nuit, à son domicile :",
+      "options": [
+        {
+          "id": "a",
+          "text": "vous la déposez devant la porte de son immeuble et attendez qu'elle soit rentrée dans son immeuble avant de repartir"
+        },
+        {
+          "id": "b",
+          "text": "vous la déposez devant chez elle et votre mission étant terminée, vous repartez"
+        },
+        {
+          "id": "c",
+          "text": "vous proposez de la raccompagner jusqu'à la porte de son appartement compte tenu de l'heure tardive"
+        }
+      ],
+      "answer": "a",
+      "explanation": "La dépose de nuit doit préserver sécurité et discrétion. Dans la situation du sujet, attendre brièvement que la cliente entre dans son immeuble est l'attention attendue ; proposer spontanément de l'accompagner jusqu'à son appartement peut être intrusif. Respecter son souhait et stationner sans danger.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.10",
+        "H.06"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-f-10",
+      "source_title": "Annales VTC 2021",
+      "source_page": 14,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-f-12",
+      "prompt": "A l'aéroport, le parking professionnel est saturé alors que vos clients ne vont pas tarder à sortir du check out :",
+      "options": [
+        {
+          "id": "a",
+          "text": "vous vous garez sur des zébras"
+        },
+        {
+          "id": "b",
+          "text": "vous vous garez au niveau de la dépose taxi car c'est au niveau des arrivées"
+        },
+        {
+          "id": "c",
+          "text": "vous vous garez au parking public"
+        },
+        {
+          "id": "d",
+          "text": "vous attendez qu'une place se libère"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Si le parking professionnel est saturé, chercher un stationnement public autorisé et informer les clients du point de rencontre. Les zébras et les emplacements réservés aux taxis ne deviennent pas utilisables par un VTC du seul fait de la saturation.",
+      "module": "F",
+      "sources": [
+        {
+          "title": "Devenir chauffeur de VTC — Service Public",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ],
+      "lesson_refs": [
+        "G.07",
+        "H.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-f-12",
+      "source_title": "Annales VTC 2021",
+      "source_page": 15,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-f-13",
+      "prompt": "Que doit-on dire lorsqu'on décroche un appel téléphonique ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "le nom de la société et bonjour"
+        },
+        {
+          "id": "b",
+          "text": "le nom de la société"
+        },
+        {
+          "id": "c",
+          "text": "allo"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Une réponse téléphonique professionnelle commence par une salutation et l'identification de l'entreprise. Le client sait ainsi immédiatement qui lui répond avant de communiquer les détails de sa réservation.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.10",
+        "H.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-f-13",
+      "source_title": "Annales VTC 2021",
+      "source_page": 15,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-f-14",
+      "prompt": "Le panier moyen est :",
+      "options": [
+        {
+          "id": "a",
+          "text": "la taille des achats à charger dans le coffre"
+        },
+        {
+          "id": "b",
+          "text": "la moyenne des achats par client"
+        },
+        {
+          "id": "c",
+          "text": "la taille moyenne des paniers de courses en France"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le panier moyen mesure le montant moyen des achats ou prestations par client ou commande selon la définition retenue. Il se calcule en divisant le chiffre d'affaires du périmètre par le nombre correspondant ; il faut conserver la même définition pour comparer les périodes.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-f-14",
+      "source_title": "Annales VTC 2021",
+      "source_page": 15,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-f-15",
+      "prompt": "Trouver régulièrement de nouveaux clients c'est :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Un moyen de garder votre confort de vie"
+        },
+        {
+          "id": "b",
+          "text": "Une nécessité pour la survie de l'entreprise"
+        },
+        {
+          "id": "c",
+          "text": "Une obligation de votre comptable"
+        }
+      ],
+      "answer": "b",
+      "explanation": "La prospection régulière renouvelle le portefeuille de clients et réduit la dépendance à quelques donneurs d'ordre. Elle doit être organisée, suivie et rapprochée du coût d'acquisition ainsi que de la rentabilité des prestations obtenues.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.06"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-f-15",
+      "source_title": "Annales VTC 2021",
+      "source_page": 15,
+      "correction_origin": "source"
+    },
+    {
+      "id": "independent-f-01",
+      "prompt": "Un quartier compte cinq nouveaux hôtels. Quelle donnée transforme cette observation en estimation commerciale exploitable ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le seul nombre de chambres construites."
+        },
+        {
+          "id": "b",
+          "text": "Le tarif le plus élevé affiché par un hôtel."
+        },
+        {
+          "id": "c",
+          "text": "Leurs besoins réels de transferts, horaires et conditions de partenariat."
+        }
+      ],
+      "answer": "c",
+      "explanation": "La présence d’hôtels signale un marché possible ; les besoins, créneaux et modalités d’achat permettent d’évaluer les courses accessibles.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.01"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-f-02",
+      "prompt": "Une offre « transfert familles » promet deux sièges enfants sur réservation. Quel contrôle doit précéder la confirmation ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Vérifier les équipements adaptés disponibles et la capacité de transport avec les bagages."
+        },
+        {
+          "id": "b",
+          "text": "Confirmer la formule puis vérifier les équipements le jour même."
+        },
+        {
+          "id": "c",
+          "text": "Remplacer les sièges promis par une remise sur la course."
+        }
+      ],
+      "answer": "a",
+      "explanation": "L’offre doit correspondre à une capacité réelle. Le matériel, le nombre de passagers et les bagages conditionnent l’exécution de la promesse commerciale.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.02"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-f-03",
+      "prompt": "Une course rapporte 84 € avant une commission de 25 % et entraîne 18 € de coûts variables. Quelle contribution reste pour couvrir les charges fixes ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "45 €."
+        },
+        {
+          "id": "b",
+          "text": "63 €."
+        },
+        {
+          "id": "c",
+          "text": "66 €."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Commission : 84 × 25 % = 21 €. Contribution : 84 − 21 − 18 = 45 €. Le montant après commission n’est pas encore la contribution après coûts variables.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.03"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-f-04",
+      "prompt": "Un devis prévoit le trajet et le prix mais ne traite pas l’attente à l’arrivée du train. Quelle précision réduit un désaccord ultérieur ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le délai inclus, le point de départ du décompte et le prix de l’attente supplémentaire."
+        },
+        {
+          "id": "b",
+          "text": "Une mention « attente possible » sans durée ni montant."
+        },
+        {
+          "id": "c",
+          "text": "La seule durée habituelle du trajet routier."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Une attente facturable doit pouvoir être comprise et calculée à partir des conditions proposées. Une formule générale ne précise ni le seuil ni le coût.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.04"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-f-05",
+      "prompt": "Deux canaux génèrent chacun 1 000 € de ventes. Le premier prélève 200 € et le second coûte 80 € de prospection pour ces mêmes ventes. À coûts de mission identiques, quel canal laisse la meilleure contribution ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Ils sont équivalents puisque leur chiffre d’affaires est identique."
+        },
+        {
+          "id": "b",
+          "text": "Le second, avec 120 € de plus."
+        },
+        {
+          "id": "c",
+          "text": "Le premier, car une commission remplace les coûts de véhicule."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Les coûts commerciaux diffèrent : 1 000 − 200 = 800 €, contre 1 000 − 80 = 920 €. L’écart est de 120 €, avant les mêmes coûts de mission.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.05"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-f-06",
+      "prompt": "Une campagne de prospection obtient 12 rendez-vous pour 60 contacts ciblés. Quel est son taux de prise de rendez-vous ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "20 %."
+        },
+        {
+          "id": "b",
+          "text": "12 %."
+        },
+        {
+          "id": "c",
+          "text": "5 %."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le taux se calcule avec le résultat sur le nombre de contacts : 12 ÷ 60 × 100 = 20 %. Le nombre brut de rendez-vous ne constitue pas un taux.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.06"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-f-07",
+      "prompt": "Un hôtel propose des transferts à horaires fixes avec règlement à 45 jours. Quel point doit être étudié en plus du prix par course ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le financement des dépenses engagées avant le règlement."
+        },
+        {
+          "id": "b",
+          "text": "Le montant du règlement comme s’il était encaissé le jour de la course."
+        },
+        {
+          "id": "c",
+          "text": "Le bénéfice prévisionnel seul, sans tenir compte des dates des flux bancaires."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le carburant, les commissions et d’autres dépenses peuvent être payés avant l’encaissement. Le délai client crée donc un besoin de trésorerie.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.07"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-f-08",
+      "prompt": "Une page de réservation affiche « prix tout compris » mais ajoute des frais obligatoires au dernier écran. Quelle amélioration corrige le problème ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Présenter les frais obligatoires uniquement dans une FAQ facultative après le choix du trajet."
+        },
+        {
+          "id": "b",
+          "text": "Présenter clairement le prix complet et les conditions avant la validation."
+        },
+        {
+          "id": "c",
+          "text": "Conserver les frais cachés et les expliquer uniquement après paiement."
+        }
+      ],
+      "answer": "b",
+      "explanation": "La clarté porte sur l’offre entière et ses conditions. Un client doit comprendre le montant à accepter avant de confirmer sa commande.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.08"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-f-09",
+      "prompt": "Un client effectue une première course. Le chauffeur souhaite réutiliser son numéro pour des offres promotionnelles. Quelle démarche respecte la finalité initiale des données ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Considérer la réservation comme un accord permanent à toute publicité."
+        },
+        {
+          "id": "b",
+          "text": "Transmettre le numéro à un partenaire qui se chargera de demander ensuite."
+        },
+        {
+          "id": "c",
+          "text": "Vérifier les conditions applicables à la prospection et informer le client avant une réutilisation commerciale."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Une coordonnée collectée pour exécuter une course ne devient pas librement réutilisable. La prospection demande de vérifier sa base et l’information du client.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.09"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-f-10",
+      "prompt": "Sur 80 courses, 6 ont commencé avec plus de dix minutes de retard. Quel indicateur mesure exactement ce problème ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Tous les clients ont subi en moyenne dix minutes de retard."
+        },
+        {
+          "id": "b",
+          "text": "7,5 % des courses ont dépassé dix minutes de retard au départ."
+        },
+        {
+          "id": "c",
+          "text": "6 % des courses ont dépassé dix minutes de retard au départ."
+        }
+      ],
+      "answer": "b",
+      "explanation": "6 ÷ 80 × 100 = 7,5 %. Cet indicateur ne donne ni le retard moyen de tous les trajets ni la durée de chaque retard.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.10"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-f-11",
+      "prompt": "Un client conteste 15 € d’attente facturés. Quelle information doit être rapprochée en premier ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Les conditions acceptées, les horaires réellement constatés et le calcul facturé."
+        },
+        {
+          "id": "b",
+          "text": "Le seul montant que le client souhaite payer."
+        },
+        {
+          "id": "c",
+          "text": "La note moyenne laissée par les autres clients."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le rapprochement de la commande, des faits et du calcul permet de distinguer erreur de facturation et désaccord sur des conditions connues.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.11"
+      ],
+      "origin": "pedagogical-independent"
+    }
+  ],
+  "notice": "Entraînement pédagogique à choix unique. Les questions historiques et celles nécessitant un visuel absent sont exclues. La correction renvoie aux leçons à revoir ; ce bilan ne remplace pas le barème de l’examen officiel.",
+  "construction": {
+    "reviewed_on": "2026-10-07",
+    "independent_of_workshops": true,
+    "annales_questions": 19,
+    "original_questions": 11
+  }
+}

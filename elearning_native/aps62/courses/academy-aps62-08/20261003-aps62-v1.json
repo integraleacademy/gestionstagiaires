@@ -1,0 +1,2091 @@
+{
+  "format_version": 1,
+  "id": "academy-aps62-08",
+  "version": "20261003-aps62-v1",
+  "title": "APS 08 · Consignes et comptes rendus",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "source": {
+    "type": "academy-aps62",
+    "reviewed_on": "2026-10-03"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false
+  },
+  "theme": {
+    "main_color": "#2860e8",
+    "button_color": "#245bdb",
+    "text_color": "#172b4d"
+  },
+  "planned_minutes": 300,
+  "required_minutes": 300,
+  "regulation": "Annexe II · Transmission des informations",
+  "introduction": [],
+  "sections": [
+    {
+      "id": "aps62-08-01",
+      "title": "01 · Lire et hiérarchiser les consignes",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-08-01-comprendre",
+          "title": "Comprendre · Lire et hiérarchiser les consignes",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.01",
+            "title": "Lire et hiérarchiser les consignes",
+            "kind": "lesson",
+            "image": "media/aps62/scene-04.webp",
+            "case": "Deux fiches donnent des horaires de fermeture différents. L’une n’est pas datée ; l’autre a été diffusée hier mais ne précise pas qui l’a validée. Un visiteur veut entrer pendant cet intervalle.",
+            "reason": "Une consigne doit identifier son objet, son périmètre, son déclencheur, l’action attendue et le relais. La date compte mais ne remplace pas la validation ni la compatibilité avec les textes. Une contradiction documentaire se traite avant qu’elle ne crée une décision arbitraire. La réponse provisoire doit rester sûre et conforme aux responsabilités du poste.",
+            "lessons": [
+              {
+                "ref": "04.01",
+                "title": "Décomposer une consigne",
+                "page": 183,
+                "diagram": "media/aps62/repere-04.01.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Du texte à une action observable"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une consigne utile indique une situation de départ, l'action attendue, le responsable et le relais. Elle peut être permanente, comme le contrôle des visiteurs, ou temporaire, comme la fermeture d'un accès pendant des travaux. L'agent doit connaître sa date, son périmètre et les conditions de fin. Une instruction ancienne conservée au poste peut entrer en contradiction avec l'organisation actuelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Vérifier la compréhension réelle"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Relire une phrase ne suffit pas toujours. Reformulez ce que vous ferez et les cas qui restent incertains. Une consigne « prévenir en cas de problème » doit préciser quel problème, qui prévenir et par quel moyen. La clarification évite les initiatives divergentes entre vacations. Une consigne contraire au droit doit être signalée ; son caractère écrit ne la rend pas applicable."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "« Après 20 h, accès des prestataires sur validation du responsable d'astreinte » contient un horaire, un public concerné et une autorité. Il manque peut-être le numéro d'astreinte et la conduite en cas d'absence de réponse. Ces éléments sont clarifiés avant la nuit, avec un point d'attente sûr."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Comprendre une consigne, c'est savoir l'appliquer à une situation réelle et reconnaître le moment où une clarification ou une décision supérieure est nécessaire."
+                  }
+                ],
+                "course_page": 184,
+                "practice": {
+                  "background": "Lire ne suffit pas : reformulez l’action, repérez les conditions de déclenchement et les cas qui nécessitent un arbitrage. Une phrase ambiguë doit être clarifiée. Si une consigne contredit une obligation légale ou vous expose à un danger non maîtrisé, signalez-le. Les consignes orales importantes sont confirmées et tracées selon la procédure. Une ancienne feuille conservée à côté de la nouvelle crée un risque d’erreur ; l’organisation documentaire doit éviter les versions concurrentes.",
+                  "case": "Une note autorise une livraison exceptionnelle « vendredi matin » sans date précise. Une autre interdit les livraisons avant l’ouverture. Le camion arrive et présente la première note. Quelle information manque ? Comment maintenez-vous la sécurité pendant la vérification ?",
+                  "transfer": "La consigne dit « prévenir le responsable » mais aucun contact n’est indiqué. Quelle précision manque ?",
+                  "page": 201
+                }
+              },
+              {
+                "ref": "02.02",
+                "title": "Comprendre la hiérarchie des règles",
+                "page": 76,
+                "diagram": "media/aps62/repere-02.02.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Toutes les instructions n'ont pas la même valeur"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Les lois déterminent des droits et obligations ; les règlements en précisent les modalités. Le code de la sécurité intérieure rassemble notamment le cadre des activités privées de sécurité. Une autorisation administrative peut s'appliquer à une entreprise, une personne, un lieu ou une période. Le contrat et les consignes organisent ensuite le travail dans ce cadre. Une consigne écrite n'efface jamais une interdiction légale."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Lire une règle jusqu'à ses conditions"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une phrase commençant par « l'agent peut » doit être lue avec les conditions qui suivent : activité, lieu, circonstances, consentement ou autorité de contrôle. Il faut également vérifier la version du texte. Un ancien support peut présenter une règle qui a évolué. En cas de doute, l'encadrement doit clarifier avant une opération planifiée ; pendant un événement, l'agent privilégie les mesures immédiates de protection relevant clairement de ses compétences."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une note interne demande de fouiller toutes les personnes à la sortie. La présence d'une signature de direction ne suffit pas à rendre l'acte possible. L'agent distingue la vérification des objets, la fouille d'un bagage et la fouille corporelle, puis signale le problème. Une procédure conforme doit être définie avant son application."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une règle se comprend avec son champ d'application, ses exceptions et sa date. Conservez au poste des documents identifiés et actualisés."
+                  }
+                ],
+                "course_page": 77,
+                "practice": {
+                  "background": "Pour vérifier une règle, partez de la question concrète : activité, lieu, personne et action envisagée. Consultez ensuite la version en vigueur à la date de l’intervention. Une capture ancienne ou une fiche pédagogique non actualisée peut contenir une règle abrogée. Dans Légifrance, distinguez la version initiale d’un texte et sa version consolidée. Ce manuel s’appuie sur une vérification datée ; la veille appartient aussi à l’organisme et à l’employeur. En cas de contradiction, signalez-la avant d’appliquer une instruction incertaine.",
+                  "case": "Deux supports parlent des palpations : le premier impose un ancien agrément et le second décrit un dispositif plus récent. Votre consigne reprend la première formulation sans date. Comment résolvez-vous la contradiction ? Qui valide l’adaptation de la consigne ?",
+                  "transfer": "Une ancienne fiche interne contredit un texte actuel. Quelle référence faut-il faire vérifier au responsable ?",
+                  "page": 111
+                }
+              }
+            ],
+            "decision": "Faire clarifier la consigne applicable par le responsable sans inventer une règle.",
+            "pitfall": "Choisir le document qui semble le plus pratique.",
+            "objectives": [
+              "Expliquer : lire et hiérarchiser les consignes",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Deux fiches donnent des horaires de fermeture différents. L’une n’est pas datée ; l’autre a été diffusée hier mais ne précise pas qui l’a validée. Un visiteur veut entrer pendant cet intervalle."
+              ],
+              [
+                "Décision à justifier",
+                "Faire clarifier la consigne applicable par le responsable sans inventer une règle."
+              ],
+              [
+                "Piège à éviter",
+                "Choisir le document qui semble le plus pratique."
+              ],
+              [
+                "Pourquoi ?",
+                "Une consigne doit identifier son objet, son périmètre, son déclencheur, l’action attendue et le relais. La date compte mais ne remplace pas la validation ni la compatibilité avec les textes. Une contradiction documentaire se traite avant qu’elle ne crée une décision arbitraire. La réponse provisoire doit rester sûre et conforme aux responsabilités du poste."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Deux fiches donnent des horaires de fermeture différents."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Une consigne doit identifier son objet, son périmètre, son déclencheur, l’action attendue et le relais."
+              },
+              {
+                "label": "Décider",
+                "text": "Faire clarifier la consigne applicable par le responsable sans inventer une règle."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Un message oral contredit la fiche validée. Comment demander confirmation et conserver la trace de l’arbitrage ?"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-08-01-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-08-01-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-08-01-video",
+                "title": "Lire et hiérarchiser les consignes",
+                "required": true,
+                "src": "media/aps62/aps62-08-01.mp4",
+                "poster": "media/aps62/aps62-08-01.jpg",
+                "captions": "media/aps62/aps62-08-01.vtt",
+                "duration_seconds": 68.242086,
+                "transcript": "La situation : Deux fiches donnent des horaires de fermeture différents. L’une n’est pas datée ; l’autre a été diffusée hier mais ne précise pas qui l’a validée. Un visiteur veut entrer pendant cet intervalle.\n\nÀ vous de décider : Faire clarifier la consigne applicable par le responsable sans inventer une règle. Ou bien : Choisir le document qui semble le plus pratique. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Une consigne doit identifier son objet, son périmètre, son déclencheur, l’action attendue et le relais. La date compte mais ne remplace pas la validation ni la compatibilité avec les textes. Une contradiction documentaire se traite avant qu’elle ne crée une décision arbitraire. La réponse provisoire doit rester sûre et conforme aux responsabilités du poste.\n\nLe bon relais : La consigne corrigée précise le site et les portes, la date d’application, l’autorité de validation, les horaires, les exceptions, la procédure de vérification et la traçabilité. La version remplacée est retirée du poste selon la gestion documentaire, sans effacer l’historique nécessaire."
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "08.01",
+            "title": "Lire et hiérarchiser les consignes",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Du texte à une action observable",
+                "back": "Une consigne utile indique une situation de départ, l'action attendue, le responsable et le relais. Elle peut être permanente, comme le contrôle des visiteurs, ou temporaire, comme la fermeture d'un accès pendant des travaux. L'agent doit connaître sa date, son périmètre et les conditions de fin. Une instruction ancienne conservée au poste peut entrer en contradiction avec l'organisation actuelle."
+              },
+              {
+                "front": "Vérifier la compréhension réelle",
+                "back": "Relire une phrase ne suffit pas toujours. Reformulez ce que vous ferez et les cas qui restent incertains. Une consigne « prévenir en cas de problème » doit préciser quel problème, qui prévenir et par quel moyen. La clarification évite les initiatives divergentes entre vacations. Une consigne contraire au droit doit être signalée ; son caractère écrit ne la rend pas applicable."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "« Après 20 h, accès des prestataires sur validation du responsable d'astreinte » contient un horaire, un public concerné et une autorité. Il manque peut-être le numéro d'astreinte et la conduite en cas d'absence de réponse. Ces éléments sont clarifiés avant la nuit, avec un point d'attente sûr."
+              },
+              {
+                "front": "Toutes les instructions n'ont pas la même valeur",
+                "back": "Les lois déterminent des droits et obligations ; les règlements en précisent les modalités. Le code de la sécurité intérieure rassemble notamment le cadre des activités privées de sécurité. Une autorisation administrative peut s'appliquer à une entreprise, une personne, un lieu ou une période. Le contrat et les consignes organisent ensuite le travail dans ce cadre. Une consigne écrite n'efface jamais une interdiction légale."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Deux fiches donnent des horaires de fermeture différents. L’une n’est pas datée ; l’autre a été diffusée hier mais ne précise pas qui l’a validée. Un visiteur veut entrer pendant cet intervalle.\n\nÀ vous de décider : Faire clarifier la consigne applicable par le responsable sans inventer une règle. Ou bien : Choisir le document qui semble le plus pratique. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Une consigne doit identifier son objet, son périmètre, son déclencheur, l’action attendue et le relais. La date compte mais ne remplace pas la validation ni la compatibilité avec les textes. Une contradiction documentaire se traite avant qu’elle ne crée une décision arbitraire. La réponse provisoire doit rester sûre et conforme aux responsabilités du poste.\n\nLe bon relais : La consigne corrigée précise le site et les portes, la date d’application, l’autorité de validation, les horaires, les exceptions, la procédure de vérification et la traçabilité. La version remplacée est retirée du poste selon la gestion documentaire, sans effacer l’historique nécessaire."
+          }
+        },
+        {
+          "id": "aps62-08-01-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.01",
+            "title": "Lire et hiérarchiser les consignes",
+            "kind": "workshop",
+            "case": "Deux fiches donnent des horaires de fermeture différents. L’une n’est pas datée ; l’autre a été diffusée hier mais ne précise pas qui l’a validée. Un visiteur veut entrer pendant cet intervalle.",
+            "choices": [
+              {
+                "text": "Choisir le document qui semble le plus pratique.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. Une consigne doit identifier son objet, son périmètre, son déclencheur, l’action attendue et le relais. La date compte mais ne remplace pas la validation ni la compatibilité avec les textes. Une contradiction documentaire se traite avant qu’elle ne crée une décision arbitraire. La réponse provisoire doit rester sûre et conforme aux responsabilités du poste.",
+                "correct": false
+              },
+              {
+                "text": "Appliquer toujours la feuille la plus ancienne.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. La consigne corrigée précise le site et les portes, la date d’application, l’autorité de validation, les horaires, les exceptions, la procédure de vérification et la traçabilité. La version remplacée est retirée du poste selon la gestion documentaire, sans effacer l’historique nécessaire.",
+                "correct": false
+              },
+              {
+                "text": "Faire clarifier la consigne applicable par le responsable sans inventer une règle.",
+                "feedback": "Une consigne doit identifier son objet, son périmètre, son déclencheur, l’action attendue et le relais. La date compte mais ne remplace pas la validation ni la compatibilité avec les textes. Une contradiction documentaire se traite avant qu’elle ne crée une décision arbitraire. La réponse provisoire doit rester sûre et conforme aux responsabilités du poste.",
+                "correct": true
+              }
+            ],
+            "task": "Comparez les deux fiches dans un tableau version, auteur, périmètre, action et contact. Réécrivez une consigne complète en huit lignes.",
+            "model": "La consigne corrigée précise le site et les portes, la date d’application, l’autorité de validation, les horaires, les exceptions, la procédure de vérification et la traçabilité. La version remplacée est retirée du poste selon la gestion documentaire, sans effacer l’historique nécessaire.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ]
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-08-01-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Deux fiches donnent des horaires de fermeture différents. L’une n’est pas datée ; l’autre a été diffusée hier mais ne précise pas qui l’a validée. Un visiteur veut entrer pendant cet intervalle.",
+          "options": [
+            {
+              "id": "aps62-08-01-a0",
+              "text": "Choisir le document qui semble le plus pratique.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-08-01-a1",
+              "text": "Appliquer toujours la feuille la plus ancienne.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-08-01-a2",
+              "text": "Faire clarifier la consigne applicable par le responsable sans inventer une règle.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "Une consigne doit identifier son objet, son périmètre, son déclencheur, l’action attendue et le relais. La date compte mais ne remplace pas la validation ni la compatibilité avec les textes. Une contradiction documentaire se traite avant qu’elle ne crée une décision arbitraire. La réponse provisoire doit rester sûre et conforme aux responsabilités du poste."
+        },
+        {
+          "id": "aps62-08-01-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-08-01-pair0",
+              "left": "Du texte à une action observable",
+              "right": "Une consigne utile indique une situation de départ, l'action attendue, le responsable et le relais."
+            },
+            {
+              "id": "aps62-08-01-pair1",
+              "left": "Vérifier la compréhension réelle",
+              "right": "Relire une phrase ne suffit pas toujours."
+            },
+            {
+              "id": "aps62-08-01-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "« Après 20 h, accès des prestataires sur validation du responsable d'astreinte » contient un horaire, un public concerné et une autorité."
+            }
+          ],
+          "explanation": "Du texte à une action observable : Une consigne utile indique une situation de départ, l'action attendue, le responsable et le relais. Vérifier la compréhension réelle : Relire une phrase ne suffit pas toujours. EXEMPLE EXPLIQUÉ : « Après 20 h, accès des prestataires sur validation du responsable d'astreinte » contient un horaire, un public concerné et une autorité."
+        },
+        {
+          "id": "aps62-08-01-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.01",
+            "title": "Lire et hiérarchiser les consignes",
+            "kind": "transfer",
+            "case": "Un message oral contredit la fiche validée. Comment demander confirmation et conserver la trace de l’arbitrage ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "Une consigne doit identifier son objet, son périmètre, son déclencheur, l’action attendue et le relais. La date compte mais ne remplace pas la validation ni la compatibilité avec les textes. Une contradiction documentaire se traite avant qu’elle ne crée une décision arbitraire. La réponse provisoire doit rester sûre et conforme aux responsabilités du poste. La consigne corrigée précise le site et les portes, la date d’application, l’autorité de validation, les horaires, les exceptions, la procédure de vérification et la traçabilité. La version remplacée est retirée du poste selon la gestion documentaire, sans effacer l’historique nécessaire.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ]
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-08-01-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.01",
+            "title": "Lire et hiérarchiser les consignes",
+            "kind": "recap",
+            "decision": "Faire clarifier la consigne applicable par le responsable sans inventer une règle.",
+            "reason": "Une consigne doit identifier son objet, son périmètre, son déclencheur, l’action attendue et le relais. La date compte mais ne remplace pas la validation ni la compatibilité avec les textes. Une contradiction documentaire se traite avant qu’elle ne crée une décision arbitraire. La réponse provisoire doit rester sûre et conforme aux responsabilités du poste.",
+            "pitfall": "Choisir le document qui semble le plus pratique.",
+            "cards": [
+              {
+                "front": "Du texte à une action observable",
+                "back": "Une consigne utile indique une situation de départ, l'action attendue, le responsable et le relais. Elle peut être permanente, comme le contrôle des visiteurs, ou temporaire, comme la fermeture d'un accès pendant des travaux. L'agent doit connaître sa date, son périmètre et les conditions de fin. Une instruction ancienne conservée au poste peut entrer en contradiction avec l'organisation actuelle."
+              },
+              {
+                "front": "Vérifier la compréhension réelle",
+                "back": "Relire une phrase ne suffit pas toujours. Reformulez ce que vous ferez et les cas qui restent incertains. Une consigne « prévenir en cas de problème » doit préciser quel problème, qui prévenir et par quel moyen. La clarification évite les initiatives divergentes entre vacations. Une consigne contraire au droit doit être signalée ; son caractère écrit ne la rend pas applicable."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "« Après 20 h, accès des prestataires sur validation du responsable d'astreinte » contient un horaire, un public concerné et une autorité. Il manque peut-être le numéro d'astreinte et la conduite en cas d'absence de réponse. Ces éléments sont clarifiés avant la nuit, avec un point d'attente sûr."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "04.01",
+                "page": 184
+              },
+              {
+                "ref": "02.02",
+                "page": 77
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique."
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-08-02",
+      "title": "02 · Un compte rendu oral immédiatement utile",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-08-02-comprendre",
+          "title": "Comprendre · Un compte rendu oral immédiatement utile",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.02",
+            "title": "Un compte rendu oral immédiatement utile",
+            "kind": "lesson",
+            "image": "media/aps62/scene-04.webp",
+            "case": "En ronde, vous constatez une porte de secours maintenue ouverte et des cartons devant le passage. Le PC gère déjà deux appels. Votre première transmission dit seulement : « Il y a encore un problème comme hier ».",
+            "reason": "Le destinataire doit pouvoir décider avec un minimum d’ambiguïté. Un message opérationnel situe, décrit et distingue l’action déjà prise de celle attendue. La concision se prépare : elle ne consiste pas à supprimer le lieu, le risque ou le besoin. L’accusé de réception permet de vérifier que l’information a été comprise.",
+            "lessons": [
+              {
+                "ref": "04.02",
+                "title": "Construire un message oral",
+                "page": 185,
+                "diagram": "media/aps62/repere-04.02.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Donner d'abord ce qui permet d'agir"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Le destinataire a besoin du lieu, de l'événement, du risque et de la demande. Une longue introduction retarde la compréhension. Commencez par les éléments décisifs, puis ajoutez les précisions. Distinguez ce que vous constatez de ce qu'on vous a signalé. L'importance d'un message ne dépend pas du nombre de mots, mais de leur utilité pour l'action."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Fermer la boucle de communication"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un message émis n'est pas nécessairement entendu ni compris. Faites confirmer une information importante ou une mission. Le destinataire peut reformuler : « Je prends en charge l'appel ; vous restez au portail B. » Cette confirmation évite que deux personnes effectuent la même tâche alors qu'une autre reste oubliée. Une modification de situation doit ensuite être annoncée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "« Bâtiment C, premier étage : fuite d'eau devant l'ascenseur. Zone balisée, aucune victime constatée. Demande de maintenance et maintien de l'accès fermé. » Le message indique le fait, la protection et la suite. Il est plus exploitable que « gros problème au bâtiment C », qui oblige à demander toutes les informations."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Parlez à un débit compatible avec la prise de notes et la radio. L'urgence exige de la clarté, pas une accélération qui rend le message incompréhensible."
+                  }
+                ],
+                "course_page": 186,
+                "practice": {
+                  "background": "Vérifiez que le destinataire a compris. Pour une instruction critique, une reformulation courte évite les erreurs d’adresse ou de porte. Si la radio est encombrée, utilisez le canal prioritaire ou le moyen de secours prévu. Une information nouvelle peut rendre la première transmission obsolète ; annoncez clairement la mise à jour. Le compte rendu immédiat prépare l’action ; le rapport écrit reconstituera ensuite la chronologie. Les deux sont complémentaires.",
+                  "case": "Une fuite d’eau apparaît près d’une armoire électrique. Vous êtes au sous-sol B2. Le poste central gère déjà une livraison et vous demande d’attendre. Quel message court permet de faire comprendre la priorité ? Que ne devez-vous pas entreprendre ?",
+                  "transfer": "Réduisez un récit de deux minutes sur une porte ouverte en un message initial de trois éléments.",
+                  "page": 202
+                }
+              },
+              {
+                "ref": "04.03",
+                "title": "Utiliser la radio comme un outil collectif",
+                "page": 187,
+                "diagram": "media/aps62/repere-04.03.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Un canal partagé"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La radio permet une coordination rapide, mais plusieurs personnes peuvent entendre le même échange. Écoutez avant d'émettre, identifiez votre destinataire et utilisez l'indicatif prévu. Attendez l'ouverture de la transmission avant de parler afin de ne pas couper le début du message. Une conversation inutile peut empêcher le passage d'une urgence. Les règles de priorité doivent être connues par tous."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Rendre les éléments sensibles intelligibles"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Les noms, chiffres et références peuvent être mal compris dans le bruit. Répétez ou épelez selon la procédure, notamment avec l'alphabet phonétique si l'équipe l'utilise. Une transmission radio ne convient pas à toutes les données personnelles ; choisissez un moyen plus discret lorsque c'est nécessaire. Testez aussi les zones mal couvertes et le moyen de secours disponible."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Deux portes portent des références proches, B-15 et B-50. Le destinataire répète la référence reçue avant d'envoyer un intervenant. Ce retour évite un déplacement inutile. Si le signal devient illisible, l'agent ne suppose pas que le message est passé : il change de position en sécurité ou utilise le canal de secours prévu."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La radio est une chaîne : batterie, émission, réseau, réception et compréhension. Un voyant allumé ne garantit pas que l'autre agent a reçu l'information."
+                  }
+                ],
+                "course_page": 188,
+                "practice": {
+                  "background": "Les codes éventuels sont ceux du site et doivent être compris par tous les utilisateurs concernés. N’inventez pas un code pendant un incident. Les informations sensibles ou médicales ne se détaillent pas sur un canal audible par le public. Utilisez le moyen adapté pour les transmettre aux destinataires autorisés. Gardez une solution en cas de zone non couverte : téléphone, point de contact ou procédure de rendez-vous. Une panne de communication modifie la sécurité de la mission et doit être signalée.",
+                  "case": "Vous entendez « rendez-vous porte… trois ou six » dans une zone où la réception est mauvaise. Une intervention est en cours et vous craignez de ralentir l’équipe. Pourquoi devez-vous demander confirmation ? Quelle solution utilisez-vous si la liaison reste mauvaise ?",
+                  "transfer": "Vous entendez « porte… ouverte » sans le repère. Pourquoi ne faut-il pas deviner la lettre ?",
+                  "page": 203
+                }
+              }
+            ],
+            "decision": "Localiser précisément, décrire les faits, annoncer les mesures et le besoin.",
+            "pitfall": "Répéter le message plus fort sans le préciser.",
+            "objectives": [
+              "Expliquer : un compte rendu oral immédiatement utile",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "En ronde, vous constatez une porte de secours maintenue ouverte et des cartons devant le passage. Le PC gère déjà deux appels. Votre première transmission dit seulement : « Il y a encore un problème comme hier »."
+              ],
+              [
+                "Décision à justifier",
+                "Localiser précisément, décrire les faits, annoncer les mesures et le besoin."
+              ],
+              [
+                "Piège à éviter",
+                "Répéter le message plus fort sans le préciser."
+              ],
+              [
+                "Pourquoi ?",
+                "Le destinataire doit pouvoir décider avec un minimum d’ambiguïté. Un message opérationnel situe, décrit et distingue l’action déjà prise de celle attendue. La concision se prépare : elle ne consiste pas à supprimer le lieu, le risque ou le besoin. L’accusé de réception permet de vérifier que l’information a été comprise."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "En ronde, vous constatez une porte de secours maintenue ouverte et des cartons devant le passage."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Le destinataire doit pouvoir décider avec un minimum d’ambiguïté."
+              },
+              {
+                "label": "Décider",
+                "text": "Localiser précisément, décrire les faits, annoncer les mesures et le besoin."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "La liaison est mauvaise. Que répéter en priorité et quel canal de secours est prévu sur le site ?"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-08-02-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-08-02-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-08-02-video",
+                "title": "Un compte rendu oral immédiatement utile",
+                "required": true,
+                "src": "media/aps62/aps62-08-02.mp4",
+                "poster": "media/aps62/aps62-08-02.jpg",
+                "captions": "media/aps62/aps62-08-02.vtt",
+                "duration_seconds": 70.492472,
+                "transcript": "La situation : En ronde, vous constatez une porte de secours maintenue ouverte et des cartons devant le passage. Le PC gère déjà deux appels. Votre première transmission dit seulement : « Il y a encore un problème comme hier ».\n\nÀ vous de décider : Localiser précisément, décrire les faits, annoncer les mesures et le besoin. Ou bien : Répéter le message plus fort sans le préciser. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Le destinataire doit pouvoir décider avec un minimum d’ambiguïté. Un message opérationnel situe, décrit et distingue l’action déjà prise de celle attendue. La concision se prépare : elle ne consiste pas à supprimer le lieu, le risque ou le besoin. L’accusé de réception permet de vérifier que l’information a été comprise.\n\nLe bon relais : « PC, de ronde 2 : bâtiment B, sortie est du rez-de-chaussée. Porte maintenue ouverte et cartons dans le passage. Je protège la circulation sans quitter la zone ; demande intervention du référent et consigne de traitement. Confirmez réception. » Le message ne dit pas que le problème est résolu avant vérification."
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "08.02",
+            "title": "Un compte rendu oral immédiatement utile",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Donner d'abord ce qui permet d'agir",
+                "back": "Le destinataire a besoin du lieu, de l'événement, du risque et de la demande. Une longue introduction retarde la compréhension. Commencez par les éléments décisifs, puis ajoutez les précisions. Distinguez ce que vous constatez de ce qu'on vous a signalé. L'importance d'un message ne dépend pas du nombre de mots, mais de leur utilité pour l'action."
+              },
+              {
+                "front": "Fermer la boucle de communication",
+                "back": "Un message émis n'est pas nécessairement entendu ni compris. Faites confirmer une information importante ou une mission. Le destinataire peut reformuler : « Je prends en charge l'appel ; vous restez au portail B. » Cette confirmation évite que deux personnes effectuent la même tâche alors qu'une autre reste oubliée. Une modification de situation doit ensuite être annoncée."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "« Bâtiment C, premier étage : fuite d'eau devant l'ascenseur. Zone balisée, aucune victime constatée. Demande de maintenance et maintien de l'accès fermé. » Le message indique le fait, la protection et la suite. Il est plus exploitable que « gros problème au bâtiment C », qui oblige à demander toutes les informations."
+              },
+              {
+                "front": "Un canal partagé",
+                "back": "La radio permet une coordination rapide, mais plusieurs personnes peuvent entendre le même échange. Écoutez avant d'émettre, identifiez votre destinataire et utilisez l'indicatif prévu. Attendez l'ouverture de la transmission avant de parler afin de ne pas couper le début du message. Une conversation inutile peut empêcher le passage d'une urgence. Les règles de priorité doivent être connues par tous."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : En ronde, vous constatez une porte de secours maintenue ouverte et des cartons devant le passage. Le PC gère déjà deux appels. Votre première transmission dit seulement : « Il y a encore un problème comme hier ».\n\nÀ vous de décider : Localiser précisément, décrire les faits, annoncer les mesures et le besoin. Ou bien : Répéter le message plus fort sans le préciser. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Le destinataire doit pouvoir décider avec un minimum d’ambiguïté. Un message opérationnel situe, décrit et distingue l’action déjà prise de celle attendue. La concision se prépare : elle ne consiste pas à supprimer le lieu, le risque ou le besoin. L’accusé de réception permet de vérifier que l’information a été comprise.\n\nLe bon relais : « PC, de ronde 2 : bâtiment B, sortie est du rez-de-chaussée. Porte maintenue ouverte et cartons dans le passage. Je protège la circulation sans quitter la zone ; demande intervention du référent et consigne de traitement. Confirmez réception. » Le message ne dit pas que le problème est résolu avant vérification."
+          }
+        },
+        {
+          "id": "aps62-08-02-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.02",
+            "title": "Un compte rendu oral immédiatement utile",
+            "kind": "workshop",
+            "case": "En ronde, vous constatez une porte de secours maintenue ouverte et des cartons devant le passage. Le PC gère déjà deux appels. Votre première transmission dit seulement : « Il y a encore un problème comme hier ».",
+            "choices": [
+              {
+                "text": "Donner une longue opinion sur l’organisation du site.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. « PC, de ronde 2 : bâtiment B, sortie est du rez-de-chaussée. Porte maintenue ouverte et cartons dans le passage. Je protège la circulation sans quitter la zone ; demande intervention du référent et consigne de traitement. Confirmez réception. » Le message ne dit pas que le problème est résolu avant vérification.",
+                "correct": false
+              },
+              {
+                "text": "Localiser précisément, décrire les faits, annoncer les mesures et le besoin.",
+                "feedback": "Le destinataire doit pouvoir décider avec un minimum d’ambiguïté. Un message opérationnel situe, décrit et distingue l’action déjà prise de celle attendue. La concision se prépare : elle ne consiste pas à supprimer le lieu, le risque ou le besoin. L’accusé de réception permet de vérifier que l’information a été comprise.",
+                "correct": true
+              },
+              {
+                "text": "Répéter le message plus fort sans le préciser.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. Le destinataire doit pouvoir décider avec un minimum d’ambiguïté. Un message opérationnel situe, décrit et distingue l’action déjà prise de celle attendue. La concision se prépare : elle ne consiste pas à supprimer le lieu, le risque ou le besoin. L’accusé de réception permet de vérifier que l’information a été comprise.",
+                "correct": false
+              }
+            ],
+            "task": "Préparez une transmission de 30 secondes puis une version de 15 secondes. Faites ressortir quatre informations indispensables.",
+            "model": "« PC, de ronde 2 : bâtiment B, sortie est du rez-de-chaussée. Porte maintenue ouverte et cartons dans le passage. Je protège la circulation sans quitter la zone ; demande intervention du référent et consigne de traitement. Confirmez réception. » Le message ne dit pas que le problème est résolu avant vérification.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ]
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-08-02-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "En ronde, vous constatez une porte de secours maintenue ouverte et des cartons devant le passage. Le PC gère déjà deux appels. Votre première transmission dit seulement : « Il y a encore un problème comme hier ».",
+          "options": [
+            {
+              "id": "aps62-08-02-a0",
+              "text": "Donner une longue opinion sur l’organisation du site.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-08-02-a1",
+              "text": "Localiser précisément, décrire les faits, annoncer les mesures et le besoin.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-08-02-a2",
+              "text": "Répéter le message plus fort sans le préciser.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "Le destinataire doit pouvoir décider avec un minimum d’ambiguïté. Un message opérationnel situe, décrit et distingue l’action déjà prise de celle attendue. La concision se prépare : elle ne consiste pas à supprimer le lieu, le risque ou le besoin. L’accusé de réception permet de vérifier que l’information a été comprise."
+        },
+        {
+          "id": "aps62-08-02-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-08-02-pair0",
+              "left": "Donner d'abord ce qui permet d'agir",
+              "right": "Le destinataire a besoin du lieu, de l'événement, du risque et de la demande."
+            },
+            {
+              "id": "aps62-08-02-pair1",
+              "left": "Fermer la boucle de communication",
+              "right": "Un message émis n'est pas nécessairement entendu ni compris."
+            },
+            {
+              "id": "aps62-08-02-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "« Bâtiment C, premier étage : fuite d'eau devant l'ascenseur."
+            }
+          ],
+          "explanation": "Donner d'abord ce qui permet d'agir : Le destinataire a besoin du lieu, de l'événement, du risque et de la demande. Fermer la boucle de communication : Un message émis n'est pas nécessairement entendu ni compris. EXEMPLE EXPLIQUÉ : « Bâtiment C, premier étage : fuite d'eau devant l'ascenseur."
+        },
+        {
+          "id": "aps62-08-02-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.02",
+            "title": "Un compte rendu oral immédiatement utile",
+            "kind": "transfer",
+            "case": "La liaison est mauvaise. Que répéter en priorité et quel canal de secours est prévu sur le site ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "Le destinataire doit pouvoir décider avec un minimum d’ambiguïté. Un message opérationnel situe, décrit et distingue l’action déjà prise de celle attendue. La concision se prépare : elle ne consiste pas à supprimer le lieu, le risque ou le besoin. L’accusé de réception permet de vérifier que l’information a été comprise. « PC, de ronde 2 : bâtiment B, sortie est du rez-de-chaussée. Porte maintenue ouverte et cartons dans le passage. Je protège la circulation sans quitter la zone ; demande intervention du référent et consigne de traitement. Confirmez réception. » Le message ne dit pas que le problème est résolu avant vérification.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ]
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-08-02-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.02",
+            "title": "Un compte rendu oral immédiatement utile",
+            "kind": "recap",
+            "decision": "Localiser précisément, décrire les faits, annoncer les mesures et le besoin.",
+            "reason": "Le destinataire doit pouvoir décider avec un minimum d’ambiguïté. Un message opérationnel situe, décrit et distingue l’action déjà prise de celle attendue. La concision se prépare : elle ne consiste pas à supprimer le lieu, le risque ou le besoin. L’accusé de réception permet de vérifier que l’information a été comprise.",
+            "pitfall": "Répéter le message plus fort sans le préciser.",
+            "cards": [
+              {
+                "front": "Donner d'abord ce qui permet d'agir",
+                "back": "Le destinataire a besoin du lieu, de l'événement, du risque et de la demande. Une longue introduction retarde la compréhension. Commencez par les éléments décisifs, puis ajoutez les précisions. Distinguez ce que vous constatez de ce qu'on vous a signalé. L'importance d'un message ne dépend pas du nombre de mots, mais de leur utilité pour l'action."
+              },
+              {
+                "front": "Fermer la boucle de communication",
+                "back": "Un message émis n'est pas nécessairement entendu ni compris. Faites confirmer une information importante ou une mission. Le destinataire peut reformuler : « Je prends en charge l'appel ; vous restez au portail B. » Cette confirmation évite que deux personnes effectuent la même tâche alors qu'une autre reste oubliée. Une modification de situation doit ensuite être annoncée."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "« Bâtiment C, premier étage : fuite d'eau devant l'ascenseur. Zone balisée, aucune victime constatée. Demande de maintenance et maintien de l'accès fermé. » Le message indique le fait, la protection et la suite. Il est plus exploitable que « gros problème au bâtiment C », qui oblige à demander toutes les informations."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "04.02",
+                "page": 186
+              },
+              {
+                "ref": "04.03",
+                "page": 188
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique."
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-08-03",
+      "title": "03 · La main courante : une chronologie fiable",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-08-03-comprendre",
+          "title": "Comprendre · La main courante : une chronologie fiable",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.03",
+            "title": "La main courante : une chronologie fiable",
+            "kind": "lesson",
+            "image": "media/aps62/scene-04.webp",
+            "case": "À 14 h 05 une alarme retentit. À 14 h 08 le responsable annonce par téléphone un défaut connu. À 14 h 15 aucun contrôle terrain n’a encore confirmé le retour à la normale. Un collègue veut écrire « fausse alarme résolue ».",
+            "reason": "La main courante conserve une succession datée de faits et d’actions. Une information rapportée s’attribue à sa source. Un état non vérifié reste explicitement ouvert. Il est possible de compléter ensuite sans réécrire l’histoire. Les informations doivent être utiles, proportionnées et accessibles aux acteurs autorisés.",
+            "lessons": [
+              {
+                "ref": "04.04",
+                "title": "Écrire une main courante utile",
+                "page": 189,
+                "diagram": "media/aps62/repere-04.04.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une chronologie du service"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La main courante enregistre les faits et les actions dans l'ordre du temps. Elle permet la continuité entre agents et la reconstitution d'un événement. Chaque entrée doit situer ce qui s'est passé, quand, où, par qui et avec quelle suite. Une main courante interne ne se confond pas avec une déclaration faite auprès d'un service de police."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Des faits, une origine, un état de suivi"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Écrivez ce que vous avez constaté. Lorsqu'une information vient d'un tiers, indiquez-le. Distinguez l'heure de l'événement et celle de sa connaissance si elles diffèrent. Une correction doit rester traçable selon l'outil ; il ne faut pas réécrire discrètement l'histoire. Évitez les jugements, les détails privés inutiles et les formules qui concluent sans preuve, comme « tout est réglé »."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "« 16 h 10 : porte de livraison trouvée ouverte lors de la ronde. 16 h 12 : PC informé ; accès surveillé. 16 h 18 : fermeture réalisée par le responsable technique, contrôle effectué. » La suite est lisible. Si une réparation reste attendue, elle doit être indiquée pour que la relève ne suppose pas le problème clos."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une trace de qualité permet à un autre professionnel de reprendre le dossier sans devoir deviner ce qui a été fait."
+                  }
+                ],
+                "course_page": 190,
+                "practice": {
+                  "background": "Écrivez des faits observables, sans insultes ni diagnostics. Distinguez l’heure de l’événement et l’heure de saisie si elles diffèrent. Une correction doit préserver la traçabilité selon le support ; ne supprimez pas une entrée pour dissimuler une erreur. Sur une main courante électronique, utilisez votre compte, sélectionnez la catégorie adaptée et vérifiez les champs avant validation. Une panne déclenche le support de secours prévu, puis une reprise qui conserve les horaires et l’origine des notes.",
+                  "case": "Vous constatez à 22 h 14 une porte qui ferme mal, prévenez le PC à 22 h 16 et saisissez l’entrée à 22 h 35 après avoir balisé la zone. Quels horaires distinguez-vous ? Quelle information évite une fausse impression de résolution ?",
+                  "transfer": "Qu’ajouter à « 18 h : problème caméra » pour que la relève puisse agir ?",
+                  "page": 204
+                }
+              },
+              {
+                "ref": "04.05",
+                "title": "Rédiger un rapport circonstancié",
+                "page": 191,
+                "diagram": "media/aps62/repere-04.05.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Un document centré sur un événement"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Le rapport développe un fait qui nécessite une information structurée. Il présente le contexte, la chronologie, les personnes concernées dans la mesure utile, les observations, les actions et les suites. Il complète la main courante, sans la contredire. Une rédaction claire facilite l'analyse par une personne absente du site et évite les interprétations fondées sur une phrase isolée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Séparer la preuve et l'hypothèse"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une observation directe se formule comme telle. Un témoignage est attribué à son auteur. Une image ou un document est identifié dans le cadre autorisé. Si une donnée est inconnue, indiquez-la plutôt que de la compléter de mémoire. Les termes juridiques ne doivent pas remplacer la description : « a franchi la porte après le refus d'accès » est plus précis qu'une qualification approximative."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Après une altercation, l'agent écrit les paroles menaçantes utiles, l'heure de l'appel, l'arrivée du renfort et le départ de la personne. Il précise qu'il n'a pas vu le début de l'échange. Cette limite renforce la fiabilité du rapport ; prétendre avoir tout observé l'affaiblirait."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Relisez les dates, heures, lieux, noms utiles et pièces citées. Le ton doit rester neutre, même lorsque l'événement a été éprouvant."
+                  }
+                ],
+                "course_page": 192,
+                "practice": {
+                  "background": "Décrivez ce que vous avez vu ou entendu, sans attribuer une intention que vous ne pouvez pas établir. Citez les paroles significatives lorsque leur exactitude est utile. Distinguez un objet observé, une arme supposée et une identification confirmée. Les pièces jointes sont nommées, conservées par les moyens autorisés et transmises aux destinataires légitimes. Relisez pour vérifier la cohérence des lieux, horaires et pronoms. Un rapport signé engage son auteur ; il ne doit pas être modifié pour satisfaire une version attendue.",
+                  "case": "Votre brouillon indique : « Un voleur agressif a essayé de forcer la porte. » Vous avez en réalité vu une personne tirer trois fois sur une porte fermée puis repartir, sans autre interaction. Comment corrigez-vous cette phrase ? Quelle information complémentaire pourrait être utile ?",
+                  "transfer": "« La porte a été ouverte par le livreur » : quelle réserve faut-il poser si vous n’avez pas observé l’ouverture ?",
+                  "page": 207
+                }
+              }
+            ],
+            "decision": "Tracer séparément le signal, l’information reçue et l’absence de confirmation.",
+            "pitfall": "Écrire « résolu » pour éviter une ligne en attente.",
+            "objectives": [
+              "Expliquer : la main courante : une chronologie fiable",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "À 14 h 05 une alarme retentit. À 14 h 08 le responsable annonce par téléphone un défaut connu. À 14 h 15 aucun contrôle terrain n’a encore confirmé le retour à la normale. Un collègue veut écrire « fausse alarme résolue »."
+              ],
+              [
+                "Décision à justifier",
+                "Tracer séparément le signal, l’information reçue et l’absence de confirmation."
+              ],
+              [
+                "Piège à éviter",
+                "Écrire « résolu » pour éviter une ligne en attente."
+              ],
+              [
+                "Pourquoi ?",
+                "La main courante conserve une succession datée de faits et d’actions. Une information rapportée s’attribue à sa source. Un état non vérifié reste explicitement ouvert. Il est possible de compléter ensuite sans réécrire l’histoire. Les informations doivent être utiles, proportionnées et accessibles aux acteurs autorisés."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "À 14 h 05 une alarme retentit."
+              },
+              {
+                "label": "Vérifier",
+                "text": "La main courante conserve une succession datée de faits et d’actions."
+              },
+              {
+                "label": "Décider",
+                "text": "Tracer séparément le signal, l’information reçue et l’absence de confirmation."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "L’heure exacte de la découverte est incertaine. Comment distinguer heure de constat, heure de saisie et heure rapportée ?"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-08-03-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-08-03-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-08-03-video",
+                "title": "La main courante : une chronologie fiable",
+                "required": true,
+                "src": "media/aps62/aps62-08-03.mp4",
+                "poster": "media/aps62/aps62-08-03.jpg",
+                "captions": "media/aps62/aps62-08-03.vtt",
+                "duration_seconds": 75.40096,
+                "transcript": "La situation : À 14 h 05 une alarme retentit. À 14 h 08 le responsable annonce par téléphone un défaut connu. À 14 h 15 aucun contrôle terrain n’a encore confirmé le retour à la normale. Un collègue veut écrire « fausse alarme résolue ».\n\nÀ vous de décider : Tracer séparément le signal, l’information reçue et l’absence de confirmation. Ou bien : Écrire « résolu » pour éviter une ligne en attente. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La main courante conserve une succession datée de faits et d’actions. Une information rapportée s’attribue à sa source. Un état non vérifié reste explicitement ouvert. Il est possible de compléter ensuite sans réécrire l’histoire. Les informations doivent être utiles, proportionnées et accessibles aux acteurs autorisés.\n\nLe bon relais : 14 h 05 : signal localisé et action initiale. 14 h 08 : propos du responsable attribués, sans les transformer en constat. 14 h 15 : contrôle non confirmé, suite en attente. 14 h 22 : résultat vérifié et personne ayant confirmé. La clôture intervient après les vérifications prévues."
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "08.03",
+            "title": "La main courante : une chronologie fiable",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Une chronologie du service",
+                "back": "La main courante enregistre les faits et les actions dans l'ordre du temps. Elle permet la continuité entre agents et la reconstitution d'un événement. Chaque entrée doit situer ce qui s'est passé, quand, où, par qui et avec quelle suite. Une main courante interne ne se confond pas avec une déclaration faite auprès d'un service de police."
+              },
+              {
+                "front": "Des faits, une origine, un état de suivi",
+                "back": "Écrivez ce que vous avez constaté. Lorsqu'une information vient d'un tiers, indiquez-le. Distinguez l'heure de l'événement et celle de sa connaissance si elles diffèrent. Une correction doit rester traçable selon l'outil ; il ne faut pas réécrire discrètement l'histoire. Évitez les jugements, les détails privés inutiles et les formules qui concluent sans preuve, comme « tout est réglé »."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "« 16 h 10 : porte de livraison trouvée ouverte lors de la ronde. 16 h 12 : PC informé ; accès surveillé. 16 h 18 : fermeture réalisée par le responsable technique, contrôle effectué. » La suite est lisible. Si une réparation reste attendue, elle doit être indiquée pour que la relève ne suppose pas le problème clos."
+              },
+              {
+                "front": "Un document centré sur un événement",
+                "back": "Le rapport développe un fait qui nécessite une information structurée. Il présente le contexte, la chronologie, les personnes concernées dans la mesure utile, les observations, les actions et les suites. Il complète la main courante, sans la contredire. Une rédaction claire facilite l'analyse par une personne absente du site et évite les interprétations fondées sur une phrase isolée."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : À 14 h 05 une alarme retentit. À 14 h 08 le responsable annonce par téléphone un défaut connu. À 14 h 15 aucun contrôle terrain n’a encore confirmé le retour à la normale. Un collègue veut écrire « fausse alarme résolue ».\n\nÀ vous de décider : Tracer séparément le signal, l’information reçue et l’absence de confirmation. Ou bien : Écrire « résolu » pour éviter une ligne en attente. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La main courante conserve une succession datée de faits et d’actions. Une information rapportée s’attribue à sa source. Un état non vérifié reste explicitement ouvert. Il est possible de compléter ensuite sans réécrire l’histoire. Les informations doivent être utiles, proportionnées et accessibles aux acteurs autorisés.\n\nLe bon relais : 14 h 05 : signal localisé et action initiale. 14 h 08 : propos du responsable attribués, sans les transformer en constat. 14 h 15 : contrôle non confirmé, suite en attente. 14 h 22 : résultat vérifié et personne ayant confirmé. La clôture intervient après les vérifications prévues."
+          }
+        },
+        {
+          "id": "aps62-08-03-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.03",
+            "title": "La main courante : une chronologie fiable",
+            "kind": "workshop",
+            "case": "À 14 h 05 une alarme retentit. À 14 h 08 le responsable annonce par téléphone un défaut connu. À 14 h 15 aucun contrôle terrain n’a encore confirmé le retour à la normale. Un collègue veut écrire « fausse alarme résolue ».",
+            "choices": [
+              {
+                "text": "Tracer séparément le signal, l’information reçue et l’absence de confirmation.",
+                "feedback": "La main courante conserve une succession datée de faits et d’actions. Une information rapportée s’attribue à sa source. Un état non vérifié reste explicitement ouvert. Il est possible de compléter ensuite sans réécrire l’histoire. Les informations doivent être utiles, proportionnées et accessibles aux acteurs autorisés.",
+                "correct": true
+              },
+              {
+                "text": "Écrire « résolu » pour éviter une ligne en attente.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. La main courante conserve une succession datée de faits et d’actions. Une information rapportée s’attribue à sa source. Un état non vérifié reste explicitement ouvert. Il est possible de compléter ensuite sans réécrire l’histoire. Les informations doivent être utiles, proportionnées et accessibles aux acteurs autorisés.",
+                "correct": false
+              },
+              {
+                "text": "Ne rien écrire tant que toutes les informations ne sont pas disponibles.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. 14 h 05 : signal localisé et action initiale. 14 h 08 : propos du responsable attribués, sans les transformer en constat. 14 h 15 : contrôle non confirmé, suite en attente. 14 h 22 : résultat vérifié et personne ayant confirmé. La clôture intervient après les vérifications prévues.",
+                "correct": false
+              }
+            ],
+            "task": "Rédigez les trois entrées horaires puis une quatrième après confirmation à 14 h 22. Préparez la transmission intermédiaire à la relève.",
+            "model": "14 h 05 : signal localisé et action initiale. 14 h 08 : propos du responsable attribués, sans les transformer en constat. 14 h 15 : contrôle non confirmé, suite en attente. 14 h 22 : résultat vérifié et personne ayant confirmé. La clôture intervient après les vérifications prévues.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ]
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-08-03-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "À 14 h 05 une alarme retentit. À 14 h 08 le responsable annonce par téléphone un défaut connu. À 14 h 15 aucun contrôle terrain n’a encore confirmé le retour à la normale. Un collègue veut écrire « fausse alarme résolue ».",
+          "options": [
+            {
+              "id": "aps62-08-03-a0",
+              "text": "Tracer séparément le signal, l’information reçue et l’absence de confirmation.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-08-03-a1",
+              "text": "Écrire « résolu » pour éviter une ligne en attente.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-08-03-a2",
+              "text": "Ne rien écrire tant que toutes les informations ne sont pas disponibles.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "La main courante conserve une succession datée de faits et d’actions. Une information rapportée s’attribue à sa source. Un état non vérifié reste explicitement ouvert. Il est possible de compléter ensuite sans réécrire l’histoire. Les informations doivent être utiles, proportionnées et accessibles aux acteurs autorisés."
+        },
+        {
+          "id": "aps62-08-03-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-08-03-pair0",
+              "left": "Une chronologie du service",
+              "right": "La main courante enregistre les faits et les actions dans l'ordre du temps."
+            },
+            {
+              "id": "aps62-08-03-pair1",
+              "left": "Des faits, une origine, un état de suivi",
+              "right": "Écrivez ce que vous avez constaté."
+            },
+            {
+              "id": "aps62-08-03-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "« 16 h 10 : porte de livraison trouvée ouverte lors de la ronde."
+            }
+          ],
+          "explanation": "Une chronologie du service : La main courante enregistre les faits et les actions dans l'ordre du temps. Des faits, une origine, un état de suivi : Écrivez ce que vous avez constaté. EXEMPLE EXPLIQUÉ : « 16 h 10 : porte de livraison trouvée ouverte lors de la ronde."
+        },
+        {
+          "id": "aps62-08-03-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.03",
+            "title": "La main courante : une chronologie fiable",
+            "kind": "transfer",
+            "case": "L’heure exacte de la découverte est incertaine. Comment distinguer heure de constat, heure de saisie et heure rapportée ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "La main courante conserve une succession datée de faits et d’actions. Une information rapportée s’attribue à sa source. Un état non vérifié reste explicitement ouvert. Il est possible de compléter ensuite sans réécrire l’histoire. Les informations doivent être utiles, proportionnées et accessibles aux acteurs autorisés. 14 h 05 : signal localisé et action initiale. 14 h 08 : propos du responsable attribués, sans les transformer en constat. 14 h 15 : contrôle non confirmé, suite en attente. 14 h 22 : résultat vérifié et personne ayant confirmé. La clôture intervient après les vérifications prévues.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ]
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-08-03-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.03",
+            "title": "La main courante : une chronologie fiable",
+            "kind": "recap",
+            "decision": "Tracer séparément le signal, l’information reçue et l’absence de confirmation.",
+            "reason": "La main courante conserve une succession datée de faits et d’actions. Une information rapportée s’attribue à sa source. Un état non vérifié reste explicitement ouvert. Il est possible de compléter ensuite sans réécrire l’histoire. Les informations doivent être utiles, proportionnées et accessibles aux acteurs autorisés.",
+            "pitfall": "Écrire « résolu » pour éviter une ligne en attente.",
+            "cards": [
+              {
+                "front": "Une chronologie du service",
+                "back": "La main courante enregistre les faits et les actions dans l'ordre du temps. Elle permet la continuité entre agents et la reconstitution d'un événement. Chaque entrée doit situer ce qui s'est passé, quand, où, par qui et avec quelle suite. Une main courante interne ne se confond pas avec une déclaration faite auprès d'un service de police."
+              },
+              {
+                "front": "Des faits, une origine, un état de suivi",
+                "back": "Écrivez ce que vous avez constaté. Lorsqu'une information vient d'un tiers, indiquez-le. Distinguez l'heure de l'événement et celle de sa connaissance si elles diffèrent. Une correction doit rester traçable selon l'outil ; il ne faut pas réécrire discrètement l'histoire. Évitez les jugements, les détails privés inutiles et les formules qui concluent sans preuve, comme « tout est réglé »."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "« 16 h 10 : porte de livraison trouvée ouverte lors de la ronde. 16 h 12 : PC informé ; accès surveillé. 16 h 18 : fermeture réalisée par le responsable technique, contrôle effectué. » La suite est lisible. Si une réparation reste attendue, elle doit être indiquée pour que la relève ne suppose pas le problème clos."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "04.04",
+                "page": 190
+              },
+              {
+                "ref": "04.05",
+                "page": 192
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique."
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-08-04",
+      "title": "04 · Le rapport circonstancié : démontrer sans conclure à la place d’autrui",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-08-04-comprendre",
+          "title": "Comprendre · Le rapport circonstancié : démontrer sans conclure à la place d’autrui",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.04",
+            "title": "Le rapport circonstancié : démontrer sans conclure à la place d’autrui",
+            "kind": "lesson",
+            "image": "media/aps62/scene-04.webp",
+            "case": "À la suite d’un incident, on vous demande un rapport. Vous avez vu une personne courir, un témoin dit qu’elle a volé un sac et une caméra montre seulement son passage dans un couloir.",
+            "reason": "Le rapport organise le contexte, la chronologie, les observations, les actions et les suites. Un fait personnellement constaté, un témoignage et une déduction doivent rester distinguables. La qualité vient de la précision et de la vérifiabilité, pas du caractère spectaculaire du récit. Les pièces utiles sont référencées sans diffusion excessive.",
+            "lessons": [
+              {
+                "ref": "04.05",
+                "title": "Rédiger un rapport circonstancié",
+                "page": 191,
+                "diagram": "media/aps62/repere-04.05.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Un document centré sur un événement"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Le rapport développe un fait qui nécessite une information structurée. Il présente le contexte, la chronologie, les personnes concernées dans la mesure utile, les observations, les actions et les suites. Il complète la main courante, sans la contredire. Une rédaction claire facilite l'analyse par une personne absente du site et évite les interprétations fondées sur une phrase isolée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Séparer la preuve et l'hypothèse"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une observation directe se formule comme telle. Un témoignage est attribué à son auteur. Une image ou un document est identifié dans le cadre autorisé. Si une donnée est inconnue, indiquez-la plutôt que de la compléter de mémoire. Les termes juridiques ne doivent pas remplacer la description : « a franchi la porte après le refus d'accès » est plus précis qu'une qualification approximative."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Après une altercation, l'agent écrit les paroles menaçantes utiles, l'heure de l'appel, l'arrivée du renfort et le départ de la personne. Il précise qu'il n'a pas vu le début de l'échange. Cette limite renforce la fiabilité du rapport ; prétendre avoir tout observé l'affaiblirait."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Relisez les dates, heures, lieux, noms utiles et pièces citées. Le ton doit rester neutre, même lorsque l'événement a été éprouvant."
+                  }
+                ],
+                "course_page": 192,
+                "practice": {
+                  "background": "Décrivez ce que vous avez vu ou entendu, sans attribuer une intention que vous ne pouvez pas établir. Citez les paroles significatives lorsque leur exactitude est utile. Distinguez un objet observé, une arme supposée et une identification confirmée. Les pièces jointes sont nommées, conservées par les moyens autorisés et transmises aux destinataires légitimes. Relisez pour vérifier la cohérence des lieux, horaires et pronoms. Un rapport signé engage son auteur ; il ne doit pas être modifié pour satisfaire une version attendue.",
+                  "case": "Votre brouillon indique : « Un voleur agressif a essayé de forcer la porte. » Vous avez en réalité vu une personne tirer trois fois sur une porte fermée puis repartir, sans autre interaction. Comment corrigez-vous cette phrase ? Quelle information complémentaire pourrait être utile ?",
+                  "transfer": "« La porte a été ouverte par le livreur » : quelle réserve faut-il poser si vous n’avez pas observé l’ouverture ?",
+                  "page": 207
+                }
+              },
+              {
+                "ref": "02.16",
+                "title": "Construire une décision professionnelle",
+                "page": 104,
+                "diagram": "media/aps62/repere-02.16.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Relier quatre éléments"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une décision solide relie les faits, la règle, le risque et l'action. Les faits décrivent la situation présente. La règle détermine ce qui est exigé ou permis. Le risque explique l'enjeu. L'action montre la réponse choisie et le relais éventuel. Cette méthode évite deux pièges : agir uniquement par habitude ou citer une règle sans comprendre la situation."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Expliquer sans créer un débat infini"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'explication au public doit rester simple : ce qui manque, ce qui est possible et qui peut valider la suite. L'agent peut reconnaître une gêne sans abandonner une exigence. En interne, la trace doit permettre de retrouver le raisonnement et les informations disponibles au moment de la décision. Une information obtenue plus tard ne doit pas être présentée comme si elle était connue dès le début."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un prestataire arrive avec une autorisation pour un autre bâtiment. L'agent constate l'écart, maintient l'attente dans la zone prévue et appelle le responsable habilité. Il explique : « Votre intervention est annoncée au bâtiment A ; je fais confirmer l'accès au bâtiment B avant de vous orienter. » La décision protège le site tout en proposant une issue claire."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une bonne justification ne repose ni sur le ton de la voix ni sur « parce que je le décide ». Elle rend visibles les faits et les limites du rôle."
+                  }
+                ],
+                "course_page": 105,
+                "practice": {
+                  "background": "Les sanctions possibles dépendent du texte enfreint et de la situation. Pour apprendre, il est plus utile de savoir prévenir une atteinte que de réciter une liste de peines détachée du contexte. Le livre VI prévoit des infractions et des conséquences administratives ou disciplinaires propres au secteur. Les atteintes aux personnes, aux biens et aux systèmes numériques relèvent aussi du droit commun. Conservez des faits précis et signalez les erreurs sans les masquer. Une correction rapide et loyale protège mieux qu’un récit arrangé.",
+                  "case": "Un visiteur sans badge insiste pour entrer. Il connaît le nom du directeur mais la personne attendue reste injoignable. Une réunion importante doit commencer dans deux minutes. Quelle décision est défendable ? Comment la formulez-vous au visiteur et dans la trace ?",
+                  "transfer": "Reformulez « j’ai refusé parce que c’est comme ça » en trois éléments professionnels.",
+                  "page": 127
+                }
+              }
+            ],
+            "decision": "Attribuer chaque information et expliciter les limites de l’observation.",
+            "pitfall": "Écrire que la vidéo prouve le vol alors qu’elle ne montre que le passage.",
+            "objectives": [
+              "Expliquer : le rapport circonstancié : démontrer sans conclure à la place d’autrui",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "À la suite d’un incident, on vous demande un rapport. Vous avez vu une personne courir, un témoin dit qu’elle a volé un sac et une caméra montre seulement son passage dans un couloir."
+              ],
+              [
+                "Décision à justifier",
+                "Attribuer chaque information et expliciter les limites de l’observation."
+              ],
+              [
+                "Piège à éviter",
+                "Écrire que la vidéo prouve le vol alors qu’elle ne montre que le passage."
+              ],
+              [
+                "Pourquoi ?",
+                "Le rapport organise le contexte, la chronologie, les observations, les actions et les suites. Un fait personnellement constaté, un témoignage et une déduction doivent rester distinguables. La qualité vient de la précision et de la vérifiabilité, pas du caractère spectaculaire du récit. Les pièces utiles sont référencées sans diffusion excessive."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "À la suite d’un incident, on vous demande un rapport."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Le rapport organise le contexte, la chronologie, les observations, les actions et les suites."
+              },
+              {
+                "label": "Décider",
+                "text": "Attribuer chaque information et expliciter les limites de l’observation."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Deux témoins donnent des versions incompatibles. Comment les présenter sans choisir arbitrairement celle qui vous semble la plus vraisemblable ?"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-08-04-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-08-04-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-08-04-video",
+                "title": "Le rapport circonstancié : démontrer sans conclure à la place d’autrui",
+                "required": true,
+                "src": "media/aps62/aps62-08-04.mp4",
+                "poster": "media/aps62/aps62-08-04.jpg",
+                "captions": "media/aps62/aps62-08-04.vtt",
+                "duration_seconds": 68.823764,
+                "transcript": "La situation : À la suite d’un incident, on vous demande un rapport. Vous avez vu une personne courir, un témoin dit qu’elle a volé un sac et une caméra montre seulement son passage dans un couloir.\n\nÀ vous de décider : Attribuer chaque information et expliciter les limites de l’observation. Ou bien : Écrire que la vidéo prouve le vol alors qu’elle ne montre que le passage. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Le rapport organise le contexte, la chronologie, les observations, les actions et les suites. Un fait personnellement constaté, un témoignage et une déduction doivent rester distinguables. La qualité vient de la précision et de la vérifiabilité, pas du caractère spectaculaire du récit. Les pièces utiles sont référencées sans diffusion excessive.\n\nLe bon relais : « J’observe… », « Mme X déclare… », « Je ne suis pas en mesure de confirmer… » permettent de distinguer les sources. Le rapport localise les faits, précise les horaires connus, relate les appels et identifie les pièces conservées selon procédure. Il ne désigne pas une personne coupable sur la seule base d’un récit indirect."
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "08.04",
+            "title": "Le rapport circonstancié : démontrer sans conclure à la place d’autrui",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Un document centré sur un événement",
+                "back": "Le rapport développe un fait qui nécessite une information structurée. Il présente le contexte, la chronologie, les personnes concernées dans la mesure utile, les observations, les actions et les suites. Il complète la main courante, sans la contredire. Une rédaction claire facilite l'analyse par une personne absente du site et évite les interprétations fondées sur une phrase isolée."
+              },
+              {
+                "front": "Séparer la preuve et l'hypothèse",
+                "back": "Une observation directe se formule comme telle. Un témoignage est attribué à son auteur. Une image ou un document est identifié dans le cadre autorisé. Si une donnée est inconnue, indiquez-la plutôt que de la compléter de mémoire. Les termes juridiques ne doivent pas remplacer la description : « a franchi la porte après le refus d'accès » est plus précis qu'une qualification approximative."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Après une altercation, l'agent écrit les paroles menaçantes utiles, l'heure de l'appel, l'arrivée du renfort et le départ de la personne. Il précise qu'il n'a pas vu le début de l'échange. Cette limite renforce la fiabilité du rapport ; prétendre avoir tout observé l'affaiblirait."
+              },
+              {
+                "front": "Relier quatre éléments",
+                "back": "Une décision solide relie les faits, la règle, le risque et l'action. Les faits décrivent la situation présente. La règle détermine ce qui est exigé ou permis. Le risque explique l'enjeu. L'action montre la réponse choisie et le relais éventuel. Cette méthode évite deux pièges : agir uniquement par habitude ou citer une règle sans comprendre la situation."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : À la suite d’un incident, on vous demande un rapport. Vous avez vu une personne courir, un témoin dit qu’elle a volé un sac et une caméra montre seulement son passage dans un couloir.\n\nÀ vous de décider : Attribuer chaque information et expliciter les limites de l’observation. Ou bien : Écrire que la vidéo prouve le vol alors qu’elle ne montre que le passage. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Le rapport organise le contexte, la chronologie, les observations, les actions et les suites. Un fait personnellement constaté, un témoignage et une déduction doivent rester distinguables. La qualité vient de la précision et de la vérifiabilité, pas du caractère spectaculaire du récit. Les pièces utiles sont référencées sans diffusion excessive.\n\nLe bon relais : « J’observe… », « Mme X déclare… », « Je ne suis pas en mesure de confirmer… » permettent de distinguer les sources. Le rapport localise les faits, précise les horaires connus, relate les appels et identifie les pièces conservées selon procédure. Il ne désigne pas une personne coupable sur la seule base d’un récit indirect."
+          }
+        },
+        {
+          "id": "aps62-08-04-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.04",
+            "title": "Le rapport circonstancié : démontrer sans conclure à la place d’autrui",
+            "kind": "workshop",
+            "case": "À la suite d’un incident, on vous demande un rapport. Vous avez vu une personne courir, un témoin dit qu’elle a volé un sac et une caméra montre seulement son passage dans un couloir.",
+            "choices": [
+              {
+                "text": "Écrire que la vidéo prouve le vol alors qu’elle ne montre que le passage.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. Le rapport organise le contexte, la chronologie, les observations, les actions et les suites. Un fait personnellement constaté, un témoignage et une déduction doivent rester distinguables. La qualité vient de la précision et de la vérifiabilité, pas du caractère spectaculaire du récit. Les pièces utiles sont référencées sans diffusion excessive.",
+                "correct": false
+              },
+              {
+                "text": "Fusionner tous les récits pour obtenir une histoire plus claire.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. « J’observe… », « Mme X déclare… », « Je ne suis pas en mesure de confirmer… » permettent de distinguer les sources. Le rapport localise les faits, précise les horaires connus, relate les appels et identifie les pièces conservées selon procédure. Il ne désigne pas une personne coupable sur la seule base d’un récit indirect.",
+                "correct": false
+              },
+              {
+                "text": "Attribuer chaque information et expliciter les limites de l’observation.",
+                "feedback": "Le rapport organise le contexte, la chronologie, les observations, les actions et les suites. Un fait personnellement constaté, un témoignage et une déduction doivent rester distinguables. La qualité vient de la précision et de la vérifiabilité, pas du caractère spectaculaire du récit. Les pièces utiles sont référencées sans diffusion excessive.",
+                "correct": true
+              }
+            ],
+            "task": "Rédigez un rapport de 180 à 250 mots. Utilisez trois formulations différentes pour observation directe, information rapportée et incertitude.",
+            "model": "« J’observe… », « Mme X déclare… », « Je ne suis pas en mesure de confirmer… » permettent de distinguer les sources. Le rapport localise les faits, précise les horaires connus, relate les appels et identifie les pièces conservées selon procédure. Il ne désigne pas une personne coupable sur la seule base d’un récit indirect.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ]
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-08-04-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "À la suite d’un incident, on vous demande un rapport. Vous avez vu une personne courir, un témoin dit qu’elle a volé un sac et une caméra montre seulement son passage dans un couloir.",
+          "options": [
+            {
+              "id": "aps62-08-04-a0",
+              "text": "Écrire que la vidéo prouve le vol alors qu’elle ne montre que le passage.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-08-04-a1",
+              "text": "Fusionner tous les récits pour obtenir une histoire plus claire.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-08-04-a2",
+              "text": "Attribuer chaque information et expliciter les limites de l’observation.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "Le rapport organise le contexte, la chronologie, les observations, les actions et les suites. Un fait personnellement constaté, un témoignage et une déduction doivent rester distinguables. La qualité vient de la précision et de la vérifiabilité, pas du caractère spectaculaire du récit. Les pièces utiles sont référencées sans diffusion excessive."
+        },
+        {
+          "id": "aps62-08-04-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-08-04-pair0",
+              "left": "Un document centré sur un événement",
+              "right": "Le rapport développe un fait qui nécessite une information structurée."
+            },
+            {
+              "id": "aps62-08-04-pair1",
+              "left": "Séparer la preuve et l'hypothèse",
+              "right": "Une observation directe se formule comme telle."
+            },
+            {
+              "id": "aps62-08-04-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Après une altercation, l'agent écrit les paroles menaçantes utiles, l'heure de l'appel, l'arrivée du renfort et le départ de la personne."
+            }
+          ],
+          "explanation": "Un document centré sur un événement : Le rapport développe un fait qui nécessite une information structurée. Séparer la preuve et l'hypothèse : Une observation directe se formule comme telle. EXEMPLE EXPLIQUÉ : Après une altercation, l'agent écrit les paroles menaçantes utiles, l'heure de l'appel, l'arrivée du renfort et le départ de la personne."
+        },
+        {
+          "id": "aps62-08-04-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.04",
+            "title": "Le rapport circonstancié : démontrer sans conclure à la place d’autrui",
+            "kind": "transfer",
+            "case": "Deux témoins donnent des versions incompatibles. Comment les présenter sans choisir arbitrairement celle qui vous semble la plus vraisemblable ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "Le rapport organise le contexte, la chronologie, les observations, les actions et les suites. Un fait personnellement constaté, un témoignage et une déduction doivent rester distinguables. La qualité vient de la précision et de la vérifiabilité, pas du caractère spectaculaire du récit. Les pièces utiles sont référencées sans diffusion excessive. « J’observe… », « Mme X déclare… », « Je ne suis pas en mesure de confirmer… » permettent de distinguer les sources. Le rapport localise les faits, précise les horaires connus, relate les appels et identifie les pièces conservées selon procédure. Il ne désigne pas une personne coupable sur la seule base d’un récit indirect.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ]
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-08-04-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.04",
+            "title": "Le rapport circonstancié : démontrer sans conclure à la place d’autrui",
+            "kind": "recap",
+            "decision": "Attribuer chaque information et expliciter les limites de l’observation.",
+            "reason": "Le rapport organise le contexte, la chronologie, les observations, les actions et les suites. Un fait personnellement constaté, un témoignage et une déduction doivent rester distinguables. La qualité vient de la précision et de la vérifiabilité, pas du caractère spectaculaire du récit. Les pièces utiles sont référencées sans diffusion excessive.",
+            "pitfall": "Écrire que la vidéo prouve le vol alors qu’elle ne montre que le passage.",
+            "cards": [
+              {
+                "front": "Un document centré sur un événement",
+                "back": "Le rapport développe un fait qui nécessite une information structurée. Il présente le contexte, la chronologie, les personnes concernées dans la mesure utile, les observations, les actions et les suites. Il complète la main courante, sans la contredire. Une rédaction claire facilite l'analyse par une personne absente du site et évite les interprétations fondées sur une phrase isolée."
+              },
+              {
+                "front": "Séparer la preuve et l'hypothèse",
+                "back": "Une observation directe se formule comme telle. Un témoignage est attribué à son auteur. Une image ou un document est identifié dans le cadre autorisé. Si une donnée est inconnue, indiquez-la plutôt que de la compléter de mémoire. Les termes juridiques ne doivent pas remplacer la description : « a franchi la porte après le refus d'accès » est plus précis qu'une qualification approximative."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Après une altercation, l'agent écrit les paroles menaçantes utiles, l'heure de l'appel, l'arrivée du renfort et le départ de la personne. Il précise qu'il n'a pas vu le début de l'échange. Cette limite renforce la fiabilité du rapport ; prétendre avoir tout observé l'affaiblirait."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "04.05",
+                "page": 192
+              },
+              {
+                "ref": "02.16",
+                "page": 105
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique."
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-08-05",
+      "title": "05 · La relève : transmettre aussi ce qui reste à faire",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-08-05-comprendre",
+          "title": "Comprendre · La relève : transmettre aussi ce qui reste à faire",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.05",
+            "title": "La relève : transmettre aussi ce qui reste à faire",
+            "kind": "lesson",
+            "image": "media/aps62/scene-04.webp",
+            "case": "Vous terminez votre service. Une clé n’a pas été restituée, une porte est annoncée réparée sans vérification et une entreprise extérieure est encore présente. Votre collègue dit avoir lu la main courante.",
+            "reason": "La relève transfère une situation opérationnelle, pas seulement un document. Chaque dossier ouvert doit préciser son état, la prochaine action, le responsable et l’échéance. Le relais oral permet de traiter les ambiguïtés, tandis que la trace écrite assure la continuité. La restitution d’un matériel doit être vérifiée selon la procédure.",
+            "lessons": [
+              {
+                "ref": "04.07",
+                "title": "Réussir une relève",
+                "page": 195,
+                "diagram": "media/aps62/repere-04.07.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Transmettre ce qui continue après vous"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La relève ne consiste pas à raconter toute la vacation. Elle donne au nouvel agent une vision du site, des événements ouverts, des moyens indisponibles et des tâches à venir. Distinguez les faits clos de ceux qui nécessitent une surveillance. La présence d'un écrit ne garantit pas sa lecture ; les points sensibles sont expliqués oralement et confirmés."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Vérifier les moyens remis"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Clés, badges, radio, téléphone, documents et équipements doivent être rapprochés de l'état annoncé. Une clé absente ou une radio déchargée doit être signalée avant que le collègue ne parte. Une consigne temporaire comporte une échéance et un responsable. Les urgences du moment priment sur les détails administratifs, mais la remise des moyens doit ensuite être finalisée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "« Porte C défectueuse depuis 18 h ; elle reste surveillée. Le technicien est attendu à 22 h, contact dans la main courante. Aucun rétablissement confirmé. » Le collègue sait ce qu'il doit maintenir et vérifier. « Porte C vue avec la maintenance » ne permettrait pas de comprendre l'état réel."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La relève est réussie lorsque le nouvel agent peut agir sans dépendre de la mémoire de celui qui part. Une tâche ouverte doit avoir un responsable identifiable."
+                  }
+                ],
+                "course_page": 196,
+                "practice": {
+                  "background": "Le successeur pose des questions, contrôle les éléments critiques et confirme la prise en compte. La relève ne se réduit pas à une signature. Si personne ne se présente ou si un incident empêche une passation normale, alertez l’encadrement et appliquez la procédure. Les consignes transmises oralement doivent rester accessibles après le départ de l’agent. Vérifiez les heures, les stocks sensibles, les moyens de communication et les mesures compensatoires encore en vigueur.",
+                  "case": "Une porte est surveillée par caméra parce que sa fermeture est défectueuse. Le technicien est attendu à 7 h 30. Votre service se termine à 7 h et la main courante contient seulement « problème porte signalé ». Que complétez-vous avant de partir ? Comment vérifiez-vous la compréhension ?",
+                  "transfer": "Une porte reste hors service à la relève. Quelles informations évitent une rupture de surveillance ?",
+                  "page": 209
+                }
+              },
+              {
+                "ref": "08.26",
+                "title": "Clôturer le service sans perdre les suites",
+                "page": 390,
+                "diagram": "media/aps62/repere-08.26.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une fin de vacation organisée"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Avant de quitter le service, vérifiez les tâches confiées, les moyens remis et les événements restant ouverts. La fermeture d'un accès, l'armement d'un système ou la remise des clés suit la procédure du site. Une action annoncée doit être confirmée par le contrôle prévu. Les documents sont complétés sans attendre que la mémoire des heures devienne incertaine."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Laisser une situation compréhensible"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La relève reçoit les points prioritaires, les risques et les échéances. Un défaut non corrigé doit rester explicitement ouvert. Les matériels indisponibles sont identifiés. Si la relève n'est pas présente ou si un incident retarde la clôture, l'agent contacte l'encadrement selon l'organisation ; il ne décide pas seul de laisser le site sans la couverture prévue."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une porte reste en attente de réparation au moment de la fin de service. L'agent transmet la mesure provisoire, le contact du technicien et le dernier état constaté. La mention « maintenance prévenue » est complétée par « défaut toujours présent ». Le collègue peut alors maintenir la protection et suivre l'intervention."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La qualité du service se prolonge après votre départ. Une clôture fiable laisse des faits, des moyens vérifiés et un responsable pour chaque suite."
+                  }
+                ],
+                "course_page": 391,
+                "practice": {
+                  "background": "Faites confirmer les actions critiques et tracez les écarts. Ne mettez pas un système en service si les conditions de fermeture ne sont pas réunies. La relève reçoit les anomalies actives, les mesures compensatoires et les contacts utiles. Le rapport se termine par la situation réelle, pas par une formule automatique. Après une mission difficile, signalez également les besoins de soutien ou de récupération à l’encadrement. La continuité repose sur une passation organisée, même lorsqu’aucun incident majeur n’a eu lieu.",
+                  "case": "Une zone doit être mise sous alarme à 20 h. Une personne autorisée y travaille encore et le responsable ne répond pas. Votre planning se termine à la même heure. Quelle information transmettez-vous ? Pourquoi une mise sous alarme automatique serait-elle inadaptée ?",
+                  "transfer": "Une intervention technique est attendue après votre départ. Quelle information doit figurer explicitement dans la relève ?",
+                  "page": 423
+                }
+              }
+            ],
+            "decision": "Faire une relève structurée et confirmer la prise en compte des dossiers ouverts.",
+            "pitfall": "Considérer la lecture supposée comme une transmission suffisante.",
+            "objectives": [
+              "Expliquer : la relève : transmettre aussi ce qui reste à faire",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Vous terminez votre service. Une clé n’a pas été restituée, une porte est annoncée réparée sans vérification et une entreprise extérieure est encore présente. Votre collègue dit avoir lu la main courante."
+              ],
+              [
+                "Décision à justifier",
+                "Faire une relève structurée et confirmer la prise en compte des dossiers ouverts."
+              ],
+              [
+                "Piège à éviter",
+                "Considérer la lecture supposée comme une transmission suffisante."
+              ],
+              [
+                "Pourquoi ?",
+                "La relève transfère une situation opérationnelle, pas seulement un document. Chaque dossier ouvert doit préciser son état, la prochaine action, le responsable et l’échéance. Le relais oral permet de traiter les ambiguïtés, tandis que la trace écrite assure la continuité. La restitution d’un matériel doit être vérifiée selon la procédure."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Vous terminez votre service."
+              },
+              {
+                "label": "Vérifier",
+                "text": "La relève transfère une situation opérationnelle, pas seulement un document."
+              },
+              {
+                "label": "Décider",
+                "text": "Faire une relève structurée et confirmer la prise en compte des dossiers ouverts."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "La relève est retardée. À qui rendre compte et comment préserver la continuité sans inventer une autorisation de quitter le poste ?"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-08-05-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-08-05-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-08-05-video",
+                "title": "La relève : transmettre aussi ce qui reste à faire",
+                "required": true,
+                "src": "media/aps62/aps62-08-05.mp4",
+                "poster": "media/aps62/aps62-08-05.jpg",
+                "captions": "media/aps62/aps62-08-05.vtt",
+                "duration_seconds": 72.140625,
+                "transcript": "La situation : Vous terminez votre service. Une clé n’a pas été restituée, une porte est annoncée réparée sans vérification et une entreprise extérieure est encore présente. Votre collègue dit avoir lu la main courante.\n\nÀ vous de décider : Faire une relève structurée et confirmer la prise en compte des dossiers ouverts. Ou bien : Considérer la lecture supposée comme une transmission suffisante. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La relève transfère une situation opérationnelle, pas seulement un document. Chaque dossier ouvert doit préciser son état, la prochaine action, le responsable et l’échéance. Le relais oral permet de traiter les ambiguïtés, tandis que la trace écrite assure la continuité. La restitution d’un matériel doit être vérifiée selon la procédure.\n\nLe bon relais : Clé : détenteur connu ou recherche en cours et action suivante. Porte : réparation annoncée, vérification attendue. Entreprise : zone, référent, heure et condition de sortie. Le repreneur confirme les priorités et les contacts. Une annonce de réparation n’est pas une preuve de retour à la normale."
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "08.05",
+            "title": "La relève : transmettre aussi ce qui reste à faire",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Transmettre ce qui continue après vous",
+                "back": "La relève ne consiste pas à raconter toute la vacation. Elle donne au nouvel agent une vision du site, des événements ouverts, des moyens indisponibles et des tâches à venir. Distinguez les faits clos de ceux qui nécessitent une surveillance. La présence d'un écrit ne garantit pas sa lecture ; les points sensibles sont expliqués oralement et confirmés."
+              },
+              {
+                "front": "Vérifier les moyens remis",
+                "back": "Clés, badges, radio, téléphone, documents et équipements doivent être rapprochés de l'état annoncé. Une clé absente ou une radio déchargée doit être signalée avant que le collègue ne parte. Une consigne temporaire comporte une échéance et un responsable. Les urgences du moment priment sur les détails administratifs, mais la remise des moyens doit ensuite être finalisée."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "« Porte C défectueuse depuis 18 h ; elle reste surveillée. Le technicien est attendu à 22 h, contact dans la main courante. Aucun rétablissement confirmé. » Le collègue sait ce qu'il doit maintenir et vérifier. « Porte C vue avec la maintenance » ne permettrait pas de comprendre l'état réel."
+              },
+              {
+                "front": "Une fin de vacation organisée",
+                "back": "Avant de quitter le service, vérifiez les tâches confiées, les moyens remis et les événements restant ouverts. La fermeture d'un accès, l'armement d'un système ou la remise des clés suit la procédure du site. Une action annoncée doit être confirmée par le contrôle prévu. Les documents sont complétés sans attendre que la mémoire des heures devienne incertaine."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Vous terminez votre service. Une clé n’a pas été restituée, une porte est annoncée réparée sans vérification et une entreprise extérieure est encore présente. Votre collègue dit avoir lu la main courante.\n\nÀ vous de décider : Faire une relève structurée et confirmer la prise en compte des dossiers ouverts. Ou bien : Considérer la lecture supposée comme une transmission suffisante. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La relève transfère une situation opérationnelle, pas seulement un document. Chaque dossier ouvert doit préciser son état, la prochaine action, le responsable et l’échéance. Le relais oral permet de traiter les ambiguïtés, tandis que la trace écrite assure la continuité. La restitution d’un matériel doit être vérifiée selon la procédure.\n\nLe bon relais : Clé : détenteur connu ou recherche en cours et action suivante. Porte : réparation annoncée, vérification attendue. Entreprise : zone, référent, heure et condition de sortie. Le repreneur confirme les priorités et les contacts. Une annonce de réparation n’est pas une preuve de retour à la normale."
+          }
+        },
+        {
+          "id": "aps62-08-05-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.05",
+            "title": "La relève : transmettre aussi ce qui reste à faire",
+            "kind": "workshop",
+            "case": "Vous terminez votre service. Une clé n’a pas été restituée, une porte est annoncée réparée sans vérification et une entreprise extérieure est encore présente. Votre collègue dit avoir lu la main courante.",
+            "choices": [
+              {
+                "text": "Clore les trois points pour remettre un service « propre ».",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. Clé : détenteur connu ou recherche en cours et action suivante. Porte : réparation annoncée, vérification attendue. Entreprise : zone, référent, heure et condition de sortie. Le repreneur confirme les priorités et les contacts. Une annonce de réparation n’est pas une preuve de retour à la normale.",
+                "correct": false
+              },
+              {
+                "text": "Faire une relève structurée et confirmer la prise en compte des dossiers ouverts.",
+                "feedback": "La relève transfère une situation opérationnelle, pas seulement un document. Chaque dossier ouvert doit préciser son état, la prochaine action, le responsable et l’échéance. Le relais oral permet de traiter les ambiguïtés, tandis que la trace écrite assure la continuité. La restitution d’un matériel doit être vérifiée selon la procédure.",
+                "correct": true
+              },
+              {
+                "text": "Considérer la lecture supposée comme une transmission suffisante.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. La relève transfère une situation opérationnelle, pas seulement un document. Chaque dossier ouvert doit préciser son état, la prochaine action, le responsable et l’échéance. Le relais oral permet de traiter les ambiguïtés, tandis que la trace écrite assure la continuité. La restitution d’un matériel doit être vérifiée selon la procédure.",
+                "correct": false
+              }
+            ],
+            "task": "Préparez un tableau des trois dossiers et jouez le dialogue de relève à voix haute. Ajoutez une question de contrôle de compréhension.",
+            "model": "Clé : détenteur connu ou recherche en cours et action suivante. Porte : réparation annoncée, vérification attendue. Entreprise : zone, référent, heure et condition de sortie. Le repreneur confirme les priorités et les contacts. Une annonce de réparation n’est pas une preuve de retour à la normale.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ]
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-08-05-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Vous terminez votre service. Une clé n’a pas été restituée, une porte est annoncée réparée sans vérification et une entreprise extérieure est encore présente. Votre collègue dit avoir lu la main courante.",
+          "options": [
+            {
+              "id": "aps62-08-05-a0",
+              "text": "Clore les trois points pour remettre un service « propre ».",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-08-05-a1",
+              "text": "Faire une relève structurée et confirmer la prise en compte des dossiers ouverts.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-08-05-a2",
+              "text": "Considérer la lecture supposée comme une transmission suffisante.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "La relève transfère une situation opérationnelle, pas seulement un document. Chaque dossier ouvert doit préciser son état, la prochaine action, le responsable et l’échéance. Le relais oral permet de traiter les ambiguïtés, tandis que la trace écrite assure la continuité. La restitution d’un matériel doit être vérifiée selon la procédure."
+        },
+        {
+          "id": "aps62-08-05-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-08-05-pair0",
+              "left": "Transmettre ce qui continue après vous",
+              "right": "La relève ne consiste pas à raconter toute la vacation."
+            },
+            {
+              "id": "aps62-08-05-pair1",
+              "left": "Vérifier les moyens remis",
+              "right": "Clés, badges, radio, téléphone, documents et équipements doivent être rapprochés de l'état annoncé."
+            },
+            {
+              "id": "aps62-08-05-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "« Porte C défectueuse depuis 18 h ; elle reste surveillée."
+            }
+          ],
+          "explanation": "Transmettre ce qui continue après vous : La relève ne consiste pas à raconter toute la vacation. Vérifier les moyens remis : Clés, badges, radio, téléphone, documents et équipements doivent être rapprochés de l'état annoncé. EXEMPLE EXPLIQUÉ : « Porte C défectueuse depuis 18 h ; elle reste surveillée."
+        },
+        {
+          "id": "aps62-08-05-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.05",
+            "title": "La relève : transmettre aussi ce qui reste à faire",
+            "kind": "transfer",
+            "case": "La relève est retardée. À qui rendre compte et comment préserver la continuité sans inventer une autorisation de quitter le poste ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "La relève transfère une situation opérationnelle, pas seulement un document. Chaque dossier ouvert doit préciser son état, la prochaine action, le responsable et l’échéance. Le relais oral permet de traiter les ambiguïtés, tandis que la trace écrite assure la continuité. La restitution d’un matériel doit être vérifiée selon la procédure. Clé : détenteur connu ou recherche en cours et action suivante. Porte : réparation annoncée, vérification attendue. Entreprise : zone, référent, heure et condition de sortie. Le repreneur confirme les priorités et les contacts. Une annonce de réparation n’est pas une preuve de retour à la normale.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ]
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-08-05-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "08.05",
+            "title": "La relève : transmettre aussi ce qui reste à faire",
+            "kind": "recap",
+            "decision": "Faire une relève structurée et confirmer la prise en compte des dossiers ouverts.",
+            "reason": "La relève transfère une situation opérationnelle, pas seulement un document. Chaque dossier ouvert doit préciser son état, la prochaine action, le responsable et l’échéance. Le relais oral permet de traiter les ambiguïtés, tandis que la trace écrite assure la continuité. La restitution d’un matériel doit être vérifiée selon la procédure.",
+            "pitfall": "Considérer la lecture supposée comme une transmission suffisante.",
+            "cards": [
+              {
+                "front": "Transmettre ce qui continue après vous",
+                "back": "La relève ne consiste pas à raconter toute la vacation. Elle donne au nouvel agent une vision du site, des événements ouverts, des moyens indisponibles et des tâches à venir. Distinguez les faits clos de ceux qui nécessitent une surveillance. La présence d'un écrit ne garantit pas sa lecture ; les points sensibles sont expliqués oralement et confirmés."
+              },
+              {
+                "front": "Vérifier les moyens remis",
+                "back": "Clés, badges, radio, téléphone, documents et équipements doivent être rapprochés de l'état annoncé. Une clé absente ou une radio déchargée doit être signalée avant que le collègue ne parte. Une consigne temporaire comporte une échéance et un responsable. Les urgences du moment priment sur les détails administratifs, mais la remise des moyens doit ensuite être finalisée."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "« Porte C défectueuse depuis 18 h ; elle reste surveillée. Le technicien est attendu à 22 h, contact dans la main courante. Aucun rétablissement confirmé. » Le collègue sait ce qu'il doit maintenir et vérifier. « Porte C vue avec la maintenance » ne permettrait pas de comprendre l'état réel."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "04.07",
+                "page": 196
+              },
+              {
+                "ref": "08.26",
+                "page": 391
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique."
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "aps62-08-01-comprendre",
+    "aps62-08-01-memoriser",
+    "aps62-08-01-atelier",
+    "aps62-08-01-q1",
+    "aps62-08-01-q2",
+    "aps62-08-01-transfert",
+    "aps62-08-01-synthese",
+    "aps62-08-02-comprendre",
+    "aps62-08-02-memoriser",
+    "aps62-08-02-atelier",
+    "aps62-08-02-q1",
+    "aps62-08-02-q2",
+    "aps62-08-02-transfert",
+    "aps62-08-02-synthese",
+    "aps62-08-03-comprendre",
+    "aps62-08-03-memoriser",
+    "aps62-08-03-atelier",
+    "aps62-08-03-q1",
+    "aps62-08-03-q2",
+    "aps62-08-03-transfert",
+    "aps62-08-03-synthese",
+    "aps62-08-04-comprendre",
+    "aps62-08-04-memoriser",
+    "aps62-08-04-atelier",
+    "aps62-08-04-q1",
+    "aps62-08-04-q2",
+    "aps62-08-04-transfert",
+    "aps62-08-04-synthese",
+    "aps62-08-05-comprendre",
+    "aps62-08-05-memoriser",
+    "aps62-08-05-atelier",
+    "aps62-08-05-q1",
+    "aps62-08-05-q2",
+    "aps62-08-05-transfert",
+    "aps62-08-05-synthese"
+  ],
+  "counts": {
+    "sections": 5,
+    "activities": 35,
+    "scored_activities": 10,
+    "required_videos": 5,
+    "workbooks": 10,
+    "assets": 25
+  },
+  "assets": [
+    "media/aps62/aps62-08-01.jpg",
+    "media/aps62/aps62-08-01.mp4",
+    "media/aps62/aps62-08-01.vtt",
+    "media/aps62/aps62-08-02.jpg",
+    "media/aps62/aps62-08-02.mp4",
+    "media/aps62/aps62-08-02.vtt",
+    "media/aps62/aps62-08-03.jpg",
+    "media/aps62/aps62-08-03.mp4",
+    "media/aps62/aps62-08-03.vtt",
+    "media/aps62/aps62-08-04.jpg",
+    "media/aps62/aps62-08-04.mp4",
+    "media/aps62/aps62-08-04.vtt",
+    "media/aps62/aps62-08-05.jpg",
+    "media/aps62/aps62-08-05.mp4",
+    "media/aps62/aps62-08-05.vtt",
+    "media/aps62/repere-02.02.webp",
+    "media/aps62/repere-02.16.webp",
+    "media/aps62/repere-04.01.webp",
+    "media/aps62/repere-04.02.webp",
+    "media/aps62/repere-04.03.webp",
+    "media/aps62/repere-04.04.webp",
+    "media/aps62/repere-04.05.webp",
+    "media/aps62/repere-04.07.webp",
+    "media/aps62/repere-08.26.webp",
+    "media/aps62/scene-04.webp"
+  ],
+  "import_warnings": []
+}

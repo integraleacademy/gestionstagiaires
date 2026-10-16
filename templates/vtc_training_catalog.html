@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Entraînement libre · {{ course.title }}</title><link rel="stylesheet" href="{{ url_for('static',filename='css/aps62-exam.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-annales.css') }}"></head>
+<body>
+<header class="exam-top"><a href="{{ back_url }}">← Retour au cours</a><strong>INTÉGRALE ACADEMY / VTC</strong><span>{{ 'Aperçu administrateur' if preview else 'Mon entraînement libre' }}</span></header>
+<main class="exam-shell">
+  <header class="exam-intro"><span class="exam-eyebrow">ENTRAÎNEMENT LIBRE</span><h1>{{ course.title }}</h1><p>{{ total }} situations pour approfondir vos révisions à votre rythme. Choisissez un dossier, vérifiez vos décisions et reprenez vos erreurs.</p><div class="exam-pills"><span>Sans rédaction</span><span>Correction après chaque choix</span><span>Reprise dans cet onglet</span></div></header>
+  <aside class="annales-notice"><h2>Un complément à votre parcours</h2><p>Ces exercices ne modifient ni votre temps suivi, ni vos activités validées, ni vos résultats d’examen. Vos choix sont conservés dans cet onglet pour reprendre un exercice ; les explications apparaissent après vérification.</p></aside>
+  <section aria-label="Dossiers d’entraînement"><div class="annales-grid">
+  {% for item in activities %}<article class="exam-card"><h2>{{ item.title }}</h2><p>{{ item.purpose }}</p><p>{{ item.count }} situations à explorer</p><a class="exam-primary" href="{{ item.url }}">Ouvrir l’entraînement →</a></article>
+  {% else %}<p>Aucun entraînement complémentaire n’est proposé pour les séquences qui vous sont attribuées.</p>{% endfor %}
+  </div></section>
+</main></body></html>

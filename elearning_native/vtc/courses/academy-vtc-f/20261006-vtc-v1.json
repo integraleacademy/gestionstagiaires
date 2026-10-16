@@ -1,0 +1,2684 @@
+{
+  "format_version": 1,
+  "id": "academy-vtc-f",
+  "version": "20261006-vtc-v1",
+  "title": "VTC F · Développer son activité VTC",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "training_label": "VTC",
+  "source": {
+    "type": "academy-vtc",
+    "reviewed_on": "2026-10-06",
+    "manual_sha256": "dc22c7f98da0700180499c1fba3f15e0c9238f26c4a734da584952eef67ef8ce"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false
+  },
+  "theme": {
+    "main_color": "#7045bd",
+    "button_color": "#6534b4",
+    "text_color": "#241a38"
+  },
+  "planned_minutes": 420,
+  "required_minutes": 0,
+  "introduction": [],
+  "illustration": "images/vtc/module-f.webp",
+  "mock_exam_id": "vtc-f",
+  "mock_exam_questions": 30,
+  "regulation": "Épreuve F",
+  "sections": [
+    {
+      "id": "vtc-f-01",
+      "title": "F.01 · Comprendre son marché",
+      "activities": [
+        {
+          "id": "vtc-f-01-cours",
+          "title": "Comprendre son marché",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "F.01",
+            "title": "Comprendre son marché",
+            "page": 288,
+            "pages": [
+              288,
+              289
+            ],
+            "objective": "Choisir des clients à servir et vérifier leur besoin.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une étude de marché observe la demande, la concurrence et les contraintes d’exploitation. Repérez les pôles d’activité, hôtels, gares, événements et flux, puis vérifiez les horaires, la saisonnalité et les conditions d’accès. Une zone de chalandise est l’espace d’où vient une clientèle potentielle ; elle ne garantit pas des réservations."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Segmenter consiste à regrouper des besoins : déplacement professionnel, tourisme, transfert familial, événement ou accompagnement adapté. Évitez les catégories fondées sur des préjugés. Les entretiens et données réellement disponibles valent mieux qu’une intuition. Analysez aussi vos ressources : langue, véhicule, disponibilité, partenaires et budget. Une opportunité intéressante peut être incompatible avec vos moyens actuels."
+              },
+              {
+                "kind": "heading",
+                "text": "Définir un marché"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un marché réunit des clients ayant un besoin et des entreprises capables d'y répondre. « Tout le monde peut prendre un VTC » est vrai mais peu utile pour organiser une activité. Un voyageur d'affaires, une famille avec bagages et un client d'événement ont des attentes différentes. Segmenter consiste à regrouper des besoins comparables pour proposer une réponse cohérente."
+              },
+              {
+                "kind": "heading",
+                "text": "Observer avant de promettre"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Étudiez les horaires, les lieux de départ, la saisonnalité, les concurrents et les contraintes d'accès. Discutez avec des clients potentiels et des partenaires pour comprendre leurs difficultés concrètes. Une intuition devient plus solide lorsqu'elle est confrontée à des faits : demandes reçues, trajets effectivement réalisés et motifs de refus. Un concurrent très visible n'est pas forcément rentable."
+              },
+              {
+                "kind": "heading",
+                "text": "Choisir une cible compatible"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Votre offre doit correspondre à vos moyens : capacité du véhicule, disponibilité, langues, rayon d'action et coûts. Une spécialisation peut faciliter la communication, mais une dépendance à un seul client fragilise l'activité. Évaluez aussi les périodes creuses. Le marché se mesure sur une année réaliste, pas uniquement pendant une semaine de forte demande."
+              }
+            ],
+            "cards": [
+              {
+                "label": "DEMANDE",
+                "text": "Qui se déplace, quand et pour quel besoin ?"
+              },
+              {
+                "label": "OFFRE",
+                "text": "Quels concurrents et quelles alternatives ?"
+              },
+              {
+                "label": "CAPACITÉ",
+                "text": "Quels moyens pour tenir la promesse ?"
+              }
+            ],
+            "diagram": "media/vtc/diagram-f.01.webp",
+            "diagram_text": [
+              "Croiser trois réalités",
+              "Demande",
+              "Offre",
+              "Capacité",
+              "Clients, horaires et besoins.",
+              "Concurrents et alternatives.",
+              "Véhicule, disponibilité et moyens.",
+              "L’exemple des hôtels éloignés de la gare",
+              "1 Observer Les demandes et difficultés.",
+              "2 Comprendre Des départs matinaux fiables.",
+              "3 Proposer Une offre adaptée au créneau.",
+              "Une cible commerciale se définit par un besoin que l’on peut réellement satisfaire."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-f.webp",
+            "module": "F"
+          }
+        },
+        {
+          "id": "vtc-f-01-atelier",
+          "title": "À vous de jouer · Comprendre son marché",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "F.01",
+            "title": "Comprendre son marché",
+            "objective": "Choisir des clients à servir et vérifier leur besoin.",
+            "module": "F"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Pour étudier un marché local, quelles données sont utiles ?",
+                "options": [
+                  {
+                    "id": "f2224366d517",
+                    "text": "La seule intuition du chauffeur"
+                  },
+                  {
+                    "id": "94a1f849a0c6",
+                    "text": "Les besoins, horaires, flux et offres concurrentes"
+                  },
+                  {
+                    "id": "c230d6216b89",
+                    "text": "Uniquement le nombre de voitures de luxe"
+                  }
+                ],
+                "answer": "94a1f849a0c6",
+                "explanation": "Une étude relie demande réelle, concurrence et contraintes afin de construire une offre viable.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.01"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Des hôtels affichent complet certains week-ends. Que faut-il encore vérifier ?",
+                "options": [
+                  {
+                    "id": "b9c0ec8140ea",
+                    "text": "Que toutes les chambres commanderont forcément une course"
+                  },
+                  {
+                    "id": "f5331e2827a1",
+                    "text": "Les besoins de transport et les conditions d’accès à cette clientèle"
+                  },
+                  {
+                    "id": "9f1fbadb3809",
+                    "text": "Qu’aucun concurrent ne travaille"
+                  }
+                ],
+                "answer": "f5331e2827a1",
+                "explanation": "Une fréquentation touristique n’est pas automatiquement un volume de ventes ; il faut vérifier le besoin réel.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.01"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "CAPACITÉ"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "DEMANDE"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "OFFRE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Qui se déplace, quand et pour quel besoin ?",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Quels concurrents et quelles alternatives ?",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Quels moyens pour tenir la promesse ?",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon F.01. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-f-02",
+      "title": "F.02 · Construire une offre lisible",
+      "activities": [
+        {
+          "id": "vtc-f-02-cours",
+          "title": "Construire une offre lisible",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "F.02",
+            "title": "Construire une offre lisible",
+            "page": 290,
+            "pages": [
+              290,
+              291
+            ],
+            "objective": "Transformer des caractéristiques en bénéfices concrets.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une offre explique à qui elle s’adresse, ce qu’elle comprend et dans quelles conditions elle est réalisée. Le véhicule n’est qu’un moyen : le client attend surtout fiabilité, sécurité, information et confort. Une promesse comme « ponctualité garantie quelles que soient les circonstances » est fragile ; indiquez plutôt une organisation et des engagements réalistes."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Distinguez service de base, options et limites : bagages, attente incluse, siège enfant disponible sur réservation, accueil nominatif, trajet ou mise à disposition. Ne promettez pas un équipement non confirmé. L’image de marque repose sur la cohérence entre la communication, le véhicule, la présentation et le comportement, pas seulement sur un logo."
+              },
+              {
+                "kind": "heading",
+                "text": "Décrire le service"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une offre précise ce qui est fourni, à qui, où et dans quelles conditions. « Service haut de gamme » reste vague sans éléments concrets. Une confirmation écrite, un point de rendez-vous expliqué et une facturation claire sont observables. Le client doit comprendre ce qu'il achète et les limites de la prestation avant de réserver."
+              },
+              {
+                "kind": "heading",
+                "text": "Relier caractéristique et bénéfice"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une caractéristique décrit un moyen : grand coffre, suivi d'une arrivée, contact professionnel. Le bénéfice explique ce que le client en retire : bagages transportés dans de bonnes conditions, accueil mieux coordonné, interlocuteur identifiable. Ne promettez pas un résultat absolu que vous ne maîtrisez pas, comme l'absence garantie de retard routier."
+              },
+              {
+                "kind": "heading",
+                "text": "Encadrer les options"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Précisez les conditions d'attente, les arrêts supplémentaires, les équipements et la modification d'une course. Une option doit être réellement disponible, tarifée clairement lorsqu'elle est payante et compatible avec le véhicule. Les informations recueillies à la réservation servent à vérifier la faisabilité. Une promesse oubliée peut dégrader toute la prestation, même si la conduite est excellente."
+              }
+            ],
+            "cards": [
+              {
+                "label": "BESOIN",
+                "text": "Arriver sereinement à un rendez-vous."
+              },
+              {
+                "label": "PREUVE",
+                "text": "Réservation confirmée et suivi de l’horaire."
+              },
+              {
+                "label": "CONDITIONS",
+                "text": "Capacité, attente et modalités clairement annoncées."
+              }
+            ],
+            "diagram": "media/vtc/diagram-f.02.webp",
+            "diagram_text": [
+              "Décrire une promesse vérifiable",
+              "Rendez-vous",
+              "Prise en charge",
+              "Confirmé par écrit.",
+              "Au point convenu.",
+              "€",
+              "Capacité",
+              "Prix",
+              "Deux voyageurs et deux valises.",
+              "Total indiqué avant accord.",
+              "Une option demandée",
+              "1 Besoin Siège enfant ou arrêt supplémentaire.",
+              "2 Vérification Moyens et disponibilité.",
+              "3 Confirmation Conditions avant acceptation.",
+              "Une bonne offre décrit un résultat utile et les conditions pour l’obtenir."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-f.webp",
+            "module": "F"
+          }
+        },
+        {
+          "id": "vtc-f-02-atelier",
+          "title": "À vous de jouer · Construire une offre lisible",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "F.02",
+            "title": "Construire une offre lisible",
+            "objective": "Transformer des caractéristiques en bénéfices concrets.",
+            "module": "F"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Quelle offre est la plus lisible ?",
+                "options": [
+                  {
+                    "id": "c197329f1823",
+                    "text": "Transport de tout, partout, sans limites"
+                  },
+                  {
+                    "id": "ea9407379b0d",
+                    "text": "Transfert réservé avec zone, capacité, prix et conditions précisés"
+                  },
+                  {
+                    "id": "cf38dddb5eb2",
+                    "text": "Un slogan sans contenu de prestation"
+                  }
+                ],
+                "answer": "ea9407379b0d",
+                "explanation": "Une offre claire indique ce que le client achète, ce qui est inclus et les limites du service.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.02"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Pourquoi annoncer les limites de bagages avant la réservation ?",
+                "options": [
+                  {
+                    "id": "b38b0120123a",
+                    "text": "Pour remplacer l’assurance du véhicule"
+                  },
+                  {
+                    "id": "8132965e3203",
+                    "text": "Pour pouvoir refuser tous les passagers à l’arrivée"
+                  },
+                  {
+                    "id": "db757af84387",
+                    "text": "Pour vérifier que la prestation est réalisable"
+                  }
+                ],
+                "answer": "db757af84387",
+                "explanation": "La capacité se prépare avec le véhicule et le nombre de personnes ; elle ne se découvre pas à l’embarquement.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.02"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "PREUVE"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "CONDITIONS"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "BESOIN"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Capacité, attente et modalités clairement annoncées.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Arriver sereinement à un rendez-vous.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Réservation confirmée et suivi de l’horaire.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon F.02. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-f-03",
+      "title": "F.03 · Fixer un prix soutenable",
+      "activities": [
+        {
+          "id": "vtc-f-03-cours",
+          "title": "Fixer un prix soutenable",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "F.03",
+            "title": "Fixer un prix soutenable",
+            "page": 293,
+            "pages": [
+              293,
+              294
+            ],
+            "objective": "Intégrer le temps, les coûts et la valeur du service.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le prix VTC est libre, dans le respect de l’information du client et des conditions convenues. Il doit couvrir le coût de la mission, contribuer aux charges fixes et permettre le revenu visé. Le prix des concurrents est un repère commercial, pas une connaissance de vos propres coûts."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Calculez l’approche, la course, le retour, l’attente et les frais spécifiques. Si une commission est prélevée sur le prix, raisonnez sur la bonne base. Pour conserver 60 € avant autres coûts avec une commission de 20 % du montant retenu dans l’exercice, il faut 60 ÷ 0,80 = 75 €, et non 60 + 20 %. Vérifiez toujours si la commission porte sur HT, TTC ou une autre base contractuelle."
+              },
+              {
+                "kind": "heading",
+                "text": "Partir du coût complet"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le prix doit contribuer aux coûts variables, aux charges fixes et au revenu recherché. Comptez le temps mobilisé, les kilomètres avec et sans passager, les frais spécifiques et les commissions éventuelles. Une course peut occuper deux heures pour seulement quarante minutes de présence du client. Le temps restant ne disparaît pas de l'économie de l'activité."
+              },
+              {
+                "kind": "heading",
+                "text": "Comprendre marge et majoration"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un taux de marge calculé sur le coût et un taux de marque calculé sur le prix de vente n'ont pas la même base. Avec un coût de 80 €, ajouter 25 % donne un prix de 100 € : le gain de 20 € représente 25 % du coût mais 20 % du prix. Il faut connaître la base avant d'utiliser un pourcentage."
+              },
+              {
+                "kind": "heading",
+                "text": "Relier le prix au marché"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le coût indique ce qu'il faut financer ; le marché aide à comprendre ce que le client accepte pour la prestation proposée. Une baisse de prix doit être analysée avec son effet sur la marge. Si le coût ne baisse pas, une remise consomme directement une partie du résultat. Des volumes supplémentaires ne corrigent pas toujours une vente structurellement déficitaire."
+              }
+            ],
+            "cards": [
+              {
+                "label": "COÛT",
+                "text": "Kilomètres, temps, péage et stationnement."
+              },
+              {
+                "label": "CONTRIBUTION",
+                "text": "Participation aux charges fixes et au revenu."
+              },
+              {
+                "label": "PRIX CLIENT",
+                "text": "Un montant ou une méthode annoncée clairement."
+              }
+            ],
+            "diagram": "media/vtc/diagram-f.03.webp",
+            "diagram_text": [
+              "L’effet d’une remise dans le cas du cours",
+              "Avant remise 100 € de prix − 70 € de coût = 30 €",
+              "90 € de prix − 70 € de coût = 20 €",
+              "Après remise de 10 €",
+              "Contribution Elle baisse d’un tiers.",
+              "Pour compenser une commission, divisez par la part du prix que vous conservez."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-f.webp",
+            "module": "F"
+          }
+        },
+        {
+          "id": "vtc-f-03-atelier",
+          "title": "À vous de jouer · Fixer un prix soutenable",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "F.03",
+            "title": "Fixer un prix soutenable",
+            "objective": "Intégrer le temps, les coûts et la valeur du service.",
+            "module": "F"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Coût d’une mission 40 €, recette après commission 55 € : quelle marge avant autres charges non incluses ?",
+                "options": [
+                  {
+                    "id": "e6eebac98f1b",
+                    "text": "15 €"
+                  },
+                  {
+                    "id": "9862b7c25390",
+                    "text": "95 €"
+                  },
+                  {
+                    "id": "41c1bd900335",
+                    "text": "55 €"
+                  }
+                ],
+                "answer": "e6eebac98f1b",
+                "explanation": "55 − 40 = 15 €. Le résultat dépend du périmètre de coûts et ne représente pas nécessairement un revenu net.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.03"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Avec 20 % de commission, quel prix brut laisse 80 € après cette commission ?",
+                "options": [
+                  {
+                    "id": "f1b945f53510",
+                    "text": "80 €"
+                  },
+                  {
+                    "id": "944a63c53151",
+                    "text": "96 €"
+                  },
+                  {
+                    "id": "6ae1cd1fe909",
+                    "text": "100 €"
+                  }
+                ],
+                "answer": "6ae1cd1fe909",
+                "explanation": "Le prix doit vérifier prix × 0,80 = 80 ; donc 80 ÷ 0,80 = 100 €.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.03"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "CONTRIBUTION"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "COÛT"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "PRIX CLIENT"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Un montant ou une méthode annoncée clairement.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Kilomètres, temps, péage et stationnement.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Participation aux charges fixes et au revenu.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon F.03. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-f-04",
+      "title": "F.04 · Rédiger un devis clair",
+      "activities": [
+        {
+          "id": "vtc-f-04-cours",
+          "title": "Rédiger un devis clair",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "F.04",
+            "title": "Rédiger un devis clair",
+            "page": 299,
+            "pages": [
+              299,
+              300
+            ],
+            "objective": "Formaliser l’accord avant de réaliser la mission.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le devis décrit le service : date, horaires, points de prise en charge et de destination, nombre de passagers, capacité bagages et options. Il présente le prix et les conditions : attente, péage, annulation, modification, règlement et durée de validité de l’offre. Pour un consommateur, l’information sur le montant total doit être claire, notamment taxes comprises."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L’accord doit être identifiable et conservé. Une modification importante appelle une confirmation avant exécution, dans les conditions contractuelles. Une facture vient ensuite constater la prestation ; elle ne doit pas servir à révéler après coup des frais jamais annoncés. Le devis ne dispense pas d’un justificatif de réservation contenant les mentions réglementaires."
+              },
+              {
+                "kind": "heading",
+                "text": "Définir le périmètre"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un devis doit permettre de comprendre les personnes concernées, le trajet, la date, les horaires et les moyens prévus. Distinguez le réservant, le passager et le payeur. Précisez les arrêts, l'attente, les bagages ou équipements déterminants. Une adresse approximative peut rendre le prix et le temps estimés peu fiables."
+              },
+              {
+                "kind": "heading",
+                "text": "Présenter les conditions"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Indiquez le prix total ou le mode de calcul clairement convenu, les inclusions et les suppléments possibles. Expliquez la durée de validité de l'offre, les conditions de confirmation, de paiement, de modification et d'annulation. Une condition importante ne doit pas apparaître pour la première fois après la course. L'information doit rester lisible et compréhensible pour le client."
+              },
+              {
+                "kind": "heading",
+                "text": "Conserver l'accord"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Gardez la version acceptée et les modifications ultérieures. Un échange téléphonique peut être récapitulé par écrit. Le devis commercial ne dispense pas du justificatif réglementaire de réservation préalable : les deux documents peuvent être liés, mais doivent chacun contenir les informations nécessaires. L'acceptation d'un prix ne prouve pas à elle seule toutes les mentions de réservation."
+              }
+            ],
+            "cards": [
+              {
+                "label": "DÉCRIRE",
+                "text": "Mission, personnes et équipements."
+              },
+              {
+                "label": "CHIFFRER",
+                "text": "Prix, inclusions et suppléments possibles."
+              },
+              {
+                "label": "CONFIRMER",
+                "text": "Accord et preuve de réservation conservés."
+              }
+            ],
+            "diagram": "media/vtc/diagram-f.04.webp",
+            "diagram_text": [
+              "Un arrêt de trente minutes est ajouté",
+              "1 Vérifier La disponibilité.",
+              "2 Expliquer Le service et le prix modifiés.",
+              "3 Confirmer L’accord avant l’exécution.",
+              "Ce qui modifie la mission peut modifier le prix : on l’explique avant de l’exécuter."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-f.webp",
+            "module": "F"
+          }
+        },
+        {
+          "id": "vtc-f-04-atelier",
+          "title": "À vous de jouer · Rédiger un devis clair",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "F.04",
+            "title": "Rédiger un devis clair",
+            "objective": "Formaliser l’accord avant de réaliser la mission.",
+            "module": "F"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Un devis doit préciser une attente facturable. Quelle formulation est utile ?",
+                "options": [
+                  {
+                    "id": "b9fdb4b19b3b",
+                    "text": "Attente selon mon humeur"
+                  },
+                  {
+                    "id": "050718f30cb6",
+                    "text": "La durée incluse et la méthode de facturation au-delà"
+                  },
+                  {
+                    "id": "f2523ed85319",
+                    "text": "Le supplément sera révélé après paiement"
+                  }
+                ],
+                "answer": "050718f30cb6",
+                "explanation": "Une condition claire permet au client de comprendre et d’accepter la prestation avant son exécution.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.04"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Le client change la destination après acceptation du devis. Que faire ?",
+                "options": [
+                  {
+                    "id": "3f91d7bf8e69",
+                    "text": "Clarifier la modification et son éventuel prix avant de l’exécuter"
+                  },
+                  {
+                    "id": "44ec18ea750a",
+                    "text": "Considérer que le devis couvre toute distance"
+                  },
+                  {
+                    "id": "d2ebc09a39ed",
+                    "text": "Ajouter librement un montant sans information"
+                  }
+                ],
+                "answer": "3f91d7bf8e69",
+                "explanation": "Une modification du service peut changer le coût ; elle doit être expliquée et convenue.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.04"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "CHIFFRER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "CONFIRMER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "DÉCRIRE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Prix, inclusions et suppléments possibles.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Accord et preuve de réservation conservés.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Mission, personnes et équipements.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon F.04. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-f-05",
+      "title": "F.05 · Travailler avec une plateforme",
+      "activities": [
+        {
+          "id": "vtc-f-05-cours",
+          "title": "Travailler avec une plateforme",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "F.05",
+            "title": "Travailler avec une plateforme",
+            "page": 302,
+            "pages": [
+              302,
+              303
+            ],
+            "objective": "Lire un contrat et analyser la recette réellement conservée.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une plateforme peut apporter des réservations, des outils de paiement et une visibilité. Elle facture en contrepartie des services ou une commission selon le contrat. Examinez qui contracte avec le passager, qui encaisse, comment les factures sont établies et à quel rythme les fonds sont versés."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Comparez le chiffre d’affaires, les commissions, le temps connecté, les kilomètres à vide et les dépenses. Un bonus n’est pas nécessairement régulier et ne doit pas financer une charge permanente dans un prévisionnel prudent. Les obligations professionnelles restent à votre charge selon votre rôle. La dépendance à un seul apporteur expose aussi à un changement de conditions ou à une interruption du compte."
+              },
+              {
+                "kind": "heading",
+                "text": "Comprendre le contrat"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une plateforme peut intervenir dans la mise en relation, l'encaissement et la facturation selon son modèle. Lisez les conditions de commission, d'annulation, de versement, de réclamation et de suspension. Identifiez qui vend la prestation, qui facture le client et qui facture la commission. Un virement bancaire seul ne permet pas de reconstituer toute l'opération."
+              },
+              {
+                "kind": "heading",
+                "text": "Séparer vente, commission et paiement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Lorsque la plateforme encaisse pour votre compte, la vente au client et la commission peuvent constituer deux opérations distinctes."
+              },
+              {
+                "kind": "heading",
+                "text": "Séparer vente, commission et paiement (suite)"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le montant reversé est alors une différence entre des flux. Ne confondez pas ce montant avec le chiffre d'affaires ou le bénéfice sans analyser les pièces. Le traitement de la TVA sur une commission, notamment étrangère, doit être vérifié selon la situation."
+              },
+              {
+                "kind": "heading",
+                "text": "Mesurer la performance réelle"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Comparez le revenu conservé au temps total mobilisé et aux kilomètres parcourus. Incluez l'approche, les périodes d'attente et les retours à vide. Une succession de petites courses peut produire un chiffre d'affaires visible tout en laissant une contribution faible. Gardez un suivi propre à l'entreprise pour comprendre les résultats, indépendamment du tableau commercial de l'application."
+              }
+            ],
+            "cards": [
+              {
+                "label": "CONTRAT",
+                "text": "Rôles, frais, conditions et réclamations."
+              },
+              {
+                "label": "RELEVÉ",
+                "text": "Prix vendu, commission et versement net."
+              },
+              {
+                "label": "DÉPENDANCE",
+                "text": "Part des ventes liée à un seul canal."
+              }
+            ],
+            "diagram": "media/vtc/diagram-f.05.webp",
+            "diagram_text": [
+              "Lire la relation avec la plateforme",
+              "Contrat Qui vend, encaisse et facture ?",
+              "Relevé Commission et versement à rapprocher.",
+              "Dépendance Quelle part des ventes vient de ce canal ?",
+              "Le versement net n’est ni un bénéfice ni une mesure suffisante de performance."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-f.webp",
+            "module": "F"
+          }
+        },
+        {
+          "id": "vtc-f-05-atelier",
+          "title": "À vous de jouer · Travailler avec une plateforme",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "F.05",
+            "title": "Travailler avec une plateforme",
+            "objective": "Lire un contrat et analyser la recette réellement conservée.",
+            "module": "F"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Une course affiche 60 € et la commission de l’exemple est de 25 %. Quel reste avant les autres frais ?",
+                "options": [
+                  {
+                    "id": "c61543a79114",
+                    "text": "45 €"
+                  },
+                  {
+                    "id": "9f2913fbdaa9",
+                    "text": "35 €"
+                  },
+                  {
+                    "id": "2d013226a160",
+                    "text": "60 €"
+                  }
+                ],
+                "answer": "c61543a79114",
+                "explanation": "Commission : 60 × 0,25 = 15 €. Reste : 60 − 15 = 45 €, avant les autres obligations.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.05"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Le virement d’une plateforme représente-t-il automatiquement le bénéfice du chauffeur ?",
+                "options": [
+                  {
+                    "id": "94b10d2c7fca",
+                    "text": "Oui, sauf le dimanche"
+                  },
+                  {
+                    "id": "5a42451cd003",
+                    "text": "Non, d’autres coûts et obligations restent à prendre en compte"
+                  },
+                  {
+                    "id": "5c54e69b2649",
+                    "text": "Oui, c’est toujours le salaire net"
+                  }
+                ],
+                "answer": "5a42451cd003",
+                "explanation": "Le virement après commission n’intègre pas nécessairement carburant, véhicule, cotisations et impôts.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.05"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "CONTRAT"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "RELEVÉ"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "DÉPENDANCE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Rôles, frais, conditions et réclamations.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Prix vendu, commission et versement net.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Part des ventes liée à un seul canal.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon F.05. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-f-06",
+      "title": "F.06 · Prospecter avec méthode",
+      "activities": [
+        {
+          "id": "vtc-f-06-cours",
+          "title": "Prospecter avec méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "F.06",
+            "title": "Prospecter avec méthode",
+            "page": 304,
+            "pages": [
+              304,
+              305
+            ],
+            "objective": "Transformer un contact en rendez-vous utile.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Prospecter consiste à identifier un besoin, contacter le bon interlocuteur et proposer une réponse adaptée. Préparez une liste qualifiée : activité, zone, besoins possibles et moyen de contact autorisé. Un message bref et pertinent vaut mieux qu’un envoi massif sans cible."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Expliquez votre service, posez une question sur les besoins et proposez une étape simple : échange, devis ou test encadré. Respectez les règles de prospection et les demandes d’opposition. Pour la prospection électronique auprès de particuliers, le consentement préalable est le principe, avec des exceptions encadrées pour certains clients existants. Un numéro utilisé pour une course n’est pas une permission générale d’envoyer des promotions."
+              },
+              {
+                "kind": "heading",
+                "text": "Choisir les bons interlocuteurs"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La prospection commence par une liste de partenaires dont les clients ont un besoin compatible avec votre offre. Pour chaque contact, identifiez la personne qui organise réellement les déplacements. Un message générique envoyé à de nombreuses adresses apporte rarement autant d'informations qu'un échange ciblé. Préparez une raison concrète de prendre contact."
+              },
+              {
+                "kind": "heading",
+                "text": "Écouter avant de présenter"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Posez des questions sur les trajets, les horaires, les difficultés et le processus de réservation. Présentez ensuite la partie de votre offre qui répond au besoin. Un entretien ne se termine pas forcément par une vente : il peut aboutir à un test, à l'envoi d'un devis ou à une reprise de contact à une date précise. Notez la prochaine action utile."
+              },
+              {
+                "kind": "heading",
+                "text": "Respecter les règles de contact"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La prospection électronique auprès de particuliers repose en principe sur un consentement préalable, sous réserve des exceptions prévues. En contexte professionnel, les règles diffèrent selon le lien avec l'activité et les conditions d'information et d'opposition. Dans tous les cas, identifiez l'émetteur et permettez l'opposition lorsqu'elle est requise. N'utilisez pas automatiquement les données d'une réservation pour ajouter un client à une campagne."
+              }
+            ],
+            "cards": [
+              {
+                "label": "CIBLER",
+                "text": "Un besoin et un interlocuteur identifiés."
+              },
+              {
+                "label": "CONTACTER",
+                "text": "Une proposition courte et pertinente."
+              },
+              {
+                "label": "SUIVRE",
+                "text": "Une prochaine action datée et respectueuse."
+              }
+            ],
+            "diagram": "media/vtc/diagram-f.06.webp",
+            "diagram_text": [
+              "Un suivi de prospection utile",
+              "Besoin Départs matinaux d’un hôtel.",
+              "Proposition Un essai sur un créneau précis.",
+              "Prochaine action La date convenue avec l’interlocutrice.",
+              "Prospecter commence par comprendre le besoin, pas par réciter son argumentaire."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-f.webp",
+            "module": "F"
+          }
+        },
+        {
+          "id": "vtc-f-06-atelier",
+          "title": "À vous de jouer · Prospecter avec méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "F.06",
+            "title": "Prospecter avec méthode",
+            "objective": "Transformer un contact en rendez-vous utile.",
+            "module": "F"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Quelle prospection est pertinente auprès d’un hôtel ?",
+                "options": [
+                  {
+                    "id": "fda96ed427a4",
+                    "text": "Envoyer des messages identiques sans connaître ses besoins"
+                  },
+                  {
+                    "id": "c7046d3a2512",
+                    "text": "Présenter une offre adaptée à ses besoins et un contact professionnel"
+                  },
+                  {
+                    "id": "5f018f5c5d1b",
+                    "text": "Promettre une disponibilité impossible"
+                  }
+                ],
+                "answer": "c7046d3a2512",
+                "explanation": "La prospection utile part du besoin du partenaire et propose un service réalisable.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.06"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quel indicateur suit l’efficacité d’une prospection ?",
+                "options": [
+                  {
+                    "id": "0d86526dd24b",
+                    "text": "Le nombre de contacts transformés en clients selon une période définie"
+                  },
+                  {
+                    "id": "d4f4fe4e284e",
+                    "text": "Le nombre de kilomètres du véhicule uniquement"
+                  },
+                  {
+                    "id": "e79987052d7a",
+                    "text": "Le nombre de couleurs du logo"
+                  }
+                ],
+                "answer": "0d86526dd24b",
+                "explanation": "Une conversion relie les démarches entreprises aux résultats commerciaux obtenus.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.06"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "CONTACTER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "SUIVRE"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "CIBLER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Un besoin et un interlocuteur identifiés.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Une prochaine action datée et respectueuse.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Une proposition courte et pertinente.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon F.06. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-f-07",
+      "title": "F.07 · Créer un partenariat",
+      "activities": [
+        {
+          "id": "vtc-f-07-cours",
+          "title": "Créer un partenariat",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "F.07",
+            "title": "Créer un partenariat",
+            "page": 307,
+            "pages": [
+              307,
+              308
+            ],
+            "objective": "Définir les engagements réciproques avec précision.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un hôtel, une agence ou une entreprise peut devenir un prescripteur ou un client régulier. Le partenariat doit préciser qui réserve, qui paie, qui informe les voyageurs et qui traite une modification. Les délais, capacités et conditions de remplacement doivent être réalistes."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Négociez aussi les conditions financières, la confidentialité, l’usage de votre marque et les règles d’annulation. Une promesse de volume n’est pas une commande ferme. Une éventuelle sous-traitance impose de vérifier les autorisations, assurances et conditions de la prestation. Ne remettez jamais votre carte professionnelle à un tiers et ne laissez pas votre identité servir à un conducteur non autorisé."
+              },
+              {
+                "kind": "heading",
+                "text": "Définir qui fait quoi"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un partenariat doit préciser qui reçoit la demande, confirme la course, informe le passager et facture. Définissez un canal professionnel et les informations nécessaires à transmettre. La réception d'un hôtel ne doit pas promettre un véhicule que vous n'avez pas confirmé. Un processus simple évite les doubles réservations et les attentes sans chauffeur."
+              },
+              {
+                "kind": "heading",
+                "text": "Prévoir les imprévus"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Déterminez comment gérer une arrivée décalée, une annulation, un nombre de bagages différent ou l'indisponibilité d'un conducteur. Une solution de remplacement doit rester conforme et clairement annoncée. Les conditions financières, y compris une éventuelle commission, doivent être transparentes et documentées. Une entente orale imprécise devient fragile lorsqu'un incident survient."
+              },
+              {
+                "kind": "heading",
+                "text": "Contrôler la qualité ensemble"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Choisissez quelques critères observables : réservations confirmées, ponctualité, informations complètes, réclamations et factures correctes. Un échange régulier permet de corriger les causes récurrentes. Le partenariat doit rester soutenable pour les deux parties. Accepter toutes les demandes sans moyens suffisants peut dégrader à la fois votre réputation et celle du partenaire."
+              }
+            ],
+            "cards": [
+              {
+                "label": "MISSION",
+                "text": "Qui commande et pour quels voyageurs ?"
+              },
+              {
+                "label": "RESPONSABILITÉ",
+                "text": "Qui confirme, informe et facture ?"
+              },
+              {
+                "label": "SUIVI",
+                "text": "Qualité, incidents et révision de l’accord."
+              }
+            ],
+            "diagram": "media/vtc/diagram-f.07.webp",
+            "diagram_text": [
+              "Quand l’horaire change",
+              "1 Demande Le client souhaite un autre horaire.",
+              "2 Transmission L’hôtel informe le transporteur.",
+              "3 Confirmation La modification doit être validée.",
+              "Un partenariat solide définit des engagements, pas seulement des intentions."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-f.webp",
+            "module": "F"
+          }
+        },
+        {
+          "id": "vtc-f-07-atelier",
+          "title": "À vous de jouer · Créer un partenariat",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "F.07",
+            "title": "Créer un partenariat",
+            "objective": "Définir les engagements réciproques avec précision.",
+            "module": "F"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Avant un partenariat avec une conciergerie, que clarifier ?",
+                "options": [
+                  {
+                    "id": "f4f5b7297246",
+                    "text": "Seulement la couleur des cartes de visite"
+                  },
+                  {
+                    "id": "2155b8025392",
+                    "text": "Réservation, paiement, responsabilités et conditions de service"
+                  },
+                  {
+                    "id": "68d50efd0d90",
+                    "text": "Uniquement la poignée de main"
+                  }
+                ],
+                "answer": "2155b8025392",
+                "explanation": "Les rôles et engagements évitent les malentendus sur qui commande, qui paie et qui traite un incident.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.07"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Un hôtel réserve pour un client mais une société paie. Quelle précaution ?",
+                "options": [
+                  {
+                    "id": "58a0d23f9724",
+                    "text": "Supposer que l’hôtel est toujours le payeur"
+                  },
+                  {
+                    "id": "9d70cef8ae03",
+                    "text": "Facturer au premier numéro trouvé"
+                  },
+                  {
+                    "id": "f8509ec8101a",
+                    "text": "Identifier les trois rôles dans la commande"
+                  }
+                ],
+                "answer": "f8509ec8101a",
+                "explanation": "Réservant, passager et payeur peuvent différer. Les informations de facturation doivent être confirmées.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.07"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "MISSION"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "RESPONSABILITÉ"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "SUIVI"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Qui confirme, informe et facture ?",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Qualité, incidents et révision de l’accord.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Qui commande et pour quels voyageurs ?",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon F.07. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-f-08",
+      "title": "F.08 · Communiquer en ligne",
+      "activities": [
+        {
+          "id": "vtc-f-08-cours",
+          "title": "Communiquer en ligne",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "F.08",
+            "title": "Communiquer en ligne",
+            "page": 310,
+            "pages": [
+              310,
+              311
+            ],
+            "objective": "Présenter une image cohérente et une réservation compréhensible.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Votre site ou fiche professionnelle doit permettre de comprendre le service, la zone, les conditions de réservation et la façon de vous contacter. Les informations de prix, identité professionnelle, conditions et médiation doivent être accessibles selon les règles applicables. Une belle image ne compense pas un parcours de réservation confus."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Publiez des contenus exacts et des avis authentiques. N’achetez pas de faux commentaires et ne diffusez pas la photo d’un client sans base appropriée. Une publicité doit être identifiable et ses promesses vérifiables. Vérifiez aussi les appareils mobiles : bouton de contact, formulaire, confirmation et affichage des montants. Ne demandez pas plus de données que nécessaire pour préparer la course."
+              },
+              {
+                "kind": "heading",
+                "text": "Présenter une information utile"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un site ou une page professionnelle doit permettre de comprendre votre service, votre zone, vos moyens de contact et le processus de réservation. Des photos cohérentes avec les véhicules utilisés et des textes précis inspirent davantage confiance que des promesses impossibles à vérifier. Indiquez clairement ce qui reste soumis à disponibilité ou à devis."
+              },
+              {
+                "kind": "heading",
+                "text": "Réduire les ambiguïtés du formulaire"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Demandez les données nécessaires : date, heure, départ, destination, nombre de voyageurs et besoins matériels. Distinguez une demande de devis d'une réservation confirmée. Le message affiché après envoi doit expliquer la prochaine étape. Si l'utilisateur croit avoir une voiture réservée alors qu'aucun chauffeur n'a accepté, le parcours crée un risque de service."
+              },
+              {
+                "kind": "heading",
+                "text": "Protéger l'image et les données"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Publiez uniquement des contenus que vous êtes autorisé à utiliser. Une photo de passager ou une capture de réservation peut révéler son identité et son déplacement. Les avis doivent refléter des expériences réelles ; une réponse publique à une critique doit rester sobre et préserver les informations privées. Le détail du dossier se traite dans un échange approprié."
+              }
+            ],
+            "cards": [
+              {
+                "label": "COMPRENDRE",
+                "text": "Service, zone et capacité."
+              },
+              {
+                "label": "RÉSERVER",
+                "text": "Étapes, prix et confirmation."
+              },
+              {
+                "label": "FAIRE CONFIANCE",
+                "text": "Identité, conditions et avis authentiques."
+              }
+            ],
+            "diagram": "media/vtc/diagram-f.08.webp",
+            "diagram_text": [
+              "Deux états à ne pas confondre",
+              "Demande reçue Elle doit encore être étudiée.",
+              "La mission a été validée.",
+              "Réservation confirmée",
+              "Le client doit comprendre ce qu’il réserve avant de laisser ses coordonnées."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-f.webp",
+            "module": "F"
+          }
+        },
+        {
+          "id": "vtc-f-08-atelier",
+          "title": "À vous de jouer · Communiquer en ligne",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "F.08",
+            "title": "Communiquer en ligne",
+            "objective": "Présenter une image cohérente et une réservation compréhensible.",
+            "module": "F"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Quelle publication respecte mieux la confidentialité ?",
+                "options": [
+                  {
+                    "id": "d5ef58fa1c0e",
+                    "text": "Une photo du client avec son adresse sans accord"
+                  },
+                  {
+                    "id": "53dfb38ae410",
+                    "text": "Une présentation du service sans données personnelles de passagers"
+                  },
+                  {
+                    "id": "4a063eb2e288",
+                    "text": "Une capture de toutes les réservations du jour"
+                  }
+                ],
+                "answer": "53dfb38ae410",
+                "explanation": "La promotion peut présenter le service sans exposer les données de courses ni l’identité des passagers.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.08"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quelle information commerciale doit rester exacte sur le site ?",
+                "options": [
+                  {
+                    "id": "be636f86cf89",
+                    "text": "Uniquement le slogan"
+                  },
+                  {
+                    "id": "67fda8eb2636",
+                    "text": "Le nombre de concurrents supprimés"
+                  },
+                  {
+                    "id": "5a78b533e070",
+                    "text": "Les prestations, capacités et conditions réellement proposées"
+                  }
+                ],
+                "answer": "5a78b533e070",
+                "explanation": "Une promesse doit correspondre au service réalisable. Une présentation attractive ne justifie pas une information trompeuse.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.08"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "FAIRE CONFIANCE"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "RÉSERVER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "COMPRENDRE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Identité, conditions et avis authentiques.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Service, zone et capacité.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Étapes, prix et confirmation.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon F.08. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-f-09",
+      "title": "F.09 · Fidéliser avec discrétion",
+      "activities": [
+        {
+          "id": "vtc-f-09-cours",
+          "title": "Fidéliser avec discrétion",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "F.09",
+            "title": "Fidéliser avec discrétion",
+            "page": 312,
+            "pages": [
+              312,
+              313
+            ],
+            "objective": "Mémoriser l’utile sans envahir la vie privée.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La fidélisation repose d’abord sur un service régulier : confirmation, ponctualité, conduite, propreté et traitement fiable des demandes. Les petites préférences peuvent améliorer le confort si elles sont recueillies et conservées de manière justifiée. Ne constituez pas un dossier intime sur les habitudes d’un client."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un suivi client simple peut contenir l’historique nécessaire, les demandes de service et les autorisations de contact commercial. Distinguez un message pratique après une course et une promotion. Offrez une possibilité simple d’opposition à la prospection. Une réclamation bien traitée peut préserver une relation ; une réduction systématique n’est pas la seule réponse à l’insatisfaction."
+              },
+              {
+                "kind": "heading",
+                "text": "Comprendre la fidélisation"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un client revient lorsqu'il trouve un service prévisible et adapté. La fidélisation ne dépend pas uniquement d'une remise. Une confirmation claire, une conduite confortable et une réponse correcte en cas de problème créent une relation durable. Les promesses doivent être répétables : un service exceptionnel un jour suivi de plusieurs oublis fragilise la confiance."
+              },
+              {
+                "kind": "heading",
+                "text": "Mémoriser ce qui aide le service"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Certaines préférences opérationnelles peuvent être utiles, à condition de respecter les règles de protection des données et les choix du client. Notez une entrée habituelle ou un besoin confirmé plutôt que des informations personnelles inutiles. Ne transformez pas la proximité commerciale en familiarité imposée. Un passager régulier peut souhaiter le silence ou davantage de discrétion."
+              },
+              {
+                "kind": "heading",
+                "text": "Recontacter avec mesure"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un message de suivi peut servir à résoudre un problème ou à confirmer une prochaine prestation. Une communication promotionnelle relève d'un autre objectif et de règles spécifiques. Respectez les refus de contact. Un programme de fidélité doit rester compréhensible et économiquement soutenable ; promettre une réduction permanente sans calcul peut fragiliser la prestation."
+              }
+            ],
+            "cards": [
+              {
+                "label": "TENIR",
+                "text": "La prestation promise, à chaque course."
+              },
+              {
+                "label": "ÉCOUTER",
+                "text": "Une préférence utile et librement exprimée."
+              },
+              {
+                "label": "SUIVRE",
+                "text": "Un contact autorisé, discret et pertinent."
+              }
+            ],
+            "diagram": "media/vtc/diagram-f.09.webp",
+            "diagram_text": [
+              "La cliente revient chaque mois",
+              "Conserver l’utile Préférences de service justifiées.",
+              "Reconfirmer Horaire et entrée à chaque réservation.",
+              "Respecter Vie privée et choix de contact.",
+              "La fidélité se construit par la confiance ; elle ne justifie pas un contact imposé."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-f.webp",
+            "module": "F"
+          }
+        },
+        {
+          "id": "vtc-f-09-atelier",
+          "title": "À vous de jouer · Fidéliser avec discrétion",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "F.09",
+            "title": "Fidéliser avec discrétion",
+            "objective": "Mémoriser l’utile sans envahir la vie privée.",
+            "module": "F"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Comment fidéliser un client sans intrusion ?",
+                "options": [
+                  {
+                    "id": "c92c96bf450f",
+                    "text": "Conserver tous ses déplacements sans limite"
+                  },
+                  {
+                    "id": "b7aff9117e73",
+                    "text": "Assurer le service convenu et respecter ses choix de contact"
+                  },
+                  {
+                    "id": "2efc0dd592ff",
+                    "text": "Le contacter sur tous ses comptes personnels"
+                  }
+                ],
+                "answer": "b7aff9117e73",
+                "explanation": "La fidélisation repose sur la qualité et un usage approprié des données, pas sur une surveillance du client.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.09"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Un client demande de ne plus recevoir de messages commerciaux. Que faire ?",
+                "options": [
+                  {
+                    "id": "37288c598491",
+                    "text": "Lui demander le mot de passe de son téléphone"
+                  },
+                  {
+                    "id": "6e559120dfbc",
+                    "text": "Respecter sa demande et mettre à jour le suivi"
+                  },
+                  {
+                    "id": "48a49bd2c4b7",
+                    "text": "Continuer jusqu’à ce qu’il réserve"
+                  }
+                ],
+                "answer": "6e559120dfbc",
+                "explanation": "Le choix de contact doit être pris en compte et appliqué dans les outils utilisés.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.09"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "ÉCOUTER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "TENIR"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "SUIVRE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Un contact autorisé, discret et pertinent.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Une préférence utile et librement exprimée.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "La prestation promise, à chaque course.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon F.09. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-f-10",
+      "title": "F.10 · Mesurer la qualité du service",
+      "activities": [
+        {
+          "id": "vtc-f-10-cours",
+          "title": "Mesurer la qualité du service",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "F.10",
+            "title": "Mesurer la qualité du service",
+            "page": 315,
+            "pages": [
+              315,
+              316
+            ],
+            "objective": "Observer des faits pour progresser.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La qualité se mesure à plusieurs étapes : confirmation, accueil, trajet, règlement et suivi. Choisissez des critères observables, comme le respect de l’horaire convenu, la clarté du prix ou l’absence d’oubli de document. Un avis global donne un signal mais n’explique pas toujours la cause."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Cherchez les écarts récurrents et leur origine. Un retard peut venir d’un planning trop serré plutôt que d’un manque d’effort du conducteur. Une action corrective doit être précise et vérifiable : ajouter une marge de transfert, revoir un message ou contrôler le coffre. Mesurez à nouveau après le changement. Les retours des clients doivent être utilisés avec respect et confidentialité."
+              },
+              {
+                "kind": "heading",
+                "text": "Choisir un critère observable"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Les clients sont contents » est une impression. Le nombre de réclamations, le taux de départs à l'heure ou la part de factures corrigées sont des informations mesurables. Définissez chaque indicateur : que signifie « à l'heure » et à partir de quel moment comptez-vous le retard ? Une définition stable permet de comparer les périodes."
+              },
+              {
+                "kind": "heading",
+                "text": "Chercher la cause"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un retard peut provenir d'un planning trop serré, d'une adresse incomplète ou d'un incident de circulation. Compter les retards ne suffit pas : il faut identifier ce qui peut être amélioré. Les avis clients apportent un point de vue utile, mais ne remplacent pas les faits opérationnels. Une note isolée ne décrit pas toujours toute la qualité du service."
+              },
+              {
+                "kind": "heading",
+                "text": "Tester une correction"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Choisissez une action concrète, une période d'observation et un résultat attendu. Par exemple, confirmer l'entrée exacte la veille peut réduire les rendez-vous manqués. Mesurez ensuite l'effet. Si le problème persiste, reconsidérez la cause au lieu d'ajouter des consignes sans lien avec la difficulté."
+              }
+            ],
+            "cards": [
+              {
+                "label": "OBSERVER",
+                "text": "Un écart décrit sans jugement."
+              },
+              {
+                "label": "COMPRENDRE",
+                "text": "Une cause à vérifier."
+              },
+              {
+                "label": "CORRIGER",
+                "text": "Une action et une mesure de résultat."
+              }
+            ],
+            "diagram": "media/vtc/diagram-f.10.webp",
+            "diagram_text": [
+              "Relier le résultat à une action",
+              "1 Écart observé Adresse imprécise.",
+              "2 Cause à traiter La confirmation du lieu.",
+              "3 Contrôle Comparer des périodes de même nature.",
+              "Une amélioration utile agit sur la cause observée, pas seulement sur le symptôme."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-f.webp",
+            "module": "F"
+          }
+        },
+        {
+          "id": "vtc-f-10-atelier",
+          "title": "À vous de jouer · Mesurer la qualité du service",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "F.10",
+            "title": "Mesurer la qualité du service",
+            "objective": "Observer des faits pour progresser.",
+            "module": "F"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Une note moyenne de 4,8 sur 5 suffit-elle à expliquer toutes les difficultés du service ?",
+                "options": [
+                  {
+                    "id": "60a52a5c3057",
+                    "text": "Oui, cela garantit la rentabilité"
+                  },
+                  {
+                    "id": "4a0f81aabe43",
+                    "text": "Non, il faut aussi lire les motifs et suivre des indicateurs concrets"
+                  },
+                  {
+                    "id": "b32c7f7659f7",
+                    "text": "Oui, les commentaires deviennent inutiles"
+                  }
+                ],
+                "answer": "4a0f81aabe43",
+                "explanation": "La note synthétise des avis, mais les retards, réclamations et causes donnent les pistes d’amélioration.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.10"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quel indicateur mesure directement la ponctualité ?",
+                "options": [
+                  {
+                    "id": "bc1d85ebac77",
+                    "text": "Le nombre total d’abonnés"
+                  },
+                  {
+                    "id": "a1fd19f03345",
+                    "text": "Le nombre de photos publiées"
+                  },
+                  {
+                    "id": "0cd28c596061",
+                    "text": "La part des prises en charge réalisées à l’heure selon une règle définie"
+                  }
+                ],
+                "answer": "0cd28c596061",
+                "explanation": "Un indicateur doit correspondre au phénomène mesuré et conserver une définition stable.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.10"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "COMPRENDRE"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "OBSERVER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "CORRIGER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Une action et une mesure de résultat.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Un écart décrit sans jugement.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Une cause à vérifier.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon F.10. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-f-11",
+      "title": "F.11 · Traiter une réclamation",
+      "activities": [
+        {
+          "id": "vtc-f-11-cours",
+          "title": "Traiter une réclamation",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "F.11",
+            "title": "Traiter une réclamation",
+            "page": 317,
+            "pages": [
+              317,
+              318
+            ],
+            "objective": "Écouter, vérifier et proposer une réponse traçable.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Accueillez la réclamation sans interrompre ni promettre immédiatement un remboursement. Reformulez le problème, retrouvez les pièces et comparez ce qui était convenu à ce qui a été réalisé. Séparez un désaccord de prix, un défaut de service et un dommage à déclarer à l’assureur."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Répondez dans un délai annoncé avec une explication et, si justifié, une solution proportionnée. Conservez une trace des échanges. Un consommateur doit pouvoir accéder au dispositif de médiation dont relève le professionnel, après la démarche préalable appropriée. Les coordonnées du médiateur doivent être communiquées selon les règles applicables. Ne demandez pas la suppression d’un avis honnête comme condition d’un droit du client."
+              },
+              {
+                "kind": "heading",
+                "text": "Écouter et reformuler"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Laissez le client exposer le problème, puis reformulez le point précis : horaire, montant, accueil ou objet endommagé. Reconnaître son insatisfaction ne signifie pas accepter immédiatement tous les faits allégués. Un ton calme facilite la collecte d'informations. Évitez de répondre par une justification automatique avant d'avoir compris la demande."
+              },
+              {
+                "kind": "heading",
+                "text": "Vérifier les éléments"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Consultez la réservation, les conditions acceptées, les horaires et les documents utiles. Distinguez un fait établi d'une appréciation. Si une erreur est confirmée, expliquez la correction et son délai. Si le désaccord persiste, présentez votre réponse de manière motivée et les voies de traitement adaptées, notamment la médiation de la consommation dans le cadre applicable."
+              },
+              {
+                "kind": "heading",
+                "text": "Conserver une trace utile"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Notez la date, le problème, les vérifications et la solution proposée. Une réclamation révèle parfois un défaut du processus : conditions mal expliquées, facture ambiguë ou point de rendez-vous insuffisant. Le traitement ne s'arrête donc pas à un geste commercial. Corriger la cause évite que d'autres clients rencontrent la même difficulté."
+              }
+            ],
+            "cards": [
+              {
+                "label": "ÉCOUTER",
+                "text": "Quel fait et quelle attente ?"
+              },
+              {
+                "label": "VÉRIFIER",
+                "text": "Réservation, devis, facture et échanges."
+              },
+              {
+                "label": "RÉPONDRE",
+                "text": "Explication, solution et recours approprié."
+              }
+            ],
+            "diagram": "media/vtc/diagram-f.11.webp",
+            "diagram_text": [
+              "Un supplément d’attente contesté",
+              "1 Pièce retrouvée Le devis est imprécis.",
+              "2 Réponse au client Analyser l’information réellement donnée.",
+              "3 Amélioration Corriger le modèle pour les prochaines missions.",
+              "Une réponse professionnelle commence par les faits et se termine par une action claire."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-f.webp",
+            "module": "F"
+          }
+        },
+        {
+          "id": "vtc-f-11-atelier",
+          "title": "À vous de jouer · Traiter une réclamation",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "F.11",
+            "title": "Traiter une réclamation",
+            "objective": "Écouter, vérifier et proposer une réponse traçable.",
+            "module": "F"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Un client conteste un supplément. Quelle première réponse ?",
+                "options": [
+                  {
+                    "id": "f41883f08039",
+                    "text": "Écouter puis vérifier la réservation et les conditions convenues"
+                  },
+                  {
+                    "id": "55d05135532f",
+                    "text": "Supprimer la facture sans examen"
+                  },
+                  {
+                    "id": "9623657a3b2a",
+                    "text": "Le menacer immédiatement"
+                  }
+                ],
+                "answer": "f41883f08039",
+                "explanation": "Le traitement commence par les faits et les preuves, puis une réponse proportionnée et expliquée.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.11"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Une réclamation se révèle justifiée. Quelle suite est professionnelle ?",
+                "options": [
+                  {
+                    "id": "239de2d5571c",
+                    "text": "Accuser un autre client"
+                  },
+                  {
+                    "id": "95b2f79f4109",
+                    "text": "Proposer une correction adaptée et traiter la cause"
+                  },
+                  {
+                    "id": "13fcce956d85",
+                    "text": "Promettre de supprimer tous les avis négatifs"
+                  }
+                ],
+                "answer": "95b2f79f4109",
+                "explanation": "La solution au cas individuel et la prévention d’une répétition sont deux volets complémentaires.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.11"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "VÉRIFIER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "ÉCOUTER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "RÉPONDRE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Réservation, devis, facture et échanges.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Quel fait et quelle attente ?",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Explication, solution et recours approprié.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon F.11. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-f-12",
+      "title": "F.12 · Lire son tableau de bord",
+      "activities": [
+        {
+          "id": "vtc-f-12-cours",
+          "title": "Lire son tableau de bord",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "F.12",
+            "title": "Lire son tableau de bord",
+            "page": 319,
+            "pages": [
+              319,
+              320
+            ],
+            "objective": "Choisir quelques indicateurs qui aident à décider.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un tableau de bord relie ventes, coûts, temps et satisfaction. Le chiffre d’affaires par course indique une moyenne, mais il faut le compléter par la contribution par heure totale, les kilomètres à vide, le taux de transformation des devis et la part des clients récurrents. Comparez des périodes de même nature."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le taux de transformation est le nombre de devis acceptés divisé par le nombre de devis émis. Une hausse du CA accompagnée d’une baisse de marge peut signaler des remises ou des approches trop longues. Une moyenne cache parfois de fortes différences entre canaux et créneaux. Utilisez les données pour tester une action, puis vérifiez le résultat sans sacrifier la sécurité."
+              },
+              {
+                "kind": "heading",
+                "text": "Choisir une mesure par décision"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le chiffre d'affaires renseigne sur les ventes. La marge renseigne sur leur contribution économique. Le taux de transformation compare les réservations obtenues aux demandes ou devis selon votre définition. Le panier moyen divise le chiffre d'affaires par le nombre de prestations. Chaque indicateur répond à une question différente ; les multiplier sans décision associée rend le suivi inutilement complexe."
+              },
+              {
+                "kind": "heading",
+                "text": "Mesurer l'utilisation du véhicule"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le taux de kilomètres facturés peut se calculer en divisant les kilomètres avec recette par les kilomètres totaux. Les heures mobilisées comprennent l'approche, l'attente et les retours."
+              },
+              {
+                "kind": "heading",
+                "text": "Mesurer l'utilisation du véhicule (suite)"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une amélioration du chiffre d'affaires peut masquer une dégradation du revenu par heure. Comparez donc les ventes aux ressources réellement consommées."
+              },
+              {
+                "kind": "heading",
+                "text": "Décider puis vérifier"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Si un créneau produit de longues approches et peu de marge, testez une autre organisation ou une offre mieux adaptée. Si un partenaire apporte des courses régulières mais paie tard, surveillez la trésorerie. Un tableau de bord utile se termine par une action précise, un responsable et une date de réexamen."
+              }
+            ],
+            "cards": [
+              {
+                "label": "VENDRE",
+                "text": "Devis, acceptations et chiffre d’affaires."
+              },
+              {
+                "label": "RENTABILISER",
+                "text": "Coûts, temps total et kilomètres."
+              },
+              {
+                "label": "FIDÉLISER",
+                "text": "Récurrence, incidents et satisfaction."
+              }
+            ],
+            "diagram": "media/vtc/diagram-f.12.webp",
+            "diagram_text": [
+              "Relier l’indicateur à une décision",
+              "Ventes Devis acceptés ÷ devis émis.",
+              "Rentabilité Temps total et kilomètres à vide.",
+              "Fidélisation Récurrence, incidents et satisfaction.",
+              "Un indicateur sert à décider seulement si son périmètre est clairement défini."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-f.webp",
+            "module": "F"
+          }
+        },
+        {
+          "id": "vtc-f-12-atelier",
+          "title": "À vous de jouer · Lire son tableau de bord",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "F.12",
+            "title": "Lire son tableau de bord",
+            "objective": "Choisir quelques indicateurs qui aident à décider.",
+            "module": "F"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "70 km mobilisent 2 h. Avec 0,30 €/km et 18 €/h dans l’exemple, quel coût binôme ?",
+                "options": [
+                  {
+                    "id": "33ad2f77b4d6",
+                    "text": "21 €"
+                  },
+                  {
+                    "id": "737336c9bab9",
+                    "text": "36 €"
+                  },
+                  {
+                    "id": "2482820f5f79",
+                    "text": "57 €"
+                  }
+                ],
+                "answer": "2482820f5f79",
+                "explanation": "70 × 0,30 + 2 × 18 = 21 + 36 = 57 €. Les deux termes couvrent des composantes distinctes.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.12"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quel tableau de bord aide à décider ?",
+                "options": [
+                  {
+                    "id": "a4977be0be54",
+                    "text": "Uniquement le chiffre d’affaires cumulé"
+                  },
+                  {
+                    "id": "ba13fbf0f8c2",
+                    "text": "Seulement le nombre d’avis"
+                  },
+                  {
+                    "id": "bdb1b3a44a3d",
+                    "text": "Recettes, coûts, kilomètres à vide, temps et qualité sur la même période"
+                  }
+                ],
+                "answer": "bdb1b3a44a3d",
+                "explanation": "Relier activité, consommation de ressources et qualité permet d’identifier une amélioration utile.",
+                "module": "F",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon F.12"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "RENTABILISER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "FIDÉLISER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "VENDRE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Coûts, temps total et kilomètres.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Devis, acceptations et chiffre d’affaires.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Récurrence, incidents et satisfaction.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon F.12. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-f-synthese",
+      "title": "Synthèse · relier les notions",
+      "activities": [
+        {
+          "id": "vtc-f-capsule",
+          "title": "Voir et retenir · les essentiels",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [
+            {
+              "type": "Video",
+              "video": {
+                "src": "media/vtc/capsule-f.mp4",
+                "poster": "media/vtc/capsule-f.jpg",
+                "captions": "media/vtc/capsule-f.vtt",
+                "duration_seconds": 92.583333,
+                "transcript": "Pour étudier un marché local, quelles données sont utiles ? Les besoins, horaires, flux et offres concurrentes. Une étude relie demande réelle, concurrence et contraintes afin de construire une offre viable.\n\nUn devis doit préciser une attente facturable. Quelle formulation est utile ? La durée incluse et la méthode de facturation au-delà. Une condition claire permet au client de comprendre et d’accepter la prestation avant son exécution.\n\nQuelle publication respecte mieux la confidentialité ? Une présentation du service sans données personnelles de passagers. La promotion peut présenter le service sans exposer les données de courses ni l’identité des passagers.\n\n70 km mobilisent 2 h. Avec 0,30 €/km et 18 €/h dans l’exemple, quel coût binôme ? 57 €. 70 × 0,30 + 2 × 18 = 21 + 36 = 57 €. Les deux termes couvrent des composantes distinctes.",
+                "voice": null,
+                "audio": false,
+                "burned_captions": true,
+                "id": "vtc-f-capsule",
+                "title": "Les essentiels · Développer son activité VTC",
+                "required": true
+              }
+            }
+          ],
+          "vtc": {
+            "kind": "recap",
+            "module": "F",
+            "title": "Développer son activité VTC",
+            "image": "media/vtc/module-f.webp",
+            "transcript": "Pour étudier un marché local, quelles données sont utiles ? Les besoins, horaires, flux et offres concurrentes. Une étude relie demande réelle, concurrence et contraintes afin de construire une offre viable.\n\nUn devis doit préciser une attente facturable. Quelle formulation est utile ? La durée incluse et la méthode de facturation au-delà. Une condition claire permet au client de comprendre et d’accepter la prestation avant son exécution.\n\nQuelle publication respecte mieux la confidentialité ? Une présentation du service sans données personnelles de passagers. La promotion peut présenter le service sans exposer les données de courses ni l’identité des passagers.\n\n70 km mobilisent 2 h. Avec 0,30 €/km et 18 €/h dans l’exemple, quel coût binôme ? 57 €. 70 × 0,30 + 2 × 18 = 21 + 36 = 57 €. Les deux termes couvrent des composantes distinctes.",
+            "cards": [
+              {
+                "label": "F.01",
+                "text": "Comprendre son marché"
+              },
+              {
+                "label": "F.02",
+                "text": "Construire une offre lisible"
+              },
+              {
+                "label": "F.03",
+                "text": "Fixer un prix soutenable"
+              },
+              {
+                "label": "F.04",
+                "text": "Rédiger un devis clair"
+              },
+              {
+                "label": "F.05",
+                "text": "Travailler avec une plateforme"
+              },
+              {
+                "label": "F.06",
+                "text": "Prospecter avec méthode"
+              },
+              {
+                "label": "F.07",
+                "text": "Créer un partenariat"
+              },
+              {
+                "label": "F.08",
+                "text": "Communiquer en ligne"
+              },
+              {
+                "label": "F.09",
+                "text": "Fidéliser avec discrétion"
+              },
+              {
+                "label": "F.10",
+                "text": "Mesurer la qualité du service"
+              },
+              {
+                "label": "F.11",
+                "text": "Traiter une réclamation"
+              },
+              {
+                "label": "F.12",
+                "text": "Lire son tableau de bord"
+              }
+            ]
+          }
+        },
+        {
+          "id": "vtc-f-approfondir",
+          "title": "Approfondir · repères et méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 24,
+          "blocks": [],
+          "vtc": {
+            "kind": "supplements",
+            "module": "F",
+            "title": "Relier le cours à la mission",
+            "supplements": [
+              {
+                "title": "Calculer un coût monôme",
+                "page": 295,
+                "image": "media/vtc/complement-295.webp",
+                "text": [
+                  "Un seul coût unitaire permet une estimation rapide. Les hypothèses doivent rester visibles.",
+                  "Le monôme kilométrique ramène le coût d’une période à un kilomètre. Il convient à une première estimation lorsque les missions ressemblent à l’activité moyenne. Les kilomètres à vide font partie du calcul.",
+                  "FORMULE",
+                  "Coût kilométrique = charges de la période ÷ kilomètres totaux de la période.",
+                  "Coût de mission = coût kilométrique × kilomètres mobilisés + frais spécifiques non déjà inclus.",
+                  "Exemple chiffré original, hors taxes",
+                  "Hypothèse annuelle Montant",
+                  "Charges fixes retenues 30 000 €",
+                  "Charges variables : 60 000 km × 0,20 € 12 000 €",
+                  "Charges totales / kilomètres totaux 42 000 € / 60 000 km",
+                  "Coût monôme 0,70 €/km",
+                  "Une mission mobilise 15 km d’approche, 35 km avec le client et 20 km de retour : 70 km. Son coût estimé est de 70 × 0,70 = 49 €, avant les frais spécifiques exclus des hypothèses.",
+                  "La limite : pour 70 km, le monôme attribue le même coût à une mission de deux heures ou de quatre heures. Il décrit mal une longue attente. Le binôme distingue le temps et la distance."
+                ]
+              },
+              {
+                "title": "Calculer un coût binôme",
+                "page": 296,
+                "image": "media/vtc/complement-296.webp",
+                "text": [
+                  "Deux termes distinguent les dépenses liées aux kilomètres et les charges liées au temps mobilisé.",
+                  "FORMULE PÉDAGOGIQUE",
+                  "Coût de mission = (coût variable au km × km totaux) + (coût fixe à l’heure × heures mobilisées) + frais spécifiques exclus.",
+                  "Coût fixe horaire = charges fixes annuelles ÷ heures d’activité retenues pour les répartir.",
+                  "Reprendre les mêmes données",
+                  "Conservez les 30 000 € de charges fixes et les 0,20 €/km variables du complément précédent. Avec 2 000 heures d’activité annuelles retenues, le terme horaire est de 15 €/h. La mission de 70 km mobilise deux heures, approche, trajet, attente et retour compris.",
+                  "Calcul Résultat",
+                  "Terme kilométrique : 70 × 0,20 14 €",
+                  "Terme horaire : 2 × 15 30 €",
+                  "Coût binôme de la mission 44 €",
+                  "Si la même mission dure 4 heures 14 + 60 = 74 €",
+                  "Au monôme, l’estimation était de 49 €. Au binôme, elle est de 44 € pour deux heures et de 74 € pour quatre heures. La différence provient du temps réellement immobilisé par rapport à la moyenne annuelle.",
+                  "Éviter le double comptage : classez chaque charge une seule fois. N’ajoutez pas la rémunération du chauffeur si le terme horaire l’inclut déjà. Péages, stationnement et commissions ne s’ajoutent que s’ils sont exclus du calcul initial."
+                ]
+              },
+              {
+                "title": "€ Du coût au prix de vente",
+                "page": 297,
+                "image": "media/vtc/complement-297.webp",
+                "text": [
+                  "Le coût mesure ce que la mission consomme ; le prix intègre aussi la marge et les conditions commerciales.",
+                  "Un exemple avec une commission",
+                  "Reprenez un coût de 44 € HT. Ajoutez 6 € de frais spécifiques absents de ce coût et un objectif de marge de 10 € : l’entreprise doit conserver 60 € HT. Une plateforme prélève 20 % du prix HT.",
+                  "CALCUL DU PRIX",
+                  "Prix HT = 60 ÷ (1 - 0,20) = 75 €. Commission = 15 € ; montant restant = 60 €. Avec une TVA de 10 % applicable dans cet exemple : prix TTC = 82,50 €.",
+                  "Ajouter 20 % à 60 € donnerait 72 € : après commission, il ne resterait que 57,60 €. Il faut diviser par la fraction conservée. Vérifiez toujours si la commission est calculée sur le HT, le TTC ou une autre base contractuelle.",
+                  "À vous de calculer",
+                  "Une mission mobilise 90 km et trois heures. Le terme kilométrique est de 0,22 €/km ; le terme horaire de 16 €/h. Des frais de parking de 8 € ne sont pas inclus. Vous voulez 12 € de marge après une commission de 10 % du prix HT.",
+                  "CORRIGÉ EXPLIQUÉ",
+                  "Coût : (90 × 0,22) + (3 × 16) + 8 = 75,80 €. À conserver : 75,80 + 12 = 87,80 €. Prix HT : 87,80 ÷ 0,90 = 97,56 €, arrondi au centime. TVA 10 % : 9,76 € ; TTC : 107,32 €.",
+                  "Ces montants sont fictifs : ils enseignent une méthode et ne constituent pas un tarif conseillé. En franchise de TVA, il n’y a pas de TVA facturée ; les achats non récupérables doivent être traités dans les coûts."
+                ]
+              }
+            ],
+            "sources": [
+              {
+                "title": "Programme et modalités de l’examen · arrêté du 6 avril 2017 modifié",
+                "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046/"
+              },
+              {
+                "title": "Devenir chauffeur de VTC · Service Public",
+                "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+              },
+              {
+                "title": "Réforme de l’accès par expérience · décret du 5 août 2026",
+                "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000054658967/"
+              }
+            ],
+            "exam": {
+              "minutes": 30,
+              "coefficient": 3,
+              "format": "12 QCM + 4 QRC"
+            },
+            "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "vtc-f-01-cours",
+    "vtc-f-01-atelier",
+    "vtc-f-02-cours",
+    "vtc-f-02-atelier",
+    "vtc-f-03-cours",
+    "vtc-f-03-atelier",
+    "vtc-f-04-cours",
+    "vtc-f-04-atelier",
+    "vtc-f-05-cours",
+    "vtc-f-05-atelier",
+    "vtc-f-06-cours",
+    "vtc-f-06-atelier",
+    "vtc-f-07-cours",
+    "vtc-f-07-atelier",
+    "vtc-f-08-cours",
+    "vtc-f-08-atelier",
+    "vtc-f-09-cours",
+    "vtc-f-09-atelier",
+    "vtc-f-10-cours",
+    "vtc-f-10-atelier",
+    "vtc-f-11-cours",
+    "vtc-f-11-atelier",
+    "vtc-f-12-cours",
+    "vtc-f-12-atelier",
+    "vtc-f-capsule",
+    "vtc-f-approfondir"
+  ],
+  "assets": [
+    "media/vtc/capsule-f.jpg",
+    "media/vtc/capsule-f.mp4",
+    "media/vtc/capsule-f.vtt",
+    "media/vtc/complement-295.webp",
+    "media/vtc/complement-296.webp",
+    "media/vtc/complement-297.webp",
+    "media/vtc/diagram-f.01.webp",
+    "media/vtc/diagram-f.02.webp",
+    "media/vtc/diagram-f.03.webp",
+    "media/vtc/diagram-f.04.webp",
+    "media/vtc/diagram-f.05.webp",
+    "media/vtc/diagram-f.06.webp",
+    "media/vtc/diagram-f.07.webp",
+    "media/vtc/diagram-f.08.webp",
+    "media/vtc/diagram-f.09.webp",
+    "media/vtc/diagram-f.10.webp",
+    "media/vtc/diagram-f.11.webp",
+    "media/vtc/diagram-f.12.webp",
+    "media/vtc/module-f.webp"
+  ],
+  "import_warnings": [],
+  "counts": {
+    "sections": 13,
+    "lessons": 12,
+    "activities": 26,
+    "scored_activities": 0,
+    "workbooks": 0,
+    "interactive_workshops": 12,
+    "required_videos": 1,
+    "assets": 19
+  }
+}

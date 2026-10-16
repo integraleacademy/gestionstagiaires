@@ -1,0 +1,20 @@
+{
+  "reference": "aps-missions-limites-20260920.mp4",
+  "voice": "fr-FR-HenriNeural",
+  "rate": "-2%",
+  "pitch": "+0Hz",
+  "volume": "+0%",
+  "sample_rate": 48000,
+  "first_scene_head": 0.9,
+  "scene_head": 0.58,
+  "line_pause": 0.22,
+  "scene_tail": 0.5,
+  "subtitle_font": "Manrope",
+  "subtitle_weight": 600,
+  "subtitle_size": 30,
+  "subtitle_background": "#080E11",
+  "subtitle_radius": 11,
+  "fps": 25,
+  "width": 3840,
+  "height": 2160
+}

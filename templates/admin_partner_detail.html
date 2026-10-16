@@ -1,111 +1,28 @@
 {% extends "base.html" %}
+{% from 'partners/_ui.html' import icon, assist, empty %}
 {% block content %}
-<div class="page-head"><h1>{{ partner.name }}</h1><a class="btn" href="{{ url_for('admin_partners') }}">← Partenaires</a></div>
-{% for category,message in get_flashed_messages(with_categories=true) %}<div class="card" style="margin-bottom:12px;background:{{ '#fee2e2' if category=='error' else '#dcfce7' }};">{{ message }}</div>{% endfor %}
-<div class="grid" style="display:grid;grid-template-columns:2fr 1fr;gap:18px;align-items:start;">
-<form id="edit" method="post" class="card" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
-  <h2 style="grid-column:1/-1">Informations générales</h2>
-  <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;">{% if partner.logo_url or partner.logo_path %}<img src="{{ url_for('admin_view_upload', path=partner.logo_url or partner.logo_path) }}" alt="Logo {{ partner.name }}" style="width:72px;height:52px;object-fit:contain;background:#fff;border-radius:10px;border:1px solid #e2e8f0;">{% else %}<span style="width:52px;height:52px;border-radius:14px;background:#dcfce7;color:#166534;display:inline-flex;align-items:center;justify-content:center;font-weight:900;">{{ (partner.name[:2] or 'IC')|upper }}</span>{% endif %}<strong>Logo partenaire</strong></div>
-  {% for name,label in [('name','Nom commercial'),('legal_name','Raison sociale'),('siret','SIRET'),('contact_first_name','Prénom contact'),('contact_last_name','Nom contact'),('email','Email'),('phone','Téléphone'),('address','Adresse'),('postal_code','Code postal'),('city','Ville'),('subscription_plan','Formule'),('max_users','Utilisateurs max'),('storage_limit','Stockage max')] %}
-    <label>{{ label }}<input name="{{ name }}" value="{{ partner.get(name,'') }}" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;"></label>
-  {% endfor %}
-  <label>Statut<select name="status" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;">{% for st in ['active','trial','suspended','archived'] %}<option value="{{ st }}" {% if partner.status==st %}selected{% endif %}>{{ st }}</option>{% endfor %}</select></label>
-  <label style="grid-column:1/-1">Notes internes<textarea name="internal_notes" rows="4" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;">{{ partner.internal_notes }}</textarea></label>
-
-  <div class="partner-modules" style="grid-column:1/-1">
-    <h2>Modules payants disponibles</h2>
-    <p class="muted">Cochez les modules inclus dans l’abonnement du partenaire. Les modules non cochés restent visibles dans son espace avec un cadenas, mais sont non fonctionnels.</p>
-    <div class="partner-module-grid">
-      {% for module in module_catalog %}
-        <label class="partner-module-card">
-          <input type="checkbox" name="enabled_modules" value="{{ module.key }}" {% if module.key in enabled_modules %}checked{% endif %}>
-          <span>
-            <strong>{{ module.label }}</strong>
-            <small>{{ module.description }}</small>
-          </span>
-        </label>
-      {% endfor %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/partner-workspace.css', v='20261016-1') }}">
+<div class="pw" data-partner-workspace>
+  <a class="pw-back" href="{{ url_for('admin_partners') }}">{{ icon('back') }} Organismes de formation</a>
+  {% for category,message in get_flashed_messages(with_categories=true) %}<div class="pw-notice {{ 'error' if category == 'error' }}" role="status">{{ message }}</div>{% endfor %}
+  <header class="pw-hero">
+    <div class="pw-identity">
+      <div class="pw-logo">{% if partner.logo_url or partner.logo_path %}<img src="{{ url_for('admin_view_upload', path=partner.logo_url or partner.logo_path) }}" alt="Logo {{ partner.name }}">{% else %}{{ (partner.name[:2] or 'OF')|upper }}{% endif %}</div>
+      <div><div class="pw-eyebrow">FICHE ORGANISME <span class="pw-status {{ 'good' if partner.status in ['active','trial'] else 'warn' }}">{{ {'active':'Actif','trial':'Actif · période d’essai','suspended':'Suspendu','archived':'Archivé'}.get(partner.status, partner.status) }}</span></div><h1>{{ partner.name }}</h1><p>{{ partner.city or 'Coordonnées à compléter' }}{% if partner.siret %}<span>·</span> SIRET {{ partner.siret }}{% endif %}<span>·</span> Depuis le {{ (partner.created_at or '')[:10] }}</p></div>
     </div>
-  </div>
-  <button class="btn btn-blue" type="submit">Enregistrer</button>
-</form>
-
-<div class="card" id="subscription" style="grid-column:1/-1">
-  <h2>Abonnement et utilisation</h2>
-  {% set sub = partner.subscription or {} %}
-  <div class="admin-subscription-grid">
-    <label>Nom de l’abonnement<input form="edit" name="subscription_plan_name" value="{{ sub.get('plan_name','Essentiel') }}"></label>
-    <label>Statut<select form="edit" name="subscription_status">{% for st in ['active','trial','suspended','expired'] %}<option value="{{ st }}" {% if sub.get('status')==st %}selected{% endif %}>{{ st }}</option>{% endfor %}</select></label>
-    <label>Limite de stagiaires<input form="edit" name="trainee_limit" type="number" min="0" value="{{ sub.get('trainee_limit') or '' }}"></label>
-    <label style="align-self:end"><input form="edit" type="checkbox" name="trainee_unlimited" value="1" {% if sub.get('trainee_unlimited') or sub.get('trainee_limit') is none %}checked{% endif %}> Utilisation illimitée</label>
-  </div>
-  <h3>Modules et tarifs</h3>
-  <div class="admin-subscription-grid">{% for key,cfg in subscription_module_pricing.items() %}<label class="admin-module-price"><span><input form="edit" type="checkbox" name="subscription_modules" value="{{ key }}" {% if (sub.get('modules') or {}).get(key) %}checked{% endif %}> {{ cfg.label }}</span><input form="edit" name="module_price_{{ key }}" type="number" min="0" value="{{ (sub.get('module_prices') or {}).get(key, cfg.price) }}"></label>{% endfor %}</div>
-  <p><strong>Stagiaires comptabilisés :</strong> {{ sub.get('trainee_usage_count',0) }}</p>
-  <p><strong>Dernière remise à zéro :</strong> {{ sub.get('trainee_usage_reset_at')|frdatetime if sub.get('trainee_usage_reset_at') else '—' }}</p>
-  <form method="post" action="{{ url_for('admin_partner_reset_usage', partner_id=partner.id) }}" onsubmit="return confirm('Remettre le compteur à zéro ?\n\nCette action remettra à zéro le nombre de stagiaires comptabilisés dans l’abonnement. Elle ne supprimera aucun stagiaire et ne modifiera aucune fiche existante.');"><button class="btn btn-danger" type="submit">Remettre le compteur à zéro</button></form>
-  <h3>Historique des remises à zéro</h3>{% for item in sub.get('trainee_usage_reset_history', [])[:5] %}<p>{{ item.date|frdatetime }} — {{ item.admin }} — {{ item.old_value }} → {{ item.new_value }}</p>{% else %}<p class="muted">Aucune remise à zéro.</p>{% endfor %}
+    {{ assist(partner, 'Ouvrir l’espace partenaire', url_for('manuals_shop.home'), 'pw-button light') }}
+  </header>
+  <section class="pw-metrics" aria-label="Chiffres clés du partenaire">
+    <a href="{{ url_for('admin_partner_detail', partner_id=partner.id, tab='orders') }}"><span>{{ icon('box') }} Commandes confirmées</span><strong>{{ workspace_stats.orders }}</strong><small>Manuels, clés USB et e-learning</small></a>
+    <a href="{{ url_for('admin_partner_detail', partner_id=partner.id, tab='invoices') }}"><span>{{ icon('invoice') }} Total commandé TTC</span><strong>{{ workspace_stats.total_cents|manuals_money }}</strong><small>{{ workspace_stats.invoices }} facture{{ 's' if workspace_stats.invoices != 1 }} · {{ workspace_stats.unpaid }} à régler</small></a>
+    <a href="{{ url_for('admin_partner_detail', partner_id=partner.id, tab='learning') }}"><span>{{ icon('learning') }} Accès e-learning activés</span><strong>{{ workspace_stats.active }}</strong><small>Sur {{ workspace_stats.learners }} inscription{{ 's' if workspace_stats.learners != 1 }}</small></a>
+    <a href="{{ url_for('admin_partner_detail', partner_id=partner.id, tab='account') }}"><span>{{ icon('users') }} Utilisateurs de l’organisme</span><strong>{{ counts.users }}</strong><small>Comptes et invitations</small></a>
+  </section>
+  <nav class="pw-tabs" aria-label="Rubriques de l’organisme">
+    {% for key,label in workspace_tabs %}<a href="{{ url_for('admin_partner_detail', partner_id=partner.id, tab=key) }}" {% if active_tab == key %}aria-current="page"{% endif %}>{{ label }}{% if key == 'orders' %}<span>{{ workspace_orders|length }}</span>{% elif key == 'learning' %}<span>{{ workspace_stats.learners }}</span>{% endif %}</a>{% endfor %}
+  </nav>
+  <div class="pw-panel" id="partner-panel">{% include 'partners/' ~ active_tab ~ '.html' %}</div>
+  <dialog class="pw-dialog" id="partner-document" aria-labelledby="partner-document-title"><header><div><span class="pw-eyebrow">{{ partner.name }}</span><h2 id="partner-document-title">Détail</h2></div><button class="pw-button" type="button" data-dialog-close>Fermer {{ icon('close') }}</button></header><p class="pw-dialog-loading" role="status">Chargement du dossier…</p><iframe title="Détail du dossier partenaire"></iframe></dialog>
 </div>
-<div class="card"><h2>Utilisation</h2><p><strong>{{ counts.users }}</strong> utilisateurs</p><p><strong>{{ counts.trainees }}</strong> stagiaires</p><p><strong>{{ counts.sessions }}</strong> sessions</p><p>Créé le {{ partner.created_at|frdatetime }}</p><h3>Utilisateurs</h3>{% for u in users %}<p>{{ u.email }} — {{ u.role }} {% if not u.active %}(désactivé){% endif %}</p>{% else %}<p>Aucun utilisateur.</p>{% endfor %}</div>
-
-<div class="card" style="grid-column:1/-1">
-  <h2>Accès au compte</h2>
-  {% set account_user = users[0] if users else {} %}
-  {% if account_user and not account_user.password_hash %}
-  <div style="margin:0 0 16px;padding:14px 16px;border:1px solid #fdba74;border-radius:14px;background:#fff7ed;color:#9a3412;line-height:1.55;">
-    <strong>Première connexion non terminée.</strong><br>
-    Le partenaire doit ouvrir l’e-mail « Activation de votre espace partenaire », cliquer sur « Définir mon mot de passe », puis choisir son mot de passe. Ne transmettez pas l’adresse de cette fiche : <code>/admin/partners/…</code> est réservée à l’administration.
-  </div>
-  {% endif %}
-  <p><strong>Adresse e-mail de connexion :</strong> {{ account_user.email if account_user else partner.email }}</p>
-  <p><strong>Page de connexion après activation :</strong> <a href="{{ partner_login_url }}" target="_blank" rel="noopener">{{ partner_login_url }}</a></p>
-  <p><strong>Rôle :</strong> {{ account_user.role if account_user else '—' }}</p>
-  <p><strong>Statut de l’utilisateur :</strong> {{ 'actif' if account_user and account_user.active else 'désactivé' }}</p>
-  <p><strong>Compte activé :</strong> {{ 'oui' if account_user and account_user.invitation_activated_at else 'non' }}</p>
-  <p><strong>Mot de passe défini :</strong> {{ 'oui' if account_user and account_user.password_hash else 'non' }}</p>
-  <p><strong>Date d’activation :</strong> {{ account_user.invitation_activated_at|frdatetime if account_user and account_user.invitation_activated_at else '—' }}</p>
-  <p><strong>Dernière connexion :</strong> {{ account_user.last_login_at|frdatetime if account_user and account_user.last_login_at else '—' }}</p>
-  <p><strong>Statut du partenaire :</strong> {{ partner.status }}</p>
-</div>
-
-<div class="card" style="grid-column:1/-1">
-  <h2>Invitation partenaire</h2>
-  <p style="padding:12px 14px;border-radius:12px;background:#eff6ff;color:#1e3a8a;line-height:1.5;">Pour la première connexion, seul le lien contenu dans l’e-mail d’activation permet de définir le mot de passe. Cette page d’administration n’est pas l’espace du partenaire.</p>
-  <p><strong>E-mail de connexion :</strong> {{ users[0].email if users else partner.email }}</p>
-  <p><strong>Statut du compte :</strong> {{ 'actif' if users and users[0].active else 'désactivé' }}</p>
-  <p><strong>Statut de l’invitation :</strong> {% if invitation %}{% if invitation.used_at %}utilisée{% elif invitation.cancelled_at %}annulée{% else %}active{% endif %}{% else %}aucune{% endif %}</p>
-  <p><strong>Date du dernier envoi :</strong> {{ invitation.last_sent_at|frdatetime if invitation else '—' }}</p>
-  <p><strong>Date d’expiration :</strong> {{ invitation.expires_at|frdatetime if invitation else '—' }}</p>
-  <p><strong>Statut du dernier envoi :</strong> {{ invitation.last_send_status if invitation and invitation.last_send_status else '—' }}</p>
-  <p><strong>État de distribution :</strong> {{ invitation.delivery_state if invitation and invitation.delivery_state else 'en attente' }}</p>
-  <p><strong>Nombre de tentatives :</strong> {{ invitation.send_attempt_count if invitation else 0 }}</p>
-  <p><strong>Erreur du dernier envoi :</strong> {{ invitation.last_send_error if invitation and invitation.last_send_error else '—' }}</p>
-  <p><strong>Identifiant Brevo :</strong> {{ invitation.brevo_message_id if invitation and invitation.brevo_message_id else '—' }}</p>
-  <h3>Diagnostic Brevo sécurisé</h3>
-  <p>BREVO_API_KEY présente : {{ 'oui' if brevo_diag.api_key_present else 'non' }}</p>
-  <p>BREVO_SENDER_EMAIL : {{ brevo_diag.sender_email }}</p>
-  <p>BREVO_SENDER_NAME : {{ brevo_diag.sender_name }}</p>
-  <p>APP_BASE_URL / PUBLIC_BASE_URL : {{ brevo_diag.base_url }}</p>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <form method="post" action="{{ url_for('admin_partner_send_invitation', partner_id=partner.id) }}" data-single-submit><button class="btn btn-blue" type="submit">{{ 'Renvoyer l’e-mail d’activation' if invitation and invitation.last_sent_at else 'Envoyer l’e-mail d’activation' }}</button></form>
-    <form method="post" action="{{ url_for('admin_partner_new_invitation', partner_id=partner.id) }}" data-single-submit onsubmit="return confirm('Annuler le lien actif, en créer un nouveau et l’envoyer par e-mail ?');"><button class="btn" type="submit">Créer et envoyer une nouvelle invitation</button></form>
-    {% if can_copy_test_activation_link %}<button class="btn" type="button" data-copy-activation-url="{{ url_for('admin_partner_activation_link', partner_id=partner.id) }}">Copier le lien d’activation (test)</button>{% endif %}
-  </div>
-</div>
-</div>
-<script>
-document.querySelectorAll('form[data-single-submit]').forEach(form => form.addEventListener('submit', () => {
-  const button = form.querySelector('button[type="submit"]');
-  if (button) { button.disabled = true; button.textContent = 'Envoi en cours…'; }
-}));
-</script>
-{% if can_copy_test_activation_link %}<script>
-document.querySelectorAll('[data-copy-activation-url]').forEach(btn => btn.addEventListener('click', async () => {
-  const res = await fetch(btn.dataset.copyActivationUrl, {credentials:'same-origin'});
-  if (!res.ok) { alert('Lien indisponible'); return; }
-  const data = await res.json();
-  await navigator.clipboard.writeText(data.activation_url);
-  alert('Lien copié');
-}));
-</script>{% endif %}
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/partner-workspace.js', v='20261016-1') }}" defer></script>{% endblock %}

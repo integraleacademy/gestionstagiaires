@@ -1,0 +1,939 @@
+{
+  "id": "module-08",
+  "version": "20261006-aps62-v5",
+  "title": "Consignes et comptes rendus",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-q-08-01",
+      "prompt": "Quel ordre rend une alerte radio rapidement exploitable ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "S’identifier, localiser, décrire puis préciser le besoin"
+        },
+        {
+          "id": "2",
+          "text": "Donner son opinion puis chercher le lieu"
+        },
+        {
+          "id": "3",
+          "text": "Raconter toute la journée"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’essentiel permet d’engager le bon relais sans délai inutile.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-02",
+      "prompt": "Un message radio est mal compris. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Couper la radio"
+        },
+        {
+          "id": "2",
+          "text": "Faire semblant d’avoir compris"
+        },
+        {
+          "id": "3",
+          "text": "Demander une répétition ou une reformulation"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une vérification évite qu’une erreur de réception devienne une erreur d’action.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-03",
+      "prompt": "Quelle différence entre alerter et rendre compte ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’alerte sollicite une réponse rapide, le compte rendu documente aussi le suivi"
+        },
+        {
+          "id": "2",
+          "text": "Le compte rendu remplace toujours l’appel urgent"
+        },
+        {
+          "id": "3",
+          "text": "Il n’existe aucune différence de finalité"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’urgence opérationnelle et la traçabilité sont complémentaires.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-04",
+      "prompt": "Quel fait est suffisamment précis ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le site est mal géré"
+        },
+        {
+          "id": "2",
+          "text": "À 09 h 42, porte B bloquée ouverte, sans personne à proximité"
+        },
+        {
+          "id": "3",
+          "text": "Il y a encore un problème de porte"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La localisation et le constat rendent l’information vérifiable et exploitable.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-05",
+      "prompt": "Une consigne temporaire expire ce soir. Que faut-il transmettre ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Seulement son titre"
+        },
+        {
+          "id": "2",
+          "text": "Sa durée de validité et les conditions de retour au fonctionnement normal"
+        },
+        {
+          "id": "3",
+          "text": "L’avis personnel de l’agent"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une consigne périmée ne doit pas être appliquée par inadvertance à la relève.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-06",
+      "prompt": "Deux consignes se contredisent. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Choisir celle qui demande le moins de travail"
+        },
+        {
+          "id": "2",
+          "text": "Demander clarification au responsable et tracer la réponse"
+        },
+        {
+          "id": "3",
+          "text": "Les appliquer alternativement sans prévenir"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La contradiction doit être levée par le circuit compétent.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-07",
+      "prompt": "Pourquoi faire reformuler une instruction importante ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour confirmer la compréhension de l’action attendue"
+        },
+        {
+          "id": "2",
+          "text": "Pour tester la mémoire sans lien avec le poste"
+        },
+        {
+          "id": "3",
+          "text": "Pour gagner du temps de parole"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La reformulation sécurise la transmission d’une consigne.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-08",
+      "prompt": "Quelle information éviter sur un canal radio partagé ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le besoin de renfort"
+        },
+        {
+          "id": "2",
+          "text": "Le lieu précis de l’incident"
+        },
+        {
+          "id": "3",
+          "text": "Un détail personnel sensible inutile à l’intervention"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le canal doit rester adapté à la sensibilité des données transmises.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-09",
+      "prompt": "Un lieu possède deux entrées similaires. Que préciser ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Seulement « à l’entrée »"
+        },
+        {
+          "id": "2",
+          "text": "La couleur approximative du quartier"
+        },
+        {
+          "id": "3",
+          "text": "Le repère de site exact et l’accès utilisable"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La précision évite d’envoyer le renfort au mauvais endroit.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-10",
+      "prompt": "Un témoin rapporte un événement non vu par l’agent. Quelle formulation ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "C’est forcément exact"
+        },
+        {
+          "id": "2",
+          "text": "Selon le témoin, en distinguant ce qui a été vérifié"
+        },
+        {
+          "id": "3",
+          "text": "J’ai constaté personnellement"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La source doit apparaître pour éviter de transformer un récit en constat direct.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-11",
+      "prompt": "Pourquoi noter l’heure d’un appel ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour reconstituer les délais et le déroulement"
+        },
+        {
+          "id": "2",
+          "text": "Pour remplacer l’identité du destinataire"
+        },
+        {
+          "id": "3",
+          "text": "Pour compléter automatiquement tous les champs"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La chronologie permet de comprendre les actions et leurs suites.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-12",
+      "prompt": "Une radio tombe en panne. Quelle action ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Poursuivre comme si elle fonctionnait"
+        },
+        {
+          "id": "2",
+          "text": "Utiliser le moyen de secours prévu et signaler la panne"
+        },
+        {
+          "id": "3",
+          "text": "Quitter le site pour acheter un téléphone"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’organisation doit conserver une capacité d’alerte et connaître la défaillance.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-13",
+      "prompt": "Quel message confirme une prise en charge ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Reçu, je me rends à la porte B avec le moyen demandé"
+        },
+        {
+          "id": "2",
+          "text": "Un bruit de micro"
+        },
+        {
+          "id": "3",
+          "text": "Le silence du destinataire"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Un accusé de réception explicite réduit l’incertitude sur le relais.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-14",
+      "prompt": "Une urgence nécessite un appel aux secours. Faut-il attendre de finir le rapport ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui, si la main courante est ouverte"
+        },
+        {
+          "id": "2",
+          "text": "Oui, pour disposer d’un récit parfait"
+        },
+        {
+          "id": "3",
+          "text": "Non, alerter selon l’urgence puis compléter la trace"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’écriture ne doit pas retarder une action urgente de protection.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-15",
+      "prompt": "Quel écrit convient après une ronde sans anomalie constatée ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Tout est forcément sécurisé pour la nuit"
+        },
+        {
+          "id": "2",
+          "text": "Aucun risque n’existe"
+        },
+        {
+          "id": "3",
+          "text": "Le périmètre et les contrôles effectivement réalisés"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Un contrôle rend compte de ce qui a été vérifié, sans garantie absolue sur l’avenir.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-16",
+      "prompt": "Une action reste en attente à la relève. Que transmettre ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Seulement « problème en cours »"
+        },
+        {
+          "id": "2",
+          "text": "Rien tant qu’elle n’est pas résolue"
+        },
+        {
+          "id": "3",
+          "text": "Le responsable saisi, l’état et la suite attendue"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une relève exploitable évite les ruptures de suivi.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-17",
+      "prompt": "Pourquoi éviter les abréviations inconnues du destinataire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Elles peuvent rendre le message ambigu"
+        },
+        {
+          "id": "2",
+          "text": "Elles valent confirmation"
+        },
+        {
+          "id": "3",
+          "text": "Elles sont toujours interdites"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le vocabulaire doit être partagé et adapté au relais.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-18",
+      "prompt": "Une nouvelle information corrige une alerte. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La transmettre rapidement en précisant ce qui change"
+        },
+        {
+          "id": "2",
+          "text": "Effacer la première alerte sans explication"
+        },
+        {
+          "id": "3",
+          "text": "Attendre le prochain service"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’actualisation permet au destinataire d’ajuster son action.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-19",
+      "prompt": "Quelle distinction est essentielle dans un compte rendu ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Les faits, les hypothèses et les actions réalisées"
+        },
+        {
+          "id": "2",
+          "text": "Les rumeurs récentes et anciennes"
+        },
+        {
+          "id": "3",
+          "text": "Les personnes aimables et désagréables"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Séparer ces éléments empêche de présenter une interprétation comme une certitude.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-20",
+      "prompt": "Un agent n’a pas pu vérifier un point de ronde. Que noter ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le déclarer conforme par défaut"
+        },
+        {
+          "id": "2",
+          "text": "Supprimer la ligne"
+        },
+        {
+          "id": "3",
+          "text": "Le point non vérifié, la raison et le relais"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La limite du contrôle doit être visible pour permettre un traitement ultérieur.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-21",
+      "prompt": "Un appel doit donner le nombre de victimes. Si ce nombre est incertain ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Inventer un nombre rond"
+        },
+        {
+          "id": "2",
+          "text": "Ne rien dire du tout"
+        },
+        {
+          "id": "3",
+          "text": "Donner le constat disponible en précisant l’incertitude"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une estimation explicitement qualifiée est plus utile qu’une fausse précision.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-22",
+      "prompt": "Quelle consigne est la plus opérationnelle ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "En cas d’ouverture anormale de la porte B, prévenir le PC et sécuriser l’accès sans s’exposer"
+        },
+        {
+          "id": "2",
+          "text": "Faites au mieux"
+        },
+        {
+          "id": "3",
+          "text": "Soyez vigilant en toute circonstance"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une consigne décrit un déclencheur, une action et un relais identifiables.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-23",
+      "prompt": "Pourquoi identifier l’auteur d’un compte rendu ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour garantir que tout est exact"
+        },
+        {
+          "id": "2",
+          "text": "Pour permettre clarification et traçabilité"
+        },
+        {
+          "id": "3",
+          "text": "Pour rendre les autres témoignages inutiles"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’attribution rend possible un complément, sans remplacer l’examen des faits.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-24",
+      "prompt": "Une instruction verbale importante doit-elle être tracée ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui selon la procédure, notamment son auteur et son objet"
+        },
+        {
+          "id": "2",
+          "text": "Non puisqu’elle n’est pas écrite"
+        },
+        {
+          "id": "3",
+          "text": "Seulement si elle plaît à l’agent"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La trace aide à comprendre la décision et sa mise en œuvre.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-25",
+      "prompt": "Un message est très long en situation urgente. Que privilégier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le récit complet avant le lieu"
+        },
+        {
+          "id": "2",
+          "text": "Tous les éléments biographiques"
+        },
+        {
+          "id": "3",
+          "text": "Les informations nécessaires immédiatement puis les détails utiles"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La hiérarchisation facilite une réponse rapide sans perdre les informations secondaires.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-26",
+      "prompt": "Le destinataire donne une consigne impossible à exécuter. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Répondre « reçu » puis ne rien faire"
+        },
+        {
+          "id": "2",
+          "text": "Signaler la contrainte concrète et demander adaptation"
+        },
+        {
+          "id": "3",
+          "text": "Inventer une exécution"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Un retour honnête permet d’ajuster les moyens et la décision.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-27",
+      "prompt": "Un rapport peut-il contenir une citation utile d’un propos menaçant ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non, aucun propos ne peut être rapporté"
+        },
+        {
+          "id": "2",
+          "text": "Oui, attribuée et distinguée de l’analyse"
+        },
+        {
+          "id": "3",
+          "text": "Oui mais en le modifiant pour le renforcer"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La fidélité de la citation et son contexte comptent pour comprendre la situation.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-28",
+      "prompt": "Une issue est libérée après signalement. Quel suivi ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Considérer tout le site conforme"
+        },
+        {
+          "id": "2",
+          "text": "Supprimer l’anomalie initiale"
+        },
+        {
+          "id": "3",
+          "text": "Vérifier la correction et consigner la clôture utile"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une clôture ne remplace pas l’historique de l’écart et de sa résolution.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-29",
+      "prompt": "Quel support utiliser pour une information confidentielle ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Un groupe personnel de messagerie"
+        },
+        {
+          "id": "2",
+          "text": "Le canal professionnel autorisé adapté à son contenu"
+        },
+        {
+          "id": "3",
+          "text": "Le haut-parleur d’accueil"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le choix du support participe à la protection des informations.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-08-30",
+      "prompt": "Pourquoi préparer les numéros et relais avant le service ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour multiplier les appels inutiles"
+        },
+        {
+          "id": "2",
+          "text": "Pour éviter de les chercher pendant l’urgence"
+        },
+        {
+          "id": "3",
+          "text": "Pour ne plus lire les consignes"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’anticipation réduit les délais lorsque la situation se dégrade.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    }
+  ],
+  "reviewed_on": "2026-10-04"
+}

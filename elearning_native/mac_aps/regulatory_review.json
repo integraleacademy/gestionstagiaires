@@ -1,0 +1,43 @@
+{
+  "reviewed_on": "2026-10-12",
+  "scope": "pedagogical_support",
+  "stage_minutes": 2040,
+  "stage_minutes_with_documented_first_aid_exemption": 1620,
+  "automatic_stage_credit": false,
+  "automatic_certificate": false,
+  "distance_status": "L’arrêté du 27 janvier 2025 ouvrait certains objectifs au distanciel jusqu’au 31 décembre 2025 inclus. Aucune prorogation officielle pour 2026 n’a été trouvée lors de la vérification du 12 octobre 2026. Ne pas imputer automatiquement le suivi numérique aux heures du stage.",
+  "notes": [
+    "Les durées du tableau réglementaire sont celles du stage complet. Les durées du lecteur sont des estimations pédagogiques ajustables par l’organisme, et le suivi enregistre uniquement le temps réellement effectué.",
+    "Le module de secourisme général peut faire l’objet d’une dispense demandée et justifiée dans les conditions de l’article 4. L’organisme contrôle le justificatif ; terminer un QCM ne vaut pas dispense.",
+    "La dispense des sept heures de secourisme général ne supprime pas les objectifs sur les blessures, le secourisme tactique et l’alerte inclus dans la prévention des risques terroristes.",
+    "Le positionnement initial prévu par l’article 4 comporte dix questions à réponse courte. Les QCM du lecteur sont un entraînement distinct ; le formateur organise et conserve le positionnement initial.",
+    "Le seuil de 80 % des examens blancs est un choix pédagogique. La fin du parcours numérique ne délivre ni attestation réglementaire MAC APS ni renouvellement de certification SST."
+  ],
+  "in_person": [
+    "Premiers secours : mises en situation et gestes adaptés, ou dispense justifiée des sept heures dans les conditions du texte.",
+    "Gestion des conflits : trois heures trente, dont deux heures de pratique.",
+    "Inspection et filtrage : trois heures trente, dont deux heures de pratique.",
+    "Protection face à une attaque : deux heures trente, dont une heure trente de mise en situation pratique.",
+    "Faciliter l’intervention des forces de l’ordre : deux heures, dont une heure de mise en pratique.",
+    "Secourisme tactique : une heure trente, dont une heure de mise en pratique."
+  ],
+  "initial_assessment": [
+    {"question": "Quelle est la première priorité avant d’approcher une victime sur votre site ?", "expected": "Identifier le danger et protéger sans exposer davantage l’agent, la victime ou les tiers."},
+    {"question": "Quelles informations rendent un appel aux secours utilisable immédiatement ?", "expected": "Lieu et accès précis, nature du danger, nombre de victimes et signes observés, identité de l’appelant et moyen de rappel."},
+    {"question": "Comment appliquer l’égalité de traitement à un contrôle d’accès ?", "expected": "Fonder la décision sur une consigne légale et des critères objectifs, expliquer la même règle à toute personne concernée."},
+    {"question": "Quelle différence faites-vous entre un agent privé de sécurité et un agent de police ?", "expected": "Les missions, pouvoirs et habilitations diffèrent ; la tenue et le discours ne doivent pas créer de confusion avec un service public."},
+    {"question": "Quelles conditions faut-il vérifier avant d’invoquer la légitime défense ?", "expected": "Une atteinte injustifiée et actuelle, une réponse nécessaire et simultanée, proportionnée à la gravité de l’atteinte."},
+    {"question": "Que permet l’article 73 du code de procédure pénale, et quelle limite en découle ?", "expected": "Appréhender l’auteur d’un crime flagrant ou d’un délit flagrant puni d’emprisonnement pour le conduire devant l’OPJ le plus proche ; ce n’est ni un pouvoir général d’enquête ni une sanction."},
+    {"question": "Comment réagissez-vous à une agression verbale au contrôle d’accès ?", "expected": "Garder une distance et une possibilité de retrait, écouter, parler calmement, poser une limite claire et organiser un relais si nécessaire."},
+    {"question": "Que vérifiez-vous avant une fouille de bagage ou une palpation ?", "expected": "Le cadre légal applicable, les habilitations et conditions nécessaires, le consentement requis et les règles propres à chaque contrôle."},
+    {"question": "Que transmettez-vous à votre hiérarchie après une observation préoccupante ?", "expected": "Des faits localisés et datés, les actions déjà réalisées, les inconnues et l’urgence éventuelle, sans accusation fondée sur l’apparence ou les convictions."},
+    {"question": "Comment vous comportez-vous à l’arrivée des forces de l’ordre lors d’une attaque ?", "expected": "Respecter leurs consignes, rester identifiable et sans geste brusque, ne pas gêner l’intervention et transmettre brièvement les informations vérifiées."}
+  ],
+  "sources": [
+    {"title": "Arrêté du 27 février 2017, notamment articles 2 à 4 — stage MAC APS", "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034104578/"},
+    {"title": "Arrêté du 27 janvier 2025 — ouverture temporaire de certains objectifs au distanciel", "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051058748/"},
+    {"title": "Article 8 de l’arrêté du 23 octobre 2024 — organisation et traçabilité du distanciel", "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000050400272"},
+    {"title": "CNAPS — renouveler sa carte professionnelle", "url": "https://www.cnaps.interieur.gouv.fr/Demarches-en-ligne/Vous-etes-un-particulier/Renouveler-votre-carte-professionnelle2/Renouveler-votre-carte-professionnelle"},
+    {"title": "INRS — organisation des secours en cas d’accident ou de malaise", "url": "https://www.inrs.fr/demarche/organisation-secours/accident-malaise.html"}
+  ]
+}

@@ -1,0 +1,548 @@
+{
+  "format_version": 1,
+  "id": "academy-aps62-04",
+  "version": "20261003-aps62-v1",
+  "title": "APS 04 · Libertés et données personnelles",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "source": {
+    "type": "academy-aps62",
+    "reviewed_on": "2026-10-03"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false
+  },
+  "theme": {
+    "main_color": "#2860e8",
+    "button_color": "#245bdb",
+    "text_color": "#172b4d"
+  },
+  "planned_minutes": 60,
+  "required_minutes": 60,
+  "regulation": "Annexe II · Libertés publiques",
+  "introduction": [],
+  "sections": [
+    {
+      "id": "aps62-04-01",
+      "title": "01 · Une information personnelle reste protégée",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-04-01-comprendre",
+          "title": "Comprendre · Une information personnelle reste protégée",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "04.01",
+            "title": "Une information personnelle reste protégée",
+            "kind": "lesson",
+            "image": "media/aps62/scene-10.webp",
+            "case": "Un commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine. Il souhaite les publier sur un réseau social. Vous avez accès au système pour la sécurité de votre site, pas pour des recherches personnelles.",
+            "reason": "La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste.",
+            "lessons": [
+              {
+                "ref": "02.13",
+                "title": "Comprendre une donnée personnelle",
+                "page": 98,
+                "diagram": "media/aps62/repere-02.13.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une personne peut être identifiable indirectement"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Collecter, consulter, transmettre et supprimer sont des traitements. Un registre papier peut donc poser les mêmes questions de protection qu'un logiciel. Une information disponible au poste n'est pas librement utilisable pour n'importe quel objectif."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Ne collecter que ce qui est utile"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La finalité explique pourquoi l'information est nécessaire. Pour gérer une visite, il faut les données prévues par la procédure, sans ajouter des renseignements privés par curiosité. Les accès doivent être limités aux personnes habilitées, la conservation adaptée et l'information des personnes assurée dans le cadre prévu. L'agent applique les règles du responsable du traitement et signale les demandes ou incidents à l'interlocuteur compétent."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un visiteur laisse son numéro pour être joint par l'accueil. L'agent ne l'utilise pas ensuite pour un contact personnel. La donnée a été fournie pour organiser la visite. De même, photographier le registre avec un téléphone privé crée une copie non maîtrisée, même si l'intention est seulement de faciliter la relève."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Avant une utilisation, posez trois questions : pour quelle mission, par quelle personne autorisée et pendant quelle durée ?"
+                  }
+                ],
+                "course_page": 99,
+                "practice": {
+                  "background": "Recueillez seulement les données utiles, exactes et nécessaires à la mission. Ne recopiez pas une pièce d’identité sur un téléphone personnel. Un registre visiteurs se consulte à l’abri du regard des autres visiteurs. Les durées de conservation sont fixées et justifiées par le responsable du traitement ; elles ne se choisissent pas selon la capacité de stockage. Une demande d’accès, d’effacement ou une erreur de destinataire doit être transmise à l’interlocuteur prévu, notamment au délégué à la protection des données lorsqu’il existe.",
+                  "case": "Un salarié vous demande l’heure de départ d’une collègue pour « vérifier quelque chose de personnel ». Vous pouvez la retrouver dans l’historique des badges en quelques secondes. Avez-vous une raison professionnelle de consulter ? Comment répondez-vous ?",
+                  "transfer": "Pourquoi photographier une pièce d’identité « au cas où » ne constitue-t-il pas une bonne pratique par défaut ?",
+                  "page": 124
+                }
+              },
+              {
+                "ref": "02.14",
+                "title": "Protéger une information numérique",
+                "page": 100,
+                "diagram": "media/aps62/repere-02.14.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Trois qualités complémentaires"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La confidentialité limite l'accès aux personnes autorisées. L'intégrité signifie que l'information reste exacte et n'a pas été modifiée sans contrôle. La disponibilité permet de la retrouver au moment nécessaire. Un mot de passe protège l'accès ; une sauvegarde contribue à la disponibilité ; une correction tracée préserve l'historique. Aucune de ces mesures ne remplace les autres."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Les gestes ordinaires sont déterminants"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Utilisez votre compte, verrouillez la session lorsque vous vous éloignez et évitez les supports personnels non autorisés. Vérifiez le destinataire avant un envoi. Une demande urgente de code ou de document peut relever d'une tentative de manipulation : confirmez-la par un canal connu. Si une erreur est découverte, prévenez rapidement selon la procédure ; la supprimer silencieusement ne garantit pas que ses effets disparaissent."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un courriel prétend provenir du directeur et réclame la liste des badges actifs. L'agent vérifie la demande par le numéro habituel du responsable, sans utiliser celui indiqué dans le message suspect. Cette démarche protège la confidentialité tout en permettant de traiter une demande légitime par le circuit approprié."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La sécurité numérique est une continuité de la sécurité du poste. Une porte contrôlée perd de son intérêt si les codes d'accès sont transmis sans vérification."
+                  }
+                ],
+                "course_page": 101,
+                "practice": {
+                  "background": "Sur les outils numériques, utilisez votre compte, verrouillez la session et ne partagez pas de mot de passe. Une demande urgente de code par téléphone doit être vérifiée par un canal connu. N’accédez pas à un système au-delà des droits attribués ; une session ouverte ne vaut pas autorisation. Une erreur, un courriel suspect ou une perte de matériel doit être signalé rapidement. Préservez les traces sans mener votre propre investigation technique et appliquez le plan de continuité prévu.",
+                  "case": "Une personne se présente au téléphone comme technicien et vous demande votre identifiant, votre mot de passe et un code reçu par SMS. Elle affirme que le système va tomber en panne dans cinq minutes. Quels indices vous alertent ? Quelle méthode permet de vérifier la demande ?",
+                  "transfer": "Un collègue vous demande votre mot de passe pour gagner du temps. Quel principe explique votre refus ?",
+                  "page": 125
+                }
+              },
+              {
+                "ref": "10.03",
+                "title": "Respecter les libertés avec la vidéo",
+                "page": 485,
+                "diagram": "media/aps62/repere-10.03.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Un système a une finalité déterminée"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La vidéosurveillance et la vidéoprotection répondent à des cadres qui dépendent notamment des lieux filmés. Leur mise en place doit respecter les autorisations et obligations applicables. La protection des personnes et des biens n'autorise pas une surveillance de curiosité ou une utilisation privée. L'agent consulte seulement les images nécessaires à sa mission et selon ses habilitations."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Limiter l'accès et la conservation"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Les personnes concernées doivent être informées dans le cadre prévu. La conservation doit correspondre à la finalité et aux règles applicables ; il n'existe pas une durée universelle à choisir librement au poste. Une extraction liée à un événement suit un circuit distinct et documenté. Les demandes d'accès ou de copie sont adressées à l'interlocuteur habilité, pas satisfaites sur une simple demande informelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un collègue souhaite voir qui accompagne un salarié sur le parking. Cette curiosité ne correspond pas à une mission de sécurité justifiée. L'opérateur refuse l'usage détourné et rappelle le circuit de demande. Il ne photographie pas l'écran pour « rendre service »."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La possibilité technique de voir ou de copier ne vaut pas autorisation. Chaque consultation doit rester liée à la mission et aux droits accordés."
+                  }
+                ],
+                "course_page": 486,
+                "practice": {
+                  "background": "L’agent ne consulte pas les images pour surveiller une relation personnelle, commenter l’apparence ou contrôler librement les salariés. Les zones d’intimité ne doivent pas être filmées. La durée de conservation est définie et justifiée ; pour la vidéoprotection relevant de l’autorisation préfectorale, elle ne dépasse pas le plafond légal applicable, généralement un mois hors conservation pour une procédure. Ce plafond n’est pas une durée systématique à choisir. Toute extraction, transmission ou demande d’accès suit la procédure du responsable de traitement.",
+                  "case": "Un manager vous demande de suivre pendant toute la journée les pauses d’un salarié depuis les caméras de sécurité. La consigne du dispositif concerne la protection des accès et des biens. Pourquoi la demande doit-elle être examinée ? À qui l’adressez-vous ?",
+                  "transfer": "Pourquoi « garder systématiquement un mois » n’est-il pas une règle suffisante de conservation ?",
+                  "page": 499
+                }
+              },
+              {
+                "ref": "10.05",
+                "title": "Préserver une séquence vidéo",
+                "page": 489,
+                "diagram": "media/aps62/repere-10.05.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Identifier le bon événement"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une conservation utile nécessite la caméra, la date, la plage horaire et le contexte. Si l'horloge présente un décalage, il doit être documenté avec l'heure de référence. Une séquence trop courte peut supprimer le début ou la suite utiles à la compréhension. La sélection et l'extraction doivent être réalisées par une personne autorisée, selon la procédure et les demandes compétentes."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Conserver l'origine et les accès"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'objectif est de maintenir l'intégrité et la traçabilité. Notez qui a demandé, extrait et reçu la séquence, avec quel support autorisé. Évitez les montages, conversions ou captures privées non prévus. Un fichier partagé dans une messagerie personnelle devient difficile à maîtriser et peut perdre des informations utiles. La conservation courante et la préservation liée à un incident doivent être distinguées."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un incident est signalé à 11 h 05, mais la caméra affiche quatre minutes de retard. L'opérateur identifie la plage correspondant à 11 h 01 sur le système et documente l'écart. Il ne modifie pas simplement le nom du fichier pour faire disparaître la différence."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une image doit rester reliée à son origine, à son horaire et au circuit de transmission. La qualité de la trace est aussi importante que son contenu visible."
+                  }
+                ],
+                "course_page": 490,
+                "practice": {
+                  "background": "Ne modifiez pas l’original pour accentuer un détail ou supprimer une partie gênante. Une copie de travail éventuelle reste identifiée et contrôlée. La transmission aux autorités, au responsable ou à une autre personne suit le cadre applicable ; une demande informelle ne suffit pas. Les images ne se partagent pas entre collègues pour commenter l’événement. Une extraction liée à une procédure peut suivre des règles de conservation distinctes du cycle automatique, sous la responsabilité du service compétent.",
+                  "case": "Un client vous demande immédiatement une vidéo montrant un incident qui le concerne. Il propose une clé USB personnelle et insiste pour repartir avec la copie. Pouvez-vous lui remettre directement ? Quelle réponse est adaptée ?",
+                  "transfer": "Pourquoi transmettre seulement un court extrait sans identifier la caméra ni l’heure peut-il rendre l’information difficile à exploiter ?",
+                  "page": 503
+                }
+              }
+            ],
+            "decision": "Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure.",
+            "pitfall": "Envoyer une photo de l’écran depuis votre téléphone.",
+            "objectives": [
+              "Expliquer : une information personnelle reste protégée",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Un commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine. Il souhaite les publier sur un réseau social. Vous avez accès au système pour la sécurité de votre site, pas pour des recherches personnelles."
+              ],
+              [
+                "Décision à justifier",
+                "Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure."
+              ],
+              [
+                "Piège à éviter",
+                "Envoyer une photo de l’écran depuis votre téléphone."
+              ],
+              [
+                "Pourquoi ?",
+                "La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Un commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine."
+              },
+              {
+                "label": "Vérifier",
+                "text": "La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès."
+              },
+              {
+                "label": "Décider",
+                "text": "Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Une personne filmée demande ses propres images. Expliquez vers qui l’orienter et pourquoi il faut aussi protéger les tiers visibles."
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-04-01-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-04-01-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-04-01-video",
+                "title": "Une information personnelle reste protégée",
+                "required": true,
+                "src": "media/aps62/aps62-04-01.mp4",
+                "poster": "media/aps62/aps62-04-01.jpg",
+                "captions": "media/aps62/aps62-04-01.vtt",
+                "duration_seconds": 75.437415,
+                "transcript": "La situation : Un commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine. Il souhaite les publier sur un réseau social. Vous avez accès au système pour la sécurité de votre site, pas pour des recherches personnelles.\n\nÀ vous de décider : Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure. Ou bien : Envoyer une photo de l’écran depuis votre téléphone. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste.\n\nLe bon relais : Le registre contient uniquement les données nécessaires, reste à l’abri des autres visiteurs et est accessible aux personnes autorisées. Une extraction vidéo se fait par l’acteur habilité et se trace. La durée pertinente dépend du dispositif et de sa finalité ; un délai maximal n’est pas une durée à appliquer automatiquement dans tous les cas."
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "04.01",
+            "title": "Une information personnelle reste protégée",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Une personne peut être identifiable indirectement",
+                "back": "Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Collecter, consulter, transmettre et supprimer sont des traitements. Un registre papier peut donc poser les mêmes questions de protection qu'un logiciel. Une information disponible au poste n'est pas librement utilisable pour n'importe quel objectif."
+              },
+              {
+                "front": "Ne collecter que ce qui est utile",
+                "back": "La finalité explique pourquoi l'information est nécessaire. Pour gérer une visite, il faut les données prévues par la procédure, sans ajouter des renseignements privés par curiosité. Les accès doivent être limités aux personnes habilitées, la conservation adaptée et l'information des personnes assurée dans le cadre prévu. L'agent applique les règles du responsable du traitement et signale les demandes ou incidents à l'interlocuteur compétent."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un visiteur laisse son numéro pour être joint par l'accueil. L'agent ne l'utilise pas ensuite pour un contact personnel. La donnée a été fournie pour organiser la visite. De même, photographier le registre avec un téléphone privé crée une copie non maîtrisée, même si l'intention est seulement de faciliter la relève."
+              },
+              {
+                "front": "Trois qualités complémentaires",
+                "back": "La confidentialité limite l'accès aux personnes autorisées. L'intégrité signifie que l'information reste exacte et n'a pas été modifiée sans contrôle. La disponibilité permet de la retrouver au moment nécessaire. Un mot de passe protège l'accès ; une sauvegarde contribue à la disponibilité ; une correction tracée préserve l'historique. Aucune de ces mesures ne remplace les autres."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Un commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine. Il souhaite les publier sur un réseau social. Vous avez accès au système pour la sécurité de votre site, pas pour des recherches personnelles.\n\nÀ vous de décider : Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure. Ou bien : Envoyer une photo de l’écran depuis votre téléphone. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste.\n\nLe bon relais : Le registre contient uniquement les données nécessaires, reste à l’abri des autres visiteurs et est accessible aux personnes autorisées. Une extraction vidéo se fait par l’acteur habilité et se trace. La durée pertinente dépend du dispositif et de sa finalité ; un délai maximal n’est pas une durée à appliquer automatiquement dans tous les cas."
+          }
+        },
+        {
+          "id": "aps62-04-01-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "04.01",
+            "title": "Une information personnelle reste protégée",
+            "kind": "workshop",
+            "case": "Un commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine. Il souhaite les publier sur un réseau social. Vous avez accès au système pour la sécurité de votre site, pas pour des recherches personnelles.",
+            "choices": [
+              {
+                "text": "Envoyer une photo de l’écran depuis votre téléphone.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste.",
+                "correct": false
+              },
+              {
+                "text": "Diffuser les images en masquant seulement le nom de la cliente.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. Le registre contient uniquement les données nécessaires, reste à l’abri des autres visiteurs et est accessible aux personnes autorisées. Une extraction vidéo se fait par l’acteur habilité et se trace. La durée pertinente dépend du dispositif et de sa finalité ; un délai maximal n’est pas une durée à appliquer automatiquement dans tous les cas.",
+                "correct": false
+              },
+              {
+                "text": "Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure.",
+                "feedback": "La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste.",
+                "correct": true
+              }
+            ],
+            "task": "Créez une fiche « cycle de la donnée » : collecte, consultation, transmission, conservation et suppression. Appliquez-la à un registre de visiteurs puis à une vidéo.",
+            "model": "Le registre contient uniquement les données nécessaires, reste à l’abri des autres visiteurs et est accessible aux personnes autorisées. Une extraction vidéo se fait par l’acteur habilité et se trace. La durée pertinente dépend du dispositif et de sa finalité ; un délai maximal n’est pas une durée à appliquer automatiquement dans tous les cas.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ]
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-04-01-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Un commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine. Il souhaite les publier sur un réseau social. Vous avez accès au système pour la sécurité de votre site, pas pour des recherches personnelles.",
+          "options": [
+            {
+              "id": "aps62-04-01-a0",
+              "text": "Envoyer une photo de l’écran depuis votre téléphone.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-04-01-a1",
+              "text": "Diffuser les images en masquant seulement le nom de la cliente.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-04-01-a2",
+              "text": "Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste."
+        },
+        {
+          "id": "aps62-04-01-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-04-01-pair0",
+              "left": "Une personne peut être identifiable indirectement",
+              "right": "Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement."
+            },
+            {
+              "id": "aps62-04-01-pair1",
+              "left": "Ne collecter que ce qui est utile",
+              "right": "La finalité explique pourquoi l'information est nécessaire."
+            },
+            {
+              "id": "aps62-04-01-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Un visiteur laisse son numéro pour être joint par l'accueil."
+            }
+          ],
+          "explanation": "Une personne peut être identifiable indirectement : Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Ne collecter que ce qui est utile : La finalité explique pourquoi l'information est nécessaire. EXEMPLE EXPLIQUÉ : Un visiteur laisse son numéro pour être joint par l'accueil."
+        },
+        {
+          "id": "aps62-04-01-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "04.01",
+            "title": "Une information personnelle reste protégée",
+            "kind": "transfer",
+            "case": "Une personne filmée demande ses propres images. Expliquez vers qui l’orienter et pourquoi il faut aussi protéger les tiers visibles.",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste. Le registre contient uniquement les données nécessaires, reste à l’abri des autres visiteurs et est accessible aux personnes autorisées. Une extraction vidéo se fait par l’acteur habilité et se trace. La durée pertinente dépend du dispositif et de sa finalité ; un délai maximal n’est pas une durée à appliquer automatiquement dans tous les cas.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ]
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-04-01-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "04.01",
+            "title": "Une information personnelle reste protégée",
+            "kind": "recap",
+            "decision": "Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure.",
+            "reason": "La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste.",
+            "pitfall": "Envoyer une photo de l’écran depuis votre téléphone.",
+            "cards": [
+              {
+                "front": "Une personne peut être identifiable indirectement",
+                "back": "Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Collecter, consulter, transmettre et supprimer sont des traitements. Un registre papier peut donc poser les mêmes questions de protection qu'un logiciel. Une information disponible au poste n'est pas librement utilisable pour n'importe quel objectif."
+              },
+              {
+                "front": "Ne collecter que ce qui est utile",
+                "back": "La finalité explique pourquoi l'information est nécessaire. Pour gérer une visite, il faut les données prévues par la procédure, sans ajouter des renseignements privés par curiosité. Les accès doivent être limités aux personnes habilitées, la conservation adaptée et l'information des personnes assurée dans le cadre prévu. L'agent applique les règles du responsable du traitement et signale les demandes ou incidents à l'interlocuteur compétent."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un visiteur laisse son numéro pour être joint par l'accueil. L'agent ne l'utilise pas ensuite pour un contact personnel. La donnée a été fournie pour organiser la visite. De même, photographier le registre avec un téléphone privé crée une copie non maîtrisée, même si l'intention est seulement de faciliter la relève."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "02.13",
+                "page": 99
+              },
+              {
+                "ref": "02.14",
+                "page": 101
+              },
+              {
+                "ref": "10.03",
+                "page": 486
+              },
+              {
+                "ref": "10.05",
+                "page": 490
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique."
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "aps62-04-01-comprendre",
+    "aps62-04-01-memoriser",
+    "aps62-04-01-atelier",
+    "aps62-04-01-q1",
+    "aps62-04-01-q2",
+    "aps62-04-01-transfert",
+    "aps62-04-01-synthese"
+  ],
+  "counts": {
+    "sections": 1,
+    "activities": 7,
+    "scored_activities": 2,
+    "required_videos": 1,
+    "workbooks": 2,
+    "assets": 8
+  },
+  "assets": [
+    "media/aps62/aps62-04-01.jpg",
+    "media/aps62/aps62-04-01.mp4",
+    "media/aps62/aps62-04-01.vtt",
+    "media/aps62/repere-02.13.webp",
+    "media/aps62/repere-02.14.webp",
+    "media/aps62/repere-10.03.webp",
+    "media/aps62/repere-10.05.webp",
+    "media/aps62/scene-10.webp"
+  ],
+  "import_warnings": []
+}

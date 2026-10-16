@@ -1,0 +1,220 @@
+"""Distinct teaching focuses and fictional decision cases, grouped by objective.
+
+Each row is authored, not produced by changing a client name in one scenario.
+The compiler supplies presentation, shuffled choices and shared reading tools.
+"""
+CARDS = []
+
+
+def add(objective, ref, title, teaching, situation, fact, unknown, decision, change, revised):
+    CARDS.append(dict(objective_id=objective, ref=ref, title=title, teaching=teaching,
+        situation=situation, fact=fact, unknown=unknown, decision=decision,
+        change=change, revised=revised))
+
+
+add("II-01","02.01","Définir ce que protège la mission",
+    "La protection porte sur une personne identifiée, avec des besoins et des limites explicités. Elle ne se confond ni avec la surveillance générale du lieu ni avec la recherche d'informations pour un litige privé. La première analyse consiste à nommer le bénéficiaire, les actes demandés, les interfaces et le résultat attendu. Un contrat mal intitulé ne transforme pas la nature réelle d'une tâche. L'agent doit pouvoir expliquer ce qu'il accepte et quel interlocuteur prend en charge le reste.",
+    "Une dirigeante participe à un salon. Son organisateur demande à l'équipe A3P de surveiller également le stock de marchandises pendant la fermeture du hall.",
+    "Le contrat prévoit l'accompagnement de la dirigeante ; le salon dispose de son propre responsable de sécurité.",
+    "La prise en charge du stock n'a pas été examinée par l'employeur.",
+    "Maintenir l'accompagnement et transmettre la demande de surveillance au responsable compétent, sans accepter la nouvelle fonction de sa propre initiative.",
+    "La dirigeante annonce qu'elle quitte le salon trente minutes plus tôt.",
+    "Repréparer son départ avec l'organisateur ; le changement d'horaire ne permet toujours pas d'abandonner l'accompagnement pour garder le stock.")
+add("II-01","02.01","Distinguer loi, contrat et consigne",
+    "La loi détermine les pouvoirs et les interdictions ; le contrat délimite une prestation ; la consigne en organise l'exécution. Ces trois niveaux s'articulent dans cet ordre. Un document signé par le client ne crée pas un droit de retenir quelqu'un, de saisir un appareil ou d'effacer des images. Lorsque deux instructions s'opposent, il faut suspendre l'acte litigieux, préserver la sécurité et obtenir une décision conforme. Le statut commercial du client ne modifie pas cette hiérarchie.",
+    "Une fiche de mission prévoit de récupérer les téléphones des invités qui photographient la personne protégée sur la voie publique.",
+    "La fiche a été signée par le client, mais aucune procédure légale de saisie ne concerne l'équipe.",
+    "L'auteur de la fiche a-t-il confondu une règle interne d'accès et un pouvoir de contrainte ?",
+    "Faire corriger la consigne et traiter la gêne par une organisation licite du déplacement et un dialogue, sans saisir les appareils.",
+    "Le gestionnaire propose un espace privé dont l'accès est soumis à une règle d'absence de photographie, annoncée avant l'entrée.",
+    "Distinguer les conditions d'accès à cet espace et la situation sur la voie publique ; un refus d'accès ne donne toujours pas un pouvoir général de saisie.")
+add("II-01","02.02","Vérifier les titres sans confondre les documents",
+    "L'aptitude professionnelle, la carte professionnelle et les autorisations de l'entreprise répondent à des questions différentes. La présence d'un diplôme ne suffit pas à établir le droit d'exercer aujourd'hui l'activité demandée. Le contrôle porte sur l'identité, la mention de l'activité, la validité du titre et le cadre de l'employeur. La vérification doit suivre le canal officiel approprié et être réalisée par la personne habilitée ; une ancienne capture ou une promesse orale ne constituent pas une vérification actuelle.",
+    "Un remplaçant arrive pour un accompagnement. Il présente son diplôme et une photographie ancienne de sa carte, dont la date est illisible.",
+    "La compétence annoncée et la validité administrative du titre sont deux points distincts.",
+    "La validité du titre pour l'activité de protection physique n'a pas été confirmée.",
+    "Faire confirmer les conditions d'exercice par le responsable habilité avant l'affectation ; préparer une solution de remplacement licite.",
+    "Le contrôle officiel confirme la carte, mais le remplaçant n'a pas reçu le briefing spécifique.",
+    "Compléter sa préparation opérationnelle avant la prise de poste : une carte valide ne remplace pas les consignes de cette mission.")
+add("II-01","02.02","Comprendre l'exclusivité et les interfaces",
+    "Le régime d'exclusivité de la protection physique des personnes doit être examiné au niveau de l'entreprise et de la prestation. Il ne suffit pas qu'un même client ait besoin de plusieurs services pour autoriser leur cumul. Identifier une interface permet de coopérer avec le gardiennage, l'accueil ou le transport sans reprendre leurs fonctions. Une répartition claire précise qui décide, qui intervient et comment les équipes échangent une information utile, sans fusionner leurs responsabilités.",
+    "Une offre commerciale regroupe l'accompagnement d'un artiste, le gardiennage du dépôt et une enquête sur une disparition de matériel.",
+    "Ces besoins correspondent à des activités de nature différente.",
+    "L'organisation contractuelle et les autorisations de chaque prestataire n'ont pas été vérifiées.",
+    "Faire revoir l'offre par l'employeur et séparer les responsabilités avant toute exécution ; ne pas promettre un cumul sur la seule demande du client.",
+    "L'organisateur confirme trois prestataires distincts et transmet leurs contacts.",
+    "Établir les interfaces de communication tout en conservant le périmètre propre de chaque prestation.")
+
+add("II-02","02.06","Qualifier une atteinte actuelle",
+    "La légitime défense s'apprécie à partir des circonstances de l'atteinte et de la réponse, et non à partir du seul sentiment d'insécurité. Il faut distinguer menace, atteinte actuelle, interruption du danger et poursuite d'un conflit. L'analyse porte notamment sur le caractère injustifié de l'atteinte, la nécessité et la simultanéité de la défense, ainsi que la proportion de la réponse. Le cours examine des décisions ; il n'enseigne pas de technique de contrainte.",
+    "À la sortie d'une réunion, une personne crie une insulte puis s'éloigne. Un membre de l'entourage souhaite la rattraper pour lui donner une leçon.",
+    "La personne s'éloigne et aucune atteinte physique actuelle n'est décrite dans le dossier.",
+    "Il manque toute circonstance permettant de justifier une intervention punitive.",
+    "Maintenir la protection et signaler les faits utiles ; ne pas transformer une défense éventuelle en poursuite ou représailles.",
+    "Un témoin indique un nouvel acte agressif à proximité immédiate, sans préciser ce qu'il a vu.",
+    "Rechercher les faits utiles depuis une position sûre et adapter la protection ; le témoignage imprécis ne constitue pas une autorisation générale d'employer la force.")
+add("II-02","02.06","Nécessité et proportion de la réponse",
+    "Une réponse doit être appréciée au regard du danger concret et des moyens effectivement disponibles. La gravité d'une crainte ne justifie pas à elle seule n'importe quel acte. Une issue sûre, un relais accessible ou la fin de l'atteinte peuvent modifier ce qui est nécessaire. L'analyse doit rester factuelle : possibilités au moment des faits, urgence, personnes exposées et conséquences prévisibles. Une formule telle que « assurer la protection » ne dispense pas d'expliquer les circonstances.",
+    "Un différend verbal survient dans un hall. Une sortie latérale ouverte permet d'accompagner le client vers un espace calme, avec l'accord du gestionnaire.",
+    "Une solution de mise à distance est disponible et le différend ne comporte pas d'atteinte physique décrite.",
+    "Le dossier ne démontre pas qu'une contrainte physique serait nécessaire.",
+    "Utiliser la solution de protection disponible, expliquer le déplacement et faire intervenir le relais du site si nécessaire.",
+    "Le gestionnaire annonce que la sortie latérale devient indisponible.",
+    "Rechercher une autre solution proportionnée et réévaluer les faits ; l'indisponibilité d'une porte ne crée pas automatiquement les conditions de la légitime défense.")
+add("II-02","02.07","Distinguer nécessité, assistance et initiative personnelle",
+    "L'état de nécessité et l'obligation d'assistance répondent à des conditions propres. Il faut éviter d'en faire une permission générale d'ignorer les règles. Face à un danger, la réponse doit rester nécessaire et proportionnée ; l'assistance peut notamment passer par une alerte rapide lorsque l'action directe exposerait l'intervenant ou des tiers. Le professionnel distingue ce qu'il observe, ce qu'il peut faire sans risque disproportionné et ce qui relève d'intervenants compétents.",
+    "Une personne paraît en difficulté derrière une zone technique dont l'accès n'est pas confirmé sûr. Un témoin demande à l'agent de franchir seul la barrière.",
+    "Une difficulté est signalée et le danger de la zone technique n'a pas été évalué.",
+    "Les conditions permettant une intervention directe sûre sont inconnues.",
+    "Alerter immédiatement les secours et le responsable du site, transmettre l'accès et les signes connus, puis suivre les instructions adaptées.",
+    "Le responsable confirme une autre voie d'accès sûre et les secours donnent leurs consignes.",
+    "Actualiser l'aide possible dans les limites de sa formation et des instructions, sans improviser un geste spécialisé.")
+
+add("II-03","02.08","Reconnaître les conditions de l'article 73",
+    "L'article 73 du code de procédure pénale vise le crime flagrant ou le délit flagrant puni d'emprisonnement et la conduite de l'auteur devant l'officier de police judiciaire le plus proche. Il ne crée pas un pouvoir général d'enquête, de contrôle d'identité ou de sanction. Le professionnel doit distinguer un fait personnellement constaté d'une rumeur ou d'un événement ancien. La sécurité, la nécessité et la proportionnalité restent à examiner ; l'alerte aux services compétents demeure essentielle.",
+    "Un organisateur montre une photographie et affirme qu'une personne présente aurait volé du matériel la semaine précédente.",
+    "Le signalement porte sur un fait ancien rapporté par un tiers.",
+    "Les éléments de flagrance ne sont pas établis par ce dossier.",
+    "Transmettre les éléments au responsable et aux services compétents, sans retenir la personne sur la seule affirmation de l'organisateur.",
+    "Un nouvel événement est observé directement sur place.",
+    "Décrire précisément ce nouvel événement et réexaminer son cadre propre ; ne pas déduire automatiquement la culpabilité de l'ancien signalement.")
+add("II-03","02.08","Préparer le relais aux services compétents",
+    "L'objectif du relais est de transmettre les faits utiles, les circonstances et les informations d'accès. L'agent ne se substitue pas à l'enquêteur : il n'organise pas d'interrogatoire, n'exige pas des aveux et n'improvise pas de fouille. Le compte rendu distingue l'observation initiale, l'évolution, les appels effectués et les décisions prises. Il mentionne les incertitudes sans inventer une qualification. La prise en charge par les services compétents doit être clairement identifiée.",
+    "Après un incident, un responsable demande à l'équipe de questionner longuement une personne dans une pièce fermée avant l'arrivée des policiers.",
+    "Les policiers ont été appelés ; l'équipe peut transmettre un récit factuel et l'emplacement des témoins.",
+    "Aucun pouvoir d'interrogatoire n'est conféré à l'équipe par cet appel.",
+    "Préparer le relais factuel et préserver les éléments utiles selon les consignes, sans organiser d'interrogatoire privé.",
+    "Un témoin souhaite partir avant l'arrivée des services.",
+    "Signaler sa disponibilité et les informations qu'il accepte de communiquer, sans inventer un pouvoir de rétention du témoin.")
+add("XI-12","02.08","Protéger le client sans détourner toute l'équipe",
+    "L'application de l'article 73 dans une mission A3P doit aussi prendre en compte la continuité de la protection. Un incident périphérique ne doit pas absorber tous les moyens au point de laisser le bénéficiaire sans accompagnement. Les rôles de protection, d'alerte et de relais se distinguent. Le droit éventuel d'agir n'équivaut pas à une obligation de poursuite ni à une autorisation de prendre des risques sans rapport avec le besoin. Le chef de mission organise les relais disponibles.",
+    "Un incident est signalé à l'extérieur du lieu alors que la personne protégée doit changer de bâtiment. Les agents du site sont déjà sur place.",
+    "Le déplacement du client est imminent et un relais local traite l'incident.",
+    "La nature exacte de l'incident et l'utilité d'un engagement supplémentaire ne sont pas confirmées.",
+    "Conserver la continuité de la protection, transmettre les informations utiles et coordonner le relais avec le site.",
+    "Le trajet initial est momentanément fermé en raison de l'incident.",
+    "Réévaluer le déplacement avec le site et le responsable de mission plutôt que déplacer toute l'équipe vers l'incident.")
+
+add("II-04","02.05","Vie privée, circulation et respect des personnes",
+    "Le besoin de protection doit être concilié avec les libertés des autres personnes. Une tenue inhabituelle, une opinion, une origine ou la simple présence dans un espace public ne constituent pas une preuve de menace. Le professionnel raisonne à partir de faits et applique des mesures justifiées par la situation. Une demande de photographie ou de déplacement peut être formulée poliment ; elle ne devient pas un ordre de police. Les données collectées doivent rester utiles à la mission et accessibles aux seuls destinataires concernés.",
+    "Une personne photographie la façade d'un lieu public. Le client demande son identité et souhaite faire enregistrer sa photographie dans une liste de personnes dangereuses.",
+    "La photographie de la façade est le seul comportement décrit.",
+    "Aucun fait concret de menace ni fondement de la collecte proposée n'est établi.",
+    "Expliquer les limites de la demande, maintenir une observation factuelle adaptée et éviter la constitution d'un fichier injustifié.",
+    "La personne formule ensuite une menace explicite rapportée par un témoin.",
+    "Distinguer ce nouvel élément, sa source et son degré de précision ; transmettre la menace sans transformer toutes les données du témoin en informations à diffuser.")
+add("II-05","02.04","Égalité de traitement dans une mission privée",
+    "L'égalité de traitement implique des critères liés au besoin réel et aux règles d'accès applicables, et non à des caractéristiques personnelles supposées. L'agent doit être capable d'expliquer pourquoi la même règle s'applique à deux situations comparables. Une différence de traitement doit reposer sur une circonstance pertinente, documentée et proportionnée. L'examen d'un badge, d'une réservation ou d'une zone autorisée ne permet pas d'extrapoler sur la religion, l'origine ou les opinions d'une personne.",
+    "Deux invités disposent de la même catégorie d'invitation. Un membre de l'entourage demande un contrôle supplémentaire pour l'un d'eux à cause de son apparence.",
+    "Les titres d'accès sont équivalents et aucun comportement particulier n'est signalé.",
+    "Aucun critère pertinent ne justifie le traitement différent demandé.",
+    "Appliquer la procédure commune, refuser le critère discriminatoire et faire traiter la demande par le responsable compétent.",
+    "L'un des badges est ensuite déclaré invalide par l'organisateur.",
+    "Traiter cette différence objective de validité, en l'expliquant, sans la rattacher à l'apparence de son porteur.")
+add("II-05","02.04","Liberté de conscience et neutralité de la prestation",
+    "Le respect de la liberté de conscience ne signifie pas que l'agent doit partager les convictions du client ni intervenir dans les débats. Sa mission exige une attitude professionnelle, respectueuse et centrée sur les faits. Il faut distinguer la neutralité attendue dans la relation de service, les règles propres à une structure et les obligations qui s'appliquent à des agents publics. On ne transpose pas automatiquement tous les régimes juridiques à chaque prestation privée. Les demandes sensibles se font examiner par l'employeur.",
+    "Pendant un déplacement, le client demande à l'agent de participer publiquement à une prise de position politique au nom de l'équipe.",
+    "L'objet de la prestation est l'accompagnement, et non une représentation politique.",
+    "Aucun mandat de représentation de l'entreprise n'a été donné.",
+    "Conserver une posture de service respectueuse, expliquer le périmètre professionnel et transmettre la demande à l'employeur.",
+    "Un journaliste interroge directement l'agent sur les opinions du client.",
+    "Orienter la demande vers le contact autorisé sans commenter les convictions ni révéler les informations connues dans la mission.")
+add("II-05","02.04","Répondre à une consigne contraire aux principes républicains",
+    "Une consigne discriminatoire ou une demande portant atteinte aux libertés ne devient pas acceptable parce qu'elle émane d'un supérieur ou d'un client important. Le professionnel qualifie la demande, identifie la difficulté et propose une solution conforme au besoin de protection. La remontée doit être précise : texte de la demande, auteur, contexte et solution proposée. Il faut éviter la polémique avec le public tout en conservant une limite claire. La traçabilité soutient l'examen de la situation par l'employeur.",
+    "Un message demande de refuser tout contact au client à un groupe défini par sa nationalité, sans autre circonstance.",
+    "La consigne utilise un critère personnel général et ne décrit aucun comportement menaçant.",
+    "Le besoin de sécurité concret n'est pas formulé.",
+    "Faire retirer cette consigne et demander une organisation fondée sur les accès, horaires et comportements pertinents, applicable de manière cohérente.",
+    "Le responsable reformule la demande en précisant une zone réservée à toutes les personnes accréditées.",
+    "Examiner cette nouvelle règle d'accès sur ses critères objectifs et l'information donnée au public, sans maintenir le critère initial.")
+
+add("II-06","02.03","Discrétion professionnelle et besoin de connaître",
+    "La discrétion concerne les informations obtenues pendant la préparation comme celles observées sur place. Le besoin de connaître détermine le contenu transmis, le destinataire et le canal. Il ne suffit pas qu'une personne appartienne à l'organisation pour qu'elle ait besoin de tout le dossier. Une information utile à un conducteur peut se limiter à un point de rendez-vous et à un contact, sans inclure la situation familiale ou l'agenda complet du client. La diffusion doit pouvoir être expliquée par la tâche confiée.",
+    "Un chauffeur de remplacement demande le dossier complet du client dans une conversation de groupe comprenant plusieurs prestataires.",
+    "Le chauffeur a besoin de l'horaire, du point de rendez-vous et du contact de coordination.",
+    "L'accès de chaque membre du groupe aux informations personnelles n'est pas établi.",
+    "Transmettre par le canal approprié les seuls éléments nécessaires à la prise en charge, après vérification du destinataire.",
+    "Le chauffeur signale une difficulté d'accessibilité du véhicule.",
+    "Partager l'information fonctionnelle nécessaire à une solution adaptée, avec les personnes compétentes, sans diffuser des détails médicaux inutiles.")
+add("II-06","02.03","Cadeaux, avantages et conflit d'intérêts",
+    "Un avantage peut influencer une décision ou donner l'apparence d'une contrepartie. Le professionnel examine le lien avec sa fonction, la demande associée et les règles de son employeur. La valeur financière n'est pas le seul critère : un service, une invitation ou une promesse d'emploi peuvent créer une difficulté. La conduite attendue consiste à signaler la situation et à suivre le circuit prévu. Une relation amicale ne justifie pas la divulgation d'un horaire ni la modification d'un contrôle.",
+    "Un organisateur propose des invitations personnelles à un agent s'il accepte de communiquer à l'avance l'itinéraire exact du client.",
+    "L'avantage est explicitement associé à la communication d'une information de mission.",
+    "Aucune autorisation de diffusion de l'itinéraire n'est donnée.",
+    "Refuser la contrepartie, conserver la confidentialité et signaler la demande par le circuit professionnel.",
+    "L'organisateur prétend ensuite que le cadeau n'avait aucun lien avec la demande.",
+    "Conserver une trace factuelle de la chronologie et appliquer la politique de l'employeur ; une reformulation tardive n'efface pas le contexte.")
+add("II-06","02.03","Image de l'entreprise et communication publique",
+    "La publication d'une photographie peut révéler un lieu, un horaire, une habitude ou la composition d'une équipe même sans nommer le client. L'absence de visage n'élimine pas les indices de localisation. L'agent distingue communication personnelle et communication autorisée de l'entreprise. Une autorisation ponctuelle doit être interprétée dans son périmètre précis ; elle ne vaut pas permission permanente. Les contenus déjà diffusés se traitent avec le responsable, sans promettre un effacement complet d'Internet.",
+    "Un agent souhaite publier une photographie de son badge et de la vue depuis la chambre où l'équipe prépare le lendemain.",
+    "Le badge et le décor permettent de recouper l'événement et le lieu.",
+    "L'autorisation de publication et l'exposition produite par ces indices n'ont pas été examinées.",
+    "Suspendre la publication et soumettre un éventuel contenu de communication au circuit autorisé.",
+    "La photographie a déjà été partagée par un tiers.",
+    "Signaler rapidement la diffusion et ses indices au responsable pour traiter l'exposition, sans multiplier les repartages ni enquêter publiquement.")
+add("II-06","02.03","Refuser une demande et organiser une solution",
+    "Un refus professionnel est explicite sur l'acte concerné et constructif sur le besoin réel. Il ne suffit pas de dire non sans relais, ni de promettre une exception pour calmer le client. La formulation peut rappeler brièvement la limite, proposer une solution et identifier le décideur. La discrétion impose aussi de choisir le moment et l'interlocuteur pour éviter une humiliation publique. Après l'échange, la consigne et les conséquences pour l'équipe doivent être mises à jour.",
+    "Le client demande que l'équipe intimide un ancien associé venu à un rendez-vous public afin de le faire partir.",
+    "La demande décrit une intimidation destinée à régler un différend privé.",
+    "Aucun fait de menace actuelle n'est donné dans le dossier.",
+    "Refuser l'intimidation, maintenir un accompagnement licite et proposer un échange avec le responsable de mission sur l'organisation du rendez-vous.",
+    "Le client accepte de déplacer le rendez-vous dans un espace géré par l'organisateur.",
+    "Vérifier les conditions de cet espace et les interlocuteurs, puis communiquer la nouvelle organisation à l'équipe sans commenter le différend.")
+
+add("XI-13","02.09","Distinguer responsabilités pénale, civile et disciplinaire",
+    "Un même fait peut susciter des questions différentes : infraction et sanction pénale, dommage et réparation civile, manquement aux règles professionnelles et responsabilité disciplinaire. Ces plans ne doivent pas être confondus. L'absence de poursuite pénale ne prouve pas automatiquement l'absence de faute professionnelle. Le compte rendu décrit les actes, les circonstances, les dommages connus et les pièces disponibles ; il ne prononce pas lui-même une condamnation. Chaque autorité examine le cadre qui relève de sa compétence.",
+    "Un client se plaint d'une diffusion d'informations et évoque à la fois un préjudice commercial et un manquement déontologique.",
+    "Plusieurs types de conséquences sont allégués à propos d'une même diffusion.",
+    "Les faits, le préjudice et les procédures engagées doivent être établis séparément.",
+    "Conserver les éléments factuels et orienter chaque question vers le responsable ou conseil compétent, sans assimiler tous les régimes à une procédure unique.",
+    "Le client renonce à sa demande de réparation mais l'employeur poursuit son examen interne.",
+    "Coopérer à l'examen professionnel : l'abandon d'une demande civile n'efface pas automatiquement les autres questions.")
+add("XI-13","02.09","Comprendre les acteurs de la procédure pénale",
+    "Les policiers et gendarmes, le parquet et les juridictions de jugement ont des fonctions distinctes. Une enquête rassemble et vérifie des éléments ; elle ne constitue pas en elle-même une déclaration de culpabilité. Le parquet dirige l'action publique dans son cadre ; la juridiction compétente juge. L'agent fournit un témoignage précis, distingue ce qu'il a vu de ce qu'on lui a raconté et respecte les demandes qui lui sont légalement adressées. Les termes « suspect », « prévenu » et « condamné » ne sont pas interchangeables.",
+    "Après un incident, un courriel interne présente une personne entendue par les enquêteurs comme définitivement coupable.",
+    "Le seul élément confirmé est qu'une audition a eu lieu.",
+    "Aucune décision de condamnation n'est produite.",
+    "Corriger la formulation et limiter le compte rendu aux faits et étapes de procédure réellement connus.",
+    "Un jugement est ensuite communiqué à l'employeur.",
+    "Faire examiner la portée exacte de cette décision et ses destinataires autorisés, sans diffuser indistinctement les données de procédure.")
+add("XI-13","02.09","Identifier l'objet d'une demande adressée à la justice",
+    "L'orientation dépend de la question posée : dommage contractuel, litige lié au travail, contestation d'une décision administrative ou infraction alléguée. Le professionnel n'a pas à choisir seul une procédure complexe pour le client. Il doit en revanche éviter les confusions qui dégradent un dossier : mélanger griefs commerciaux et observations d'un incident, annoncer une sanction inexistante ou affirmer qu'une décision du CNAPS remplace un jugement pénal. Une présentation structurée facilite le relais à un conseil qualifié.",
+    "Un dossier mélange une facture impayée, une contestation d'horaire de travail et un signalement d'agression.",
+    "Les trois demandes portent sur des objets et des faits différents.",
+    "L'autorité et la procédure appropriées n'ont pas été examinées pour chaque objet.",
+    "Séparer les faits et les pièces par question, puis solliciter les interlocuteurs compétents pour l'orientation.",
+    "Un document présenté comme jugement est en réalité un accusé de réception de plainte.",
+    "Rétablir la nature du document et ne pas lui attribuer les effets d'une décision de justice.")
+add("XI-13","02.09","Conserver des éléments utiles sans mener une enquête privée",
+    "La qualité d'un élément dépend notamment de son origine, de sa date, de son intégrité et du contexte de collecte. Le professionnel conserve ce qui relève de son cadre d'intervention et évite de modifier les originaux. Il n'accède pas sans droit à une messagerie, à un compte ou à un dispositif vidéo pour compléter un récit. Le relais précise ce qui est disponible, où et auprès de qui. Une copie annotée doit rester distincte de l'original et les incertitudes doivent rester visibles.",
+    "Un collègue propose de recadrer et retoucher une photographie avant de la transmettre pour rendre l'incident plus convaincant.",
+    "La photographie originale existe et son heure de prise de vue est connue.",
+    "La retouche envisagée modifierait la présentation de l'élément transmis.",
+    "Conserver l'original, documenter sa provenance et distinguer toute copie de travail sans altérer le sens des faits.",
+    "Une séquence vidéo complémentaire est détenue par le gestionnaire du lieu.",
+    "Signaler son existence et son détenteur au relais compétent ; ne pas contourner les droits d'accès pour la récupérer.")
+
+add("XI-14","02.05","Minimiser les données d'un dossier de mission",
+    "La minimisation consiste à sélectionner les données adéquates et nécessaires à un objectif défini. Un dossier de protection peut nécessiter des contacts, des horaires ou des besoins fonctionnels ; il ne justifie pas la collecte systématique de la vie privée du client et de ses proches. La durée de conservation et les droits d'accès doivent être fixés dans l'organisation. Une information sensible ne se transmet pas simplement parce qu'elle pourrait être utile un jour. La sécurité du stockage et du partage fait partie de la préparation.",
+    "Un formulaire de préparation demande les habitudes scolaires des enfants du client alors que la mission concerne uniquement une conférence professionnelle.",
+    "Le périmètre communiqué n'inclut pas l'accompagnement de la famille.",
+    "La nécessité de ces données familiales n'est pas démontrée.",
+    "Faire réduire le formulaire au besoin de la mission et examiner toute collecte supplémentaire avec le responsable habilité.",
+    "Le périmètre est modifié pour inclure un déplacement familial précisément défini.",
+    "Réexaminer les données réellement nécessaires à ce nouveau périmètre, leur accès et leur conservation, sans ouvrir une collecte générale.")
+add("XI-14","02.10","Articuler consignes de mission et règles de travail",
+    "Le contrat de travail, les règles collectives applicables et l'organisation de la mission doivent être examinés ensemble. Un changement commercial ne supprime pas les limites liées au repos, à la durée du travail ou aux compétences. L'agent signale une incompatibilité concrète : horaires, fatigue, relève ou disponibilité. Le responsable habilité organise une solution conforme. Le cours n'invente pas un régime universel d'heures supplémentaires : il apprend à identifier le texte et la situation à vérifier.",
+    "Une journée de mission est prolongée de plusieurs heures alors qu'un départ matinal est maintenu le lendemain et qu'aucune relève n'est confirmée.",
+    "L'horaire initial a changé et la disponibilité réelle de l'équipe est affectée.",
+    "Le respect des règles de travail et l'organisation de la relève n'ont pas été vérifiés.",
+    "Faire réexaminer les horaires et la relève par l'employeur avant de promettre la continuité inchangée du dispositif.",
+    "Un renfort est proposé mais sa préparation et ses titres ne sont pas confirmés.",
+    "Vérifier aussi les conditions d'emploi et le briefing du renfort ; un nom sur le planning ne suffit pas à rendre la solution opérationnelle.")
+add("XI-14","02.10","Traiter une modification contractuelle",
+    "Une modification doit préciser ce qui change, qui la décide et quelles conséquences elle produit. Déplacer un rendez-vous peut modifier les moyens, les interfaces et les horaires ; ajouter une nouvelle personne protégée peut changer le besoin de protection. L'agent ne confond pas une adaptation ponctuelle conforme aux consignes avec un engagement commercial nouveau. La version du document et les destinataires informés sont essentiels pour éviter que deux équipes exécutent des organisations différentes.",
+    "Un message du client ajoute un second bénéficiaire et un autre lieu de rendez-vous, sans validation de l'employeur.",
+    "Le périmètre initial concernait un seul bénéficiaire et un seul déplacement.",
+    "Les moyens et les responsabilités liés à cette extension ne sont pas confirmés.",
+    "Soumettre l'extension au responsable et maintenir une organisation claire dans l'attente de la décision, sans promettre des moyens inexistants.",
+    "L'extension est validée avec un nouveau chef de coordination et une version datée de la mission.",
+    "Diffuser la version validée aux destinataires concernés et vérifier leur compréhension avant la transition.")

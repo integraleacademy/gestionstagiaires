@@ -1,0 +1,61 @@
+{% extends 'manuals/layout.html' %}
+{% from 'manuals/_elearning_ui.html' import icon, group_title, errors_box %}
+{% block title %}Mes accès e-learning{% endblock %}
+{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static',filename='css/elearning-orders.css',v='20261010-3') }}"><link rel="stylesheet" href="{{ url_for('static',filename='css/elearning-dashboard.css',v='20261013-1') }}"><script src="{{ url_for('static',filename='js/elearning-orders.js',v='20261010-3') }}" defer></script>{% endblock %}
+{% block content %}
+{% set current_state = filter_state|default('all') %}{% set search_query = filter_query|default('') %}
+{% set current_view = dashboard_view|default('groups') %}
+<div class="el-wrap el-dashboard" data-el-dashboard>
+  {{ errors_box(errors|default([])) }}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <header class="el-workspace-heading">
+    <div><span class="eyebrow blue">VOTRE ESPACE ORGANISME</span><h1>Mes accès e-learning</h1><p>Vos accès, vos stagiaires et vos factures, chacun à sa place.</p></div>
+    <a class="button secondary" href="{{ url_for('manuals_shop.public_elearning') }}">Catalogue et démonstrations {{ icon('arrow') }}</a>
+  </header>
+  <nav class="el-workspace-nav" aria-label="Rubriques e-learning">
+    <a href="{{ url_for('manuals_shop.elearning_soon') }}" {% if current_view == 'groups' %}aria-current="page"{% endif %}>{{ icon('users') }} Mes groupes et stagiaires <span class="el-nav-count">{{ groups|length }}</span></a>
+    <a href="{{ url_for('manuals_shop.elearning_soon',view='catalogue') }}" {% if current_view == 'catalogue' %}aria-current="page"{% endif %}>{{ icon('plus') }} {{ 'Commander des accès' if elearning_sales_enabled else 'Catalogue des accès' }}</a>
+    <a href="{{ url_for('manuals_shop.elearning_soon',view='orders') }}" {% if current_view == 'orders' %}aria-current="page"{% endif %}>{{ icon('card') }} Commandes et factures</a>
+  </nav>
+  {% if current_view == 'catalogue' %}
+    {% include 'manuals/_elearning_order_catalogue.html' %}
+  {% elif current_view == 'orders' %}
+    <p class="el-view-intro">Retrouvez vos commandes d’accès e-learning. Ouvrez une commande pour consulter sa facture, son règlement et déclencher l’envoi des accès.</p>
+    {% if orders %}{% include 'manuals/_elearning_history.html' %}
+    {% else %}<div class="el-empty"><span class="el-empty-icon">{{ icon('card') }}</span><h2>Aucune commande e-learning pour le moment</h2><p>Les groupes en préparation sont dans « Mes groupes et stagiaires ». Vos commandes apparaîtront ici après validation des accès.</p>{% if elearning_sales_enabled %}<a class="button primary" href="{{ url_for('manuals_shop.elearning_soon',view='catalogue') }}">Commander des accès {{ icon('arrow') }}</a>{% else %}<span class="el-sales-disabled" aria-disabled="true">{{ elearning_sales_title }}</span>{% endif %}</div>{% endif %}
+  {% else %}
+  {% set counts = namespace(pending=0, waiting=0, active=0) %}{% for group in groups %}{% set counts.pending = counts.pending + group.pending_count %}{% set counts.waiting = counts.waiting + group.waiting_count %}{% set counts.active = counts.active + group.active_count %}{% endfor %}
+  <nav class="el-stats" aria-label="Filtrer mes espaces e-learning">
+    <a href="{{ url_for('manuals_shop.elearning_soon',state='all',q=search_query) }}#el-groups-heading" data-el-state="all" class="{{ 'is-selected' if current_state == 'all' }}" {% if current_state == 'all' %}aria-current="true"{% endif %}><span class="el-stat-icon">{{ icon('folder') }}</span><span class="el-stat-content"><strong>{{ groups|length }}</strong><span>Groupes et accès individuels</span><small>Tout afficher →</small></span></a>
+    <a href="{{ url_for('manuals_shop.elearning_soon',state='draft',q=search_query) }}#el-groups-heading" data-el-state="draft" class="{{ 'is-selected' if current_state == 'draft' }}" {% if current_state == 'draft' %}aria-current="true"{% endif %}><span class="el-stat-icon amber">{{ icon('clock') }}</span><span class="el-stat-content"><strong>{{ counts.pending }}</strong><span>Accès à préparer</span><small>Afficher la liste →</small></span></a>
+    <a href="{{ url_for('manuals_shop.elearning_soon',state='waiting',q=search_query) }}#el-groups-heading" data-el-state="waiting" class="{{ 'is-selected' if current_state == 'waiting' }}" {% if current_state == 'waiting' %}aria-current="true"{% endif %}><span class="el-stat-icon blue">{{ icon('card') }}</span><span class="el-stat-content"><strong>{{ counts.waiting }}</strong><span>En attente d’activation</span><small>Afficher la liste →</small></span></a>
+    <a href="{{ url_for('manuals_shop.elearning_soon',state='active',q=search_query) }}#el-groups-heading" data-el-state="active" class="{{ 'is-selected' if current_state == 'active' }}" {% if current_state == 'active' %}aria-current="true"{% endif %}><span class="el-stat-icon green">{{ icon('check') }}</span><span class="el-stat-content"><strong>{{ counts.active }}</strong><span>Accès activés</span><small>Afficher le suivi →</small></span></a>
+  </nav>
+  <section aria-labelledby="el-groups-heading">
+    <div class="el-section-heading"><div><h2 id="el-groups-heading">Mes groupes et stagiaires</h2><p class="muted">Retrouvez vos groupes et accès individuels. Ouvrez-les pour ajouter des stagiaires, activer les accès ou consulter leur progression.</p></div>{% if elearning_sales_enabled %}<a class="button primary" href="{{ url_for('manuals_shop.elearning_soon',view='catalogue') }}">{{ icon('plus') }} Commander des accès</a>{% else %}<span class="el-sales-disabled" aria-disabled="true">{{ elearning_sales_title }}</span>{% endif %}</div>
+    {% if groups %}
+    <form class="el-toolbar" action="{{ url_for('manuals_shop.elearning_soon') }}" method="get" id="el-filter-form">
+      <div class="el-search-field"><label for="el-search">Rechercher</label><div class="el-search">{{ icon('search') }}<input type="search" name="q" id="el-search" placeholder="Nom d’un groupe, d’un stagiaire ou adresse e-mail" value="{{ search_query }}" autocomplete="off"><button type="button" class="el-search-clear" id="el-clear-search" aria-label="Effacer la recherche" {% if not search_query %}hidden{% endif %}>×</button></div></div>
+      <div class="el-filter"><label for="el-filter">État des accès</label><select name="state" id="el-filter"><option value="all" {% if current_state == 'all' %}selected{% endif %}>Tous les états</option><option value="draft" {% if current_state == 'draft' %}selected{% endif %}>À préparer</option><option value="waiting" {% if current_state == 'waiting' %}selected{% endif %}>En attente d’activation</option><option value="active" {% if current_state == 'active' %}selected{% endif %}>Accès activés</option></select></div><button class="button secondary el-search-submit" type="submit">Rechercher</button>
+    </form>
+    <div class="el-results-bar"><p id="el-results-count" role="status" aria-live="polite">{{ visible_count|default(groups|length) }} résultat{{ 's' if visible_count|default(groups|length) != 1 }}{% if current_state != 'all' %} · {{ {'draft':'Accès à préparer','waiting':'En attente d’activation','active':'Accès activés'}[current_state] }}{% endif %}</p><a href="{{ url_for('manuals_shop.elearning_soon') }}" id="el-reset-filters" {% if current_state == 'all' and not search_query %}hidden{% endif %}>Réinitialiser les filtres</a></div>
+    <div class="el-group-grid">
+    {% for group in groups %}
+      <article class="el-group-card" data-el-group data-search="{{ group.group_name }} {{ group.course_code }}" data-states="{{ 'draft' if group.pending_count or not group.total_count }} {{ 'waiting' if group.waiting_count }} {{ 'active' if group.active_count }}" style="--course-color:{{ courses[group.course_code].color }}" {% if group_ids_visible is defined and group.id not in group_ids_visible %}hidden{% endif %}>
+        <div class="el-group-card-top"><span class="el-course-badge">{{ group.course_code|elearning_label }}</span><span class="el-kind">{{ icon('user' if group.mode == 'individual' else 'users') }} {{ 'Individuel' if group.mode == 'individual' else 'Groupe' }}</span></div>
+        <h3><a href="{{ url_for('manuals_shop.elearning_group',gid=group.id) }}">{{ group_title(group) }}</a></h3><p class="el-group-card-subtitle">{{ group.total_count }} stagiaire{{ 's' if group.total_count != 1 }}{% if group.get('updated_at') %} · Modifié le {{ group.updated_at[8:10] }}/{{ group.updated_at[5:7] }}/{{ group.updated_at[:4] }}{% endif %}</p>
+        <div class="el-card-statuses">{% if group.pending_count or not group.total_count %}<span class="el-badge draft">{{ group.pending_count }} à préparer</span>{% endif %}{% if group.waiting_count %}<span class="el-badge waiting">{{ group.waiting_count }} en attente</span>{% endif %}{% if group.active_count %}<span class="el-badge active">{{ group.active_count }} activé{{ 's' if group.active_count != 1 }}</span>{% endif %}{% if group.get('deletion_pending') %}<span class="el-badge waiting">Suppression en cours</span>{% endif %}</div>
+        <div hidden>{% for person in group.learners %}<span data-person-search="{{ person.first_name }} {{ person.last_name }} {{ person.email }}" data-person-name="{{ person.first_name }} {{ person.last_name }}"></span>{% endfor %}</div><p class="el-matching-people" data-el-matches hidden></p>
+        {% if group.active_count %}<p class="el-group-followup">{{ icon('chart') }} Progression, connexions et attestations dans le suivi des stagiaires.</p>{% endif %}
+        <div class="el-group-card-bottom"><span>{{ 'Liste à compléter' if group.pending_count or not group.total_count else 'Gestion et suivi' }}</span><a href="{{ url_for('manuals_shop.elearning_group',gid=group.id) }}" class="text-link">{{ 'Gérer et suivre' if group.active_count else 'Ouvrir' }} {{ icon('arrow') }}<span class="el-sr-only"> {{ group_title(group) }}</span></a></div>
+      </article>
+    {% endfor %}
+    </div><div class="el-empty el-filter-empty" id="el-no-results" {% if visible_count|default(groups|length) %}hidden{% endif %}><h3>Aucun résultat</h3><p>Essayez un autre nom, une adresse e-mail ou un autre état.</p><a href="{{ url_for('manuals_shop.elearning_soon') }}" class="text-link">Afficher tous les groupes et accès →</a></div>
+    {% else %}
+    <div class="el-empty"><span class="el-empty-icon">{{ icon('folder') }}</span><h3>Préparez vos premiers accès e-learning</h3><p>Choisissez un parcours, puis créez un groupe ou un accès pour une seule personne. Vous pourrez compléter votre liste de stagiaires à votre rythme.</p>{% if elearning_sales_enabled %}<a class="button primary" href="{{ url_for('manuals_shop.elearning_soon',view='catalogue') }}">Choisir un parcours {{ icon('arrow') }}</a>{% else %}<span class="el-sales-disabled" aria-disabled="true">{{ elearning_sales_title }}</span>{% endif %}<span class="small">Aucun paiement demandé à la création du groupe.</span></div>
+    {% endif %}
+  </section>
+  {% endif %}
+  <div class="el-help-strip">{{ icon('help') }}<p>Une question sur vos accès ou vos tarifs ? <a href="tel:+33422470768">04 22 47 07 68</a> · <a href="mailto:clement@integraleacademy.com">clement@integraleacademy.com</a></p></div>
+</div>
+{% endblock %}

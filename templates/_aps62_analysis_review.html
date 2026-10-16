@@ -1,0 +1,28 @@
+{% if production_ai_history and production_ai_history.history %}
+<section aria-label="Historique des analyses pédagogiques IA">
+<h3>Analyses pédagogiques IA</h3><p>Les versions restent consultables. La note est indicative ; la validation du formateur est distincte.</p>
+{% for analysis in production_ai_history.history %}
+<details class="ai-review-card"{% if loop.first %} open{% endif %}><summary>Analyse {{ analysis.revision }} · {{ analysis.created_at }} · {{ {'queued':'En attente','running':'En cours','completed':'Disponible','failed':'À relancer'}.get(analysis.status, analysis.status) }}</summary>
+{% if analysis.feedback %}{% set feedback = analysis.feedback %}
+  <div class="ai-review-grade"><span>{{ feedback.summary }}</span><strong>{{ feedback.indicative_grade ~ ' / 20' if feedback.indicative_grade is not none else 'À préciser' }}</strong></div>
+  <p class="assessment-note">{{ feedback.notice }}</p>
+  {% if feedback.strengths %}<h4>Points forts</h4><ul>{% for point in feedback.strengths %}<li>{{ point }}</li>{% endfor %}</ul>{% endif %}
+  <h4>Analyse de chaque critère</h4>
+  {% for criterion in feedback.criteria %}<section class="ai-review-criterion"><h4>{{ criterion.label }} · {{ criterion.score }} / 4</h4><p>{{ criterion.explanation }}</p>
+    {% for evidence in criterion.evidence %}<blockquote class="ai-review-evidence">« {{ evidence.quote }} »</blockquote>{% endfor %}
+    {% if criterion.strengths %}<p><strong>Réussi :</strong></p><ul>{% for point in criterion.strengths %}<li>{{ point }}</li>{% endfor %}</ul>{% endif %}
+    {% if criterion.errors %}<p><strong>À corriger :</strong></p><ul>{% for point in criterion.errors %}<li>{{ point }}</li>{% endfor %}</ul>{% endif %}
+    {% if criterion.missing %}<p><strong>À compléter :</strong></p><ul>{% for point in criterion.missing %}<li>{{ point }}</li>{% endfor %}</ul>{% endif %}
+    <p><small>Repères : {% for reference in feedback.references %}{% if reference.id in criterion.course_reference_ids %}{{ reference.title }}{% if not loop.last %} · {% endif %}{% endif %}{% endfor %}</small></p>
+  </section>{% endfor %}
+  {% if feedback.priority_corrections %}<h4>Corrections prioritaires</h4>{% for correction in feedback.priority_corrections %}<p><strong>{{ correction.problem }}</strong><br>{{ correction.why }}<br>{{ correction.how }}</p>{% endfor %}{% endif %}
+  {% if feedback.missing_points %}<h4>Éléments manquants</h4><ul>{% for point in feedback.missing_points %}<li>{{ point }}</li>{% endfor %}</ul>{% endif %}
+  <h4>Plan de progrès</h4><ol>{% for step in feedback.progress_plan %}<li><strong>{{ step.action }}</strong><br>{{ step.success_check }}</li>{% endfor %}</ol>
+  <details><summary>Proposition de réponse améliorée</summary>{% for response in feedback.corrected_response %}<h4>{{ response.label }}</h4><div class="ai-review-response">{{ response.text }}</div>{% endfor %}</details>
+  {% if feedback.questions_for_trainer %}<h4>Questions à discuter avec le formateur</h4><ul>{% for question in feedback.questions_for_trainer %}<li>{{ question }}</li>{% endfor %}</ul>{% endif %}
+  {% if feedback.limits %}<h4>Limites de cette analyse</h4><ul>{% for point in feedback.limits %}<li>{{ point }}</li>{% endfor %}</ul>{% endif %}
+{% elif analysis.error %}<p>{{ analysis.error }}</p>{% else %}<p>L’analyse est en cours de préparation. Actualisez cette page pour consulter son résultat.</p>{% endif %}
+<details><summary>Texte correspondant à cette version</summary>{% for field_id, text in analysis.answers.items() %}<div class="ai-review-response">{{ text }}</div>{% endfor %}</details>
+</details>{% endfor %}
+</section>
+{% endif %}

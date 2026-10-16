@@ -1,0 +1,58 @@
+{
+  "id": "a3p-v4-xi-39-02-video",
+  "title": "Traiter un message numérique suspect",
+  "duration_seconds": 373.975016,
+  "narration_seconds": 371.71200000000005,
+  "voice": "fr-FR-HenriNeural",
+  "rate": "-2%",
+  "required": true,
+  "burned_captions": true,
+  "chapters": [
+    {
+      "title": "Traiter un message numérique suspect",
+      "start_seconds": 0,
+      "end_seconds": 29.333
+    },
+    {
+      "title": "Les repères du cours",
+      "start_seconds": 29.333,
+      "end_seconds": 131.247
+    },
+    {
+      "title": "Lire la situation professionnelle",
+      "start_seconds": 131.247,
+      "end_seconds": 171.265
+    },
+    {
+      "title": "Expliquer la décision",
+      "start_seconds": 171.265,
+      "end_seconds": 232.787
+    },
+    {
+      "title": "Fiabilité et disponibilité vont ensemble",
+      "start_seconds": 232.787,
+      "end_seconds": 259.621
+    },
+    {
+      "title": "Vérifier une demande inhabituelle",
+      "start_seconds": 259.621,
+      "end_seconds": 288.287
+    },
+    {
+      "title": "Préciser le cadre de la décision",
+      "start_seconds": 288.287,
+      "end_seconds": 319.287
+    },
+    {
+      "title": "Vérifier son raisonnement",
+      "start_seconds": 319.287,
+      "end_seconds": 373.954
+    }
+  ],
+  "transcript": "Traiter un message numérique suspect. Un logo, une signature et une urgence apparente ne suffisent pas à authentifier une demande. L'hameçonnage peut viser un code d'accès, un paiement, un agenda ou un changement de point de rendez-vous. La vérification utilise un contact connu indépendamment du message suspect. L'agent conserve les éléments utiles au signalement et suit le circuit prévu. Il ne répond pas avec un secret, ne teste pas une pièce jointe inconnue et ne mène pas de contre-attaque.\n\nUn dossier utile comporte une structure commune : cadrage, programme, contacts, reconnaissance et comptes rendus. Les noms de fichiers indiquent le sujet, la date et la version. « Programme_final_vraiment_final » ne permet pas de savoir quelle version est active. Une version validée doit être identifiable par l’équipe, et les anciennes versions conservées ou retirées selon la procédure. Le rangement fait gagner du temps au moment où l’attention est déjà sollicitée. Utilisez les comptes et outils autorisés, verrouillez les appareils et limitez les droits au besoin réel. Une sauvegarde permet de retrouver des données ; elle ne remplace pas la maîtrise des accès. Une copie locale peut être nécessaire en cas de mauvaise connexion, mais elle doit être prévue, protégée et supprimée à la clôture selon les règles. Un téléphone déchargé rend inutilisable un dossier pourtant bien préparé. Un envoi au mauvais destinataire, une perte d’appareil ou un document ouvert à tous constitue un incident à signaler rapidement. Conservez les faits utiles et suivez la procédure de l’organisation. Ne cherchez pas à dissimuler l’erreur en supprimant les seules traces disponibles. Pour un débutant, trois habitudes réduisent de nombreux problèmes : vérifier le destinataire avant d’envoyer, vérifier la version avant d’agir et vérifier la fermeture des accès à la fin de la mission. Ces contrôles courts doivent devenir réguliers. Nommez le document par mission, objet, date et version. L’organisation désigne l’emplacement faisant référence et les droits de modification. Une diffusion précise ce qui change et qui doit confirmer. La sauvegarde restaure après perte ; l’historique de versions explique les modifications. Les deux répondent à des problèmes différents.\n\nUn message imitant le responsable demande l'export complet de l'agenda et fournit un lien de connexion inhabituel. Le point établi est le suivant. Le domaine et le circuit de transmission diffèrent de ceux habituellement utilisés. Il faut cependant conserver une distinction avec ce qui reste inconnu. L'identité réelle de l'émetteur n'est pas vérifiée. Ces deux informations ne jouent pas le même rôle. La première peut fonder une décision ; la seconde doit être traitée comme une vérification à organiser. Le fait de ne pas connaître une information ne permet ni de la considérer favorable, ni de conclure au pire. Il faut préciser comment cette incertitude affecte la mission.\n\nDans cette situation, la décision adaptée est la suivante. Vérifier par un contact indépendant connu et signaler la demande sans utiliser le lien ni transmettre l'agenda. Pour comprendre cette réponse, revenons à la règle étudiée. Un logo, une signature et une urgence apparente ne suffisent pas à authentifier une demande. L'hameçonnage peut viser un code d'accès, un paiement, un agenda ou un changement de point de rendez-vous. La vérification utilise un contact connu indépendamment du message suspect. L'agent conserve les éléments utiles au signalement et suit le circuit prévu. Il ne répond pas avec un secret, ne teste pas une pièce jointe inconnue et ne mène pas de contre-attaque. La qualité du choix se vérifie sur ses conséquences : maintien de la protection, respect du cadre, information de la personne compétente et possibilité de réévaluer. Une décision ne doit pas être présentée comme définitivement valable si ses conditions changent. Il faut donc conserver les éléments sur lesquels elle repose et prévoir le retour d’information utile.\n\nUn document doit être exact, accessible aux personnes autorisées et identifiable comme version applicable. La sécurité numérique ne se limite pas au mot de passe. Vérifiez les droits, les liens, les copies hors ligne autorisées et la procédure de secours. Un plan parfaitement protégé mais inaccessible au moment utile crée une difficulté de mission. À l’inverse, un lien public facilite l’accès au prix d’une exposition excessive.\n\nL’urgence, le changement de coordonnées et la demande d’identifiants sont des signaux qui justifient une vérification par un autre canal connu. Ne confirmez pas une demande en utilisant uniquement le numéro fourni dans le message suspect. Signalez l’anomalie selon la procédure et conservez les éléments utiles sans les rediffuser à tous. La reprise doit utiliser une source de référence contrôlée. Une erreur d’accès ou de partage se traite collectivement, sans masquer le problème derrière une copie non maîtrisée.\n\nUne équipe peut posséder trois fichiers intitulés « programme final ». Sans numéro de version ni responsable de diffusion, un ancien horaire peut être pris pour une nouvelle consigne. Dans notre exemple, le dossier utilise une identification simple : « Érable - programme - v03 - 28/09, 18 h ». Le nom du fichier aide à le reconnaître ; la diffusion par le circuit autorisé confirme qu’il s’agit de la version applicable. Un nom contenant « validé » ne prouve pas à lui seul une validation.\n\nPour faire le point, distinguez quatre éléments dans le cas expliqué. D’abord, la situation. Un message imitant le responsable demande l'export complet de l'agenda et fournit un lien de connexion inhabituel. Ensuite, le fait confirmé. Le domaine et le circuit de transmission diffèrent de ceux habituellement utilisés. Puis, la limite de l’information disponible. L'identité réelle de l'émetteur n'est pas vérifiée. Enfin, l’action retenue et son relais. Vérifier par un contact indépendant connu et signaler la demande sans utiliser le lien ni transmettre l'agenda. Dans l’atelier qui suit, une information nouvelle modifiera le dossier. Vous devrez relire les pièces et choisir une réponse adaptée à cette évolution. La correction expliquera le choix après votre réponse. Le but est de transférer le raisonnement, et pas de mémoriser la phrase donnée dans cet exemple.",
+  "source_sha256": "7d38aedc2cecf84090ba076790d46c6d6024acf9b338eb186ce634213da103b9",
+  "video_sha256": "a10ae1cdd4c1473669a6d5a99a0852c6e89e8d91afac21dbd3d8c85be7a25f72",
+  "src": "media/a3p/v4/a3p-v4-xi-39-02.mp4",
+  "poster": "media/a3p/v4/a3p-v4-xi-39-02.jpg",
+  "captions": "media/a3p/v4/a3p-v4-xi-39-02.vtt"
+}

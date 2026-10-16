@@ -1,0 +1,936 @@
+{
+  "id": "vtc-h",
+  "version": "20261007-vtc-v5-annales",
+  "training_label": "VTC",
+  "title": "VTC · Réaliser une mission professionnelle · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "vtc-h-independent-01",
+      "prompt": "Votre mission prévoit une arrivée au terminal à 17 h 20. À 16 h 25, le trajet annoncé prend 40 minutes, mais le client demande encore un arrêt de 25 minutes. Quelle décision prenez-vous avant de confirmer cet arrêt ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Accepter l’arrêt en conservant l’annonce de 17 h 20, puisque le trajet principal reste inchangé"
+        },
+        {
+          "id": "o3",
+          "text": "Demander au client de réduire son passage au terminal de dix minutes sans modifier la mission"
+        },
+        {
+          "id": "o1",
+          "text": "Expliquer que l’arrivée prévisible passe à 17 h 30, puis faire arbitrer l’arrêt et l’horaire avec le client"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "16 h 25 + 40 minutes + 25 minutes = 17 h 30, sans marge supplémentaire. L’arrêt rend l’horaire demandé incompatible avec les données du scénario ; le choix doit être explicite avant de s’engager.",
+      "module": "H",
+      "lesson_refs": [
+        "H.01"
+      ],
+      "sources": [
+        {
+          "title": "Arrêté du 6 avril 2017, article 3 — compétences de l’épreuve pratique VTC",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-02",
+      "prompt": "Une réservation annonce trois passagers et trois petites valises. À la prise en charge, une quatrième personne et deux grandes valises supplémentaires se présentent ; le véhicule ne permet pas de tout installer correctement. Quelle solution organisez-vous ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Prendre tout le groupe puis régler la question des bagages au premier arrêt"
+        },
+        {
+          "id": "o1",
+          "text": "Faire adapter la réservation et rechercher un véhicule ou un transport complémentaire offrant les places et le chargement nécessaires"
+        },
+        {
+          "id": "o2",
+          "text": "Installer les valises excédentaires entre les passagers et partir si les portes ferment"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Le besoin réel dépasse ici la capacité utilisable. Adapter le transport avant le départ évite une installation improvisée et permet de confirmer aussi le nouveau prix et le délai.",
+      "module": "H",
+      "lesson_refs": [
+        "H.01"
+      ],
+      "sources": [
+        {
+          "title": "Arrêté du 6 avril 2017, article 3 — compétences de l’épreuve pratique VTC",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        },
+        {
+          "title": "ONISR — Code de la route et partage de la voie publique",
+          "url": "https://www.onisr.securite-routiere.gouv.fr/politique-de-securite-routiere/code-de-la-route"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-03",
+      "prompt": "Deux personnes vous attendent devant une entreprise et affirment avoir réservé la même voiture. Vous disposez d’une référence de réservation et du nom du réservant. Comment identifiez-vous la bonne mission ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Comparer discrètement la référence et les informations nécessaires avec chacune avant de charger les bagages"
+        },
+        {
+          "id": "o2",
+          "text": "Lire à voix haute la liste complète de vos clients et destinations pour trouver une correspondance"
+        },
+        {
+          "id": "o3",
+          "text": "Choisir la première personne arrivée, puis comparer les réservations pendant le trajet"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La référence permet de vérifier la mission sans exposer la liste des autres clients. Partir avant ce rapprochement peut attribuer le véhicule au mauvais passager et compromettre les deux prises en charge.",
+      "module": "H",
+      "lesson_refs": [
+        "H.01"
+      ],
+      "sources": [
+        {
+          "title": "CNIL — Minimiser les données collectées",
+          "url": "https://www.cnil.fr/fr/minimiser-les-donnees-collectees"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-04",
+      "prompt": "Deux itinéraires licites sont disponibles : A prend 32 minutes avec 8 € de péage, B prend 39 minutes sans péage. Il reste 50 minutes avant l’heure d’arrivée demandée et le devis exclut les péages. Que proposez-vous ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Choisir A et annoncer les 8 € seulement à l’arrivée, car A est plus rapide"
+        },
+        {
+          "id": "o3",
+          "text": "Choisir B en affirmant qu’aucun retard n’est possible puisqu’il reste onze minutes"
+        },
+        {
+          "id": "o1",
+          "text": "Présenter les deux temps et le supplément éventuel, puis confirmer le choix avant le départ"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Les deux options sont faisables selon les temps fournis, sans garantie sur le trafic futur. Le supplément connu doit être annoncé avant accord ; la comparaison doit associer temps, coût et marge.",
+      "module": "H",
+      "lesson_refs": [
+        "H.02"
+      ],
+      "sources": [
+        {
+          "title": "DGCCRF — Information préalable sur les prix et suppléments",
+          "url": "https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/linformation-sur-les-prix"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-05",
+      "prompt": "Vous avez prévu une arrivée à 11 h 45. Une déviation officielle ajoute 12 minutes au trajet estimé et l’accueil du client ferme à midi. Quelle information transmettez-vous une fois arrêté dans un lieu adapté ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Une arrivée annoncée à midi exactement, sans expliquer la nouvelle estimation"
+        },
+        {
+          "id": "o1",
+          "text": "Une estimation actualisée à 11 h 57, avec la marge restante de trois minutes et l’incertitude du trafic"
+        },
+        {
+          "id": "o2",
+          "text": "Le maintien garanti de 11 h 45, puisque la déviation ne dépend pas de vous"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "11 h 45 + 12 minutes donne 11 h 57. Il reste trois minutes avant la fermeture, ce qui justifie une information précise et prudente pour que le client décide d’une éventuelle réorganisation.",
+      "module": "H",
+      "lesson_refs": [
+        "H.02"
+      ],
+      "sources": [
+        {
+          "title": "Arrêté du 6 avril 2017, article 3 — compétences de l’épreuve pratique VTC",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        },
+        {
+          "title": "Sécurité routière — Distraction et smartphone en conduite",
+          "url": "https://www.securite-routiere.gouv.fr/quand-vous-regardez-votre-telephone-qui-regarde-la-route"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-06",
+      "prompt": "Vous reprenez un véhicule conduit auparavant par un collègue plus grand. Le siège vous permet d’atteindre les pédales mais vos rétroviseurs montrent surtout l’habitacle. Quel enchaînement prépare le départ ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Stabiliser votre position de conduite, ajuster les rétroviseurs à cette position et vérifier la vision avant de circuler"
+        },
+        {
+          "id": "o2",
+          "text": "Régler les rétroviseurs en roulant pour observer immédiatement le trafic réel"
+        },
+        {
+          "id": "o3",
+          "text": "Conserver les réglages du collègue, puis vous pencher à chaque contrôle"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Les réglages se font à l’arrêt, à partir de votre position stabilisée. Se pencher systématiquement ou régler en circulation ajoute une tâche au moment où l’attention doit rester disponible.",
+      "module": "H",
+      "lesson_refs": [
+        "H.03"
+      ],
+      "sources": [
+        {
+          "title": "Arrêté du 6 avril 2017, article 3 — compétences de l’épreuve pratique VTC",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-07",
+      "prompt": "À l’arrêt avant la prise en charge, vous constatez qu’un tapis mal fixé peut remonter sous les pédales. La mission suivante est proche. Quelle priorité retenez-vous ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Partir en maintenant le tapis avec le pied gauche"
+        },
+        {
+          "id": "o3",
+          "text": "Signaler le tapis au client puis le fixer à la fin de la mission"
+        },
+        {
+          "id": "o1",
+          "text": "Supprimer le risque et vérifier le débattement des commandes avant tout départ"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Le problème concerne directement l’accès aux commandes. Le signalement seul ne le corrige pas ; l’intervention précède le départ, même si elle impose d’actualiser l’heure d’arrivée.",
+      "module": "H",
+      "lesson_refs": [
+        "H.03"
+      ],
+      "sources": [
+        {
+          "title": "ONISR — Code de la route et partage de la voie publique",
+          "url": "https://www.onisr.securite-routiere.gouv.fr/politique-de-securite-routiere/code-de-la-route"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-08",
+      "prompt": "Un passager vous indique entendre difficilement et vous demande de lui faire face lorsque le véhicule est arrêté. Quelle adaptation convient à l’accueil ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Demander systématiquement son diagnostic médical avant de confirmer la course"
+        },
+        {
+          "id": "o1",
+          "text": "Confirmer destination et consignes face à lui à l’arrêt, puis convenir d’un moyen simple pour ses demandes pendant le trajet"
+        },
+        {
+          "id": "o2",
+          "text": "Hausser la voix depuis le coffre en chargeant les bagages"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La demande porte sur une modalité de communication concrète. L’accueil peut être adapté sans recueillir un diagnostic qui n’est pas nécessaire à cette organisation.",
+      "module": "H",
+      "lesson_refs": [
+        "H.04"
+      ],
+      "sources": [
+        {
+          "title": "Arrêté du 6 avril 2017, article 3 — compétences de l’épreuve pratique VTC",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        },
+        {
+          "title": "CNIL — Minimiser les données collectées",
+          "url": "https://www.cnil.fr/fr/minimiser-les-donnees-collectees"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-09",
+      "prompt": "Un client craint de manquer son train. Le calcul donne 18 h 42 à la gare pour un départ à 18 h 50, hors trajet à pied jusqu’au quai. Quelle réponse est professionnellement fondée ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Présenter cette estimation et la marge limitée, puis convenir d’une arrivée au point autorisé le plus pertinent"
+        },
+        {
+          "id": "o2",
+          "text": "Garantir qu’il sera assis dans le train à 18 h 50 parce que la gare est atteinte à 18 h 42"
+        },
+        {
+          "id": "o3",
+          "text": "Promettre de gagner les minutes manquantes en accélérant si la circulation se densifie"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’estimation routière ne comprend pas l’accès au quai et ne garantit pas l’embarquement. Une information exacte aide le client à choisir sans créer une promesse que le conducteur ne maîtrise pas.",
+      "module": "H",
+      "lesson_refs": [
+        "H.04"
+      ],
+      "sources": [
+        {
+          "title": "Arrêté du 6 avril 2017, article 3 — compétences de l’épreuve pratique VTC",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-10",
+      "prompt": "À la réception d’un hôtel, un employé vous demande la destination exacte et le numéro personnel du client pour « compléter son fichier ». Ces données ne sont pas nécessaires à la prise en charge. Que faites-vous ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Donner les deux données parce que l’employé connaît le nom du client"
+        },
+        {
+          "id": "o3",
+          "text": "Envoyer une capture de la réservation complète pour éviter une erreur de transcription"
+        },
+        {
+          "id": "o1",
+          "text": "Limiter l’échange aux informations nécessaires au rendez-vous et orienter toute demande supplémentaire vers le client"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La connaissance du nom ne justifie pas le partage d’autres données. Une capture révèle souvent davantage que ce qui est nécessaire à l’organisation du rendez-vous.",
+      "module": "H",
+      "lesson_refs": [
+        "H.04"
+      ],
+      "sources": [
+        {
+          "title": "CNIL — Minimiser les données collectées",
+          "url": "https://www.cnil.fr/fr/minimiser-les-donnees-collectees"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-11",
+      "prompt": "Une application affiche une modification urgente du point de rendez-vous alors que vous approchez d’un carrefour complexe. Le passager vous propose de tenir le téléphone pendant que vous lisez. Que faites-vous ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Dicter une réponse détaillée tout en cherchant votre voie dans le carrefour"
+        },
+        {
+          "id": "o1",
+          "text": "Traiter le carrefour, puis consulter et confirmer la modification après un arrêt adapté"
+        },
+        {
+          "id": "o2",
+          "text": "Lire immédiatement l’écran tenu par le passager, car vous ne tenez pas l’appareil"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Tenir l’appareil à deux ne supprime pas la distraction visuelle et cognitive. Reporter la consultation préserve l’attention requise par le carrefour, puis permet une réponse exacte.",
+      "module": "H",
+      "lesson_refs": [
+        "H.05"
+      ],
+      "sources": [
+        {
+          "title": "Sécurité routière — Distraction et smartphone en conduite",
+          "url": "https://www.securite-routiere.gouv.fr/quand-vous-regardez-votre-telephone-qui-regarde-la-route"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-12",
+      "prompt": "Sur une mission du soir, vous bâillez plusieurs fois et vos paupières deviennent lourdes. Il reste quinze kilomètres. Quelle décision protège la prestation ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Rejoindre un endroit sûr pour interrompre la conduite et organiser le repos ou la continuité de service"
+        },
+        {
+          "id": "o2",
+          "text": "Finir le trajet avec la fenêtre ouverte puis se reposer à destination"
+        },
+        {
+          "id": "o3",
+          "text": "Augmenter la musique et réduire la vitesse pour compenser la somnolence"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Les signes décrits signalent une difficulté à rester éveillé. Une courte distance restante, l’air frais ou la musique ne rétablissent pas durablement la vigilance ; la conduite doit être interrompue dans un lieu sûr.",
+      "module": "H",
+      "lesson_refs": [
+        "H.05"
+      ],
+      "sources": [
+        {
+          "title": "Sécurité routière — Fatigue et conduite",
+          "url": "https://modules.securite-routiere.gouv.fr/jsrt/Fatigue/Fatigue.html"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-13",
+      "prompt": "Sous une pluie forte, la file devant vous ralentit par vagues. Le passager pose plusieurs questions touristiques. Quel comportement combine sécurité et qualité de service ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Rester très près du véhicule précédent pour éviter les insertions et poursuivre le commentaire"
+        },
+        {
+          "id": "o3",
+          "text": "Maintenir l’allure habituelle pour préserver l’horaire, en freinant plus fort si nécessaire"
+        },
+        {
+          "id": "o1",
+          "text": "Augmenter la marge avec le véhicule précédent, adapter l’allure et différer les explications longues"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Une marge accrue et une allure adaptée permettent d’anticiper les ralentissements. Reporter un commentaire long est une décision de service justifiée par la charge de conduite, que l’on peut expliquer brièvement.",
+      "module": "H",
+      "lesson_refs": [
+        "H.05"
+      ],
+      "sources": [
+        {
+          "title": "ONISR — Code de la route et partage de la voie publique",
+          "url": "https://www.onisr.securite-routiere.gouv.fr/politique-de-securite-routiere/code-de-la-route"
+        },
+        {
+          "title": "Arrêté du 6 avril 2017, article 3 — compétences de l’épreuve pratique VTC",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-14",
+      "prompt": "Vous devez quitter une place en marche arrière. Un fourgon vient de masquer la zone et un piéton y est entré sans que vous puissiez confirmer sa sortie. Que faites-vous ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Continuer dès que le fourgon commence à repartir, sans nouvel examen de la zone"
+        },
+        {
+          "id": "o1",
+          "text": "Suspendre la manœuvre et rétablir une observation suffisante avant de reprendre"
+        },
+        {
+          "id": "o2",
+          "text": "Reculer très lentement en vous fondant seulement sur l’absence de bip des capteurs"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’absence d’alerte d’un équipement ne démontre pas que la zone masquée est libre. Le doute porte sur un usager réellement observé : il faut retrouver une visibilité suffisante avant le mouvement.",
+      "module": "H",
+      "lesson_refs": [
+        "H.06"
+      ],
+      "sources": [
+        {
+          "title": "ONISR — Code de la route et partage de la voie publique",
+          "url": "https://www.onisr.securite-routiere.gouv.fr/politique-de-securite-routiere/code-de-la-route"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-15",
+      "prompt": "Le client demande une dépose devant une porte située après un virage sans visibilité. Un emplacement autorisé se trouve trente mètres plus loin sur le même trottoir. Quelle proposition convient ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Expliquer le risque du virage, rejoindre l’emplacement autorisé et faciliter la fin de parcours à pied selon le besoin"
+        },
+        {
+          "id": "o2",
+          "text": "S’arrêter dans le virage avec les feux de détresse pour rendre la dépose visible"
+        },
+        {
+          "id": "o3",
+          "text": "Faire descendre le client en ralentissant près de la porte pour ne pas immobiliser la circulation"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La proximité de la porte ne rend pas la dépose sûre. L’emplacement annoncé offre une solution concrète ; les feux de détresse ne corrigent pas une mauvaise visibilité.",
+      "module": "H",
+      "lesson_refs": [
+        "H.06"
+      ],
+      "sources": [
+        {
+          "title": "ONISR — Code de la route et partage de la voie publique",
+          "url": "https://www.onisr.securite-routiere.gouv.fr/politique-de-securite-routiere/code-de-la-route"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-16",
+      "prompt": "Une personne utilisant une canne doit descendre. L’emplacement prévu impose de poser le pied dans une flaque profonde et un second emplacement autorisé, dégagé, est accessible vingt mètres plus loin. Que décidez-vous ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Maintenir le premier emplacement parce qu’il figure dans la réservation"
+        },
+        {
+          "id": "o3",
+          "text": "La tirer rapidement par le bras pour franchir la flaque avant l’arrivée d’un autre véhicule"
+        },
+        {
+          "id": "o1",
+          "text": "Proposer le second emplacement, confirmer l’aide souhaitée et laisser le temps nécessaire à la descente"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La dépose doit tenir compte de la situation réellement observée et de l’aide souhaitée. Un changement limité et expliqué peut rendre la descente plus sûre sans imposer de manipulation au passager.",
+      "module": "H",
+      "lesson_refs": [
+        "H.06"
+      ],
+      "sources": [
+        {
+          "title": "Arrêté du 6 avril 2017, article 3 — compétences de l’épreuve pratique VTC",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-17",
+      "prompt": "Le passager souhaite voir un monument depuis la voiture. Le détour licite ajoute vingt minutes et une prestation supplémentaire payante selon vos conditions. Que faites-vous avant de quitter l’itinéraire ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Décrire le monument comme inclus dans la mission sans vérifier le délai restant"
+        },
+        {
+          "id": "o1",
+          "text": "Vérifier l’impact sur l’horaire, annoncer le supplément et obtenir un accord sur la modification"
+        },
+        {
+          "id": "o2",
+          "text": "Faire le détour puis calculer le supplément à l’arrivée, puisque le passager a parlé du monument"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Une demande d’information n’équivaut pas à l’acceptation d’un détour payant. Temps et prix doivent être clarifiés avant d’engager la modification.",
+      "module": "H",
+      "lesson_refs": [
+        "H.07"
+      ],
+      "sources": [
+        {
+          "title": "DGCCRF — Information préalable sur les prix et suppléments",
+          "url": "https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/linformation-sur-les-prix"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-18",
+      "prompt": "Un client vous demande quel lieu visiter entre deux rendez-vous. Il dispose de quarante minutes sur place et veut éviter les escaliers. Vous connaissez deux lieux mais pas leur accessibilité du jour. Quelle démarche convient ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Faire préciser ses priorités et vérifier l’accès actuel avant de proposer une visite compatible avec le temps disponible"
+        },
+        {
+          "id": "o2",
+          "text": "Choisir le lieu le plus connu et assurer que l’accès est possible sans vérification"
+        },
+        {
+          "id": "o3",
+          "text": "Lui réciter l’histoire complète des deux lieux sans traiter le temps ni l’accès"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La recommandation dépend ici de deux contraintes explicites : le temps et l’accès. Les vérifier produit une information utile au client ; la notoriété seule ne répond pas à sa demande.",
+      "module": "H",
+      "lesson_refs": [
+        "H.07"
+      ],
+      "sources": [
+        {
+          "title": "Arrêté du 6 avril 2017, article 3 — compétences de l’épreuve pratique VTC",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-19",
+      "prompt": "Votre client ne répond pas au point prévu devant une gare. L’attente autorisée y prend fin dans deux minutes, et aucune nouvelle consigne n’est arrivée. Quelle action préparez-vous ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Rejoindre la file de taxis pour attendre plus longtemps sans prévenir"
+        },
+        {
+          "id": "o3",
+          "text": "Considérer immédiatement la mission comme annulée sans consulter les conditions convenues"
+        },
+        {
+          "id": "o1",
+          "text": "Envoyer une information concise sur votre position et le délai, puis appliquer les conditions de réservation depuis un emplacement autorisé"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Le défaut de réponse doit être traité avec une trace du contact et les conditions réellement acceptées. Il ne crée ni droit d’occuper une zone réservée ni motif automatique d’annulation immédiate.",
+      "module": "H",
+      "lesson_refs": [
+        "H.08"
+      ],
+      "sources": [
+        {
+          "title": "DGCCRF — Taxis, VTC, motos-pro : ce qu’il faut savoir",
+          "url": "https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/taxis-vtc-motos-pro-ce-quil-faut-savoir"
+        },
+        {
+          "title": "ONISR — Code de la route et partage de la voie publique",
+          "url": "https://www.onisr.securite-routiere.gouv.fr/politique-de-securite-routiere/code-de-la-route"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-20",
+      "prompt": "Une fermeture de pont imprévue retarde la mission. Le client exige un délai certain, alors que le nouvel itinéraire reste soumis au trafic. Quelle information donnez-vous après avoir sécurisé la conduite ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Aucune information avant l’arrivée pour ne pas exposer l’entreprise à une réclamation"
+        },
+        {
+          "id": "o1",
+          "text": "Une nouvelle estimation, la cause factuelle et les options possibles, en distinguant estimation et garantie"
+        },
+        {
+          "id": "o2",
+          "text": "Un horaire garanti calculé sans marge pour rassurer le client"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Une fermeture peut être décrite factuellement sans promettre la maîtrise du trafic. Expliquer l’estimation et les choix possibles permet au client d’agir sur sa suite de voyage.",
+      "module": "H",
+      "lesson_refs": [
+        "H.08"
+      ],
+      "sources": [
+        {
+          "title": "Arrêté du 6 avril 2017, article 3 — compétences de l’épreuve pratique VTC",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-21",
+      "prompt": "Le terminal affiche « transaction non aboutie ». Le client propose que vous photographiiez sa carte bancaire pour le débiter plus tard. Quel traitement retenez-vous ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Vérifier l’état du paiement et convenir d’un autre moyen sécurisé sans photographier la carte"
+        },
+        {
+          "id": "o2",
+          "text": "Photographier recto et verso pour disposer de toutes les informations de paiement"
+        },
+        {
+          "id": "o3",
+          "text": "Considérer la transaction comme réglée puisque la carte a été présentée"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La présentation d’une carte n’est pas une preuve d’encaissement. Il faut vérifier l’état réel et choisir un canal de paiement adapté, sans conserver une image contenant des données bancaires inutiles au dossier de course.",
+      "module": "H",
+      "lesson_refs": [
+        "H.08"
+      ],
+      "sources": [
+        {
+          "title": "CNIL — Minimiser les données collectées",
+          "url": "https://www.cnil.fr/fr/minimiser-les-donnees-collectees"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-22",
+      "prompt": "Le prix convenu est de 72 € TTC. Les conditions acceptées prévoient dix minutes d’attente incluses puis 1,50 € TTC par minute supplémentaire. Le client vous fait attendre seize minutes. Quel total présentez-vous ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "96 € TTC"
+        },
+        {
+          "id": "o3",
+          "text": "88 € TTC"
+        },
+        {
+          "id": "o1",
+          "text": "81 € TTC"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Six minutes sont facturables : 16 − 10 = 6. Le supplément est 6 × 1,50 € = 9 €, soit 72 + 9 = 81 € TTC. Facturer les seize minutes ignorerait la franchise incluse.",
+      "module": "H",
+      "lesson_refs": [
+        "H.09"
+      ],
+      "sources": [
+        {
+          "title": "DGCCRF — Information préalable sur les prix et suppléments",
+          "url": "https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/linformation-sur-les-prix"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-23",
+      "prompt": "Une facture déjà réglée comprend par erreur 12 € de supplément. Vous reconnaissez l’erreur et remboursez ces 12 €. Quelle pièce permet de conserver une trace cohérente ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Un nouveau devis de 12 € sans lien avec la facture réglée"
+        },
+        {
+          "id": "o1",
+          "text": "Un avoir de 12 € rattaché à la facture initiale et la trace du remboursement"
+        },
+        {
+          "id": "o2",
+          "text": "La même facture dont le montant est diminué sans nouveau document"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Après paiement, la correction passe par un avoir. Le lien avec la facture et le remboursement explique l’écart tout en conservant l’historique comptable.",
+      "module": "H",
+      "lesson_refs": [
+        "H.09"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Corriger une facture",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F23208"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-24",
+      "prompt": "Une mission est facturée 94 € TTC. La réservation mentionne un acompte de 30 € déjà encaissé, confirmé dans le suivi bancaire. Quel montant reste à demander au client à la fin ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "64 € TTC"
+        },
+        {
+          "id": "o2",
+          "text": "94 € TTC"
+        },
+        {
+          "id": "o3",
+          "text": "124 € TTC"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Le solde est 94 − 30 = 64 €. Le document récapitulatif distingue le prix total et le paiement déjà reçu ; demander 94 € ferait payer une deuxième fois les 30 € d’acompte.",
+      "module": "H",
+      "lesson_refs": [
+        "H.09"
+      ],
+      "sources": [
+        {
+          "title": "DGCCRF — Taxis, VTC, motos-pro : ce qu’il faut savoir",
+          "url": "https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/taxis-vtc-motos-pro-ce-quil-faut-savoir"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-25",
+      "prompt": "Après la dépose, vous trouvez un passeport dans le véhicule. Un numéro inconnu vous écrit pour en obtenir immédiatement une photo. Quelle démarche convient ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Envoyer la photo complète pour laisser l’expéditeur confirmer lui-même son identité"
+        },
+        {
+          "id": "o3",
+          "text": "Publier le nom et la photo du passeport sur votre page professionnelle pour retrouver son propriétaire"
+        },
+        {
+          "id": "o1",
+          "text": "Sécuriser l’objet et utiliser le canal de réservation pour vérifier sa restitution sans transmettre la copie à un interlocuteur non vérifié"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Le passeport expose des données d’identité. Le canal lié à la course permet d’engager la restitution tout en limitant la diffusion ; une demande reçue d’un numéro inconnu ne suffit pas à identifier le propriétaire.",
+      "module": "H",
+      "lesson_refs": [
+        "H.10"
+      ],
+      "sources": [
+        {
+          "title": "CNIL — Minimiser les données collectées",
+          "url": "https://www.cnil.fr/fr/minimiser-les-donnees-collectees"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-26",
+      "prompt": "Le passager conteste à l’arrivée dix minutes d’attente. Vous avez l’heure prévue, l’heure de présentation et un message annonçant son retard. Quelle réponse prépare le traitement du désaccord ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Répondre seulement que le logiciel a décidé et refuser de regarder les pièces"
+        },
+        {
+          "id": "o1",
+          "text": "Rapprocher ces éléments des conditions acceptées, expliquer le calcul et conserver une trace de la réclamation"
+        },
+        {
+          "id": "o2",
+          "text": "Supprimer les horaires de suivi pour éviter qu’ils contredisent votre estimation"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Le différend porte sur une durée précise : la chronologie et les conditions permettent de contrôler le calcul. Conserver une trace facilite une correction éventuelle et un traitement cohérent.",
+      "module": "H",
+      "lesson_refs": [
+        "H.10"
+      ],
+      "sources": [
+        {
+          "title": "DGCCRF — Information préalable sur les prix et suppléments",
+          "url": "https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/linformation-sur-les-prix"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-27",
+      "prompt": "Vous découvrez un liquide répandu sur une place arrière juste avant la mission suivante. La place est nécessaire pour accueillir tous les passagers réservés. Quelle décision prenez-vous ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Remettre la place en état et actualiser le délai, ou organiser une solution de remplacement si elle reste inutilisable"
+        },
+        {
+          "id": "o2",
+          "text": "Poser une brochure sur la zone et considérer la place comme disponible"
+        },
+        {
+          "id": "o3",
+          "text": "Faire voyager un passager sans place assise pour respecter l’horaire"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La capacité annoncée doit être réellement disponible. Une remise en état ou une solution de remplacement répond au besoin ; masquer la zone ne rend pas le siège utilisable.",
+      "module": "H",
+      "lesson_refs": [
+        "H.10"
+      ],
+      "sources": [
+        {
+          "title": "Arrêté du 6 avril 2017, article 3 — compétences de l’épreuve pratique VTC",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-28",
+      "prompt": "Lors d’une simulation sans faute éliminatoire, vous obtenez 3/3 en parcours, 6/10 en conduite, 2/5 en relation client et 1/2 en facturation. Quel bilan chiffré est correct ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "11/20 ; le résultat en relation client doit être retiré du total"
+        },
+        {
+          "id": "o3",
+          "text": "14/20 ; les points non obtenus en facturation sont compensés automatiquement par le parcours"
+        },
+        {
+          "id": "o1",
+          "text": "12/20 ; le total atteint le seuil d’admission, mais la relation client laisse une marge de progression importante"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "3 + 6 + 2 + 1 = 12. Dans les conditions indiquées, le seuil est atteint. Le total ne dispense pas du débriefing : la relation client ne représente ici que deux points sur cinq.",
+      "module": "H",
+      "lesson_refs": [
+        "H.11"
+      ],
+      "sources": [
+        {
+          "title": "Arrêté du 6 avril 2017, article 3 — compétences de l’épreuve pratique VTC",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-29",
+      "prompt": "Sur trois simulations, vous réussissez l’accueil et la facturation mais vous découvrez trop tard les voies nécessaires aux intersections. Quel exercice ciblé choisissez-vous pour la séance suivante ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Le même parcours appris par cœur sans vérifier le placement dans une rue différente"
+        },
+        {
+          "id": "o1",
+          "text": "Un parcours comportant des intersections variées, avec observation anticipée des directions, puis débriefing des placements"
+        },
+        {
+          "id": "o2",
+          "text": "Trois nouvelles simulations de facturation pour augmenter le score sur le thème déjà réussi"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Le constat répété porte sur l’anticipation et le placement. Varier les intersections vérifie que la méthode se transfère ; répéter un thème déjà maîtrisé ou mémoriser une seule rue ne traite pas cette difficulté.",
+      "module": "H",
+      "lesson_refs": [
+        "H.12"
+      ],
+      "sources": [
+        {
+          "title": "Arrêté du 6 avril 2017, article 3 — compétences de l’épreuve pratique VTC",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ]
+    },
+    {
+      "id": "vtc-h-independent-30",
+      "prompt": "Après un entraînement, vous notez : « freinages brusques à deux carrefours, annonce du tarif correcte, bagages bien vérifiés ». Quel indicateur choisissez-vous pour évaluer la séance suivante ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Le nombre de ralentissements préparés en amont dans des situations comparables, observé et expliqué au débriefing"
+        },
+        {
+          "id": "o2",
+          "text": "Le seul temps total du trajet, même si les freinages restent brusques"
+        },
+        {
+          "id": "o3",
+          "text": "Le nombre de détails touristiques mémorisés, sans observation de la conduite"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’indicateur doit mesurer la difficulté observée : préparer les ralentissements. Le temps total peut diminuer sans améliorer la souplesse ; un autre thème ne montre pas si cette compétence progresse.",
+      "module": "H",
+      "lesson_refs": [
+        "H.12"
+      ],
+      "sources": [
+        {
+          "title": "Arrêté du 6 avril 2017, article 3 — compétences de l’épreuve pratique VTC",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046"
+        }
+      ]
+    }
+  ],
+  "notice": "Entraînement pédagogique à choix unique. Les questions historiques et celles nécessitant un visuel absent sont exclues. La correction renvoie aux leçons à revoir ; ce bilan ne remplace pas le barème de l’examen officiel.",
+  "construction": {
+    "reviewed_on": "2026-10-07",
+    "independent_of_workshops": true,
+    "annales_questions": 0,
+    "original_questions": 30
+  }
+}

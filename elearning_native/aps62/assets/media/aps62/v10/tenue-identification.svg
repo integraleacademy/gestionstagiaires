@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 1060" role="img" aria-labelledby="title desc">
+  <title id="title">Repères de tenue pour une mission de surveillance privée</title>
+  <desc id="desc">Exemple fictif non à l'échelle. De face, le numéro individuel est en haut de la poitrine à gauche au porté, donc à droite pour l'observateur. L'insigne de l'entreprise est placé dessous. De dos, SÉCURITÉ PRIVÉE est inscrit sur une seule ligne. Le numéro et les éléments communs restent visibles avec la veste ou le gilet. Les dimensions et le champ d'application sont détaillés dans le cours.</desc>
+  <rect width="400" height="1060" fill="#f4f7fc"/>
+  <g font-family="Arial, sans-serif" fill="#14243c">
+    <text x="24" y="40" font-size="23" font-weight="700">Les repères de la tenue</text>
+    <text x="24" y="69" font-size="17">Surveillance privée d’un entrepôt</text>
+    <rect x="16" y="89" width="368" height="469" rx="18" fill="white" stroke="#d5deeb"/>
+    <text x="32" y="124" font-size="22" font-weight="700">FACE</text>
+    <text x="32" y="152" font-size="17">Gauche au porté = à votre droite</text>
+    <path d="M146 178 L165 166 Q200 187 235 166 L254 178 L292 197 L338 281 L294 305 L271 266 L271 425 L129 425 L129 266 L106 305 L62 281 L108 197 Z" fill="#21395b" stroke="#13283f" stroke-width="3"/>
+    <path d="M165 166 L184 204 L200 185 L216 204 L235 166 M200 185 L200 422" fill="none" stroke="#8299b6" stroke-width="3"/>
+    <rect x="220" y="226" width="59" height="19" rx="2" fill="white"/>
+    <text x="249.5" y="240" text-anchor="middle" font-size="12" font-weight="700" fill="black">1234567</text>
+    <rect x="222" y="259" width="54" height="52" rx="4" fill="#f2f5f8" stroke="#14243c"/>
+    <text x="249" y="289" text-anchor="middle" font-size="10" font-weight="700">EXEMPLE</text>
+    <circle cx="322" cy="233" r="17" fill="#195dc1"/>
+    <text x="322" y="240" text-anchor="middle" font-size="20" font-weight="700" fill="white">1</text>
+    <path d="M304 233 L283 235" fill="none" stroke="#195dc1" stroke-width="3"/>
+    <circle cx="322" cy="335" r="17" fill="#195dc1"/>
+    <text x="322" y="342" text-anchor="middle" font-size="20" font-weight="700" fill="white">2</text>
+    <path d="M308 324 L279 293" fill="none" stroke="#195dc1" stroke-width="3"/>
+    <text x="32" y="464" font-size="20" font-weight="700">1 · Numéro individuel</text>
+    <text x="32" y="491" font-size="18">Les 7 derniers chiffres du NUB.</text>
+    <text x="32" y="523" font-size="20" font-weight="700">2 · Insigne professionnel dessous</text>
+    <rect x="16" y="578" width="368" height="341" rx="18" fill="white" stroke="#d5deeb"/>
+    <text x="32" y="613" font-size="22" font-weight="700">DOS</text>
+    <path d="M147 638 L166 627 Q200 641 234 627 L253 638 L291 657 L331 728 L296 749 L277 719 L277 847 L123 847 L123 719 L104 749 L69 728 L109 657 Z" fill="#21395b" stroke="#13283f" stroke-width="3"/>
+    <rect x="94" y="678" width="212" height="33" rx="2" fill="black"/>
+    <text x="200" y="701" text-anchor="middle" font-size="20" font-weight="700" fill="white">SÉCURITÉ PRIVÉE</text>
+    <circle cx="345" cy="689" r="17" fill="#195dc1"/>
+    <text x="345" y="696" text-anchor="middle" font-size="20" font-weight="700" fill="white">3</text>
+    <path d="M327 689 L309 691" fill="none" stroke="#195dc1" stroke-width="3"/>
+    <text x="32" y="886" font-size="20" font-weight="700">3 · Une seule ligne, centrée</text>
+    <rect x="16" y="936" width="368" height="69" rx="12" fill="#e2edff"/>
+    <text x="31" y="964" font-size="20" font-weight="700">4 · Des éléments toujours visibles</text>
+    <text x="31" y="990" font-size="17">Même avec la veste ou le gilet.</text>
+    <text x="24" y="1030" font-size="14">Exemple fictif · Schéma non à l’échelle</text>
+    <text x="24" y="1051" font-size="14">Arrêté du 18 juillet 2023 · Vérifié le 10/10/2026</text>
+  </g>
+</svg>

@@ -1,0 +1,2410 @@
+{
+  "id": "vtc-final",
+  "version": "20261006-vtc-v3-105h",
+  "training_label": "VTC",
+  "title": "VTC · Examen blanc final · Les sept matières",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "vtc-a-01-q2",
+      "prompt": "Qu’est-ce qui distingue principalement un VTC d’un taxi pour la prise en charge ?",
+      "options": [
+        {
+          "id": "ce7a20ba6d5a",
+          "text": "Le VTC exige une réservation préalable"
+        },
+        {
+          "id": "24045227c97c",
+          "text": "Le VTC peut toujours prendre un client qui le hèle"
+        },
+        {
+          "id": "49e3c899f591",
+          "text": "Le véhicule de luxe dispense de réservation"
+        }
+      ],
+      "answer": "ce7a20ba6d5a",
+      "explanation": "La réservation précède la prise en charge du VTC. Le confort ou l’application utilisée ne change pas ce cadre.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.01"
+      ]
+    },
+    {
+      "id": "vtc-a-08-q1",
+      "prompt": "Vous observez une agression en cours. Quel numéro correspond à une alerte urgente ?",
+      "options": [
+        {
+          "id": "df7c2d9c1e39",
+          "text": "17 ou 112"
+        },
+        {
+          "id": "9ce4d3dd69eb",
+          "text": "Le service fiscal"
+        },
+        {
+          "id": "309abb1b90c6",
+          "text": "3919 comme unique numéro d’urgence"
+        }
+      ],
+      "answer": "df7c2d9c1e39",
+      "explanation": "Le 17 et le 112 permettent l’alerte urgente ; le 3919 est un service d’écoute et d’information.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.08"
+      ]
+    },
+    {
+      "id": "vtc-f-01-q2",
+      "prompt": "Des hôtels affichent complet certains week-ends. Que faut-il encore vérifier ?",
+      "options": [
+        {
+          "id": "b9c0ec8140ea",
+          "text": "Que toutes les chambres commanderont forcément une course"
+        },
+        {
+          "id": "f5331e2827a1",
+          "text": "Les besoins de transport et les conditions d’accès à cette clientèle"
+        },
+        {
+          "id": "9f1fbadb3809",
+          "text": "Qu’aucun concurrent ne travaille"
+        }
+      ],
+      "answer": "f5331e2827a1",
+      "explanation": "Une fréquentation touristique n’est pas automatiquement un volume de ventes ; il faut vérifier le besoin réel.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.01"
+      ]
+    },
+    {
+      "id": "vtc-a-01-q1",
+      "prompt": "Un chauffeur effectue un déplacement uniquement pour transporter un client payant. Comment qualifier la situation ?",
+      "options": [
+        {
+          "id": "efa28be3ca23",
+          "text": "Une prestation professionnelle de transport"
+        },
+        {
+          "id": "4a0ada8babe2",
+          "text": "Un covoiturage parce que le véhicule est partagé"
+        },
+        {
+          "id": "293ee6f52d91",
+          "text": "Un trajet privé dès que le paiement est en espèces"
+        }
+      ],
+      "answer": "efa28be3ca23",
+      "explanation": "Le trajet est organisé pour le client et rémunère un service ; ce n’est pas le partage des frais d’un déplacement personnel.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.01"
+      ]
+    },
+    {
+      "id": "vtc-e-06-q2",
+      "prompt": "How do you ask whether the temperature is comfortable?",
+      "options": [
+        {
+          "id": "d0b62566af18",
+          "text": "Is the temperature all right for you?"
+        },
+        {
+          "id": "63e5e6331f0c",
+          "text": "Where is the temperature going?"
+        },
+        {
+          "id": "a5d34e87fb5f",
+          "text": "Do you pay the temperature?"
+        }
+      ],
+      "answer": "d0b62566af18",
+      "explanation": "Cette question vérifie le confort du passager et lui permet d’exprimer son besoin.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.06"
+      ]
+    },
+    {
+      "id": "vtc-c-12-q1",
+      "prompt": "Après une panne sur une voie rapide, quelle priorité ?",
+      "options": [
+        {
+          "id": "fd9b131a9014",
+          "text": "Réparer immédiatement au milieu de la circulation"
+        },
+        {
+          "id": "16d297f50ddd",
+          "text": "Mettre les personnes en sécurité et alerter selon la situation"
+        },
+        {
+          "id": "5732ec75e1e6",
+          "text": "Rester derrière le véhicule pour le pousser"
+        }
+      ],
+      "answer": "16d297f50ddd",
+      "explanation": "La protection des personnes précède la mécanique ; ne vous exposez pas à la circulation pour récupérer ou installer un objet.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.12"
+      ]
+    },
+    {
+      "id": "vtc-g-05-q1",
+      "prompt": "La réservation est enregistrée après la prise en charge. Est-elle préalable ?",
+      "options": [
+        {
+          "id": "6e8d98404411",
+          "text": "Oui, si elle existe à la fin de la course"
+        },
+        {
+          "id": "8944c576c963",
+          "text": "Oui, si le client paie par carte"
+        },
+        {
+          "id": "a7856bc96932",
+          "text": "Non"
+        }
+      ],
+      "answer": "a7856bc96932",
+      "explanation": "Préalable signifie avant la prise en charge ; enregistrer ensuite ne régularise pas rétroactivement la chronologie.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.05"
+      ]
+    },
+    {
+      "id": "vtc-f-05-q1",
+      "prompt": "Une course affiche 60 € et la commission de l’exemple est de 25 %. Quel reste avant les autres frais ?",
+      "options": [
+        {
+          "id": "c61543a79114",
+          "text": "45 €"
+        },
+        {
+          "id": "9f2913fbdaa9",
+          "text": "35 €"
+        },
+        {
+          "id": "2d013226a160",
+          "text": "60 €"
+        }
+      ],
+      "answer": "c61543a79114",
+      "explanation": "Commission : 60 × 0,25 = 15 €. Reste : 60 − 15 = 45 €, avant les autres obligations.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.05"
+      ]
+    },
+    {
+      "id": "vtc-c-07-q1",
+      "prompt": "Vous bâillez, avez les paupières lourdes et manquez une sortie. Quelle action ?",
+      "options": [
+        {
+          "id": "7c0e47ecda29",
+          "text": "Vous arrêter dans un lieu sûr et vous reposer"
+        },
+        {
+          "id": "7b1008cf83fe",
+          "text": "Ouvrir la vitre et continuer coûte que coûte"
+        },
+        {
+          "id": "d413893b4cb9",
+          "text": "Monter le volume pour garantir la vigilance"
+        }
+      ],
+      "answer": "7c0e47ecda29",
+      "explanation": "Les signes de somnolence nécessitent l’arrêt et le repos. Les astuces de stimulation ne remplacent pas le sommeil.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.07"
+      ]
+    },
+    {
+      "id": "vtc-a-02-q1",
+      "prompt": "Vous voulez vous inscrire à l’examen VTC. Quel interlocuteur recherchez-vous ?",
+      "options": [
+        {
+          "id": "b0330b510167",
+          "text": "L’assureur automobile"
+        },
+        {
+          "id": "a045e2d80f7a",
+          "text": "Le concessionnaire du véhicule"
+        },
+        {
+          "id": "a47a9e5b1d60",
+          "text": "La chambre de métiers et de l’artisanat"
+        }
+      ],
+      "answer": "a47a9e5b1d60",
+      "explanation": "La CMA organise l’examen. La carte professionnelle, le véhicule et les assurances relèvent d’autres démarches.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.02"
+      ]
+    },
+    {
+      "id": "vtc-c-05-q1",
+      "prompt": "Un feu devient vert. Peut-on avancer si le carrefour est encombré ?",
+      "options": [
+        {
+          "id": "ddc0e3ab1af3",
+          "text": "Oui, le vert impose toujours d’avancer"
+        },
+        {
+          "id": "a0f56274e8f4",
+          "text": "Oui, en klaxonnant"
+        },
+        {
+          "id": "e712d120b512",
+          "text": "Non, il faut éviter de bloquer le carrefour"
+        }
+      ],
+      "answer": "e712d120b512",
+      "explanation": "L’autorisation donnée par le feu n’efface pas l’obligation de ne pas s’engager dans une intersection bloquée.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.05"
+      ]
+    },
+    {
+      "id": "vtc-g-08-q2",
+      "prompt": "Pourquoi intégrer le retour à vide dans le calcul de mission ?",
+      "options": [
+        {
+          "id": "eaf248840a13",
+          "text": "Il n’utilise pas le véhicule"
+        },
+        {
+          "id": "af8cd074b0d6",
+          "text": "Il produit toujours un revenu supplémentaire"
+        },
+        {
+          "id": "4d3638989fa0",
+          "text": "Il consomme du temps et des ressources"
+        }
+      ],
+      "answer": "4d3638989fa0",
+      "explanation": "Un trajet sans client crée néanmoins des coûts et mobilise le chauffeur.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.08"
+      ]
+    },
+    {
+      "id": "vtc-d-manual-06",
+      "prompt": "L’heure d’arrivée annoncée est…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Garantie."
+        },
+        {
+          "id": "b",
+          "text": "Supprimée."
+        },
+        {
+          "id": "c",
+          "text": "Estimée."
+        }
+      ],
+      "answer": "c",
+      "explanation": "La ligne 16 précise qu’elle est estimée et non garantie.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-d-08-q1",
+      "prompt": "Quelle phrase annonce une action future ?",
+      "options": [
+        {
+          "id": "0b1474dbd5c4",
+          "text": "Je vous attendais à l’entrée nord."
+        },
+        {
+          "id": "db4024bc5119",
+          "text": "Je vous ai attendu à l’entrée nord."
+        },
+        {
+          "id": "e1232fc3ab49",
+          "text": "Je vous attendrai à l’entrée nord."
+        }
+      ],
+      "answer": "e1232fc3ab49",
+      "explanation": "« Attendrai » est au futur ; « attendais » et « ai attendu » situent l’action dans le passé.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.08"
+      ]
+    },
+    {
+      "id": "vtc-b-manual-04",
+      "prompt": "Produits 5 000 €, charges 3 800 € : résultat simplifié ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "1 200 €."
+        },
+        {
+          "id": "b",
+          "text": "8 800 €."
+        },
+        {
+          "id": "c",
+          "text": "3 800 €."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le résultat correspond à la différence entre produits et charges.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-g-03-q1",
+      "prompt": "Le nombre réglementaire de places d’un VTC inclut-il le conducteur ?",
+      "options": [
+        {
+          "id": "e04324631be1",
+          "text": "Seulement si le véhicule est loué"
+        },
+        {
+          "id": "cf74d3d7b861",
+          "text": "Oui"
+        },
+        {
+          "id": "bde739240401",
+          "text": "Non, seulement les clients"
+        }
+      ],
+      "answer": "cf74d3d7b861",
+      "explanation": "La capacité se lit conducteur compris. Le nombre maximal de clients est donc inférieur d’une place au total indiqué.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.03"
+      ]
+    },
+    {
+      "id": "vtc-c-manual-06",
+      "prompt": "Le GPS demande un sens interdit. Vous…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Poursuivez par une voie autorisée."
+        },
+        {
+          "id": "b",
+          "text": "Suivez le GPS car la mission est réservée."
+        },
+        {
+          "id": "c",
+          "text": "Entrez si aucun véhicule n’est visible."
+        }
+      ],
+      "answer": "a",
+      "explanation": "La signalisation prime sur l’outil de navigation.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-f-manual-02",
+      "prompt": "Pour conserver 80 € après une commission de 20 % sur le HT, il faut facturer…",
+      "options": [
+        {
+          "id": "a",
+          "text": "96 € HT."
+        },
+        {
+          "id": "b",
+          "text": "80 € HT."
+        },
+        {
+          "id": "c",
+          "text": "100 € HT."
+        }
+      ],
+      "answer": "c",
+      "explanation": "80 ÷ 0,80 = 100 € HT.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-f-manual-04",
+      "prompt": "Un numéro obtenu pour une réservation…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Autorise toutes les publicités."
+        },
+        {
+          "id": "b",
+          "text": "Ne vaut pas consentement général à la prospection."
+        },
+        {
+          "id": "c",
+          "text": "Doit être publié avec l’avis client."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Il faut une base autorisant l’envoi et respecter les règles d’opposition ou de consentement.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-f-07-q1",
+      "prompt": "Avant un partenariat avec une conciergerie, que clarifier ?",
+      "options": [
+        {
+          "id": "f4f5b7297246",
+          "text": "Seulement la couleur des cartes de visite"
+        },
+        {
+          "id": "2155b8025392",
+          "text": "Réservation, paiement, responsabilités et conditions de service"
+        },
+        {
+          "id": "68d50efd0d90",
+          "text": "Uniquement la poignée de main"
+        }
+      ],
+      "answer": "2155b8025392",
+      "explanation": "Les rôles et engagements évitent les malentendus sur qui commande, qui paie et qui traite un incident.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.07"
+      ]
+    },
+    {
+      "id": "vtc-e-01-q2",
+      "prompt": "How do you politely ask a passenger to repeat?",
+      "options": [
+        {
+          "id": "1465e9b1fd4a",
+          "text": "Could you repeat that, please?"
+        },
+        {
+          "id": "d9e63aeebec5",
+          "text": "I am repeating you tomorrow."
+        },
+        {
+          "id": "99d33636b509",
+          "text": "You repeat yesterday."
+        }
+      ],
+      "answer": "1465e9b1fd4a",
+      "explanation": "« Could you… please? » permet de demander poliment. Il vaut mieux faire répéter que prétendre comprendre.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.01"
+      ]
+    },
+    {
+      "id": "vtc-e-05-q2",
+      "prompt": "The passenger has « two suitcases and one small bag ». What should you expect?",
+      "options": [
+        {
+          "id": "4c52e33f2737",
+          "text": "Trois valises"
+        },
+        {
+          "id": "550b08a77898",
+          "text": "Une valise et deux sacs"
+        },
+        {
+          "id": "17ec6672f71e",
+          "text": "Deux valises et un petit sac"
+        }
+      ],
+      "answer": "17ec6672f71e",
+      "explanation": "Il faut conserver à la fois le nombre et la nature des bagages dans la traduction.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.05"
+      ]
+    },
+    {
+      "id": "vtc-a-manual-03",
+      "prompt": "Une personne discrimine un client en raison de son origine. Quel est le bon repère ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "C’est une préférence commerciale."
+        },
+        {
+          "id": "b",
+          "text": "C’est admis si le partenaire le demande."
+        },
+        {
+          "id": "c",
+          "text": "Un critère protégé ne justifie pas ce refus."
+        }
+      ],
+      "answer": "c",
+      "explanation": "La consigne d’un partenaire ne légitime pas une discrimination.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-d-08-q2",
+      "prompt": "Quelle phrase est la plus adaptée à une demande polie ?",
+      "options": [
+        {
+          "id": "ee4f38aa1158",
+          "text": "Vous confirmer terminal."
+        },
+        {
+          "id": "9dec6833dbdb",
+          "text": "Pourriez-vous confirmer le terminal ?"
+        },
+        {
+          "id": "1ecf341627ab",
+          "text": "Tu confirmes maintenant !"
+        }
+      ],
+      "answer": "9dec6833dbdb",
+      "explanation": "Le conditionnel et une phrase complète rendent la demande claire et courtoise.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.08"
+      ]
+    },
+    {
+      "id": "vtc-d-04-q2",
+      "prompt": "« Les passagères prennent leurs valises et les placent près de la porte. » Que remplace « les » ?",
+      "options": [
+        {
+          "id": "21137ff27905",
+          "text": "Les valises"
+        },
+        {
+          "id": "21cccb2c5b48",
+          "text": "Les portes"
+        },
+        {
+          "id": "d6186d7c99ef",
+          "text": "Les passagères"
+        }
+      ],
+      "answer": "21137ff27905",
+      "explanation": "Le pronom complément reprend l’objet placé. La cohérence de l’action aide à retrouver son référent.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.04"
+      ]
+    },
+    {
+      "id": "vtc-f-04-q1",
+      "prompt": "Un devis doit préciser une attente facturable. Quelle formulation est utile ?",
+      "options": [
+        {
+          "id": "b9fdb4b19b3b",
+          "text": "Attente selon mon humeur"
+        },
+        {
+          "id": "050718f30cb6",
+          "text": "La durée incluse et la méthode de facturation au-delà"
+        },
+        {
+          "id": "f2523ed85319",
+          "text": "Le supplément sera révélé après paiement"
+        }
+      ],
+      "answer": "050718f30cb6",
+      "explanation": "Une condition claire permet au client de comprendre et d’accepter la prestation avant son exécution.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.04"
+      ]
+    },
+    {
+      "id": "vtc-f-manual-01",
+      "prompt": "Une proposition de valeur décrit surtout…",
+      "options": [
+        {
+          "id": "a",
+          "text": "La taille du logo."
+        },
+        {
+          "id": "b",
+          "text": "Le besoin satisfait et le service proposé."
+        },
+        {
+          "id": "c",
+          "text": "Le revenu garanti au chauffeur."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Elle relie le besoin du client à une offre réalisable.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-b-08-q2",
+      "prompt": "Un client professionnel paie à 30 jours. Où placer cette recette dans le plan de trésorerie ?",
+      "options": [
+        {
+          "id": "5ffd54f7d3a2",
+          "text": "Toujours au jour du devis"
+        },
+        {
+          "id": "a15c4945b9b1",
+          "text": "À la date d’achat du véhicule"
+        },
+        {
+          "id": "321966dedfc2",
+          "text": "À la date d’encaissement prévue"
+        }
+      ],
+      "answer": "321966dedfc2",
+      "explanation": "Le tableau de trésorerie suit l’argent réellement reçu ou payé, pas seulement la date de la prestation.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.08"
+      ]
+    },
+    {
+      "id": "vtc-c-manual-05",
+      "prompt": "En cas de somnolence, la réponse adaptée est…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Monter la musique."
+        },
+        {
+          "id": "b",
+          "text": "Ouvrir la fenêtre seulement."
+        },
+        {
+          "id": "c",
+          "text": "S’arrêter dans un lieu sûr et récupérer."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Les astuces ne remplacent pas le repos ; la bande d’arrêt d’urgence n’est pas une aire de pause.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-g-09-q2",
+      "prompt": "Un supplément peut être facturé. Quand en clarifier les conditions ?",
+      "options": [
+        {
+          "id": "031f08726f8e",
+          "text": "Uniquement après le paiement"
+        },
+        {
+          "id": "08bd462a20ea",
+          "text": "Jamais si la course est courte"
+        },
+        {
+          "id": "7c1c27cfba4e",
+          "text": "Avant son application et selon ce qui est convenu"
+        }
+      ],
+      "answer": "7c1c27cfba4e",
+      "explanation": "Le client doit comprendre le prix et les conditions ; un supplément ne doit pas surgir sans base annoncée.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.09"
+      ]
+    },
+    {
+      "id": "vtc-d-manual-03",
+      "prompt": "Combien de passagers voyagent ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Deux."
+        },
+        {
+          "id": "b",
+          "text": "Quatre."
+        },
+        {
+          "id": "c",
+          "text": "Trois."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Deux adultes et un enfant font trois passagers, sans compter Lina.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-e-manual-06",
+      "prompt": "Choose the correct question.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Does she needs a receipt?"
+        },
+        {
+          "id": "b",
+          "text": "Do she need a receipt?"
+        },
+        {
+          "id": "c",
+          "text": "Does she need a receipt?"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Après does, le verbe reste à sa forme de base.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-e-11-q2",
+      "prompt": "Which phrase is suitable when you do not understand a problem?",
+      "options": [
+        {
+          "id": "3fdc17a69f90",
+          "text": "Could you explain the problem, please?"
+        },
+        {
+          "id": "d907e39dce64",
+          "text": "Your problem is not a word."
+        },
+        {
+          "id": "786db37b0e03",
+          "text": "There is never a problem, goodbye."
+        }
+      ],
+      "answer": "3fdc17a69f90",
+      "explanation": "Demander une explication polie permet de vérifier le besoin avant de proposer une solution.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.11"
+      ]
+    },
+    {
+      "id": "vtc-a-manual-02",
+      "prompt": "Une inscription sur une application remplace-t-elle le REVTC ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Oui, si le compte est validé."
+        },
+        {
+          "id": "b",
+          "text": "Non."
+        },
+        {
+          "id": "c",
+          "text": "Seulement pour les petites courses."
+        }
+      ],
+      "answer": "b",
+      "explanation": "La validation commerciale d’un compte ne remplace pas l’inscription réglementaire de l’exploitant.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-g-01-q2",
+      "prompt": "La carte professionnelle remplace-t-elle l’inscription de l’exploitant au REVTC ?",
+      "options": [
+        {
+          "id": "9a63d40fa235",
+          "text": "Non"
+        },
+        {
+          "id": "642eb18c242f",
+          "text": "Oui, dans tous les cas"
+        },
+        {
+          "id": "ccf1591e2aa3",
+          "text": "Oui, si la carte est récente"
+        }
+      ],
+      "answer": "9a63d40fa235",
+      "explanation": "Conducteur et exploitant correspondent à deux niveaux de contrôle distincts.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.01"
+      ]
+    },
+    {
+      "id": "vtc-d-07-q1",
+      "prompt": "Dans une prestation, que désigne un « justificatif » ?",
+      "options": [
+        {
+          "id": "5b3168d1ae2c",
+          "text": "Un document apportant une preuve"
+        },
+        {
+          "id": "ab492e46e4dd",
+          "text": "Une préférence de confort"
+        },
+        {
+          "id": "474ddb573d3e",
+          "text": "Une personne qui réserve"
+        }
+      ],
+      "answer": "5b3168d1ae2c",
+      "explanation": "Le sens professionnel est celui d’une pièce servant à établir une information ou une opération.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.07"
+      ]
+    },
+    {
+      "id": "vtc-e-02-q2",
+      "prompt": "Which question asks for the number of passengers?",
+      "options": [
+        {
+          "id": "f402318f3635",
+          "text": "Where is the passenger going?"
+        },
+        {
+          "id": "62847e6f4866",
+          "text": "How many passengers are there?"
+        },
+        {
+          "id": "0f1d0c32ae9e",
+          "text": "When is the passenger leaving?"
+        }
+      ],
+      "answer": "62847e6f4866",
+      "explanation": "« How many » interroge sur un nombre d’éléments dénombrables.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.02"
+      ]
+    },
+    {
+      "id": "vtc-f-08-q1",
+      "prompt": "Quelle publication respecte mieux la confidentialité ?",
+      "options": [
+        {
+          "id": "d5ef58fa1c0e",
+          "text": "Une photo du client avec son adresse sans accord"
+        },
+        {
+          "id": "53dfb38ae410",
+          "text": "Une présentation du service sans données personnelles de passagers"
+        },
+        {
+          "id": "4a063eb2e288",
+          "text": "Une capture de toutes les réservations du jour"
+        }
+      ],
+      "answer": "53dfb38ae410",
+      "explanation": "La promotion peut présenter le service sans exposer les données de courses ni l’identité des passagers.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.08"
+      ]
+    },
+    {
+      "id": "vtc-g-manual-02",
+      "prompt": "L’ancienneté ordinaire prévue pour le véhicule concerné est…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Moins de sept ans."
+        },
+        {
+          "id": "b",
+          "text": "Moins de dix ans."
+        },
+        {
+          "id": "c",
+          "text": "Sans limite pour tous les véhicules."
+        }
+      ],
+      "answer": "a",
+      "explanation": "L’arrêté prévoit moins de sept ans, sous réserve des exceptions applicables.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-d-10-q2",
+      "prompt": "Quelle réponse conserve le sens de « deux valises et un petit sac » ?",
+      "options": [
+        {
+          "id": "2ff6ef0d21af",
+          "text": "Deux bagages seulement"
+        },
+        {
+          "id": "21318188b112",
+          "text": "Deux valises, plus un petit sac"
+        },
+        {
+          "id": "22f9f84815d3",
+          "text": "Trois grandes valises"
+        }
+      ],
+      "answer": "21318188b112",
+      "explanation": "Une reformulation doit conserver la nature et le nombre des objets.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.10"
+      ]
+    },
+    {
+      "id": "vtc-c-11-q1",
+      "prompt": "Sous forte pluie, quelle combinaison est adaptée ?",
+      "options": [
+        {
+          "id": "562513624751",
+          "text": "Même vitesse et véhicule précédent suivi de près"
+        },
+        {
+          "id": "9ba6aa5ced47",
+          "text": "Allure réduite, distances accrues et visibilité entretenue"
+        },
+        {
+          "id": "c6c20162b576",
+          "text": "Feux éteints pour éviter les reflets"
+        }
+      ],
+      "answer": "9ba6aa5ced47",
+      "explanation": "La pluie dégrade adhérence et visibilité. Plusieurs adaptations se combinent pour préserver une marge de sécurité.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.11"
+      ]
+    },
+    {
+      "id": "vtc-a-10-q2",
+      "prompt": "Un client oublie son bagage. Quel usage de ses coordonnées est pertinent ?",
+      "options": [
+        {
+          "id": "605b0bc28100",
+          "text": "Le contacter pour organiser la restitution"
+        },
+        {
+          "id": "2468ddad2af9",
+          "text": "Publier son hôtel sur un réseau social"
+        },
+        {
+          "id": "63c2844b8df3",
+          "text": "Les ajouter à une campagne commerciale sans autre vérification"
+        }
+      ],
+      "answer": "605b0bc28100",
+      "explanation": "La restitution correspond au besoin concret de la prestation ; elle n’autorise pas des usages sans rapport.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.10"
+      ]
+    },
+    {
+      "id": "vtc-a-03-q1",
+      "prompt": "Un candidat a réussi seulement les épreuves théoriques. Peut-il déjà exercer avec cette attestation ?",
+      "options": [
+        {
+          "id": "af73173fb5f4",
+          "text": "Oui, si le passager donne son accord"
+        },
+        {
+          "id": "4ff126cb91bf",
+          "text": "Non, la pratique et les autres démarches restent nécessaires"
+        },
+        {
+          "id": "32bfe98db8d0",
+          "text": "Oui, pendant un an sans carte"
+        }
+      ],
+      "answer": "4ff126cb91bf",
+      "explanation": "L’admissibilité est une étape. Elle ne vaut ni réussite à l’ensemble de l’examen ni carte professionnelle.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.03"
+      ]
+    },
+    {
+      "id": "vtc-b-manual-06",
+      "prompt": "En régime micro, une dépense de carburant…",
+      "options": [
+        {
+          "id": "a",
+          "text": "N’existe pas économiquement."
+        },
+        {
+          "id": "b",
+          "text": "Est toujours remboursée par l’État."
+        },
+        {
+          "id": "c",
+          "text": "Reste à payer même si elle n’est pas déduite au réel fiscal."
+        }
+      ],
+      "answer": "c",
+      "explanation": "L’abattement forfaitaire ne rembourse pas les frais réellement supportés.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-f-manual-05",
+      "prompt": "Une mission plus chère est-elle toujours plus rentable ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Oui."
+        },
+        {
+          "id": "b",
+          "text": "Oui, si elle est longue."
+        },
+        {
+          "id": "c",
+          "text": "Non, les coûts et le temps doivent être comparés."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le prix seul ne mesure ni contribution ni revenu horaire.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-c-02-q1",
+      "prompt": "La limitation autorise 80 km/h mais la visibilité est très réduite. Quelle décision ?",
+      "options": [
+        {
+          "id": "0af7445d4342",
+          "text": "Accélérer pour quitter rapidement la zone"
+        },
+        {
+          "id": "6bffec1a5fe5",
+          "text": "Réduire l’allure selon les conditions"
+        },
+        {
+          "id": "c979003282d9",
+          "text": "Maintenir forcément 80 km/h"
+        }
+      ],
+      "answer": "6bffec1a5fe5",
+      "explanation": "La vitesse maximale autorisée n’est pas une vitesse à atteindre ; les conditions peuvent imposer de ralentir.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.02"
+      ]
+    },
+    {
+      "id": "vtc-g-manual-04",
+      "prompt": "Le justificatif de réservation doit comporter notamment…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le diplôme scolaire du client."
+        },
+        {
+          "id": "b",
+          "text": "Le code confidentiel de sa carte bancaire."
+        },
+        {
+          "id": "c",
+          "text": "Le REVTC et le SIREN de l’exploitant."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Ces mentions figurent dans l’arrêté du 6 août 2025.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-e-manual-01",
+      "prompt": "Choose the correct greeting at 7 p.m.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Good evening."
+        },
+        {
+          "id": "b",
+          "text": "Good night, welcome!"
+        },
+        {
+          "id": "c",
+          "text": "Good morning."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Good evening sert à accueillir le soir ; good night sert généralement à prendre congé.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-a-12-q2",
+      "prompt": "L’assureur indemnise un dommage. Cela efface-t-il automatiquement une infraction routière ?",
+      "options": [
+        {
+          "id": "a747a7a6c62a",
+          "text": "Oui, dès que le dommage est payé"
+        },
+        {
+          "id": "5ebbfa141aab",
+          "text": "Oui, si le client retire son avis"
+        },
+        {
+          "id": "87fb19f805cc",
+          "text": "Non, les responsabilités sont distinctes"
+        }
+      ],
+      "answer": "87fb19f805cc",
+      "explanation": "La réparation civile n’annule pas une sanction pénale ni une mesure administrative éventuelle.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.12"
+      ]
+    },
+    {
+      "id": "vtc-b-manual-01",
+      "prompt": "La micro-entreprise est…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Une société avec deux associés."
+        },
+        {
+          "id": "b",
+          "text": "Un régime simplifié, pas une forme de société autonome."
+        },
+        {
+          "id": "c",
+          "text": "Un diplôme professionnel."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le régime micro doit être distingué du statut juridique.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-g-09-q1",
+      "prompt": "Les tarifs VTC sont-ils identiques aux tarifs réglementés du taxi ?",
+      "options": [
+        {
+          "id": "d46451ed796a",
+          "text": "Oui, seulement en ville"
+        },
+        {
+          "id": "22c15353e774",
+          "text": "Non, les prix VTC sont libres dans leur cadre légal"
+        },
+        {
+          "id": "b04364d151bd",
+          "text": "Oui, obligatoirement"
+        }
+      ],
+      "answer": "22c15353e774",
+      "explanation": "La liberté tarifaire ne dispense pas d’informer le client et de convenir clairement des conditions du service.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.09"
+      ]
+    },
+    {
+      "id": "vtc-b-09-q2",
+      "prompt": "Que signifie atteindre le seuil de rentabilité ?",
+      "options": [
+        {
+          "id": "a59d32661889",
+          "text": "Couvrir les charges retenues dans le calcul"
+        },
+        {
+          "id": "eb32ece62ac5",
+          "text": "Obtenir automatiquement un salaire net garanti"
+        },
+        {
+          "id": "3673ebaec6d1",
+          "text": "Ne plus payer de cotisations"
+        }
+      ],
+      "answer": "a59d32661889",
+      "explanation": "Au seuil, la marge couvre les charges fixes du modèle ; cela ne garantit ni trésorerie ni rémunération disponible.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.09"
+      ]
+    },
+    {
+      "id": "vtc-a-11-q1",
+      "prompt": "Un justificatif présente une heure de réservation postérieure au départ. Que faire lors du contrôle ?",
+      "options": [
+        {
+          "id": "5e2312a814d3",
+          "text": "Antidater le document à la main"
+        },
+        {
+          "id": "908cb1170f4f",
+          "text": "Supprimer le trajet de l’application"
+        },
+        {
+          "id": "0575ca11270a",
+          "text": "Présenter les faits et documents authentiques sans falsifier l’heure"
+        }
+      ],
+      "answer": "0575ca11270a",
+      "explanation": "Une modification destinée à masquer la chronologie ne rend pas la réservation préalable et peut aggraver la situation.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.11"
+      ]
+    },
+    {
+      "id": "vtc-e-09-q1",
+      "prompt": "Which phrase announces an estimated delay politely?",
+      "options": [
+        {
+          "id": "ac292c1ec982",
+          "text": "You are late because you are a passenger."
+        },
+        {
+          "id": "cfe818d4ebb5",
+          "text": "I am ten minutes old."
+        },
+        {
+          "id": "3e7c01b2eae0",
+          "text": "I’m sorry, we may be ten minutes late."
+        }
+      ],
+      "answer": "3e7c01b2eae0",
+      "explanation": "« May be » exprime une possibilité ; le message informe sans transformer l’estimation en certitude.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.09"
+      ]
+    },
+    {
+      "id": "vtc-d-02-q1",
+      "prompt": "Mme Roy réserve pour M. et Mme Diallo. Qui voyage ?",
+      "options": [
+        {
+          "id": "f246f8c3bb67",
+          "text": "Mme Roy seule"
+        },
+        {
+          "id": "4811895329a7",
+          "text": "M. et Mme Diallo"
+        },
+        {
+          "id": "01356fa5e2ec",
+          "text": "Les trois personnes nécessairement"
+        }
+      ],
+      "answer": "4811895329a7",
+      "explanation": "La personne qui réserve et les passagers peuvent être différents. Le texte désigne ici les Diallo comme voyageurs.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.02"
+      ]
+    },
+    {
+      "id": "vtc-d-05-q1",
+      "prompt": "« La rue est fermée, donc le trajet est modifié. » Quel lien exprime « donc » ?",
+      "options": [
+        {
+          "id": "6a2fd6f1b69c",
+          "text": "Une conséquence"
+        },
+        {
+          "id": "b6a47270de0c",
+          "text": "Une comparaison"
+        },
+        {
+          "id": "1921f48acd7a",
+          "text": "Une opposition"
+        }
+      ],
+      "answer": "6a2fd6f1b69c",
+      "explanation": "La fermeture est la cause ; la modification du trajet en est la conséquence dans cette phrase.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.05"
+      ]
+    },
+    {
+      "id": "vtc-b-05-q1",
+      "prompt": "Approche 8 km, client 20 km, retour 12 km : quelle distance compte pour les coûts ?",
+      "options": [
+        {
+          "id": "80bbdbcdcdca",
+          "text": "40 km"
+        },
+        {
+          "id": "ef78c334cdbb",
+          "text": "28 km"
+        },
+        {
+          "id": "7529c0fd351b",
+          "text": "20 km"
+        }
+      ],
+      "answer": "80bbdbcdcdca",
+      "explanation": "Le véhicule consomme sur tout le trajet, y compris les kilomètres sans passager : 8 + 20 + 12 = 40 km.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.05"
+      ]
+    },
+    {
+      "id": "vtc-c-10-q2",
+      "prompt": "Une conduite économique permet-elle de couper le moteur en roulant ?",
+      "options": [
+        {
+          "id": "52a58d1545e6",
+          "text": "Oui, si le passager accepte"
+        },
+        {
+          "id": "852b022ff4bd",
+          "text": "Oui, dans toutes les descentes"
+        },
+        {
+          "id": "9090dac4c51b",
+          "text": "Non, la sécurité et les consignes du véhicule restent prioritaires"
+        }
+      ],
+      "answer": "9090dac4c51b",
+      "explanation": "L’éco-conduite s’appuie sur l’anticipation et un usage adapté du véhicule, sans supprimer ses fonctions de sécurité.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.10"
+      ]
+    },
+    {
+      "id": "vtc-c-09-q2",
+      "prompt": "À 50 km/h, environ quelle distance parcourt-on en trois secondes ?",
+      "options": [
+        {
+          "id": "99936d12742c",
+          "text": "42 mètres"
+        },
+        {
+          "id": "28667405f207",
+          "text": "150 mètres"
+        },
+        {
+          "id": "34a7e18b76ca",
+          "text": "5 mètres"
+        }
+      ],
+      "answer": "99936d12742c",
+      "explanation": "50 ÷ 3,6 × 3 ≈ 41,7 m. Quelques secondes de distraction représentent déjà une grande distance.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.09"
+      ]
+    },
+    {
+      "id": "vtc-g-05-q2",
+      "prompt": "Quelle paire d’horaires doit être distinguée sur une réservation ?",
+      "options": [
+        {
+          "id": "6e81d64d83d7",
+          "text": "L’heure du nettoyage et celle du plein seulement"
+        },
+        {
+          "id": "f70387422db4",
+          "text": "L’heure de réservation et l’heure de prise en charge souhaitée"
+        },
+        {
+          "id": "e12b97f37563",
+          "text": "Les horaires du précédent client uniquement"
+        }
+      ],
+      "answer": "f70387422db4",
+      "explanation": "Ces deux moments établissent des faits différents et participent à la preuve de la réservation préalable.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.05"
+      ]
+    },
+    {
+      "id": "vtc-a-07-q2",
+      "prompt": "Un client harcèle le conducteur par messages après la course. Que faire ?",
+      "options": [
+        {
+          "id": "fbcc599351f5",
+          "text": "Conserver les traces utiles et utiliser les canaux de signalement adaptés"
+        },
+        {
+          "id": "c79099f23e2e",
+          "text": "Accepter ses demandes pour éviter une mauvaise note"
+        },
+        {
+          "id": "2a13639aa80b",
+          "text": "Publier ses coordonnées pour le dénoncer"
+        }
+      ],
+      "answer": "fbcc599351f5",
+      "explanation": "Les preuves utiles sont conservées sans diffusion publique. En cas de danger immédiat, appeler les secours ou les forces de l’ordre.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.07"
+      ]
+    },
+    {
+      "id": "vtc-a-manual-05",
+      "prompt": "Pour une agression en cours, quel contact est adapté ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le 3919 uniquement."
+        },
+        {
+          "id": "b",
+          "text": "Le 17 ou le 112."
+        },
+        {
+          "id": "c",
+          "text": "Le service des impôts."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le 17 et le 112 permettent une alerte urgente ; le 3919 est un service d’écoute et d’information.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-d-09-q1",
+      "prompt": "Quelle phrase est correctement accordée ?",
+      "options": [
+        {
+          "id": "730c148adbb8",
+          "text": "Les passagères sont arrivées."
+        },
+        {
+          "id": "261dec1387f5",
+          "text": "Les passagères sont arrivé."
+        },
+        {
+          "id": "2aef536d2779",
+          "text": "Les passagères est arrivé."
+        }
+      ],
+      "answer": "730c148adbb8",
+      "explanation": "Le sujet pluriel commande « sont » et le participe avec être s’accorde ici au féminin pluriel.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.09"
+      ]
+    },
+    {
+      "id": "vtc-c-02-q2",
+      "prompt": "Le client demande de rouler plus vite pour attraper son train. Que répondre ?",
+      "options": [
+        {
+          "id": "9de19d12e3bc",
+          "text": "Accepter si le client paie le supplément"
+        },
+        {
+          "id": "a18c3c16afcf",
+          "text": "Annoncer une estimation réaliste sans dépasser les règles de sécurité"
+        },
+        {
+          "id": "d4094e47e613",
+          "text": "Demander au client d’assumer les points perdus"
+        }
+      ],
+      "answer": "a18c3c16afcf",
+      "explanation": "Le conducteur reste responsable de sa conduite. Une contrainte commerciale ne justifie pas une infraction.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.02"
+      ]
+    },
+    {
+      "id": "vtc-f-03-q2",
+      "prompt": "Avec 20 % de commission, quel prix brut laisse 80 € après cette commission ?",
+      "options": [
+        {
+          "id": "f1b945f53510",
+          "text": "80 €"
+        },
+        {
+          "id": "944a63c53151",
+          "text": "96 €"
+        },
+        {
+          "id": "6ae1cd1fe909",
+          "text": "100 €"
+        }
+      ],
+      "answer": "6ae1cd1fe909",
+      "explanation": "Le prix doit vérifier prix × 0,80 = 80 ; donc 80 ÷ 0,80 = 100 €.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.03"
+      ]
+    },
+    {
+      "id": "vtc-g-07-q2",
+      "prompt": "Le vol est retardé. Quelle action limite une attente inadaptée ?",
+      "options": [
+        {
+          "id": "cdcf42998442",
+          "text": "Stationner indéfiniment au même endroit"
+        },
+        {
+          "id": "78eb2e470b8e",
+          "text": "Actualiser l’horaire et vérifier les règles de stationnement applicables"
+        },
+        {
+          "id": "ad8b09534e4c",
+          "text": "Supprimer toute communication avec le client"
+        }
+      ],
+      "answer": "78eb2e470b8e",
+      "explanation": "L’attente et l’accès à l’aéroport obéissent à des conditions ; le suivi du vol aide à adapter l’organisation.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.07"
+      ]
+    },
+    {
+      "id": "vtc-e-05-q1",
+      "prompt": "Which phrase offers help with luggage?",
+      "options": [
+        {
+          "id": "8a250d992e04",
+          "text": "May I help you with your luggage?"
+        },
+        {
+          "id": "0109ce25be7e",
+          "text": "Your luggage are tomorrow."
+        },
+        {
+          "id": "f271f0f2e283",
+          "text": "Give me all your documents now."
+        }
+      ],
+      "answer": "8a250d992e04",
+      "explanation": "« May I help you…? » propose de l’aide sans l’imposer ; « luggage » est un nom indénombrable.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.05"
+      ]
+    },
+    {
+      "id": "vtc-b-06-q2",
+      "prompt": "TVA collectée 600 €, TVA déductible 250 €, toutes conditions remplies : quelle différence à payer ?",
+      "options": [
+        {
+          "id": "bf52921d9fa2",
+          "text": "250 €"
+        },
+        {
+          "id": "4fa9178ec89f",
+          "text": "350 €"
+        },
+        {
+          "id": "31f7348113ff",
+          "text": "850 €"
+        }
+      ],
+      "answer": "4fa9178ec89f",
+      "explanation": "La TVA nette de cet exemple est 600 − 250 = 350 €, sous réserve des règles de déduction.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.06"
+      ]
+    },
+    {
+      "id": "vtc-c-08-q1",
+      "prompt": "Un médicament porte un avertissement sur la conduite. Que faire ?",
+      "options": [
+        {
+          "id": "1d48b214b0d0",
+          "text": "Lire la notice et demander un avis médical ou pharmaceutique adapté"
+        },
+        {
+          "id": "6de895c590d7",
+          "text": "L’ignorer s’il est vendu sans ordonnance"
+        },
+        {
+          "id": "3acbea69bcc7",
+          "text": "Tester ses effets avec un client à bord"
+        }
+      ],
+      "answer": "1d48b214b0d0",
+      "explanation": "Un médicament peut diminuer la vigilance. La notice et le professionnel de santé aident à décider avant de conduire.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.08"
+      ]
+    },
+    {
+      "id": "vtc-f-manual-06",
+      "prompt": "Une promesse de dix courses par mois…",
+      "options": [
+        {
+          "id": "a",
+          "text": "N’est pas nécessairement une commande ferme."
+        },
+        {
+          "id": "b",
+          "text": "Garantit toujours le paiement."
+        },
+        {
+          "id": "c",
+          "text": "Supprime les conditions d’annulation."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Les engagements réels doivent être définis dans l’accord.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-e-manual-02",
+      "prompt": "“A quarter to eight” means…",
+      "options": [
+        {
+          "id": "a",
+          "text": "8:15."
+        },
+        {
+          "id": "b",
+          "text": "7:45."
+        },
+        {
+          "id": "c",
+          "text": "8:45."
+        }
+      ],
+      "answer": "b",
+      "explanation": "To indique les minutes avant l’heure suivante.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-b-02-q2",
+      "prompt": "Les formalités de création suffisent-elles pour exploiter immédiatement un VTC ?",
+      "options": [
+        {
+          "id": "b33703752aac",
+          "text": "Oui, dès l’attribution du code APE"
+        },
+        {
+          "id": "512a3ce2ee62",
+          "text": "Non, les obligations propres au transport restent à remplir"
+        },
+        {
+          "id": "9f8bfa22b4e7",
+          "text": "Oui, pour les trajets inférieurs à 10 km"
+        }
+      ],
+      "answer": "512a3ce2ee62",
+      "explanation": "L’immatriculation de l’entreprise est distincte du REVTC, des titres du conducteur et de la conformité du véhicule.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.02"
+      ]
+    },
+    {
+      "id": "vtc-g-02-q1",
+      "prompt": "Avant de constituer la garantie financière, que faut-il vérifier ?",
+      "options": [
+        {
+          "id": "f8cfbffe918a",
+          "text": "Le nombre d’avis en ligne"
+        },
+        {
+          "id": "b985156b5449",
+          "text": "Seulement le prix du carburant"
+        },
+        {
+          "id": "9aa943514ffb",
+          "text": "Le régime applicable au véhicule et les éventuelles dispenses prévues"
+        }
+      ],
+      "answer": "9aa943514ffb",
+      "explanation": "La capacité financière obéit à des règles et exceptions liées à la situation du véhicule ; une règle isolée peut induire en erreur.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.02"
+      ]
+    },
+    {
+      "id": "vtc-g-11-q2",
+      "prompt": "Comment suivre un véhicule professionnel dans la durée ?",
+      "options": [
+        {
+          "id": "9bff994a19be",
+          "text": "Changer uniquement les accessoires visibles"
+        },
+        {
+          "id": "5c38e5deb71f",
+          "text": "Planifier entretien, contrôles, assurance et mises à jour documentaires"
+        },
+        {
+          "id": "c0b905b8e87f",
+          "text": "Attendre une immobilisation"
+        }
+      ],
+      "answer": "5c38e5deb71f",
+      "explanation": "La continuité d’exploitation dépend de plusieurs échéances et de l’état réel du véhicule.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.11"
+      ]
+    },
+    {
+      "id": "vtc-a-manual-04",
+      "prompt": "Le silence d’une personne vaut-il consentement à un acte sexuel ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Non."
+        },
+        {
+          "id": "b",
+          "text": "Oui, en l’absence de refus oral."
+        },
+        {
+          "id": "c",
+          "text": "Oui, après une conversation amicale."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le consentement ne se déduit pas du seul silence ou de l’absence de réaction.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-f-11-q1",
+      "prompt": "Un client conteste un supplément. Quelle première réponse ?",
+      "options": [
+        {
+          "id": "f41883f08039",
+          "text": "Écouter puis vérifier la réservation et les conditions convenues"
+        },
+        {
+          "id": "55d05135532f",
+          "text": "Supprimer la facture sans examen"
+        },
+        {
+          "id": "9623657a3b2a",
+          "text": "Le menacer immédiatement"
+        }
+      ],
+      "answer": "f41883f08039",
+      "explanation": "Le traitement commence par les faits et les preuves, puis une réponse proportionnée et expliquée.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.11"
+      ]
+    },
+    {
+      "id": "vtc-b-11-q1",
+      "prompt": "Une facture comporte une erreur. Quelle méthode évite de rompre la traçabilité ?",
+      "options": [
+        {
+          "id": "11fbdb59e38c",
+          "text": "Effacer la facture sans trace"
+        },
+        {
+          "id": "15281d0a9f26",
+          "text": "Réutiliser son numéro pour un autre client"
+        },
+        {
+          "id": "5d8c007310b2",
+          "text": "Utiliser la procédure de correction ou d’avoir et conserver l’historique"
+        }
+      ],
+      "answer": "5d8c007310b2",
+      "explanation": "Les factures suivent une numérotation et une traçabilité. La correction doit laisser une preuve compréhensible.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.11"
+      ]
+    },
+    {
+      "id": "vtc-d-manual-04",
+      "prompt": "Pourquoi le rendez-vous est-il déplacé ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le client a changé de train."
+        },
+        {
+          "id": "b",
+          "text": "L’entrée principale est fermée pour travaux."
+        },
+        {
+          "id": "c",
+          "text": "Le prix a augmenté."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Les lignes 6 et 7 établissent la cause et la conséquence.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-b-03-q1",
+      "prompt": "Dans un bilan, où figurent les dettes d’emprunt ?",
+      "options": [
+        {
+          "id": "c0ea4d4aa49c",
+          "text": "Dans les recettes de courses"
+        },
+        {
+          "id": "f7300128cf97",
+          "text": "Dans les stocks de carburant"
+        },
+        {
+          "id": "00bd940f897b",
+          "text": "Au passif"
+        }
+      ],
+      "answer": "00bd940f897b",
+      "explanation": "Le passif présente les ressources et les dettes ; l’actif présente les emplois et les biens de l’entreprise.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.03"
+      ]
+    },
+    {
+      "id": "vtc-g-04-q2",
+      "prompt": "Le véhicule est remplacé. Peut-on réutiliser sans contrôle sa signalétique liée à l’ancien véhicule ?",
+      "options": [
+        {
+          "id": "af53f1d641ae",
+          "text": "Oui, si les voitures ont la même couleur"
+        },
+        {
+          "id": "843b3534d152",
+          "text": "Oui, les immatriculations n’ont aucune importance"
+        },
+        {
+          "id": "688d1c881951",
+          "text": "Non, il faut vérifier et mettre à jour les éléments correspondants"
+        }
+      ],
+      "answer": "688d1c881951",
+      "explanation": "Les justificatifs et la signalétique doivent correspondre au véhicule réellement utilisé.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.04"
+      ]
+    },
+    {
+      "id": "vtc-c-manual-03",
+      "prompt": "L’exemption de siège enfant propre au taxi…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Ne s’étend pas au VTC."
+        },
+        {
+          "id": "b",
+          "text": "S’applique à tous les chauffeurs payants."
+        },
+        {
+          "id": "c",
+          "text": "S’applique si le trajet est court."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le VTC doit appliquer les règles générales de retenue avec leurs exceptions propres.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-b-manual-05",
+      "prompt": "Le remboursement du capital d’un emprunt est…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Toujours une charge d’exploitation."
+        },
+        {
+          "id": "b",
+          "text": "Un décaissement distinct d’une charge du résultat."
+        },
+        {
+          "id": "c",
+          "text": "Une recette client."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Il diminue la dette et la trésorerie ; les intérêts se distinguent du capital.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-e-08-q2",
+      "prompt": "Which phrase clearly gives an example of a fixed fare?",
+      "options": [
+        {
+          "id": "d82f543b3455",
+          "text": "The weather is eighty euros."
+        },
+        {
+          "id": "99c892db3626",
+          "text": "The price has eight passengers."
+        },
+        {
+          "id": "3e7041761ba0",
+          "text": "The agreed fare is eighty euros."
+        }
+      ],
+      "answer": "3e7041761ba0",
+      "explanation": "« Fare » désigne le prix du transport ; « agreed » indique qu’il a été convenu.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.08"
+      ]
+    },
+    {
+      "id": "vtc-d-10-q1",
+      "prompt": "Question : « Pourquoi le rendez-vous change-t-il ? » Texte : « La porte est fermée pour travaux. » Quelle réponse est précise ?",
+      "options": [
+        {
+          "id": "2018c87cbe88",
+          "text": "Le rendez-vous est à huit heures."
+        },
+        {
+          "id": "360061b28801",
+          "text": "Le client a deux bagages."
+        },
+        {
+          "id": "50a1a6397678",
+          "text": "Parce que la porte est fermée pour travaux."
+        }
+      ],
+      "answer": "50a1a6397678",
+      "explanation": "Une question commençant par « pourquoi » demande la cause, pas une autre information du document.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.10"
+      ]
+    },
+    {
+      "id": "vtc-e-11-q1",
+      "prompt": "A passenger says « I’ve lost my phone ». What happened?",
+      "options": [
+        {
+          "id": "ca6e2d0cbf3f",
+          "text": "Le passager a perdu son téléphone"
+        },
+        {
+          "id": "5f196cc7aec6",
+          "text": "Le téléphone sonne normalement"
+        },
+        {
+          "id": "62b25711a0eb",
+          "text": "Le passager veut vendre son téléphone"
+        }
+      ],
+      "answer": "ca6e2d0cbf3f",
+      "explanation": "« I’ve lost » exprime une perte ; il faut ensuite demander des précisions utiles calmement.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.11"
+      ]
+    },
+    {
+      "id": "vtc-a-manual-01",
+      "prompt": "Qui détient la carte professionnelle ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le conducteur."
+        },
+        {
+          "id": "b",
+          "text": "La plateforme."
+        },
+        {
+          "id": "c",
+          "text": "Le véhicule."
+        }
+      ],
+      "answer": "a",
+      "explanation": "La carte atteste les conditions personnelles du conducteur ; elle ne se prête pas.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-f-06-q1",
+      "prompt": "Quelle prospection est pertinente auprès d’un hôtel ?",
+      "options": [
+        {
+          "id": "fda96ed427a4",
+          "text": "Envoyer des messages identiques sans connaître ses besoins"
+        },
+        {
+          "id": "c7046d3a2512",
+          "text": "Présenter une offre adaptée à ses besoins et un contact professionnel"
+        },
+        {
+          "id": "5f018f5c5d1b",
+          "text": "Promettre une disponibilité impossible"
+        }
+      ],
+      "answer": "c7046d3a2512",
+      "explanation": "La prospection utile part du besoin du partenaire et propose un service réalisable.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.06"
+      ]
+    },
+    {
+      "id": "vtc-d-01-q1",
+      "prompt": "Message : « Départ confirmé à 8 h 15. Rendez-vous entrée latérale, la porte principale est fermée. » Qu’est-ce qui est modifié ?",
+      "options": [
+        {
+          "id": "0af07baef3d2",
+          "text": "L’heure de départ"
+        },
+        {
+          "id": "f833556a1c39",
+          "text": "Le lieu de rendez-vous"
+        },
+        {
+          "id": "c3c3d30cdfd4",
+          "text": "Le nombre de passagers"
+        }
+      ],
+      "answer": "f833556a1c39",
+      "explanation": "Le départ est confirmé ; la précision porte sur l’entrée utilisée. Il faut répondre à l’information réellement donnée.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.01"
+      ]
+    },
+    {
+      "id": "vtc-b-06-q1",
+      "prompt": "Avec une TVA supposée à 10 %, 80 € HT donnent quel prix TTC ?",
+      "options": [
+        {
+          "id": "090877008e55",
+          "text": "90 €"
+        },
+        {
+          "id": "5e52cea6cf9a",
+          "text": "72 €"
+        },
+        {
+          "id": "471f801bfa66",
+          "text": "88 €"
+        }
+      ],
+      "answer": "471f801bfa66",
+      "explanation": "TVA = 80 × 10 % = 8 € ; TTC = 80 + 8 = 88 €. Le taux est une donnée de cet exercice.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.06"
+      ]
+    },
+    {
+      "id": "vtc-e-08-q1",
+      "prompt": "The customer asks « Is parking included? ». What do they want to know?",
+      "options": [
+        {
+          "id": "55b6f60330b3",
+          "text": "Si le chauffeur a son permis"
+        },
+        {
+          "id": "69cfbd0cbfca",
+          "text": "Où la voiture a été fabriquée"
+        },
+        {
+          "id": "289ec42f37cf",
+          "text": "Si le stationnement est compris dans le prix"
+        }
+      ],
+      "answer": "289ec42f37cf",
+      "explanation": "« Included » signifie compris. La réponse doit correspondre aux conditions réelles de l’offre.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.08"
+      ]
+    },
+    {
+      "id": "vtc-e-04-q1",
+      "prompt": "The passenger is « opposite the hotel ». Where are they?",
+      "options": [
+        {
+          "id": "9159d2f5b549",
+          "text": "Derrière l’hôtel"
+        },
+        {
+          "id": "339ba1064d21",
+          "text": "À l’intérieur de l’hôtel"
+        },
+        {
+          "id": "e30c0917a140",
+          "text": "En face de l’hôtel"
+        }
+      ],
+      "answer": "e30c0917a140",
+      "explanation": "« Opposite » indique un emplacement en face ; « inside » signifie à l’intérieur.",
+      "module": "E",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon E.04"
+      ]
+    },
+    {
+      "id": "vtc-b-04-q1",
+      "prompt": "Produits de 5 000 € et charges de 3 800 € sur la même période : quel résultat ?",
+      "options": [
+        {
+          "id": "2cdd8c33c8c4",
+          "text": "1 200 €"
+        },
+        {
+          "id": "f817852d2739",
+          "text": "5 000 €"
+        },
+        {
+          "id": "ad37f3261c65",
+          "text": "8 800 €"
+        }
+      ],
+      "answer": "2cdd8c33c8c4",
+      "explanation": "Le résultat est la différence entre produits et charges : 5 000 − 3 800 = 1 200 €.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.04"
+      ]
+    },
+    {
+      "id": "vtc-g-02-q2",
+      "prompt": "Une somme prévue pour garantir l’exploitation est-elle automatiquement du bénéfice disponible ?",
+      "options": [
+        {
+          "id": "48b98e8d0620",
+          "text": "Oui, dès l’inscription au registre"
+        },
+        {
+          "id": "8386a20dd3f6",
+          "text": "Oui, après une première course"
+        },
+        {
+          "id": "b0057fb9dbff",
+          "text": "Non"
+        }
+      ],
+      "answer": "b0057fb9dbff",
+      "explanation": "Garantie, financement et bénéfice ont des fonctions différentes ; la disponibilité d’une somme dépend de son affectation.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.02"
+      ]
+    },
+    {
+      "id": "vtc-c-04-q1",
+      "prompt": "Avant de tourner à droite, un cycliste peut se trouver près du véhicule. Que faire ?",
+      "options": [
+        {
+          "id": "d81777efd21d",
+          "text": "Se fier uniquement au clignotant"
+        },
+        {
+          "id": "061d8953fc48",
+          "text": "Contrôler les abords et l’angle mort adapté avant la manœuvre"
+        },
+        {
+          "id": "d67a56b08b38",
+          "text": "Accélérer pour passer avant lui"
+        }
+      ],
+      "answer": "061d8953fc48",
+      "explanation": "Le clignotant annonce une intention mais ne vérifie pas que l’espace est libre.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.04"
+      ]
+    },
+    {
+      "id": "vtc-b-08-q1",
+      "prompt": "Solde initial 1 000 €, encaissements 2 500 €, paiements 2 800 € : solde final ?",
+      "options": [
+        {
+          "id": "fbbfddde4bd3",
+          "text": "1 300 €"
+        },
+        {
+          "id": "bc3439560dd8",
+          "text": "5 300 €"
+        },
+        {
+          "id": "7e748195d9df",
+          "text": "700 €"
+        }
+      ],
+      "answer": "7e748195d9df",
+      "explanation": "1 000 + 2 500 − 2 800 = 700 €. Un plan de trésorerie suit les mouvements aux dates prévues.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.08"
+      ]
+    },
+    {
+      "id": "vtc-a-05-q2",
+      "prompt": "Quelle différence entre l’assurance automobile professionnelle et la RC professionnelle ?",
+      "options": [
+        {
+          "id": "0341591731c5",
+          "text": "La RC professionnelle remplace toujours l’assurance du véhicule"
+        },
+        {
+          "id": "93de9b521ddd",
+          "text": "Elles couvrent des risques différents et doivent être examinées ensemble"
+        },
+        {
+          "id": "056ca18acdf8",
+          "text": "Une réservation remplace les deux garanties"
+        }
+      ],
+      "answer": "93de9b521ddd",
+      "explanation": "L’usage du véhicule et les responsabilités de l’activité ne se confondent pas. Il faut vérifier les garanties et leurs limites.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.05"
+      ]
+    },
+    {
+      "id": "vtc-f-02-q1",
+      "prompt": "Quelle offre est la plus lisible ?",
+      "options": [
+        {
+          "id": "c197329f1823",
+          "text": "Transport de tout, partout, sans limites"
+        },
+        {
+          "id": "ea9407379b0d",
+          "text": "Transfert réservé avec zone, capacité, prix et conditions précisés"
+        },
+        {
+          "id": "cf38dddb5eb2",
+          "text": "Un slogan sans contenu de prestation"
+        }
+      ],
+      "answer": "ea9407379b0d",
+      "explanation": "Une offre claire indique ce que le client achète, ce qui est inclus et les limites du service.",
+      "module": "F",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon F.02"
+      ]
+    },
+    {
+      "id": "vtc-c-10-q1",
+      "prompt": "Quelle conduite favorise le confort et l’anticipation ?",
+      "options": [
+        {
+          "id": "9ada4d17d98c",
+          "text": "Freiner fort au dernier moment"
+        },
+        {
+          "id": "1177a2bfe95d",
+          "text": "Observer loin et adapter progressivement accélération et freinage"
+        },
+        {
+          "id": "4c5d32c4e3ac",
+          "text": "Multiplier les changements de voie"
+        }
+      ],
+      "answer": "1177a2bfe95d",
+      "explanation": "La souplesse vient de l’anticipation, pas seulement d’un geste doux sur la pédale.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.10"
+      ]
+    },
+    {
+      "id": "vtc-d-06-q2",
+      "prompt": "« Le retard ne devrait pas dépasser dix minutes. » Quelle reformulation respecte la nuance ?",
+      "options": [
+        {
+          "id": "89200ae4e520",
+          "text": "Il n’y aura aucun retard"
+        },
+        {
+          "id": "8d9afcc1a330",
+          "text": "Le retard est estimé à dix minutes au maximum"
+        },
+        {
+          "id": "0767eea703d2",
+          "text": "Le retard sera obligatoirement de dix minutes"
+        }
+      ],
+      "answer": "8d9afcc1a330",
+      "explanation": "« Devrait » exprime une estimation, pas une certitude absolue.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.06"
+      ]
+    },
+    {
+      "id": "vtc-b-10-q2",
+      "prompt": "Dans une échéance d’emprunt, le remboursement du capital est-il identique à une charge d’intérêts ?",
+      "options": [
+        {
+          "id": "602caf9c5fd5",
+          "text": "Oui, tout est toujours une charge identique"
+        },
+        {
+          "id": "9a71dfbc988d",
+          "text": "Non, les traitements sont distincts"
+        },
+        {
+          "id": "d4b81654dc5a",
+          "text": "Oui, si le paiement est mensuel"
+        }
+      ],
+      "answer": "9a71dfbc988d",
+      "explanation": "Le capital rembourse une dette ; les intérêts rémunèrent le financement. Le paiement affecte aussi la trésorerie.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.10"
+      ]
+    }
+  ],
+  "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+}

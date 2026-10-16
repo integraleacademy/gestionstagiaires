@@ -1,0 +1,13 @@
+{% set cma_status_labels = {'in_progress':'Examen en cours', 'pending_correction':'Correction à terminer', 'needs_human_review':'Relecture nécessaire', 'admissible':'Objectif d’admissibilité atteint', 'not_admissible':'Objectif d’admissibilité non atteint', 'unavailable':'Résultat indisponible'} %}
+<div class="vtc-cma-report">
+  <p>La simulation comporte sept matières. La moyenne pondérée et les notes minimales suivent les règles de l’épreuve théorique. Le temps de simulation est un entraînement complémentaire et n’est pas ajouté aux 105 heures du parcours.</p>
+  {% for attempt in cma_attempts %}
+  <details data-el-live-key="cma-{{ attempt.attempt_id }}" style="border:1px solid #dce4ee;border-radius:12px;padding:16px;margin:12px 0">
+    <summary style="cursor:pointer;font-weight:700">{{ attempt.created_at[8:10] }}/{{ attempt.created_at[5:7] }}/{{ attempt.created_at[:4] }} · {{ cma_status_labels.get(attempt.result_status, 'Résultat à consulter') }}{% if attempt.weighted_average is not none %} · {{ '%g'|format(attempt.weighted_average) }}/20{% endif %}</summary>
+    <p>{{ attempt.submitted_subjects }} / 7 matières remises.{% if attempt.result_status == 'needs_human_review' %} Une ou plusieurs réponses courtes nécessitent une vérification pédagogique ; aucun résultat définitif n’est annoncé.{% elif attempt.result_status == 'pending_correction' %} La copie est conservée ; le stagiaire peut relancer les corrections manquantes depuis sa simulation.{% endif %}</p>
+    {% if attempt.subjects %}<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th style="padding:8px">Matière</th><th style="padding:8px">Note /20</th><th style="padding:8px">Coefficient</th><th style="padding:8px">Minimum</th><th style="padding:8px">État</th></tr></thead><tbody>
+      {% for subject in attempt.subjects %}<tr style="border-top:1px solid #e2e8f0"><td style="padding:8px">{{ subject.id }} · {{ subject.title }}</td><td style="padding:8px">{{ '%g'|format(subject.score) if subject.score is not none else '—' }}</td><td style="padding:8px">{{ subject.coefficient }}</td><td style="padding:8px">{{ subject.minimum }}/20</td><td style="padding:8px">{% if subject.minimum_met is sameas true %}Seuil atteint{% elif subject.minimum_met is sameas false %}Sous le seuil{% elif subject.grading_status == 'needs_human_review' %}À relire{% elif subject.status in ['submitted','expired'] %}Correction en attente{% elif subject.status == 'paused' %}En pause{% elif subject.status == 'running' %}En cours{% else %}À venir{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>{% endif %}
+  </details>
+  {% else %}<p>Aucun examen en conditions réelles n’a encore été commencé.</p>{% endfor %}
+</div>

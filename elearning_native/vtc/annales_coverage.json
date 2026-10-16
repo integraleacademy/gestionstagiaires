@@ -1,0 +1,6490 @@
+{
+  "version": "20261007-vtc-v5-annales",
+  "reviewed_on": "2026-10-07",
+  "source_count": 8,
+  "question_count": 404,
+  "modules": [
+    {
+      "id": "academy-vtc-a",
+      "letter": "A",
+      "covered_lessons": [
+        "A.01",
+        "A.02",
+        "A.03",
+        "A.04",
+        "A.05",
+        "A.06",
+        "A.08",
+        "A.09",
+        "A.11",
+        "A.12"
+      ],
+      "removed_duplicates": 24,
+      "specific_methods": 12,
+      "replaced_distractors": 0,
+      "removed_ids": {
+        "vtc-a-04-dossier": [
+          "e010",
+          "e011",
+          "e012",
+          "e013",
+          "e014",
+          "e015",
+          "e016",
+          "e017"
+        ],
+        "vtc-a-05-dossier": [
+          "e010",
+          "e011",
+          "e012",
+          "e013",
+          "e014",
+          "e015",
+          "e016",
+          "e017"
+        ],
+        "vtc-a-11-dossier": [
+          "e010",
+          "e011",
+          "e012",
+          "e013",
+          "e014",
+          "e015",
+          "e016",
+          "e017"
+        ]
+      },
+      "rule_edits": []
+    },
+    {
+      "id": "academy-vtc-b",
+      "letter": "B",
+      "covered_lessons": [
+        "B.01",
+        "B.02",
+        "B.03",
+        "B.04",
+        "B.05",
+        "B.06",
+        "B.07",
+        "B.08",
+        "B.10",
+        "B.11",
+        "B.12"
+      ],
+      "removed_duplicates": 28,
+      "specific_methods": 12,
+      "replaced_distractors": 63,
+      "removed_ids": {
+        "vtc-b-01-dossier": [
+          "e009",
+          "e011",
+          "e013",
+          "e015",
+          "e017"
+        ],
+        "vtc-b-02-dossier": [
+          "e008",
+          "e010",
+          "e012",
+          "e014",
+          "e016"
+        ],
+        "vtc-b-09-dossier": [
+          "e012",
+          "e016"
+        ],
+        "vtc-b-10-dossier": [
+          "e004",
+          "e006",
+          "e008",
+          "e010",
+          "e012",
+          "e014",
+          "e016"
+        ],
+        "vtc-b-11-dossier": [
+          "e004",
+          "e006",
+          "e008",
+          "e010",
+          "e012",
+          "e014",
+          "e016"
+        ],
+        "vtc-b-revision": [
+          "e020",
+          "e022"
+        ]
+      },
+      "rule_edits": []
+    },
+    {
+      "id": "academy-vtc-c",
+      "letter": "C",
+      "covered_lessons": [
+        "C.01",
+        "C.02",
+        "C.03",
+        "C.04",
+        "C.05",
+        "C.06",
+        "C.07",
+        "C.08",
+        "C.09",
+        "C.10",
+        "C.11",
+        "C.12"
+      ],
+      "removed_duplicates": 36,
+      "specific_methods": 12,
+      "replaced_distractors": 0,
+      "removed_ids": {
+        "vtc-c-02-dossier": [
+          "e011",
+          "e014",
+          "e015",
+          "e018",
+          "e019",
+          "e022"
+        ],
+        "vtc-c-03-dossier": [
+          "e010",
+          "e012",
+          "e014",
+          "e015",
+          "e016",
+          "e018"
+        ],
+        "vtc-c-05-dossier": [
+          "e011",
+          "e014",
+          "e015",
+          "e018",
+          "e019",
+          "e022"
+        ],
+        "vtc-c-07-dossier": [
+          "e011",
+          "e014",
+          "e015",
+          "e018",
+          "e019",
+          "e022"
+        ],
+        "vtc-c-10-dossier": [
+          "e011",
+          "e014",
+          "e015",
+          "e018",
+          "e019",
+          "e022"
+        ],
+        "vtc-c-11-dossier": [
+          "e011",
+          "e014",
+          "e015",
+          "e018",
+          "e019",
+          "e022"
+        ]
+      },
+      "rule_edits": []
+    },
+    {
+      "id": "academy-vtc-d",
+      "letter": "D",
+      "covered_lessons": [
+        "D.02",
+        "D.03",
+        "D.06",
+        "D.07",
+        "D.10",
+        "D.12"
+      ],
+      "removed_duplicates": 39,
+      "specific_methods": 12,
+      "replaced_distractors": 0,
+      "removed_ids": {
+        "vtc-d-01-dossier": [
+          "e002",
+          "e003",
+          "e004",
+          "e005",
+          "e006",
+          "e007",
+          "e008"
+        ],
+        "vtc-d-02-dossier": [
+          "e008",
+          "e010",
+          "e012",
+          "e014",
+          "e016"
+        ],
+        "vtc-d-06-dossier": [
+          "e002",
+          "e003",
+          "e004",
+          "e005",
+          "e006",
+          "e007",
+          "e008"
+        ],
+        "vtc-d-12-dossier": [
+          "e003",
+          "e004",
+          "e005",
+          "e006",
+          "e007",
+          "e008",
+          "e009",
+          "e010",
+          "e011",
+          "e012",
+          "e013",
+          "e014",
+          "e015",
+          "e016"
+        ],
+        "vtc-d-diagnostic": [
+          "e002",
+          "e012",
+          "e024"
+        ],
+        "vtc-d-revision": [
+          "e002",
+          "e012",
+          "e024"
+        ]
+      },
+      "rule_edits": []
+    },
+    {
+      "id": "academy-vtc-e",
+      "letter": "E",
+      "covered_lessons": [
+        "E.01",
+        "E.02",
+        "E.03",
+        "E.04",
+        "E.05",
+        "E.06",
+        "E.07",
+        "E.08",
+        "E.09",
+        "E.10",
+        "E.11",
+        "E.12"
+      ],
+      "removed_duplicates": 78,
+      "specific_methods": 12,
+      "replaced_distractors": 0,
+      "removed_ids": {
+        "vtc-e-01-dossier": [
+          "e004",
+          "e006",
+          "e007",
+          "e009",
+          "e010",
+          "e012"
+        ],
+        "vtc-e-02-dossier": [
+          "e005",
+          "e006",
+          "e008",
+          "e009",
+          "e011",
+          "e012"
+        ],
+        "vtc-e-03-dossier": [
+          "e006",
+          "e009",
+          "e012"
+        ],
+        "vtc-e-04-dossier": [
+          "e005",
+          "e006",
+          "e008",
+          "e009",
+          "e011",
+          "e012"
+        ],
+        "vtc-e-05-dossier": [
+          "e004",
+          "e005",
+          "e006",
+          "e007",
+          "e008",
+          "e009",
+          "e010",
+          "e011",
+          "e012"
+        ],
+        "vtc-e-06-dossier": [
+          "e004",
+          "e005",
+          "e007",
+          "e008",
+          "e010",
+          "e011"
+        ],
+        "vtc-e-07-dossier": [
+          "e004",
+          "e006",
+          "e007",
+          "e009",
+          "e010",
+          "e012"
+        ],
+        "vtc-e-08-dossier": [
+          "e004",
+          "e006",
+          "e007",
+          "e009",
+          "e010",
+          "e012"
+        ],
+        "vtc-e-09-dossier": [
+          "e004",
+          "e006",
+          "e007",
+          "e009",
+          "e010",
+          "e012"
+        ],
+        "vtc-e-10-dossier": [
+          "e004",
+          "e005",
+          "e006",
+          "e007",
+          "e008",
+          "e009",
+          "e010",
+          "e011",
+          "e012"
+        ],
+        "vtc-e-11-dossier": [
+          "e004",
+          "e005",
+          "e006",
+          "e007",
+          "e008",
+          "e009",
+          "e010",
+          "e011",
+          "e012"
+        ],
+        "vtc-e-12-dossier": [
+          "e005",
+          "e006",
+          "e008",
+          "e009",
+          "e011",
+          "e012"
+        ]
+      },
+      "rule_edits": []
+    },
+    {
+      "id": "academy-vtc-f",
+      "letter": "F",
+      "covered_lessons": [
+        "F.01",
+        "F.02",
+        "F.03",
+        "F.04",
+        "F.06",
+        "F.07",
+        "F.08",
+        "F.09",
+        "F.10",
+        "F.11",
+        "F.12"
+      ],
+      "removed_duplicates": 30,
+      "specific_methods": 12,
+      "replaced_distractors": 0,
+      "removed_ids": {
+        "vtc-f-01-dossier": [
+          "e008",
+          "e010",
+          "e012",
+          "e014",
+          "e016"
+        ],
+        "vtc-f-02-dossier": [
+          "e008",
+          "e010",
+          "e012",
+          "e014",
+          "e016"
+        ],
+        "vtc-f-07-dossier": [
+          "e008",
+          "e010",
+          "e012",
+          "e014",
+          "e016"
+        ],
+        "vtc-f-11-dossier": [
+          "e009",
+          "e011",
+          "e013",
+          "e015",
+          "e017"
+        ],
+        "vtc-f-diagnostic": [
+          "e009",
+          "e010",
+          "e023",
+          "e024"
+        ],
+        "vtc-f-revision": [
+          "e004",
+          "e009",
+          "e010",
+          "e014",
+          "e023",
+          "e024"
+        ]
+      },
+      "rule_edits": []
+    },
+    {
+      "id": "academy-vtc-g",
+      "letter": "G",
+      "covered_lessons": [
+        "G.01",
+        "G.02",
+        "G.03",
+        "G.04",
+        "G.05",
+        "G.06",
+        "G.07",
+        "G.08",
+        "G.09",
+        "G.10",
+        "G.11",
+        "G.12"
+      ],
+      "removed_duplicates": 104,
+      "specific_methods": 0,
+      "replaced_distractors": 0,
+      "removed_ids": {
+        "vtc-g-01-dossier": [
+          "e008",
+          "e009",
+          "e010",
+          "e011",
+          "e012",
+          "e013",
+          "e014",
+          "e015"
+        ],
+        "vtc-g-02-dossier": [
+          "e008",
+          "e009",
+          "e010",
+          "e011",
+          "e012",
+          "e013",
+          "e014",
+          "e015"
+        ],
+        "vtc-g-03-dossier": [
+          "e007",
+          "e008",
+          "e009"
+        ],
+        "vtc-g-04-dossier": [
+          "e008",
+          "e009",
+          "e010",
+          "e011",
+          "e012",
+          "e013",
+          "e014",
+          "e015"
+        ],
+        "vtc-g-05-dossier": [
+          "e010",
+          "e011",
+          "e013",
+          "e014",
+          "e015",
+          "e016",
+          "e017",
+          "e018",
+          "e019",
+          "e020",
+          "e021",
+          "e022",
+          "e023",
+          "e024",
+          "e025",
+          "e027",
+          "e028"
+        ],
+        "vtc-g-06-dossier": [
+          "e007",
+          "e009",
+          "e010",
+          "e011",
+          "e012",
+          "e013",
+          "e014",
+          "e015",
+          "e016"
+        ],
+        "vtc-g-07-dossier": [
+          "e007",
+          "e009",
+          "e010",
+          "e011",
+          "e012",
+          "e013",
+          "e014",
+          "e015",
+          "e016"
+        ],
+        "vtc-g-08-dossier": [
+          "e007",
+          "e009",
+          "e010",
+          "e011",
+          "e012",
+          "e013",
+          "e014",
+          "e015",
+          "e016"
+        ],
+        "vtc-g-09-dossier": [
+          "e007",
+          "e009",
+          "e010",
+          "e011",
+          "e012",
+          "e013",
+          "e014",
+          "e015",
+          "e016"
+        ],
+        "vtc-g-10-dossier": [
+          "e008",
+          "e009",
+          "e010",
+          "e011",
+          "e012",
+          "e013",
+          "e014",
+          "e015"
+        ],
+        "vtc-g-11-dossier": [
+          "e008",
+          "e009",
+          "e010",
+          "e011",
+          "e012",
+          "e013",
+          "e014",
+          "e015"
+        ],
+        "vtc-g-12-dossier": [
+          "e008",
+          "e009",
+          "e010",
+          "e011",
+          "e012",
+          "e013",
+          "e014",
+          "e015"
+        ]
+      },
+      "rule_edits": []
+    },
+    {
+      "id": "academy-vtc-h",
+      "letter": "H",
+      "covered_lessons": [
+        "H.02",
+        "H.04",
+        "H.06",
+        "H.08",
+        "H.10"
+      ],
+      "removed_duplicates": 42,
+      "specific_methods": 12,
+      "replaced_distractors": 0,
+      "removed_ids": {
+        "vtc-h-01-dossier": [
+          "e011",
+          "e014",
+          "e015",
+          "e018",
+          "e019",
+          "e022"
+        ],
+        "vtc-h-02-dossier": [
+          "e011",
+          "e014",
+          "e015",
+          "e018",
+          "e019",
+          "e022"
+        ],
+        "vtc-h-05-dossier": [
+          "e011",
+          "e014",
+          "e015",
+          "e018",
+          "e019",
+          "e022"
+        ],
+        "vtc-h-06-dossier": [
+          "e011",
+          "e014",
+          "e015",
+          "e018",
+          "e019",
+          "e022"
+        ],
+        "vtc-h-08-dossier": [
+          "e011",
+          "e014",
+          "e015",
+          "e018",
+          "e019",
+          "e022"
+        ],
+        "vtc-h-10-dossier": [
+          "e011",
+          "e014",
+          "e015",
+          "e018",
+          "e019",
+          "e022"
+        ],
+        "vtc-h-12-dossier": [
+          "e011",
+          "e014",
+          "e015",
+          "e018",
+          "e019",
+          "e022"
+        ]
+      },
+      "rule_edits": []
+    }
+  ],
+  "questions": [
+    {
+      "id": "annales-2020-a-01",
+      "number": 1,
+      "page": 2,
+      "prompt": "Un conducteur sanctionné par le tribunal correctionnel pour délit de fuite peut saisir :",
+      "lesson_refs": [
+        "A.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-a-02",
+      "number": 2,
+      "page": 2,
+      "prompt": "Quelle est l'autorité qui effectue la vérification du casier judiciaire d'un candidat à la carte professionnelle de conducteur de véhicules T3P ?",
+      "lesson_refs": [
+        "A.02",
+        "A.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-a-03",
+      "number": 3,
+      "page": 2,
+      "prompt": "Quelles assurances doit souscrire un professionnel effectuant du T3P ?",
+      "lesson_refs": [
+        "A.05"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-a-04",
+      "number": 4,
+      "page": 2,
+      "prompt": "Le retrait de la carte professionnelle est :",
+      "lesson_refs": [
+        "A.04",
+        "A.12"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Les réponses historiques mêlent sanction administrative et conséquence d’une condamnation pénale. Le libellé ne précise pas la procédure ni le fondement : ne pas l’utiliser comme question notée sur le droit actuel.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-a-05",
+      "number": 5,
+      "page": 2,
+      "prompt": "Citez deux cas dans lesquels la carte professionnelle peut être retirée à un conducteur du T3P ?",
+      "lesson_refs": [
+        "A.03",
+        "A.04"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-a-06",
+      "number": 6,
+      "page": 2,
+      "prompt": "Quel kilométrage maximum un conducteur de T3P peut-il réaliser pour sa course ?",
+      "lesson_refs": [
+        "A.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-a-07",
+      "number": 7,
+      "page": 2,
+      "prompt": "Qui agrée les organismes de formation continue des conducteurs de T3P ?",
+      "lesson_refs": [
+        "A.02",
+        "A.04"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-a-08",
+      "number": 8,
+      "page": 2,
+      "prompt": "Quels agents sont habilités à effectuer un contrôle routier de conducteur de T3P ?",
+      "lesson_refs": [
+        "A.11"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-a-09",
+      "number": 9,
+      "page": 2,
+      "prompt": "La réglementation du T3P se trouve dans le :",
+      "lesson_refs": [
+        "A.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-a-10",
+      "number": 10,
+      "page": 3,
+      "prompt": "Quelle est l'ancienneté maximum pour un véhicule hybride ?",
+      "lesson_refs": [
+        "G.03",
+        "G.11"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-a-11",
+      "number": 11,
+      "page": 3,
+      "prompt": "Que devez-vous présenter aux agents susceptibles d'effectuer des contrôles pour justifier d'une réservation préalable ?",
+      "lesson_refs": [
+        "G.05",
+        "A.11"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-a-12",
+      "number": 12,
+      "page": 3,
+      "prompt": "Comment se présente une réservation préalable ? Citez 2 mentions qui doivent figurer obligatoirement sur celle-ci.",
+      "lesson_refs": [
+        "G.05"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "La liste du corrigé 2020 ne comprend pas toutes les mentions désormais fixées par l’arrêté du 6 août 2025, notamment le numéro REVTC. Les anciennes réponses sont conservées ; apprendre la liste actuelle dans le complément.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-a-13",
+      "number": 13,
+      "page": 3,
+      "prompt": "Pour être exploitable en activité de transport public particulier de personnes, un véhicule électrique doit être :",
+      "lesson_refs": [
+        "G.03"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "La réponse source « sans contraintes particulières » est trop générale : l’exception concernant certaines caractéristiques techniques ne supprime pas les autres obligations professionnelles. Question neutralisée.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-a-14",
+      "number": 14,
+      "page": 3,
+      "prompt": "Vous êtes chauffeur de transport public particulier de personnes né le 12 mai 1950. Quelle est la périodicité de l'examen médical d'aptitude physique auquel vous devez vous soumettre ?",
+      "lesson_refs": [
+        "A.04"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "La date de naissance était à apprécier au jour de l’épreuve du 28 janvier 2020 (69 ans, deux ans). Au 7 octobre 2026, cette personne a 76 ans : la périodicité maximale professionnelle devient annuelle. Énoncé non actualisé, hors score.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-a-15",
+      "number": 15,
+      "page": 3,
+      "prompt": "Quelle est la taille minimum de la commune dans laquelle peut s'exercer une activité du T3P ?",
+      "lesson_refs": [
+        "A.01",
+        "F.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-a"
+    },
+    {
+      "id": "annales-2020-b-01",
+      "number": 1,
+      "page": 4,
+      "prompt": "Qu'est-ce qu'un investissement ?",
+      "lesson_refs": [
+        "B.05",
+        "B.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-02",
+      "number": 2,
+      "page": 4,
+      "prompt": "Selon le Code du Commerce, les documents comptables doivent être conservés :",
+      "lesson_refs": [
+        "B.11"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-03",
+      "number": 3,
+      "page": 4,
+      "prompt": "Un artisan achète un véhicule 21 000 € HT. Ce véhicule est amorti sur 3 ans. De combien sera l'amortissement annuel ? Détaillez votre calcul.",
+      "lesson_refs": [
+        "B.04",
+        "B.10"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-04",
+      "number": 4,
+      "page": 4,
+      "prompt": "Quels sont les critères qui caractérisent une activité relevant du Répertoire des Métiers ?",
+      "lesson_refs": [
+        "B.02"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le Répertoire des métiers a été remplacé par le RNE le 1er janvier 2023. La procédure et le document historiques ne sont pas enseignés comme démarches actuelles.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-05",
+      "number": 5,
+      "page": 4,
+      "prompt": "Qui attribue le code APE d'une entreprise ?",
+      "lesson_refs": [
+        "B.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-06",
+      "number": 6,
+      "page": 4,
+      "prompt": "Quelle est la durée de vie maximum prévue par la loi pour une SARL ?",
+      "lesson_refs": [
+        "B.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-07",
+      "number": 7,
+      "page": 4,
+      "prompt": "Que signifie le sigle SARL ?",
+      "lesson_refs": [
+        "B.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-08",
+      "number": 8,
+      "page": 4,
+      "prompt": "Comment appelle-t-on l'extrait d'immatriculation d'une entreprise artisanale ?",
+      "lesson_refs": [
+        "B.02"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le D1 correspond à l’ancien Répertoire des métiers, remplacé par le RNE depuis 2023. Utiliser l’attestation d’immatriculation au RNE pour la situation actuelle.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-09",
+      "number": 9,
+      "page": 4,
+      "prompt": "Qu'est-ce qu'une personne morale ?",
+      "lesson_refs": [
+        "B.01"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-10",
+      "number": 10,
+      "page": 5,
+      "prompt": "Chaque mois, la TVA à décaisser représente :",
+      "lesson_refs": [
+        "B.06"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-11",
+      "number": 11,
+      "page": 5,
+      "prompt": "Lorsque les charges d'exploitation d'une entreprise sont inférieures aux produits :",
+      "lesson_refs": [
+        "B.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-12",
+      "number": 12,
+      "page": 5,
+      "prompt": "Dans quel cas un gérant de société à capitaux est-il salarié ?",
+      "lesson_refs": [
+        "B.01",
+        "B.12"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "L’énoncé confond salarié et assimilé salarié, omet la rémunération et appelle « gérant » le président de SAS. Les clés B/D du PDF sont préservées mais ne constituent pas une qualification sociale complète.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-13",
+      "number": 13,
+      "page": 5,
+      "prompt": "Dans un bilan :",
+      "lesson_refs": [
+        "B.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-14",
+      "number": 14,
+      "page": 5,
+      "prompt": "La CRDS signifie :",
+      "lesson_refs": [
+        "B.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-15",
+      "number": 15,
+      "page": 5,
+      "prompt": "Le Président d'une SASU est :",
+      "lesson_refs": [
+        "B.01",
+        "B.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-16",
+      "number": 16,
+      "page": 5,
+      "prompt": "La TVA sur les carburants est-elle récupérable ?",
+      "lesson_refs": [
+        "B.06"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé coche « oui, totalement dans tous les cas ». Cette affirmation absolue est fausse, notamment en franchise en base ; le droit à déduction dépend de la situation et du carburant. Ne pas noter selon cette clé.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-17",
+      "number": 17,
+      "page": 5,
+      "prompt": "Parmi ces propositions, qu'est-ce qui constitue une charge déductible pour un entrepreneur individuel ?",
+      "lesson_refs": [
+        "B.04",
+        "B.05"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "L’énoncé dit seulement entrepreneur individuel et ne précise pas le régime fiscal. Les clés entretien/crédit-bail correspondent à une déduction de charges réelles sous conditions ; elles ne s’appliquent pas individuellement au régime micro.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-b-18",
+      "number": 18,
+      "page": 5,
+      "prompt": "Pour être immatriculé au Répertoire des Métiers, le futur chef d'entreprise du T3P doit :",
+      "lesson_refs": [
+        "B.02",
+        "A.03"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le RM a été remplacé par le RNE. La formulation réunit immatriculation de l’entreprise et qualification personnelle du conducteur ; il faut traiter ces démarches séparément.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-b"
+    },
+    {
+      "id": "annales-2020-c-01",
+      "number": 1,
+      "page": 6,
+      "prompt": "Mon voyant d'essence vient de s'allumer :",
+      "lesson_refs": [
+        "C.01",
+        "C.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-02",
+      "number": 2,
+      "page": 6,
+      "prompt": "Lorsque les pneus sont sous-gonflés cela entraîne:",
+      "lesson_refs": [
+        "C.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-03",
+      "number": 3,
+      "page": 6,
+      "prompt": "Sur un trajet de 100 km sur autoroute, si je roule à 130 km/h au lieu de 120 km/h, je « gagne » environ :",
+      "lesson_refs": [
+        "C.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-04",
+      "number": 4,
+      "page": 6,
+      "prompt": "Quelles sont les obligations expressément prévues par le code de la route, pour tout conducteur impliqué dans un accident de la circulation qui n'a provoqué que des dégâts matériels ?",
+      "lesson_refs": [
+        "C.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-05",
+      "number": 5,
+      "page": 6,
+      "prompt": "En cas de panne de votre véhicule, à quelle distance placez-vous le triangle de pré signalisation ?",
+      "lesson_refs": [
+        "C.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-06",
+      "number": 6,
+      "page": 6,
+      "prompt": "Que risque un conducteur en cas de dépassement de la vitesse maximale autorisée compris entre 40 km/h et moins de 50 km/h ?",
+      "lesson_refs": [
+        "C.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-07",
+      "number": 7,
+      "page": 6,
+      "prompt": "En agglomération, l'usage de l'avertisseur sonore est autorisé :",
+      "lesson_refs": [
+        "C.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-08",
+      "number": 8,
+      "page": 6,
+      "prompt": "Combien de points perdez-vous en cas de chevauchement d'une ligne continue ?",
+      "lesson_refs": [
+        "C.05"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-09",
+      "number": 9,
+      "page": 6,
+      "prompt": "Les feux de route éclairent à une distance minimale de :",
+      "lesson_refs": [
+        "C.01",
+        "C.11"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-10",
+      "number": 10,
+      "page": 7,
+      "prompt": "A 90 km/h la distance d'arrêt est approximativement de:",
+      "lesson_refs": [
+        "C.03"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé retient 80 m sans préciser adhérence, pneus, freinage ou temps de réaction. Conserver comme repère historique, pas comme distance universelle ni question notée sans hypothèses.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-11",
+      "number": 11,
+      "page": 7,
+      "prompt": "Les piétons qui s'engagent dans la traversée d'une chaussée :",
+      "lesson_refs": [
+        "C.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-12",
+      "number": 12,
+      "page": 7,
+      "prompt": "Le décret n° 2016-448 du 13 avril 2016 modifiant certaines dispositions du code de la route relatives aux véhicules interdit les « vitres surteintées ». A cette fin, il impose :",
+      "lesson_refs": [
+        "C.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-13",
+      "number": 13,
+      "page": 7,
+      "prompt": "Dans quel cas l'arrêt est-il autorisé sur la bande d'arrêt d'urgence de l'autoroute ?",
+      "lesson_refs": [
+        "C.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-14",
+      "number": 14,
+      "page": 7,
+      "prompt": "La durée du temps de réaction est d'environ:",
+      "lesson_refs": [
+        "C.03",
+        "C.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-15",
+      "number": 15,
+      "page": 7,
+      "prompt": "En agglomération, lorsque vous dépassez latéralement, un piéton ou un cycliste, vous devez laisser un espace d'au moins :",
+      "lesson_refs": [
+        "C.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-16",
+      "number": 16,
+      "page": 7,
+      "prompt": "Titulaire d'un permis probatoire, dans quel cas, devrais-je suivre obligatoirement un stage de sensibilisation à la sécurité routière :",
+      "lesson_refs": [
+        "A.04",
+        "C.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-17",
+      "number": 17,
+      "page": 8,
+      "prompt": "Ce panneau signale :",
+      "lesson_refs": [
+        "C.05"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-18",
+      "number": 18,
+      "page": 8,
+      "prompt": "Par temps de pluie, est allongé(e) :",
+      "lesson_refs": [
+        "C.11",
+        "C.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-19",
+      "number": 19,
+      "page": 8,
+      "prompt": "Vous êtes au volant de votre véhicule et recevez un appel sur votre téléphone portable. Vous prenez le téléphone en main, vous encourez :",
+      "lesson_refs": [
+        "C.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-c-20",
+      "number": 20,
+      "page": 8,
+      "prompt": "En cas de récidive d'une conduite sous l'influence de substances ou de plantes classées comme stupéfiants, vous encourez :",
+      "lesson_refs": [
+        "C.08",
+        "A.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-c"
+    },
+    {
+      "id": "annales-2020-d-01",
+      "number": 1,
+      "page": 10,
+      "prompt": "Pourquoi le Cybertruck pourrait-il avoir du mal à séduire la clientèle traditionnelle ?",
+      "lesson_refs": [
+        "D.03",
+        "D.06"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé retient le caractère électrique, mais le texte insiste aussi sur le design inhabituel et ne formule pas une cause unique. Question conservée pour discuter la distinction entre information explicite et inférence.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-d"
+    },
+    {
+      "id": "annales-2020-d-02",
+      "number": 2,
+      "page": 10,
+      "prompt": "Quelle est l'autonomie maximale d'un modèle Cybertruck ?",
+      "lesson_refs": [
+        "D.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-d"
+    },
+    {
+      "id": "annales-2020-d-03",
+      "number": 3,
+      "page": 10,
+      "prompt": "Qu'est-ce qu'un prototype ?",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-d"
+    },
+    {
+      "id": "annales-2020-d-04",
+      "number": 4,
+      "page": 10,
+      "prompt": "« Si le pick-up Tesla n'était pas un peu polémique, ça ne serait pas une Tesla». Expliquez cette affirmation",
+      "lesson_refs": [
+        "D.03",
+        "D.06"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "L’idée du corrigé selon laquelle les scandales ne feraient qu’accroître le succès généralise au-delà du texte. La citation originale et sa correction sont visibles, mais l’exercice est hors score.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-d"
+    },
+    {
+      "id": "annales-2020-d-05",
+      "number": 5,
+      "page": 10,
+      "prompt": "Pour quel autre moyen de transport l'alliage en acier développé par Tesla sera-t-il utilisé ?",
+      "lesson_refs": [
+        "D.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-d"
+    },
+    {
+      "id": "annales-2020-d-06",
+      "number": 6,
+      "page": 10,
+      "prompt": "Pourquoi la présentation du Cybertruck a été un échec?",
+      "lesson_refs": [
+        "D.02",
+        "D.10"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-d"
+    },
+    {
+      "id": "annales-2020-d-07",
+      "number": 7,
+      "page": 10,
+      "prompt": "Donnez un (des) synonyme(s) de « arborer »:",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé accepte à la fois révéler et afficher. Dans le contexte, afficher est le synonyme net ; révéler est discutable. Les choix originaux restent inchangés et l’item est hors score.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-d"
+    },
+    {
+      "id": "annales-2020-d-08",
+      "number": 8,
+      "page": 10,
+      "prompt": "Quelle est la signification du mot « allure » dans le texte ?",
+      "lesson_refs": [
+        "D.06",
+        "D.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-d"
+    },
+    {
+      "id": "annales-2020-d-09",
+      "number": 9,
+      "page": 10,
+      "prompt": "D'après le texte, listez au moins 4 caractéristiques du Cybertruck Tesla.",
+      "lesson_refs": [
+        "D.02",
+        "D.10"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-d"
+    },
+    {
+      "id": "annales-2020-d-10",
+      "number": 10,
+      "page": 11,
+      "prompt": "Quel pick-up est le plus apprécié aux États-Unis depuis longtemps ?",
+      "lesson_refs": [
+        "D.02",
+        "D.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-d"
+    },
+    {
+      "id": "annales-2020-e-01",
+      "number": 1,
+      "page": 12,
+      "prompt": "I was told to say anything concerning this new advert:",
+      "lesson_refs": [
+        "E.11"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "L’énoncé anglais a perdu la négation « not », indispensable à la traduction C du corrigé. Aucune option ne restitue fidèlement la phrase imprimée : question neutralisée sans modifier l’original.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-02",
+      "number": 2,
+      "page": 12,
+      "prompt": "Bonjour, êtes-vous disponible pour m'emmener à la gare?",
+      "lesson_refs": [
+        "E.02",
+        "E.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-03",
+      "number": 3,
+      "page": 12,
+      "prompt": "You will ……………, our island is amazing.",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-04",
+      "number": 4,
+      "page": 12,
+      "prompt": "Thank you for the ride, keep the change:",
+      "lesson_refs": [
+        "E.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-05",
+      "number": 5,
+      "page": 12,
+      "prompt": "Nous vérifions le moteur trois fois par an",
+      "lesson_refs": [
+        "E.06"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-06",
+      "number": 6,
+      "page": 12,
+      "prompt": "Pourriez-vous passer me prendre ici demain à 6 heures, s'il-vous-plait ?",
+      "lesson_refs": [
+        "E.02",
+        "E.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-07",
+      "number": 7,
+      "page": 12,
+      "prompt": "Have you come for the music festival?",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-08",
+      "number": 8,
+      "page": 12,
+      "prompt": "I took a taxi because the buses were on strike",
+      "lesson_refs": [
+        "E.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-09",
+      "number": 9,
+      "page": 12,
+      "prompt": "Disabled welcome :",
+      "lesson_refs": [
+        "E.05"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-10",
+      "number": 10,
+      "page": 12,
+      "prompt": "Do you take the......card?",
+      "lesson_refs": [
+        "E.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-11",
+      "number": 11,
+      "page": 13,
+      "prompt": "Souhaitez-vous un reçu ?",
+      "lesson_refs": [
+        "E.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-12",
+      "number": 12,
+      "page": 13,
+      "prompt": "Savez-vous de quand date ce bâtiment historique ?",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-13",
+      "number": 13,
+      "page": 13,
+      "prompt": "Il est interdit de fumer dans la voiture !",
+      "lesson_refs": [
+        "E.06"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-14",
+      "number": 14,
+      "page": 13,
+      "prompt": "Passez-vous un agréable séjour en France ?",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-15",
+      "number": 15,
+      "page": 13,
+      "prompt": "Les gilets jaunes bloquent les autoroutes en ce moment",
+      "lesson_refs": [
+        "E.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-16",
+      "number": 16,
+      "page": 13,
+      "prompt": "Elle vit à Paris depuis dix ans",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-17",
+      "number": 17,
+      "page": 13,
+      "prompt": "What is the opposite of slow?",
+      "lesson_refs": [
+        "E.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-18",
+      "number": 18,
+      "page": 13,
+      "prompt": "She..........english very well.",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-19",
+      "number": 19,
+      "page": 13,
+      "prompt": "Vous nous devez 53 euros :",
+      "lesson_refs": [
+        "E.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-e-20",
+      "number": 20,
+      "page": 13,
+      "prompt": "Sorry! It's quite expensive for us. May we get a ……………… price?",
+      "lesson_refs": [
+        "E.08"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-e"
+    },
+    {
+      "id": "annales-2020-f-01",
+      "number": 1,
+      "page": 15,
+      "prompt": "A l'aéroport, le parking professionnel est saturé alors que vos clients ne vont pas tarder à sortir du check out :",
+      "lesson_refs": [
+        "G.07",
+        "H.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-02",
+      "number": 2,
+      "page": 15,
+      "prompt": "En cas de retard très important du client, que faites-vous ?",
+      "lesson_refs": [
+        "F.10",
+        "H.08"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-03",
+      "number": 3,
+      "page": 15,
+      "prompt": "En déposant une cliente, de nuit, à son domicile :",
+      "lesson_refs": [
+        "H.06",
+        "H.10",
+        "A.06"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-04",
+      "number": 4,
+      "page": 15,
+      "prompt": "Dans l'activité de VTC, les conditions générales de vente sont :",
+      "lesson_refs": [
+        "F.04",
+        "G.09"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Une référence générale à la loi Hamon et le terme « facultatives » en B2B ne décrivent pas précisément les obligations actuelles d’information et de communication sur demande. Les choix historiques ne sont pas un test juridique actuel.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-05",
+      "number": 5,
+      "page": 15,
+      "prompt": "Que doit-on dire lorsqu'on décroche un appel téléphonique ?",
+      "lesson_refs": [
+        "F.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-06",
+      "number": 6,
+      "page": 15,
+      "prompt": "La marge peut être exprimée en pourcentage du :",
+      "lesson_refs": [
+        "F.03",
+        "F.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-07",
+      "number": 7,
+      "page": 15,
+      "prompt": "Dans le mix marketing, à quoi correspondent les 4P ?",
+      "lesson_refs": [
+        "F.01",
+        "F.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-08",
+      "number": 8,
+      "page": 15,
+      "prompt": "Le matériel informatique peut être amorti sur :",
+      "lesson_refs": [
+        "B.04",
+        "B.10"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé sélectionne uniquement trois ans alors que « peut être amorti » ne définit ni matériel, ni durée d’utilisation. D’autres durées peuvent être justifiées : la question n’a pas une clé exclusive suffisamment précise.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-09",
+      "number": 9,
+      "page": 15,
+      "prompt": "Quelles sont les méthodes de prospection existantes ? Citez un exemple de chaque.",
+      "lesson_refs": [
+        "F.06",
+        "F.08"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-10",
+      "number": 10,
+      "page": 16,
+      "prompt": "Le panier moyen est :",
+      "lesson_refs": [
+        "F.12"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le terme panier moyen est défini de façon trop vague dans le PDF (« par client ») sans période ni unité de transaction. Le tableau de bord doit distinguer panier par commande et revenu par client ; l’item n’est pas noté.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-11",
+      "number": 11,
+      "page": 16,
+      "prompt": "Le montant d'une prestation s'élève à 75 € TTC. Calculez le montant de la TVA et le prix HT, en détaillant vos calculs.",
+      "lesson_refs": [
+        "B.06",
+        "F.03"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-12",
+      "number": 12,
+      "page": 16,
+      "prompt": "Vous connaissez un VTC qui va démarrer son activité avec des prix très bas afin d'attirer un maximum de clients. Que pensez-vous de cette politique tarifaire ?",
+      "lesson_refs": [
+        "F.03"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-13",
+      "number": 13,
+      "page": 16,
+      "prompt": "Quelle est la première étape d'une stratégie commerciale ?",
+      "lesson_refs": [
+        "F.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-14",
+      "number": 14,
+      "page": 16,
+      "prompt": "Trouver régulièrement de nouveaux clients c'est :",
+      "lesson_refs": [
+        "F.06",
+        "F.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-15",
+      "number": 15,
+      "page": 16,
+      "prompt": "Un client vous demande si vous faites des prestations en B to B. De quoi parle-t-il ?",
+      "lesson_refs": [
+        "F.01",
+        "F.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-f-16",
+      "number": 16,
+      "page": 16,
+      "prompt": "Un chauffeur VTC, en EURL, fait un chiffre d'affaires de 50 000 €. Il a 10 000 € de charges sociales, a vendu son ancienne voiture 8 000 € et a payé 5 000 € de TVA. Quel est son résultat ?",
+      "lesson_refs": [
+        "B.04",
+        "B.08"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé soustrait la TVA payée du résultat et ajoute tout le prix de cession du véhicule sans sa valeur nette comptable. Les données ne permettent pas un résultat comptable fiable : aucune proposition ne doit être imposée comme correction actuelle.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-f"
+    },
+    {
+      "id": "annales-2020-g-01",
+      "number": 1,
+      "page": 17,
+      "prompt": "La prise en charge d'un client sur une voie ouverte à la circulation publique sans réservation préalable est :",
+      "lesson_refs": [
+        "G.06",
+        "A.12"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "L’article 28 de la loi n°2026-534 du 25 juin 2026 a relevé, à l’article L3124-12, les maxima d’un à trois ans et de 15 000 à 45 000 €. Les options de 2020 sont conservées et exclues du score.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-g"
+    },
+    {
+      "id": "annales-2020-g-02",
+      "number": 2,
+      "page": 17,
+      "prompt": "Quelle démarche faut-il entreprendre pour pouvoir exploiter un véhicule électrique dérogeant aux caractéristiques techniques imposées aux véhicules VTC ?",
+      "lesson_refs": [
+        "G.03"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "Le corrigé exige une demande préfectorale de dérogation pour l’électrique. L’exception technique est prévue directement par l’article 2 de l’arrêté du 26 mars 2015 pour les catégories visées ; cette démarche générale n’est pas fondée par ce texte.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-g"
+    },
+    {
+      "id": "annales-2020-g-03",
+      "number": 3,
+      "page": 17,
+      "prompt": "Quelle sont les dimensions minimum d'une voiture pour être utilisée comme VTC ?",
+      "lesson_refs": [
+        "G.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-g"
+    },
+    {
+      "id": "annales-2020-g-04",
+      "number": 4,
+      "page": 17,
+      "prompt": "L'inscription au registre des exploitants VTC donne lieu à :",
+      "lesson_refs": [
+        "G.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-g"
+    },
+    {
+      "id": "annales-2020-g-05",
+      "number": 5,
+      "page": 17,
+      "prompt": "Comment reconnait-on un VTC ?",
+      "lesson_refs": [
+        "G.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-g"
+    },
+    {
+      "id": "annales-2020-g-06",
+      "number": 6,
+      "page": 17,
+      "prompt": "La durée maximale de stationnement précédant l'horaire de prise en charge mentionné par le client lors de sa réservation à un aéroport ou une gare pour un VTC est de :",
+      "lesson_refs": [
+        "G.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-g"
+    },
+    {
+      "id": "annales-2020-g-07",
+      "number": 7,
+      "page": 17,
+      "prompt": "Pour la réalisation d'une prestation de VTC :",
+      "lesson_refs": [
+        "G.05",
+        "G.09"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "L’énoncé assimile le contrat avec le client au justificatif de réservation obligatoirement présentable. La règle papier/électronique du justificatif est vérifiable ; l’obligation générale de forme écrite de tout contrat n’est pas établie par cette question.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-g"
+    },
+    {
+      "id": "annales-2020-g-08",
+      "number": 8,
+      "page": 17,
+      "prompt": "Si vous utilisez votre véhicule VTC à des fins privées, que devez-vous faire ?",
+      "lesson_refs": [
+        "G.04",
+        "G.12"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "Le corrigé reprend la rédaction de R3122-8 applicable de 2015 à juillet 2017. La rédaction actuelle ne contient plus cette obligation de retrait/occultation hors activité. Portée actuelle à confirmer au regard de l’arrêté de signalétique avant réemploi en évaluation.",
+      "source": "Annales 2020 (1).pdf",
+      "section_id": "annales-2020-g"
+    },
+    {
+      "id": "annales-2021-a-01",
+      "number": 1,
+      "page": 2,
+      "prompt": "Quels agents sont habilités à effectuer un contrôle routier de conducteur de T3P ?",
+      "lesson_refs": [
+        "A.11",
+        "A.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-a-02",
+      "number": 2,
+      "page": 2,
+      "prompt": "Un conducteur sanctionné par le tribunal correctionnel pour délit de fuite peut saisir :",
+      "lesson_refs": [
+        "A.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-a-03",
+      "number": 3,
+      "page": 2,
+      "prompt": "Quelle est la taille minimum de la commune dans laquelle peut s'exercer une activité du T3P ?",
+      "lesson_refs": [
+        "A.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-a-04",
+      "number": 4,
+      "page": 2,
+      "prompt": "Qui agrée les organismes de formation continue des conducteurs de T3P ?",
+      "lesson_refs": [
+        "A.02",
+        "A.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-a-05",
+      "number": 5,
+      "page": 2,
+      "prompt": "Quelle est l'autorité qui effectue la vérification du casier judiciaire d'un candidat à la carte professionnelle de conducteur de véhicules T3P ?",
+      "lesson_refs": [
+        "A.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-a-06",
+      "number": 6,
+      "page": 2,
+      "prompt": "Quelle est l'ancienneté maximum pour un véhicule hybride ?",
+      "lesson_refs": [
+        "G.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-a-07",
+      "number": 7,
+      "page": 2,
+      "prompt": "Comment se présente une réservation préalable ? Citez 2 mentions qui doivent figurer obligatoirement sur celle-ci.",
+      "lesson_refs": [
+        "G.05"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Liste ancienne des mentions : le justificatif VTC est désormais régi par l’arrêté du 6 août 2025, entré en vigueur le 29 octobre 2025. Le numéro REVTC et le SIREN font notamment partie des mentions à contrôler. La question de 2021 est conservée pour comparaison, sans servir de formulaire actuel.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-a-08",
+      "number": 8,
+      "page": 2,
+      "prompt": "Que devez-vous présenter aux agents susceptibles d'effectuer des contrôles pour justifier d'une réservation préalable ?",
+      "lesson_refs": [
+        "G.05",
+        "A.11"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-a-09",
+      "number": 9,
+      "page": 3,
+      "prompt": "Le retrait de la carte professionnelle est :",
+      "lesson_refs": [
+        "A.12",
+        "A.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-a-10",
+      "number": 10,
+      "page": 3,
+      "prompt": "Quelles assurances doit souscrire un professionnel effectuant du T3P ?",
+      "lesson_refs": [
+        "A.05"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-a-11",
+      "number": 11,
+      "page": 3,
+      "prompt": "La réglementation du T3P se trouve dans le :",
+      "lesson_refs": [
+        "A.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-a-12",
+      "number": 12,
+      "page": 3,
+      "prompt": "Pour être exploitable en activité de transport public particulier de personnes, un véhicule électrique doit être :",
+      "lesson_refs": [
+        "G.03"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Formulation trop générale : l’exemption de certaines caractéristiques des véhicules électriques ne signifie pas absence de toutes contraintes. La réponse D du corrigé ancien ne doit pas devenir une règle de conformité actuelle.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-a-13",
+      "number": 13,
+      "page": 3,
+      "prompt": "Vous êtes chauffeur de transport public particulier de personnes né le 12 mai 1950. Quelle est la périodicité de l'examen médical d'aptitude physique auquel vous devez vous soumettre ?",
+      "lesson_refs": [
+        "A.04"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "L’âge est calculé dans le contexte de l’examen de 2021 : 71 ans, donc deux ans maximum. Au 7 octobre 2026, cette personne a 76 ans : la périodicité maximale est alors d’un an. Ne pas réutiliser cette question datée avec le même corrigé comme règle actuelle.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-a-14",
+      "number": 14,
+      "page": 3,
+      "prompt": "Citez deux cas dans lesquels la carte professionnelle peut être retirée à un conducteur du T3P ?",
+      "lesson_refs": [
+        "A.04",
+        "A.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-a-15",
+      "number": 15,
+      "page": 3,
+      "prompt": "Quel kilométrage maximum un conducteur de T3P peut-il réaliser pour sa course ?",
+      "lesson_refs": [
+        "A.01",
+        "H.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-a"
+    },
+    {
+      "id": "annales-2021-b-01",
+      "number": 1,
+      "page": 4,
+      "prompt": "Parmi ces propositions, qu'est-ce qui constitue une charge déductible pour un entrepreneur individuel ?",
+      "lesson_refs": [
+        "B.05"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-02",
+      "number": 2,
+      "page": 4,
+      "prompt": "Lorsque les charges d'exploitation d'une entreprise sont inférieures aux produits :",
+      "lesson_refs": [
+        "B.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-03",
+      "number": 3,
+      "page": 4,
+      "prompt": "Quelle est la durée de vie maximum prévue par la loi pour une SARL ?",
+      "lesson_refs": [
+        "B.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-04",
+      "number": 4,
+      "page": 4,
+      "prompt": "Comment appelle-t-on l'extrait d'immatriculation d'une entreprise artisanale ?",
+      "lesson_refs": [
+        "B.02"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le Répertoire des métiers et son extrait D1 sont un dispositif ancien. Le RNE a remplacé le RM depuis le 1er janvier 2023 ; l’attestation RNE est le justificatif à rechercher aujourd’hui.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-05",
+      "number": 5,
+      "page": 4,
+      "prompt": "Un artisan achète un véhicule 21 000 € HT. Ce véhicule est amorti sur 3 ans. De combien sera l'amortissement linéaire annuel ? Détaillez votre calcul.",
+      "lesson_refs": [
+        "B.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-06",
+      "number": 6,
+      "page": 4,
+      "prompt": "Pour être immatriculé au Répertoire des Métiers, le futur chef d'entreprise du T3P doit :",
+      "lesson_refs": [
+        "B.02",
+        "A.03"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le Répertoire des métiers mentionné n’est plus le registre d’immatriculation actuel depuis le 1er janvier 2023. Les formalités RNE et les conditions spécifiques de conducteur/exploitant doivent être distinguées.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-07",
+      "number": 7,
+      "page": 4,
+      "prompt": "Qui attribue le code APE d'une entreprise ?",
+      "lesson_refs": [
+        "B.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-08",
+      "number": 8,
+      "page": 4,
+      "prompt": "Que signifie le sigle SARL ?",
+      "lesson_refs": [
+        "B.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-09",
+      "number": 9,
+      "page": 4,
+      "prompt": "Dans un bilan :",
+      "lesson_refs": [
+        "B.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-10",
+      "number": 10,
+      "page": 5,
+      "prompt": "Qu'est-ce qu'une personne morale ?",
+      "lesson_refs": [
+        "B.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-11",
+      "number": 11,
+      "page": 5,
+      "prompt": "Le Président d'une SASU est :",
+      "lesson_refs": [
+        "B.01",
+        "B.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-12",
+      "number": 12,
+      "page": 5,
+      "prompt": "La CRDS signifie :",
+      "lesson_refs": [
+        "B.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-13",
+      "number": 13,
+      "page": 5,
+      "prompt": "Quels sont les critères qui caractérisent une activité relevant du Répertoire des Métiers ?",
+      "lesson_refs": [
+        "B.02"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le sujet porte sur le Répertoire des métiers, remplacé par le RNE depuis le 1er janvier 2023. Les critères historiques ne constituent pas une description complète des formalités actuelles.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-14",
+      "number": 14,
+      "page": 5,
+      "prompt": "Dans quel cas un gérant de société à capitaux est-il salarié ?",
+      "lesson_refs": [
+        "B.01",
+        "B.12"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé retient le président de SAS comme « salarié », mais le statut précis est assimilé salarié. Un contrat de travail n’est pas automatique. Cette ambiguïté exclut la question du score actuel.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-15",
+      "number": 15,
+      "page": 5,
+      "prompt": "Chaque mois, la TVA à décaisser représente :",
+      "lesson_refs": [
+        "B.06"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-16",
+      "number": 16,
+      "page": 5,
+      "prompt": "Parmi les propositions suivantes, la ou lesquelles correspond(ent) à un investissement ?",
+      "lesson_refs": [
+        "B.05",
+        "B.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-17",
+      "number": 17,
+      "page": 5,
+      "prompt": "La TVA sur les carburants est-elle récupérable ?",
+      "lesson_refs": [
+        "B.06"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé ancien affirme une récupération totale « dans tous les cas », sans préciser régime de TVA, carburant ni affectation du véhicule. Cette généralisation est inexacte ; aucune des propositions universelles ne donne une règle actuelle suffisamment fiable.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-b-18",
+      "number": 18,
+      "page": 5,
+      "prompt": "Selon le Code de Commerce, les documents comptables doivent être conservés :",
+      "lesson_refs": [
+        "B.11"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-b"
+    },
+    {
+      "id": "annales-2021-c-01",
+      "number": 1,
+      "page": 6,
+      "prompt": "Sur un trajet de 100 km sur autoroute, si je roule à 130 km/h au lieu de 120 km/h, je « gagne » environ :",
+      "lesson_refs": [
+        "C.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-02",
+      "number": 2,
+      "page": 6,
+      "prompt": "Par temps de pluie, est allongé(e) :",
+      "lesson_refs": [
+        "C.11",
+        "C.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-03",
+      "number": 3,
+      "page": 6,
+      "prompt": "Vous êtes au volant de votre véhicule et recevez un appel sur votre téléphone portable. Vous prenez le téléphone en main, vous encourez :",
+      "lesson_refs": [
+        "C.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-04",
+      "number": 4,
+      "page": 6,
+      "prompt": "Quelles sont les obligations expressément prévues par le code de la route, pour tout conducteur impliqué dans un accident de la circulation qui n'a provoqué que des dégâts matériels ?",
+      "lesson_refs": [
+        "C.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-05",
+      "number": 5,
+      "page": 6,
+      "prompt": "Les piétons qui s'engagent dans la traversée d'une chaussée :",
+      "lesson_refs": [
+        "C.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-06",
+      "number": 6,
+      "page": 6,
+      "prompt": "En cas de récidive d'une conduite sous l'influence de substances ou de plantes classées comme stupéfiants, vous encourez :",
+      "lesson_refs": [
+        "C.08"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-07",
+      "number": 7,
+      "page": 6,
+      "prompt": "Mon voyant d'essence vient de s'allumer :",
+      "lesson_refs": [
+        "C.01",
+        "C.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-08",
+      "number": 8,
+      "page": 6,
+      "prompt": "Le décret n° 2016-448 du 13 avril 2016 modifiant certaines dispositions du code de la route relatives aux véhicules interdit les « vitres surteintées ». A cette fin, il impose :",
+      "lesson_refs": [
+        "C.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-09",
+      "number": 9,
+      "page": 7,
+      "prompt": "En cas de panne de votre véhicule, à quelle distance placez-vous le triangle de pré signalisation ?",
+      "lesson_refs": [
+        "C.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-10",
+      "number": 10,
+      "page": 7,
+      "prompt": "En agglomération, l'usage de l'avertisseur sonore est autorisé :",
+      "lesson_refs": [
+        "C.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-11",
+      "number": 11,
+      "page": 7,
+      "prompt": "A 90 km/h la distance d'arrêt est approximativement de:",
+      "lesson_refs": [
+        "C.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-12",
+      "number": 12,
+      "page": 7,
+      "prompt": "Lorsque les pneus sont sous-gonflés cela entraîne:",
+      "lesson_refs": [
+        "C.01",
+        "C.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-13",
+      "number": 13,
+      "page": 7,
+      "prompt": "Que risque un conducteur en cas de dépassement de la vitesse maximale autorisée compris entre 40 km/h et moins de 50 km/h ?",
+      "lesson_refs": [
+        "C.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-14",
+      "number": 14,
+      "page": 7,
+      "prompt": "La durée du temps de réaction est d'environ:",
+      "lesson_refs": [
+        "C.03",
+        "C.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-15",
+      "number": 15,
+      "page": 7,
+      "prompt": "Dans quel cas l'arrêt est-il autorisé sur la bande d'arrêt d'urgence de l'autoroute ?",
+      "lesson_refs": [
+        "C.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-16",
+      "number": 16,
+      "page": 7,
+      "prompt": "Combien de points perdez-vous en cas de chevauchement d'une ligne continue ?",
+      "lesson_refs": [
+        "C.05"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-17",
+      "number": 17,
+      "page": 7,
+      "prompt": "Les feux de route éclairent à une distance minimale de :",
+      "lesson_refs": [
+        "C.11"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-18",
+      "number": 18,
+      "page": 7,
+      "prompt": "Titulaire d'un permis probatoire, dans quel cas, devrais-je suivre obligatoirement un stage de sensibilisation à la sécurité routière :",
+      "lesson_refs": [
+        "C.02",
+        "A.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-19",
+      "number": 19,
+      "page": 8,
+      "prompt": "En agglomération, lorsque vous dépassez latéralement, un piéton ou un cycliste, vous devez laisser un espace d'au moins :",
+      "lesson_refs": [
+        "C.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-c-20",
+      "number": 20,
+      "page": 8,
+      "prompt": "Ce panneau signale :",
+      "lesson_refs": [
+        "C.05"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-c"
+    },
+    {
+      "id": "annales-2021-d-01",
+      "number": 1,
+      "page": 9,
+      "prompt": "Quel pick-up est le plus apprécié aux États-Unis depuis longtemps ?",
+      "lesson_refs": [
+        "D.02",
+        "D.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-d"
+    },
+    {
+      "id": "annales-2021-d-02",
+      "number": 2,
+      "page": 9,
+      "prompt": "Qu'est-ce qu'un prototype ?",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-d"
+    },
+    {
+      "id": "annales-2021-d-03",
+      "number": 3,
+      "page": 9,
+      "prompt": "Pourquoi le Cybertruck pourrait-il avoir du mal à séduire la clientèle traditionnelle ?",
+      "lesson_refs": [
+        "D.03",
+        "D.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-d"
+    },
+    {
+      "id": "annales-2021-d-04",
+      "number": 4,
+      "page": 9,
+      "prompt": "Donnez un (des) synonyme(s) de « arborer »:",
+      "lesson_refs": [
+        "D.07",
+        "D.06"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-d"
+    },
+    {
+      "id": "annales-2021-d-05",
+      "number": 5,
+      "page": 9,
+      "prompt": "Pourquoi la présentation du Cybertruck a été un échec?",
+      "lesson_refs": [
+        "D.02",
+        "D.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-d"
+    },
+    {
+      "id": "annales-2021-d-06",
+      "number": 6,
+      "page": 10,
+      "prompt": "Pour quel autre moyen de transport l'alliage en acier développé par Tesla sera-t-il utilisé ?",
+      "lesson_refs": [
+        "D.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-d"
+    },
+    {
+      "id": "annales-2021-d-07",
+      "number": 7,
+      "page": 10,
+      "prompt": "Quelle est l'autonomie maximale d'un modèle Cybertruck ?",
+      "lesson_refs": [
+        "D.02",
+        "D.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-d"
+    },
+    {
+      "id": "annales-2021-d-08",
+      "number": 8,
+      "page": 10,
+      "prompt": "« Si le pick-up Tesla n'était pas un peu polémique, ça ne serait pas une Tesla». Expliquez cette affirmation",
+      "lesson_refs": [
+        "D.06",
+        "D.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-d"
+    },
+    {
+      "id": "annales-2021-d-09",
+      "number": 9,
+      "page": 10,
+      "prompt": "Quelle est la signification du mot « allure » dans le texte ?",
+      "lesson_refs": [
+        "D.07",
+        "D.06"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-d"
+    },
+    {
+      "id": "annales-2021-d-10",
+      "number": 10,
+      "page": 10,
+      "prompt": "D'après le texte, listez au moins 4 caractéristiques du Cybertruck Tesla.",
+      "lesson_refs": [
+        "D.02",
+        "D.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-d"
+    },
+    {
+      "id": "annales-2021-e-01",
+      "number": 1,
+      "page": 11,
+      "prompt": "Savez-vous de quand date ce bâtiment historique ?",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-02",
+      "number": 2,
+      "page": 11,
+      "prompt": "You will ……………, our island is amazing.",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-03",
+      "number": 3,
+      "page": 11,
+      "prompt": "Pourriez-vous passer me prendre ici demain à 6 heures, s'il-vous-plait ?",
+      "lesson_refs": [
+        "E.02",
+        "E.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-04",
+      "number": 4,
+      "page": 11,
+      "prompt": "Thank you for the ride, keep the change.",
+      "lesson_refs": [
+        "E.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-05",
+      "number": 5,
+      "page": 11,
+      "prompt": "Passez-vous un agréable séjour en France ?",
+      "lesson_refs": [
+        "E.01",
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-06",
+      "number": 6,
+      "page": 11,
+      "prompt": "She..........English very well.",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-07",
+      "number": 7,
+      "page": 11,
+      "prompt": "Have you come for the music festival?",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-08",
+      "number": 8,
+      "page": 11,
+      "prompt": "Souhaitez-vous un reçu ?",
+      "lesson_refs": [
+        "E.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-09",
+      "number": 9,
+      "page": 11,
+      "prompt": "Sorry! It's quite expensive for us. May we get a ……………… price?",
+      "lesson_refs": [
+        "E.08"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-10",
+      "number": 10,
+      "page": 11,
+      "prompt": "Les gilets jaunes bloquent les autoroutes en ce moment",
+      "lesson_refs": [
+        "E.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-11",
+      "number": 11,
+      "page": 12,
+      "prompt": "Disabled welcome :",
+      "lesson_refs": [
+        "E.05",
+        "A.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-12",
+      "number": 12,
+      "page": 12,
+      "prompt": "Bonjour, êtes-vous disponible pour m'emmener à la gare?",
+      "lesson_refs": [
+        "E.02",
+        "E.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-13",
+      "number": 13,
+      "page": 12,
+      "prompt": "Do you take the......card?",
+      "lesson_refs": [
+        "E.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-14",
+      "number": 14,
+      "page": 12,
+      "prompt": "I was told to say anything concerning this new advert:",
+      "lesson_refs": [
+        "E.11"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le texte anglais fourni omet la négation not alors que le corrigé traduit une interdiction de parler. La phrase correcte serait « I was told not to say anything concerning this new advert ». Le texte original est conservé et non noté.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-15",
+      "number": 15,
+      "page": 12,
+      "prompt": "Nous vérifions le moteur trois fois par an",
+      "lesson_refs": [
+        "E.06"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-16",
+      "number": 16,
+      "page": 12,
+      "prompt": "Vous nous devez 53 euros :",
+      "lesson_refs": [
+        "E.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-17",
+      "number": 17,
+      "page": 12,
+      "prompt": "What is the opposite of slow?",
+      "lesson_refs": [
+        "E.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-18",
+      "number": 18,
+      "page": 12,
+      "prompt": "Il est interdit de fumer dans la voiture !",
+      "lesson_refs": [
+        "E.06"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-19",
+      "number": 19,
+      "page": 12,
+      "prompt": "Elle vit à Paris depuis dix ans",
+      "lesson_refs": [
+        "E.03",
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-e-20",
+      "number": 20,
+      "page": 12,
+      "prompt": "I took a taxi because the buses were on strike",
+      "lesson_refs": [
+        "E.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-e"
+    },
+    {
+      "id": "annales-2021-f-01",
+      "number": 1,
+      "page": 14,
+      "prompt": "Vous connaissez un VTC qui va démarrer son activité avec des prix très bas afin d'attirer un maximum de clients. Que pensez-vous de cette politique tarifaire ?",
+      "lesson_refs": [
+        "F.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-02",
+      "number": 2,
+      "page": 14,
+      "prompt": "La marge peut être exprimée en pourcentage du :",
+      "lesson_refs": [
+        "F.03",
+        "F.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-03",
+      "number": 3,
+      "page": 14,
+      "prompt": "Dans le mix marketing, à quoi correspondent les 4P ?",
+      "lesson_refs": [
+        "F.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-04",
+      "number": 4,
+      "page": 14,
+      "prompt": "Quelles sont les méthodes de prospection existantes ? Citez un exemple de chaque.",
+      "lesson_refs": [
+        "F.06",
+        "F.08"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-05",
+      "number": 5,
+      "page": 14,
+      "prompt": "Quelle est la première étape d'une stratégie commerciale ?",
+      "lesson_refs": [
+        "F.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-06",
+      "number": 6,
+      "page": 14,
+      "prompt": "En cas de retard très important du client, que faites-vous ?",
+      "lesson_refs": [
+        "F.10",
+        "H.08"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-07",
+      "number": 7,
+      "page": 14,
+      "prompt": "Le matériel informatique peut être amorti sur :",
+      "lesson_refs": [
+        "B.10",
+        "F.12"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Trois ans est la durée retenue par le corrigé, mais l’énoncé ne précise pas la durée d’utilisation attendue du matériel. La formulation « peut être amorti » rend d’autres durées possibles selon les circonstances ; question conservée hors score pour éviter une règle universelle trompeuse.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-08",
+      "number": 8,
+      "page": 14,
+      "prompt": "Le montant d'une prestation s'élève à 75 € TTC. Calculez le montant de la TVA et le prix HT, en détaillant vos calculs.",
+      "lesson_refs": [
+        "B.06",
+        "F.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-09",
+      "number": 9,
+      "page": 14,
+      "prompt": "Un chauffeur VTC, en EURL, fait un chiffre d'affaires de 50 000 €. Il a 10 000 € de charges sociales, a vendu son ancienne voiture 8 000 € et a payé 5 000 € de TVA. Quel est son résultat ?",
+      "lesson_refs": [
+        "B.04",
+        "B.06"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le calcul source 50 000 − 10 000 + 8 000 − 5 000 = 43 000 mélange flux et résultat. Il manque la valeur nette comptable du véhicule cédé et la précision HT/TTC. La TVA reversée n’est normalement pas une charge de résultat pour une opération ouvrant droit à déduction.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-10",
+      "number": 10,
+      "page": 14,
+      "prompt": "En déposant une cliente, de nuit, à son domicile :",
+      "lesson_refs": [
+        "F.10",
+        "H.06"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-11",
+      "number": 11,
+      "page": 15,
+      "prompt": "Dans l'activité de VTC, les conditions générales de vente sont :",
+      "lesson_refs": [
+        "F.04",
+        "G.09"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé ancien coche B et C mais ne retient pas D. « Facultatives en B to B » est ambigu : distinguer l’établissement des CGV de leur communication obligatoire lorsqu’un client professionnel les demande. La loi Hamon seule ne décrit pas toutes les obligations actuelles ; question exclue du score.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-12",
+      "number": 12,
+      "page": 15,
+      "prompt": "A l'aéroport, le parking professionnel est saturé alors que vos clients ne vont pas tarder à sortir du check out :",
+      "lesson_refs": [
+        "G.07",
+        "H.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-13",
+      "number": 13,
+      "page": 15,
+      "prompt": "Que doit-on dire lorsqu'on décroche un appel téléphonique ?",
+      "lesson_refs": [
+        "F.10",
+        "H.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-14",
+      "number": 14,
+      "page": 15,
+      "prompt": "Le panier moyen est :",
+      "lesson_refs": [
+        "F.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-15",
+      "number": 15,
+      "page": 15,
+      "prompt": "Trouver régulièrement de nouveaux clients c'est :",
+      "lesson_refs": [
+        "F.06"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-f-16",
+      "number": 16,
+      "page": 15,
+      "prompt": "Un client vous demande si vous faites des prestations en B to B. De quoi parle-t-il ?",
+      "lesson_refs": [
+        "F.07",
+        "F.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-f"
+    },
+    {
+      "id": "annales-2021-g-01",
+      "number": 1,
+      "page": 16,
+      "prompt": "Quelle sont les dimensions minimum d'une voiture pour être utilisée comme VTC ?",
+      "lesson_refs": [
+        "G.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-g"
+    },
+    {
+      "id": "annales-2021-g-02",
+      "number": 2,
+      "page": 16,
+      "prompt": "La prise en charge d'un client sur une voie ouverte à la circulation publique sans réservation préalable est :",
+      "lesson_refs": [
+        "G.06",
+        "A.12"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "La loi n° 2026-534 du 25 juin 2026, article 28, a relevé la peine de l’article L3124-12 de un an et 15 000 € à trois ans et 45 000 €. Les choix et le corrigé de 2021 restent visibles comme archive ; ils ne servent pas au score actuel.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-g"
+    },
+    {
+      "id": "annales-2021-g-03",
+      "number": 3,
+      "page": 16,
+      "prompt": "Pour la réalisation d'une prestation de VTC :",
+      "lesson_refs": [
+        "G.05",
+        "G.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-g"
+    },
+    {
+      "id": "annales-2021-g-04",
+      "number": 4,
+      "page": 16,
+      "prompt": "Quelle démarche faut-il entreprendre pour pouvoir exploiter un véhicule électrique dérogeant aux caractéristiques techniques imposées aux véhicules VTC?",
+      "lesson_refs": [
+        "G.03"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé d’origine affirme sans nuance qu’un véhicule électrique n’a pas de caractéristiques techniques à respecter. La dérogation est limitée : ce texte ne doit pas faire oublier les exigences restantes. Adaptation explicitement nuancée et conservée hors score.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-g"
+    },
+    {
+      "id": "annales-2021-g-05",
+      "number": 5,
+      "page": 16,
+      "prompt": "La durée maximale de stationnement précédant l'horaire de prise en charge mentionné par le client lors de sa réservation à un aéroport ou une gare pour un VTC est de :",
+      "lesson_refs": [
+        "G.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-g"
+    },
+    {
+      "id": "annales-2021-g-06",
+      "number": 6,
+      "page": 16,
+      "prompt": "Si vous utilisez votre véhicule VTC à des fins privées, que devez-vous faire ?",
+      "lesson_refs": [
+        "G.04"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé ancien attend « retirer la carte professionnelle ». Le texte actuel consulté impose son affichage pendant l’usage professionnel mais ne formule pas cette consigne privée de la même façon. L’ancienne phrase sur l’occultation de la signalétique a disparu de R3122-8 en juillet 2017 ; l’ensemble des prescriptions d’usage privé nécessite confirmation avant d’en faire une question notée.",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-g"
+    },
+    {
+      "id": "annales-2021-g-07",
+      "number": 7,
+      "page": 16,
+      "prompt": "Comment reconnait-on un VTC ?",
+      "lesson_refs": [
+        "G.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-g"
+    },
+    {
+      "id": "annales-2021-g-08",
+      "number": 8,
+      "page": 16,
+      "prompt": "L'inscription au registre des exploitants VTC donne lieu à :",
+      "lesson_refs": [
+        "G.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2021 (1).pdf",
+      "section_id": "annales-2021-g"
+    },
+    {
+      "id": "annales-2022-a-01",
+      "number": 1,
+      "page": 2,
+      "prompt": "Quel service délivre la carte professionnelle de conducteur de T3P ?",
+      "lesson_refs": [
+        "A.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-a-02",
+      "number": 2,
+      "page": 2,
+      "prompt": "Qu'est-ce qu'un service de transport régulier ?",
+      "lesson_refs": [
+        "A.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-a-03",
+      "number": 3,
+      "page": 2,
+      "prompt": "L'examen du T3P est composé :",
+      "lesson_refs": [
+        "A.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-a-04",
+      "number": 4,
+      "page": 2,
+      "prompt": "Je me fais contrôler sur la route, quels documents communs aux trois professions dois-je présenter aux forces de l'ordre ?",
+      "lesson_refs": [
+        "A.11",
+        "A.05"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Liste historique de contrôle insuffisamment contextualisée : elle mêle pièces communes et professionnelles et précède le nouveau justificatif d’assurance applicable depuis avril 2024. Ne pas la présenter comme une liste exhaustive actuelle.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-a-05",
+      "number": 5,
+      "page": 2,
+      "prompt": "Quel est le délit justifiant le refus de délivrance d'une carte professionnelle ? :",
+      "lesson_refs": [
+        "A.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-a-06",
+      "number": 6,
+      "page": 2,
+      "prompt": "Quelle est la signification du terme LOTI ?",
+      "lesson_refs": [
+        "A.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-a-07",
+      "number": 7,
+      "page": 2,
+      "prompt": "Parmi ces affirmations, laquelle est vraie ?",
+      "lesson_refs": [
+        "A.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-a-08",
+      "number": 8,
+      "page": 2,
+      "prompt": "Un conducteur de transport public particulier de personnes doit restituer sa carte professionnelle lorsqu' :",
+      "lesson_refs": [
+        "A.04",
+        "A.03"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé coche toute condamnation pour délit (B). Cette généralisation est incorrecte : examiner les condamnations incompatibles de R3120-8 et les autres conditions de délivrance ; la cessation définitive et la perte d’une condition imposent bien restitution.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-a-09",
+      "number": 9,
+      "page": 2,
+      "prompt": "Quels types de personnalités peuvent être associées avec voix consultative aux travaux des membres de la commission locale des T3P ?",
+      "lesson_refs": [
+        "A.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-a-10",
+      "number": 10,
+      "page": 3,
+      "prompt": "Quelles sont les deux assurances obligatoires qu'un conducteur de T3P doit souscrire ?",
+      "lesson_refs": [
+        "A.05"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-a-11",
+      "number": 11,
+      "page": 3,
+      "prompt": "Quelles sont les sanctions administratives encourues par un conducteur de T3P en cas de violation de la réglementation de la profession ?",
+      "lesson_refs": [
+        "A.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-a-12",
+      "number": 12,
+      "page": 3,
+      "prompt": "Qu'est-ce que l'honorabilité dans votre profession ?",
+      "lesson_refs": [
+        "A.03"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "La formule source « B2 vierge » est excessive. R3120-8 interdit l’exercice pour certaines condamnations inscrites au B2, pas pour toute mention quelle qu’elle soit.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-a-13",
+      "number": 13,
+      "page": 3,
+      "prompt": "Pour accéder à la profession de conducteur de T3P, il faut obligatoirement :",
+      "lesson_refs": [
+        "A.03"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "La question généralise la voie de l’examen et n’expose pas les régimes particuliers. La voie nationale par expérience a en outre changé au 12 août 2026 ; conserver l’item comme historique plutôt que généraliser « obligatoirement ».",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-a-14",
+      "number": 14,
+      "page": 3,
+      "prompt": "Un client se plaint de la tarification de la course. Quelle est l'autorité compétente pour le traiter ?",
+      "lesson_refs": [
+        "A.12",
+        "F.11"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé « préfecture » ne couvre pas à lui seul une contestation commerciale du prix ; l’énoncé ne précise pas s’il s’agit d’un signalement administratif ou du règlement d’un litige. Réclamation, médiation de la consommation et recours judiciaire répondent à des rôles distincts.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-a-15",
+      "number": 15,
+      "page": 3,
+      "prompt": "Le stage de formation continue dispensé aux conducteurs de transport public particulier de personnes permet d'obtenir une attestation valable :",
+      "lesson_refs": [
+        "A.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-a"
+    },
+    {
+      "id": "annales-2022-b-01",
+      "number": 1,
+      "page": 4,
+      "prompt": "Bilan et compte de résultat sont obligatoires pour toutes structures exploitées :",
+      "lesson_refs": [
+        "B.03",
+        "B.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-02",
+      "number": 2,
+      "page": 4,
+      "prompt": "Mme Sophie achète et met en service un véhicule le 1er mars 2023 pour une valeur de 24 000 € HT, amortissable de façon linéaire sur 5 ans. Ses comptes sont clôturés traditionnellement le 31 décembre de chaque année. Quelle sera la valeur comptable nette du véhicule au 31 décembre 2026 ? Détaillez vos calculs.",
+      "lesson_refs": [
+        "B.03",
+        "B.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-03",
+      "number": 3,
+      "page": 4,
+      "prompt": "Parmi ces propositions, laquelle (lesquelles) se trouve(nt) à l'actif du bilan :",
+      "lesson_refs": [
+        "B.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-04",
+      "number": 4,
+      "page": 4,
+      "prompt": "Une entreprise individuelle :",
+      "lesson_refs": [
+        "B.01",
+        "B.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-05",
+      "number": 5,
+      "page": 4,
+      "prompt": "Le résultat d'une entreprise est obtenu par :",
+      "lesson_refs": [
+        "B.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-06",
+      "number": 6,
+      "page": 4,
+      "prompt": "Dans un bilan comptable, un amortissement fait baisser :",
+      "lesson_refs": [
+        "B.03",
+        "B.04"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le sujet dit « dans un bilan » et présente la baisse de l’imposition comme automatique. Une dotation baisse la valeur nette du bien et le résultat, mais son effet fiscal dépend de la déductibilité et de la situation bénéficiaire ; énoncé incomplet.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-07",
+      "number": 7,
+      "page": 4,
+      "prompt": "L'assujettissement du bénéfice de l'entreprise à l'impôt sur les sociétés est possible dans le cadre :",
+      "lesson_refs": [
+        "B.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-08",
+      "number": 8,
+      "page": 4,
+      "prompt": "Les montants figurant dans le compte de résultat sont :",
+      "lesson_refs": [
+        "B.04",
+        "B.06"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé HT suppose une TVA récupérable. L’énoncé dit « les montants » sans préciser le régime ; une TVA non récupérable peut faire partie d’une charge. Conserver le principe avec cette condition plutôt que noter une affirmation universelle.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-09",
+      "number": 9,
+      "page": 4,
+      "prompt": "Qu'est-ce qu'une créance client ?",
+      "lesson_refs": [
+        "B.03",
+        "B.08"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-10",
+      "number": 10,
+      "page": 5,
+      "prompt": "Lequel de ces documents n'est pas demandé à un artisan pour s'inscrire au Répertoire des Métiers ?",
+      "lesson_refs": [
+        "B.02"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le Répertoire des métiers a été remplacé pour l’immatriculation artisanale par le RNE au 1er janvier 2023. La liste de pièces de l’ancienne procédure ne doit pas être utilisée pour les formalités actuelles.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-11",
+      "number": 11,
+      "page": 5,
+      "prompt": "Vous créez seul(e) une activité de transport de personnes. Quels sont les statuts juridiques possibles ? (citez-en trois)",
+      "lesson_refs": [
+        "B.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-12",
+      "number": 12,
+      "page": 5,
+      "prompt": "Le Président de la Chambre de Métiers et de l'Artisanat est :",
+      "lesson_refs": [
+        "B.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-13",
+      "number": 13,
+      "page": 5,
+      "prompt": "Qu'est-ce qu'un chiffre d'affaires ?",
+      "lesson_refs": [
+        "B.04",
+        "B.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-14",
+      "number": 14,
+      "page": 5,
+      "prompt": "Lors de la création d'une société, la publication d'une annonce légale est :",
+      "lesson_refs": [
+        "B.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-15",
+      "number": 15,
+      "page": 5,
+      "prompt": "Un artisan exerçant en entreprise individuelle est imposé de plein droit à :",
+      "lesson_refs": [
+        "B.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-16",
+      "number": 16,
+      "page": 5,
+      "prompt": "Quel est le taux de TVA applicable sur le transport de personnes ?",
+      "lesson_refs": [
+        "B.06"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-17",
+      "number": 17,
+      "page": 5,
+      "prompt": "Quel est le code qui permet de déterminer l'activité réalisée par une entreprise ?",
+      "lesson_refs": [
+        "B.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-b-18",
+      "number": 18,
+      "page": 5,
+      "prompt": "Les emprunts sont intégrés dans :",
+      "lesson_refs": [
+        "B.03",
+        "B.10"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé coche uniquement capitaux permanents alors que des emprunts à long terme relèvent aussi des dettes à long terme. Sans durée d’emprunt ni distinction bilan financier/comptable, le choix unique est ambigu.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-b"
+    },
+    {
+      "id": "annales-2022-c-01",
+      "number": 1,
+      "page": 7,
+      "prompt": "Je peux suivre un stage de sensibilisation à la sécurité routière :",
+      "lesson_refs": [
+        "A.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-02",
+      "number": 2,
+      "page": 7,
+      "prompt": "A 90 km/h la distance d'arrêt est approximativement de:",
+      "lesson_refs": [
+        "C.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-03",
+      "number": 3,
+      "page": 7,
+      "prompt": "Donnez au moins deux effets de la fatigue.",
+      "lesson_refs": [
+        "C.07",
+        "C.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-04",
+      "number": 4,
+      "page": 7,
+      "prompt": "Par temps de brouillard, lorsque la visibilité est inférieure à 50 mètres, je roule à :",
+      "lesson_refs": [
+        "C.02",
+        "C.11"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-05",
+      "number": 5,
+      "page": 7,
+      "prompt": "Sur les routes à sens unique, à deux voies ou lors d'un accès sur un rond point, vous pouvez circuler sur la voie de gauche :",
+      "lesson_refs": [
+        "C.04",
+        "C.05"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-06",
+      "number": 6,
+      "page": 7,
+      "prompt": "Quel type d'arrêt ou de stationnement sont considérés comme gênant la circulation publique dans le code de la route ?",
+      "lesson_refs": [
+        "C.05",
+        "H.06"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "La formulation rassemble des situations qualifiées de gênantes ou très gênantes par des articles distincts. Les interdictions restent à connaître, mais la catégorie juridique exacte ne peut pas être validée globalement par cet énoncé.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-07",
+      "number": 7,
+      "page": 7,
+      "prompt": "Puis-je rajouter moi-même du liquide de refroidissement?",
+      "lesson_refs": [
+        "C.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-08",
+      "number": 8,
+      "page": 7,
+      "prompt": "Quelles sont les actions à mettre en œuvre en présence d'un blessé :",
+      "lesson_refs": [
+        "C.12",
+        "A.08"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-09",
+      "number": 9,
+      "page": 7,
+      "prompt": "Au volant de mon véhicule léger, je me dirige vers le sommet d'une montagne (véhicule montant). Un véhicule de transport en commun arrive en sens inverse (véhicule descendant). Le croisement s'avère difficile :",
+      "lesson_refs": [
+        "C.04",
+        "C.11"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé confond potentiellement l’arrêt initial du descendant et l’obligation de reculer du véhicule le plus léger. L’énoncé n’indique pas qu’une marche arrière est nécessaire ; R414-3 distingue expressément ces situations.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-10",
+      "number": 10,
+      "page": 8,
+      "prompt": "Quelles sont les précautions nécessaires pour vérifier le niveau d'huile?",
+      "lesson_refs": [
+        "C.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-11",
+      "number": 11,
+      "page": 8,
+      "prompt": "Pourquoi faut-il rédiger un constat amiable?",
+      "lesson_refs": [
+        "C.12",
+        "A.05"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-12",
+      "number": 12,
+      "page": 8,
+      "prompt": "Conduisant durant une période de suspension du permis de conduire :",
+      "lesson_refs": [
+        "A.04",
+        "A.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-13",
+      "number": 13,
+      "page": 8,
+      "prompt": "Sur les routes à 2x2 voies séparées par une ligne continue, la vitesse est limitée à :",
+      "lesson_refs": [
+        "C.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-14",
+      "number": 14,
+      "page": 8,
+      "prompt": "Contrôlé avec un taux d'alcool de 0,7 gramme par litre de sang, je risque:",
+      "lesson_refs": [
+        "C.08"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-15",
+      "number": 15,
+      "page": 8,
+      "prompt": "Dans quel cas exceptionnel devez-vous dépasser un véhicule par la droite ?",
+      "lesson_refs": [
+        "C.04",
+        "C.05"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-16",
+      "number": 16,
+      "page": 8,
+      "prompt": "Je dois augmenter la pression des pneus:",
+      "lesson_refs": [
+        "C.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-17",
+      "number": 17,
+      "page": 8,
+      "prompt": "Ce pictogramme, qui figure sur des boîtes de médicaments, signifie :",
+      "lesson_refs": [
+        "C.08"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-18",
+      "number": 18,
+      "page": 9,
+      "prompt": "Lorsque le permis a été invalidé en raison d'une perte totale de points, le nouveau permis obtenu est :",
+      "lesson_refs": [
+        "A.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-19",
+      "number": 19,
+      "page": 9,
+      "prompt": "Sont considérés comme véhicules d'intervention d'urgence prioritaire les :",
+      "lesson_refs": [
+        "C.05"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "L’expression générale « véhicules des services pénitenciers » est trop large. R311-1 vise notamment ceux affectés au transport des détenus ; la mission, la catégorie et l’usage des avertisseurs doivent être pris en compte.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-c-20",
+      "number": 20,
+      "page": 9,
+      "prompt": "Un conducteur qui commet un excès de vitesse de 40 km/h au-dessus de la vitesse autorisée risque :",
+      "lesson_refs": [
+        "C.02",
+        "A.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-c"
+    },
+    {
+      "id": "annales-2022-d-01",
+      "number": 1,
+      "page": 10,
+      "prompt": "Que signifie le mot « recensement » ?",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-d"
+    },
+    {
+      "id": "annales-2022-d-02",
+      "number": 2,
+      "page": 10,
+      "prompt": "Combien de Français utilisent le vélo au quotidien ?",
+      "lesson_refs": [
+        "D.02",
+        "D.06"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-d"
+    },
+    {
+      "id": "annales-2022-d-03",
+      "number": 3,
+      "page": 10,
+      "prompt": "Le mot « cadre » définit :",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-d"
+    },
+    {
+      "id": "annales-2022-d-04",
+      "number": 4,
+      "page": 10,
+      "prompt": "Qu'est-ce que l'INSEE ?",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "La définition précise de l’INSEE est correcte (D), mais « une administration » (C) n’est pas faux en soi. L’énoncé ne demande pas la réponse la plus précise : le choix exclusif n’est pas assez robuste pour la notation.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-d"
+    },
+    {
+      "id": "annales-2022-d-05",
+      "number": 5,
+      "page": 10,
+      "prompt": "Qu'est-ce qu'une mesure incitative ?",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-d"
+    },
+    {
+      "id": "annales-2022-d-06",
+      "number": 6,
+      "page": 10,
+      "prompt": "Qu'est-ce qu'une indemnité ?",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-d"
+    },
+    {
+      "id": "annales-2022-d-07",
+      "number": 7,
+      "page": 11,
+      "prompt": "Quels éléments les sondés jugent prioritaires dans le plan vélo ?",
+      "lesson_refs": [
+        "D.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-d"
+    },
+    {
+      "id": "annales-2022-d-08",
+      "number": 8,
+      "page": 11,
+      "prompt": "Pourquoi l'État veut-il lancer un plan vélo et quel est son objectif ?",
+      "lesson_refs": [
+        "D.02",
+        "D.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-d"
+    },
+    {
+      "id": "annales-2022-d-09",
+      "number": 9,
+      "page": 11,
+      "prompt": "Que signifie l'expression « remporter la palme » ?",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-d"
+    },
+    {
+      "id": "annales-2022-d-10",
+      "number": 10,
+      "page": 11,
+      "prompt": "Selon le sondage, quel est le profil des cyclistes convaincus par la pratique du vélo ?",
+      "lesson_refs": [
+        "D.02",
+        "D.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-d"
+    },
+    {
+      "id": "annales-2022-e-01",
+      "number": 1,
+      "page": 12,
+      "prompt": "I need a taxi for tomorrow afternoon :",
+      "lesson_refs": [
+        "E.02",
+        "E.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-02",
+      "number": 2,
+      "page": 12,
+      "prompt": "Est-ce qu'il y a un musée dans votre ville ?",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-03",
+      "number": 3,
+      "page": 12,
+      "prompt": "Pouvez-vous attendre quelques minutes ? Mon ami arrive.",
+      "lesson_refs": [
+        "E.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-04",
+      "number": 4,
+      "page": 12,
+      "prompt": "Souhaitez-vous un reçu ?",
+      "lesson_refs": [
+        "E.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-05",
+      "number": 5,
+      "page": 12,
+      "prompt": "Ma voiture ne démarre pas :",
+      "lesson_refs": [
+        "E.11"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-06",
+      "number": 6,
+      "page": 12,
+      "prompt": "What is the translation of « driving »?",
+      "lesson_refs": [
+        "E.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-07",
+      "number": 7,
+      "page": 12,
+      "prompt": "Quelle est la marque de votre voiture ?",
+      "lesson_refs": [
+        "E.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-08",
+      "number": 8,
+      "page": 12,
+      "prompt": "Are you free?",
+      "lesson_refs": [
+        "E.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-09",
+      "number": 9,
+      "page": 12,
+      "prompt": "Mettez votre ceinture de sécurité :",
+      "lesson_refs": [
+        "E.06"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-10",
+      "number": 10,
+      "page": 12,
+      "prompt": "Can you take us to the airport before 4 pm?",
+      "lesson_refs": [
+        "E.03",
+        "E.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-11",
+      "number": 11,
+      "page": 13,
+      "prompt": "I am so sorry, I lost my wallet. What can we do ?",
+      "lesson_refs": [
+        "E.11"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-12",
+      "number": 12,
+      "page": 13,
+      "prompt": "Do you have a business card?",
+      "lesson_refs": [
+        "E.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-13",
+      "number": 13,
+      "page": 13,
+      "prompt": "I can't go through, the road is blocked.",
+      "lesson_refs": [
+        "E.07",
+        "E.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-14",
+      "number": 14,
+      "page": 13,
+      "prompt": "There seems to be traffic jams on the motorway, do you know another way ?",
+      "lesson_refs": [
+        "E.07",
+        "E.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-15",
+      "number": 15,
+      "page": 13,
+      "prompt": "Will we be on time for my train?",
+      "lesson_refs": [
+        "E.03",
+        "E.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-16",
+      "number": 16,
+      "page": 13,
+      "prompt": "Taking the bus is cheaper than taking the train:",
+      "lesson_refs": [
+        "E.08"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-17",
+      "number": 17,
+      "page": 13,
+      "prompt": "We booked a guest house in Lamentin:",
+      "lesson_refs": [
+        "E.02"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-18",
+      "number": 18,
+      "page": 13,
+      "prompt": "I have a commute at the station at 4.15 pm.",
+      "lesson_refs": [
+        "E.03",
+        "E.07"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Erreur de vocabulaire dans le sujet : commute n’est pas une correspondance ferroviaire. Employer connection pour ce sens ; le corrigé est conservé comme trace, pas comme anglais à reproduire.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-19",
+      "number": 19,
+      "page": 13,
+      "prompt": "I would like to visit the south of France, have you already been there?",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-e-20",
+      "number": 20,
+      "page": 13,
+      "prompt": "Do you have change on ten euros?",
+      "lesson_refs": [
+        "E.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-e"
+    },
+    {
+      "id": "annales-2022-f-01",
+      "number": 1,
+      "page": 16,
+      "prompt": "Le prix psychologique correspond :",
+      "lesson_refs": [
+        "F.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-02",
+      "number": 2,
+      "page": 16,
+      "prompt": "Quelle affirmation est vraie ?",
+      "lesson_refs": [
+        "F.01",
+        "F.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-03",
+      "number": 3,
+      "page": 16,
+      "prompt": "De manière générale, quelle est l'attitude à adopter lors de l'approche du lieu de destination?",
+      "lesson_refs": [
+        "H.10",
+        "F.09"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-04",
+      "number": 4,
+      "page": 16,
+      "prompt": "Avant de démarrer votre activité, vous allez devoir convaincre votre banquier afin de lui \"vendre\" votre projet. Quels sont dans l'idéal les deux éléments à lui présenter le jour du rendez-vous ?",
+      "lesson_refs": [
+        "F.01",
+        "B.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-05",
+      "number": 5,
+      "page": 16,
+      "prompt": "En tant qu'exploitant, je ne peux pas:",
+      "lesson_refs": [
+        "F.03",
+        "B.05"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-06",
+      "number": 6,
+      "page": 16,
+      "prompt": "Pour prendre en charge un client dans un hôtel, il convient de :",
+      "lesson_refs": [
+        "H.04",
+        "F.07"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-07",
+      "number": 7,
+      "page": 16,
+      "prompt": "Quelle est la première étape d'une stratégie commerciale d'un chauffeur VTC ?",
+      "lesson_refs": [
+        "F.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-08",
+      "number": 8,
+      "page": 16,
+      "prompt": "Votre client oublie son portefeuille dans votre véhicule. Que faites-vous ?",
+      "lesson_refs": [
+        "H.10",
+        "F.11"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-09",
+      "number": 9,
+      "page": 16,
+      "prompt": "Le devis:",
+      "lesson_refs": [
+        "F.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-10",
+      "number": 10,
+      "page": 16,
+      "prompt": "Diriez-vous que vos futurs clients VTC, que vous cherchez à conquérir sont :",
+      "lesson_refs": [
+        "F.01",
+        "F.06"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Aucun choix ne propose « prospects » ou « clientèle cible ». Le corrigé appelle ces personnes « objectifs », formulation imprécise qui confond personnes visées et résultats commerciaux mesurables.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-11",
+      "number": 11,
+      "page": 17,
+      "prompt": "Citez quatre des mentions devant obligatoirement figurer sur un devis.",
+      "lesson_refs": [
+        "F.04",
+        "B.02"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Réponse de 2022 mêlant mentions de devis de travaux et de transport et référence à l’ancien Répertoire des métiers. Les mentions doivent être adaptées au contrat et à l’immatriculation actuelle au RNE.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-12",
+      "number": 12,
+      "page": 17,
+      "prompt": "Quelles sont les méthodes de prospection existantes ? Citez un exemple de chaque.",
+      "lesson_refs": [
+        "F.06",
+        "F.08"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-13",
+      "number": 13,
+      "page": 17,
+      "prompt": "Dans la formule monôme, l'élément pris en compte pour le calcul du coût de revient est :",
+      "lesson_refs": [
+        "F.03",
+        "B.05"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-14",
+      "number": 14,
+      "page": 17,
+      "prompt": "Dans l'activité de VTC, les conditions générales de vente sont :",
+      "lesson_refs": [
+        "F.04",
+        "G.09"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Le corrigé exclut les CGV facultatives en B to B, alors que la fiche officielle actuelle indique qu’entre professionnels elles ne sont pas obligatoires mais, si établies, sont communicables sur demande. La formulation originale est conservée hors notation.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-15",
+      "number": 15,
+      "page": 17,
+      "prompt": "Parmi ces affirmations, la ou lesquelles sont vraie(s) ?",
+      "lesson_refs": [
+        "F.09",
+        "H.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-f-16",
+      "number": 16,
+      "page": 17,
+      "prompt": "Vous avez réussi votre examen avec succès et décidez d'acheter un véhicule pour réaliser votre activité. Sur quels points allez-vous être attentifs concernant l'achat de celui-ci ? Citez-en 3.",
+      "lesson_refs": [
+        "B.10",
+        "G.03"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-f"
+    },
+    {
+      "id": "annales-2022-g-01",
+      "number": 1,
+      "page": 22,
+      "prompt": "Le portail REVTC ou registre des exploitants de VTC est utilisé pour :",
+      "lesson_refs": [
+        "G.01"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-g"
+    },
+    {
+      "id": "annales-2022-g-02",
+      "number": 2,
+      "page": 22,
+      "prompt": "Puis-je utiliser un véhicule acheté en janvier 2012 pour exercer la profession de VTC ?",
+      "lesson_refs": [
+        "G.03"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "La date d’achat en janvier 2012 ne prouve pas la date de première mise en circulation. Le plafond actuel usuel est de sept ans pour les thermiques, sous réserve des exceptions ; l’éligibilité demande davantage d’informations que cette question.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-g"
+    },
+    {
+      "id": "annales-2022-g-03",
+      "number": 3,
+      "page": 22,
+      "prompt": "Vous exploitez un véhicule avec lunette arrière surteintée. Est-il obligatoire d'apposer le macaron EVTC?",
+      "lesson_refs": [
+        "G.04"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-g"
+    },
+    {
+      "id": "annales-2022-g-04",
+      "number": 4,
+      "page": 22,
+      "prompt": "Pour chaque véhicule exploité comme VTC, une capacité financière est exigée. Quel est son montant ?",
+      "lesson_refs": [
+        "G.02"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "L’affirmation « pour chaque véhicule ... exigée » omet les dispenses pour propriété ou location de plus de six mois. Le montant de 1 500 € est exact lorsque la garantie est due, mais l’énoncé universel est trompeur.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-g"
+    },
+    {
+      "id": "annales-2022-g-05",
+      "number": 5,
+      "page": 22,
+      "prompt": "A la fin d'une course, après le départ du client, que doit faire le conducteur d'un VTC (en excluant les opérations de vérification et de nettoyage) ?",
+      "lesson_refs": [
+        "G.08"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "La réponse historique omet l’exception de réservation préalable suivante ou de contrat avec le client final. Ne pas enseigner un retour systématique à la base après chaque course.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-g"
+    },
+    {
+      "id": "annales-2022-g-06",
+      "number": 6,
+      "page": 22,
+      "prompt": "Je suis conducteur d'un véhicule de transport avec chauffeur, je peux :",
+      "lesson_refs": [
+        "G.06",
+        "G.08"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-g"
+    },
+    {
+      "id": "annales-2022-g-07",
+      "number": 7,
+      "page": 22,
+      "prompt": "Quelle est la sanction encourue pour exercice de l'activité de conducteur de VTC sans inscription au registre des exploitants VTC ?",
+      "lesson_refs": [
+        "G.01",
+        "A.12"
+      ],
+      "status": "historical",
+      "correction_origin": "source",
+      "update_note": "Depuis le 27 juin 2026, L3124-7 prévoit trois ans d’emprisonnement et 45 000 € d’amende pour l’exercice sans inscription au registre. Le corrigé 2022 (un an et 15 000 €) est obsolète et aucun choix original n’est à jour.",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-g"
+    },
+    {
+      "id": "annales-2022-g-08",
+      "number": 8,
+      "page": 22,
+      "prompt": "Proposez 4 situations entraînant une mise à jour des dossiers sur le registre des exploitants VTC.",
+      "lesson_refs": [
+        "G.01",
+        "G.10"
+      ],
+      "status": "active",
+      "correction_origin": "source",
+      "update_note": "",
+      "source": "Annales 2022 (1).pdf",
+      "section_id": "annales-2022-g"
+    },
+    {
+      "id": "annales-2023-a-01",
+      "number": 1,
+      "page": 4,
+      "prompt": "Quelles sont les sanctions possibles qui peuvent être décidées par les commissions disciplinaires locales ?",
+      "lesson_refs": [
+        "A.02",
+        "A.12"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "L’énoncé attribue directement la décision à la commission, alors que son rôle est consultatif. L’adaptation clarifie cette distinction et reste hors score pour ne pas valider cette imprécision.",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-a-02",
+      "number": 2,
+      "page": 4,
+      "prompt": "Quelle est la périodicité du contrôle technique ou de l'attestation d'entretien des véhicules du T3P?",
+      "lesson_refs": [
+        "A.04",
+        "G.11"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-a-03",
+      "number": 3,
+      "page": 4,
+      "prompt": "Quels types de personnalités ont voix délibérative lors de la commission locale des T3P ?",
+      "lesson_refs": [
+        "A.02"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-a-04",
+      "number": 4,
+      "page": 4,
+      "prompt": "Quels agents sont habilités à effectuer un contrôle routier de conducteur de T3P ?",
+      "lesson_refs": [
+        "A.11"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-a-05",
+      "number": 5,
+      "page": 4,
+      "prompt": "Lors d'un contrôle par la police des transports, quels documents le conducteur de T3P doit-il présenter en plus de sa carte professionnelle?",
+      "lesson_refs": [
+        "A.11"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "La question mélange les pièces à détenir, à présenter et leur forme ; elle ne précise pas le statut de l’exploitant. Le PDF ne fournit pas de corrigé. Les choix A/D ne sont pas présentés comme liste officielle exhaustive et la question est hors score.",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-a-06",
+      "number": 6,
+      "page": 4,
+      "prompt": "Le(s) quel(s) est(sont) un(des) dommage(s) couvert par l'assurance dite RCP pour le transport public de personnes à titre onéreux ?",
+      "lesson_refs": [
+        "A.05"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "Les choix C/D dépendent du contrat, d’une responsabilité et d’un préjudice établi. Un retard causé par un passager n’engage pas automatiquement le chauffeur. Sans hypothèses ni corrigé, cette question reste hors score.",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-a-07",
+      "number": 7,
+      "page": 4,
+      "prompt": "Quelles sont les conséquences pour un conducteur de T3P qui ne serait pas titulaire d'une responsabilité civile professionnelle ?",
+      "lesson_refs": [
+        "A.05",
+        "A.12"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "Le PDF ne fournit pas de corrigé et les montants proposés ne permettent pas d’établir une réponse actuelle fiable à cette qualification d’infraction. Ce montant historique n’est pas enseigné comme une sanction générale de l’absence de RCP.",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-a-08",
+      "number": 8,
+      "page": 4,
+      "prompt": "Le stage de formation continue dispensé aux conducteurs de transport public routier particulier de personnes permet d'obtenir une attestation valable :",
+      "lesson_refs": [
+        "A.04"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-a-09",
+      "number": 9,
+      "page": 5,
+      "prompt": "Pour être exploitable en activité de transport public particulier de personnes un véhicule électrique doit être validé par :",
+      "lesson_refs": [
+        "G.03",
+        "G.11"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "La formulation « validé par » ne désigne aucune procédure précise. Le PDF sans corrigé ne permet pas de retenir une autorité pour une validation générale : question hors score, à clarifier avec le référentiel de la session.",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-a-10",
+      "number": 10,
+      "page": 5,
+      "prompt": "Dans quel(s) cas de condamnation ne peut-on exercer la profession de conducteur de T3P ?",
+      "lesson_refs": [
+        "A.03"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "Le libellé omet les conditions légales de peine et d’inscription. Il ne faut pas enseigner qu’une condamnation quelconque entraîne automatiquement l’interdiction : étude hors score avec les conditions actuelles.",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-a-11",
+      "number": 11,
+      "page": 5,
+      "prompt": "Citez 4 informations communes qui figurent sur une carte professionnelle T3P.",
+      "lesson_refs": [
+        "A.03",
+        "A.11"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-a-12",
+      "number": 12,
+      "page": 5,
+      "prompt": "Un chauffeur effectue à la demande et à titre onéreux le transport particulier de personnes et de bagages sans être titulaire d'une carte professionnelle. Quelles sont les peines encourues lorsqu'il est reconnu coupable de cette infraction ?",
+      "lesson_refs": [
+        "A.03",
+        "A.12"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "La loi du 25 juin 2026 a modifié L3124-12 : les prestations sans la carte correspondant à l’activité sont désormais visées par trois ans d’emprisonnement et 45 000 € d’amende, avec les peines complémentaires prévues. Les anciens choix ne forment plus un corrigé actuel : hors score.",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-a-13",
+      "number": 13,
+      "page": 5,
+      "prompt": "La réglementation du T3P se trouve dans le :",
+      "lesson_refs": [
+        "A.01",
+        "A.02"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-a-14",
+      "number": 14,
+      "page": 5,
+      "prompt": "Dans la liste ci-dessous quels sont les véhicules qui sont autorisés à être en attente de clientèle sur la voie publique ?",
+      "lesson_refs": [
+        "G.06"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-a-15",
+      "number": 15,
+      "page": 5,
+      "prompt": "Comment s'appelle le document sur lequel ne doivent pas figurer certaines condamnations définitives incompatibles avec l'exercice du transport public particulier de personnes ?",
+      "lesson_refs": [
+        "A.03"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-T3P-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-a"
+    },
+    {
+      "id": "annales-2023-b-01",
+      "number": 1,
+      "page": 3,
+      "prompt": "Quelle est la base de calcul des cotisations sociales d'un entrepreneur individuel qui n'est pas sous le régime de l'autoentrepreneur micro-social ?",
+      "lesson_refs": [
+        "B.07",
+        "B.12"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "Réforme applicable aux revenus 2025 : l’assiette sociale unifiée est calculée sur le revenu brut social avec un abattement de 26 %, selon ses règles propres. L’ancienne réponse « bénéfice réalisé » est insuffisante pour enseigner le calcul actuel.",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-02",
+      "number": 2,
+      "page": 3,
+      "prompt": "Expliquez la différence entre une charge fixe et une charge variable.",
+      "lesson_refs": [
+        "B.05"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-03",
+      "number": 3,
+      "page": 3,
+      "prompt": "Dans une entreprise individuelle :",
+      "lesson_refs": [
+        "B.01"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "Depuis 2022, les patrimoines professionnel et personnel sont en principe séparés, avec des exceptions prévues par les textes. L’option affirmant leur confusion est obsolète ; l’option B est trop générale sans préciser ce périmètre. Question étudiée hors score.",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-04",
+      "number": 4,
+      "page": 3,
+      "prompt": "L'EBE signifie :",
+      "lesson_refs": [
+        "B.04"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-05",
+      "number": 5,
+      "page": 3,
+      "prompt": "Au 1er janvier N, j'achète un véhicule 20 000 € HT amortissable linéairement sur 4 ans et un ordinateur portable 600 € HT amortissable linéairement sur 3 ans. Quel sera le montant de la dotation d'amortissement déductible sur les charges d'entreprise en année N ?",
+      "lesson_refs": [
+        "B.03",
+        "B.04"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-06",
+      "number": 6,
+      "page": 3,
+      "prompt": "Pour une course qui s'élève à 30 € TTC, quel est le montant de la TVA ?",
+      "lesson_refs": [
+        "B.06"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-07",
+      "number": 7,
+      "page": 3,
+      "prompt": "Quelle est la durée de validité d'un chèque ?",
+      "lesson_refs": [
+        "B.08"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-08",
+      "number": 8,
+      "page": 4,
+      "prompt": "Dans un bilan comptable, un amortissement fait baisser :",
+      "lesson_refs": [
+        "B.03",
+        "B.04"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "L’énoncé mélange bilan, bénéfice et impôt : le bénéfice relève du compte de résultat et l’impôt ne baisse pas systématiquement. Sans ces hypothèses, les réponses A et C ne constituent pas un corrigé universel ; question étudiée hors score.",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-09",
+      "number": 9,
+      "page": 4,
+      "prompt": "Une entreprise artisanale se caractérise notamment par :",
+      "lesson_refs": [
+        "B.02"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-10",
+      "number": 10,
+      "page": 4,
+      "prompt": "Citez 2 modes de transmission d'une entreprise.",
+      "lesson_refs": [
+        "B.02"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-11",
+      "number": 11,
+      "page": 4,
+      "prompt": "Les cotisations sociales d'un artisan, en entreprise individuelle au régime réel normal, sont calculées sur :",
+      "lesson_refs": [
+        "B.07",
+        "B.12"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "L’option « totalité du bénéfice » correspond à une présentation ancienne simplifiée. La réforme de l’assiette sociale applicable aux revenus 2025 impose d’enseigner l’assiette unifiée et l’abattement de 26 % : question historique hors score.",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-12",
+      "number": 12,
+      "page": 4,
+      "prompt": "Qui est concerné par le « versement fiscal libératoire » ?",
+      "lesson_refs": [
+        "B.07"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-13",
+      "number": 13,
+      "page": 4,
+      "prompt": "Qu'appelle-t-on TVA collectée ?",
+      "lesson_refs": [
+        "B.06"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-14",
+      "number": 14,
+      "page": 4,
+      "prompt": "Que signifie le sigle SASU ?",
+      "lesson_refs": [
+        "B.01"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-15",
+      "number": 15,
+      "page": 4,
+      "prompt": "Les achats de carburant figurent :",
+      "lesson_refs": [
+        "B.04",
+        "B.05"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-16",
+      "number": 16,
+      "page": 4,
+      "prompt": "Quel est le taux de TVA applicable sur le transport de personnes ?",
+      "lesson_refs": [
+        "B.06"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-17",
+      "number": 17,
+      "page": 4,
+      "prompt": "Quelles sont les pièces comptables que vous devez conserver à titre professionnel ?",
+      "lesson_refs": [
+        "B.11"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-b-18",
+      "number": 18,
+      "page": 5,
+      "prompt": "Le dirigeant d'une micro-entreprise :",
+      "lesson_refs": [
+        "B.07"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-GESTION-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-b"
+    },
+    {
+      "id": "annales-2023-c-01",
+      "number": 1,
+      "page": 2,
+      "prompt": " Ce panneau signale :",
+      "lesson_refs": [
+        "C.05"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-02",
+      "number": 2,
+      "page": 2,
+      "prompt": "Dans une rue à double sens de circulation en agglomération, je peux :",
+      "lesson_refs": [
+        "C.05"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-03",
+      "number": 3,
+      "page": 2,
+      "prompt": "En agglomération éclairée la nuit :",
+      "lesson_refs": [
+        "C.11"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-04",
+      "number": 4,
+      "page": 2,
+      "prompt": "Dans quel cas un conducteur circulant à allure fortement réduite dans une file de voitures est-il obligé de faire usage de ses feux de détresse ?",
+      "lesson_refs": [
+        "C.03",
+        "C.12"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-05",
+      "number": 5,
+      "page": 2,
+      "prompt": "Les témoins sur le tableau de bord du véhicule qui alertent le conducteur d'une urgence mécanique sont de couleur :",
+      "lesson_refs": [
+        "C.01"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-06",
+      "number": 6,
+      "page": 3,
+      "prompt": " Ce pictogramme, qui figure sur des boîtes de médicaments, signifie :",
+      "lesson_refs": [
+        "C.08"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-07",
+      "number": 7,
+      "page": 3,
+      "prompt": "Dans quel cas l'arrêt est-il autorisé sur la bande d'arrêt d'urgence de l'autoroute ?",
+      "lesson_refs": [
+        "C.12"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-08",
+      "number": 8,
+      "page": 3,
+      "prompt": "Quand le croisement s'avère difficile, le conducteur d'une voiture, en agglomération doit au besoin s'arrêter pour laisser passer :",
+      "lesson_refs": [
+        "C.04"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-09",
+      "number": 9,
+      "page": 3,
+      "prompt": "Dans quel délai un chauffeur doit-il transmettre un constat amiable à son assureur après un accident matériel ?",
+      "lesson_refs": [
+        "C.12",
+        "A.05"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-10",
+      "number": 10,
+      "page": 3,
+      "prompt": "Un permis B, permet de transporter au maximum :",
+      "lesson_refs": [
+        "C.06"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-11",
+      "number": 11,
+      "page": 3,
+      "prompt": "Par temps de pluie, l'utilisation des feux de brouillard arrière est :",
+      "lesson_refs": [
+        "C.11"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-12",
+      "number": 12,
+      "page": 3,
+      "prompt": "Sur une route à forte déclivité :",
+      "lesson_refs": [
+        "C.04"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-13",
+      "number": 13,
+      "page": 3,
+      "prompt": "Dans un tunnel éclairé, hors agglomération, je circule :",
+      "lesson_refs": [
+        "C.11"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-14",
+      "number": 14,
+      "page": 4,
+      "prompt": "Lorsque le permis a été invalidé en raison d'une perte totale de points, le nouveau permis obtenu est :",
+      "lesson_refs": [
+        "A.03",
+        "C.05"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-15",
+      "number": 15,
+      "page": 4,
+      "prompt": "Dans le cas où plusieurs infractions entrainant un retrait de points seraient commises simultanément, la perte maximale de points est de :",
+      "lesson_refs": [
+        "C.05"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-16",
+      "number": 16,
+      "page": 4,
+      "prompt": "Pourquoi faut-il rédiger un constat amiable?",
+      "lesson_refs": [
+        "C.12"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-17",
+      "number": 17,
+      "page": 4,
+      "prompt": "Quelles sont les précautions nécessaires pour vérifier le niveau d'huile?",
+      "lesson_refs": [
+        "C.01"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-18",
+      "number": 18,
+      "page": 4,
+      "prompt": "Pour changer la roue d'une voiture, il faut :",
+      "lesson_refs": [
+        "C.12"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-19",
+      "number": 19,
+      "page": 4,
+      "prompt": "En cas de freinage, quels sont les deux principaux facteurs qui constituent la distance d'arrêt ?",
+      "lesson_refs": [
+        "C.03"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-c-20",
+      "number": 20,
+      "page": 4,
+      "prompt": "Le marquage au sol de couleur jaune est :",
+      "lesson_refs": [
+        "C.05"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "L’énoncé dit seulement « marquage jaune ». Certaines marques jaunes sont permanentes, notamment des interdictions d’arrêt ou de stationnement. Sans image ni précision « lignes temporaires de circulation », on ne peut pas généraliser ; question hors score.",
+      "source": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+      "section_id": "annales-2023-c"
+    },
+    {
+      "id": "annales-2023-d-01",
+      "number": 1,
+      "page": 3,
+      "prompt": "Pourquoi Jorge Sayas a lâché son boulot de gardien de nuit ?",
+      "lesson_refs": [
+        "D.02"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-FRANCAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-d"
+    },
+    {
+      "id": "annales-2023-d-02",
+      "number": 2,
+      "page": 3,
+      "prompt": "Jusqu'à combien Jorge Sayas peut gagner en moyenne par jour, lorsqu'il le métro tombe en panne ?",
+      "lesson_refs": [
+        "D.02"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-FRANCAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-d"
+    },
+    {
+      "id": "annales-2023-d-03",
+      "number": 3,
+      "page": 3,
+      "prompt": "Quel est le synonyme de fléau ?",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-FRANCAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-d"
+    },
+    {
+      "id": "annales-2023-d-04",
+      "number": 4,
+      "page": 3,
+      "prompt": "Quel est un synonyme de « vrombir » ?",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-FRANCAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-d"
+    },
+    {
+      "id": "annales-2023-d-05",
+      "number": 5,
+      "page": 4,
+      "prompt": "Que veut dire ambiance « bon enfant » ?",
+      "lesson_refs": [
+        "D.06"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-FRANCAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-d"
+    },
+    {
+      "id": "annales-2023-d-06",
+      "number": 6,
+      "page": 4,
+      "prompt": "Pourquoi le vol des motos est devenu un vrai fléau ?",
+      "lesson_refs": [
+        "D.03",
+        "D.10"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-FRANCAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-d"
+    },
+    {
+      "id": "annales-2023-d-07",
+      "number": 7,
+      "page": 4,
+      "prompt": "Quel avantage les clients trouvent-ils aux motorizados ?",
+      "lesson_refs": [
+        "D.02"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-FRANCAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-d"
+    },
+    {
+      "id": "annales-2023-d-08",
+      "number": 8,
+      "page": 4,
+      "prompt": "Qu'est qu'une horde de motos ?",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-FRANCAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-d"
+    },
+    {
+      "id": "annales-2023-d-09",
+      "number": 9,
+      "page": 4,
+      "prompt": "Dans le texte, l'auteur utilise trois mots différents pour définir un groupe de motos : lesquels ?",
+      "lesson_refs": [
+        "D.07",
+        "D.10"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-FRANCAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-d"
+    },
+    {
+      "id": "annales-2023-d-10",
+      "number": 10,
+      "page": 4,
+      "prompt": "Que veut dire l'auteur par l'expression « service à la criée » ?",
+      "lesson_refs": [
+        "D.06",
+        "D.10"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-FRANCAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-d"
+    },
+    {
+      "id": "annales-2023-e-01",
+      "number": 1,
+      "page": 2,
+      "prompt": "I'm going to ……… the game, take me to the stadium:",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "Le contexte « take me to the stadium » permet aussi « see the game ». Sans corrigé fourni, cette question ne départage pas équitablement les choix B et C : elle est étudiée hors score.",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-02",
+      "number": 2,
+      "page": 2,
+      "prompt": "I booked a car, are you my driver?",
+      "lesson_refs": [
+        "E.02"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-03",
+      "number": 3,
+      "page": 2,
+      "prompt": "How long are you planning to stay in France?",
+      "lesson_refs": [
+        "E.03"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-04",
+      "number": 4,
+      "page": 2,
+      "prompt": "\"To demand\" signifie :",
+      "lesson_refs": [
+        "E.11"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-05",
+      "number": 5,
+      "page": 2,
+      "prompt": "Comment se rend-on au cinéma ?",
+      "lesson_refs": [
+        "E.04"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "Les choix se recouvrent : « how do you go » peut aussi porter sur le moyen de transport. Cette formulation ne permet pas de fixer un corrigé unique sans précision ; entraînement hors score.",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-06",
+      "number": 6,
+      "page": 2,
+      "prompt": "Quelle est la bonne traduction de « sac à main »?",
+      "lesson_refs": [
+        "E.05"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-07",
+      "number": 7,
+      "page": 2,
+      "prompt": "Mettez votre ceinture de sécurité :",
+      "lesson_refs": [
+        "E.06"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-08",
+      "number": 8,
+      "page": 2,
+      "prompt": "Pneu crevé :",
+      "lesson_refs": [
+        "E.11"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-09",
+      "number": 9,
+      "page": 3,
+      "prompt": "Do you want to choose the route?",
+      "lesson_refs": [
+        "E.07"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-10",
+      "number": 10,
+      "page": 3,
+      "prompt": "Where would you like to go?",
+      "lesson_refs": [
+        "E.04"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-11",
+      "number": 11,
+      "page": 3,
+      "prompt": "J'ai un avion demain matin à 10h20",
+      "lesson_refs": [
+        "E.03"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-12",
+      "number": 12,
+      "page": 3,
+      "prompt": "How many people can you take in your car?",
+      "lesson_refs": [
+        "E.03"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-13",
+      "number": 13,
+      "page": 3,
+      "prompt": "Vous demandez à votre client de mettre sa ceinture de sécurité, il vous demande pourquoi :",
+      "lesson_refs": [
+        "E.06"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-14",
+      "number": 14,
+      "page": 3,
+      "prompt": "I've left my credit card at the hotel. Could we go back please?",
+      "lesson_refs": [
+        "E.09"
+      ],
+      "status": "historical",
+      "correction_origin": "pedagogical",
+      "update_note": "Plusieurs propositions reformulent une demande très voisine. Sans indication demandant la traduction la plus littérale et sans corrigé fourni, cette question est étudiée hors score.",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-15",
+      "number": 15,
+      "page": 3,
+      "prompt": "Les heures de pointe :",
+      "lesson_refs": [
+        "E.07"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-16",
+      "number": 16,
+      "page": 3,
+      "prompt": "France has …… places to visit:",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-17",
+      "number": 17,
+      "page": 3,
+      "prompt": "Fill it up, please:",
+      "lesson_refs": [
+        "E.11"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-18",
+      "number": 18,
+      "page": 3,
+      "prompt": "You're better than me in English :",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-19",
+      "number": 19,
+      "page": 3,
+      "prompt": "Don't worry, I can drive you there :",
+      "lesson_refs": [
+        "E.09"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    },
+    {
+      "id": "annales-2023-e-20",
+      "number": 20,
+      "page": 4,
+      "prompt": "My GPS isn't working, I need to ……….a map:",
+      "lesson_refs": [
+        "E.07"
+      ],
+      "status": "active",
+      "correction_origin": "pedagogical",
+      "update_note": "",
+      "source": "SUJET-DANGLAIS-VTC-MARS-2023.pdf",
+      "section_id": "annales-2023-e"
+    }
+  ],
+  "active_count": 330,
+  "historical_count": 74,
+  "covered_lesson_count": 79,
+  "teaching_note_count": 552
+}
