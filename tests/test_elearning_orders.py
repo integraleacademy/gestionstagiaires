@@ -40,7 +40,8 @@ def form(client, **updates):
     for last, first, email in [("Martin", "Camille", "camille@example.test"), ("Durand", "Alex", "alex@example.test")]:
         for k,v in (("last_name",last),("first_name",first),("email",email)):
             fields.add(k,v)
-    fields.update(updates)
+    for key, value in updates.items():
+        fields[key] = value
     return fields
 
 
@@ -155,6 +156,20 @@ def test_free_vtc_never_calls_billing_and_pins_current_curriculum(shop, monkeypa
     assert sum(k.startswith("learner_") for k in order["commerce"]["emails"]) == 2
 
 
+@pytest.mark.parametrize("code,minutes", [("mac-aps", 840), ("a3p", 9450)])
+def test_partner_gratuity_skips_billing_and_requires_explicit_dispatch(shop, monkeypatch, code, minutes):
+    order = submit(shop, code=code, free=True)
+    monkeypatch.setattr(host, "_qonto_request", lambda *a, **k: pytest.fail("No Qonto call for free access"))
+    run(order)
+    assert not latest(shop).get("activated_at")
+    order = send_accesses(shop, order)
+    assert order["unit_cents"] == order["total_cents"] == 0 and order["free_snapshot"] is True
+    assert learning.entitled(order) and all(p.get("activated_at") for p in order["learners"])
+    assert sum(m["required_minutes"] for m in order["modules"]) == minutes
+    assert not order["commerce"].get("invoice_id")
+    assert sum(k.startswith("learner_") for k in order["commerce"]["emails"]) == 2
+
+
 def test_failed_learner_mail_retries_without_recreating_access(shop, merchant, monkeypatch):
     order = submit(shop)
     run(order)
@@ -201,11 +216,12 @@ def test_invalid_learners_and_unknown_price(shop):
     assert c.post("/admin/organisme/e-learning/recapitulatif",data=fields).status_code == 400
 
 
-def test_price_change_before_confirmation_requires_new_quote(shop):
+@pytest.mark.parametrize("code", ["aps", "mac-aps", "a3p"])
+def test_price_change_before_confirmation_requires_new_quote(shop, code):
     pid = prepare(shop)
     c=shop["client"]
-    url=c.post("/admin/organisme/e-learning/recapitulatif",data=form(c)).location
-    host._atomic_update_data(lambda data:host._partner_or_404(data,pid).update(elearning_pricing={"aps":{"unit_cents":1000}}),partner_id=pid)
+    url=c.post("/admin/organisme/e-learning/recapitulatif",data=form(c, course_code=code)).location
+    host._atomic_update_data(lambda data:host._partner_or_404(data,pid).update(elearning_pricing={code:{"unit_cents":1000}}),partner_id=pid)
     assert c.post(url+"/confirmer",data={"csrf_token":csrf(c,url),"confirm":"yes", "terms_version":"2026-10-12"}).status_code == 409
     assert latest(shop)["status"] == "draft"
 
@@ -233,7 +249,7 @@ def test_inactive_partner_or_cancelled_order_blocks_existing_token(shop):
     assert learning.learner_context(data,token)==(None,None)
 
 
-@pytest.mark.parametrize("code", ["aps", "vtc"])
+@pytest.mark.parametrize("code", ["aps", "mac-aps", "a3p", "vtc"])
 def test_personal_link_opens_only_purchased_curriculum(shop, code):
     order=submit(shop,code=code,free=True)
     person=order["learners"][0]

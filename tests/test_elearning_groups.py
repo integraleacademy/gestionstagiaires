@@ -92,6 +92,30 @@ def confirm(shop, url, fields=None):
     return record(shop, response.location)
 
 
+def test_a3p_group_uses_negotiated_price_and_the_full_current_curriculum(shop, merchant):
+    from elearning_native import a3p
+    pid = prepare(shop)
+    host._atomic_update_data(lambda data: host._partner_or_404(data, pid).update(
+        elearning_pricing={"a3p": {"unit_cents": 7990, "free": False}}), partner_id=pid)
+    url = create(shop["client"], code="a3p", name="A3P · groupe de test")
+    save(shop, url, [person(), person("alex@example.test", "Alex", "Durand")])
+    fields = quote(shop["client"], url)
+    fields.update(unit_cents="1", total_cents="0", free_snapshot="true")
+    order = confirm(shop, url, fields)
+    assert order["course_code"] == "a3p" and order["unit_cents"] == 7990
+    assert order["total_cents"] == 15980 and order["free_snapshot"] is False
+    assert len(order["modules"]) == 8
+    assert sum(m["required_minutes"] for m in order["modules"]) == 9450
+    assert {m["course_version"] for m in order["modules"]} == {a3p.VERSION}
+    assert all(m["course_id"].startswith("academy-a3p-") for m in order["modules"])
+    run(order)
+    assert merchant["invoice"]["total_amount"] == {"value": "159.8", "currency": "EUR"}
+    assert not learning.entitled(purchases(shop)[0])
+    mark_paid(merchant)
+    retry(order)
+    assert learning.entitled(purchases(shop)[0])
+
+
 def test_empty_group_survives_relogin_and_multiple_roster_edits_without_checkout(shop, merchant):
     prepare(shop)
     client = shop["client"]

@@ -27,7 +27,7 @@ def learner_mails(shop, order):
     return [mail for mail in shop["mails"] if mail[0][0] in recipients]
 
 
-@pytest.mark.parametrize("code", ["aps", "mac-aps", "vtc"])
+@pytest.mark.parametrize("code", ["aps", "mac-aps", "a3p", "vtc"])
 def test_payment_and_refresh_never_dispatch_until_explicit_post(shop, merchant, code):
     order = submit(shop, code=code)
     client = shop["client"]

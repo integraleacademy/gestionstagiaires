@@ -63,7 +63,7 @@ def test_only_platform_admin_with_valid_csrf_can_toggle(shop):
     assert sales.enabled(host)
 
 
-@pytest.mark.parametrize("code", ["aps", "mac-aps", "vtc"])
+@pytest.mark.parametrize("code", ["aps", "mac-aps", "a3p", "vtc"])
 def test_stale_direct_orders_blocked_and_reopen_without_losing_drafts(shop, merchant, code):
     prepare(shop)
     client = shop["client"]

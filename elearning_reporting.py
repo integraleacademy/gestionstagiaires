@@ -258,7 +258,7 @@ class ProgressReader:
                 updates.append(aps_final['updated_at'])
         versions = {m["version"] for m in modules if m["version"]}
         if len(versions) == 1:
-            final_id = "macaps-final" if is_mac_aps else "vtc-final" if order["course_code"] == "vtc" else "final"
+            final_id = {"mac-aps": "macaps-final", "vtc": "vtc-final", "a3p": "a3p-final"}.get(order["course_code"], "final")
             # Keep final attempts from a proven VTC predecessor edition, just
             # like module attempts; never include unrelated curriculum versions.
             final_versions = set.intersection(*(set(lineage_versions(session_view, m["course_id"])) for m in modules))

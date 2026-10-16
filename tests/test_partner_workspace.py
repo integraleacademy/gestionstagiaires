@@ -7,6 +7,9 @@ import pytest
 
 import app as host
 import partner_workspace as workspace
+import elearning_orders as learning
+import elearning_sales as sales
+from test_elearning_groups import HiddenFields
 from test_manuals_shop import shop, signup, login, all_data
 from test_elearning_reporting import activated, seed_course, tracked, database_dump, report_url
 
@@ -71,6 +74,43 @@ def test_information_edit_preserves_modules_subscription_and_login(shop):
     for key in ("enabled_modules", "subscription", "subscription_plan", "max_users", "email", "siret"):
         assert updated.get(key) == original.get(key), key
     assert after["users"] == before["users"]
+
+
+@pytest.mark.parametrize("free", [False, True])
+def test_four_partner_prices_save_and_reopen_without_changing_other_accounts(shop, free):
+    partner = create_partner(shop)
+    other_client = host.app.test_client()
+    assert signup(other_client, email="other-pricing@example.test").status_code == 303
+    other = next(p for p in all_data(shop)["partners"] if p.get("email") == "other-pricing@example.test")
+    as_admin(shop["client"])
+    client = shop["client"]
+    page = client.get(url(partner, "pricing"))
+    fields = HiddenFields(page.text, include_visible=True).fields
+    for code in ("aps", "mac-aps", "a3p", "vtc"):
+        assert f"{code}_price" in fields and f"{code}_free" in fields
+    assert fields["mac-aps_price"] == "49.00" and fields["a3p_price"] == "150.00"
+    assert "157 h 30 min" in page.text
+    post_url = f"/admin/partners/{partner['id']}/pricing"
+    payload = {"csrf_token": fields["csrf_token"], "aps_price": "59.00", "mac-aps_price": "42.50",
+               "a3p_price": "79.90", "vtc_price": "150.00"}
+    if free:
+        payload.update({"mac-aps_free": "yes", "a3p_free": "yes"})
+    before = all_data(shop)
+    other = next(p for p in before["partners"] if p["id"] == other["id"])
+    sales_before = sales.enabled(host)
+    assert client.post(post_url, data={"mac-aps_price": "1"}).status_code == 400
+    response = client.post(post_url, data=payload)
+    assert response.status_code == 303 and response.location.endswith("?tab=pricing")
+    after = all_data(shop)
+    saved = next(p for p in after["partners"] if p["id"] == partner["id"])
+    for code, cents in (("mac-aps", 4250), ("a3p", 7990)):
+        assert saved["elearning_pricing"][code] == {"unit_cents": cents, "free": free}
+        assert learning.prices(saved)[code]["unit_cents"] == (0 if free else cents)
+    reopened = HiddenFields(client.get(url(partner, "pricing")).text, include_visible=True).fields
+    assert reopened["mac-aps_price"] == "42.50" and reopened["a3p_price"] == "79.90"
+    assert next(p for p in after["partners"] if p["id"] == other["id"]) == other
+    assert after["users"] == before["users"] and after.get("manual_orders", []) == before.get("manual_orders", [])
+    assert sales.enabled(host) is sales_before
 
 
 @pytest.mark.parametrize("legacy_tracking", [False, True])

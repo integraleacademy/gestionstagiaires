@@ -3,7 +3,7 @@
 An entitlement is never inferred from a browser return URL or a posted price.
 Only a fully paid, verified invoice (or an allowed free price snapshot) and
 the centre's explicit dispatch request can activate and send new accesses.
-Fixed-price courses never allow a free or discounted entitlement.
+Prices and gratuity are set by the administrator for each partner.
 Learner records stay outside administrative trainee sessions.
 """
 from __future__ import annotations
@@ -27,7 +27,8 @@ import elearning_sales
 
 COURSES = {
     "aps": {"name": "APS", "title": "Agent de prévention et de sécurité", "color": "#2468b3", "default_cents": 5900, "folder": "aps62"},
-    "mac-aps": {"name": "MAC APS", "title": "Maintien et actualisation des compétences APS", "color": "#173c5b", "default_cents": 4900, "fixed_cents": 4900, "legacy_fixed_cents": (6000,)},
+    "mac-aps": {"name": "MAC APS", "title": "Maintien et actualisation des compétences APS", "color": "#173c5b", "default_cents": 4900},
+    "a3p": {"name": "A3P", "title": "Agent de protection physique des personnes", "color": "#258252", "default_cents": 15000},
     "vtc": {"name": "VTC", "title": "Chauffeur VTC", "color": "#7951a8", "default_cents": 15000, "folder": "vtc"},
 }
 CUSTOMER_ENDPOINTS = {"manuals_shop.elearning_checkout", "manuals_shop.elearning_order", "manuals_shop.elearning_confirm", "manuals_shop.elearning_refresh", "manuals_shop.elearning_status", "manuals_shop.elearning_invoice", "manuals_shop.elearning_send_accesses"}
@@ -53,15 +54,14 @@ def prices(partner):
     result = {}
     for code, course in COURSES.items():
         cfg = saved.get(code) or {}
-        fixed = course.get("fixed_cents")
-        free = fixed is None and cfg.get("free") is True
-        cents = fixed if fixed is not None else cfg.get("unit_cents", course["default_cents"])
+        free = cfg.get("free") is True
+        cents = cfg.get("unit_cents", course["default_cents"])
         if cents is not None and (type(cents) is not int or not 1 <= cents <= 10000000):
             cents = None
         minutes = sum(module["required_minutes"] for module in curriculum(code))
         hours, remaining = divmod(minutes, 60)
         duration_label = f"{hours} h" + (f" {remaining:02d} min" if remaining else "")
-        result[code] = {**course, "code": code, "free": free, "fixed_price": fixed is not None, "unit_cents": 0 if free else cents,
+        result[code] = {**course, "code": code, "free": free, "unit_cents": 0 if free else cents, "configured_unit_cents": cents,
                         "configured": free or cents is not None, "planned_minutes": minutes,
                         "hours": minutes / 60, "duration_label": duration_label}
     return result
@@ -70,8 +70,6 @@ def prices(partner):
 def parse_prices(form):
     result = {}
     for code, course in COURSES.items():
-        if course.get("fixed_cents") is not None:
-            continue
         raw = str(form.get(code + "_price", "")).strip().replace(",", ".")
         cents = None
         if raw:
@@ -108,6 +106,9 @@ def curriculum(code):
     if code == "mac-aps":
         from elearning_native.mac_aps import curriculum_manifest
         manifest = curriculum_manifest()
+    elif code == "a3p":
+        from elearning_native.a3p import curriculum_manifest
+        manifest = curriculum_manifest()
     else:
         manifest = json.loads((Path(__file__).parent / "elearning_native" / COURSES[code]["folder"] / "manifest.json").read_text(encoding="utf-8"))
     return [{"course_id": m["id"], "course_version": m["version"], "title": m["title"], "required_minutes": m["planned_minutes"] if "planned_minutes" in m else int(Decimal(str(m["hours"])) * 60)} for m in manifest["modules"]]
@@ -117,14 +118,13 @@ def entitled(order):
     state = order.get("commerce") or {}
     if not is_order(order) or order.get("status") in {"draft", "cancelled"} or order.get("cancellation_requested_at"):
         return False
-    course = COURSES.get(order.get("course_code"), {})
-    fixed = course.get("fixed_cents")
-    if fixed is not None:
-        # Confirmed purchases keep their original price and full-payment requirement.
-        # Only explicitly supported historical tariffs are accepted; new orders use fixed_cents.
+    if order.get("course_code") == "mac-aps":
+        # Keep validating the stored quote, including historical purchases.
+        # Partner price changes never change an already confirmed order.
         unit = order.get("unit_cents")
-        if (order.get("free_snapshot") is not False or type(unit) is not int
-                or unit not in (fixed, *course.get("legacy_fixed_cents", ()))
+        free = order.get("free_snapshot") is True
+        if (type(unit) is not int or not (unit == 0 if free else 0 < unit <= 10000000)
+                or (not free and order.get("free_snapshot") is not False)
                 or not order.get("learners") or order.get("total_cents") != unit * len(order["learners"])):
             return False
     if order.get("free_snapshot") is True and order.get("total_cents") == 0:
@@ -358,7 +358,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         rows = [{"last_name": l, "first_name": f, "email": e} for l, f, e in zip(request.form.getlist("last_name"), request.form.getlist("first_name"), request.form.getlist("email"))]
         try:
             if code not in COURSES:
-                raise ValueError("Choisissez un parcours APS, MAC APS ou VTC.")
+                raise ValueError("Choisissez un parcours APS, MAC APS, A3P ou VTC.")
             price = prices(partner)[code]
             if not price["configured"]:
                 raise ValueError("Contactez-nous pour définir votre tarif pour ce parcours.")

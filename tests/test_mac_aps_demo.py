@@ -151,17 +151,16 @@ def test_mac_demo_is_available_to_restricted_centres_without_switching_identity(
 
 def test_mac_offer_is_available_in_public_shop_and_centre_ordering(shop):
     public = shop["client"].get("/")
-    assert public.status_code == 200 and BASE in public.text
-    assert "MAC APS" in public.text and "14 h de parcours" in public.text and "60,00 €" in public.text
-    assert "reconnaissance réglementaire en 2026 n’est pas vérifiée" in public.text
+    assert public.status_code == 200 and "/e-learning" in public.text
+    assert "MAC APS" in public.text
     signup(shop["client"])
     login(shop["client"])
-    for path in ("/admin/organisme", "/admin/organisme/e-learning", "/admin/organisme/e-learning/nouveau?course=mac-aps"):
+    for path in ("/admin/organisme", "/admin/organisme/e-learning?view=catalogue", "/admin/organisme/e-learning/nouveau?course=mac-aps"):
         response = shop["client"].get(path)
-        assert response.status_code == 200 and "MAC APS" in response.text and "60,00 €" in response.text
+        assert response.status_code == 200 and "MAC APS" in response.text and "49,00 €" in response.text
     form = shop["client"].get("/admin/organisme/e-learning/nouveau?course=mac-aps").text
     assert 'name="course_code" value="mac-aps" checked' in form
-    assert "Tarif unique par stagiaire" in form
+    assert "Tarif unique" not in form
 
 
 def test_public_course_page_keeps_mac_price_demo_and_purchase_intent(shop):
@@ -169,8 +168,8 @@ def test_public_course_page_keeps_mac_price_demo_and_purchase_intent(shop):
     listing = client.get("/e-learning")
     assert listing.status_code == 200 and "/e-learning/mac-aps" in listing.text
     response = client.get("/e-learning/mac-aps")
-    assert response.status_code == 200 and "60,00 € TTC / stagiaire" in response.text
-    assert "MAC APS · 14 h" in response.text and "Tarif unique pour tous les organismes" in response.text
+    assert response.status_code == 200 and "49,00 € TTC / stagiaire" in response.text
+    assert "MAC APS · 14 h" in response.text and "Le tarif applicable est présenté dans votre espace" in response.text
     assert "reconnaissance réglementaire en 2026 n’est pas vérifiée" in response.text
     assert BASE in response.text and BASE + "?view=suivi" in response.text
     showcase_video = re.search(r'<video\b[^>]*class="cs-demo-video"[^>]*>.*?</video>',

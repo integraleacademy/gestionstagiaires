@@ -1,4 +1,4 @@
-"""Fixed MAC APS pricing and paid access, with simulated providers and tenants."""
+"""Partner-specific MAC APS pricing, with simulated providers and tenants."""
 import copy
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -18,14 +18,17 @@ from test_manuals_shop import all_data, csrf, login, shop, signup
 CODE = "mac-aps"
 
 
-@pytest.mark.parametrize("saved", [{}, {"unit_cents": 1, "free": True}, {"unit_cents": None}, {"unit_cents": 9900}, {"unit_cents": 0, "free": True}])
-def test_mac_aps_price_is_4900_for_every_centre(saved):
+@pytest.mark.parametrize("saved,cents,free,configured", [({}, 4900, False, True),
+    ({"unit_cents": 4200}, 4200, False, True), ({"unit_cents": 4200, "free": True}, 0, True, True),
+    ({"unit_cents": None}, None, False, False), ({"unit_cents": None, "free": True}, 0, True, True)])
+def test_mac_aps_uses_the_partner_price_or_gratuity(saved, cents, free, configured):
     price = learning.prices({"elearning_pricing": {CODE: saved}})[CODE]
     assert price["name"] == "MAC APS"
-    assert price["configured"] and price["fixed_price"] and price["free"] is False
-    assert price["unit_cents"] == 4900
+    assert price["configured"] is configured and price["free"] is free
+    assert price["unit_cents"] == cents
+    assert price["configured_unit_cents"] == saved.get("unit_cents", 4900)
     assert price["planned_minutes"] == 840 and price["duration_label"] == "14 h"
-    assert CODE not in learning.parse_prices({"mac-aps_price": "0.01", "mac-aps_free": "yes"})
+    assert learning.parse_prices({"mac-aps_price": "42,50", "mac-aps_free": "yes"})[CODE] == {"unit_cents": 4250, "free": True}
 
 
 @pytest.mark.parametrize("quantity", [1, 2, 37, 100])
@@ -45,8 +48,8 @@ def test_invoice_rounding_keeps_exact_mac_aps_ttc(quantity, vat, net):
     assert payload["settings"]["transaction_type"] == "services"
 
 
-@pytest.mark.parametrize("overrides", [{"free_snapshot": True, "total_cents": 0}, {"unit_cents": 1, "total_cents": 1}, {"unit_cents": 9900, "total_cents": 9900}, {"total_cents": 9800}, {"learners": []}])
-def test_mac_aps_entitlement_rejects_free_or_inconsistent_snapshots(overrides):
+@pytest.mark.parametrize("overrides", [{"free_snapshot": True, "total_cents": 0}, {"unit_cents": 0, "total_cents": 0}, {"unit_cents": True, "total_cents": 1}, {"unit_cents": 9900, "total_cents": 9900}, {"total_cents": 9800}, {"learners": []}])
+def test_mac_aps_entitlement_rejects_unpaid_or_inconsistent_snapshots(overrides):
     order = {"order_type": "elearning", "course_code": CODE, "status": "received",
              "free_snapshot": False, "unit_cents": 4900, "total_cents": 4900, "learners": [{"id": "specimen"}],
              "commerce": {"invoice_id": "specimen-invoice", "invoice_status": "paid", "payment_status": "paid", "paid_cents": 9800, "remaining_cents": 0}}
@@ -68,42 +71,72 @@ def test_legacy_mac_invoice_still_requires_full_original_payment():
     assert order["unit_cents"] == order["total_cents"] == 6000
 
 
-def test_fixed_mac_price_is_visible_and_not_editable_in_admin(shop):
+def test_mac_and_a3p_prices_and_gratuity_are_editable_in_admin(shop):
     pid = prepare(shop)
     admin = host.app.test_client()
     admin.post("/admin/login", data={"username": "admin@example.test", "password": "platform-test-pass"})
     url = "/admin/commandes-elearning?partner_id=" + pid
     page = admin.get(url)
-    assert page.status_code == 200 and "MAC APS" in page.text and "49,00 €" in page.text
-    assert 'name="mac-aps_price"' not in page.text and 'name="mac-aps_free"' not in page.text
+    assert page.status_code == 200 and "MAC APS" in page.text and "A3P" in page.text
+    for code in (CODE, "a3p"):
+        assert f'name="{code}_price"' in page.text and f'name="{code}_free"' in page.text
     assert admin.post(url, data={"csrf_token": csrf(admin, url), "partner_id": pid,
                                 "aps_price": "42.50", "vtc_price": "", "vtc_free": "yes",
-                                "mac-aps_price": "0.01", "mac-aps_free": "yes"}).status_code == 303
+                                "mac-aps_price": "42.50", "mac-aps_free": "yes", "a3p_price": "79.90"}).status_code == 303
     partner = next(p for p in all_data(shop)["partners"] if p["id"] == pid)
-    assert CODE not in partner["elearning_pricing"]
-    assert learning.prices(partner)[CODE]["unit_cents"] == 4900
+    assert partner["elearning_pricing"][CODE] == {"unit_cents": 4250, "free": True}
+    assert learning.prices(partner)[CODE]["unit_cents"] == 0
+    assert learning.prices(partner)["a3p"]["unit_cents"] == 7990
     assert learning.prices(partner)["aps"]["unit_cents"] == 4250
     assert learning.prices(partner)["vtc"]["free"] is True
 
 
-def test_direct_mac_checkout_ignores_posted_and_saved_discounts(shop, merchant):
+def test_direct_mac_checkout_uses_admin_price_and_ignores_posted_discounts(shop, merchant):
     pid = prepare(shop)
-    host._atomic_update_data(lambda data: host._partner_or_404(data, pid).update(elearning_pricing={CODE: {"unit_cents": 100, "free": True}}), partner_id=pid)
+    host._atomic_update_data(lambda data: host._partner_or_404(data, pid).update(elearning_pricing={CODE: {"unit_cents": 4200, "free": False}}), partner_id=pid)
     fields = form(shop["client"])
     for key, value in {"course_code": CODE, "unit_cents": "1", "total_cents": "0", "free_snapshot": "true"}.items():
         fields[key] = value
     created = shop["client"].post(ROOT + "/recapitulatif", data=fields)
     assert created.status_code == 303, created.text
     order = latest(shop)
-    assert order["unit_cents"] == 4900 and order["total_cents"] == 9800 and order["free_snapshot"] is False
+    assert order["unit_cents"] == 4200 and order["total_cents"] == 8400 and order["free_snapshot"] is False
     assert order["items"][0]["label"] == "Accès e-learning MAC APS"
     assert [(m["course_id"], m["course_version"], m["required_minutes"]) for m in order["modules"]] == [
         ("academy-macaps-02", mac_aps.VERSION, 180), ("academy-macaps-03", mac_aps.VERSION, 240), ("academy-macaps-05", mac_aps.VERSION, 420)]
     assert shop["client"].post(created.location + "/confirmer", data={"csrf_token": csrf(shop["client"], created.location), "confirm": "yes", "terms_version": TERMS_VERSION}).status_code == 303
     assert latest(shop)["terms_acceptance"]["version"] == TERMS_VERSION
     run(order)
-    assert merchant["invoice"]["total_amount"] == {"value": "98", "currency": "EUR"}
+    assert merchant["invoice"]["total_amount"] == {"value": "84", "currency": "EUR"}
     assert not latest(shop).get("activated_at") and not learning.entitled(latest(shop))
+    mark_paid(merchant)
+    retry(order)
+    assert learning.entitled(latest(shop)) and not latest(shop).get("activated_at")
+
+
+@pytest.mark.parametrize("free", [False, True])
+def test_partner_storefront_uses_the_negotiated_mac_price(shop, free):
+    pid = prepare(shop)
+    host._atomic_update_data(lambda data: host._partner_or_404(data, pid).update(
+        elearning_pricing={CODE: {"unit_cents": 4250, "free": free}}), partner_id=pid)
+    for path in ("/admin/organisme", "/admin/organisme/e-learning?view=catalogue",
+                 "/admin/organisme/e-learning/nouveau?course=mac-aps"):
+        page = shop["client"].get(path)
+        assert page.status_code == 200
+        assert ("Gratuit" if free else "42,50 €") in page.text, path
+        assert "49,00 €" not in page.text and "Tarif unique" not in page.text
+
+
+def test_a3p_catalogue_and_programme_show_the_actual_course(shop):
+    listing = shop["client"].get("/e-learning")
+    assert listing.status_code == 200 and 'href="/e-learning/a3p"' in listing.text
+    assert "el-coming-a3p" not in listing.text
+    page = shop["client"].get("/e-learning/a3p")
+    assert page.status_code == 200 and "157 h 30 min" in page.text and "150,00 €" in page.text
+    assert "Préparer la mission. Protéger les personnes." in page.text
+    assert "images/organism-elearning/a3p-extrait.webp" in page.text
+    assert "Préparer mon groupe A3P" in page.text
+    assert "course=a3p" in page.text and "course=aps" not in page.text
 
 
 def test_mac_group_paid_only_activation_and_centre_branded_learner_access(shop, merchant):
@@ -167,7 +200,7 @@ def test_mac_later_additions_keep_the_paid_batch_and_charge_only_new_people(shop
     url = create(shop["client"], code=CODE, name="MAC APS · groupe test")
     save(shop, url, [person()])
     with monkeypatch.context() as previous_price:
-        previous_price.setitem(learning.COURSES[CODE], "fixed_cents", original_price)
+        previous_price.setitem(learning.COURSES[CODE], "default_cents", original_price)
         first = confirm(shop, url)
         run(first)
         mark_paid(merchant)

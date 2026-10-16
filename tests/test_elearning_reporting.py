@@ -87,6 +87,24 @@ def test_activated_access_without_activity_is_not_complete_and_does_not_create_t
         assert not session.get("public_auth_" + token)
 
 
+def test_a3p_reporting_uses_its_own_modules_and_final_exam(shop):
+    from elearning_native import a3p
+    order = submit(shop, code="a3p", free=True)
+    run(order)
+    order = send_accesses(shop, order)
+    root = Path(host.PERSIST_DIR) / "native_elearning"
+    store = ExamStore(root / "tracking.sqlite3")
+    for exam_id in ("a3p-final", "final"):
+        store.save("el-" + order["id"], order["learners"][0]["id"], {"id": exam_id, "version": a3p.VERSION},
+                   "1" * 32, {"score": 27, "total": 30, "percent": 90, "passed": True})
+    report = reporting.ProgressReader(host).report(order, order["learners"][0])
+    assert report["available"] and report["course_label"] == "A3P"
+    assert report["total_modules"] == 8 and report["required_seconds"] == 9450 * 60
+    assert len(report["exams"]) == 1 and report["exams"][0]["id"] == "a3p-final"
+    assert {e["id"] for e in report["final_exams"]} == {"a3p-final"}
+    assert shop["client"].get(report_url(order)).status_code == 200
+
+
 def test_real_progress_pinned_selection_active_time_and_exam_results_are_read_only(shop):
     order, root = seed_course(activated(shop))
     store, access, _ = tracked(root, order)
@@ -176,19 +194,12 @@ def test_programme_download_serves_connect_pdf_without_changing_progress(shop):
     assert not (root / "tracking.sqlite3").exists()
 
 
-@pytest.mark.parametrize("course_code", ["vtc", "mac-aps"])
+@pytest.mark.parametrize("course_code", ["vtc", "mac-aps", "a3p"])
 def test_aps_programme_is_not_offered_for_other_courses(shop, course_code):
     order, _ = seed_course(activated(shop))
     def change_course(data):
         stored = next(o for o in data["manual_orders"] if o["id"] == order["id"])
         stored["course_code"] = course_code
-        if course_code == "mac-aps":
-            # A MAC APS fixture must retain its fixed-price paid entitlement.
-            unit = learning.COURSES[course_code]["fixed_cents"]
-            total = unit * len(stored["learners"])
-            stored.update(free_snapshot=False, unit_cents=unit, total_cents=total)
-            stored["commerce"].update(invoice_id="specimen-paid-invoice", invoice_status="paid",
-                                      payment_status="paid", paid_cents=total, remaining_cents=0)
     host._atomic_update_data(change_course, partner_id=order["partner_id"])
     page = shop["client"].get(report_url(order))
     assert page.status_code == 200
