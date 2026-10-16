@@ -1,6 +1,7 @@
 """Partner dossier: real reporting, scoped commerce and non-destructive edits."""
 import copy
 import re
+import sqlite3
 
 import pytest
 
@@ -72,9 +73,17 @@ def test_information_edit_preserves_modules_subscription_and_login(shop):
     assert after["users"] == before["users"]
 
 
-def test_real_progress_and_exports_work_for_admin_without_impersonating_or_writing(shop):
+@pytest.mark.parametrize("legacy_tracking", [False, True])
+def test_real_progress_and_exports_work_for_admin_without_impersonating_or_writing(shop, legacy_tracking):
     order, root = seed_course(activated(shop))
     tracked(root, order)
+    if legacy_tracking:
+        # Existing tracking databases may predate optional ledgers. A report
+        # must still work without invoking the learner store's migrations.
+        with sqlite3.connect(root / "tracking.sqlite3") as db:
+            for column in ("video_progress_json", "assessment_diagnostics_json",
+                           "activity_seconds_json", "lesson_seconds_json", "aps_workload_json"):
+                db.execute(f"ALTER TABLE learner_course_progress DROP COLUMN {column}")
     before = database_dump(root)
     as_admin(shop["client"])
     partner = {"id": order["partner_id"]}

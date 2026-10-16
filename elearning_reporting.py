@@ -95,9 +95,11 @@ class ProgressReader:
             records = [dict(row) for row in db.execute(queries[table], (session_id, learner_id))] if exists else []
         if table == "progress":
             for row in records:
-                row.setdefault("video_progress_json", "{}")
-                row.setdefault("assessment_diagnostics_json", "{}")
-                row.setdefault("activity_seconds_json", "{}")
+                # Optional tracking ledgers were introduced progressively.
+                # Reading historical reports must not migrate learner data.
+                for column in ("video_progress_json", "assessment_diagnostics_json",
+                               "activity_seconds_json", "lesson_seconds_json", "aps_workload_json"):
+                    row.setdefault(column, "{}")
             return [NativeElearningStore._serialize_progress(row) for row in records]
         return records
 
