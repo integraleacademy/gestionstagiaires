@@ -17,7 +17,7 @@ import time
 import uuid
 from functools import wraps
 from pathlib import Path
-from urllib.parse import urlparse, urlencode
+from urllib.parse import urlparse, urlencode, parse_qsl, urlunparse
 
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, send_file, session, url_for
 from PIL import Image, UnidentifiedImageError
@@ -184,15 +184,26 @@ def register(host):
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
+        if host._is_super_admin_session() and request.args.get("embed") == "1" and response.status_code in {302, 303}:
+            destination = urlparse(response.headers.get("Location", ""))
+            if not destination.scheme and not destination.netloc and destination.path.startswith("/admin/"):
+                query = dict(parse_qsl(destination.query))
+                query["embed"] = "1"
+                response.headers["Location"] = urlunparse(destination._replace(query=urlencode(query)))
         return response
 
     def page(template, **context):
         header = None
-        if not context.get("public") and session.get("admin_logged_in") and host._is_external_partner_session() and not context.get("staff"):
+        assisting = bool(host._is_super_admin_session() and session.get("assist_partner_id"))
+        context.setdefault("embedded", host._is_super_admin_session() and request.args.get("embed") == "1")
+        if assisting:
+            assisted = host._current_partner(host.load_data()) or {}
+            context["assisted_partner_name"] = assisted.get("name", "Organisme")
+        if not context.get("public") and session.get("admin_logged_in") and (host._is_external_partner_session() or assisting) and not context.get("staff"):
             partner = context.get("partner") or {}
-            if partner.get("id") != session.get("partner_id"):
+            if partner.get("id") != host._current_partner_id():
                 partner = host._current_partner(host.load_data()) or {}
-            if partner.get("id") == session.get("partner_id"):
+            if partner.get("id") == host._current_partner_id():
                 header = {"name": str(partner.get("name") or "Mon organisme"),
                           "logo_url": url_for("manuals_shop.organisme_logo_preview") if organisme_profile.logo_path(host, partner) else ""}
         return render_template("manuals/" + template, csrf_token=("" if context.get("public") and request.endpoint in manuals_public.CACHEABLE else csrf_token()), statuses=STATUSES, payment_labels=commerce.PAYMENT_LABELS,
@@ -203,8 +214,11 @@ def register(host):
         def wrapped(*args, **kwargs):
             if not session.get("admin_logged_in"):
                 return redirect(url_for("admin_login", next=request.full_path.rstrip("?")))
-            if not host._is_external_partner_session():
+            assisting = bool(host._is_super_admin_session() and session.get("assist_partner_id"))
+            if not (host._is_external_partner_session() or assisting):
                 if host._is_super_admin_session():
+                    if view.__name__.startswith("elearning_progress") and request.method in {"GET", "HEAD"}:
+                        return view(*args, **kwargs)
                     if view.__name__.startswith("elearning"):
                         return redirect(url_for("manuals_shop.elearning_admin"))
                     if view.__name__ == "order_detail":

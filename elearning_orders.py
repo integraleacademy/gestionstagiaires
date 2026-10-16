@@ -402,7 +402,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             abort(403)
         if not host._is_super_admin_session():
             partner_data()
-        return render_order(oid, staff=host._is_super_admin_session())
+        return render_order(oid, staff=host._is_super_admin_session() and not session.get("assist_partner_id"))
 
     @bp.post("/admin/organisme/e-learning/commandes/<oid>/confirmer")
     @customer

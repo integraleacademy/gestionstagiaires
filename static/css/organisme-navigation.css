@@ -15,3 +15,5 @@ body .site-header nav[hidden]{display:none!important}
 @media(max-width:900px){body .site-header{gap:14px;padding:16px 24px}.organisme-navigation{padding:8px 20px;gap:3px}.organisme-navigation-label{display:none}}
 @media(max-width:700px){body .site-header{padding:15px 20px;min-height:75px;flex-wrap:wrap}body .site-header nav{width:100%;flex-basis:100%;margin:0;justify-content:flex-start;gap:2px}body .site-header nav a{font-size:12px;padding:8px 11px}body .site-header nav a.nav-account{margin-left:0}.organisme-navigation{padding:8px 14px;gap:2px}.organisme-navigation a{font-size:11px;padding:9px 8px}.organisme-navigation .organisme-logout{margin-left:0}}
 @media print{.organisme-navigation{display:none}}
+
+.organisme-assistance{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;padding:12px 20px;background:#183858;color:#fff;font:600 13px/1.5 system-ui,sans-serif}.organisme-assistance form{margin:0}.organisme-assistance button{padding:7px 12px;border:1px solid #bdd2ec;border-radius:8px;color:#183858;background:#fff;font:700 12px/1.5 system-ui,sans-serif;cursor:pointer}

@@ -56,8 +56,8 @@ def register_routes(host, bp, *, page):
         return {'elearning_sales_enabled': sales_enabled,
                 'elearning_sales_notice': sales_page and not sales_enabled,
                 'elearning_sales_title': elearning_sales.TITLE, 'elearning_sales_message': elearning_sales.MESSAGE,
-                'storefront_staff': bool(session.get('admin_logged_in') and host._is_super_admin_session()),
-                'storefront_customer': bool(session.get('admin_logged_in') and host._is_external_partner_session()),
+                'storefront_staff': bool(session.get('admin_logged_in') and host._is_super_admin_session() and not session.get('assist_partner_id')),
+                'storefront_customer': bool(session.get('admin_logged_in') and (host._is_external_partner_session() or (host._is_super_admin_session() and session.get('assist_partner_id')))),
                 'cart_completed_key':completed, 'terms_version': TERMS_VERSION, 'canonical_url': public_origin() + request.path,
                 'public_origin': public_origin(), 'page_indexable': indexable() and request.endpoint in CACHEABLE}
 

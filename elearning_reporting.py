@@ -726,9 +726,16 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
 
 def register_routes(host, bp, *, page, customer, partner_data):
     def context(oid, learner_id):
-        data, partner = partner_data()
+        if host._is_super_admin_session() and not host.session.get("assist_partner_id"):
+            data = host.load_data()
+            order = next((o for o in data.get("manual_orders", []) if learning.is_order(o) and o.get("id") == oid), None)
+            if not order:
+                abort(404)
+            partner = host._partner_or_404(data, order["partner_id"])
+        else:
+            data, partner = partner_data()
         order = next((o for o in data.get("manual_orders", []) if learning.is_order(o) and o.get("id") == oid
-                      and o.get("partner_id") == partner["id"] == host._current_partner_id()), None)
+                      and o.get("partner_id") == partner["id"]), None)
         if not order or not learning.entitled(order):
             abort(404)
         person = next((p for p in order.get("learners", []) if p.get("id") == learner_id and p.get("activated_at")), None)
@@ -746,7 +753,7 @@ def register_routes(host, bp, *, page, customer, partner_data):
         partner, order, person, group = context(oid, learner_id)
         report = ProgressReader(host).report(order, person)
         return page("elearning_progress.html", partner=partner, order=order, person=person, group=group, report=report,
-                    course=learning.COURSES[order["course_code"]])
+                    course=learning.COURSES[order["course_code"]], staff=host._is_super_admin_session() and not host.session.get("assist_partner_id"))
 
     @bp.get(base + "/examens/<exam_id>/<version>/<attempt_id>.pdf")
     @customer

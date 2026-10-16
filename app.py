@@ -3925,8 +3925,7 @@ def _is_partner_data_scope_session() -> bool:
     return bool(
         _is_external_partner_session()
         or (
-            _partner_postgres_active()
-            and session.get("assist_partner_id")
+            session.get("assist_partner_id")
             and _is_super_admin_session()
         )
     )
@@ -17019,35 +17018,17 @@ def admin_partner_new():
 @admin_login_required
 @require_super_admin
 def admin_partner_detail(partner_id: str):
+    import partner_workspace
     if request.method == "POST":
+        manuals_shop.check_csrf()
         def update_partner(data: Dict[str, Any]) -> Dict[str, Any]:
             partner = _partner_or_404(data, partner_id)
-            for key in ("name", "legal_name", "siret", "address", "postal_code", "city", "phone", "email", "contact_first_name", "contact_last_name", "subscription_plan", "internal_notes"):
-                partner[key] = (request.form.get(key) or "").strip()
+            for key in ("name", "legal_name", "siret", "address", "address_extra", "postal_code", "city", "phone", "email", "contact_first_name", "contact_last_name", "internal_notes"):
+                if key in request.form:
+                    partner[key] = (request.form.get(key) or "").strip()
             partner["status"] = (request.form.get("status") or partner.get("status") or "active") if (request.form.get("status") or "") in PARTNER_STATUSES else partner.get("status", "active")
-            partner["enabled_modules"] = [key for key in request.form.getlist("enabled_modules") if key in PARTNER_MODULE_KEYS]
-            normalize_partner_subscription(data, partner)
-            sub = partner.setdefault("subscription", {})
-            sub["plan_name"] = (request.form.get("subscription_plan_name") or sub.get("plan_name") or "Essentiel").strip()
-            sub["status"] = (request.form.get("subscription_status") or sub.get("status") or "active").strip()
-            sub["trainee_unlimited"] = bool(request.form.get("trainee_unlimited"))
-            try:
-                sub["trainee_limit"] = None if sub["trainee_unlimited"] else int(request.form.get("trainee_limit") or 0)
-            except ValueError:
-                sub["trainee_limit"] = None
-            sub["modules"] = {key: (key in request.form.getlist("subscription_modules")) for key in PARTNER_SUBSCRIPTION_MODULE_PRICING}
-            prices = {}
-            for key, cfg in PARTNER_SUBSCRIPTION_MODULE_PRICING.items():
-                try:
-                    prices[key] = int(request.form.get(f"module_price_{key}") or cfg["price"])
-                except ValueError:
-                    prices[key] = cfg["price"]
-            sub["module_prices"] = prices
-            for int_key in ("max_users", "storage_limit"):
-                try:
-                    partner[int_key] = int((request.form.get(int_key) or partner.get(int_key) or 0))
-                except ValueError:
-                    pass
+            # The commercial dossier no longer edits legacy subscription/module
+            # settings. Missing form fields must never revoke existing access.
             partner["updated_at"] = _now_iso()
             _append_activity_log(data, "partner_updated", "partner", partner_id, partner_id)
             return {"ok": True}
@@ -17058,14 +17039,14 @@ def admin_partner_detail(partner_id: str):
             data = load_data()
             update_partner(data)
             save_data(data)
-        return redirect(url_for("admin_partner_detail", partner_id=partner_id))
-    data = load_data()
-    partner = _partner_or_404(data, partner_id)
+        flash("Les informations de l’organisme sont enregistrées.", "success")
+        return redirect(url_for("admin_partner_detail", partner_id=partner_id, tab="information"), code=303)
+    data, partner = partner_workspace.load_partner(sys.modules[__name__], partner_id)
     users = [u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
     invitations = [i for i in data.get("invitations", []) if isinstance(i, dict) and i.get("partner_id") == partner_id and not i.get("cancelled_at")]
     invitations.sort(key=lambda i: i.get("created_at") or "", reverse=True)
-    partner_login_url = f"{_public_base_url()}{url_for('admin_login', next=url_for('admin_sessions'))}"
-    return render_template("admin_partner_detail.html", partner=partner, counts=_partner_counts(data, partner_id), users=users, invitation=invitations[0] if invitations else None, brevo_diag=_brevo_config_diagnostics(), can_copy_test_activation_link=_can_show_test_activation_link(), partner_login_url=partner_login_url, module_catalog=PARTNER_MODULES, enabled_modules=_partner_enabled_modules(partner), subscription_module_pricing=PARTNER_SUBSCRIPTION_MODULE_PRICING)
+    partner_login_url = request.host_url.rstrip("/") + url_for('admin_login', next=url_for('manuals_shop.home'))
+    return render_template("admin_partner_detail.html", title=(partner.get("name") or "Organisme") + " · Fiche partenaire", partner=partner, counts=_partner_counts(data, partner_id), users=users, invitation=invitations[0] if invitations else None, brevo_diag=_brevo_config_diagnostics(), can_copy_test_activation_link=_can_show_test_activation_link(), partner_login_url=partner_login_url, **partner_workspace.context(sys.modules[__name__], data, partner))
 
 
 def _can_show_test_activation_link() -> bool:
@@ -17407,6 +17388,11 @@ def admin_partner_delete(partner_id: str):
         flash(f"Le partenaire {partner_name} et toutes ses données ont été supprimés.", "success")
         return redirect(url_for("admin_partners"))
 
+    # Deletion is a platform operation: do not later save a tenant-filtered
+    # snapshot as the global document after leaving assistance.
+    session.pop("assist_partner_id", None)
+    session.pop("assist_started_at", None)
+    _invalidate_request_data_cache()
     data = load_data()
     partner = _partner_or_404(data, partner_id)
     partner_name = partner.get("name") or partner_id
@@ -17425,18 +17411,16 @@ def admin_partner_delete(partner_id: str):
 @admin_login_required
 @require_super_admin
 def admin_partner_assist(partner_id: str):
-    data = load_data(); _partner_or_404(data, partner_id)
+    _partner_or_404(load_data(), partner_id)
+    def record_start(bundle: Dict[str, Any]) -> Dict[str, Any]:
+        _append_activity_log(bundle, "super_admin_assist_started", "partner", partner_id, partner_id)
+        return {"ok": True}
+    # Record before switching scope: saving a global snapshot inside a tenant
+    # context can otherwise reassign records from other organisations.
+    _atomic_update_data(record_start, partner_id=partner_id)
     session["assist_partner_id"] = partner_id
     session["assist_started_at"] = _now_iso()
-    if _partner_postgres_active() and partner_id != INTEGRALE_PARTNER_ID:
-        def record_start(bundle: Dict[str, Any]) -> Dict[str, Any]:
-            _append_activity_log(bundle, "super_admin_assist_started", "partner", partner_id, partner_id)
-            return {"ok": True}
-        _atomic_update_data(record_start, partner_id=partner_id)
-    else:
-        _append_activity_log(data, "super_admin_assist_started", "partner", partner_id, partner_id)
-        save_data(data)
-    return redirect(url_for("admin_sessions"))
+    return redirect(_safe_local_redirect_target(request.form.get("next", ""), url_for("manuals_shop.home")))
 
 
 @app.post("/admin/partners/assist/exit")
@@ -17444,19 +17428,15 @@ def admin_partner_assist(partner_id: str):
 @require_super_admin
 def admin_partner_assist_exit():
     partner_id = str(session.get("assist_partner_id") or "")
-    data = load_data()
-    session.pop("assist_partner_id", None)
-    started = session.pop("assist_started_at", "")
+    started = session.get("assist_started_at", "")
     if partner_id:
-        if _partner_postgres_active() and partner_id != INTEGRALE_PARTNER_ID:
-            def record_finish(bundle: Dict[str, Any]) -> Dict[str, Any]:
-                _append_activity_log(bundle, "super_admin_assist_finished", "partner", partner_id, partner_id, {"started_at": started})
-                return {"ok": True}
-            _atomic_update_data(record_finish, partner_id=partner_id)
-        else:
-            _append_activity_log(data, "super_admin_assist_finished", "partner", partner_id, partner_id, {"started_at": started})
-            save_data(data)
-    return redirect(url_for("admin_partners"))
+        def record_finish(bundle: Dict[str, Any]) -> Dict[str, Any]:
+            _append_activity_log(bundle, "super_admin_assist_finished", "partner", partner_id, partner_id, {"started_at": started})
+            return {"ok": True}
+        _atomic_update_data(record_finish, partner_id=partner_id)
+    session.pop("assist_partner_id", None)
+    session.pop("assist_started_at", None)
+    return redirect(url_for("admin_partner_detail", partner_id=partner_id) if partner_id else url_for("admin_partners"))
 
 
 @app.route("/activate-account", methods=["GET", "POST"])
@@ -55508,6 +55488,8 @@ if _partner_postgres_active():
 
 
 manuals_shop.register(sys.modules[__name__])
+import partner_workspace
+partner_workspace.register(sys.modules[__name__])
 
 _log_memory_stage("AFTER_ROUTE_REGISTRATION", _APP_IMPORT_STARTED_AT, "-")
 _log_memory_stage("IMPORT_END_REAL", _APP_IMPORT_STARTED_AT, "-")
