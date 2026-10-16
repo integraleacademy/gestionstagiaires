@@ -8,6 +8,8 @@
 .nel-catalog--vtc{--catalog-accent:#7045bd;--catalog-ink:#281c3a;--catalog-muted:#6f607e;--catalog-soft:#f3edfb;--catalog-line:#e4dcea;--catalog-number:#dfd3f2}
 .nel-catalog--a3p{--catalog-accent:#16745f;--catalog-ink:#153f35;--catalog-muted:#526f66;--catalog-soft:#edf7f2;--catalog-line:#d5e8df;--catalog-number:#cde3d8}
 .nel-catalog--macaps{--catalog-accent:#164d78;--catalog-ink:#173247;--catalog-muted:#526e83;--catalog-soft:#eff6fc;--catalog-line:#d8e6f1;--catalog-number:#d1e2ef}
+/* Keep the faces visible when portrait artwork fills the shared landscape hero. */
+.nel-catalog--vtc .aps-catalog-art>img,.nel-catalog--a3p .aps-catalog-art>img{object-position:center 15%}
 .nel-admin .a3p-catalog,.nel-admin .vtc-catalog,.nel-admin .mac-catalog{margin:0 0 36px}
 .nel-admin .aps-catalog-hero>div{min-width:0;align-self:center}
 .nel-admin .aps-catalog-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
