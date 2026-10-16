@@ -91,7 +91,10 @@ def _group_text(root):
 @lru_cache(maxsize=512)
 def _pages(family, payload):
     lesson = json.loads(payload)
-    root = _Fragment(_ENV.get_template(TEMPLATES[family]).render(activity={family: lesson})).root
+    # A3P changed presentation, not the content of its reading steps. Retain
+    # the issued page IDs and time requirements for sessions already in progress.
+    template = '_a3p_reading_identity.html' if family == 'a3p' else TEMPLATES[family]
+    root = _Fragment(_ENV.get_template(template).render(activity={family: lesson})).root
     _group_text(root)
     pages, occurrences = [], {}
     for node in root.walk():

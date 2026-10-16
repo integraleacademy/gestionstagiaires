@@ -153,6 +153,26 @@ def _section(row):
     for item,budget in zip(activities,budgets):item.update(planned_minutes=budget,duration_estimated=True)
     lesson['a3p']['pacing']=[{'label':a['title'].split(' · ')[0],'minutes':a['planned_minutes']} for a in activities]
     lesson['a3p']['pacing_note']='Repères de travail indicatifs. Seul le temps réellement suivi est enregistré.'
+    # Match the APS learning sequence without changing any activity ID, video,
+    # question, budget or recorded completion. Original pacing remains the
+    # compatibility input for reading page IDs issued to existing sessions.
+    lesson['title']='Le cours · '+row['title']
+    film['title']='Comprendre avec la vidéo'
+    workshop['title']='Dossier à résoudre · '+row['title']
+    recap['title']='À retenir'
+    activities=[lesson,film,workshop,activities[3],recap]
+    lesson['a3p'].update(title=row['title'],intro=[row['teaching']],
+        display_pacing=[{'label':label,'minutes':a['planned_minutes']} for label,a in zip(
+            ['Le cours','Comprendre avec la vidéo','Dossier à résoudre','Questionnaire','À retenir'],activities)])
+    lesson['easy_glossary']=[
+        {'term':'Fait confirmé','definition':'Une information établie par une pièce du dossier. Elle se distingue d’une supposition.'},
+        {'term':'Information manquante','definition':'Un point que les pièces disponibles ne permettent pas encore de confirmer.'},
+        {'term':'Réévaluer','definition':'Reprendre une décision en tenant compte d’une information nouvelle.'},
+    ]
+    if row['id']=='a3p-v4-ii-01-01':
+        lesson['a3p']['illustration']={'src':'/static/manuals/powerpoint-previews/a3p-scene.webp',
+            'width':1122,'height':1402,'alt':'Équipe A3P préparant la mission avec la personne accompagnée',
+            'caption':'Préparer la mission : préciser les besoins, les consignes et les limites de la protection.'}
     return {'id':row['id'],'title':row['title'],'delivery':'distance','objective_id':row['objective_id'],
             'planned_minutes':row['minutes'],'dossier_count':1,'activities':activities}
 
@@ -162,6 +182,8 @@ def _course(uv):
     course=previous.previous.load_bundled_course('academy-a3p-'+uv)
     rows=[r for r in programme() if r['uv']==uv]
     sections=[_section(r) for r in rows]
+    for index,section in enumerate(sections,1):
+        section['title']=f'{index:02d} · '+section['title']
     # Keep existing preparatory resources and the eight supplementary syntheses.
     supplements=[s for s in course['sections'] if s.get('delivery')!='distance']
     for s in supplements:

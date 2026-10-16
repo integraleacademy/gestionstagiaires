@@ -49,7 +49,8 @@ def test_160_required_videos_and_no_skip(curriculum):
         projected=project_course(course,{'required_minutes':course['required_minutes']})
         requirements=course_videos(projected);count+=len(requirements)
         first=projected['sections'][0]
-        assert video_blocker(projected,{},first['activities'][1]['id'])==first['activities'][0]['id']
+        assert not video_blocker(projected,{},first['activities'][0]['id'])
+        assert video_blocker(projected,{},first['activities'][2]['id'])==first['activities'][1]['id']
         assert all(len(v)==1 for v in requirements.values())
     assert count==160
 
@@ -85,7 +86,7 @@ def test_course_pages_and_corrected_quizzes(curriculum):
     for c in curriculum:
         for s in c['sections']:
             if s['delivery']!='distance':continue
-            film,lesson,workshop,quiz,recap=s['activities']
+            lesson,film,workshop,quiz,recap=s['activities']
             assert lesson_pages(c,lesson)
             assert all(any(a['is_correct'] for a in g['answers']) for g in quiz['answer_groups'])
             assert quiz['explanation'] and quiz['a3p']['delivery']=='distance'
@@ -124,17 +125,17 @@ def test_every_new_workshop_renders_and_server_grades_without_tracking(curriculu
     assert not (case.persist_dir/'native_elearning/tracking.sqlite3').exists()
 
 
-def test_video_first_learner_cannot_skip_or_receive_planned_time(curriculum,case):
-    c=curriculum[0];film,lesson,workshop,quiz,recap=c['sections'][0]['activities']
+def test_course_first_learner_cannot_skip_or_receive_planned_time(curriculum,case):
+    c=curriculum[0];lesson,film,workshop,quiz,recap=c['sections'][0]['activities']
     case.data['sessions'][0].update(training_type='A3P',aps_native_modules=[{
         'course_id':c['id'],'course_version':c['version'],'required_minutes':c['required_minutes']}])
     case._public_login();url='/espace/public-token/elearning/'+c['id']
     response=case.client.get(url);assert response.status_code==200
-    cfg=case._player_config(response);assert cfg['activityId']==film['id']
+    cfg=case._player_config(response);assert cfg['activityId']==lesson['id']
     assert case._api_post(cfg['completeUrl'],cfg).status_code==409
-    requested=case.client.get(url,query_string={'activity':lesson['id']})
+    requested=case.client.get(url,query_string={'activity':film['id']})
     assert requested.status_code == 200
-    assert case._player_config(requested)['activityId'] == film['id']
+    assert case._player_config(requested)['activityId'] == lesson['id']
     assert case._api_post('/api/elearning/v1/activities/'+workshop['id']+'/complete',cfg).status_code==409
     store=NativeElearningStore(case.persist_dir/'native_elearning/tracking.sqlite3')
     access={'session_id':'session-aps','trainee_id':'trainee-1','course_id':c['id'],'course_version':c['version']}
@@ -157,3 +158,20 @@ def test_latest_catalog_and_exam_links_target_existing_sequences(curriculum,case
     links={link['url'] for correction in response.json['result']['corrections'] for link in correction['lesson_links']}
     assert links and all('a3p-v4-' in link for link in links)
     for link in links:assert case.client.get(link).status_code==200
+
+
+def test_presentation_preserves_all_preexisting_reading_ledgers():
+    # Captured from test-v2 before the APS presentation refresh: all three
+    # assignable A3P editions, 388 lessons, including in-person preparation.
+    import hashlib
+    ledgers={}
+    for version in a3p.SUPPORTED_VERSIONS[1:]:
+        for cid in a3p.curriculum_ids():
+            course=a3p.load_bundled_course(cid,version)
+            for section in course['sections']:
+                for activity in section['activities']:
+                    pages=lesson_pages(course,activity)
+                    if pages:ledgers[version+':'+cid+':'+activity['id']]=pages
+    assert len(ledgers)==388
+    assert hashlib.sha256(json.dumps(ledgers,ensure_ascii=False,sort_keys=True).encode()).hexdigest()==\
+        '02dc7baae6b4590f5335c57f45b3a2d2f41dd1961077549e734160ed4f94df4e'

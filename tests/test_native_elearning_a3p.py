@@ -123,7 +123,7 @@ class A3PWebTests(unittest.TestCase):
         with patch('elearning_native.web.NativeElearningStore',side_effect=AssertionError('preview wrote tracking')):
             page=self.client.get('/admin/elearning/a3p')
             self.assertEqual(page.status_code,200)
-            for text in ('160','168','157 h 30','Répondre au QCM'):self.assertIn(text,page.text)
+            for text in ('160','168','157 h 30','QCM corrigés'):self.assertIn(text,page.text)
             for text in ('ADEF','suspendue','certificateur'):self.assertNotIn(text,page.text)
             for cid in a3p.curriculum_ids():
                 c=a3p.load_bundled_course(cid)

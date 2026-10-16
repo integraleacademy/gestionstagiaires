@@ -1,5 +1,6 @@
 """Real desktop/mobile previews and click workflows against synthetic account data."""
 import json
+import os
 import sys
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -12,10 +13,10 @@ from elearning_native import a3p
 root=Path('/tmp/a3p157-ui');root.mkdir(exist_ok=True)
 fixture=A3PWebTests(methodName='runTest');fixture.setUp();fixture._admin_login()
 course=a3p.load_bundled_course('academy-a3p-02')
-film,lesson,workshop,quiz,recap=course['sections'][0]['activities']
+lesson,film,workshop,quiz,recap=course['sections'][0]['activities']
 try:
  with published_media_inventory(),sync_playwright() as p:
-  browser=p.chromium.launch()
+  browser=p.chromium.launch(channel=os.environ.get('A3P_UI_BROWSER_CHANNEL') or None)
   for label,width,height in [('desktop',1440,1040),('mobile',390,844)]:
    page=browser.new_page(viewport={'width':width,'height':height},device_scale_factor=1)
    errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
@@ -28,21 +29,58 @@ try:
     route.fulfill(status=response.status_code,headers={k:v for k,v in response.headers.items() if k.lower() not in {'set-cookie','content-length','content-encoding'}},body=response.data)
    page.route('**/*',handle)
    base='http://a3p.test/admin/elearning/courses/academy-a3p-02/preview?version='+a3p.VERSION+'&activity='
+   # Compare actual computed styles with APS, not just CSS class names.
+   selectors=['.native-course-nav h2','.native-course-nav li.is-current a',
+       '.native-course-nav li.is-current i','.aps-study-plan','.aps-study-plan li',
+       '.aps-study-plan li b','.aps-exam-link','.native-kicker','.native-activity__header h1',
+       '.aps-book','.aps-lesson-progress','.aps-objectives','.aps-editorial > h2']
+   def styles():
+    return page.evaluate("""(selectors)=>Object.fromEntries(selectors.map(selector=>{
+      const s=getComputedStyle(document.querySelector(selector));
+      return [selector,Object.fromEntries(['color','backgroundColor','fontSize','fontWeight','lineHeight',
+       'borderRadius','padding','display'].map(k=>[k,s[k]]))];
+    }))""",selectors)
+   page.goto('http://a3p.test/admin/elearning/courses/academy-aps62-01/preview?version=20261012-aps62-v12')
+   page.locator('[data-aps-lesson-next]').wait_for()
+   page.locator('.aps-teaching-scene img').first.evaluate('(img)=>img.decode()')
+   aps_styles=styles()
+   page.screenshot(path=str(root/f'{label}-aps-reference.png'))
+   page.goto(base.removesuffix('&activity='))
+   assert page.locator('.native-activity').get_attribute('data-activity-id')==lesson['id']
+   page.locator('[data-aps-lesson-next]').wait_for()
+   page.locator('.aps-teaching-scene img').first.evaluate('(img)=>img.decode()')
+   a3p_styles=styles()
+   assert aps_styles==a3p_styles, {k:(aps_styles[k],a3p_styles[k]) for k in selectors if aps_styles[k]!=a3p_styles[k]}
+   page.screenshot(path=str(root/f'{label}-a3p-comparison.png'))
+   if label=='mobile':
+    page.locator('#nativeMenuButton').click()
+    page.locator('.native-sidebar.is-open').wait_for()
+    page.screenshot(path=str(root/'mobile-menu.png'))
+    page.locator('#nativeMenuClose').click()
+    assert not page.locator('#nativeSidebar').evaluate('(e)=>e.classList.contains("is-open")')
    page.goto('http://a3p.test/admin/elearning/a3p');page.locator('#a3p-title').wait_for()
-   assert page.locator('.a3p-module').count()==8
-   assert '168' in page.locator('.a3p-stats').inner_text()
+   assert page.locator('#a3pModules .aps-catalog-grid article').count()==8
+   assert '168' in page.locator('.aps-catalog-stats').inner_text()
    page.screenshot(path=str(root/f'{label}-catalog.png'))
    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 2')
    page.goto(base+film['id']);page.locator('video').wait_for()
-   page.wait_for_function('document.querySelector("video").duration > 300')
-   page.locator('video').evaluate('(v)=>{v.currentTime=98}')
-   page.wait_for_timeout(700);page.screenshot(path=str(root/f'{label}-video.png'))
+   if '--layout-only' not in sys.argv:
+    page.wait_for_function('document.querySelector("video").duration > 300')
+    page.locator('video').evaluate('(v)=>{v.currentTime=98}')
+    page.wait_for_timeout(700)
+   page.screenshot(path=str(root/f'{label}-video.png'))
    page.goto(base+lesson['id'])
+   page.screenshot(path=str(root/f'{label}-course-intro.png'))
    page.locator('[data-aps-lesson-next]').click()
    page.locator('.a3p-reading').first.wait_for()
    page.screenshot(path=str(root/f'{label}-course.png'))
-   assert page.locator('.a3p-nav-chapter[open]').count()==1
+   assert page.locator('.native-course-nav > section').count()>1
+   assert page.locator('.a3p-nav-chapter').count()==0
    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 2')
+   if label=='desktop':
+    page.locator('.aps-study-plan').scroll_into_view_if_needed()
+    page.screenshot(path=str(root/'desktop-study-plan.png'))
+   page.goto(base+recap['id']);page.screenshot(path=str(root/f'{label}-recap.png'))
    page.goto(base+workshop['id']);page.locator('#apsPracticeForm').wait_for()
    assert page.locator('.aps-evidence').count()==4
    assert page.locator('textarea').count()==0
@@ -66,5 +104,7 @@ try:
    assert not errors,errors
    page.close()
   browser.close()
- print('A3P157 UI: video decoded, 4 documents, 6 guided steps, quiz, desktop/mobile, no JS errors or horizontal overflow.')
+ print('APS/A3P computed styles identical. A3P157 UI: 4 documents, 6 guided steps, quiz, desktop/mobile, no JS errors or horizontal overflow.')
+ if '--layout-only' in sys.argv:print('Local layout check only: video decode is checked by the full Chrome CI run.')
+ else:print('Video decoded and seek verified in the browser.')
 finally:fixture.tearDown()

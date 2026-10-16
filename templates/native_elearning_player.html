@@ -2,6 +2,7 @@
 <html lang="fr">
 {% from '_native_lesson_steps.html' import lesson_progress, lesson_navigation %}
 {% set paged_reading = activity.type == 'content' and (activity.get('vtc', {}).get('kind') == 'lesson' or activity.get('a3p', {}).get('kind') == 'lesson' or activity.get('macaps', {}).get('kind') == 'lesson') %}
+{% set player_theme = {'main_color':'#2860e8','button_color':'#245bdb','text_color':'#172b4d'} if course.training_label == 'A3P' else course.theme %}
 {% set player_brand = (learner_brand|default({})) if course.training_label == 'MAC APS' else {} %}
 <head>
   <meta charset="utf-8">
@@ -12,14 +13,14 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261011-vtc-readable-video') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261015-aps-reading-125') }}">
   {% if course.training_label == 'MAC APS' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-elearning.css', v='20261012-2') }}">{% endif %}
-  {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261015-3') }}">{% endif %}
+  {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261016-aps-presentation') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
-  {% if course.aps_reading_revision or course.aps_depth_revision %}<link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-depth.css', v=course.aps_reading_revision or course.aps_depth_revision) }}">{% endif %}
+  {% if course.aps_reading_revision or course.aps_depth_revision or course.study_plan or course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-depth.css', v=course.aps_reading_revision or course.aps_depth_revision or '20261016-a3p') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261007-visuals') }}">
 {% if course.training_label == 'VTC' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-journey.css', v='20261006-105-1') }}">{% endif %}
 {% if activity.production %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-production.css' if course.training_label == 'VTC' else 'css/aps62-production.css', v='20261012-v12') }}">{% endif %}
 </head>
-<body class="native-elearning-body{{ ' macaps-course' if course.training_label == 'MAC APS' else ' a3p-course' if course.training_label == 'A3P' else ' vtc-course' if course.training_label == 'VTC' else '' }}" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
+<body class="native-elearning-body{{ ' macaps-course' if course.training_label == 'MAC APS' else ' a3p-course' if course.training_label == 'A3P' else ' vtc-course' if course.training_label == 'VTC' else '' }}" style="--course-accent:{{ player_theme.main_color|default('#4f46e5') }};--course-button:{{ player_theme.button_color|default('#ff6b1a') }};--course-text:{{ player_theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
     <section class="native-block native-block--{{ block.type|lower }}" data-native-block="{{ block.type }}">
       {% if block.video and block.video.src %}
@@ -61,7 +62,7 @@
         {% if block.video.lesson_explainer and block.video.transcript %}
         <details class="vtc-transcript"><summary>Lire la transcription de cette leçon</summary>{% for paragraph in block.video.transcript.split('\n\n') %}<p>{{ paragraph }}</p>{% endfor %}</details>
         {% endif %}
-        {% if block.video.required and not preview_mode and (course.id.startswith('academy-aps62-') or course.training_label == 'MAC APS') %}
+        {% if block.video.required and not preview_mode and (course.id.startswith('academy-aps62-') or course.training_label in ['MAC APS', 'A3P']) %}
         <div class="native-video-pace">
           <label>Rythme de lecture
             <select data-video-rate="{{ block.video.id }}">
@@ -155,7 +156,7 @@
       {% endif %}
       <nav class="native-course-nav">
         {% for nav_section in navigation %}
-          {% if course.training_label == 'A3P' %}<details class="a3p-nav-chapter"{% if nav_section.activities|selectattr('current')|list %} open{% endif %}><summary>{{ nav_section.title }}</summary>{% else %}<section><h2>{{ nav_section.title }}</h2>{% endif %}
+          <section><h2>{{ nav_section.title }}</h2>
             <ol>
               {% for item in nav_section.activities %}
                 <li class="{% if item.current %}is-current{% endif %} {% if item.completed %}is-complete{% endif %} {% if item.locked %}is-locked{% endif %}">
@@ -167,11 +168,11 @@
                 </li>
               {% endfor %}
             </ol>
-          {% if course.training_label == 'A3P' %}</details>{% else %}</section>{% endif %}
+          </section>
         {% endfor %}
       </nav>
       {% if exam_url %}<a class="aps-exam-link" href="{{ exam_url }}"><strong>Mon examen blanc →</strong><span>30 questions · correction{% if course.id.startswith('academy-aps62-') %} · temps inclus dans le module{% else %} · nouvelles tentatives{% endif %}</span></a>{% endif %}
-      {% if course.study_plan %}<details class="aps-study-plan"{% if activity_position == 1 %} open{% endif %}><summary>Déroulé · {{ course.study_plan.total_minutes }} min au total</summary><ol>{% for step in course.study_plan.steps %}<li><span>{{ step.label }}</span><b>{{ step.minutes }} min</b></li>{% endfor %}</ol><p>Temps de travail indicatifs, examen et correction inclus. Seul le temps actif réellement effectué est enregistré. Les exercices et leur correction font partie du travail prévu.</p></details>{% endif %}
+      {% if course.study_plan %}<details class="aps-study-plan"{% if activity_position == 1 %} open{% endif %}><summary>Déroulé · {{ course.study_plan.total_minutes }} min au total</summary><ol>{% for step in course.study_plan.steps %}<li><span>{{ step.label }}</span><b>{{ step.minutes }} min</b></li>{% endfor %}</ol><p>Temps de travail indicatifs{% if course.study_plan.exam_minutes %}, examen et correction inclus{% endif %}. Seul le temps actif réellement effectué est enregistré. Les exercices et leur correction font partie du travail prévu.</p></details>{% endif %}
       <a class="native-back-link" href="{{ portal_url }}">{{ '← Retour aux modules' if preview_mode else '← Retour à mon espace' }}</a>
     </aside>
     <button class="native-sidebar-overlay" id="nativeSidebarOverlay" type="button" tabindex="-1" aria-hidden="true" aria-label="Fermer le sommaire"></button>
@@ -199,7 +200,7 @@
 
         <article class="native-activity" data-activity-id="{{ activity.id }}" data-activity-type="{{ activity.type }}">
           <header class="native-activity__header">
-            <span class="native-kicker">{{ 'Atelier facultatif' if activity.optional else 'Questionnaire de fin d’objectif' if activity.macaps and activity.macaps.is_objective_assessment else 'Questionnaire du chapitre' if (activity.a3p or activity.macaps) and activity.scored else 'Question évaluée' if activity.scored else 'Production personnelle' if activity.production else 'Atelier interactif' if activity.practice else 'Cours' }}</span>
+            <span class="native-kicker">{{ 'Atelier facultatif' if activity.optional else 'Questionnaire de fin d’objectif' if activity.macaps and activity.macaps.is_objective_assessment else 'Questionnaire du chapitre' if (activity.a3p or activity.macaps) and activity.scored else 'Question évaluée' if activity.scored else 'Production personnelle' if activity.production else 'Atelier interactif' if activity.practice else 'Vidéo' if activity.get('a3p', {}).get('kind') == 'video' else 'Synthèse' if activity.get('a3p', {}).get('kind') == 'recap' else 'Cours' }}</span>
             {% if activity.planned_minutes %}<span class="aps-minute-badge">{{ activity.planned_minutes }} {{ 'min estimées' if activity.duration_estimated else 'min conseillées' if activity.optional else 'min de travail guidé' }}</span>{% endif %}
             <h1>{{ activity.title }}</h1>
           </header>
@@ -209,7 +210,8 @@
           {% endif %}
 
           {% if activity.type == 'content' %}
-            <div class="native-content-flow{% if paged_reading %} native-lesson-reader{% endif %}"{% if paged_reading %} data-aps-lesson data-lesson-key="{{ course.id }}:{{ course.version }}:{{ activity.id }}"{% endif %}>
+            <div class="native-content-flow{% if paged_reading and not activity.a3p %} native-lesson-reader{% endif %}"{% if paged_reading and not activity.a3p %} data-aps-lesson data-lesson-key="{{ course.id }}:{{ course.version }}:{{ activity.id }}"{% endif %}>
+              {% if activity.a3p %}<div class="aps-book{% if paged_reading %} native-lesson-reader{% endif %}" data-aps-work{% if paged_reading %} data-aps-lesson data-lesson-key="{{ course.id }}:{{ course.version }}:{{ activity.id }}"{% endif %}>{% endif %}
               {% if paged_reading %}{{ lesson_progress() }}{% endif %}
               {% for block in activity.blocks %}{% if paged_reading %}<div data-aps-lesson-page>{% endif %}{{ render_block(block) }}{% if paged_reading %}</div>{% endif %}{% endfor %}
               {% if activity.production and course.training_label == 'VTC' %}{% include '_vtc_production.html' %}{% elif activity.academy or activity.production %}{% include '_aps62_activity.html' %}{% endif %}
@@ -217,6 +219,7 @@
               {% if activity.a3p %}{% include '_a3p_lesson.html' %}{% endif %}
               {% if activity.macaps %}{% include '_macaps_lesson.html' %}{% endif %}
               {% if paged_reading %}{{ lesson_navigation() }}{% endif %}
+              {% if activity.a3p %}</div>{% endif %}
             </div>
           {% else %}
             {% if activity.macaps %}{% include '_macaps_lesson.html' %}{% endif %}

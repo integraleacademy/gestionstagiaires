@@ -11,15 +11,8 @@
   <figure><button type="button" class="aps-page-zoom" data-aps-image="{{ reference.diagram }}" aria-label="Agrandir le repère {{ reference.ref }}"><img src="{{ reference.diagram }}" alt="Fiche illustrée {{ reference.ref }} : {{ reference.title }}" loading="lazy"><span>Agrandir la fiche ↗</span></button><figcaption>Manuel APS · page {{ reference.page }} du fichier</figcaption></figure>
 {%- endmacro %}
 
-<section class="aps-editorial" data-aps-lesson-page>
-  <span class="aps-label">Dossier {{ lesson.dossier }} · Comprendre la règle</span>
-  <h2>{{ lesson.title }}</h2>
-  {% if lesson.illustrations %}{{ scene(lesson.illustrations.action) }}{% endif %}
-  {% for paragraph in lesson.intro %}<p>{{ paragraph }}</p>{% endfor %}
-  <div class="aps-objectives"><span class="aps-label">À l’issue de ce dossier</span><ul>{% for objective in lesson.objectives %}<li>{{ objective }}</li>{% endfor %}</ul></div>
-  <p>Étudiez les explications, les tableaux et les exemples commentés, puis observez leur application dans la vidéo. Les exercices vous proposeront d’autres situations avec des réponses à sélectionner. Aucun texte à rédiger.</p>
-  {% if lesson.pacing %}<details class="aps-transcript"><summary>Organisation et temps de travail indicatifs</summary><div class="aps-route">{% for item in lesson.pacing %}<span><b>{{ item.minutes }} min</b> {{ item.label }}</span>{% endfor %}</div>{% if lesson.pacing_note %}<p class="aps-small">{{ lesson.pacing_note }}</p>{% endif %}</details>{% endif %}
-</section>
+{% from '_native_lesson_intro.html' import lesson_intro %}
+{{ lesson_intro('Dossier ' ~ lesson.dossier ~ ' · Comprendre la règle', lesson.title, lesson.intro, lesson.objectives, lesson.pacing|default([]), lesson.pacing_note|default(''), lesson.illustrations.action if lesson.illustrations else none) }}
 
 {% include '_aps62_course_reading.html' %}
 
