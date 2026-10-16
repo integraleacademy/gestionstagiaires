@@ -1,6 +1,7 @@
 """Public commercial pages, indexing policy and shared security headers."""
 import os
 import hashlib
+from datetime import date
 from pathlib import Path
 from urllib.parse import urlparse
 from xml.sax.saxutils import escape
@@ -11,9 +12,12 @@ import elearning_orders
 import elearning_sales
 from elearning_programmes import PROGRAMMES, programme_download
 
-TERMS_VERSION = '2026-10-12'
+TERMS_VERSION = '2026-10-16'
 # Published versions are immutable: append future versions, keep the old file.
-TERMS_TEMPLATES = {TERMS_VERSION: 'manuals/legal/conditions_2026-10-12.html'}
+TERMS_TEMPLATES = {
+    '2026-10-12': 'manuals/legal/conditions_2026-10-12.html',
+    TERMS_VERSION: 'manuals/legal/conditions_2026-10-16.html',
+}
 PUBLIC_ENDPOINTS = {'manuals_shop.usb_catalogue', 'manuals_shop.usb_detail', 'manuals_shop.public_elearning', 'manuals_shop.public_course', 'manuals_shop.public_course_programme', 'manuals_shop.legal_page', 'manuals_shop.robots', 'manuals_shop.sitemap', 'manuals_shop.favicon'}
 CACHEABLE = PUBLIC_ENDPOINTS | {'home', 'manuals_shop.public_presentation', 'manuals_shop.public_manual_detail'}
 
@@ -119,7 +123,8 @@ def register_routes(host, bp, *, page):
         if version not in TERMS_TEMPLATES:
             abort(404)
         slug = request.path.strip('/')
-        return page('legal.html', public=True, staff=False, slug=slug, terms_template=TERMS_TEMPLATES[version])
+        return page('legal.html', public=True, staff=False, slug=slug, terms_template=TERMS_TEMPLATES[version],
+                    terms_date_label=date.fromisoformat(version).strftime('%d/%m/%Y'))
 
     @bp.get('/robots.txt')
     def robots():

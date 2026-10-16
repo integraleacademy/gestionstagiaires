@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 import app as host
+from manuals_public import TERMS_VERSION
 import manuals_commerce as commerce
 from test_manuals_shop import shop, signup, login, csrf, order_form, all_data
 
@@ -18,7 +19,7 @@ def submitted(shop, **fields):
     signup(c)
     login(c)
     location = c.post("/admin/manuels/recapitulatif", data=order_form(c, **fields)).location
-    response = c.post(location + "/confirmer", data={"csrf_token": csrf(c, location), "confirm": "yes", "terms_version": "2026-10-12"})
+    response = c.post(location + "/confirmer", data={"csrf_token": csrf(c, location), "confirm": "yes", "terms_version": TERMS_VERSION})
     assert response.status_code == 303
     return all_data(shop)["manual_orders"][0]
 

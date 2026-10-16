@@ -9,6 +9,7 @@ import pytest
 from werkzeug.datastructures import MultiDict
 
 import app as host
+from manuals_public import TERMS_VERSION
 import elearning_orders as learning
 import manuals_commerce as commerce
 from elearning_native.integration import register_native_elearning
@@ -53,7 +54,7 @@ def submit(shop, *, code="aps", free=False):
     response = client.post("/admin/organisme/e-learning/recapitulatif", data=fields)
     assert response.status_code == 303, response.text
     url = response.location
-    assert client.post(url + "/confirmer", data={"csrf_token": csrf(client, url), "confirm": "yes", "terms_version": "2026-10-12"}).status_code == 303
+    assert client.post(url + "/confirmer", data={"csrf_token": csrf(client, url), "confirm": "yes", "terms_version": TERMS_VERSION}).status_code == 303
     return latest(shop)
 
 
@@ -79,8 +80,8 @@ def test_group_quoted_server_side_and_idempotent(shop, merchant):
     order = latest(shop)
     assert order["total_cents"] == 11800 and order["free_snapshot"] is False
     assert len(order["learners"]) == 2 and len(order["modules"]) == 15
-    assert c.post(url + "/confirmer", data={"confirm":"yes", "terms_version":"2026-10-12"}).status_code == 400
-    confirmation = {"csrf_token": csrf(c,url), "confirm":"yes", "terms_version":"2026-10-12"}
+    assert c.post(url + "/confirmer", data={"confirm":"yes", "terms_version":TERMS_VERSION}).status_code == 400
+    confirmation = {"csrf_token": csrf(c,url), "confirm":"yes", "terms_version":TERMS_VERSION}
     assert c.post(url+"/confirmer",data=confirmation).status_code == 303
     assert c.post(url+"/confirmer",data=confirmation).status_code == 303
     run(order)
@@ -222,7 +223,7 @@ def test_price_change_before_confirmation_requires_new_quote(shop, code):
     c=shop["client"]
     url=c.post("/admin/organisme/e-learning/recapitulatif",data=form(c, course_code=code)).location
     host._atomic_update_data(lambda data:host._partner_or_404(data,pid).update(elearning_pricing={code:{"unit_cents":1000}}),partner_id=pid)
-    assert c.post(url+"/confirmer",data={"csrf_token":csrf(c,url),"confirm":"yes", "terms_version":"2026-10-12"}).status_code == 409
+    assert c.post(url+"/confirmer",data={"csrf_token":csrf(c,url),"confirm":"yes", "terms_version":TERMS_VERSION}).status_code == 409
     assert latest(shop)["status"] == "draft"
 
 
@@ -302,7 +303,7 @@ def test_individual_order_and_viewer_cannot_confirm(shop):
     assert len(order["learners"])==1 and order["total_cents"]==5900
     token=csrf(c,response.location)
     with c.session_transaction() as state: state["admin_role"]="viewer"
-    assert c.post(response.location+"/confirmer",data={"csrf_token":token,"confirm":"yes", "terms_version":"2026-10-12"}).status_code==403
+    assert c.post(response.location+"/confirmer",data={"csrf_token":token,"confirm":"yes", "terms_version":TERMS_VERSION}).status_code==403
 
 
 

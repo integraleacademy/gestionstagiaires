@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 import app as host
+from manuals_public import TERMS_VERSION
 import elearning_orders as learning
 import elearning_sales as sales
 from test_manuals_shop import shop, csrf, all_data, order_form
@@ -69,7 +70,7 @@ def test_stale_direct_orders_blocked_and_reopen_without_losing_drafts(shop, merc
     client = shop["client"]
     fields = form(client, course_code=code)
     draft_url = client.post(ROOT + "/recapitulatif", data=fields).location
-    confirmation = {"csrf_token": csrf(client, draft_url), "confirm": "yes", "terms_version": "2026-10-12"}
+    confirmation = {"csrf_token": csrf(client, draft_url), "confirm": "yes", "terms_version": TERMS_VERSION}
     admin = admin_client()
     toggle(admin, False)
     before, mails = all_data(shop), len(shop["mails"])

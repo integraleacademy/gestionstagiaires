@@ -10,6 +10,7 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import app as host
+from manuals_public import TERMS_VERSION
 from manuals_shop import CATALOGUE, money, quote_items
 
 
@@ -143,10 +144,10 @@ def test_prices_tampering_isolation_durable_order_and_idempotency(shop):
     assert orders[0]["total_cents"] == 259900  # 100 APS at 18 + 50 SST at 12 + USB at 199
     assert orders[0]["partner_id"] != "other-centre"
     token = csrf(c, detail)
-    confirmation = c.post(detail + "/confirmer", data={"csrf_token": token, "confirm": "yes", "terms_version": "2026-10-12"})
+    confirmation = c.post(detail + "/confirmer", data={"csrf_token": token, "confirm": "yes", "terms_version": TERMS_VERSION})
     assert confirmation.status_code == 303 and confirmation.location == detail + "/paiement"
     assert "data-checkout" in c.get(confirmation.location).text
-    assert c.post(detail + "/confirmer", data={"csrf_token": token, "confirm": "yes", "terms_version": "2026-10-12"}).status_code == 303
+    assert c.post(detail + "/confirmer", data={"csrf_token": token, "confirm": "yes", "terms_version": TERMS_VERSION}).status_code == 303
     persisted = all_data(shop)["manual_orders"]
     assert len(persisted) == 1 and persisted[0]["status"] == "received"
     assert persisted[0]["reference"] in c.get("/admin/manuels").text
@@ -159,7 +160,7 @@ def test_prices_tampering_isolation_durable_order_and_idempotency(shop):
     assert second.get(detail + "/paiement").status_code == 404
     assert second.get(detail + "/paiement/statut").status_code == 404
     assert persisted[0]["reference"] not in second.get("/admin/manuels").text
-    assert second.post(detail + "/confirmer", data={"csrf_token": csrf(second, "/admin/manuels"), "confirm": "yes", "terms_version": "2026-10-12"}).status_code == 404
+    assert second.post(detail + "/confirmer", data={"csrf_token": csrf(second, "/admin/manuels"), "confirm": "yes", "terms_version": TERMS_VERSION}).status_code == 404
     c.get("/admin/logout")
     login(c)
     assert c.get(detail).status_code == 200
