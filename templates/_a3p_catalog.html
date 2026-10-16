@@ -1,13 +1,16 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261016-aps-presentation') }}">
 <section class="a3p-catalog" aria-labelledby="a3p-title">
-  <header class="aps-catalog-hero">
-    <div><span class="aps-catalog-label">Le parcours A3P · Intégrale Academy</span><h2 id="a3p-title">Apprendre le métier.<br>Comprendre chaque décision.</h2>
-      <p>Un parcours de 157 h 30 pour relier les cours de protection physique des personnes aux situations du terrain. Des cours développés, des exemples expliqués et des exercices sans rédaction.</p>
-      <a class="nel-button nel-button--primary" href="{{ url_for('native_elearning.admin_preview', course_id='academy-a3p-02', version=a3p_manifest.version) }}">Découvrir le premier cours →</a>
-      <a class="aps-catalog-link" href="#a3pModules">Voir les 8 modules ↓</a>
-    </div><img src="{{ url_for('static', filename='manuals/powerpoint-previews/a3p-scene.webp') }}" alt="Équipe A3P préparant une mission de protection">
-  </header>
-  <div class="aps-catalog-stats"><span><b>157 h 30</b>parcours pédagogique</span><span><b>{{ a3p_manifest.lesson_count }}</b>séquences de cours</span><span><b>{{ a3p_manifest.video_count }}</b>vidéos Henri</span><span><b>{{ a3p_manifest.dossier_count }}</b>dossiers à analyser</span><span><b>{{ a3p_manifest.question_count }}</b>questions corrigées</span></div>
+  {{ catalog_ui.hero(
+    'Le parcours A3P · Intégrale Academy',
+    'Apprendre le métier.<br>Comprendre chaque décision.'|safe,
+    'Un parcours de 157 h 30 pour relier les cours de protection physique des personnes aux situations du terrain. Des cours développés, des exemples expliqués et des exercices sans rédaction.',
+    'manuals/powerpoint-previews/a3p-scene.webp', 'Équipe A3P préparant une mission de protection',
+    url_for('native_elearning.admin_preview', course_id='academy-a3p-02', version=a3p_manifest.version),
+    '#a3pModules', 'Voir les 8 modules', url_for('native_elearning.admin_content_audit') ~ '#audit-A3P', 'a3p-title'
+  ) }}
+  {{ catalog_ui.stats([('157 h 30', 'parcours pédagogique'), (a3p_manifest.lesson_count, 'séquences de cours'),
+    (a3p_manifest.video_count, 'vidéos Henri'), (a3p_manifest.dossier_count, 'dossiers à analyser'),
+    (a3p_manifest.question_count, 'questions corrigées')]) }}
   <details class="aps-catalog-scope"><summary>Organisation des 157 h 30 et règles d’utilisation</summary><p>{{ a3p_manifest.notice }}</p><p>Le cours, la vidéo explicative, le dossier à résoudre, le questionnaire et la synthèse composent chaque séquence. Les ateliers proposent {{ a3p_manifest.interactive_decisions }} décisions corrigées, sans texte à rédiger.</p><a href="#a3p-reglementation">Objectifs, correspondances et organisation →</a></details>
   <section class="aps-catalog-scope" aria-labelledby="a3p-calibration-title"><h3 id="a3p-calibration-title">Un parcours organisé de 157 h 30</h3><p><strong>160 séquences</strong> réunissent un cours, une capsule vidéo, un dossier à résoudre, un QCM corrigé et une synthèse. Les durées prévues totalisent 157 h 30, réparties sur les 40 objectifs à distance. Les 160 capsules s’ajoutent aux huit synthèses complémentaires.</p><p>Comme pour l’APS, les durées sont des repères de travail : seul le temps réellement suivi est enregistré. Leur calibrage sera confronté aux temps observés des apprenants.</p><a class="aps-catalog-link" href="{{ url_for('native_elearning.admin_content_audit') }}#audit-A3P">Voir les durées et contenus par séquence →</a><p>Les nouvelles affectations utilisent cette édition. Les sessions déjà affectées conservent leur édition, leurs temps et leurs résultats.</p></section>
   <section class="aps-catalog-modules" id="a3pModules"><header><div><span class="aps-catalog-label">Votre collection de cours</span><h2>8 modules pour progresser</h2></div><span>Cours · vidéos · dossiers · QCM · synthèses</span></header>
@@ -21,8 +24,8 @@
       <a class="nel-button" href="{{ url_for('native_elearning.admin_preview', course_id=module.id, version=module.version) }}">Explorer le module →</a>
       <a class="aps-catalog-link" href="{{ url_for('native_elearning.admin_live', course_id=module.id) }}">Suivi</a>
       <a class="aps-catalog-link aps-catalog-exam" href="{{ url_for('native_elearning.admin_exam', exam_id=module.exam_id, version=module.version) }}">Examen blanc · 30 questions →</a>
-      <details class="a3p-syllabus"><summary>Les {{ module.lesson_count }} chapitres du module</summary><ol>{% for lesson in module.lessons %}<li><a href="{{ url_for('native_elearning.admin_preview', course_id=module.id, version=module.version, activity=lesson.activity) }}">{{ lesson.title }}</a></li>{% endfor %}</ol></details>
-      <div class="a3p-resource-links"><a href="{{ url_for('native_elearning.admin_preview', course_id=module.id, version=module.version, activity='a3p-' + module.uv + '-video') }}">Synthèse vidéo →</a><a href="{{ url_for('native_elearning.admin_preview', course_id=module.id, version=module.version, activity='a3p-' + module.uv + '-cas') }}">Cas de synthèse →</a></div>
+      <details class="nel-catalog-syllabus"><summary>Les {{ module.lesson_count }} chapitres du module</summary><ol>{% for lesson in module.lessons %}<li><a href="{{ url_for('native_elearning.admin_preview', course_id=module.id, version=module.version, activity=lesson.activity) }}">{{ lesson.title }}</a></li>{% endfor %}</ol></details>
+      <div class="nel-catalog-resource-links"><a href="{{ url_for('native_elearning.admin_preview', course_id=module.id, version=module.version, activity='a3p-' + module.uv + '-video') }}">Synthèse vidéo →</a><a href="{{ url_for('native_elearning.admin_preview', course_id=module.id, version=module.version, activity='a3p-' + module.uv + '-cas') }}">Cas de synthèse →</a></div>
     </article>
   {% endfor %}
   </div></section>
