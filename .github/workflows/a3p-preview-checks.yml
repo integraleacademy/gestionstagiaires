@@ -1,14 +1,23 @@
 name: A3P — vérifier le parcours structuré et le périmètre à distance
 on:
   push:
-    branches: [codex/a3p-correction-20261010, test-v2]
+    branches: [codex/a3p-correction-20261010, codex/unify-elearning-catalog-tabs-20261016, test-v2]
     paths:
       - elearning_native/a3p.py
       - elearning_native/a3p_resources/**
       - templates/_a3p*
+      - templates/_aps62_catalog.html
+      - templates/_vtc_catalog.html
+      - templates/_macaps_catalog.html
+      - templates/_native_catalog_components.html
+      - templates/admin_native_elearning.html
+      - templates/admin_sidebar.html
+      - templates/base.html
+      - static/css/aps62-catalog.css
       - static/css/a3p*
       - tests/test_native_elearning_a3p.py
       - scripts/check_a3p_ui.py
+      - scripts/check_a3p157_ui.py
       - .github/workflows/a3p-preview-checks.yml
 permissions:
   contents: read
@@ -20,6 +29,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
+      A3P_UI_BROWSER_CHANNEL: chrome
       PERSIST_DIR: /tmp/a3p-ci-synthetic-data
       SECRET_KEY: a3p-ci-synthetic-key-not-used-in-production
     steps:
@@ -36,12 +46,12 @@ jobs:
       - name: Installer Chromium pour les contrôles visuels
         run: python -m playwright install --with-deps chromium
       - name: Vérifier le catalogue, le lecteur et le QCM sur bureau et mobile
-        run: python scripts/check_a3p_ui.py
+        run: python scripts/check_a3p157_ui.py
       - name: Conserver les captures de contrôle
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: a3p-preview-screenshots
-          path: /tmp/a3p-ui/*.png
+          path: /tmp/a3p157-ui/*.png
           if-no-files-found: warn
           retention-days: 7

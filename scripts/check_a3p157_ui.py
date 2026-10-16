@@ -58,11 +58,31 @@ try:
     page.screenshot(path=str(root/'mobile-menu.png'))
     page.locator('#nativeMenuClose').click()
     assert not page.locator('#nativeSidebar').evaluate('(e)=>e.classList.contains("is-open")')
-   page.goto('http://a3p.test/admin/elearning/a3p');page.locator('#a3p-title').wait_for()
-   assert page.locator('#a3pModules .aps-catalog-grid article').count()==8
-   assert '168' in page.locator('.aps-catalog-stats').inner_text()
-   page.screenshot(path=str(root/f'{label}-catalog.png'))
-   assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 2')
+   catalog_layout = None
+   for family, suffix, module_count in [('aps', '', 15), ('vtc', '/vtc', 8), ('a3p', '/a3p', 8), ('macaps', '/mac-aps', 3)]:
+    page.goto('http://a3p.test/admin/elearning' + suffix)
+    page.locator('.aps-catalog-hero').wait_for()
+    page.locator('.aps-catalog-art img').evaluate('(img)=>img.decode()')
+    assert page.locator('.aps-catalog-grid article').count() == module_count
+    assert page.locator('.aps-catalog-stats > span').count() == 5
+    assert page.locator('body.admin-sidebar-active #partnerSidebar').count() == 1
+    assert page.locator('#partnerSidebar a.is-active[href="/admin/elearning"]').count() == 1
+    assert page.locator('.curriculum-tabs a[aria-current="page"]').count() == 1
+    layout = page.evaluate("""()=>Object.fromEntries(
+     ['.aps-catalog-hero','.aps-catalog-hero > div','.aps-catalog-hero h2','.aps-catalog-stats','.aps-catalog-grid'].map(selector=>{
+      const element=document.querySelector(selector), style=getComputedStyle(element);
+      return [selector, {width:element.getBoundingClientRect().width,
+       ...Object.fromEntries(['fontSize','borderRadius','padding','display','gridTemplateColumns'].map(key=>[key,style[key]]))}];
+     }))""")
+    if catalog_layout is None: catalog_layout = layout
+    else: assert layout == catalog_layout, (label, family, layout, catalog_layout)
+    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 2'), (label, family, 'catalogue overflow')
+    page.screenshot(path=str(root/f'{label}-catalog-{family}.png'))
+    if family == 'a3p': assert '168' in page.locator('.aps-catalog-stats').inner_text()
+    syllabus=page.locator('.nel-catalog-syllabus').first
+    if page.locator('.nel-catalog-syllabus').count():
+     syllabus.locator('summary').click()
+     assert syllabus.locator('ol').is_visible()
    page.goto(base+film['id']);page.locator('video').wait_for()
    if '--layout-only' not in sys.argv:
     page.wait_for_function('document.querySelector("video").duration > 300')
@@ -104,7 +124,7 @@ try:
    assert not errors,errors
    page.close()
   browser.close()
- print('APS/A3P computed styles identical. A3P157 UI: 4 documents, 6 guided steps, quiz, desktop/mobile, no JS errors or horizontal overflow.')
+ print('Four catalogue layouts identical on desktop/mobile. APS/A3P computed styles identical. A3P157 UI: 4 documents, 6 guided steps, quiz, desktop/mobile, no JS errors or horizontal overflow.')
  if '--layout-only' in sys.argv:print('Local layout check only: video decode is checked by the full Chrome CI run.')
  else:print('Video decoded and seek verified in the browser.')
 finally:fixture.tearDown()
