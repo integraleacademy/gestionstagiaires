@@ -55578,6 +55578,8 @@ def admin_exam_official_qcu_answer(session_id: str, attempt_id: str, index: int)
     return {"ok": True, **answer, "completed": attempt["status"] == "completed"}
 
 
+@app.get("/admin")
+@app.get("/admin/")
 @app.get("/admin/sessions/")
 def admin_sessions_slash_redirect():
     return redirect(url_for("admin_sessions"), code=301)
