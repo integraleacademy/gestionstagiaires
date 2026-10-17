@@ -280,7 +280,7 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False, sta
     brand = learner_brand(host.load_data(run_background_tasks=False), order, host=host) if person else None
     subject = ("Votre accès personnel " if person else "Commande confirmée · E-learning ") + (course_full_label(order["course_code"]) if person else course_label(order["course_code"])) + " · " + (brand["name"] if person else "Intégrale Connect")
     if staff:
-        subject = "Commande e-learning " + ("validée" if order.get("free_snapshot") else "réglée") + " · " + order["reference"] + " · " + order["centre"]["name"]
+        subject = "Nouvelle commande e-learning" + (" gratuite" if order.get("free_snapshot") else " payée") + " · " + order["centre"]["name"] + " · " + order["reference"]
     template = "manuals/elearning_admin_email.html" if staff else "manuals/elearning_email.html"
     body = host.app.jinja_env.get_template(template).render(order=order, person=person, title=title, link=link, paid=paid, invoice=invoice, money=money, learner_brand=brand, email_base_url=base_url(host))
     dispatch_note = ("Votre demande d’envoi des accès est enregistrée.\n" if order.get("access_dispatch_requested_at")
@@ -291,10 +291,17 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False, sta
         plain += "Ce programme numérique de préparation et de révision ne délivre pas à lui seul l’attestation réglementaire de stage MAC APS.\n"
     plain += "Ouvrir mon espace : " + link
     if staff:
-        plain = (f"Commande {order['reference']} confirmée après {'validation de la gratuité' if order.get('free_snapshot') else 'règlement intégral'}.\n"
-                 f"Organisme : {order['centre']['name']} ({order['centre']['email']})\n"
-                 f"{len(order['learners'])} accès {course_full_label(order['course_code'])} · {money(order['total_cents'])} TTC.\n"
-                 f"Consulter la commande : {link}")
+        order_note = "a validé une commande e-learning gratuite." if order.get('free_snapshot') else "a réglé sa commande e-learning."
+        amount_label = "Commande gratuite" if order.get('free_snapshot') else "Montant payé"
+        plain = ("Bonjour Clément,\n\n"
+                 f"L’organisme {order['centre']['name']} {order_note}\n\n"
+                 f"{amount_label} : {money(order['total_cents'])} TTC\n"
+                 f"Formation : {course_full_label(order['course_code'])}\n"
+                 f"Nombre d’accès : {len(order['learners'])}\n"
+                 f"Référence de commande : {order['reference']}\n")
+        if state.get('invoice_number'):
+            plain += f"Facture : {state['invoice_number']}\n"
+        plain += f"Contact de l’organisme : {order['centre']['email']}\n\nVoir la commande : {link}"
     send_options = {}
     if person:
         plain += "\n\n" + brand["name"]
@@ -306,6 +313,9 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False, sta
         send_options["sender_name"] = brand["name"]
         # Only a verified platform-configured sending address may override From.
         send_options["sender_email"] = str(getattr(host, "ELEARNING_SENDER_EMAIL", "") or "").strip() or None
+    elif staff:
+        send_options["sender_name"] = "Intégrale Connect"
+        plain += "\n\nIntégrale Connect · Notification de commande e-learning"
     else:
         plain += "\nIntégrale Academy — 04 22 47 07 68"
     try:

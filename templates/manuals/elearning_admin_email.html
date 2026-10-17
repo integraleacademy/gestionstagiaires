@@ -1,17 +1,21 @@
 {% extends 'manuals/_email_base.html' %}
-{% block email_title %}Commande e-learning confirmée · {{ order.reference }}{% endblock %}
-{% block preheader %}{{ order.centre.name }} · {{ order.learners|length }} accès · {{ money(order.total_cents) }} TTC{% endblock %}
-{% block eyebrow %}NOUVELLE COMMANDE E-LEARNING{% endblock %}
-{% block heading %}{{ 'Commande gratuite validée' if order.free_snapshot else 'Paiement reçu !' }}{% endblock %}
+{% block email_title %}{{ 'Nouvelle commande e-learning' if order.free_snapshot else 'Nouvelle commande e-learning payée' }} · {{ order.reference }}{% endblock %}
+{% block preheader %}{{ order.centre.name }} · {{ order.learners|length }} accès {{ order.course_code|elearning_label }} · {{ 'Commande gratuite' if order.free_snapshot else 'Paiement confirmé : ' ~ money(order.total_cents) ~ ' TTC' }}{% endblock %}
+{% block eyebrow %}INTÉGRALE CONNECT · E-LEARNING{% endblock %}
+{% block heading %}{{ 'Nouvelle commande gratuite' if order.free_snapshot else 'Nouvelle commande payée' }}{% endblock %}
 {% block email_content %}
 <p style="margin-top:0">Bonjour Clément,</p>
-<p>La commande <strong>{{ order.reference }}</strong> de <strong>{{ order.centre.name }}</strong> est confirmée{% if not order.free_snapshot %} après règlement intégral{% endif %}.</p>
-<div style="padding:20px;background:#f1f6fc;border-radius:12px">
-  <strong>{{ order.learners|length }} accès {{ order.course_code|elearning_full_label }}</strong><br>
-  <span style="font-size:28px;font-weight:bold">{{ 'Gratuit' if order.free_snapshot else money(order.total_cents) ~ ' TTC' }}</span>
+<p>L’organisme <strong>{{ order.centre.name }}</strong> {{ 'a validé une commande e-learning gratuite.' if order.free_snapshot else 'a réglé sa commande e-learning.' }}</p>
+<div style="padding:20px 22px;background:#f1f6fc;border-radius:12px;margin:24px 0">
+  <span style="font-size:12px;color:#586c86;font-weight:bold;letter-spacing:1px">{{ 'COMMANDE GRATUITE' if order.free_snapshot else 'MONTANT PAYÉ' }}</span><br>
+  <strong style="font-size:28px">{{ money(order.total_cents) }} TTC</strong>
 </div>
-<p>Contact de l’organisme : <a href="mailto:{{ order.centre.email }}">{{ order.centre.email }}</a>{% if order.commerce.get('invoice_number') %}<br>Facture : <strong>{{ order.commerce.invoice_number }}</strong>{% endif %}</p>
-<p>L’organisme choisit quand envoyer les accès à ses stagiaires.</p>
-<p style="margin:28px 0"><a href="{{ link }}" style="display:inline-block;padding:15px 22px;background:#2360c4;border-radius:10px;color:#fff;text-decoration:none;font-weight:bold">Consulter la commande →</a></p>
-<p style="font-size:12px;word-break:break-all"><a href="{{ link }}">{{ link }}</a></p>
+<p style="margin:0 0 16px"><span style="font-size:13px;color:#586c86">Formation</span><br><strong>{{ order.course_code|elearning_full_label }}</strong></p>
+<p style="margin:0 0 16px"><span style="font-size:13px;color:#586c86">Nombre d’accès</span><br><strong>{{ order.learners|length }}</strong></p>
+<p style="margin:0 0 16px"><span style="font-size:13px;color:#586c86">Référence de commande</span><br><strong>{{ order.reference }}</strong></p>
+{% if order.commerce.get('invoice_number') %}<p style="margin:0 0 16px"><span style="font-size:13px;color:#586c86">Facture</span><br><strong>{{ order.commerce.invoice_number }}</strong></p>{% endif %}
+<p style="margin:0"><span style="font-size:13px;color:#586c86">Contact de l’organisme</span><br><a href="mailto:{{ order.centre.email }}" style="color:#2360c4;word-break:break-word">{{ order.centre.email }}</a></p>
+<p style="margin:28px 0"><a href="{{ link }}" style="display:inline-block;padding:15px 22px;background:#2360c4;border-radius:10px;color:#fff;text-decoration:none;font-weight:bold">Voir la commande</a></p>
+<p style="font-size:12px;color:#586c86;word-break:break-all;margin-bottom:0">Si le bouton ne s’ouvre pas, utilisez ce lien :<br><a href="{{ link }}" style="color:#2360c4">{{ link }}</a></p>
 {% endblock %}
+{% block email_footer %}<strong style="color:#172a45">Intégrale Connect</strong><br>Notification de commande e-learning{% endblock %}
