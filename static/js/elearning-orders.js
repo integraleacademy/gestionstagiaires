@@ -3,6 +3,11 @@
   const money = new Intl.NumberFormat('fr-FR', {style: 'currency', currency: 'EUR'});
   const errors = document.querySelector('[data-el-errors]');
   if (errors) errors.focus({preventScroll: true});
+  if (window.initFrenchAddressAutocomplete) window.initFrenchAddressAutocomplete({
+    addressInput: document.getElementById('el-address'),
+    postalCodeInput: document.getElementById('el-postal'),
+    cityInput: document.getElementById('el-city')
+  });
 
   const dashboard = document.querySelector('[data-el-dashboard]');
   if (dashboard) {
@@ -82,6 +87,15 @@
 
   const roster = document.getElementById('el-roster-form');
   if (roster) {
+    const normalizeName = input => {
+      if (!['last_name', 'first_name'].includes(input.name)) return;
+      const start = input.selectionStart, end = input.selectionEnd;
+      input.value = input.name === 'last_name' ? input.value.toLocaleUpperCase('fr') : input.value.toLocaleLowerCase('fr').replace(/(^|[\s\-’'])\p{L}/gu, value => value.toLocaleUpperCase('fr'));
+      if (typeof start === 'number' && input.setSelectionRange) input.setSelectionRange(start, end);
+    };
+    roster.querySelectorAll('[name="last_name"], [name="first_name"]').forEach(normalizeName);
+    roster.addEventListener('input', event => { if (!event.isComposing) normalizeName(event.target); });
+    roster.addEventListener('compositionend', event => normalizeName(event.target));
     const people = document.getElementById('el-learners');
     const add = document.getElementById('el-add');
     const course = document.getElementById('el-course-code');
@@ -162,12 +176,16 @@
     try { previous = status.dataset.elInitial ? signature(JSON.parse(status.dataset.elInitial)) : null; } catch (_) { /* A manual refresh remains available. */ }
     let ticks = 0;
     const poll = async () => {
+      if (window.elPaymentInProgress) return;
       if (++ticks > 180) return;
       if (!document.hidden) {
         try {
           const response = await fetch(status.dataset.elStatus, {credentials: 'same-origin', headers: {'Accept': 'application/json'}});
+          if (window.elPaymentInProgress) return;
           if (response.ok && !response.redirected) {
-            const current = signature(await response.json());
+            const value = await response.json();
+            if (value.paid && status.dataset.elConfirmation && !location.pathname.endsWith('/confirmation')) { location.assign(status.dataset.elConfirmation); return; }
+            const current = signature(value);
             if (previous !== null && current !== previous) { location.reload(); return; }
           }
         } catch (_) { /* Preserve the page and retry after a transient network error. */ }

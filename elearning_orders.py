@@ -1,7 +1,7 @@
 """Partner e-learning orders, using the existing tenant store and merchant queue.
 
 An entitlement is never inferred from a browser return URL or a posted price.
-Only a fully paid, verified invoice (or an allowed free price snapshot) and
+Only a verified full invoice payment (or an allowed free price snapshot) and
 the centre's explicit dispatch request can activate and send new accesses.
 Prices and gratuity are set by the administrator for each partner.
 Learner records stay outside administrative trainee sessions.
@@ -31,7 +31,7 @@ COURSES = {
     "a3p": {"name": "A3P", "title": "Agent de protection physique des personnes", "color": "#258252", "default_cents": 15000},
     "vtc": {"name": "VTC", "title": "Chauffeur VTC", "color": "#7951a8", "default_cents": 15000, "folder": "vtc"},
 }
-CUSTOMER_ENDPOINTS = {"manuals_shop.elearning_checkout", "manuals_shop.elearning_order", "manuals_shop.elearning_confirm", "manuals_shop.elearning_refresh", "manuals_shop.elearning_status", "manuals_shop.elearning_invoice", "manuals_shop.elearning_send_accesses"}
+CUSTOMER_ENDPOINTS = {"manuals_shop.elearning_checkout", "manuals_shop.elearning_order", "manuals_shop.elearning_confirm", "manuals_shop.elearning_refresh", "manuals_shop.elearning_status", "manuals_shop.elearning_invoice", "manuals_shop.elearning_send_accesses", "manuals_shop.elearning_confirmation"}
 MAX_LEARNERS = 100
 
 
@@ -84,13 +84,20 @@ def parse_prices(form):
     return result
 
 
+def normalize_name(value, *, surname=False):
+    value = str(value or "").strip()
+    if surname:
+        return value.upper()
+    return re.sub(r"(^|[\s\-’'])[^\W\d_]", lambda match: match.group().upper(), value.lower())
+
+
 def parse_learners(form):
     columns = [form.getlist(k) for k in ("last_name", "first_name", "email")]
     if len({len(c) for c in columns}) != 1 or not 1 <= len(columns[0]) <= MAX_LEARNERS:
         raise ValueError("Ajoutez entre 1 et 100 personnes avec nom, prénom et e-mail.")
     result, seen = [], set()
     for index, (last, first, email) in enumerate(zip(*columns), 1):
-        last, first, email = last.strip(), first.strip(), email.strip().casefold()
+        last, first, email = normalize_name(last, surname=True), normalize_name(first), email.strip().casefold()
         if not last or not first or max(len(last), len(first)) > 100 or any(ord(c) < 32 for c in last + first):
             raise ValueError(f"Personne {index} : renseignez un nom et un prénom valides.")
         if len(email) > 254 or not re.fullmatch(r"[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+", email):
@@ -129,7 +136,14 @@ def entitled(order):
             return False
     if order.get("free_snapshot") is True and order.get("total_cents") == 0:
         return True
-    return bool(order.get("total_cents", 0) > 0 and state.get("invoice_id") and state.get("invoice_status") == "paid"
+    proof = state.get("confirmed_invoice_payment") or {}
+    verified_capture = bool(proof.get("invoice_id") == state.get("invoice_id")
+                            and proof.get("link_id") == state.get("payment_id") and proof.get("link_id")
+                            and proof.get("payment_ids") and proof.get("verified_at")
+                            and proof.get("amount_cents") == order.get("total_cents") and proof.get("currency") == "EUR")
+    return bool(order.get("total_cents", 0) > 0 and state.get("invoice_id")
+                and state.get("invoice_status") in {"paid", "unpaid"}
+                and (state.get("invoice_status") == "paid" or verified_capture)
                 and state.get("payment_status") == "paid" and state.get("paid_cents", 0) >= order["total_cents"]
                 and state.get("remaining_cents") == 0)
 
@@ -140,11 +154,25 @@ def status_view(order):
                for p in order.get("learners", []))
     complete = bool(order.get("learners")) and sent == len(order["learners"])
     requested = bool(order.get("access_dispatch_requested_at"))
+    checkout_url = commerce.safe_payment_url(state.get("payment_url")) if (
+        order.get("status") not in {"draft", "cancelled"} and not order.get("cancellation_requested_at")
+        and state.get("invoice_status") == "unpaid" and state.get("payment_status") == "unpaid"
+        and state.get("payment_link_status") == "open") else ""
     return {"status": state.get("status"), "payment_status": state.get("payment_status"), "invoice_status": state.get("invoice_status"),
+            "paid": entitled(order), "checkout_url": checkout_url,
             "payment_url": bool(state.get("payment_url")), "payment_link_status": state.get("payment_link_status"),
             "active": bool(order.get("activated_at")), "mail_sent": sent,
             "dispatch_requested": requested, "dispatch_complete": complete,
             "can_send": entitled(order) and not requested and not complete}
+
+
+def checkout_response(oid):
+    """Progressive enhancement: keep the payment window opened by the click."""
+    location = url_for("manuals_shop.elearning_order", oid=oid)
+    if request.accept_mimetypes.best == "application/json":
+        return {"order_url": location, "status_url": url_for("manuals_shop.elearning_status", oid=oid),
+                "confirmation_url": url_for("manuals_shop.elearning_confirmation", oid=oid)}
+    return redirect(location, code=303)
 
 
 
@@ -224,17 +252,17 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False):
     emails = copy.deepcopy(state.get("emails") or {})
     if emails.get(key, {}).get("status") == "sent":
         return True
-    if person and (not entitled(order) or not person.get("activated_at") or not order.get("access_dispatch_requested_at")):
+    if not entitled(order):
+        return False
+    if person and (not person.get("activated_at") or not order.get("access_dispatch_requested_at")):
         return False
     emails[key] = {"status": "sending", "attempted_at": host._now_iso()}
     commerce._save(host, order, emails=emails)
     paid = entitled(order)
-    title = "Votre formation vous attend" if person else ("Vos accès sont prêts à être envoyés" if paid and not order.get("access_dispatch_requested_at") else "Votre commande e-learning")
+    title = "Votre formation vous attend" if person else "Votre commande est confirmée"
     link = base_url(host) + ("/apprendre/" + access_token(host, order, person) if person else "/admin/organisme/e-learning/commandes/" + order["id"])
     brand = learner_brand(host.load_data(run_background_tasks=False), order, host=host) if person else None
-    subject = ("Votre accès personnel " if person else "Commande e-learning ") + course_label(order["course_code"]) + " · " + (brand["name"] if person else "Intégrale Academy")
-    if invoice:
-        subject = ("Facture acquittée " if paid else "Facture à régler ") + state.get("invoice_number", "") + " · E-learning"
+    subject = ("Votre accès personnel " if person else "Commande confirmée · E-learning ") + course_label(order["course_code"]) + " · " + (brand["name"] if person else "Intégrale Connect")
     body = host.app.jinja_env.get_template("manuals/elearning_email.html").render(order=order, person=person, title=title, link=link, paid=paid, invoice=invoice, money=money, learner_brand=brand, email_base_url=base_url(host))
     dispatch_note = ("Votre demande d’envoi des accès est enregistrée.\n" if order.get("access_dispatch_requested_at")
                      else "Cliquez sur « Envoyer les accès e-learning aux stagiaires » dans votre commande pour déclencher l’envoi.\n" if paid
@@ -262,7 +290,7 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False):
             pdf, name = host.fetch_qonto_client_invoice_pdf(state["invoice_id"])
             import os
             root = Path(host.get_partner_storage_path(order["partner_id"], "factures"))
-            destination = root / ("elearning-" + order["id"] + ("-paid" if state.get("invoice_status") == "paid" else "-due") + ".pdf")
+            destination = root / ("elearning-" + order["id"] + ("-paid" if paid else "-due") + ".pdf")
             temporary = root / ("." + uuid.uuid4().hex + ".tmp")
             try:
                 temporary.write_bytes(pdf)
@@ -277,7 +305,80 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False):
         result = {"ok": False}
     emails[key] = {"status": "sent" if result.get("ok") else "failed", "attempted_at": host._now_iso(), "message_id": result.get("message_id", "")}
     commerce._save(host, order, emails=emails)
+    if key == "invoice_paid" and result.get("ok"):
+        host.app.logger.info("elearning_confirmation_sent order=%s", order["id"])
     return bool(result.get("ok"))
+
+
+def sync_invoice_payment(host, order):
+    """Read captures for the exact invoice link, before the bank payout arrives.
+
+    The caller has verified the invoice, OAuth merchant and link amount. A
+    browser return, a link status alone or an authorized card never grants access.
+    """
+    state = order["commerce"]
+    if not state.get("payment_id") or state.get("invoice_status") == "canceled":
+        return
+    paid, processing = {}, False
+    for page in range(1, 51):
+        payload = host._qonto_request("GET", f"/v2/payment_links/{state['payment_id']}/payments",
+                                      params={"page": page, "per_page": 100})
+        payments = payload.get("payments", [])
+        if not isinstance(payments, list):
+            raise commerce.ReviewRequired("La réponse de paiement Qonto doit être vérifiée.")
+        for payment in payments:
+            if payment.get("status") == "paid":
+                if not payment.get("id"):
+                    raise commerce.ReviewRequired("L’identifiant du règlement Qonto est absent.")
+                amount = commerce._money_cents(payment.get("amount"))
+                try:
+                    paid_at = dt.datetime.fromisoformat(payment["paid_at"].replace("Z", "+00:00"))
+                    if paid_at.tzinfo is None or paid_at > dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=5) or amount <= 0:
+                        raise ValueError
+                except (KeyError, TypeError, ValueError, AttributeError):
+                    raise commerce.ReviewRequired("La date ou le montant du règlement Qonto doit être vérifié.")
+                if payment["id"] in paid and paid[payment["id"]] != amount:
+                    raise commerce.ReviewRequired("Le règlement Qonto contient des montants contradictoires.")
+                paid[payment["id"]] = amount
+            processing = processing or payment.get("status") in {"pending", "authorized"}
+        if not host._qonto_invoice_list_has_next_page(payload, page, len(payments), 100):
+            break
+    else:
+        raise commerce.ReviewRequired("La liste des règlements Qonto doit être vérifiée.")
+    total = sum(paid.values())
+    if total == order["total_cents"]:
+        commerce._save(host, order, payment_status="paid", paid_cents=total, remaining_cents=0,
+                       payment_url="", payment_link_status="paid",
+                       confirmed_invoice_payment={"invoice_id": state["invoice_id"], "link_id": state["payment_id"],
+                           "payment_ids": sorted(paid), "amount_cents": total, "currency": "EUR", "verified_at": host._now_iso()})
+    elif total > 0:
+        commerce._save(host, order, payment_url="", payment_status="partially_paid", paid_cents=total,
+                       remaining_cents=max(0, order["total_cents"] - total), confirmed_invoice_payment={})
+        raise commerce.ReviewRequired("Le règlement reçu ne correspond pas au total de la commande.")
+    elif state.get("confirmed_invoice_payment"):
+        commerce._save(host, order, payment_status="unpaid", paid_cents=0, remaining_cents=order["total_cents"],
+                       confirmed_invoice_payment={}, payment_url="")
+        raise commerce.ReviewRequired("Le règlement confirmé n’est plus retrouvé dans Qonto.")
+    elif processing or state.get("payment_link_status") in {"paid", "processing"}:
+        commerce._save(host, order, payment_status="processing", payment_url="")
+
+
+def cache_invoice(host, order):
+    """Keep the PDF available without requiring an unpaid invoice e-mail."""
+    state = order["commerce"]
+    if not state.get("invoice_id") or state.get("invoice_status") not in {"unpaid", "paid"}:
+        return
+    root = Path(host.get_partner_storage_path(order["partner_id"], "factures"))
+    destination = root / ("elearning-" + order["id"] + ("-paid" if entitled(order) else "-due") + ".pdf")
+    if destination.is_file():
+        return
+    pdf, _ = host.fetch_qonto_client_invoice_pdf(state["invoice_id"])
+    temporary = root / ("." + uuid.uuid4().hex + ".tmp")
+    try:
+        temporary.write_bytes(pdf)
+        temporary.replace(destination)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def process_claimed(host, order):
@@ -285,13 +386,15 @@ def process_claimed(host, order):
     if order.get("cancellation_requested_at"):
         from elearning_groups import process_cancellation
         return process_cancellation(host, order)
+    previously_paid = entitled(order)
     outcome, error = "ready", ""
     try:
         if not order.get("free_snapshot"):
             invoice = commerce._ensure_invoice(host, order, commerce.settings_from(host.load_data(run_background_tasks=False)))
             if not entitled(order):
                 commerce._ensure_payment_link(host, order, invoice)
-                outcome = "waiting_payment"
+                sync_invoice_payment(host, order)
+                outcome = "ready" if entitled(order) else "waiting_payment"
         if entitled(order) and order.get("access_dispatch_requested_at"):
             activate(host, order)
     except commerce.PaymentPending as exc:
@@ -304,11 +407,19 @@ def process_claimed(host, order):
         outcome, error = "retry", host.format_qonto_error_for_front(exc)[:500]
         host.app.logger.warning("elearning_order_error order=%s type=%s", order["id"], type(exc).__name__)
     commerce._save(host, order, status=outcome, error=error)
-    sent = send_message(host, order, "confirmation", order["centre"]["email"])
+    if entitled(order) and not previously_paid:
+        host.app.logger.info("elearning_payment_confirmed order=%s", order["id"])
+    sent = True
     state = order["commerce"]
-    if state.get("invoice_id") and state.get("invoice_status") in {"unpaid", "paid"}:
-        invoice_key = "invoice_paid" if entitled(order) else "invoice_due"
-        sent = send_message(host, order, invoice_key, order["centre"]["email"], invoice=True) and sent
+    try:
+        cache_invoice(host, order)
+    except Exception as exc:
+        sent = False
+        host.app.logger.warning("elearning_invoice_pdf_pending order=%s type=%s", order["id"], type(exc).__name__)
+    already_confirmed_free = order.get("free_snapshot") and state.get("emails", {}).get("confirmation", {}).get("status") == "sent"
+    if entitled(order) and not already_confirmed_free:
+        # Reuse the historical paid-mail key to avoid resending settled orders.
+        sent = send_message(host, order, "invoice_paid", order["centre"]["email"], invoice=bool(state.get("invoice_id"))) and sent
     if entitled(order) and order.get("access_dispatch_requested_at") and order.get("activated_at"):
         for person in order["learners"]:
             sent = send_message(host, order, "learner_" + person["id"], person["email"], person=person) and sent
@@ -316,7 +427,7 @@ def process_claimed(host, order):
     tracking = bool(state.get("invoice_id") and not entitled(order) and state.get("invoice_status") != "canceled")
     # Keep email retries durable even after a transient mail outage. Sent keys are never replayed.
     queued = tracking or not sent or outcome == "retry"
-    delay = (60 if outcome in {"ready", "waiting_payment"} else 300) if tracking else min(60 * 2 ** min(state.get("attempts", 1), 6), 3600)
+    delay = (15 if outcome in {"ready", "waiting_payment"} else 60) if tracking else min(60 * 2 ** min(state.get("attempts", 1), 6), 3600)
     def finish(current):
         current_state = current.setdefault("commerce", {})
         if current_state.get("lease_token") != state.get("lease_token"):
@@ -342,10 +453,14 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             abort(404)
         return order
 
-    def render_order(oid, staff=False):
+    def render_order(oid, staff=False, confirmation=False):
         data = host.load_data()
-        order = find(data, oid)
-        return page("elearning_order.html", order=order, partner=order["centre"], staff=staff, unlocked=entitled(order), order_status=status_view(order))
+        order = copy.deepcopy(find(data, oid))
+        for person in order.get("learners", []):
+            person.update(last_name=normalize_name(person.get("last_name"), surname=True), first_name=normalize_name(person.get("first_name")))
+        if confirmation and not entitled(order):
+            return redirect(url_for("manuals_shop.elearning_order", oid=oid), code=303)
+        return page("elearning_order.html", order=order, partner=order["centre"], staff=staff, unlocked=entitled(order), order_status=status_view(order), confirmation=confirmation)
 
     @bp.post("/admin/organisme/e-learning/recapitulatif")
     @customer
@@ -404,6 +519,11 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             partner_data()
         return render_order(oid, staff=host._is_super_admin_session() and not session.get("assist_partner_id"))
 
+    @bp.get("/admin/organisme/e-learning/commandes/<oid>/confirmation")
+    @customer
+    def elearning_confirmation(oid):
+        return render_order(oid, confirmation=True)
+
     @bp.post("/admin/organisme/e-learning/commandes/<oid>/confirmer")
     @customer
     @elearning_sales.required(host)
@@ -428,14 +548,17 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             return {}
         host._atomic_update_data(confirm, partner_id=partner["id"])
         kick_worker()
-        return redirect(url_for("manuals_shop.elearning_order", oid=oid), code=303)
+        return checkout_response(oid)
 
     @bp.get("/admin/organisme/e-learning/commandes/<oid>/statut")
     @customer
     def elearning_status(oid):
-        order = find(host.load_data(), oid)
+        order = find(host.load_data(run_background_tasks=False), oid)
+        state = order.get("commerce", {})
+        if state.get("queued") and state.get("next_attempt", 0) <= time.time() and state.get("lease_until", 0) <= time.time():
+            kick_worker()
         # No learner identities or access tokens in this polling response.
-        return status_view(order)
+        return status_view(order), 200, {"Cache-Control": "no-store"}
 
     @bp.post("/admin/organisme/e-learning/commandes/<oid>/envoyer-acces")
     @customer
@@ -481,7 +604,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         if not state.get("invoice_id") or state.get("invoice_status") == "canceled":
             abort(404)
         # Invoice files are downloaded in the merchant worker, never with a tenant's credentials.
-        path = Path(host.get_partner_storage_path(order["partner_id"], "factures")) / ("elearning-" + oid + ("-paid" if state.get("invoice_status") == "paid" else "-due") + ".pdf")
+        path = Path(host.get_partner_storage_path(order["partner_id"], "factures")) / ("elearning-" + oid + ("-paid" if entitled(order) else "-due") + ".pdf")
         if not path.is_file():
             abort(409, "La facture est en préparation. Réessayez dans quelques instants.")
         return send_file(io.BytesIO(path.read_bytes()), mimetype="application/pdf", as_attachment=True, download_name="Facture-" + order["reference"] + ".pdf")

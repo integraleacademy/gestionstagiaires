@@ -442,7 +442,7 @@ def _ensure_payment_link(host, order, invoice):
     state = order["commerce"]
     if state.get("payment_status") in {"paid", "canceled"}:
         return
-    if state.get("payment_status") == "partially_paid":
+    if state.get("payment_status") == "partially_paid" and not (order.get("order_type") == "elearning" and state.get("payment_id")):
         _save(host, order, payment_url="")
         raise ReviewRequired("Un règlement partiel a été constaté. Vérifiez le solde et le lien de paiement dans Qonto.")
     data = host.load_data(run_background_tasks=False)

@@ -16,3 +16,14 @@
 /* The centre decides when paid e-learning accesses are sent. */
 .el-dispatch-panel{margin-top:20px;padding:20px;background:#eff5fd;border:1px solid #cfddf1;border-radius:14px}.el-dispatch-panel h3{margin:0 0 10px}.el-dispatch-panel p{line-height:1.6}.el-dispatch-panel .button{white-space:normal;text-align:center;max-width:100%}.el-dispatch-panel .button:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:640px){.el-dispatch-panel{padding:16px}.el-dispatch-panel .button{width:100%}}
+/* Billing suggestions stay attached to the street field on every screen. */
+.el-address-field{position:relative;margin-bottom:18px}
+.el-address-field .french-address-status{font-size:13px;color:#617895;margin-top:6px}
+.el-address-field .french-address-list{position:absolute;z-index:20;top:100%;left:0;right:0;background:#fff;border:1px solid #d9e4ef;border-radius:12px;box-shadow:0 12px 30px #18304b20;overflow:hidden}
+.el-address-field .french-address-list[hidden]{display:none}
+.el-address-field .french-address-option{display:block;width:100%;padding:13px 15px;text-align:left;border:0;border-bottom:1px solid #edf2f7;background:#fff;color:#18304b;font:inherit;cursor:pointer}
+.el-address-field .french-address-option:hover,.el-address-field .french-address-option.is-active{background:#eef5ff}
+.el-address-field .french-address-option__main,.el-address-field .french-address-option__meta{display:block}
+.el-address-field .french-address-option__meta{font-size:12px;color:#617895;margin-top:4px}
+.el-payment-followup{max-width:760px;margin:35px auto}
+.el-payment-followup [hidden]{display:none!important}

@@ -68,6 +68,7 @@ const complete = (email = 'alice@example.fr', id = 'learner-1') => ({learner_id:
 function boot({rows = [{}], individual = false, locked = 0, price = '5900', unsaved = false, conflict = false, salesPaused = false} = {}) {
   const people = rows === null ? null : new People(rows.map(values => new Row(values)));
   const roster = new Element({dataset: {mode: individual ? 'individual' : 'group', lockedCount: String(locked), maxLearners: individual ? '1' : '100', unsaved: String(unsaved), conflict: String(conflict)}});
+  roster.querySelectorAll = () => people ? people.children.flatMap(row => row.inputs.filter(input => ['first_name', 'last_name'].includes(input.name))) : [];
   roster.checkValidity = () => !people || people.children.every(row => row.inputs.every(input => input.valid()));
   roster.reportValidity = () => { roster.reported = true; };
   const course = new Element({selectedOptions: [{dataset: {price}}]});
@@ -208,7 +209,7 @@ test('individual creation hides/disables group naming, switching back restores i
   field.querySelector = selector => { assert.equal(selector, 'input'); return input; };
   const createLabel = new Element();
   const nodes = {'el-create-form': create, 'el-group-name-field': field, 'el-create-label': createLabel};
-  vm.runInNewContext(script, {document: {querySelectorAll: () => [], querySelector: () => null, getElementById: id => nodes[id] || null}, Intl});
+  vm.runInNewContext(script, {document: {querySelectorAll: () => [], querySelector: () => null, getElementById: id => nodes[id] || null}, window: {}, Intl});
   assert.equal(field.hidden, true); assert.equal(input.disabled, true); assert.equal(input.required, false);
   assert.equal(createLabel.textContent, 'Créer mon accès individuel');
   mode.value = 'group'; create.dispatch('change');
@@ -308,7 +309,7 @@ test('dispatch disables its submit button while preserving native POST submissio
     getElementById: () => null, querySelector: () => null,
     querySelectorAll: selector => selector === '[data-el-dispatch-form]' ? [form] : [],
   };
-  vm.runInNewContext(script, {document, Intl});
+  vm.runInNewContext(script, {document, window: {}, Intl});
   assert.equal(button.disabled, false);
   const event = form.dispatch('submit');
   assert.equal(event.defaultPrevented, false);

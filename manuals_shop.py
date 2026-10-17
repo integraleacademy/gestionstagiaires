@@ -135,7 +135,9 @@ def valid_siret(value):
 def base_url(host):
     # Render's service URL keeps test-v2 welcome links on test-v2 even when the
     # legacy student-portal configuration deliberately points at production.
-    for value in (os.getenv("MANUALS_BASE_URL"), os.getenv("RENDER_EXTERNAL_URL"), host._public_base_url()):
+    production = urlparse(os.getenv("RENDER_EXTERNAL_URL", "")).hostname == "gestionstagiaires-r5no.onrender.com"
+    commercial_url = (os.getenv("MANUALS_PUBLIC_URL") or "https://www.integraleconnect.com") if production else None
+    for value in (os.getenv("MANUALS_BASE_URL"), commercial_url, os.getenv("RENDER_EXTERNAL_URL"), host._public_base_url()):
         parsed = urlparse(value or "")
         if parsed.scheme == "https" and parsed.hostname and not parsed.username and not parsed.password:
             return f"https://{parsed.netloc}"
