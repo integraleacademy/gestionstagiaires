@@ -1,1 +1,16 @@
-<!doctype html><html lang="fr"><body style="font-family:Arial,sans-serif;line-height:1.6;color:#183349"><h1>Commande {{ message.reference }}</h1><p>{{ message.message }}</p><p><a href="{{ order_url }}">Consulter ma commande</a></p><p>Intégrale Academy · 04 22 47 07 68</p></body></html>
+{% extends 'manuals/_email_base.html' %}
+{% block email_title %}Suivi de votre commande {{ message.reference }}{% endblock %}
+{% block preheader %}{{ message.message }}{% endblock %}
+{% block eyebrow %}SUIVI DE VOTRE COMMANDE{% endblock %}
+{% block heading %}Des nouvelles de<br>votre commande.{% endblock %}
+{% block email_content %}
+  <p style="margin:0 0 18px">Bonjour,</p>
+  <p style="margin:0 0 24px">Voici les dernières informations concernant votre commande <strong>{{ message.reference }}</strong>.</p>
+  <table role="presentation" width="100%" cellpadding="18" cellspacing="0" style="background:#f3f6fb;border-radius:12px">
+    <tr><td style="font-size:16px;line-height:1.7">{{ message.message }}</td></tr>
+  </table>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0">
+    <tr><td align="center" bgcolor="#2360c4" style="border-radius:10px"><a href="{{ order_url }}" style="display:block;padding:17px 18px;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;line-height:1.5">Consulter ma commande →</a></td></tr>
+  </table>
+  <p style="font-size:12px;line-height:1.6;color:#738096;border-top:1px solid #e3e9f1;padding-top:22px;margin:26px 0 0;word-break:break-all;overflow-wrap:anywhere">Si le bouton ne fonctionne pas, ouvrez ce lien :<br><a href="{{ order_url }}" style="color:#2360c4;word-break:break-all;overflow-wrap:anywhere">{{ order_url }}</a></p>
+{% endblock %}

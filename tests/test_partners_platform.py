@@ -1,5 +1,9 @@
 """Merchant hub keeps sales, tax settings and all order types on one admin surface."""
 import copy
+from html.parser import HTMLParser
+from urllib.parse import parse_qs, urlsplit
+
+import pytest
 
 import app as host
 import elearning_sales as sales
@@ -9,6 +13,55 @@ from test_partner_workspace import as_admin
 HUB = '/admin/partners'
 SETTINGS = '/admin/commandes-manuels/reglages'
 SALES = '/admin/commandes-elearning'
+
+
+@pytest.mark.parametrize('outcome', ['success', 'denied', 'exchange_failed'])
+def test_embedded_payment_authorization_leaves_dialog_and_returns_to_hub(shop, monkeypatch, outcome):
+    client = shop['client']
+    as_admin(client)
+    monkeypatch.setattr(host, '_qonto_oauth_is_configured', lambda: True)
+    monkeypatch.setattr(host, '_qonto_oauth_client_id', lambda: 'test-client')
+    monkeypatch.setattr(host, '_qonto_oauth_client_secret', lambda: 'test-secret')
+    exchanges = []
+    def exchange(payload):
+        exchanges.append(payload)
+        if outcome == 'exchange_failed':
+            raise RuntimeError('Local simulated failure')
+        return {'access_token': 'dummy-access', 'refresh_token': 'dummy-refresh',
+                'expires_in': 3600, 'scope': host.QONTO_OAUTH_SCOPE + ' payment_link.read payment_link.write'}
+    monkeypatch.setattr(host, '_exchange_qonto_oauth_token', exchange)
+    class Links(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.links = []
+        def handle_starttag(self, tag, attrs):
+            if tag == 'a':
+                self.links.append(dict(attrs))
+    parser = Links()
+    parser.feed(client.get(SETTINGS + '?embed=1').text)
+    connect = next(link for link in parser.links if '/connexion-paiement' in link.get('href', ''))
+    assert connect['target'] == '_top'
+    assert parse_qs(urlsplit(connect['href']).query)['return_to'] == ['partners']
+    oauth = client.get(connect['href'])
+    assert oauth.status_code == 302
+    params = parse_qs(urlsplit(oauth.location).query)
+    assert 'embed' not in params
+    callback = urlsplit(params['redirect_uri'][0]).path
+    result = 'error=access_denied' if outcome == 'denied' else 'code=local-test-code'
+    response = client.get(callback + '?state=' + params['state'][0] + '&' + result)
+    assert response.status_code == 302 and response.location == HUB + '?tab=settings'
+    assert len(exchanges) == (0 if outcome == 'denied' else 1)
+    # A provider-return parameter must not override the saved destination.
+    assert client.get(callback + '?state=' + params['state'][0] + '&code=reused&return_to=https://other.invalid').status_code == 400
+
+
+def test_payment_authorization_missing_config_and_untrusted_return_destination(shop, monkeypatch):
+    client = shop['client']
+    as_admin(client)
+    monkeypatch.setattr(host, '_qonto_oauth_is_configured', lambda: False)
+    connect = '/admin/commandes-manuels/connexion-paiement'
+    assert client.get(connect + '?return_to=partners').location == HUB + '?tab=settings'
+    assert client.get(connect + '?return_to=https://other.invalid').location == SETTINGS
 
 
 def test_hub_sales_and_tax_controls_share_existing_state(shop):

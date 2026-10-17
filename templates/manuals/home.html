@@ -5,7 +5,6 @@
 <div class="shop-wrap portal-wrap">
   <section class="portal-welcome"><div><span class="eyebrow blue">VOTRE ESPACE ORGANISME DE FORMATION</span><h1>Tout pour accompagner<br><span>vos prochaines formations.</span></h1><p class="muted">Bienvenue, {{ partner.name }}. Vos supports pédagogiques et vos services de formation réunis au même endroit.</p><a class="text-link" style="display:inline-block;margin-top:14px" href="{{ url_for('manuals_shop.organisme_profile') }}">Mon organisme : coordonnées et logo →</a></div><div class="portal-mark portal-centre-logo">{% if organisme_header and organisme_header.logo_url %}<img src="{{ organisme_header.logo_url }}" alt="Logo de {{ partner.name }}">{% else %}<span class="portal-centre-initial" aria-hidden="true">{{ partner.name[:1]|upper }}</span><span class="portal-centre-name">{{ partner.name }}</span>{% endif %}</div></section>
   {% include 'manuals/_support_choices.html' %}
-  {% include 'manuals/_mac_aps_offer.html' %}
   {% include 'manuals/_order_history.html' %}
 </div>
 {% endblock %}

@@ -66,6 +66,10 @@ def test_recovery_single_use_no_enumeration_and_old_session_revoked(shop):
         if any(m[1].get('metadata',{}).get('purpose')=='password_recovery' for m in shop['mails']): break
         time.sleep(.01)
     mail=next(m for m in shop['mails'] if m[1].get('metadata',{}).get('purpose')=='password_recovery')
+    for purpose in ('password_recovery', 'manuals_welcome'):
+        html = next(m[0][2] for m in shop['mails'] if m[1].get('metadata', {}).get('purpose') == purpose)
+        assert 'src="https://gestionstagiaires-test-v2.onrender.com/static/logoic.png"' in html
+        assert 'alt="Intégrale Connect"' in html
     link=re.search(r'https://[^\s<]+/reinitialiser-mot-de-passe/[^\s<]+',mail[1]['text_content']).group(0)
     path=urlparse(link).path
     token=csrf(visitor,path)

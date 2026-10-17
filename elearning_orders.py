@@ -235,7 +235,7 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False):
     subject = ("Votre accès personnel " if person else "Commande e-learning ") + course_label(order["course_code"]) + " · " + (brand["name"] if person else "Intégrale Academy")
     if invoice:
         subject = ("Facture acquittée " if paid else "Facture à régler ") + state.get("invoice_number", "") + " · E-learning"
-    body = host.app.jinja_env.get_template("manuals/elearning_email.html").render(order=order, person=person, title=title, link=link, paid=paid, invoice=invoice, money=money, learner_brand=brand)
+    body = host.app.jinja_env.get_template("manuals/elearning_email.html").render(order=order, person=person, title=title, link=link, paid=paid, invoice=invoice, money=money, learner_brand=brand, email_base_url=base_url(host))
     dispatch_note = ("Votre demande d’envoi des accès est enregistrée.\n" if order.get("access_dispatch_requested_at")
                      else "Cliquez sur « Envoyer les accès e-learning aux stagiaires » dans votre commande pour déclencher l’envoi.\n" if paid
                      else "Après règlement intégral, cliquez sur « Envoyer les accès e-learning aux stagiaires » dans votre commande.\n")

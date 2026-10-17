@@ -39,7 +39,7 @@ def register_routes(host, bp, *, page, check_csrf, base_url):
                     token = signer().dumps({'uid': user['id'], 'pid': user['partner_id'], 'version': fingerprint(user)})
                     reset_url = base_url(host) + url_for('manuals_shop.reset_password', token=token)
                     from flask import render_template
-                    html = render_template('manuals/reset_email.html', reset_url=reset_url)
+                    html = render_template('manuals/reset_email.html', reset_url=reset_url, user=user, email_base_url=base_url(host))
                     def deliver():
                         try:
                             host.brevo_send_email(email, 'Réinitialiser votre mot de passe Intégrale Connect', html,

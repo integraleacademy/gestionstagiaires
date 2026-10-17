@@ -37,7 +37,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, find_
         link = base_url(host) + url_for('manuals_shop.order_detail', order_id=order_id)
         try:
             result = host.brevo_send_email(message['email'], 'Suivi de votre commande ' + message['reference'],
-                render_template('manuals/fulfillment_email.html', message=message, order_url=link),
+                render_template('manuals/fulfillment_email.html', message=message, order_url=link, email_base_url=base_url(host)),
                 text_content=message['message'] + '\nConsulter votre commande : ' + link,
                 metadata={'partner_id': partner_id, 'purpose': 'manuals_fulfillment', 'event_id': event_id})
             status = 'sent' if result.get('ok') else 'failed'

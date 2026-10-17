@@ -556,7 +556,7 @@ def _send_email(host, order, key, recipient, staff=False):
     message = _email_copy(order, key, staff=staff)
     subject = message["subject"]
     # Standalone email: avoid request-only CRM context processors in the worker.
-    body = host.app.jinja_env.get_template("manuals/order_email.html").render(order=order, staff=staff, invoice_ready=invoice_ready, payment_available=payment_available, order_url=order_url, message=message)
+    body = host.app.jinja_env.get_template("manuals/order_email.html").render(order=order, staff=staff, invoice_ready=invoice_ready, payment_available=payment_available, order_url=order_url, message=message, email_base_url=base_url(host))
     lines = "\n".join(f"{i['quantity']} × {i['label']} : {money(i['total_cents'])}" for i in order["items"])
     text = subject + "\n\n" + "\n\n".join(message["paragraphs"])
     text += f"\n\n{message['amount_label']} : {money(order['total_cents'])} TTC"

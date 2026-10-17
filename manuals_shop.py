@@ -258,7 +258,7 @@ def register(host):
         partner, user = claimed["partner"], claimed["user"]
         try:
             login_url = base_url(host) + url_for("admin_login", next=url_for("manuals_shop.home"))
-            body = render_template("manuals/welcome_email.html", partner=partner, user=user, login_url=login_url)
+            body = render_template("manuals/welcome_email.html", partner=partner, user=user, login_url=login_url, email_base_url=base_url(host))
             result = host.brevo_send_email(user["email"], "Votre espace organisme de formation est créé", body,
                 text_content=f"Bonjour {user['first_name']},\nVotre espace organisme de formation {partner['name']} a bien été créé.\nConnectez-vous avec votre adresse e-mail et le mot de passe choisi : {login_url}\nRetrouvez vos manuels personnalisés, vos supports PowerPoint sur clé USB, vos commandes et vos accès e-learning APS, MAC APS, A3P et VTC.\nIntégrale Academy — 04 22 47 07 68",
                 metadata={"partner_id": partner_id, "user_id": user_id, "purpose": "manuals_welcome"})
@@ -695,12 +695,14 @@ def register(host):
     def payment_connection():
         if host._is_partner_data_scope_session():
             abort(403)
+        return_to_partners = request.args.get("return_to") == "partners"
+        settings_url = url_for("admin_partners", tab="settings") if return_to_partners else url_for("manuals_shop.commerce_settings")
         if not host._qonto_oauth_is_configured():
             flash("Renseignez QONTO_OAUTH_CLIENT_ID et QONTO_OAUTH_CLIENT_SECRET sur ce service Render.", "error")
-            return redirect(url_for("manuals_shop.commerce_settings"))
+            return redirect(settings_url)
         callback = base_url(host) + url_for("manuals_shop.payment_connection_callback")
         state = secrets.token_urlsafe(32)
-        session["manuals_payment_connection"] = {"state": state, "created": time.time(), "callback": callback}
+        session["manuals_payment_connection"] = {"state": state, "created": time.time(), "callback": callback, "return_to_partners": return_to_partners}
         params = {"client_id": host._qonto_oauth_client_id(), "redirect_uri": callback,
                   "response_type": "code", "scope": host.QONTO_OAUTH_SCOPE + " payment_link.read payment_link.write", "state": state}
         return redirect(host._qonto_oauth_base_url() + "/oauth2/auth?" + urlencode(params))
@@ -733,7 +735,7 @@ def register(host):
             except Exception as exc:
                 app.logger.warning("manuals_payment_connection_failed type=%s", type(exc).__name__)
                 flash("La connexion Qonto a échoué. Vérifiez les réglages OAuth de ce service et réessayez.", "error")
-        return redirect(url_for("manuals_shop.commerce_settings"))
+        return redirect(url_for("admin_partners", tab="settings") if saved.get("return_to_partners") else url_for("manuals_shop.commerce_settings"))
 
     elearning_orders.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, kick_worker=kick_worker)
     elearning_groups.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, kick_worker=kick_worker)
