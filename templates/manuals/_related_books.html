@@ -22,7 +22,7 @@
         {% if other.code.endswith('_recyclage') %}<span class="manual-related-edition">Recyclage / Remise à niveau</span><h3>{{ other.name|replace('Recyclage / Remise à niveau ', '') }}</h3>{% else %}<span class="manual-related-edition">Manuel de formation</span><h3>{{ other.name }}</h3>{% endif %}
         <p>{{ other.title }}</p>
         <div class="manual-related-price">Dès <strong>{{ other.bulk_price|manuals_money }}</strong> <span>TTC / ex.</span><small>À partir de 100 exemplaires</small></div>
-        <span class="manual-related-link">Découvrir le manuel <span aria-hidden="true">↗</span></span>
+        <span class="manual-related-link">Découvrir le manuel</span>
       </div>
     </a>
     {% endfor %}

@@ -35,8 +35,8 @@
         <div class="sf-product-body">
           <p class="sf-category">{{ item.category_name }}</p>
           <h3 id="support-{{ item.code }}"><a href="{{ url_for('manuals_shop.usb_detail', code=item.code) }}">{{ support_name(item) }}{% if 'recyclage' in item.code %}<span>Recyclage / Remise à niveau</span>{% endif %}</a></h3>
-          <p class="sf-product-description">{{ item.title }}</p><a class="sf-card-preview" href="{{ url_for('manuals_shop.usb_detail', code=item.code, _anchor='apercus') }}">Voir les 3 aperçus ↗</a>
-          <div class="sf-product-footer"><p><strong>{{ item.usb_price|manuals_money }}</strong><span>TTC · Livraison incluse</span></p><a class="sf-product-link" href="{{ url_for('manuals_shop.usb_detail', code=item.code) }}" aria-label="Découvrir le support PowerPoint {{ item.name }}">Découvrir <span aria-hidden="true">↗</span></a></div>
+          <p class="sf-product-description">{{ item.title }}</p><a class="sf-card-preview" href="{{ url_for('manuals_shop.usb_detail', code=item.code, _anchor='apercus') }}">Voir les 3 aperçus</a>
+          <div class="sf-product-footer"><p><strong>{{ item.usb_price|manuals_money }}</strong><span>TTC · Livraison incluse</span></p><a class="sf-product-link" href="{{ url_for('manuals_shop.usb_detail', code=item.code) }}" aria-label="Découvrir le support PowerPoint {{ item.name }}">Découvrir</a></div>
         </div>
       </article>
       {% endfor %}
@@ -59,7 +59,7 @@
 <section class="sf-demo" aria-labelledby="sf-demo-title"><div class="sf-shell sf-demo-inner">
   <div class="sf-demo-icon" aria-hidden="true">{{ icon('screen') }}<span>PowerPoint</span></div>
   <div><p class="sf-kicker">BESOIN D’UN CONSEIL ?</p><h2 id="sf-demo-title">Parlons du support qu’il vous faut.</h2><p>Indiquez la formation que vous préparez. Notre équipe vous renseignera sur son contenu et son utilisation en séance.</p></div>
-  <a class="sf-button sf-button-white" href="mailto:clement@integraleacademy.com?subject=Question%20sur%20un%20support%20PowerPoint">Échanger avec notre équipe <span aria-hidden="true">↗</span></a>
+  <a class="sf-button sf-button-white" href="mailto:clement@integraleacademy.com?subject=Question%20sur%20un%20support%20PowerPoint">Échanger avec notre équipe</a>
 </div></section>
 
 <section class="sf-section sf-pairing" aria-labelledby="sf-pairing-title"><div class="sf-shell sf-split">

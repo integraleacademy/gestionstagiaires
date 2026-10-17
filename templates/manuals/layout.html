@@ -12,7 +12,6 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-shop.css', v='20261012-experience') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-presentation.css', v='20261012-collection') }}">
   {% if show_organisme_identity %}<link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-identity.css', v='20261014-group') }}">{% endif %}
-  <style>@media(max-width:700px){.site-header nav{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:4px}.site-header nav a{font-size:11px;padding:8px 9px}.site-header nav .logout{margin-left:auto}}@media(max-width:390px){.site-header nav a{padding:7px 6px;font-size:10px}.site-header nav .logout{margin-left:0}}</style>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-storefront.css', v='20261013-covers') }}">
   <script src="{{ url_for('static', filename='js/manuals-catalogue.js', v='20261012-experience') }}" defer></script>
   {% block extra_styles %}{% endblock %}
@@ -21,7 +20,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-navigation.css', v='20261014-choices') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/connect-brand.css', v='20261014') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/elearning-sales.css', v='20261014-1') }}">
-  <script src="{{ url_for('static', filename='js/manuals-shop.js', v='20261012-experience') }}" defer></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/connect-responsive.css', v='20261017-mobile') }}">
+  <script src="{{ url_for('static', filename='js/manuals-shop.js', v='20261017-mobile') }}" defer></script>
 </head>
 <body class="{% if public %}public-storefront {% endif %}{% block body_class %}{% endblock %}">
   {% if cart_completed_key %}<div hidden data-cart-complete="{{ cart_completed_key }}"></div>{% endif %}
@@ -31,7 +31,7 @@
   <header class="site-header">
     {% include 'manuals/_connect_brand.html' %}
     <span class="header-label">L’espace des organismes de formation</span>
-    <button class="navigation-toggle" data-navigation-toggle type="button" aria-controls="primary-navigation" aria-expanded="false" hidden>Menu</button>
+    <button class="navigation-toggle" data-navigation-toggle type="button" aria-controls="primary-navigation" aria-expanded="false" hidden><span class="navigation-toggle-icon" aria-hidden="true"></span><span data-navigation-label>Menu</span></button>
     <nav id="primary-navigation" aria-label="Navigation principale">
       <a href="{{ url_for('manuals_shop.public_presentation') }}" {% if request.endpoint in ['manuals_shop.public_presentation','manuals_shop.public_manual_detail','manuals_shop.presentation','manuals_shop.manual_detail','manuals_shop.catalogue'] %}aria-current="page"{% endif %}>Manuels</a>
       <a href="{{ url_for('manuals_shop.usb_catalogue') }}" {% if request.endpoint in ['manuals_shop.usb_catalogue','manuals_shop.usb_detail'] %}aria-current="page"{% endif %}>Clés USB</a>

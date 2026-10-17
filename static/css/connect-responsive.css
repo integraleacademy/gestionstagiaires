@@ -1,0 +1,152 @@
+/* Shared navigation and small-screen refinements for Intégrale Connect. */
+html { -webkit-text-size-adjust: 100%; }
+.site-header [hidden] { display: none !important; }
+.navigation-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  min-width: 88px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.navigation-toggle-icon { position: relative; width: 17px; height: 14px; }
+.navigation-toggle-icon::before,
+.navigation-toggle-icon::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 17px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+}
+.navigation-toggle-icon::before { top: 3px; }
+.navigation-toggle-icon::after { bottom: 3px; }
+.navigation-toggle[aria-expanded=true] .navigation-toggle-icon::before { top: 6px; transform: rotate(45deg); }
+.navigation-toggle[aria-expanded=true] .navigation-toggle-icon::after { bottom: 6px; transform: rotate(-45deg); }
+.public-storefront :is(.button, .cs-button, .el-button) { max-width: 100%; white-space: normal; text-align: center; }
+.public-storefront :is(.store-hero, .store-section-heading, .home-contact, .home-personalize, .home-learning-panel) > * { min-width: 0; }
+.public-storefront :is(.cs-course-label, .el-course-title, .home-card-action) { overflow-wrap: anywhere; }
+.public-storefront .home-domains {
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 16px 0;
+}
+.public-storefront .home-domains a {
+  padding: 10px 14px;
+  min-height: 44px;
+  border: 1px solid #dfe3df;
+  border-radius: 10px;
+  background: #fff;
+  color: #40566a;
+  line-height: 1.4;
+}
+.public-storefront .home-domains a:hover { background: #fff5ed; border-color: #c77c5e; color: #953b19; }
+
+/* Collapse before the brand and navigation begin to compete for space. */
+@media (max-width: 1100px) {
+  body .site-header, body.public-storefront .site-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    min-height: 72px;
+    padding: 12px 24px;
+    gap: 0 16px;
+  }
+  .site-header .header-label { display: none; }
+  body .site-header #primary-navigation {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex-basis: 100%;
+    width: 100%;
+    margin: 12px 0 0;
+    padding: 12px 0 0;
+    border-top: 1px solid #e6e9ed;
+    gap: 6px;
+  }
+  body .site-header #primary-navigation a {
+    justify-content: flex-start;
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+    padding: 12px;
+    font-size: 14px;
+    white-space: normal;
+    text-align: left;
+  }
+  body .site-header #primary-navigation .nav-account { justify-content: center; padding: 12px; }
+}
+
+@media (min-width: 651px) and (max-width: 850px) {
+  .home-offers { grid-template-columns: 1fr; gap: 24px; }
+  .home-offer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); }
+  .home-offer-heading { grid-column: 1 / -1; min-height: 0; padding: 22px; }
+  .home-offer-visual { height: 100%; min-height: 260px; }
+  .home-offer-copy { padding: 22px; }
+  .home-personalize { grid-template-columns: 1fr; }
+  .home-personalize-stage { min-height: 440px; }
+}
+
+@media (max-width: 700px) {
+  body .site-header, body.public-storefront .site-header { min-height: 68px; padding: 12px 16px; gap: 0 10px; }
+  body .site-header .logo.connect-brand { min-width: 0; max-width: calc(100% - 100px); flex-shrink: 1; gap: 8px; }
+  .site-header .connect-brand__name { font-size: clamp(12px, 3.4vw, 15px); letter-spacing: 0; white-space: normal; }
+  .site-header .connect-brand__mark { --connect-mark-size: 36px; }
+  .public-storefront .home-domains { padding: 14px 0; gap: 8px; }
+  .public-storefront .home-domains a { padding: 9px 11px; font-size: 12px; }
+  .public-storefront :is(.store-wrap, .el-shell, .cs-shell) { padding-left: 18px; padding-right: 18px; }
+  .connect-home .store-hero { padding-top: 24px; padding-bottom: 24px; }
+  .home-hero h1 { font-size: clamp(33px, 9vw, 40px); line-height: 1.12; }
+  .connect-home .store-section { margin: 40px 0; }
+  .connect-home h2 { font-size: clamp(27px, 7.5vw, 31px); line-height: 1.2; }
+  .home-studio-footer { gap: 8px 14px; justify-content: flex-start; }
+  .home-studio-footer > span { font-size: 11px; }
+  .home-studio-footer svg { flex-shrink: 0; }
+  .home-main-actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .home-main-actions .button { width: 100%; font-size: 14px; }
+  .home-brochure { min-height: 44px; align-items: center; font-size: 13px; }
+  .home-learning { margin-top: 40px; padding: 24px 18px; }
+  .home-learning-tabs { display: flex; width: 100%; }
+  .home-learning-tabs > button { min-width: 0; flex: 1; }
+  .home-course-statuses { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-contact { padding: 24px 18px; margin: 40px 0; }
+  .home-account-card { padding: 24px 18px; min-width: 0; }
+  .home-account-card .button { font-size: 13px; }
+  .el-hero h1, .cs-hero h1 { font-size: clamp(30px, 8.5vw, 38px); line-height: 1.15; letter-spacing: -1px; }
+  .cs-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .cs-actions .cs-button { width: 100%; min-height: 46px; font-size: 13px; }
+  .cs-section-nav { flex-wrap: wrap; gap: 4px 16px; padding: 10px 0; }
+  .cs-section-nav a { display: inline-flex; align-items: center; min-height: 44px; }
+  .cs-course-label { font-size: 13px; line-height: 1.5; }
+  .cs-module-list summary { flex-wrap: wrap; }
+  .cs-module-title { flex: 1; min-width: 120px; }
+  .public-storefront :is(input, select, textarea) { font-size: 16px; }
+  .el-sales-notice {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 6px 9px;
+    width: calc(100% - 36px);
+    margin-top: 12px;
+    padding: 14px;
+    border-radius: 12px;
+  }
+  .el-sales-notice > div { display: contents; }
+  .el-sales-notice-icon { width: 26px; height: 26px; font-size: 18px; border-radius: 8px; }
+  .el-sales-notice strong { align-self: center; font-size: 14px; line-height: 1.45; }
+  .el-sales-notice p, .el-sales-notice small { grid-column: 1 / -1; margin: 0; line-height: 1.5; }
+  .el-sales-notice p { font-size: 13px; }
+  .el-sales-notice small { font-size: 12px; }
+}
+
+@media (max-width: 360px) {
+  body .site-header, body.public-storefront .site-header { padding-left: 12px; padding-right: 12px; }
+  .navigation-toggle { min-width: 80px; gap: 7px; padding: 10px; }
+  .site-header .connect-brand__mark { --connect-mark-size: 32px; }
+  body .site-header .logo.connect-brand { max-width: calc(100% - 90px); }
+  body .site-header #primary-navigation a { font-size: 13px; padding: 10px; }
+}

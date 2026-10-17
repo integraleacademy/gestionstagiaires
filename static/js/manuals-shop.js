@@ -1,12 +1,35 @@
 (() => {
   'use strict';
   const menu = document.querySelector('[data-navigation-toggle]');
-  if (menu) {
-    const navigation = document.getElementById('primary-navigation');
-    const mobile = window.matchMedia('(max-width:700px)');
-    const resetMenu = () => { menu.hidden = !mobile.matches; navigation.hidden = mobile.matches; menu.setAttribute('aria-expanded', String(!navigation.hidden)); };
-    menu.addEventListener('click', () => { navigation.hidden = !navigation.hidden; menu.setAttribute('aria-expanded', String(!navigation.hidden)); });
-    mobile.addEventListener('change', resetMenu); resetMenu();
+  const navigation = document.getElementById('primary-navigation');
+  if (menu && navigation) {
+    // Keep this breakpoint aligned with connect-responsive.css.
+    const mobile = window.matchMedia('(max-width:1100px)');
+    const label = menu.querySelector('[data-navigation-label]');
+    const setMenu = (open) => {
+      navigation.hidden = !open;
+      menu.setAttribute('aria-expanded', String(open));
+      if (label) label.textContent = open ? 'Fermer' : 'Menu';
+    };
+    const resetMenu = () => {
+      menu.hidden = !mobile.matches;
+      setMenu(!mobile.matches);
+    };
+    menu.addEventListener('click', () => setMenu(navigation.hidden));
+    navigation.addEventListener('click', event => {
+      if (mobile.matches && event.target.closest('a')) setMenu(false);
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && mobile.matches && !navigation.hidden) {
+        setMenu(false);
+        menu.focus();
+      }
+    });
+    document.addEventListener('click', event => {
+      if (mobile.matches && !navigation.hidden && !menu.contains(event.target) && !navigation.contains(event.target)) setMenu(false);
+    });
+    mobile.addEventListener('change', resetMenu);
+    resetMenu();
   }
   document.querySelectorAll('[data-toggle-password]').forEach(button => {
     button.addEventListener('click', () => {

@@ -12,7 +12,7 @@
       <figure id="apercu-{{ item.code }}-{{ loop.index }}">
         <a href="{% if preview.capture %}{{ url_for('static', filename='manuals/powerpoint-previews/' ~ slide.image) }}{% else %}#apercu-{{ item.code }}-{{ loop.index }}{% endif %}" data-support-preview data-preview-caption="{{ item.name }} · {{ slide.title }}" aria-label="Agrandir {{ item.name }} : {{ slide.title }}">
           {% if preview.capture %}<div class="sf-slide-frame"><img class="sf-slide-capture" src="{{ url_for('static', filename='manuals/powerpoint-previews/' ~ slide.image) }}" alt="Extrait du PowerPoint {{ item.name }} : {{ slide.title }}" width="1440" height="810" loading="lazy"></div>{% else %}{% include 'manuals/_usb_slide.html' %}{% endif %}
-          <span class="sf-preview-open"><span>0{{ loop.index }} / 03</span>Agrandir ↗</span>
+          <span class="sf-preview-open"><span>0{{ loop.index }} / 03</span>Agrandir</span>
         </a>
         <figcaption>{{ slide.title }}</figcaption>
       </figure>

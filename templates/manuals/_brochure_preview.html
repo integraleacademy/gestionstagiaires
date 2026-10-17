@@ -6,12 +6,12 @@
   <div class="manual-presentation-panel">
     <a class="manual-brochure-preview" href="{{ url_for('static', filename='manuals/previews/' ~ book.code ~ '-presentation.webp') }}" target="_blank" rel="noopener" data-manual-preview data-preview-caption="Fiche de présentation {{ book.name }} · Brochure de la collection 2026" aria-label="Agrandir la fiche de présentation {{ book.name }}">
       <img src="{{ url_for('static', filename='manuals/previews/' ~ book.code ~ '-presentation.webp') }}" alt="Fiche de présentation du manuel {{ book.name }} dans la brochure : couverture, thèmes et tarifs" width="1263" height="893" loading="lazy">
-      <span>Agrandir la fiche de présentation <span aria-hidden="true">↗</span></span>
+      <span>Agrandir la fiche de présentation</span>
     </a>
     <div class="manual-presentation-copy">
       <h3>La couverture, les thèmes et les tarifs.</h3>
       <p>Retrouvez la présentation de ce titre dans notre brochure et découvrez les grands axes du manuel.</p>
-      <a class="button secondary" href="{{ url_for('static', filename='manuals/brochure-manuels-2026.pdf', v='20261014') }}#page={{ book.brochure_page }}" target="_blank" rel="noopener" aria-label="Ouvrir la brochure à la page {{ book.brochure_page }} (nouvel onglet)">Ouvrir la brochure <span aria-hidden="true">↗</span></a>
+      <a class="button secondary" href="{{ url_for('static', filename='manuals/brochure-manuels-2026.pdf', v='20261014') }}#page={{ book.brochure_page }}" target="_blank" rel="noopener" aria-label="Ouvrir la brochure à la page {{ book.brochure_page }} (nouvel onglet)">Ouvrir la brochure</a>
       <div class="manual-excerpt-request"><strong>Vous souhaitez feuilleter l’intérieur ?</strong>Les pages intérieures de ce titre ne sont pas encore consultables en ligne.<br><a href="mailto:clement@integraleacademy.com?subject=Extrait%20manuel%20{{ book.name|urlencode }}">Demander un extrait du manuel →</a></div>
     </div>
   </div>
