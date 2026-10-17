@@ -53,6 +53,8 @@ def group_view(data, group):
     people = []
     for person in group.get("learners", []):
         row = copy.deepcopy(person)
+        row.update(last_name=learning.normalize_name(row.get("last_name"), surname=True),
+                   first_name=learning.normalize_name(row.get("first_name")))
         order, enrolled = reservations.get(person["id"], (None, None))
         status = "draft"
         if order:
@@ -620,4 +622,4 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             data, partner = partner_data()
             return review(data, partner, find(data, gid), errors=[result["error"]], values=billing, status=409)
         kick_worker()
-        return redirect(url_for("manuals_shop.elearning_order", oid=result["id"]), code=303)
+        return learning.checkout_response(result["id"])

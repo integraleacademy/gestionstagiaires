@@ -339,7 +339,7 @@ def test_learner_email_uses_centre_identity_and_reply_to_without_platform_contac
     merchant_messages = [mail for mail in shop["mails"] if mail[0][0] == "facturation@horizon.example.test"]
     assert merchant_messages
     for args, kwargs in merchant_messages:
-        assert "Intégrale Academy" in args[1]
+        assert "Intégrale Connect" in args[1]
         assert "clement@integraleacademy.com" in args[2]
         assert not {"sender_name", "sender_email", "reply_to"} & kwargs.keys()
     assert latest(shop)["centre"] == historical_centre

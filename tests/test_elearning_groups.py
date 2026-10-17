@@ -138,7 +138,7 @@ def test_empty_group_survives_relogin_and_multiple_roster_edits_without_checkout
     group = save(shop, url, [{**first, "first_name": "Camille corrigée"}, second,
                               person("sam@example.test", "Sam", "Moreau")])
     assert group["learners"][0]["id"] == first["id"]
-    assert group["learners"][0]["first_name"] == "Camille corrigée"
+    assert group["learners"][0]["first_name"] == "Camille Corrigée"
     group = save(shop, url, [group["learners"][0], group["learners"][2]], group_name="APS octobre 2026")
     assert group["group_name"] == "APS octobre 2026"
     assert {p["email"] for p in group["learners"]} == {"camille@example.test", "sam@example.test"}
