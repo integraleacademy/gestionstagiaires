@@ -67,10 +67,12 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 const navigate = page => page.events.filter(event => event[0] === 'navigate');
 const refreshed = page => page.events.some(event => event[0] === 'fetch' && event[1].endsWith('/actualiser'));
 
-test('dialog and reserved popup open during the click; Connect stays open and Qonto has no opener', async () => {
+test('Qonto opens centered without a second modal underneath; Connect stays open', async () => {
   const page = boot();
   await page.form.trigger('submit'); await flush();
-  assert.equal(page.dialog().open, true);
+  assert.ok(!page.dialog().open);
+  assert.equal(page.form.afterElement.hidden, false);
+  assert.match(page.events.find(event => event[0] === 'popup')[1], /left=\d+,top=\d+/);
   assert.match(page.dialog().innerHTML, /Préparation du paiement en cours/);
   assert.match(page.dialog().innerHTML, /data-payment-close/);
   assert.ok(page.events.findIndex(event => event[0] === 'popup') < page.events.findIndex(event => event[0] === 'fetch'));
@@ -84,6 +86,7 @@ test('closing Qonto requests a server check but never confirms an unpaid order',
   const page = boot(); await page.form.trigger('submit'); await flush();
   page.popups[0].closed = true; await page.watch(); await flush();
   assert.ok(refreshed(page));
+  assert.equal(page.dialog().open, true);
   assert.equal(navigate(page).length, 0);
   assert.match(page.dialog().querySelector('[data-payment-title]').textContent, /Vérification du paiement/);
   assert.equal(page.popups.length, 1, 'Never reopen a dismissed payment automatically');
@@ -91,6 +94,7 @@ test('closing Qonto requests a server check but never confirms an unpaid order',
 
 test('closing the modal verifies payment and navigates only after the server confirms it', async () => {
   const page = boot(); await page.form.trigger('submit'); await flush();
+  page.popups[0].closed = true; await page.watch(); await flush();
   page.state.current = {paid: true, checkout_url: ''};
   await page.dialog().querySelector('[data-payment-close]').trigger('click'); await flush();
   assert.ok(refreshed(page));
@@ -116,6 +120,9 @@ test('a blocked popup can be opened from an explicit button without leaving Conn
   page.state.blocked = false;
   await page.dialog().querySelector('[data-payment-open]').trigger('click'); await flush();
   assert.ok(page.events.some(event => event[0] === 'payment'));
+  assert.equal(page.dialog().open, false);
+  assert.equal(page.popups[0].closed, false, 'Hiding the Connect dialog must not close Qonto');
+  assert.equal(refreshed(page), false, 'Programmatic dismissal is not the end of payment');
 });
 
 test('closing during preparation does not reopen Qonto once its link arrives', async () => {

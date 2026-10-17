@@ -1,7 +1,7 @@
 {% extends 'manuals/layout.html' %}
 {% from 'manuals/_elearning_ui.html' import icon, steps, errors_box %}
 {% block title %}Créer un groupe ou un accès e-learning{% endblock %}
-{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static',filename='css/elearning-orders.css',v='20261010-3') }}"><script src="{{ url_for('static',filename='js/elearning-orders.js',v='20261010-3') }}" defer></script>{% endblock %}
+{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static',filename='css/elearning-orders.css',v='20261017-followup') }}"><script src="{{ url_for('static',filename='js/elearning-orders.js',v='20261010-3') }}" defer></script>{% endblock %}
 {% block content %}<div class="el-wrap el-narrow">
   <a class="text-link el-back" href="{{ url_for('manuals_shop.elearning_soon') }}">← Mes espaces e-learning</a>{{ steps(1) }}
   <div class="el-page-heading"><span class="eyebrow blue">UN GROUPE OU UN ACCÈS INDIVIDUEL</span><h1>Commençons par l’essentiel.</h1><p>Choisissez une formation et un format. Vous ajouterez les stagiaires à l’étape suivante.</p></div>

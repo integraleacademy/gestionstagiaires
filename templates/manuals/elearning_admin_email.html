@@ -1,0 +1,17 @@
+{% extends 'manuals/_email_base.html' %}
+{% block email_title %}Commande e-learning confirmée · {{ order.reference }}{% endblock %}
+{% block preheader %}{{ order.centre.name }} · {{ order.learners|length }} accès · {{ money(order.total_cents) }} TTC{% endblock %}
+{% block eyebrow %}NOUVELLE COMMANDE E-LEARNING{% endblock %}
+{% block heading %}{{ 'Commande gratuite validée' if order.free_snapshot else 'Paiement reçu !' }}{% endblock %}
+{% block email_content %}
+<p style="margin-top:0">Bonjour Clément,</p>
+<p>La commande <strong>{{ order.reference }}</strong> de <strong>{{ order.centre.name }}</strong> est confirmée{% if not order.free_snapshot %} après règlement intégral{% endif %}.</p>
+<div style="padding:20px;background:#f1f6fc;border-radius:12px">
+  <strong>{{ order.learners|length }} accès {{ order.course_code|elearning_full_label }}</strong><br>
+  <span style="font-size:28px;font-weight:bold">{{ 'Gratuit' if order.free_snapshot else money(order.total_cents) ~ ' TTC' }}</span>
+</div>
+<p>Contact de l’organisme : <a href="mailto:{{ order.centre.email }}">{{ order.centre.email }}</a>{% if order.commerce.get('invoice_number') %}<br>Facture : <strong>{{ order.commerce.invoice_number }}</strong>{% endif %}</p>
+<p>L’organisme choisit quand envoyer les accès à ses stagiaires.</p>
+<p style="margin:28px 0"><a href="{{ link }}" style="display:inline-block;padding:15px 22px;background:#2360c4;border-radius:10px;color:#fff;text-decoration:none;font-weight:bold">Consulter la commande →</a></p>
+<p style="font-size:12px;word-break:break-all"><a href="{{ link }}">{{ link }}</a></p>
+{% endblock %}

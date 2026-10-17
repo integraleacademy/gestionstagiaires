@@ -171,3 +171,12 @@ a{color:inherit}
   .vtc-course .vtc-readable-video.is-expanded .native-learning-pause>div{display:inline-flex;margin:4px 0 0 12px}
   .vtc-course .vtc-readable-video.is-expanded .native-learning-pause .native-button{min-height:44px;padding:8px 12px;font-size:13px}
 }
+
+.native-programme-time{display:flex;align-items:center;justify-content:space-between;gap:22px;margin:20px 24px;padding:18px 24px;border:1px solid #cbdff5;border-radius:15px;background:#edf5ff;color:#193c64}
+.native-programme-time>div>span{display:block;font-size:12px;color:#55718c;margin-bottom:7px}
+.native-programme-time strong{display:block;font-size:25px;line-height:1.4;letter-spacing:-.5px}
+.native-programme-total{font-weight:600;color:#41698e}
+.native-programme-time progress{display:block;width:220px;max-width:100%;height:9px;accent-color:#2465ad;border:0;border-radius:10px;overflow:hidden}
+.native-programme-time progress::-webkit-progress-bar{background:#d6e5f5}
+.native-programme-time progress::-webkit-progress-value{background:#2465ad}
+@media(max-width:640px){.native-programme-time{margin:12px;padding:15px 18px;gap:14px;align-items:stretch;flex-direction:column}.native-programme-time strong{font-size:23px}.native-programme-time progress{width:100%}.native-programme-time>div>span{font-size:11px}}

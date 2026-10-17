@@ -575,6 +575,26 @@ class NativeElearningWebTests(unittest.TestCase):
         store = NativeElearningStore(self.persist_dir / "native_elearning" / "tracking.sqlite3")
         self.assertEqual(store.learner_progress("session-aps", "trainee-1"), [])
 
+    def test_programme_duration_shows_completed_time_against_all_assigned_modules(self):
+        second = self._second_course()
+        self.data['sessions'][0]['aps_native_modules'] = [
+            {**self._module(self.course), "required_minutes": 240},
+            {**self._module(second), "required_minutes": 90}]
+        self._public_login()
+        player_url = f"/espace/public-token/elearning/{self.course['id']}"
+        config = self._player_config(self.client.get(player_url))
+        self._api_post(config['startUrl'], config, tab_id='programme-duration')
+        tracking = NativeElearningStore(self.persist_dir / "native_elearning" / "tracking.sqlite3")
+        with tracking._connect() as connection:
+            connection.execute("UPDATE learner_course_progress SET active_seconds = 600")
+        overview = self.client.get("/espace/public-token/elearning").get_data(as_text=True)
+        player = self.client.get(player_url).get_data(as_text=True)
+        self.assertIn('10 min <span>/ 5 h 30 min</span>', overview)
+        self.assertIn('>10 min</span>', player)
+        self.assertIn('/ 5 h 30 min</span>', player)
+        self.assertIn('data-required-seconds="19800"', player)
+        self.assertIn('data-other-seconds="0"', player)
+
     def test_path_security_requires_admin_csrf_and_learner_authorization(self):
         url = "/api/admin/sessions/session-aps/elearning/path"
         self.assertEqual(self.client.post(url, json={}).status_code, 401)

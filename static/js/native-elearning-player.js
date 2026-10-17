@@ -12,6 +12,8 @@
   }
 
   const timer = document.getElementById("nativeActiveTimer");
+  const programmeTimer = document.getElementById("nativeProgrammeTime");
+  const programmeProgress = document.getElementById("nativeProgrammeProgress");
   const trackingState = document.getElementById("nativeTrackingState");
   const duplicateNotice = document.getElementById("nativeDuplicateNotice");
   const actionButton = document.getElementById("nativeActionButton");
@@ -146,6 +148,12 @@
 
   function renderTimer() {
     if (timer) timer.textContent = formatSeconds(displayedSeconds());
+    if (programmeTimer) {
+      const totalSeconds = Number(programmeTimer.dataset.otherSeconds || 0) + displayedSeconds();
+      const minutes = Math.floor(totalSeconds / 60), hours = Math.floor(minutes / 60);
+      programmeTimer.textContent = hours ? `${hours} h${minutes % 60 ? ' ' + String(minutes % 60).padStart(2, '0') + ' min' : ''}` : `${minutes} min`;
+      if (programmeProgress) programmeProgress.value = Math.min(100, totalSeconds / Math.max(1, Number(programmeProgress.dataset.requiredSeconds)) * 100);
+    }
     if (lessonTiming) { updateAction(); lessonTiming.notify(); }
   }
 

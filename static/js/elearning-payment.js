@@ -16,9 +16,13 @@
     // Qonto forbids framing (frame-ancestors 'none'); never proxy its payment UI.
     let popup;
     try {
-      popup = window.open('', '_blank', 'popup=yes,width=600,height=800,resizable=yes,scrollbars=yes');
+      const screen = window.screen || {};
+      const width = Math.min(600, screen.availWidth || 600), height = Math.min(800, screen.availHeight || 800);
+      const left = Math.round((screen.availLeft || 0) + Math.max(0, ((screen.availWidth || width) - width) / 2));
+      const top = Math.round((screen.availTop || 0) + Math.max(0, ((screen.availHeight || height) - height) / 2));
+      popup = window.open('', '_blank', `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`);
       if (popup) {
-        popup.document.write('<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Paiement · Intégrale Connect</title><link rel="stylesheet" href="' + location.origin + '/static/css/elearning-orders.css?v=20261017-modal-party"><body class="el-popup-preparation"><main class="el-payment-followup"><div class="el-payment-orbit" aria-hidden="true"><span></span></div><p class="eyebrow">INTÉGRALE CONNECT</p><h1>Préparation du paiement en cours</h1><p>Votre page de paiement sécurisé arrive dans quelques instants.</p><p>Après paiement, fermez cette fenêtre pour retrouver votre confirmation.</p></main></body></html>');
+        popup.document.write('<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Paiement · Intégrale Connect</title><link rel="stylesheet" href="' + location.origin + '/static/css/elearning-orders.css?v=20261017-followup"><body class="el-popup-preparation"><main class="el-payment-followup"><div class="el-payment-orbit" aria-hidden="true"><span></span></div><p class="eyebrow">INTÉGRALE CONNECT</p><h1>Préparation du paiement en cours</h1><p>Votre page de paiement sécurisé arrive dans quelques instants.</p><p>Après paiement, fermez cette fenêtre pour retrouver votre confirmation.</p></main></body></html>');
         popup.document.close();
         // Qonto must never get an opener capable of navigating our order page.
         popup.opener = null;
@@ -33,7 +37,7 @@
     const fallback = document.createElement('section');
     fallback.className = 'form-card el-payment-followup';
     fallback.hidden = true;
-    fallback.innerHTML = '<div class="el-payment-orbit" data-payment-spinner aria-hidden="true"><span></span></div><h2 data-payment-title>Préparation du paiement en cours</h2><p data-payment-message role="status">Votre commande est en cours de préparation.</p><div class="action-row"><button class="button primary" type="button" data-payment-resume>Voir le suivi du paiement</button><a class="button secondary" data-order-open hidden>Consulter ma commande</a></div>';
+    fallback.innerHTML = '<div class="el-payment-orbit" data-payment-spinner aria-hidden="true"><span></span></div><h2 data-payment-title>Préparation du paiement en cours</h2><p data-payment-message role="status">Votre commande est en cours de préparation.</p><div class="action-row"><button class="button primary" type="button" data-payment-resume>Retrouver le paiement</button><button class="button secondary" type="button" data-payment-check hidden>J’ai terminé, vérifier mon paiement</button><a class="button secondary" data-order-open hidden>Consulter ma commande</a></div>';
     container.after(fallback);
     const dialog = document.createElement('dialog');
     dialog.className = 'el-payment-dialog';
@@ -41,13 +45,24 @@
     dialog.setAttribute('aria-describedby', 'el-payment-message');
     dialog.innerHTML = '<div class="el-payment-dialog-top"><span class="el-payment-brand connect-brand"><span class="connect-brand__mark" aria-hidden="true"><img src="/static/logoic.webp" alt="" width="384" height="144"></span>Intégrale Connect</span><button type="button" class="el-dialog-close" data-payment-close aria-label="Fermer et vérifier le paiement">×</button></div><div class="el-payment-dialog-body"><div class="el-payment-orbit" data-payment-spinner aria-hidden="true"><span></span></div><span class="eyebrow blue">DERNIÈRE ÉTAPE</span><h2 id="el-payment-title" data-payment-title>Préparation du paiement en cours</h2><p id="el-payment-message" data-payment-message role="status">Quelques instants, nous préparons votre paiement sécurisé.</p><div class="el-payment-steps" aria-hidden="true"><span>Commande enregistrée</span><i></i><strong>Paiement sécurisé</strong><i></i><span>Confirmation</span></div><div class="el-payment-actions"><button type="button" class="button primary" data-payment-open hidden>Ouvrir le paiement Qonto</button><button type="button" class="button secondary" data-payment-check hidden>J’ai terminé, vérifier mon paiement</button></div><p class="el-payment-help">Gardez cette page ouverte. Après paiement, fermez la fenêtre Qonto : votre confirmation apparaîtra ici.</p></div>';
     document.body.append(dialog);
-    dialog.showModal();
     let popup = needsPayment ? paymentWindow() : null;
+    // Never leave two overlapping dialogs behind the hosted payment window.
+    if (popup) fallback.hidden = false;
+    else dialog.showModal();
     let urls, paymentUrl = '', launched = false, dismissed = false, checking = false;
     let stopped = false, disposed = false, busy = false, pendingRefresh = false, timer, watcher;
+    let ignoredCloses = 0;
     const started = Date.now();
     const openButton = dialog.querySelector('[data-payment-open]');
     const checkButton = dialog.querySelector('[data-payment-check]');
+    function showTracking() {
+      fallback.hidden = true;
+      if (!dialog.open) dialog.showModal();
+    }
+    function parkTracking() {
+      fallback.hidden = false;
+      if (dialog.open) { ignoredCloses++; dialog.close(); }
+    }
     function paint(title, message, waiting = true) {
       for (const panel of [dialog, fallback]) {
         panel.querySelector('[data-payment-title]').textContent = title;
@@ -86,6 +101,7 @@
         launched = true;
         dismissed = false;
         checking = false;
+        parkTracking();
         openButton.textContent = 'Retrouver le paiement Qonto';
         paint('Votre paiement est ouvert', 'Réglez votre facture dans la fenêtre Qonto, puis fermez-la pour retrouver votre commande.');
       } catch (_) {
@@ -118,6 +134,7 @@
         openButton.hidden = !paymentUrl;
         if (state.invoice_status === 'canceled') {
           stop(); closePopup();
+          showTracking();
           paint('Commande annulée', 'Cette commande a été annulée. Retrouvez vos autres commandes dans votre espace.', false);
         } else if (state.payment_status === 'partially_paid') {
           paint('Règlement partiel reçu', 'Votre commande sera confirmée après règlement du solde. Consultez le suivi de votre commande.', false);
@@ -128,6 +145,7 @@
           else if (!launched) paint('Votre paiement est prêt', 'Cliquez sur « Ouvrir le paiement Qonto » pour régler votre commande.', false);
         } else if (['needs_setup', 'needs_review', 'retry'].includes(state.status)) {
           closePopup();
+          showTracking();
           paint('Votre commande est enregistrée', 'La préparation du paiement demande une vérification. Retrouvez son suivi dans votre espace.', false);
         }
       } catch (_) {
@@ -139,8 +157,9 @@
         else if (!stopped) { stop(); paint('Retrouvez votre commande', 'Le suivi reste disponible dans votre espace. Aucun nouveau paiement n’est nécessaire si vous venez de régler.', false); }
       }
     }
-    function verify() {
+    function verify(reveal = false) {
       if (stopped) return;
+      if (reveal) showTracking();
       checking = true;
       dismissed = true;
       paint('Vérification du paiement en cours', 'Nous vérifions votre règlement auprès de Qonto…');
@@ -149,30 +168,37 @@
     function returned() { if (launched && !document.hidden) verify(); }
     function visible() { if (!document.hidden) returned(); }
     watcher = setInterval(() => {
-      if (popup && popup.closed) { popup = null; verify(); }
+      if (popup && popup.closed) { popup = null; verify(true); }
     }, 700);
     window.addEventListener('focus', returned);
     document.addEventListener('visibilitychange', visible);
     dialog.querySelector('[data-payment-close]').addEventListener('click', () => dialog.close());
     dialog.addEventListener('close', () => {
+      if (ignoredCloses) { ignoredCloses--; return; }
       if (disposed) return;
       fallback.hidden = false;
       closePopup();
       verify();
       fallback.querySelector('[data-payment-resume]').focus();
     });
-    fallback.querySelector('[data-payment-resume]').addEventListener('click', () => { dialog.showModal(); poll(); });
+    fallback.querySelector('[data-payment-resume]').addEventListener('click', () => {
+      if (popup && !popup.closed) { popup.focus(); return; }
+      showTracking(); poll();
+    });
     openButton.addEventListener('click', () => {
       if (popup && !popup.closed && launched) { popup.focus(); return; }
       launch();
     });
-    checkButton.addEventListener('click', () => { closePopup(); verify(); });
+    for (const button of [checkButton, fallback.querySelector('[data-payment-check]')]) {
+      button.addEventListener('click', () => { closePopup(); verify(true); });
+    }
     return {
       start(value) {
         urls = Object.fromEntries(['order_url', 'status_url', 'confirmation_url', 'refresh_url'].map(key => [key, safeLocal(value[key])]));
         const link = fallback.querySelector('[data-order-open]'); link.href = urls.order_url; link.hidden = false;
         window.history.replaceState(null, '', urls.order_url);
         checkButton.hidden = false;
+        fallback.querySelector('[data-payment-check]').hidden = false;
         const refresh = pendingRefresh; pendingRefresh = false;
         poll(refresh);
       },
