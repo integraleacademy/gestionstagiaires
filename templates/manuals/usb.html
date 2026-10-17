@@ -1,8 +1,8 @@
 {% extends 'manuals/layout.html' %}
 {% from 'manuals/_showcase_macros.html' import icon %}
 {% from 'manuals/_usb_macros.html' import usb_art, support_name %}
-{% block title %}{{ 'PowerPoint ' ~ book.name ~ ' sur clé USB' if book else 'Supports formateurs PowerPoint sur clé USB' }}{% endblock %}
-{% block description %}{{ 'Découvrez le support PowerPoint ' ~ book.name ~ ' : contenu, utilisation et tarif TTC.' if book else 'Des cours prêts à projeter : 14 supports PowerPoint pour vos formateurs. 99 € ou 199 € TTC, clé USB et livraison incluses, sans abonnement.' }}{% endblock %}
+{% block title %}{{ 'PowerPoint ' ~ seo_product_name(book) ~ ' sur clé USB' if book else 'Supports PowerPoint sur clé USB : APS, SSIAP, VTC' }}{% endblock %}
+{% block description %}{% if book %}Support PowerPoint {{ seo_product_name(book) }} pour formateurs : {{ book.usb_price|manuals_money }} TTC, clé USB et livraison incluses. Découvrez les aperçus. Achat sans abonnement.{% else %}Supports PowerPoint APS, SSIAP, A3P, VTC, SST et habilitations électriques. 14 cours sur clé USB, dès 99 € TTC, livraison incluse, sans abonnement.{% endif %}{% endblock %}
 {% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/usb-showcase.css', v='20261013-3') }}"><script src="{{ url_for('static', filename='js/support-previews.js', v='20261013-1') }}" defer></script>{% endblock %}
 {% block content %}
 <div class="sf-showcase">

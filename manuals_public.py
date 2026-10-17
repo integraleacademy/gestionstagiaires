@@ -5,12 +5,13 @@ from datetime import date
 from pathlib import Path
 from urllib.parse import urlparse
 from xml.sax.saxutils import escape
-from flask import Response, abort, request, session, url_for
+from flask import Response, abort, redirect, request, session, url_for
 from manuals_catalogue import CATALOGUE
 from manuals_support_previews import SUPPORT_PREVIEWS
 import elearning_orders
 import elearning_sales
 from elearning_programmes import PROGRAMMES, programme_download
+from manuals_seo import indexable, product_name, public_metadata, public_origin
 
 TERMS_VERSION = '2026-10-16'
 # Published versions are immutable: append future versions, keep the old file.
@@ -22,23 +23,6 @@ PUBLIC_ENDPOINTS = {'manuals_shop.usb_catalogue', 'manuals_shop.usb_detail', 'ma
 CACHEABLE = PUBLIC_ENDPOINTS | {'home', 'manuals_shop.public_presentation', 'manuals_shop.public_manual_detail'}
 
 
-def public_origin():
-    value = os.getenv('MANUALS_PUBLIC_URL') or os.getenv('MANUALS_BASE_URL') or os.getenv('RENDER_EXTERNAL_URL') or request.url_root
-    parsed = urlparse(value)
-    if parsed.scheme not in {'http', 'https'} or not parsed.hostname or parsed.username:
-        return request.url_root.rstrip('/')
-    return parsed.scheme + '://' + parsed.netloc
-
-
-def indexable():
-    host = request.host.split(':')[0].lower()
-    configured = os.getenv('MANUALS_INDEXABLE', '').lower()
-    # A staging/preview host must never compete with the commercial domain.
-    if '.onrender.com' in host or host in {'localhost', '127.0.0.1'} or 'test' in host or 'preview' in host:
-        return False
-    return configured == 'true' and host == urlparse(public_origin()).hostname
-
-
 def acceptance(host):
     if request.form.get('terms_version') != TERMS_VERSION:
         abort(400, 'Les conditions de vente ont évolué. Rechargez le récapitulatif avant de confirmer.')
@@ -47,6 +31,22 @@ def acceptance(host):
 
 
 def register_routes(host, bp, *, page):
+    @host.app.before_request
+    def storefront_canonical_host():
+        # Normalize only the two commercial domains, never admin, POST requests
+        # or staging services that share this application.
+        primary = public_origin()
+        primary_host = urlparse(primary).hostname
+        aliases = {'integraleconnect.com', 'www.integraleconnect.com'}
+        current_host = request.host.split(':')[0].lower()
+        if (request.method in {'GET', 'HEAD'} and request.endpoint in CACHEABLE
+                and primary_host in aliases and current_host in aliases
+                and current_host != primary_host):
+            target = primary + request.path
+            if request.query_string:
+                target += '?' + request.query_string.decode('latin-1')
+            return redirect(target, code=301)
+
     @host.app.context_processor
     def commercial_context():
         completed = ''
@@ -63,7 +63,9 @@ def register_routes(host, bp, *, page):
                 'storefront_staff': bool(session.get('admin_logged_in') and host._is_super_admin_session() and not session.get('assist_partner_id')),
                 'storefront_customer': bool(session.get('admin_logged_in') and (host._is_external_partner_session() or (host._is_super_admin_session() and session.get('assist_partner_id')))),
                 'cart_completed_key':completed, 'terms_version': TERMS_VERSION, 'canonical_url': public_origin() + request.path,
-                'public_origin': public_origin(), 'page_indexable': indexable() and request.endpoint in CACHEABLE}
+                'public_origin': public_origin(), 'page_indexable': indexable() and request.endpoint in CACHEABLE,
+                'public_metadata': public_metadata, 'seo_product_name': product_name,
+                'google_site_verification': os.getenv('GOOGLE_SITE_VERIFICATION', '').strip()}
 
     @host.app.after_request
     def storefront_headers(response):
@@ -77,7 +79,11 @@ def register_routes(host, bp, *, page):
             response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
         elif request.endpoint and request.endpoint.startswith('manuals_shop.'):
             response.headers.setdefault('Content-Security-Policy', "base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self' https://pay.qonto.com https://pay-sandbox.qonto.com")
-        if not indexable() or request.endpoint not in CACHEABLE:
+        public_image = (request.endpoint == 'static'
+                        and (request.path.startswith(('/static/manuals/', '/static/images/'))
+                             or request.path == '/static/logoic.webp')
+                        and Path(request.path).suffix.lower() in {'.webp', '.png', '.jpg', '.jpeg', '.avif', '.gif', '.svg'})
+        if not indexable() or response.status_code >= 400 or (request.endpoint not in CACHEABLE and not public_image):
             response.headers['X-Robots-Tag'] = 'noindex, nofollow' if not indexable() else 'noindex, follow'
         if request.endpoint in CACHEABLE and request.method in {'GET','HEAD'} and response.status_code == 200:
             response.headers['Cache-Control'] = 'private, max-age=120' if not session.get('admin_logged_in') else 'no-store'

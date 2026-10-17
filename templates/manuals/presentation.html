@@ -1,7 +1,7 @@
 {% extends 'manuals/layout.html' %}
 {% from 'manuals/_showcase_macros.html' import icon, book_card %}
-{% block title %}Découvrez nos manuels de formation{% endblock %}
-{% block description %}15 manuels de formation illustrés, avec des extraits à feuilleter. Votre logo sur la couverture et la livraison sont inclus, dès 50 exemplaires par titre.{% endblock %}
+{% block title %}Manuels de formation APS, SSIAP, VTC et SST{% endblock %}
+{% block description %}Manuels APS, SSIAP, A3P, VTC, SST et habilitations électriques pour vos stagiaires. Livres illustrés, logo et livraison inclus, dès 50 exemplaires par titre.{% endblock %}
 {% block extra_styles %}{% if public %}<link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-catalogue.css', v='20261013-1') }}">{% endif %}{% endblock %}
 {% block content %}
 {% if public %}{% include 'manuals/_manuals_catalogue.html' %}{% else %}

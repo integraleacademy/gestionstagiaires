@@ -1,7 +1,7 @@
 {% extends 'manuals/layout.html' %}
 {% set is_mac = course and course.code == 'mac-aps' %}
-{% block title %}{{ 'E-learning ' ~ course.name if course else 'Parcours e-learning pour les organismes de formation' }}{% endblock %}
-{% block description %}{{ (course.title ~ ' : programme, durée pédagogique et accès pour vos stagiaires.') if course else 'Découvrez les parcours e-learning disponibles, leur programme et le suivi de progression pour votre organisme.' }}{% endblock %}
+{% block title %}{{ 'E-learning ' ~ course.name ~ ' · Accès et programme' if course else 'E-learning APS, MAC APS, A3P et VTC pour organismes' }}{% endblock %}
+{% block description %}{% if course %}E-learning {{ course.name }} : {{ course.duration_label }} de parcours pour vos stagiaires. Programme, aperçus et suivi de progression. Accès valable 6 mois après envoi des identifiants.{% else %}Accès e-learning APS, MAC APS, A3P et VTC pour organismes de formation. Consultez les programmes, durées, tarifs et outils de suivi de vos stagiaires.{% endif %}{% endblock %}
 {% block extra_styles %}{% if not course %}<link rel="stylesheet" href="{{ url_for('static', filename='css/learning-catalogue.css', v='20261014-a3p') }}">{% endif %}<link rel="stylesheet" href="{{ url_for('static', filename='css/course-showcase.css', v='20261015-programme') }}"><script src="{{ url_for('static', filename='js/course-showcase.js', v='20261012-design-1') }}" defer></script>{% endblock %}
 {% block content %}
 {% if course %}{% include 'manuals/_course_showcase.html' %}{% else %}
