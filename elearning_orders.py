@@ -177,10 +177,11 @@ def status_view(order):
 
 
 def checkout_response(oid):
-    """Progressive enhancement for payment in the current browser tab."""
+    """Keep the order page open while the hosted payment is in progress."""
     location = url_for("manuals_shop.elearning_order", oid=oid)
     if request.accept_mimetypes.best == "application/json":
         return {"order_url": location, "status_url": url_for("manuals_shop.elearning_status", oid=oid),
+                "refresh_url": url_for("manuals_shop.elearning_refresh", oid=oid),
                 "confirmation_url": url_for("manuals_shop.elearning_confirmation", oid=oid)}
     return redirect(location, code=303)
 
@@ -601,6 +602,9 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         order = find(host.load_data(), oid)
         commerce.queue_again(host, order["partner_id"], oid, throttle=not host._is_super_admin_session())
         kick_worker()
+        if request.accept_mimetypes.best == "application/json":
+            current = find(host.load_data(run_background_tasks=False), oid)
+            return status_view(current), 200, {"Cache-Control": "no-store"}
         flash("La vérification du paiement et des e-mails est relancée.", "success")
         return redirect(url_for("manuals_shop.elearning_order", oid=oid), code=303)
 

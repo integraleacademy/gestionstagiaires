@@ -36,3 +36,57 @@
 .el-payment-orbit span:after{content:"€";font-size:30px;font-weight:700}.el-payment-orbit[hidden],.el-payment-followup a[hidden]{display:none}
 @keyframes el-payment-turn{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.el-payment-orbit:before{animation:none;border-top-color:#2463bc}}
+
+/* Hosted checkout: the Connect dialog stays available while Qonto is open. */
+.el-payment-followup[hidden]{display:none!important}
+.el-popup-preparation{margin:0;padding:24px;min-height:100vh;box-sizing:border-box;display:grid;place-items:center;background:#f3f7fd;font-family:system-ui,sans-serif;color:#18304b}
+.el-popup-preparation .el-payment-followup{width:100%;box-sizing:border-box}
+.el-popup-preparation h1{font-size:28px;line-height:1.3}
+html:has(.el-payment-dialog[open],.el-success-dialog[open]){overflow:hidden}
+.el-payment-dialog{padding:0;border:1px solid #e1e8f5;border-radius:26px;width:min(620px,calc(100vw - 28px));max-width:none;max-height:calc(100dvh - 28px);overflow:auto;background:#fff;color:#18304b;box-shadow:0 28px 100px #0c264866;font-family:inherit}
+.el-payment-dialog::backdrop,.el-success-dialog::backdrop{background:#0b2344a3;backdrop-filter:blur(7px)}
+.el-payment-dialog[open]{animation:el-dialog-enter .3s ease-out both}
+.el-payment-dialog [hidden]{display:none!important}
+.el-payment-dialog-top{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #edf1f7}
+.el-payment-brand{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:750}
+.el-payment-brand .connect-brand__mark{--connect-mark-size:34px;border-radius:9px}
+.el-dialog-close{border:1px solid #dce5f0;background:#fff;color:#5a6f89;border-radius:50%;width:38px;height:38px;font:28px/1 system-ui;display:grid;place-items:center;cursor:pointer;flex-shrink:0}
+.el-dialog-close:hover{background:#eef4fd;color:#143d76}
+.el-dialog-close:focus-visible,.el-payment-dialog button:focus-visible,.el-success-dialog button:focus-visible{outline:3px solid #8ab8ff;outline-offset:3px}
+.el-payment-dialog-body{padding:44px 32px 26px;text-align:center;background:radial-gradient(ellipse at top,#f2f7ff,transparent 65%)}
+.el-payment-dialog h2{font-size:clamp(24px,4vw,31px);line-height:1.25;letter-spacing:-.8px;margin:12px 0 16px}
+.el-payment-dialog p{line-height:1.7;font-size:15px;color:#60728b;margin:0 auto 24px;max-width:470px}
+.el-payment-dialog .eyebrow{font-size:10px;font-weight:800;letter-spacing:1.8px;color:#2964bb}
+.el-payment-dialog .el-payment-orbit{margin-bottom:28px}
+.el-payment-steps{display:flex;align-items:center;justify-content:center;gap:9px;margin:25px 0;color:#7a8aa1;font-size:10px}
+.el-payment-steps strong{color:#255fba}
+.el-payment-steps i{height:1px;background:#cbd9ed;width:20px}
+.el-payment-actions{display:flex;flex-direction:column;gap:10px;margin:0 auto 20px;max-width:390px}
+.el-payment-actions .button{justify-content:center;width:100%;box-sizing:border-box}
+.el-payment-dialog p.el-payment-help{font-size:12px;line-height:1.6;margin-bottom:0}
+@keyframes el-dialog-enter{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
+
+/* Celebration is gated by server-confirmed entitlement, never by closing Qonto. */
+.el-success-dialog{border:0;padding:24px;margin:0;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;box-sizing:border-box;overflow:auto;background:transparent;color:#18304b;font-family:inherit}
+.el-success-dialog[open]{display:grid;place-items:center}
+.el-success-card{position:relative;z-index:1;width:min(570px,100%);box-sizing:border-box;text-align:center;padding:42px 42px 26px;border:1px solid #fff;border-radius:30px;background:radial-gradient(ellipse at 50% 0%,#fff0d7,transparent 48%),#fff;box-shadow:0 35px 100px #03162f4d;animation:el-dialog-enter .4s cubic-bezier(.16,1,.3,1) both}
+.el-success-card>.el-dialog-close{position:absolute;right:18px;top:18px}
+.el-success-party{position:relative;width:145px;height:122px;margin:0 auto 15px;display:grid;place-items:center}
+.el-success-party:before{content:"";position:absolute;width:104px;height:104px;border-radius:50%;background:#ffebc6;box-shadow:0 0 0 13px #fff5e1}
+.el-success-party>span{position:relative;font-size:78px;line-height:1.2;animation:el-party-pop .8s cubic-bezier(.34,1.56,.64,1) both}
+.el-success-party>i,.el-success-party>b{position:absolute;font-style:normal;color:#ff9d27;font-size:29px;animation:el-party-pop 1s .15s both}
+.el-success-party>i{left:0;top:14px;color:#5c7fee}.el-success-party>b{right:0;bottom:12px}
+.el-success-eyebrow{font-size:11px;font-weight:850;letter-spacing:2.5px;color:#d17718}
+.el-success-card h2{font-size:clamp(34px,6vw,52px);line-height:1.1;letter-spacing:-1.8px;margin:14px 0 20px;font-weight:850;color:#163557}
+.el-success-card h2 em{font-style:normal;color:#2463bd}
+.el-success-card>p{font-size:15px;line-height:1.7;color:#60728b;margin:0 0 24px}
+.el-success-receipt{display:flex;justify-content:space-between;align-items:center;gap:14px;background:#eef8f4;border:1px solid #d9eee5;padding:16px 18px;border-radius:14px;margin:24px 0;font-size:13px;color:#227c60}
+.el-success-receipt>span{display:flex;align-items:center;gap:8px;text-align:left}.el-success-receipt svg{flex-shrink:0}.el-success-receipt>strong{white-space:nowrap}
+.el-success-continue{display:flex;align-items:center;justify-content:center;gap:18px;width:100%;box-sizing:border-box;min-height:54px;font-size:15px!important;border-radius:13px!important;box-shadow:0 7px 18px #2463bd24}
+.el-success-card>p.el-success-note{font-size:11px;margin:15px 0 16px}.el-success-reference{font-size:10px;letter-spacing:1px;color:#8c9bb0}
+.el-confetti{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:2}
+.el-confetti-piece{position:absolute;left:var(--x);top:-28px;width:9px;height:15px;opacity:0;animation:el-confetti-fall var(--duration) var(--delay) cubic-bezier(.18,.65,.45,1) both}
+@keyframes el-confetti-fall{0%{opacity:1;transform:translate3d(0,-3vh,0) rotate(0)}80%{opacity:1}100%{opacity:0;transform:translate3d(var(--drift),110vh,0) rotate(var(--rotation))}}
+@keyframes el-party-pop{0%{opacity:0;transform:scale(.4) rotate(-18deg)}65%{opacity:1;transform:scale(1.12) rotate(5deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@media(max-width:540px){.el-payment-dialog-body{padding:34px 20px 23px}.el-payment-dialog-top{padding:16px 18px}.el-payment-steps{font-size:9px;gap:5px}.el-payment-steps i{width:10px}.el-success-dialog{padding:16px}.el-success-card{padding:35px 23px 22px;border-radius:23px}.el-success-card h2{letter-spacing:-1px}.el-success-receipt{padding:13px 11px;font-size:12px}.el-success-party{height:105px}.el-success-party>span{font-size:68px}.el-success-party:before{width:90px;height:90px}}
+@media(prefers-reduced-motion:reduce){.el-payment-dialog[open],.el-success-card,.el-success-party>span,.el-success-party>i,.el-success-party>b,.el-confetti-piece{animation:none}.el-confetti{display:none}}

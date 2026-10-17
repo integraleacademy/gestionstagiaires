@@ -11,139 +11,195 @@
     if (url.protocol !== 'https:' || !['pay.qonto.com', 'pay-sandbox.qonto.com'].includes(url.hostname) || url.username || url.password) throw new Error('Adresse de paiement invalide.');
     return url.href;
   };
-  function preparation(container) {
+  function paymentWindow() {
+    // Reserve the window during the user's click, before asynchronous creation.
+    // Qonto forbids framing (frame-ancestors 'none'); never proxy its payment UI.
+    let popup;
+    try {
+      popup = window.open('', '_blank', 'popup=yes,width=600,height=800,resizable=yes,scrollbars=yes');
+      if (popup) {
+        popup.document.write('<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Paiement · Intégrale Connect</title><link rel="stylesheet" href="' + location.origin + '/static/css/elearning-orders.css?v=20261017-modal-party"><body class="el-popup-preparation"><main class="el-payment-followup"><div class="el-payment-orbit" aria-hidden="true"><span></span></div><p class="eyebrow">INTÉGRALE CONNECT</p><h1>Préparation du paiement en cours</h1><p>Votre page de paiement sécurisé arrive dans quelques instants.</p><p>Après paiement, fermez cette fenêtre pour retrouver votre confirmation.</p></main></body></html>');
+        popup.document.close();
+        // Qonto must never get an opener capable of navigating our order page.
+        popup.opener = null;
+      }
+    } catch (_) { try { popup?.close(); } catch (_) {} return null; }
+    return popup || null;
+  }
+  function checkout(container, csrf, needsPayment) {
     active = true;
     window.elPaymentInProgress = true;
-    const panel = document.createElement('section');
-    panel.className = 'form-card el-payment-followup';
-    panel.setAttribute('aria-live', 'polite');
-    panel.setAttribute('aria-busy', 'true');
-    panel.innerHTML = '<div class="el-payment-orbit" aria-hidden="true"><span></span></div><span class="eyebrow blue">PAIEMENT SÉCURISÉ</span><h2 data-payment-title>Préparation du paiement en cours</h2><p data-payment-message>Quelques instants, nous préparons votre paiement sécurisé.</p><p class="small">Le paiement Qonto s’affichera automatiquement dans cet onglet.</p><div class="action-row"><a class="button primary" data-payment-open hidden rel="noreferrer">Continuer vers le paiement</a><a class="button secondary" data-order-open hidden>Retrouver ma commande</a></div>';
-    container.after(panel);
-    container.hidden = true;
-    panel.scrollIntoView({behavior: 'smooth', block: 'center'});
-    return panel;
-  }
-  function followPayment(urls, panel) {
-    const statusUrl = safeLocal(urls.status_url);
-    const confirmationUrl = safeLocal(urls.confirmation_url);
-    const orderUrl = safeLocal(urls.order_url);
-    const orderLink = panel.querySelector('[data-order-open]');
-    orderLink.href = orderUrl;
-    orderLink.hidden = false;
-    // Back or reload must restore the existing order, never the submitted quote.
-    window.history.replaceState(null, '', orderUrl);
-    const message = panel.querySelector('[data-payment-message]');
-    const title = panel.querySelector('[data-payment-title]');
-    const payLink = panel.querySelector('[data-payment-open]');
-    const spinner = panel.querySelector('.el-payment-orbit');
-    let launched = false, leaving = false, busy = false, stopped = false, timer;
+    const previousFocus = document.activeElement;
+    const fallback = document.createElement('section');
+    fallback.className = 'form-card el-payment-followup';
+    fallback.hidden = true;
+    fallback.innerHTML = '<div class="el-payment-orbit" data-payment-spinner aria-hidden="true"><span></span></div><h2 data-payment-title>Préparation du paiement en cours</h2><p data-payment-message role="status">Votre commande est en cours de préparation.</p><div class="action-row"><button class="button primary" type="button" data-payment-resume>Voir le suivi du paiement</button><a class="button secondary" data-order-open hidden>Consulter ma commande</a></div>';
+    container.after(fallback);
+    const dialog = document.createElement('dialog');
+    dialog.className = 'el-payment-dialog';
+    dialog.setAttribute('aria-labelledby', 'el-payment-title');
+    dialog.setAttribute('aria-describedby', 'el-payment-message');
+    dialog.innerHTML = '<div class="el-payment-dialog-top"><span class="el-payment-brand connect-brand"><span class="connect-brand__mark" aria-hidden="true"><img src="/static/logoic.webp" alt="" width="384" height="144"></span>Intégrale Connect</span><button type="button" class="el-dialog-close" data-payment-close aria-label="Fermer et vérifier le paiement">×</button></div><div class="el-payment-dialog-body"><div class="el-payment-orbit" data-payment-spinner aria-hidden="true"><span></span></div><span class="eyebrow blue">DERNIÈRE ÉTAPE</span><h2 id="el-payment-title" data-payment-title>Préparation du paiement en cours</h2><p id="el-payment-message" data-payment-message role="status">Quelques instants, nous préparons votre paiement sécurisé.</p><div class="el-payment-steps" aria-hidden="true"><span>Commande enregistrée</span><i></i><strong>Paiement sécurisé</strong><i></i><span>Confirmation</span></div><div class="el-payment-actions"><button type="button" class="button primary" data-payment-open hidden>Ouvrir le paiement Qonto</button><button type="button" class="button secondary" data-payment-check hidden>J’ai terminé, vérifier mon paiement</button></div><p class="el-payment-help">Gardez cette page ouverte. Après paiement, fermez la fenêtre Qonto : votre confirmation apparaîtra ici.</p></div>';
+    document.body.append(dialog);
+    dialog.showModal();
+    let popup = needsPayment ? paymentWindow() : null;
+    let urls, paymentUrl = '', launched = false, dismissed = false, checking = false;
+    let stopped = false, disposed = false, busy = false, pendingRefresh = false, timer, watcher;
     const started = Date.now();
-    function waiting(value) {
-      spinner.hidden = !value;
-      panel.setAttribute('aria-busy', String(value));
+    const openButton = dialog.querySelector('[data-payment-open]');
+    const checkButton = dialog.querySelector('[data-payment-check]');
+    function paint(title, message, waiting = true) {
+      for (const panel of [dialog, fallback]) {
+        panel.querySelector('[data-payment-title]').textContent = title;
+        panel.querySelector('[data-payment-message]').textContent = message;
+        panel.querySelector('[data-payment-spinner]').hidden = !waiting;
+        panel.setAttribute('aria-busy', String(waiting));
+      }
     }
-    function openPayment() {
-      const paymentUrl = safePayment(payLink.href);
-      launched = true;
-      leaving = true;
-      title.textContent = 'Ouverture du paiement sécurisé';
-      message.textContent = 'Vous allez régler votre commande sur Qonto.';
-      waiting(true);
-      location.assign(paymentUrl);
+    function closePopup() {
+      try { if (popup && !popup.closed) popup.close(); } catch (_) {}
+      popup = null;
     }
-    payLink.addEventListener('click', event => { event.preventDefault(); openPayment(); });
-    async function poll() {
-      if (busy || stopped || leaving) return;
+    function stop() {
+      stopped = true;
+      clearTimeout(timer);
+      clearInterval(watcher);
+      window.removeEventListener('focus', returned);
+      document.removeEventListener('visibilitychange', visible);
+    }
+    function finish() {
+      stop();
+      closePopup();
+      paint('Paiement confirmé !', 'Votre confirmation est prête…');
+      location.assign(urls.confirmation_url);
+    }
+    function launch() {
+      if (!paymentUrl || stopped) return;
+      try {
+        if (!popup || popup.closed) popup = paymentWindow();
+        if (!popup) {
+          paint('Votre paiement est prêt', 'Cliquez sur « Ouvrir le paiement Qonto » et autorisez son ouverture pour continuer.', false);
+          return;
+        }
+        popup.location.replace(safePayment(paymentUrl));
+        popup.focus();
+        launched = true;
+        dismissed = false;
+        checking = false;
+        openButton.textContent = 'Retrouver le paiement Qonto';
+        paint('Votre paiement est ouvert', 'Réglez votre facture dans la fenêtre Qonto, puis fermez-la pour retrouver votre commande.');
+      } catch (_) {
+        closePopup();
+        paint('Votre paiement est prêt', 'Cliquez sur « Ouvrir le paiement Qonto » pour poursuivre.', false);
+      }
+    }
+    async function poll(refresh = false) {
+      if (stopped) return;
+      if (!urls || busy) { pendingRefresh = pendingRefresh || refresh; return; }
       clearTimeout(timer);
       busy = true;
       try {
-        const response = await fetch(statusUrl, {credentials: 'same-origin', cache: 'no-store', headers: {'Accept': 'application/json'}});
+        if (refresh) {
+          const body = new FormData(); body.append('csrf_token', csrf);
+          const refreshResponse = await fetch(urls.refresh_url, {method: 'POST', credentials: 'same-origin', body, headers: {'Accept': 'application/json'}});
+          if (!refreshResponse.ok || refreshResponse.redirected) throw new Error('refresh');
+        }
+        const response = await fetch(urls.status_url, {credentials: 'same-origin', cache: 'no-store', headers: {'Accept': 'application/json'}});
         if (response.redirected || response.status === 401 || response.status === 403) {
-          title.textContent = 'Retrouvez votre commande';
-          message.textContent = 'Reconnectez-vous pour consulter la confirmation de votre commande.';
-          stopped = true;
-          waiting(false);
+          stop(); closePopup(); openButton.hidden = true;
+          paint('Retrouvez votre commande', 'Reconnectez-vous à votre espace pour consulter la confirmation.', false);
+          fallback.hidden = false;
           return;
         }
-        if (!response.ok) throw new Error('Suivi temporairement indisponible');
+        if (!response.ok) throw new Error('status');
         const state = await response.json();
-        if (state.paid) {
-          stopped = true;
-          title.textContent = 'Commande confirmée';
-          message.textContent = 'Paiement reçu. Nous affichons votre confirmation.';
-          location.assign(confirmationUrl);
-          return;
-        }
-        if (state.checkout_url) {
-          payLink.href = safePayment(state.checkout_url);
-          payLink.hidden = false;
-          if (!launched) { openPayment(); return; }
-          title.textContent = 'Suivi de votre paiement';
-          message.textContent = 'Si vous avez réglé, la confirmation apparaîtra dès validation du paiement. Vous pouvez aussi reprendre un paiement interrompu.';
-          waiting(false);
-        } else {
-          payLink.hidden = true;
-          waiting(true);
-          if (state.payment_status === 'processing' || state.payment_link_status === 'paid') {
-            title.textContent = 'Confirmation du paiement en cours';
-            message.textContent = 'Votre règlement est en cours de vérification. Patientez quelques instants…';
-          } else if (state.payment_status === 'partially_paid') {
-            title.textContent = 'Règlement partiel reçu';
-            message.textContent = 'Consultez votre commande pour le suivi du solde.';
-            waiting(false);
-          } else if (state.invoice_status === 'canceled') {
-            title.textContent = 'Commande annulée';
-            message.textContent = 'Cette commande a été annulée.';
-            stopped = true;
-            waiting(false);
-          } else if (['needs_setup', 'needs_review', 'retry'].includes(state.status)) {
-            title.textContent = 'Votre commande est enregistrée';
-            message.textContent = 'La préparation du paiement demande une vérification. Retrouvez son suivi dans votre espace.';
-            waiting(false);
-          }
+        if (state.paid === true) { finish(); return; }
+        paymentUrl = state.checkout_url ? safePayment(state.checkout_url) : '';
+        openButton.hidden = !paymentUrl;
+        if (state.invoice_status === 'canceled') {
+          stop(); closePopup();
+          paint('Commande annulée', 'Cette commande a été annulée. Retrouvez vos autres commandes dans votre espace.', false);
+        } else if (state.payment_status === 'partially_paid') {
+          paint('Règlement partiel reçu', 'Votre commande sera confirmée après règlement du solde. Consultez le suivi de votre commande.', false);
+        } else if (state.payment_status === 'processing' || state.payment_link_status === 'paid' || checking) {
+          paint('Vérification du paiement en cours', 'Nous attendons la confirmation de Qonto. Si vous venez de payer, patientez quelques instants.');
+        } else if (paymentUrl) {
+          if (!launched && !dismissed && popup && !popup.closed) launch();
+          else if (!launched) paint('Votre paiement est prêt', 'Cliquez sur « Ouvrir le paiement Qonto » pour régler votre commande.', false);
+        } else if (['needs_setup', 'needs_review', 'retry'].includes(state.status)) {
+          closePopup();
+          paint('Votre commande est enregistrée', 'La préparation du paiement demande une vérification. Retrouvez son suivi dans votre espace.', false);
         }
       } catch (_) {
-        title.textContent = 'Vérification en cours';
-        message.textContent = 'La vérification reprend dans quelques instants. Votre commande est enregistrée.';
+        paint('Vérification momentanément indisponible', 'Votre commande est enregistrée. Nous réessayons automatiquement ; vous pouvez aussi la retrouver dans votre espace.', false);
       } finally {
         busy = false;
-        if (!stopped && !leaving && Date.now() - started < 30 * 60 * 1000) timer = setTimeout(poll, 3000);
-        else if (!stopped && !leaving) { message.textContent = 'Retrouvez le suivi et la confirmation de votre paiement dans votre commande.'; waiting(false); }
+        if (!stopped && pendingRefresh) { pendingRefresh = false; poll(true); }
+        else if (!stopped && Date.now() - started < 30 * 60 * 1000) timer = setTimeout(poll, 3000);
+        else if (!stopped) { stop(); paint('Retrouvez votre commande', 'Le suivi reste disponible dans votre espace. Aucun nouveau paiement n’est nécessaire si vous venez de régler.', false); }
       }
     }
-    // Qonto's invoice page has no documented return URL. If the browser restores
-    // this page from its cache, refresh payment status without reopening Qonto.
-    window.addEventListener('pageshow', event => {
-      if (event.persisted) { leaving = false; launched = true; stopped = false; poll(); }
+    function verify() {
+      if (stopped) return;
+      checking = true;
+      dismissed = true;
+      paint('Vérification du paiement en cours', 'Nous vérifions votre règlement auprès de Qonto…');
+      poll(true);
+    }
+    function returned() { if (launched && !document.hidden) verify(); }
+    function visible() { if (!document.hidden) returned(); }
+    watcher = setInterval(() => {
+      if (popup && popup.closed) { popup = null; verify(); }
+    }, 700);
+    window.addEventListener('focus', returned);
+    document.addEventListener('visibilitychange', visible);
+    dialog.querySelector('[data-payment-close]').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('close', () => {
+      if (disposed) return;
+      fallback.hidden = false;
+      closePopup();
+      verify();
+      fallback.querySelector('[data-payment-resume]').focus();
     });
-    window.addEventListener('focus', poll);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
-    poll();
+    fallback.querySelector('[data-payment-resume]').addEventListener('click', () => { dialog.showModal(); poll(); });
+    openButton.addEventListener('click', () => {
+      if (popup && !popup.closed && launched) { popup.focus(); return; }
+      launch();
+    });
+    checkButton.addEventListener('click', () => { closePopup(); verify(); });
+    return {
+      start(value) {
+        urls = Object.fromEntries(['order_url', 'status_url', 'confirmation_url', 'refresh_url'].map(key => [key, safeLocal(value[key])]));
+        const link = fallback.querySelector('[data-order-open]'); link.href = urls.order_url; link.hidden = false;
+        window.history.replaceState(null, '', urls.order_url);
+        checkButton.hidden = false;
+        const refresh = pendingRefresh; pendingRefresh = false;
+        poll(refresh);
+      },
+      dispose() {
+        disposed = true; stop(); closePopup(); dialog.close(); dialog.remove(); fallback.remove();
+        active = false; window.elPaymentInProgress = false;
+        previousFocus?.focus();
+      }
+    };
   }
   document.querySelectorAll('[data-el-checkout]').forEach(form => {
     form.addEventListener('submit', async event => {
       if (active) { event.preventDefault(); return; }
       if (!form.checkValidity()) return;
       event.preventDefault();
-      const panel = preparation(form);
+      const flow = checkout(form, form.querySelector('[name="csrf_token"]').value, form.dataset.elFree !== 'true');
       const button = form.querySelector('button[type="submit"]');
       const label = button.textContent;
-      button.disabled = true;
-      button.textContent = 'Validation en cours…';
+      form.hidden = true; button.disabled = true;
       try {
         const response = await fetch(form.action, {method: 'POST', credentials: 'same-origin', body: new FormData(form), headers: {'Accept': 'application/json'}});
         if (!response.ok || response.redirected || !(response.headers.get('content-type') || '').includes('application/json')) throw new Error('Vérifiez les informations et rechargez le récapitulatif avant de réessayer.');
         const urls = await response.json();
         if (form.dataset.elFree === 'true') { location.assign(safeLocal(urls.confirmation_url)); return; }
-        followPayment(urls, panel);
+        flow.start(urls);
       } catch (error) {
-        active = false;
-        window.elPaymentInProgress = false;
-        panel.remove();
-        form.hidden = false;
-        button.disabled = false;
-        button.textContent = label;
+        flow.dispose(); form.hidden = false; button.disabled = false; button.textContent = label;
         let notice = form.querySelector('[data-payment-error]');
         if (!notice) { notice = document.createElement('p'); notice.dataset.paymentError = ''; notice.className = 'notice warning'; notice.setAttribute('role', 'alert'); form.prepend(notice); }
         notice.textContent = error.message || 'La validation a été interrompue. Réessayez : votre commande ne sera pas créée en double.';
@@ -152,11 +208,13 @@
     });
   });
   document.querySelectorAll('[data-el-pay]').forEach(link => link.addEventListener('click', event => {
-    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     if (active) return;
     const container = link.closest('[data-el-status]');
-    if (!container) { location.assign(safePayment(link.href)); return; }
-    followPayment({order_url: location.pathname, status_url: container.dataset.elStatus, confirmation_url: container.dataset.elConfirmation}, preparation(container));
+    if (!container) return;
+    const flow = checkout(container, container.querySelector('[name="csrf_token"]').value, true);
+    try {
+      flow.start({order_url: location.pathname, status_url: container.dataset.elStatus, confirmation_url: container.dataset.elConfirmation, refresh_url: container.dataset.elRefresh});
+    } catch (_) { flow.dispose(); }
   }));
 })();

@@ -176,12 +176,12 @@
     try { previous = status.dataset.elInitial ? signature(JSON.parse(status.dataset.elInitial)) : null; } catch (_) { /* A manual refresh remains available. */ }
     let ticks = 0;
     const poll = async () => {
-      if (window.elPaymentInProgress) return;
+      if (window.elPaymentInProgress || window.elCelebrationInProgress) { window.setTimeout(poll, 10000); return; }
       if (++ticks > 180) return;
       if (!document.hidden) {
         try {
           const response = await fetch(status.dataset.elStatus, {credentials: 'same-origin', headers: {'Accept': 'application/json'}});
-          if (window.elPaymentInProgress) return;
+          if (window.elPaymentInProgress || window.elCelebrationInProgress) { window.setTimeout(poll, 10000); return; }
           if (response.ok && !response.redirected) {
             const value = await response.json();
             if (value.paid && status.dataset.elConfirmation && !location.pathname.endsWith('/confirmation')) { location.assign(status.dataset.elConfirmation); return; }
