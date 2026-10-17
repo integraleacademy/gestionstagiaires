@@ -1,6 +1,6 @@
 {% extends 'manuals/layout.html' %}
 {% block title %}Commandes et tarifs e-learning{% endblock %}
-{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static',filename='css/elearning-orders.css') }}">{% endblock %}
+{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static',filename='css/elearning-orders.css',v='20261017-followup') }}">{% endblock %}
 {% block content %}<div class="shop-wrap el-wrap"><div class="section-heading"><div><span class="eyebrow blue">ADMINISTRATION</span><h1>Accès e-learning</h1><p class="muted">Commandes, factures et tarifs propres à chaque organisme.</p></div><a class="button secondary" href="{{ url_for('manuals_shop.commerce_settings') }}">Facturation et TVA</a></div>
 {% include 'manuals/_sales_settings.html' %}
 {% if configuration.missing_taxes %}<div class="notice warning"><strong>Facturation e-learning à configurer</strong><p>Renseignez le taux de TVA des accès e-learning dans « Facturation et TVA » avant votre première commande payante. Les accès gratuits sont disponibles sans ce réglage.</p></div>{% endif %}

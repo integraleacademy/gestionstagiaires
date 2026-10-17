@@ -15,7 +15,7 @@ from test_elearning_groups import create, save, quote, person
 
 
 def centre_messages(shop):
-    return [mail for mail in shop['mails'] if mail[1].get('metadata', {}).get('purpose', '').startswith('elearning_')]
+    return [mail for mail in shop['mails'] if mail[1].get('metadata', {}).get('purpose', '') == 'elearning_invoice_paid']
 
 
 def test_verified_card_capture_unlocks_before_invoice_reconciliation_and_only_one_email(shop, merchant):
@@ -158,3 +158,84 @@ def test_modal_close_refresh_is_scoped_csrf_protected_and_never_trusts_client_pa
     with other.session_transaction() as session:
         other_csrf = session['manuals_csrf']
     assert other.post(url + '/actualiser', data={'csrf_token': other_csrf}, headers={'Accept': 'application/json'}).status_code == 404
+
+
+def admin_messages(shop):
+    return [mail for mail in shop['mails'] if mail[1].get('metadata', {}).get('purpose') == 'elearning_invoice_paid_admin']
+
+
+def test_capture_stays_paid_during_every_invoice_sync_write(shop, merchant, monkeypatch):
+    import manuals_commerce as commerce
+    order = submit(shop)
+    run(order)
+    merchant['paid'] = True
+    retry(order)
+    assert learning.entitled(latest(shop))
+    snapshots = []
+    original = commerce._save
+    def observe(host, order, **fields):
+        original(host, order, **fields)
+        snapshots.append(learning.status_view(latest(shop)))
+    monkeypatch.setattr(commerce, '_save', observe)
+    # A stale invoice and unavailable card API cannot revoke an already verified capture.
+    merchant['payments'] = []
+    retry(order)
+    assert snapshots and all(s['paid'] and s['payment_status'] == 'paid' and not s['checkout_url'] for s in snapshots)
+    assert len(centre_messages(shop)) == 1
+    assert len(admin_messages(shop)) == 1
+    merchant['invoice']['status'] = 'canceled'
+    retry(order)
+    assert not learning.entitled(latest(shop))
+
+
+def test_admin_confirmation_waits_for_payment_and_retries_without_resending_customer(shop, merchant, monkeypatch):
+    order = submit(shop)
+    run(order)
+    assert not admin_messages(shop)
+    original = host.brevo_send_email
+    failed = []
+    def send(*args, **kwargs):
+        if kwargs.get('metadata', {}).get('purpose') == 'elearning_invoice_paid_admin' and not failed:
+            failed.append(True)
+            return {'ok': False}
+        return original(*args, **kwargs)
+    monkeypatch.setattr(host, 'brevo_send_email', send)
+    merchant['paid'] = True
+    retry(order)
+    assert len(centre_messages(shop)) == 1 and not admin_messages(shop)
+    assert latest(shop)['commerce']['queued']
+    retry(order)
+    assert len(centre_messages(shop)) == len(admin_messages(shop)) == 1
+    mail = admin_messages(shop)[0]
+    assert mail[0][0] == 'clement@integraleacademy.com'
+    assert order['reference'] in mail[0][1]
+    assert order['centre']['name'] in mail[0][2]
+    assert '/admin/organisme/e-learning/commandes/' + order['id'] in mail[0][2]
+    retry(order)
+    assert len(admin_messages(shop)) == 1
+
+
+def test_admin_as_customer_receives_one_confirmation_only(shop, merchant):
+    import manuals_commerce as commerce
+    order = submit(shop)
+    def change(data):
+        commerce._find(data, order['partner_id'], order['id'])['centre']['email'] = 'clement@integraleacademy.com'
+        return {}
+    host._atomic_update_data(change, partner_id=order['partner_id'])
+    run(order)
+    merchant['paid'] = True
+    retry(order)
+    assert len(centre_messages(shop)) == 1 and not admin_messages(shop)
+
+
+def test_capture_proof_is_bound_to_exact_invoice_link_amount_and_currency(shop, merchant):
+    order = submit(shop)
+    run(order)
+    merchant['paid'] = True
+    retry(order)
+    current = latest(shop)
+    for key, value in [('invoice_id', 'another-invoice'), ('link_id', 'another-link'), ('amount_cents', 1), ('currency', 'USD')]:
+        changed = copy.deepcopy(current)
+        changed['commerce']['confirmed_invoice_payment'][key] = value
+        assert not learning.verified_capture(changed)
+        assert not learning.entitled(changed)

@@ -4,9 +4,9 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ path_title }} · {{ centre_name }}</title>
-  {% if learner_brand.get('logo_url') %}<link rel="icon" href="{{ learner_brand.logo_url }}">{% endif %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning-path.css', v='20260908-2') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/learner-path-visuals.css', v='20261010-1') }}">
+  {% include 'manuals/_connect_favicon.html' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning-path.css', v='20261017-total-time') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/learner-path-visuals.css', v='20261017-total-time') }}">
   {% if training_label == 'MAC APS' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-elearning.css', v='20261012-2') }}">{% endif %}
 </head>
 <body class="np-learner-body">
@@ -29,7 +29,7 @@
     <section class="np-panel np-overview" aria-label="Progression du parcours">
       <div><span>Modules terminés</span><strong>{{ completed_modules }} / {{ modules|length }}</strong></div>
       <div><span>{{ 'Progression des activités obligatoires' if training_label == 'VTC' else 'Progression des activités' }}</span><strong>{{ progress_percent }} %</strong><div class="np-progress"><i style="width:{{ progress_percent }}%"></i></div></div>
-      <div><span>Temps actif cumulé{{ ', examen final compris' if aps_final_time }}</span><strong>{{ active_time_label }}</strong>{% if aps_final_time %}<small>Modules : {{ modules_time_label }} · Examen final et corrigé : {{ aps_final_time.time_label }}</small>{% endif %}</div>
+      <div class="np-programme-time"><span>Temps réalisé / durée totale du parcours</span><strong>{{ programme_active_label }} <span>/ {{ programme_required_label }}</span></strong><small>Temps actif enregistré{% if aps_final_time %}, examen final compris{% endif %}.</small>{% if aps_final_time %}<small>Modules : {{ modules_time_label }} · Examen final et corrigé : {{ aps_final_time.time_label }}</small>{% endif %}</div>
       <div><span>{{ 'Activités obligatoires terminées' if training_label == 'VTC' else 'Activités terminées' }}</span><strong>{{ completed_activities }} / {{ total_activities }}</strong></div>
     </section>
     {% if training_label == 'VTC' %}<p class="np-hint">Durée minimale de votre parcours : <strong>{{ programme_time_label }}</strong>. Le temps actif réellement effectué apparaît dans votre suivi. Les productions personnelles sont facultatives. Vous pouvez approfondir les cours avec les exercices, les missions et les révisions de votre choix.</p>{% endif %}

@@ -247,6 +247,12 @@ def _format_seconds(value: Any) -> str:
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
+def _duration_label(value: Any) -> str:
+    minutes = max(0, int(float(value or 0))) // 60
+    hours, minutes = divmod(minutes, 60)
+    return (f"{hours} h" + (f" {minutes:02d} min" if minutes else "")) if hours else f"{minutes} min"
+
+
 def _normalize_fill_blank_text(value: Any) -> str:
     normalized = unicodedata.normalize("NFKC", str(value or ""))
     return re.sub(r"\s+", " ", normalized).strip()
@@ -596,6 +602,25 @@ def create_native_elearning_blueprint(
             except CourseImportError as exc:
                 modules.append({"assignment": item, "error": str(exc), "course": None, "outline": None})
         return modules
+
+    def programme_time(session_obj, trainee, current_course, current):
+        """Sum the assigned edition only, including its tracked final exam."""
+        rows = store().learner_progress(str(session_obj["id"]), str(trainee.get("id") or trainee.get("trainee_id")))
+        by_key = {(row["course_id"], row["course_version"]): row for row in rows}
+        seconds = required = 0
+        for item in load_path(session_obj):
+            course = item["course"]
+            if not course:
+                required += int(item["assignment"].get("required_minutes") or 0) * 60
+                continue
+            progress = current if (course["id"], course["version"]) == (current_course["id"], current_course["version"]) else project_progress(by_key.get((course["id"], course["version"]), {}), course)
+            seconds += progress["active_seconds"]
+            required += progress["required_seconds"]
+        final = final_time(assigned_modules(session_obj), rows)
+        seconds += final["active_seconds"] if final else 0
+        return {"active_label": _duration_label(seconds), "required_label": _duration_label(required),
+                "required_seconds": required, "other_seconds": max(0, seconds - current["active_seconds"]),
+                "percent": min(100, seconds / required * 100) if required else 0}
 
     def asset_url(asset_token: str, course_id: str, asset_name: str) -> str:
         return url_for(
@@ -2026,6 +2051,8 @@ def create_native_elearning_blueprint(
             total_activities=total, completed_activities=completed, completed_modules=finished,
             progress_percent=round(completed / total * 100) if total else 0,
             active_time_label=_format_seconds(seconds), resume_url=resume_url,
+            programme_active_label=_duration_label(seconds),
+            programme_required_label=_duration_label(sum(m['course'].get('required_minutes', 0) * 60 if m.get('course') else int(m['assignment'].get('required_minutes') or 0) * 60 for m in modules)),
             aps_final_time=aps_final, modules_time_label=modules_time_label,
             programme_time_label=_format_seconds(sum(m['course'].get('required_minutes', 0) * 60 for m in modules if m.get('course'))),
             cma_url=url_for('native_elearning.cma_learner_home', token=token) if {f'academy-vtc-{letter}' for letter in 'abcdefg'}.issubset({m['course']['id'] for m in modules if m.get('course')}) else '',
@@ -2244,6 +2271,7 @@ def create_native_elearning_blueprint(
             path_url=path_url, end_url=end_url,
             end_label="Examen blanc et correction" if aps_exam_next else "Module suivant" if next_module else "Retour au parcours",
             module_position=module_index + 1, module_count=len(modules),
+            programme_time=programme_time(session_obj, trainee, course, progress),
             has_next_module=bool(next_module),
             required_time_label=_format_seconds(progress["required_seconds"]),
             remaining_time_label=_format_seconds(progress["remaining_seconds"]),

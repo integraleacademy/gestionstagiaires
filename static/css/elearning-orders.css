@@ -37,7 +37,7 @@
 @keyframes el-payment-turn{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.el-payment-orbit:before{animation:none;border-top-color:#2463bc}}
 
-/* Hosted checkout: the Connect dialog stays available while Qonto is open. */
+/* Hosted checkout: only the active payment window is presented as a dialog. */
 .el-payment-followup[hidden]{display:none!important}
 .el-popup-preparation{margin:0;padding:24px;min-height:100vh;box-sizing:border-box;display:grid;place-items:center;background:#f3f7fd;font-family:system-ui,sans-serif;color:#18304b}
 .el-popup-preparation .el-payment-followup{width:100%;box-sizing:border-box}
@@ -90,3 +90,20 @@ html:has(.el-payment-dialog[open],.el-success-dialog[open]){overflow:hidden}
 @keyframes el-party-pop{0%{opacity:0;transform:scale(.4) rotate(-18deg)}65%{opacity:1;transform:scale(1.12) rotate(5deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
 @media(max-width:540px){.el-payment-dialog-body{padding:34px 20px 23px}.el-payment-dialog-top{padding:16px 18px}.el-payment-steps{font-size:9px;gap:5px}.el-payment-steps i{width:10px}.el-success-dialog{padding:16px}.el-success-card{padding:35px 23px 22px;border-radius:23px}.el-success-card h2{letter-spacing:-1px}.el-success-receipt{padding:13px 11px;font-size:12px}.el-success-party{height:105px}.el-success-party>span{font-size:68px}.el-success-party:before{width:90px;height:90px}}
 @media(prefers-reduced-motion:reduce){.el-payment-dialog[open],.el-success-card,.el-success-party>span,.el-success-party>i,.el-success-party>b,.el-confetti-piece{animation:none}.el-confetti{display:none}}
+
+/* Access and payment states are identifiable by text and a distinct colour. */
+.el-wrap .el-badge.draft,.el-status--draft{background:#eef1f5!important;color:#536275!important}
+.el-wrap .el-badge.waiting,.el-status--waiting,.el-status--unpaid{background:#fff1d6!important;color:#875000!important}
+.el-wrap .el-badge.active,.el-status--active,.el-status--paid{background:#dcf6e8!important;color:#16633e!important}
+.el-status--processing{background:#e7efff!important;color:#254f9a!important}
+.el-status--partially_paid{background:#fff0df!important;color:#96500d!important}
+.el-status--cancelled,.el-status--canceled{background:#ffe7eb!important;color:#9e3046!important}
+.el-stats>a[data-el-state="draft"]{background:#f4f6f9;border-color:#dce2e9}
+.el-stats>a[data-el-state="waiting"]{background:#fff8e9;border-color:#efdcad}
+.el-stats>a[data-el-state="active"]{background:#edf9f2;border-color:#bfe6d0}
+.el-stats>a[data-el-state="waiting"] .el-stat-icon{background:#ffedc4;color:#875000}
+.el-stats>a[data-el-state="active"] .el-stat-content>strong{color:#16633e}
+.el-stats>a[data-el-state="waiting"] .el-stat-content>strong{color:#875000}
+
+@media(prefers-reduced-motion:no-preference){.el-success-dialog[open] .el-success-party>span{animation:el-party-cheer 7s ease-in-out infinite}.el-success-dialog[open] .el-success-party>i,.el-success-dialog[open] .el-success-party>b{animation:el-party-cheer 7s .15s ease-in-out infinite}}
+@keyframes el-party-cheer{0%,25%,100%{transform:scale(1) rotate(0)}6%{transform:scale(1.16) rotate(-10deg)}12%{transform:scale(1.1) rotate(9deg)}18%{transform:scale(1.05) rotate(-4deg)}}

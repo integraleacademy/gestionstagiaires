@@ -131,6 +131,16 @@ def curriculum(code):
     return [{"course_id": m["id"], "course_version": m["version"], "title": m["title"], "required_minutes": m["planned_minutes"] if "planned_minutes" in m else int(Decimal(str(m["hours"])) * 60)} for m in manifest["modules"]]
 
 
+def verified_capture(order):
+    """A persisted capture is evidence for this exact immutable purchase only."""
+    state = order.get("commerce") or {}
+    proof = state.get("confirmed_invoice_payment") or {}
+    return bool(proof.get("invoice_id") == state.get("invoice_id")
+                and proof.get("link_id") == state.get("payment_id") and proof.get("link_id")
+                and proof.get("payment_ids") and proof.get("verified_at")
+                and proof.get("amount_cents") == order.get("total_cents") and proof.get("currency") == "EUR")
+
+
 def entitled(order):
     state = order.get("commerce") or {}
     if not is_order(order) or order.get("status") in {"draft", "cancelled"} or order.get("cancellation_requested_at"):
@@ -146,14 +156,9 @@ def entitled(order):
             return False
     if order.get("free_snapshot") is True and order.get("total_cents") == 0:
         return True
-    proof = state.get("confirmed_invoice_payment") or {}
-    verified_capture = bool(proof.get("invoice_id") == state.get("invoice_id")
-                            and proof.get("link_id") == state.get("payment_id") and proof.get("link_id")
-                            and proof.get("payment_ids") and proof.get("verified_at")
-                            and proof.get("amount_cents") == order.get("total_cents") and proof.get("currency") == "EUR")
     return bool(order.get("total_cents", 0) > 0 and state.get("invoice_id")
                 and state.get("invoice_status") in {"paid", "unpaid"}
-                and (state.get("invoice_status") == "paid" or verified_capture)
+                and (state.get("invoice_status") == "paid" or verified_capture(order))
                 and state.get("payment_status") == "paid" and state.get("paid_cents", 0) >= order["total_cents"]
                 and state.get("remaining_cents") == 0)
 
@@ -256,7 +261,7 @@ def activate(host, order):
     return True
 
 
-def send_message(host, order, key, recipient, *, person=None, invoice=False):
+def send_message(host, order, key, recipient, *, person=None, invoice=False, staff=False):
     import base64
     from manuals_shop import base_url, money
     state = order["commerce"]
@@ -274,7 +279,10 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False):
     link = base_url(host) + ("/apprendre/" + access_token(host, order, person) if person else "/admin/organisme/e-learning/commandes/" + order["id"])
     brand = learner_brand(host.load_data(run_background_tasks=False), order, host=host) if person else None
     subject = ("Votre accès personnel " if person else "Commande confirmée · E-learning ") + (course_full_label(order["course_code"]) if person else course_label(order["course_code"])) + " · " + (brand["name"] if person else "Intégrale Connect")
-    body = host.app.jinja_env.get_template("manuals/elearning_email.html").render(order=order, person=person, title=title, link=link, paid=paid, invoice=invoice, money=money, learner_brand=brand, email_base_url=base_url(host))
+    if staff:
+        subject = "Commande e-learning " + ("validée" if order.get("free_snapshot") else "réglée") + " · " + order["reference"] + " · " + order["centre"]["name"]
+    template = "manuals/elearning_admin_email.html" if staff else "manuals/elearning_email.html"
+    body = host.app.jinja_env.get_template(template).render(order=order, person=person, title=title, link=link, paid=paid, invoice=invoice, money=money, learner_brand=brand, email_base_url=base_url(host))
     dispatch_note = ("Votre demande d’envoi des accès est enregistrée.\n" if order.get("access_dispatch_requested_at")
                      else "Cliquez sur « Envoyer les accès e-learning aux stagiaires » dans votre commande pour déclencher l’envoi.\n" if paid
                      else "Après règlement intégral, cliquez sur « Envoyer les accès e-learning aux stagiaires » dans votre commande.\n")
@@ -282,6 +290,11 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False):
     if order["course_code"] == "mac-aps":
         plain += "Ce programme numérique de préparation et de révision ne délivre pas à lui seul l’attestation réglementaire de stage MAC APS.\n"
     plain += "Ouvrir mon espace : " + link
+    if staff:
+        plain = (f"Commande {order['reference']} confirmée après {'validation de la gratuité' if order.get('free_snapshot') else 'règlement intégral'}.\n"
+                 f"Organisme : {order['centre']['name']} ({order['centre']['email']})\n"
+                 f"{len(order['learners'])} accès {course_full_label(order['course_code'])} · {money(order['total_cents'])} TTC.\n"
+                 f"Consulter la commande : {link}")
     send_options = {}
     if person:
         plain += "\n\n" + brand["name"]
@@ -431,6 +444,9 @@ def process_claimed(host, order):
     if entitled(order) and not already_confirmed_free:
         # Reuse the historical paid-mail key to avoid resending settled orders.
         sent = send_message(host, order, "invoice_paid", order["centre"]["email"], invoice=bool(state.get("invoice_id"))) and sent
+    if entitled(order) and order["centre"]["email"].strip().casefold() != commerce.ADMIN_EMAIL.casefold():
+        # Independent retry key: a failed internal notice never resends the customer receipt.
+        sent = send_message(host, order, "invoice_paid_admin", commerce.ADMIN_EMAIL, staff=True) and sent
     if entitled(order) and order.get("access_dispatch_requested_at") and order.get("activated_at"):
         for person in order["learners"]:
             sent = send_message(host, order, "learner_" + person["id"], person["email"], person=person) and sent

@@ -36,3 +36,19 @@ test('reduced motion keeps the confirmation but omits moving confetti', () => {
 test('blocked session storage never hides the confirmed result', () => {
   const page = boot({storageFailure: true}); assert.equal(page.dialog.open, true);
 });
+
+test('confetti repeats until dismissal without accumulating elements or marking the dialog seen early', () => {
+  const page = boot();
+  assert.equal(page.storage.get('el-celebration:paid-order'), undefined);
+  const firstPiece = page.pieces[0];
+  for (let wave = 0; wave < 3; wave++) {
+    const fn = page.timers.get(1); page.timers.delete(1); fn();
+    assert.equal(page.pieces.length, 110);
+    assert.equal(page.timers.size, 1);
+  }
+  assert.notEqual(page.pieces[0], firstPiece);
+  page.controls[0].click();
+  assert.equal(page.timers.size, 0);
+  assert.equal(page.pieces.length, 0);
+  assert.equal(page.storage.get('el-celebration:paid-order'), 'shown');
+});

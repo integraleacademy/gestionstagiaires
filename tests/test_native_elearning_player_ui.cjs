@@ -15,6 +15,7 @@ async function fixture({ lastActivity = false, question = false, optional = fals
     isLastActivity: lastActivity, hasNextModule: true, endLabel: depth ? 'Examen blanc et correction' : "Module suivant", endUrl: depth ? '/exam' : "/next", apsDepth: depth,
     activityOptional: optional, questionType: question ? 'single_choice' : '', answerUrl: '/answer' };
   const dom = new JSDOM(`<!doctype html><strong id="nativeActiveTimer"></strong>
+    <span id="nativeProgrammeTime" data-other-seconds="600"></span><progress id="nativeProgrammeProgress" data-required-seconds="223200" max="100"></progress>
     <div id="nativeTrackingState"><span></span></div><div id="nativeDuplicateNotice"></div>
     <button id="nativeActionButton" data-mode="${optional ? 'complete' : question ? 'answer' : 'navigate'}">Continuer</button>
     ${optional ? '<a id="vtcOptionalSkip" href="/next">Passer cet atelier facultatif →</a>' : ''}
@@ -92,11 +93,15 @@ async function fixture({ lastActivity = false, question = false, optional = fals
     assert.equal(timer.signal().interaction_age_seconds, 299);
     await timer.advance(1000);
     assert.equal(document.querySelector("#nativeActiveTimer").textContent, "00:05:00");
+    assert.equal(document.querySelector("#nativeProgrammeTime").textContent, "15 min");
+    assert.ok(document.querySelector("#nativeProgrammeProgress").value > 0);
     assert.equal(document.querySelector("#nativeIdleNotice").hidden, false);
     assert.equal(timer.signal().recent_activity, false);
     assert.equal(timer.signal().media_playing, true);
     await timer.advance(300000);
     assert.equal(document.querySelector("#nativeActiveTimer").textContent, "00:05:00");
+    assert.equal(document.querySelector("#nativeProgrammeTime").textContent, "15 min");
+    assert.ok(document.querySelector("#nativeProgrammeProgress").value > 0);
     timer.resume();
     document.querySelector("#nativeResumeTimer").click();
     await timer.settle();

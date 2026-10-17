@@ -9,8 +9,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#172033">
   <title>{{ activity.title }} · {{ course.title }}</title>
-  {% if player_brand.get('logo_url') %}<link rel="icon" href="{{ player_brand.logo_url }}">{% else %}<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">{% endif %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261011-vtc-readable-video') }}">
+  {% include 'manuals/_connect_favicon.html' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261017-total-time') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261015-aps-reading-125') }}">
   {% if course.training_label == 'MAC APS' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-elearning.css', v='20261012-2') }}">{% endif %}
   {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261016-aps-presentation') }}">{% endif %}
@@ -124,6 +124,12 @@
     {% endif %}
   </header>
 
+  {% if programme_time is defined and not preview_mode %}
+  <section class="native-programme-time" aria-label="Temps de formation du parcours">
+    <div><span>Votre temps de formation · parcours {{ course.training_label }}</span><strong><span id="nativeProgrammeTime" data-other-seconds="{{ programme_time.other_seconds }}">{{ programme_time.active_label }}</span> <span class="native-programme-total">/ {{ programme_time.required_label }}</span></strong></div>
+    <div><span>Durée totale à réaliser</span><progress id="nativeProgrammeProgress" max="100" value="{{ programme_time.percent }}" data-required-seconds="{{ programme_time.required_seconds }}" aria-label="Temps réalisé sur la durée totale">{{ programme_time.percent|round|int }} %</progress></div>
+  </section>
+  {% endif %}
   <div class="native-layout">
     <aside class="native-sidebar" id="nativeSidebar" aria-label="Sommaire du cours" tabindex="-1">
       <button class="native-menu-close" id="nativeMenuClose" type="button" aria-label="Fermer le sommaire">Fermer le sommaire ×</button>
@@ -346,12 +352,12 @@
     'initialTimedObjectives': progress.get('timed_objectives', [])
   }|tojson }}</script>
   <script src="{{ url_for('static', filename='js/native-video-pacing.js', v='20261013-vtc-normal-speed') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261015-all-reading-125') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261017-total-time') }}" defer></script>
   {% endif %}
 {% if course.training_label == 'VTC' %}<script src="{{ url_for('static', filename='js/vtc-video-companion.js', v='20261013-vtc-normal-speed') }}" defer></script>{% endif %}
 {% if course.training_label == 'MAC APS' %}<script src="{{ url_for('static', filename='js/mac-aps-elearning.js', v='20261012-1') }}" defer></script>{% endif %}
 <script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-2') }}" defer></script>
-{% if paged_reading or (course.id.startswith('academy-aps62-') and activity.get('academy', {}).get('kind') == 'lesson') %}<script src="{{ url_for('static', filename='js/aps62-lesson.js', v='20261015-all-reading-125') }}" defer></script>{% endif %}
+{% if paged_reading or (course.id.startswith('academy-aps62-') and activity.get('academy', {}).get('kind') == 'lesson') %}<script src="{{ url_for('static', filename='js/aps62-lesson.js', v='20261017-total-time') }}" defer></script>{% endif %}
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261012-assessments') }}" defer></script>
 {% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261014-aps-dossiers-v16') }}" defer></script>{% endif %}

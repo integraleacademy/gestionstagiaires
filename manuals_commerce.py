@@ -259,6 +259,13 @@ def _ensure_invoice(host, order, settings):
                   invoice_status=invoice["status"], synced_at=host._now_iso())
     if state.get("flow") != "payment_first":
         fields.update(payment_status=normalized["qonto_payment_status"], paid_cents=normalized["qonto_amount_paid_cents"], remaining_cents=normalized["qonto_remaining_amount_cents"])
+        if order.get("order_type") == "elearning" and invoice["status"] == "unpaid":
+            from elearning_orders import verified_capture
+            if verified_capture(order):
+                # The invoice may lag behind the captured card payment until payout.
+                # Never publish an unpaid intermediate snapshot for a verified capture.
+                fields.update(payment_status="paid", paid_cents=order["total_cents"], remaining_cents=0,
+                              payment_url="", payment_link_status="paid")
     _save(host, order, **fields)
     return invoice
 

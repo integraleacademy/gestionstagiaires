@@ -171,7 +171,7 @@
 
   const status = document.querySelector('[data-el-status]');
   if (status) {
-    const signature = value => JSON.stringify([value.status, value.payment_status, value.invoice_status, value.active, value.mail_sent, value.payment_url, value.payment_link_status, value.can_send, value.dispatch_requested, value.dispatch_complete]);
+    const signature = value => JSON.stringify([value.paid, ['needs_setup', 'needs_review', 'retry', 'payment_pending'].includes(value.status) ? value.status : '', value.payment_status, value.paid ? 'settled' : value.invoice_status, value.active, value.mail_sent, value.payment_url, value.payment_link_status, value.can_send, value.dispatch_requested, value.dispatch_complete]);
     let previous = null;
     try { previous = status.dataset.elInitial ? signature(JSON.parse(status.dataset.elInitial)) : null; } catch (_) { /* A manual refresh remains available. */ }
     let ticks = 0;

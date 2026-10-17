@@ -270,6 +270,13 @@ def test_personal_link_opens_only_purchased_curriculum(shop, code):
     first=order["modules"][0]["course_id"]
     player=learner.get(response.location+"/"+first)
     assert player.status_code == 200
+    from elearning_native.web import _duration_label
+    duration = _duration_label(sum(module['required_minutes'] * 60 for module in order['modules']))
+    assert 'Temps réalisé / durée totale du parcours' in path.text
+    assert '/ ' + duration in path.text and '/ ' + duration in player.text
+    assert 'id="nativeProgrammeTime"' in player.text
+    for screen in (page, path, player):
+        assert 'href="/static/icone.png?v=20261014-ic"' in screen.text
     other="academy-vtc-a" if code=="aps" else "academy-aps62-01"
     assert learner.get(response.location+"/"+other).status_code == 403
     assert learner.get('/admin/organisme').status_code == 302
