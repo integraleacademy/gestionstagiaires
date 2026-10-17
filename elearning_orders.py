@@ -499,6 +499,8 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
                 elearning_sales.save(host, sales_enabled, session.get("user_id") or session.get("admin_user"))
                 flash("Les ventes d’accès e-learning sont activées." if sales_enabled else
                       "Les ventes d’accès e-learning sont suspendues. Le message de mise à jour est affiché dans la boutique.", "success")
+                if request.form.get("return_to") == "partners":
+                    return redirect(url_for("admin_partners"), code=303)
                 return redirect(url_for("manuals_shop.elearning_admin"), code=303)
         data = host.load_data()
         pid = request.values.get("partner_id", "")

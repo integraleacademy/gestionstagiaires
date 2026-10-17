@@ -1,0 +1,14 @@
+{% set invoices_view = platform_tab == 'invoices' %}
+{% set rows = platform_invoices if invoices_view else platform_orders %}
+<div class="pw-section-head"><div><h2>{{ 'Factures et règlements' if invoices_view else 'Toutes les commandes' }}</h2><p>Manuels, clés USB et accès e-learning de tous vos organismes partenaires.</p></div></div>
+<div class="pw-filters"><label>Rechercher<input type="search" data-pw-search placeholder="Organisme, référence, produit, facture…"></label><label>Type de commande<select data-pw-kind><option value="">Tous les produits</option><option value="physical">Manuels et clés USB</option><option value="elearning">E-learning</option></select></label></div>
+<div class="pw-table-wrap"><table><thead><tr><th>Organisme</th><th>{{ 'Facture / commande' if invoices_view else 'Commande / date' }}</th><th>Produits</th><th>Montant TTC</th><th>Règlement</th><th>Gestion</th></tr></thead><tbody data-pw-list>
+{% for row in rows %}<tr data-pw-row data-kind="{{ 'elearning' if row.learning else 'physical' }}" data-search="{{ row.partner_name }} {{ row.reference }} {{ row.flow.get('invoice_number','') }} {{ row.kind }} {{ row.payment_label }} {% for item in row.record.get('items',[]) %}{{ item.label }} {% endfor %}">
+<td><a class="pw-link" href="{{ url_for('admin_partner_detail', partner_id=row.record.partner_id, tab='invoices' if invoices_view else 'orders') }}">{{ row.partner_name }}</a></td>
+<td><strong>{{ (row.flow.get('invoice_number') or 'En préparation') if invoices_view else row.reference }}</strong><small>{{ row.reference ~ ' · ' if invoices_view }}{{ row.date|frdatetime }}</small></td>
+<td>{{ row.kind }}{% if row.learning %}<small>{{ row.record.course_code|elearning_label }}</small>{% endif %}</td>
+<td><strong>{{ row.record.total_cents|manuals_money }}</strong></td>
+<td><span class="pw-status {{ 'good' if row.flow.get('payment_status') == 'paid' else 'warn' if row.flow.get('payment_status') in ['unpaid','partially_paid'] else '' }}">{{ row.payment_label }}</span></td>
+<td><div class="pw-actions"><a class="pw-button" href="{{ row.detail_url }}?embed=1" data-pw-dialog data-title="{{ row.partner_name }} · {{ row.reference }}">{{ 'Gérer les accès' if row.learning else 'Gérer la commande' }}</a>{% if row.invoice_url %}<a class="pw-button" href="{{ row.invoice_url }}" target="_blank" rel="noopener noreferrer">Facture PDF</a>{% endif %}</div></td>
+</tr>{% else %}<tr><td colspan="6">{{ 'Aucune facture émise.' if invoices_view else 'Aucune commande confirmée.' }}</td></tr>{% endfor %}
+</tbody></table></div><p class="pw-empty" data-pw-no-results hidden>Aucun résultat ne correspond à votre recherche.</p>

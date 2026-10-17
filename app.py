@@ -16943,6 +16943,9 @@ def admin_partner_reset_usage(partner_id: str):
 @admin_login_required
 @require_super_admin
 def admin_partners():
+    import partner_workspace
+    if _is_partner_data_scope_session():
+        abort(403, "Quittez l’assistance d’un organisme pour ouvrir la gestion de la plateforme.")
     data = load_data()
     q = (request.args.get("q") or "").strip().lower()
     status = (request.args.get("status") or "").strip()
@@ -16962,7 +16965,7 @@ def admin_partners():
         row["counts"] = _partner_counts(data, partner.get("id") or "")
         partners.append(row)
     partners.sort(key=lambda item: (item.get("name") or "").lower())
-    return render_template("admin_partners.html", partners=partners, q=q, status=status, plan=plan, status_labels=PARTNER_STATUS_LABELS, protected_partner_id=INTEGRALE_PARTNER_ID)
+    return render_template("admin_partners.html", partners=partners, q=q, status=status, plan=plan, status_labels=PARTNER_STATUS_LABELS, protected_partner_id=INTEGRALE_PARTNER_ID, **partner_workspace.platform_context(sys.modules[__name__], data))
 
 
 @app.route("/admin/partners/new", methods=["GET", "POST"])

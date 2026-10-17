@@ -1,0 +1,10 @@
+<section class="form-card el-sales-settings" aria-labelledby="el-sales-settings-title">
+  <div class="el-sales-settings-heading"><h2 id="el-sales-settings-title">Vente des accès e-learning</h2><span class="el-sales-status {{ 'is-paused' if not elearning_sales_enabled }}">{{ 'Ventes activées' if elearning_sales_enabled else 'Ventes suspendues' }}</span></div>
+  <form method="post" action="{{ url_for('manuals_shop.elearning_admin') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="action" value="sales_settings">{% if platform_tab is defined %}<input type="hidden" name="return_to" value="partners">{% endif %}
+    <label class="el-sales-toggle" for="el-sales-enabled"><input id="el-sales-enabled" type="checkbox" name="sales_enabled" value="yes" {% if elearning_sales_enabled %}checked{% endif %} aria-describedby="el-sales-help"><span><strong>Activer la vente des accès e-learning</strong><small id="el-sales-help">Décochez pour suspendre les nouvelles commandes APS, MAC APS, A3P et VTC pendant vos mises à jour. Recochez pour rouvrir les ventes.</small></span></label>
+    <div class="el-sales-message-preview"><strong>{{ elearning_sales_title }}</strong><p>{{ elearning_sales_message }}</p></div>
+    <p class="small">Un message de mise à jour s’affiche dans la boutique lorsque les ventes sont suspendues. Les accès déjà activés, les commandes déjà confirmées et les ventes de manuels et de clés USB restent disponibles.</p>
+    <button class="button primary" type="submit">Enregistrer le réglage</button>
+  </form>
+</section>

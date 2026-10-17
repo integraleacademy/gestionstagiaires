@@ -132,3 +132,7 @@
   .organisme-identity__numbers { gap: 8px 18px; }
   .organisme-identity__label { font-size: 9px; margin-bottom: 2px; }
 }
+
+.organisme-identity .legal-links { display:flex; flex-wrap:wrap; justify-content:flex-start; gap:4px 24px; margin:14px 0 0; padding:10px 0 0; border-top:1px solid #39506c; background:transparent; font-size:12px; }
+.organisme-identity .legal-links a { display:inline-flex; align-items:center; min-height:40px; color:#e2eaf4; }
+@media print { .organisme-identity .legal-links { display:none; } }

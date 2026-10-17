@@ -135,6 +135,33 @@ def context(host, data, partner):
     )
 
 
+def platform_context(host, data):
+    """One merchant dashboard using the existing canonical orders and settings."""
+    from manuals_shop import csrf_token
+    tabs = (("organisations", "Organismes"), ("orders", "Commandes"),
+            ("invoices", "Factures"), ("settings", "Facturation et TVA"))
+    active = request.args.get("tab", "organisations")
+    if active not in dict(tabs):
+        active = "organisations"
+    partners = {p["id"]: p for p in data.get("partners", []) if isinstance(p, dict)}
+    orders = []
+    for order in data.get("manual_orders", []):
+        if groups.is_group(order) or order.get("status") == "draft":
+            continue
+        row = order_view(order)
+        row["partner_name"] = (partners.get(order.get("partner_id"), {}).get("name")
+                               or order.get("centre", {}).get("name") or "Organisme")
+        orders.append(row)
+    orders.sort(key=lambda row: row["date"], reverse=True)
+    invoices = [row for row in orders if any(row["flow"].get(key)
+                for key in ("invoice_id", "invoice_number", "invoice_url"))]
+    return dict(platform_tabs=tabs, platform_tab=active, platform_orders=orders,
+                platform_invoices=invoices, csrf_token=csrf_token(),
+                settings=commerce.settings_from(data), errors=[],
+                **commerce.configuration_status(host, data, {"items": [
+                    {"kind": kind} for kind in ("manual", "usb", "elearning")]}))
+
+
 def register(host):
     from manuals_shop import check_csrf
 

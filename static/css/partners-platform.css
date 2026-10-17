@@ -1,0 +1,32 @@
+.platform-hub .form-card { background:#fff; border:1px solid #dce5ef; border-radius:16px; padding:24px; margin:20px 0; }
+.platform-hub .form-card h2 { margin:0 0 12px; font-size:20px; }
+.platform-hub .form-card p { line-height:1.6; color:#52657b; }
+.platform-hub .small { font-size:13px; }
+.platform-hub .el-sales-settings .small { margin:12px 0; }
+.platform-hub .el-sales-message-preview { display:none; }
+.platform-hub .form-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
+.platform-hub .form-grid label { display:block; margin:12px 0 6px; font-size:13px; font-weight:700; }
+.platform-hub .form-grid select { width:100%; min-width:0; min-height:44px; }
+.platform-hub .button { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:10px 18px; border:1px solid #173c5b; border-radius:9px; font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+.platform-hub .button.primary { background:#173c5b; color:#fff; }
+.platform-hub .platform-integrations { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.platform-hub .platform-integrations strong { display:block; color:#173c5b; }
+.platform-hub .partners-filter { display:flex; align-items:end; flex-wrap:wrap; gap:14px; padding:18px; margin-bottom:20px; }
+.platform-hub .partners-filter label { flex:1; min-width:180px; }
+.platform-hub .partners-filter input,.platform-hub .partners-filter select { width:100%; min-height:44px; }
+.platform-hub .partners-table-wrap { overflow-x:auto; }
+.platform-hub .partners-table { min-width:900px; }
+.platform-hub .partners-actions { min-width:190px; }
+.platform-hub .partners-actions form { display:inline; }
+.platform-hub .badge { padding:5px 10px; border-radius:999px; font-weight:800; font-size:12px; }
+.platform-hub .badge-active { background:#dcfce7; color:#166534; }
+.platform-hub .badge-trial { background:#dbeafe; color:#1d4ed8; }
+.platform-hub .badge-suspended { background:#fee2e2; color:#991b1b; }
+.platform-hub .badge-archived { background:#f3f4f6; color:#374151; }
+.platform-hub .btn-small { font-size:12px; padding:8px 10px; min-height:36px; margin:3px 0; }
+.platform-hub .btn-danger { background:#dc2626; color:#fff; border-color:#dc2626; }
+.platform-hub .error-box { color:#991b1b; padding:12px; background:#fff1f2; border-radius:8px; }
+@media(max-width:700px) { .platform-hub .form-grid,.platform-hub .platform-integrations { grid-template-columns:minmax(0,1fr); gap:8px; } .platform-hub .form-card { padding:18px; } .platform-hub .el-sales-settings-heading { align-items:flex-start; flex-direction:column; } }
+
+.platform-hub .form-card > p { margin:12px 0; }
+.platform-hub form > .small { margin:14px 0; }

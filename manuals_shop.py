@@ -260,7 +260,7 @@ def register(host):
             login_url = base_url(host) + url_for("admin_login", next=url_for("manuals_shop.home"))
             body = render_template("manuals/welcome_email.html", partner=partner, user=user, login_url=login_url)
             result = host.brevo_send_email(user["email"], "Votre espace organisme de formation est créé", body,
-                text_content=f"Bonjour {user['first_name']},\nVotre espace organisme de formation {partner['name']} a bien été créé.\nConnectez-vous avec votre adresse e-mail et le mot de passe choisi : {login_url}\nRetrouvez vos manuels personnalisés, vos commandes et vos accès e-learning APS, MAC APS et VTC.\nIntégrale Academy — 04 22 47 07 68",
+                text_content=f"Bonjour {user['first_name']},\nVotre espace organisme de formation {partner['name']} a bien été créé.\nConnectez-vous avec votre adresse e-mail et le mot de passe choisi : {login_url}\nRetrouvez vos manuels personnalisés, vos supports PowerPoint sur clé USB, vos commandes et vos accès e-learning APS, MAC APS, A3P et VTC.\nIntégrale Academy — 04 22 47 07 68",
                 metadata={"partner_id": partner_id, "user_id": user_id, "purpose": "manuals_welcome"})
         except Exception:
             app.logger.exception("manuals_welcome_failed partner_id=%s", partner_id)
@@ -672,7 +672,7 @@ def register(host):
             try:
                 settings = commerce.validate_settings(request.form)
                 def save(current):
-                    current["manuals_commerce_settings"] = dict(settings, updated_at=host._now_iso())
+                    current["manuals_commerce_settings"] = dict(commerce.settings_from(current), **settings, updated_at=host._now_iso())
                     for order in current.get("manual_orders", []):
                         state = order.get("commerce", {})
                         if state.get("status") == "needs_setup" and order.get("status") != "cancelled":
@@ -681,6 +681,8 @@ def register(host):
                 host._atomic_update_data(save)
                 kick_worker()
                 flash("Les réglages de facturation sont enregistrés.", "success")
+                if request.form.get("return_to") == "partners":
+                    return redirect(url_for("admin_partners", tab="settings"), code=303)
                 return redirect(url_for("manuals_shop.commerce_settings"), code=303)
             except ValueError as exc:
                 errors = [str(exc)]

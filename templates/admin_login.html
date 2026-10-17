@@ -6,10 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Espace organismes de formation • Intégrale Connect</title>
   {% include 'manuals/_connect_favicon.html' %}
-  <meta name="description" content="Votre espace organisme de formation : commandes de manuels personnalisés, suivi des commandes et factures, et accès e-learning APS et VTC pour vos stagiaires.">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-login.css', v='organismes-20261006') }}">
+  <meta name="description" content="Votre espace organisme de formation : manuels personnalisés, supports PowerPoint sur clé USB, commandes, factures et accès e-learning APS, MAC APS, A3P et VTC pour vos stagiaires.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-login.css', v='organismes-20261017') }}">
   <style>.available-badge{display:inline-flex;align-items:center;border:1px solid #c5e4d5;border-radius:20px;padding:4px 9px;background:#e8f6ee;color:#2e7151;font-size:10px;font-weight:700;line-height:1.4}.login-demo-callout{margin:20px 0 0;padding:17px 0 0;border-top:1px solid #e3eaf2;text-align:center;font-size:12px;color:#6d8097}.login-demo-callout a{display:inline-block;margin-top:5px;color:#2b659e;font-weight:700;text-decoration:none}.login-demo-callout a:hover{text-decoration:underline}.login-demo-callout a:focus-visible{outline:3px solid #9abde3;outline-offset:4px}</style>
-  {% if show_organisme_identity %}<link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-identity.css', v='20261010-2') }}">{% endif %}
+  {% if show_organisme_identity %}<link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-identity.css', v='20261017-footer') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/connect-brand.css', v='20261014') }}">
 </head>
 <body class="admin-login-page">
@@ -19,7 +19,7 @@
       <div class="brand-copy"><a href="{{ url_for('home') }}" style="color:inherit;text-decoration:underline;font-size:13px">← Découvrir nos offres</a>
         <p class="brand-kicker">Les ressources de votre centre</p>
         <h1 id="portal-title">Espace organismes<br>de formation<span class="title-dot">.</span></h1>
-        <p class="brand-text">Commandez vos manuels de formation et créez les accès e-learning APS et VTC de vos stagiaires. Tous vos services réunis dans un même espace.</p>
+        <p class="brand-text">Commandez vos manuels personnalisés, vos supports PowerPoint sur clé USB et les accès e-learning APS, MAC APS, A3P et VTC de vos stagiaires. Tous vos services réunis dans un même espace.</p>
       </div>
     </section>
 
@@ -40,13 +40,17 @@
             <img src="{{ url_for('static', filename='manuals/a3p.webp') }}" alt="" width="48" height="68" loading="eager">
           </div>
         </li>
+        <li class="portal-service portal-service-usb">
+          <span class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M8 8V3h8v5M10 3v3m4-3v3M7 8h10v12H7V8Z M10 16h4"/></svg></span>
+          <div class="service-copy"><h3>Supports PowerPoint sur clé USB</h3><p>Retrouvez les supports de cours pour animer les formations de votre centre.</p></div>
+        </li>
         <li class="portal-service portal-service-elearning">
           <span class="service-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" focusable="false"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="m10 8 5 3-5 3V8Zm2 9v4m-4 0h8"/></svg>
           </span>
           <div class="service-copy">
-            <div class="service-heading"><h3>Accès e-learning</h3><span class="available-badge">Disponible</span></div>
-            <p>Créez un accès individuel ou un groupe, puis suivez la progression de vos stagiaires dans les parcours APS et VTC.</p>
+            <div class="service-heading"><h3>Accès e-learning</h3><span class="available-badge">{{ "Disponible" if elearning_sales_enabled else "Ventes suspendues" }}</span></div>
+            <p>Créez un accès individuel ou un groupe, puis suivez la progression de vos stagiaires dans les parcours APS, MAC APS, A3P et VTC.</p>
           </div>
         </li>
         <li class="portal-service">
@@ -103,7 +107,7 @@
           </div>
         </div>
 
-        <p><a href="{{ url_for('manuals_shop.forgot_password') }}">Mot de passe oublié ?</a></p>
+        <div class="login-recovery"><a href="{{ url_for('manuals_shop.forgot_password') }}">Mot de passe oublié ?</a><span>Recevez un lien de réinitialisation par e-mail.</span></div>
         <button class="login-submit" type="submit" data-submit-button>
           <span class="button-spinner" aria-hidden="true"></span>
           <span data-submit-text>Accéder à mon espace</span>
@@ -113,10 +117,10 @@
         <div class="signup-callout">
           <p>Vous n’avez pas encore de compte ?</p>
           <a href="{{ url_for('manuals_shop.register_account', next=next_url) }}">Créer mon espace organisme <span aria-hidden="true">→</span></a>
-          <small>Inscription gratuite pour votre organisme.<br>Commandez vos manuels et vos accès e-learning.</small>
+          <small>Inscription gratuite pour votre organisme.<br>Manuels, clés USB et accès e-learning au même endroit.</small>
         </div>
 
-        <p class="login-demo-callout">Découvrez le parcours avant de commander.<br><a href="{{ url_for('manuals_shop.elearning_demo') }}">Démonstration e-learning APS <span aria-hidden="true">→</span></a></p>
+        <p class="login-demo-callout">Découvrez nos parcours avant de commander.<br><a href="{{ url_for('manuals_shop.public_elearning') }}">Découvrir les e-learnings <span aria-hidden="true">→</span></a></p>
 
         <p class="security-note">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.5 18.5 6v5.2c0 4.1-2.6 7.7-6.5 9.3-3.9-1.6-6.5-5.2-6.5-9.3V6L12 3.5Z"/></svg>

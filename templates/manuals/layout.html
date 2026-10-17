@@ -24,7 +24,7 @@
   {% block structured_data %}{% if public %}<script type="application/ld+json">{{ search_metadata.data|tojson }}</script>{% endif %}{% endblock %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-shop.css', v='20261012-experience') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-presentation.css', v='20261012-collection') }}">
-  {% if show_organisme_identity %}<link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-identity.css', v='20261014-group') }}">{% endif %}
+  {% if show_organisme_identity %}<link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-identity.css', v='20261017-footer') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-storefront.css', v='20261013-covers') }}">
   <script src="{{ url_for('static', filename='js/manuals-catalogue.js', v='20261012-experience') }}" defer></script>
   {% block extra_styles %}{% endblock %}
@@ -77,9 +77,8 @@
   {% if show_organisme_identity %}
     {% include "manuals/_organisme_identity.html" %}
   {% else %}
-  <footer class="site-footer"><span>Intégrale Academy · Des supports pour transmettre.</span><a href="mailto:clement@integraleacademy.com">clement@integraleacademy.com</a><a href="tel:+33422470768">04 22 47 07 68</a></footer>
+  <footer class="site-footer"><span>Intégrale Academy · Des supports pour transmettre.</span><a href="mailto:clement@integraleacademy.com">clement@integraleacademy.com</a><a href="tel:+33422470768">04 22 47 07 68</a>{% include "manuals/_legal_links.html" %}</footer>
   {% endif %}
-  <nav class="legal-links" aria-label="Informations pratiques"><a href="/personnalisation-livraison">Personnalisation et livraison</a><a href="/mentions-legales">Mentions légales</a><a href="/conditions-de-vente">Conditions de vente</a><a href="/confidentialite">Confidentialité</a></nav>
   {% endif %}
   {% if embedded %}<script src="{{ url_for('static',filename='js/partner-embedded.js',v='20261016-1') }}" defer></script>{% endif %}
   {% block extra_scripts %}{% endblock %}
