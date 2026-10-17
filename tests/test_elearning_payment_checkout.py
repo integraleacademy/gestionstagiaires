@@ -46,6 +46,9 @@ def test_verified_card_capture_unlocks_before_invoice_reconciliation_and_only_on
     assert 'no-store' in status.headers['Cache-Control']
     confirmation = shop['client'].get(url + '/confirmation')
     assert confirmation.status_code == 200 and 'Commande confirmée' in confirmation.text
+    assert 'data-el-celebration=' in confirmation.text
+    assert 'data-confetti' in confirmation.text
+    assert 'data-el-celebration=' not in shop['client'].get(url).text
     assert 'Régler ma facture' not in confirmation.text
     invoice_link = re.search(r'<a\b[^>]*href="' + re.escape(url + '/facture') + r'"[^>]*>', confirmation.text).group()
     assert 'target="_blank"' in invoice_link and 'rel="noopener noreferrer"' in invoice_link
@@ -131,3 +134,27 @@ def test_production_confirmation_links_use_connect_and_staging_remains_isolated(
         assert base_url(host) == 'https://www.integraleconnect.com'
         monkeypatch.setenv('RENDER_EXTERNAL_URL', 'https://gestionstagiaires-test-v2.onrender.com')
         assert base_url(host) == 'https://gestionstagiaires-test-v2.onrender.com'
+
+
+def test_modal_close_refresh_is_scoped_csrf_protected_and_never_trusts_client_payment(shop, merchant):
+    order = submit(shop)
+    run(order)
+    client = shop['client']
+    url = '/admin/organisme/e-learning/commandes/' + order['id']
+    assert 'data-el-celebration=' not in client.get(url).text
+    rejected = client.post(url + '/actualiser', headers={'Accept': 'application/json'})
+    assert rejected.status_code == 400
+    response = client.post(url + '/actualiser', data={'csrf_token': csrf(client, url), 'paid': 'true'}, headers={'Accept': 'application/json'})
+    assert response.status_code == 200
+    assert response.json['paid'] is False
+    assert 'no-store' in response.headers['Cache-Control']
+    assert not learning.entitled(latest(shop))
+    assert not centre_messages(shop)
+    assert client.get(url + '/confirmation?paid=true').status_code == 303
+    other = host.app.test_client()
+    signup(other, email='modal-other@example.test')
+    login(other, email='modal-other@example.test')
+    other.get('/admin/organisme/e-learning')
+    with other.session_transaction() as session:
+        other_csrf = session['manuals_csrf']
+    assert other.post(url + '/actualiser', data={'csrf_token': other_csrf}, headers={'Accept': 'application/json'}).status_code == 404

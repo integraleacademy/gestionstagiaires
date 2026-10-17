@@ -1,0 +1,14 @@
+<dialog class="el-success-dialog" data-el-celebration="{{ order.id }}" aria-labelledby="el-success-title" aria-describedby="el-success-description">
+  <div class="el-confetti" data-confetti aria-hidden="true"></div>
+  <div class="el-success-card">
+    <button type="button" class="el-dialog-close" data-celebration-close aria-label="Fermer la confirmation">×</button>
+    <div class="el-success-party" aria-hidden="true"><span>🎉</span><i>✦</i><b>✧</b></div>
+    <span class="el-success-eyebrow">C’EST PARTI !</span>
+    <h2 id="el-success-title">Commande<br><em>confirmée !</em></h2>
+    <p id="el-success-description">{{ 'Votre commande gratuite est validée.' if order.free_snapshot else 'Votre paiement a bien été reçu.' }}<br>Vos stagiaires vont pouvoir commencer l’aventure.</p>
+    <div class="el-success-receipt"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".12"/><path d="m7 12 3 3 7-7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>{{ order.learners|length }} accès {{ order.course_code|elearning_label }} {{ 'prêt' if order.learners|length == 1 else 'prêts' }}</span><strong>{{ 'Gratuit' if order.free_snapshot else order.total_cents|manuals_money ~ ' TTC' }}</strong></div>
+    <button type="button" class="button primary el-success-continue" data-celebration-close>Voir ma commande <span aria-hidden="true">→</span></button>
+    <p class="el-success-note">Vous choisissez quand envoyer les accès aux stagiaires.</p>
+    <small class="el-success-reference">{{ order.reference }}</small>
+  </div>
+</dialog>
