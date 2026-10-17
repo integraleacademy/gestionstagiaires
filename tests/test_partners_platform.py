@@ -17,6 +17,8 @@ SALES = '/admin/commandes-elearning'
 
 @pytest.mark.parametrize('outcome', ['success', 'denied', 'exchange_failed'])
 def test_embedded_payment_authorization_leaves_dialog_and_returns_to_hub(shop, monkeypatch, outcome):
+    monkeypatch.setitem(host.app.config, 'SERVER_NAME', 'gestionstagiaires-test-v2.onrender.com')
+    monkeypatch.setattr(host, 'QONTO_OAUTH_REDIRECT_URI', 'https://gestionstagiaires-test-v2.onrender.com/api/qonto/oauth/callback')
     client = shop['client']
     as_admin(client)
     monkeypatch.setattr(host, '_qonto_oauth_is_configured', lambda: True)
@@ -46,6 +48,7 @@ def test_embedded_payment_authorization_leaves_dialog_and_returns_to_hub(shop, m
     assert oauth.status_code == 302
     params = parse_qs(urlsplit(oauth.location).query)
     assert 'embed' not in params
+    assert params['redirect_uri'] == [host.QONTO_OAUTH_REDIRECT_URI]
     callback = urlsplit(params['redirect_uri'][0]).path
     result = 'error=access_denied' if outcome == 'denied' else 'code=local-test-code'
     response = client.get(callback + '?state=' + params['state'][0] + '&' + result)

@@ -142,6 +142,21 @@ def base_url(host):
     raise ValueError("Adresse publique de l’espace non configurée")
 
 
+def payment_oauth_callback(host):
+    """Reuse the registered URI without sending test-service tokens to production."""
+    callback = host._qonto_oauth_redirect_uri()
+    parsed = urlparse(callback)
+    allowed_origins = {base_url(host)}
+    service = urlparse(os.getenv("RENDER_EXTERNAL_URL", ""))
+    if service.scheme == "https" and service.hostname and not service.username and not service.password:
+        allowed_origins.add(f"https://{service.netloc}")
+    if (parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password
+            or parsed.query or parsed.fragment or parsed.path != "/api/qonto/oauth/callback"
+            or f"https://{parsed.netloc}" not in allowed_origins):
+        raise ValueError("L’adresse de retour Qonto configurée ne correspond pas à ce service. Vérifiez QONTO_OAUTH_REDIRECT_URI dans Render.")
+    return callback
+
+
 def save_logo(host, upload, partner_id, draft_id):
     if not upload or not upload.filename:
         return ""
@@ -687,7 +702,7 @@ def register(host):
             except ValueError as exc:
                 errors = [str(exc)]
         configuration = commerce.configuration_status(host, data)
-        return page("commerce_settings.html", staff=True, settings=settings, errors=errors, **configuration, payment_callback=base_url(host) + url_for("manuals_shop.payment_connection_callback")), (400 if errors else 200)
+        return page("commerce_settings.html", staff=True, settings=settings, errors=errors, **configuration, payment_callback=host._qonto_oauth_redirect_uri()), (400 if errors else 200)
 
     @bp.get("/admin/commandes-manuels/connexion-paiement")
     @host.admin_login_required
@@ -700,8 +715,18 @@ def register(host):
         if not host._qonto_oauth_is_configured():
             flash("Renseignez QONTO_OAUTH_CLIENT_ID et QONTO_OAUTH_CLIENT_SECRET sur ce service Render.", "error")
             return redirect(settings_url)
-        callback = base_url(host) + url_for("manuals_shop.payment_connection_callback")
-        state = secrets.token_urlsafe(32)
+        try:
+            callback = payment_oauth_callback(host)
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return redirect(settings_url)
+        canonical = urlparse(callback)
+        if request.host.lower() != canonical.netloc.lower():
+            # Host-only session cookies must be created on the callback host.
+            # Start there before creating state or visiting Qonto.
+            destination = url_for("manuals_shop.payment_connection", return_to="partners" if return_to_partners else "commerce")
+            return redirect(f"https://{canonical.netloc}{destination}")
+        state = host.QONTO_PAYMENT_STATE_PREFIX + secrets.token_urlsafe(32)
         session["manuals_payment_connection"] = {"state": state, "created": time.time(), "callback": callback, "return_to_partners": return_to_partners}
         params = {"client_id": host._qonto_oauth_client_id(), "redirect_uri": callback,
                   "response_type": "code", "scope": host.QONTO_OAUTH_SCOPE + " payment_link.read payment_link.write", "state": state}
@@ -722,6 +747,11 @@ def register(host):
         else:
             try:
                 tokens = host._exchange_qonto_oauth_token({"client_id": host._qonto_oauth_client_id(), "client_secret": host._qonto_oauth_client_secret(), "grant_type": "authorization_code", "redirect_uri": saved["callback"], "code": request.args["code"]})
+                required = set(host.QONTO_OAUTH_SCOPE.split()) | set(commerce.PAYMENT_SCOPES)
+                granted = {"qonto_oauth": tokens}
+                if not all(host._qonto_oauth_has_scope(scope, granted) for scope in required - {"offline_access"}):
+                    flash("Qonto n’a pas accordé toutes les autorisations nécessaires. La connexion existante est conservée. Vérifiez les droits de l’application dans Qonto avant de réessayer.", "error")
+                    return redirect(url_for("admin_partners", tab="settings") if saved.get("return_to_partners") else url_for("manuals_shop.commerce_settings"))
                 host._store_qonto_oauth_tokens(host.load_data(), tokens)
                 def resume(data):
                     for order in data.get("manual_orders", []):

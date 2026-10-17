@@ -266,6 +266,12 @@ def debug_qonto_routes_once():
 
 @app.get("/api/qonto/oauth/callback")
 def api_qonto_oauth_callback():
+    # Payment links reuse the redirect URI already registered with Qonto.
+    # The prefix only selects a handler; that handler verifies the one-use
+    # state, its expiry and the platform administrator's permissions.
+    state = request.args.get("state") or ""
+    if state.startswith(QONTO_PAYMENT_STATE_PREFIX):
+        return app.view_functions["manuals_shop.payment_connection_callback"]()
     app.logger.info("[QONTO OAUTH CALLBACK] route called")
     error = request.args.get("error")
     error_description = request.args.get("error_description") or request.args.get("error_message") or ""
@@ -280,9 +286,8 @@ def api_qonto_oauth_callback():
         app.logger.warning("[QONTO OAUTH CALLBACK] missing authorization code")
         return redirect(_qonto_oauth_settings_redirect("error"))
 
-    state = request.args.get("state") or ""
     expected_state = session.pop("qonto_oauth_state", "")
-    if expected_state and (not state or not hmac.compare_digest(state, expected_state)):
+    if not expected_state or not state or not hmac.compare_digest(state, expected_state):
         app.logger.warning("[QONTO OAUTH CALLBACK] state mismatch has_state=%s", bool(state))
         return redirect(_qonto_oauth_settings_redirect("error"))
 
@@ -481,6 +486,7 @@ QONTO_WEBHOOK_SIGNATURE_HEADERS = (
 )
 
 QONTO_OAUTH_SCOPE = "offline_access client.read client.write client_invoice.write client_invoices.read sepa_direct_debit.read sepa_direct_debit.write webhook"
+QONTO_PAYMENT_STATE_PREFIX = "payment:"
 QONTO_OAUTH_ENVIRONMENT = "production"
 QONTO_OAUTH_PRODUCTION_BASE_URL = "https://oauth.qonto.com"
 QONTO_OAUTH_REQUIRED_MESSAGE = "Connexion Qonto OAuth requise pour programmer les prélèvements SEPA."

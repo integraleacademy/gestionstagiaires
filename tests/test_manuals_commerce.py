@@ -412,6 +412,8 @@ def test_untrusted_payment_links_rejected(value):
 
 def test_payment_oauth_is_bound_to_this_service_and_state(shop, monkeypatch):
     from urllib.parse import urlparse, parse_qs
+    monkeypatch.setitem(host.app.config, 'SERVER_NAME', 'gestionstagiaires-test-v2.onrender.com')
+    monkeypatch.setattr(host, 'QONTO_OAUTH_REDIRECT_URI', 'https://gestionstagiaires-test-v2.onrender.com/api/qonto/oauth/callback')
     monkeypatch.setattr(host, '_qonto_oauth_is_configured', lambda: True)
     monkeypatch.setattr(host, '_qonto_oauth_client_id', lambda: 'test-client')
     monkeypatch.setattr(host, '_qonto_oauth_client_secret', lambda: 'test-secret')
@@ -420,12 +422,12 @@ def test_payment_oauth_is_bound_to_this_service_and_state(shop, monkeypatch):
     admin=host.app.test_client()
     admin.post('/admin/login', data={'username':'admin@example.test','password':'platform-test-pass'})
     connect='/admin/commandes-manuels/connexion-paiement'
-    callback='/api/commerce/connexion-paiement/retour'
+    callback='/api/qonto/oauth/callback'
     response=admin.get(connect)
     params=parse_qs(urlparse(response.location).query)
     assert params['redirect_uri']==['https://gestionstagiaires-test-v2.onrender.com'+callback]
     assert 'payment_link.write' in params['scope'][0]
-    assert admin.get(callback+'?state=forged&code=no').status_code==400
+    assert admin.get(callback+'?state=payment:forged&code=no').status_code==400
     assert not exchange
     params=parse_qs(urlparse(admin.get(connect).location).query)
     assert admin.get(callback+'?state='+params['state'][0]+'&code=local-code').status_code==302
