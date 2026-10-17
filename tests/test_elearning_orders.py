@@ -324,7 +324,7 @@ def test_learner_email_uses_centre_identity_and_reply_to_without_platform_contac
     messages = [mail for mail in shop["mails"] if mail[0][0] in {"camille@example.test", "alex@example.test"}]
     assert len(messages) == 2
     for args, kwargs in messages:
-        assert args[1] == "Votre accès personnel APS · École Horizon"
+        assert args[1] == "Votre accès personnel Agent de prévention et de sécurité (APS) · École Horizon"
         assert kwargs["sender_name"] == "École Horizon"
         assert kwargs["sender_email"] == "learning@verified-sender.example.test"
         assert kwargs["reply_to"] == {"email": "contact@horizon.example.test", "name": "École Horizon"}

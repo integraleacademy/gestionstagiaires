@@ -49,6 +49,16 @@ def course_label(code):
     return COURSES.get(code, {}).get("name", str(code or "").upper())
 
 
+def course_full_label(code):
+    titles = {
+        "aps": "Agent de prévention et de sécurité",
+        "a3p": "Agent de protection physique des personnes",
+        "mac-aps": "Maintien et actualisation des compétences d’agent de prévention et de sécurité",
+        "vtc": "Conducteur de voiture de transport avec chauffeur",
+    }
+    return f"{titles[code]} ({course_label(code)})" if code in titles else course_label(code)
+
+
 def prices(partner):
     saved = partner.get("elearning_pricing") or {}
     result = {}
@@ -167,7 +177,7 @@ def status_view(order):
 
 
 def checkout_response(oid):
-    """Progressive enhancement: keep the payment window opened by the click."""
+    """Progressive enhancement for payment in the current browser tab."""
     location = url_for("manuals_shop.elearning_order", oid=oid)
     if request.accept_mimetypes.best == "application/json":
         return {"order_url": location, "status_url": url_for("manuals_shop.elearning_status", oid=oid),
@@ -262,12 +272,12 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False):
     title = "Votre formation vous attend" if person else "Votre commande est confirmée"
     link = base_url(host) + ("/apprendre/" + access_token(host, order, person) if person else "/admin/organisme/e-learning/commandes/" + order["id"])
     brand = learner_brand(host.load_data(run_background_tasks=False), order, host=host) if person else None
-    subject = ("Votre accès personnel " if person else "Commande confirmée · E-learning ") + course_label(order["course_code"]) + " · " + (brand["name"] if person else "Intégrale Connect")
+    subject = ("Votre accès personnel " if person else "Commande confirmée · E-learning ") + (course_full_label(order["course_code"]) if person else course_label(order["course_code"])) + " · " + (brand["name"] if person else "Intégrale Connect")
     body = host.app.jinja_env.get_template("manuals/elearning_email.html").render(order=order, person=person, title=title, link=link, paid=paid, invoice=invoice, money=money, learner_brand=brand, email_base_url=base_url(host))
     dispatch_note = ("Votre demande d’envoi des accès est enregistrée.\n" if order.get("access_dispatch_requested_at")
                      else "Cliquez sur « Envoyer les accès e-learning aux stagiaires » dans votre commande pour déclencher l’envoi.\n" if paid
                      else "Après règlement intégral, cliquez sur « Envoyer les accès e-learning aux stagiaires » dans votre commande.\n")
-    plain = (f"Bonjour {person['first_name']},\nVotre accès personnel au parcours {course_label(order['course_code'])} est activé.\n" if person else f"Commande {order['reference']} : {len(order['learners'])} accès {course_label(order['course_code'])}.\nTotal : {money(order['total_cents'])} TTC.\n" + dispatch_note)
+    plain = (f"Bonjour {person['first_name']},\n{brand['name']} vous a inscrit(e) au parcours {course_full_label(order['course_code'])}. Votre accès est maintenant activé.\n" if person else f"Commande {order['reference']} : {len(order['learners'])} accès {course_label(order['course_code'])}.\nTotal : {money(order['total_cents'])} TTC.\n" + dispatch_note)
     if order["course_code"] == "mac-aps":
         plain += "Ce programme numérique de préparation et de révision ne délivre pas à lui seul l’attestation réglementaire de stage MAC APS.\n"
     plain += "Ouvrir mon espace : " + link
@@ -607,7 +617,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         path = Path(host.get_partner_storage_path(order["partner_id"], "factures")) / ("elearning-" + oid + ("-paid" if entitled(order) else "-due") + ".pdf")
         if not path.is_file():
             abort(409, "La facture est en préparation. Réessayez dans quelques instants.")
-        return send_file(io.BytesIO(path.read_bytes()), mimetype="application/pdf", as_attachment=True, download_name="Facture-" + order["reference"] + ".pdf")
+        return send_file(io.BytesIO(path.read_bytes()), mimetype="application/pdf", as_attachment=False, download_name="Facture-" + order["reference"] + ".pdf")
 
     @bp.route("/admin/commandes-elearning", methods=["GET", "POST"])
     @host.admin_login_required

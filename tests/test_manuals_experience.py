@@ -134,3 +134,16 @@ def test_recovery_has_no_cross_tenant_write(shop):
     original=all_data(shop)['users'][0]['password_hash']
     assert c.post('/reinitialiser-mot-de-passe/fake',data={'csrf_token':csrf(c,'/mot-de-passe-oublie'),'password':'Password changed 2026!'}).status_code==400
     assert all_data(shop)['users'][0]['password_hash']==original
+
+
+def test_terms_keep_accepted_editions_and_serve_expanded_current_version(shop):
+    client = shop['client']
+    current = client.get('/conditions-de-vente')
+    assert current.status_code == 200 and '17/10/2026' in current.text
+    assert '19. Réclamations' in current.text and '6 mois' in current.text
+    old = client.get('/conditions-de-vente?version=2026-10-16')
+    assert old.status_code == 200 and '16/10/2026' in old.text
+    assert '9. Assistance, données et différends' in old.text
+    assert '19. Réclamations' not in old.text
+    assert client.get('/conditions-de-vente?version=2026-10-12').status_code == 200
+    assert client.get('/conditions-de-vente?version=not-published').status_code == 404

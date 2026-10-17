@@ -62,6 +62,10 @@ def test_payment_and_refresh_never_dispatch_until_explicit_post(shop, merchant, 
     run(order)
     sent = latest(shop)
     assert sent["activated_at"] and len(learner_mails(shop, order)) == 2
+    full_name = learning.course_full_label(code)
+    for args, options in learner_mails(shop, order):
+        assert full_name in args[1] and full_name in args[2]
+        assert full_name in options['text_content']
     assert sent["access_dispatch_requested_at"] == requested
     assert sent["access_dispatch_requested_by"]
     before = copy.deepcopy(sent)

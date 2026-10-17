@@ -1,5 +1,6 @@
 """Checkout regressions: verified capture, no premature e-mail, scoped return."""
 import copy
+import re
 
 import pytest
 from werkzeug.datastructures import MultiDict
@@ -46,6 +47,11 @@ def test_verified_card_capture_unlocks_before_invoice_reconciliation_and_only_on
     confirmation = shop['client'].get(url + '/confirmation')
     assert confirmation.status_code == 200 and 'Commande confirmée' in confirmation.text
     assert 'Régler ma facture' not in confirmation.text
+    invoice_link = re.search(r'<a\b[^>]*href="' + re.escape(url + '/facture') + r'"[^>]*>', confirmation.text).group()
+    assert 'target="_blank"' in invoice_link and 'rel="noopener noreferrer"' in invoice_link
+    invoice = shop['client'].get(url + '/facture')
+    assert invoice.status_code == 200 and invoice.mimetype == 'application/pdf'
+    assert invoice.headers['Content-Disposition'].startswith('inline;')
 
 
 @pytest.mark.parametrize('status,amount,currency,paid_at', [

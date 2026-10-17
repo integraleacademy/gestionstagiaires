@@ -188,6 +188,7 @@ def register(host):
     bp = Blueprint("manuals_shop", __name__)
     app.add_template_filter(money, "manuals_money")
     app.add_template_filter(elearning_orders.course_label, "elearning_label")
+    app.add_template_filter(elearning_orders.course_full_label, "elearning_full_label")
     app.jinja_env.globals["elearning_courses"] = elearning_orders.COURSES
     kick_worker = commerce.install_worker(host)
 
