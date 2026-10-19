@@ -23,6 +23,7 @@ import logging
 import signal
 import atexit
 import sys
+import ssiap_exam
 from backup_chronology import backup_chronology_key
 from wedof_requests import (
     entry_kind as wedof_entry_kind,
@@ -10014,6 +10015,7 @@ def save_data(
         if isinstance(canonical, dict):
             _preserve_aps_elearning_report_state(payload, canonical)
             _preserve_document_reminder_state(payload, canonical)
+            ssiap_exam.preserve_state(payload, canonical)
             _preserve_cnaps_tracking_state(payload, canonical)
             if not scoped_partner_id and preserve_qonto_oauth and isinstance(canonical.get("qonto_oauth"), dict):
                 payload["qonto_oauth"] = canonical["qonto_oauth"]
@@ -25567,6 +25569,7 @@ def admin_trainees(session_id: str):
         "admin_trainees.html",
         session={**session_view, "ssiap_pathways": s.get("ssiap_pathways")},
         ssiap_supported=ssiap_pathways.supported(s),
+        ssiap_exam_supported=ssiap_exam.supported(s) and s.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID),
         trainees=trainees,
         stats=stats,
         show_hosting=show_hosting,
@@ -55645,6 +55648,7 @@ if _partner_postgres_active():
 
 import ssiap_routes
 ssiap_routes.register(app, sys.modules[__name__])
+ssiap_exam.register(app, sys.modules[__name__])
 
 manuals_shop.register(sys.modules[__name__])
 import partner_workspace
