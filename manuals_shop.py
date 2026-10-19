@@ -33,6 +33,7 @@ import manuals_public
 import manuals_fulfillment
 import manuals_metrics
 import manuals_previews
+import partner_registration_notifications
 from manuals_presentation import presentation_books
 
 
@@ -325,6 +326,9 @@ def register(host):
             if not errors:
                 pid, uid, now = str(uuid.uuid4()), str(uuid.uuid4()), host._now_iso()
                 partner = {"id": pid, "name": values["centre"], "legal_name": values["centre"], "siret": values["siret"], "email": values["email"], "contact_first_name": values["first_name"], "contact_last_name": values["last_name"], "status": "active", "account_type": "manuals_only", "subscription_plan": "manuels", "enabled_modules": [], "max_users": 1, "created_at": now, "updated_at": now}
+                partner[partner_registration_notifications.STATE_KEY] = {
+                    "status": "pending", "queued_at": now, "user_id": uid, "attempts": 0, "next_attempt": 0,
+                }
                 user = {"id": uid, "partner_id": pid, "email": values["email"], "first_name": values["first_name"], "last_name": values["last_name"], "role": "partner_admin", "active": True, "password_hash": host._hash_password(password), "invitation_activated_at": now, "created_at": now, "updated_at": now}
                 def create(data):
                     if host._find_user_by_email(data, values["email"]):
@@ -338,6 +342,7 @@ def register(host):
                 except host.PartnerPostgresDuplicateEmail:
                     errors.append("Cette adresse e-mail est déjà utilisée. Connectez-vous à votre espace.")
                 else:
+                    kick_worker()
                     manuals_metrics.increment(host, "account_created")
                     session.clear()
                     session["manuals_registration"] = {"partner_id": pid, "user_id": uid, "name": values["centre"], "email": values["email"], "next": next_url}

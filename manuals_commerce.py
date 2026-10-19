@@ -688,6 +688,7 @@ def queue_again(host, pid, oid, *, throttle=False):
 
 
 def install_worker(host):
+    from partner_registration_notifications import process_pending as process_registrations
     lock, wake = threading.Lock(), threading.Event()
     running = [False]
     def run():
@@ -696,6 +697,7 @@ def install_worker(host):
             try:
                 with host.app.app_context():
                     data = host.load_data(run_background_tasks=False)
+                    process_registrations(host, data)
                     if not logged_configuration:
                         host.app.logger.info("manuals_commerce_configuration invoice_api=%s iban=%s vat=%s payment_scopes=%s email_ready=%s",
                             host._qonto_is_configured(), bool(os.environ.get("QONTO_IBAN")), bool(settings_from(data)),
