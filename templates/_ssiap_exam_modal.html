@@ -1,0 +1,22 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css') }}">
+<dialog id="ssiapExamDialog" class="exam-dialog" aria-labelledby="ssiapExamTitle" data-url="{{ url_for('api_ssiap_exam', session_id=session.id) }}">
+  <header class="exam-heading"><div><span class="exam-eyebrow">INTÉGRALE ACADEMY</span><h2 id="ssiapExamTitle">Examen SSIAP</h2><p>{{ session.name }}</p></div><button type="button" data-exam-close aria-label="Fermer la modale Examen" class="exam-close">×</button></header>
+  <nav class="exam-tabs" aria-label="Rubriques de l’examen">
+    <button type="button" data-exam-tab="candidates" aria-pressed="true">Dossiers candidats</button>
+    <button type="button" data-exam-tab="organization" aria-pressed="false">Organisation et jury</button>
+    <button type="button" data-exam-tab="collective" aria-pressed="false">PV collectif</button>
+  </nav>
+  <div id="ssiapExamStatus" class="exam-status" role="status" aria-live="polite"></div>
+  <div class="exam-content">
+    <section data-exam-panel="candidates"><div id="ssiapExamCandidates">Chargement des dossiers…</div></section>
+    <section data-exam-panel="organization" hidden><form id="ssiapExamConfig"></form><div id="ssiapExamMailHistory"></div></section>
+    <section data-exam-panel="collective" hidden><div id="ssiapExamCollective"></div></section>
+  </div>
+</dialog>
+<dialog id="ssiapExamMailDialog" class="exam-dialog exam-mail-dialog" aria-labelledby="ssiapExamMailTitle">
+  <header class="exam-heading"><div><span class="exam-eyebrow">AVANT ENVOI</span><h2 id="ssiapExamMailTitle">Prévisualiser le mail</h2></div><button type="button" data-mail-close class="exam-close" aria-label="Fermer l’aperçu">×</button></header>
+  <div class="exam-mail-meta"><p>À : <strong id="ssiapExamMailTo"></strong></p><p>Objet : <strong id="ssiapExamMailSubject"></strong></p><p id="ssiapExamMailStatus" role="status"></p></div>
+  <iframe id="ssiapExamMailFrame" title="Contenu du mail au jury" sandbox=""></iframe>
+  <footer class="exam-mail-actions"><button type="button" class="btn btn-outline" data-mail-close>Retour</button><button type="button" id="ssiapExamSend" class="btn btn-primary">Envoyer ce mail</button></footer>
+</dialog>
+<script src="{{ url_for('static', filename='js/ssiap-exam.js') }}" defer></script>

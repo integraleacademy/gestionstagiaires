@@ -167,6 +167,7 @@
       </select>
     {% endif %}
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
+    {% if ssiap_exam_supported %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Examen</button>{% endif %}
     {% if is_aps_training and session.aps_elearning_enabled and not is_read_only %}
     <button class="btn btn-outline" id="btnImportDigiforma" type="button">Importer les relevés Digiforma</button>
     {% endif %}
@@ -4465,4 +4466,5 @@ applyRowFilters();
 {% if is_aps_training and session.aps_elearning_enabled and not is_read_only %}
 {% include '_aps_digiforma_bulk_import.html' %}
 {% endif %}
+{% if ssiap_exam_supported %}{% include '_ssiap_exam_modal.html' %}{% endif %}
 {% endblock %}
