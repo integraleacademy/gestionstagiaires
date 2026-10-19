@@ -35,9 +35,9 @@ for font_name, filename in ((FONT, 'DejaVuSans.ttf'), (BOLD, 'DejaVuSans-Bold.tt
     pdfmetrics.registerFont(TTFont(font_name, '/usr/share/fonts/truetype/dejavu/' + filename))
 
 
-def paragraph(canvas, text, x, top, width=WIDTH, size=10, color=NAVY, bold=False, leading=None):
+def paragraph(canvas, text, x, top, width=WIDTH, size=10, color=NAVY, bold=False, leading=None, alignment=0):
     style = ParagraphStyle('text', fontName=BOLD if bold else FONT, fontSize=size,
-                           leading=leading or size * 1.45, textColor=color, spaceAfter=0)
+                           leading=leading or size * 1.45, textColor=color, spaceAfter=0, alignment=alignment)
     p = Paragraph(escape(str(text)).replace('\n', '<br/>'), style)
     _, height = p.wrap(width, H)
     p.drawOn(canvas, x, top - height)
@@ -120,16 +120,87 @@ def form_date(page, font, date, y):
     form_text(page, font, text, (float(page.rect.width) - font.text_length(text, fontsize=13)) / 2, y, 300, 13)
 
 
+def approval_footer(config, *, dark=False, pagination=''):
+    c, stream = new_pdf('Agrément SSIAP')
+    text = config['approval']
+    c.setFillColor(MINT if dark else MUTED)
+    size = min(7.3, (WIDTH - 42) / max(pdfmetrics.stringWidth(text, FONT, 1), 1))
+    c.setFont(FONT, size)
+    c.drawString(M, 14, text)
+    if pagination:
+        c.setFont(FONT, 7.3)
+        c.drawRightString(W - M, 14, pagination)
+    return finish(c, stream)
+
+
+def form_contact(page, font, config, kind, font_bytes):
+    """Replace only the centre's variable contact fields, keeping the supplied form."""
+    if kind == 'individual':
+        regions = [(26, 188, 298, 220), (26, 230, 298, 262)]
+        phone_y, mail_y, approval_y = 201, 215, 244
+    else:
+        regions = [(26, 134, 290, 166), (26, 168, 290, 185)]
+        phone_y, mail_y, approval_y = 146, 161, 179
+    for region in regions:
+        page.add_redact_annot(fitz.Rect(region), fill=(1, 1, 1))
+    page.apply_redactions(images=0, graphics=0, text=0)
+    # Redaction removes unused font resources from the blank master.
+    page.insert_font(fontname='ExamRegular', fontbuffer=font_bytes)
+    form_text(page, font, 'Tél : ' + config['contact_phone'], 28.45, phone_y, 260, 11)
+    form_text(page, font, 'Email : ' + config['contact_email'], 28.45, mail_y, 260, 11)
+    form_text(page, font, config['approval'], 28.45, approval_y, 538, 9.5)
+
+
+def form_jurors(page, font, members, rect):
+    if not members:
+        return
+    lines = []
+    for member in members:
+        lines.append(name(member))
+        if member.get('company'):
+            lines.append(member['company'])
+    text = '\n'.join(lines)
+    for size in (9.5, 9, 8, 7):
+        shape = page.new_shape()
+        if shape.insert_textbox(rect, text, fontname='ExamRegular', fontsize=size, lineheight=1.25) >= 0:
+            shape.commit()
+            return
+    raise ValueError('Les informations du jury sont trop longues pour le cadre du modèle officiel. Réduisez les noms des structures.')
+
+
+def form_centre_signature(page, font, assets, kind):
+    if kind == 'individual':
+        form_text(page, font, 'Clément VAILLANT', 399, 705, 164, 9.5)
+        signature_rect = fitz.Rect(434, 711, 504, 750)
+        stamp_rect = fitz.Rect(400, 745, 563, 791)
+    else:
+        # The two columns above belong to the jury; sign beside the centre's own label.
+        signature_rect = fitz.Rect(185, 778, 253, 816)
+        stamp_rect = fitz.Rect(327, 778, 450, 820)
+    page.insert_image(signature_rect, stream=assets['signature'], keep_proportion=True)
+    page.insert_image(stamp_rect, stream=assets['stamp'], keep_proportion=True)
+
+
+def form_footer(page, config):
+    with fitz.open(stream=approval_footer(config), filetype='pdf') as footer:
+        page.show_pdf_page(page.rect, footer)
+
+
 def individual(training, trainee, config, candidate, root):
-    """Fill identity and date only; every jury field is the untouched supplied form."""
+    """Fill administrative details; the jury still writes marks and signs by hand."""
     check_model(config)
     raw, font_bytes = official_template(root, 'individual')
     with fitz.open(stream=raw, filetype='pdf') as document:
         page = document[0]
         font = fitz.Font(fontbuffer=font_bytes)
+        form_contact(page, font, config, 'individual', font_bytes)
         form_date(page, font, config['date'], 96.2007446)
         form_text(page, font, 'Nom : ' + str(trainee.get('last_name') or '').upper(), 28.45, 338.05078, 261, 12)
         form_text(page, font, 'Prénom : ' + str(trainee.get('first_name') or ''), 301.95, 338.05078, 261, 12)
+        form_jurors(page, font, [m for m in config['jury'] if m['role'] == 'member'], fitz.Rect(33, 700, 203, 744))
+        form_jurors(page, font, [m for m in config['jury'] if m['role'] == 'president'], fitz.Rect(215, 700, 385, 744))
+        form_centre_signature(page, font, signature_assets(root), 'individual')
+        form_footer(page, config)
         document.set_metadata({'title': 'PV individuel SSIAP 1 - ' + name(trainee), 'author': 'Intégrale Academy'})
         return document.tobytes(garbage=3, deflate=True)
 
@@ -168,22 +239,39 @@ def cover(training, trainee, config, candidate, docs, root):
 def attestation(training, trainee, config, candidate, kind, assets, root):
     c, stream = new_pdf('Attestation - ' + name(trainee))
     independence = kind == 'independence'
-    title = 'Attestation d’indépendance' if independence else 'Attestation de capacité'
-    y = header(c, title, f"{config['level']} · Examen du {frdate(config['date'])}", root)
-    y = info(c, config, y)
-    y = paragraph(c, name(trainee), M, y, size=21, bold=True) - 24
+    c.setFillColor(NAVY)
+    c.rect(0, H - 5, W, 5, fill=1, stroke=0)
+    logo = os.path.join(root, 'static', 'logo-integrale.png')
+    if os.path.isfile(logo):
+        c.drawImage(logo, M, H - 36 * mm, 22 * mm, 22 * mm, preserveAspectRatio=True, mask='auto')
+    paragraph(c, 'INTÉGRALE ACADEMY', M + 30 * mm, H - 18 * mm, WIDTH - 30 * mm, 12, bold=True)
+    paragraph(c, 'Intégrale Sécurité Formations\n54 chemin du Carreou · 83480 Puget-sur-Argens',
+              M + 30 * mm, H - 25 * mm, WIDTH - 30 * mm, 8.5, MUTED)
+    c.setStrokeColor(colors.HexColor('#dce4ea'))
+    c.line(M, H - 44 * mm, W - M, H - 44 * mm)
+    paragraph(c, 'Attestation', M, H - 59 * mm, size=28, bold=True, alignment=1)
+    c.setFillColor(LIGHT)
+    c.roundRect(M, H - 110 * mm, WIDTH, 52, 7, fill=1, stroke=0)
+    paragraph(c, name(trainee), M + 12, H - 94 * mm, WIDTH - 24, 16, bold=True, alignment=1)
+    paragraph(c, f"{config['level']} · Examen du {frdate(config['date'])}", M + 12, H - 102 * mm,
+              WIDTH - 24, 9, MUTED, alignment=1)
+    y = H - 124 * mm
     intro = 'Je soussigné, Clément VAILLANT, Directeur général d’Intégrale Academy, représentant l’organisme Intégrale Sécurité Formations,'
     if independence:
         body = f"atteste que le candidat {name(trainee)}, présenté à l’examen {config['level']} du {frdate(config['date'])}, n’exerce pas dans la même entreprise ou structure que les examinateurs ou les membres du jury de cet examen."
     else:
         body = f"atteste qu’à la suite de l’évaluation réalisée par le centre de formation, le candidat {name(trainee)}, présenté à l’examen {config['level']} du {frdate(config['date'])}, a la capacité de rendre compte sur la main courante des anomalies constatées lors d’une ronde et d’alerter les secours."
-    y = paragraph(c, intro, M, y, size=12, leading=20) - 20
-    y = paragraph(c, body, M, y, size=12, leading=20) - 30
+    y = paragraph(c, intro, M, y, size=11, leading=19) - 16
+    y = paragraph(c, body, M, y, size=11, leading=19) - 32
     issued_date = dt.datetime.now(ZoneInfo('Europe/Paris')).date().isoformat()
-    y = paragraph(c, 'Fait à Puget-sur-Argens, le ' + frdate(issued_date), M, y, size=10) - 25
-    y = paragraph(c, 'Clément VAILLANT\nDirecteur général Intégrale Academy', M, y, size=11, bold=True) - 18
-    for key, x, width, height in [('signature', M, 48 * mm, 28 * mm), ('stamp', M + 65 * mm, 72 * mm, 28 * mm)]:
+    y = min(y, 302)
+    y = paragraph(c, 'Fait à Puget-sur-Argens, le ' + frdate(issued_date), M, y, size=10, alignment=1) - 22
+    y = paragraph(c, 'Clément VAILLANT', M, y, size=11, bold=True, alignment=1)
+    y = paragraph(c, 'Directeur général Intégrale Academy', M, y - 3, size=9, color=MUTED, alignment=1) - 12
+    for key, x, width, height in [('signature', W / 2 - 67 * mm, 45 * mm, 27 * mm),
+                                 ('stamp', W / 2 + 3 * mm, 64 * mm, 27 * mm)]:
         c.drawImage(ImageReader(io.BytesIO(assets[key])), x, y - height, width, height, preserveAspectRatio=True, anchor='c', mask='auto')
+    paragraph(c, config['contact_email'] + ' · ' + config['contact_phone'], M, 44, size=8, color=MUTED, alignment=1)
     return finish(c, stream)
 
 
@@ -240,13 +328,10 @@ def dossier(training, trainee, config, candidate, docs, root):
     for kind in ('independence', 'ability'):
         writer.append(io.BytesIO(attestation(training, trainee, config, candidate, kind, assets, root)))
     for i, page in enumerate(writer.pages, 1):
-        if i == 2:  # Never add a footer, logo or page number to the official PV.
+        if i == 2:  # The individual PV already carries the same approval footer.
             continue
-        c, stream = new_pdf('Pagination')
-        c.setFillColor(MINT if i == 1 else MUTED)
-        c.setFont(FONT, 8)
-        c.drawRightString(W - M, 20, f'{i:02d} / {len(writer.pages):02d}')
-        page.merge_page(PdfReader(io.BytesIO(finish(c, stream))).pages[0])
+        footer = approval_footer(config, dark=i == 1, pagination=f'{i:02d} / {len(writer.pages):02d}')
+        page.merge_page(PdfReader(io.BytesIO(footer)).pages[0])
     writer.add_metadata({'/Title': 'Dossier examen SSIAP - ' + name(trainee), '/Author': 'Intégrale Academy'})
     out = io.BytesIO()
     writer.write(out)
@@ -258,10 +343,12 @@ def collective(training, trainees, config, root):
     check_model(config)
     raw, font_bytes = official_template(root, 'collective')
     font = fitz.Font(fontbuffer=font_bytes)
+    assets = signature_assets(root)
     output = fitz.open()
     for start in range(0, max(1, len(trainees)), 14):
         with fitz.open(stream=raw, filetype='pdf') as document:
             page = document[0]
+            form_contact(page, font, config, 'collective', font_bytes)
             form_date(page, font, config['date'], 81.75079)
             for index, trainee in enumerate(trainees[start:start + 14]):
                 y = 256.85077 + index * 20
@@ -287,7 +374,9 @@ def collective(training, trainees, config, root):
             members = ', '.join(name(m) for m in config['jury'] if m['role'] == 'member')
             form_text(page, font, presidents, 28.45, 640, 260, 10)
             form_text(page, font, members, 301.25, 640, 260, 10)
-            # Results, appraisals and signature areas remain blank for the jury.
+            form_centre_signature(page, font, assets, 'collective')
+            form_footer(page, config)
+            # The jury's results and signature areas remain blank.
             output.insert_pdf(document)
     output.set_metadata({'title': 'Procès-verbal collectif SSIAP 1', 'author': 'Intégrale Academy'})
     result = output.tobytes(garbage=3, deflate=True)

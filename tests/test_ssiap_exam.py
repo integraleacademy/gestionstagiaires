@@ -141,6 +141,9 @@ def test_pdf_order_multipage_identity_portrait_and_pending_results(case):
     assert len(reader.pages) == 8
     assert all(abs(float(p.mediabox.width) - A4[0]) < 1 and abs(float(p.mediabox.height) - A4[1]) < 1 for p in reader.pages)
     text = [page.extract_text() for page in reader.pages]
+    assert all(state['config']['approval'] in page_text for page_text in text)
+    assert response.headers['Content-Disposition'].startswith('inline;')
+    assert case[0].get(row['dossier_url'] + '?download=1').headers['Content-Disposition'].startswith('attachment;')
     assert 'Dossier examen' in text[0] and 'Camille EXEMPLE' in text[0]
     assert 'FICHE D’EVALUATION' in text[1]
     assert all(label in text[index] for index, label in enumerate(['IDENTITE_RECTO', 'IDENTITE_VERSO', 'SST', 'MEDICAL'], 2))
@@ -270,7 +273,7 @@ def test_mail_status_each_kind_failure_retry_and_recipient_change(case):
     assert len(view(case)['history']) == 3
 
 
-def test_official_pv_has_no_grades_or_extra_footer_even_with_legacy_values(case):
+def test_official_pv_keeps_jury_assessment_areas_blank_even_with_legacy_values(case):
     import fitz
     state = configured(case)
     case[2]['ssiap_exam']['candidates']={'T1':{'grade':'19.75','written':'valid','practical':'fit','reason':'LEGACY_DECISION'}}
@@ -284,9 +287,11 @@ def test_official_pv_has_no_grades_or_extra_footer_even_with_legacy_values(case)
     assert '19.75' not in text and 'LEGACY_DECISION' not in text
     assert 'BENSAILA' not in text and 'ADEM' not in text and '08/06/2022' not in text
     assert 'EXEMPLE' in text and 'Camille' in text
-    # Every jury-writing area is pixel-identical to the imported official form.
+    assert 'Alex JURY' in text and 'Structure exemple' in text
+    assert 'Clément VAILLANT' in text and state['config']['approval'] in text
+    # The assessment and appraisal areas remain pixel-identical to the supplied form.
     template=fitz.open(str(Path(gestion.app.root_path)/'templates_word/ssiap_exam/pv_individual_ssiap1.pdf'))
-    rect=fitz.Rect(0,365,595,841)
+    rect=fitz.Rect(0,365,595,658)
     assert individual[0].get_pixmap(clip=rect).samples == template[0].get_pixmap(clip=rect).samples
 
 
@@ -304,6 +309,48 @@ def test_collective_repeats_original_14_places_without_changing_table(case):
     template=fitz.open(str(Path(gestion.app.root_path)/'templates_word/ssiap_exam/pv_collective_ssiap1.pdf'))
     results_column=fitz.Rect(365,242,570,520)
     assert doc[0].get_pixmap(clip=results_column).samples == template[0].get_pixmap(clip=results_column).samples
+
+
+def test_pvs_share_contact_approval_and_centre_signatures(case):
+    import fitz
+    state = configured(case)
+    config = case[2]['ssiap_exam']['config']
+    config['contact_email'] = 'centre@example.test'
+    config['contact_phone'] = '04 11 22 33 44'
+    config['jury'].append(dict(config['jury'][0], id='J2', role='member', first_name='Marie', last_name='MEMBRE'))
+    for kind, url in [('individual', state['candidates'][0]['pv_url']), ('collective', state['collective_url'])]:
+        response = case[0].get(url)
+        assert response.headers['Content-Disposition'].startswith('inline;')
+        document = fitz.open(stream=response.data, filetype='pdf')
+        for page in document:
+            text = page.get_text()
+            assert config['contact_email'] in text and config['contact_phone'] in text
+            assert config['approval'] in text
+            assert 'integralesecuriteformations@gmail.com' not in text and 'ecole@integraleacademy.com' not in text
+            assert 'Alex JURY' in text and 'Marie MEMBRE' in text
+            images = page.get_images(full=True)
+            for dimensions in [(1605, 543), (283, 158)]:
+                asset = next(image for image in images if image[2:4] == dimensions)
+                bounds = page.get_image_rects(asset[0])[0]
+                if kind == 'individual':
+                    assert bounds.x0 >= 394 and bounds.y0 >= 691 and bounds.y1 <= 794
+                else:
+                    assert bounds.y0 >= 777 and bounds.y1 <= 821
+
+
+def test_attestations_have_one_centered_title_and_both_required_texts(case):
+    import fitz
+    state = configured(case)
+    document = fitz.open(stream=case[0].get(state['candidates'][0]['dossier_url']).data, filetype='pdf')
+    for page in list(document)[-2:]:
+        title = page.search_for('Attestation')
+        assert len(title) == 1
+        assert abs((title[0].x0 + title[0].x1) / 2 - page.rect.width / 2) < 1
+        assert state['config']['approval'] in page.get_text()
+        assert 'Clément VAILLANT' in page.get_text()
+    assert 'même entreprise ou structure' in document[-2].get_text()
+    ability_text = ' '.join(document[-1].get_text().split())
+    assert 'main courante' in ability_text and 'alerter les secours' in ability_text
 
 
 def test_mail_layout_escapes_content_and_preserves_all_exam_details(case):
