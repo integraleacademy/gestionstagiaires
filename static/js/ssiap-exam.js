@@ -7,6 +7,10 @@
   const configForm = document.getElementById('ssiapExamConfig');
   const mailDialog = document.getElementById('ssiapExamMailDialog');
   const sendButton = document.getElementById('ssiapExamSend');
+  const textButton = document.getElementById('ssiapExamMailTextToggle');
+  const mailLoading = document.getElementById('ssiapExamMailLoading');
+  const mailText = document.getElementById('ssiapExamMailText');
+  let previewTimer, mailSendLocked = false;
   let data, preview, busy = false, configDirty = false;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const field = (label, key, value, type = 'text', extra = '') => `<label class="exam-field ${extra}">${esc(label)}<input name="${key}" type="${type}" value="${esc(value)}" ${type === 'number' ? 'min="0" max="20" step="0.01"' : ''}></label>`;
@@ -28,7 +32,7 @@
   function chip(label, ok, review = false) { return `<span class="exam-chip ${ok && !review ? 'ok' : 'warn'}">${ok && !review ? '✓' : '!'} ${esc(label)}</span>`; }
   function renderCandidate(row) {
     const c = row.candidate;
-    return `<article class="exam-card" data-candidate-id="${esc(row.id)}"><div class="exam-candidate-top"><div><div class="exam-candidate-name">${esc(row.first_name)} ${esc(row.last_name)}</div><span class="exam-muted">${c.included ? 'Présenté à l’examen' : 'Non présenté à l’examen'}</span></div><div class="exam-actions"><a class="btn btn-primary" data-dossier-link href="${esc(row.dossier_url)}?download=1" target="_blank" rel="noopener">Dossier examen PDF</a><a class="btn btn-outline" data-dossier-link href="${esc(row.dossier_url)}" target="_blank" rel="noopener">Aperçu</a></div></div>
+    return `<article class="exam-card" data-candidate-id="${esc(row.id)}"><div class="exam-candidate-top"><div><div class="exam-candidate-name">${esc(row.first_name)} ${esc(row.last_name)}</div><span class="exam-muted">${c.included ? 'Présenté à l’examen' : 'Non présenté à l’examen'}</span></div><div class="exam-actions"><a class="btn btn-primary" data-dossier-link href="${esc(row.dossier_url)}" target="_blank" rel="noopener">Dossier examen PDF</a><a class="btn btn-outline" data-dossier-link href="${esc(row.dossier_url)}?download=1" target="_blank" rel="noopener">Télécharger</a></div></div>
       <div class="exam-chips">${row.documents.map(d => chip(d.label + (!d.available ? ' manquant' : d.review ? ' à vérifier' : ''), d.available, !!d.review)).join('')}${chip('Attestations signées et tamponnées', true)}</div>
       <div class="exam-actions"><a href="${esc(row.edit_url)}" target="_blank" rel="noopener">Ouvrir la fiche et les pièces</a><span class="exam-muted">·</span><a data-dossier-link href="${esc(row.pv_url)}?download=1" target="_blank" rel="noopener">Télécharger le PV individuel</a></div>
       <details class="exam-details"><summary>Présentation à l’examen</summary><form data-candidate-form="${esc(row.id)}"><fieldset ${data.read_only ? 'disabled' : ''}>
@@ -72,7 +76,7 @@
       <div class="exam-card"><h3>Contact du centre</h3><div class="exam-grid three">${field('Nom du contact', 'contact_name', c.contact_name)}${field('E-mail', 'contact_email', c.contact_email, 'email')}${field('Téléphone', 'contact_phone', c.contact_phone, 'tel')}</div></div>
       <div class="exam-card"><h3>Jury et examinateurs</h3><p class="exam-muted">Les coordonnées sont enregistrées dans votre répertoire et réutilisables pour les autres examens. Les invitations et rappels restent propres à cette session.</p><div id="ssiapExamMailOverview"></div><div class="exam-directory"><label class="exam-field">Choisir un membre déjà enregistré<select id="ssiapExamDirectory"><option value="">Sélectionner dans le répertoire (${data.directory.length})</option>${data.directory.map(m => `<option value="${esc(m.id)}">${esc(m.first_name)} ${esc(m.last_name)}${m.company ? ' · ' + esc(m.company) : ''}${m.email ? ' · ' + esc(m.email) : ''}</option>`).join('')}</select></label><button type="button" data-reuse-juror class="btn btn-outline">Ajouter à cet examen</button></div><div id="ssiapExamJurors">${c.jury.map(juror).join('')}</div><button type="button" data-add-juror class="btn btn-outline">+ Ajouter un membre du jury</button></div><button type="submit" class="btn btn-primary">Enregistrer l’organisation et le jury</button></fieldset>`;
     configDirty = false;
-    document.getElementById('ssiapExamCollective').innerHTML = `<div class="exam-card"><span class="exam-eyebrow" style="color:#008da8">PROCÈS-VERBAL DE LA SESSION</span><h3 style="margin-top:12px">PV collectif ${esc(c.level)}</h3><div class="exam-pv-count">${count}</div><p>candidat${count > 1 ? 's' : ''} présenté${count > 1 ? 's' : ''}</p><p class="exam-muted">Le modèle officiel fourni est conservé à l’identique. La date, les candidats et les informations du jury sont préremplis. Les résultats et signatures seront renseignés à la main par le jury. Le modèle contient 14 places ; une page identique est ajoutée si nécessaire. Les inscriptions annulées et les candidats non présentés sont exclus.</p><div class="exam-actions"><a class="btn btn-primary" href="${esc(data.collective_url)}?download=1" target="_blank" rel="noopener">Télécharger le PV collectif</a><a class="btn btn-outline" href="${esc(data.collective_url)}" target="_blank" rel="noopener">Prévisualiser le PV</a></div></div>`;
+    document.getElementById('ssiapExamCollective').innerHTML = `<div class="exam-card"><span class="exam-eyebrow" style="color:#008da8">PROCÈS-VERBAL DE LA SESSION</span><h3 style="margin-top:12px">PV collectif ${esc(c.level)}</h3><div class="exam-pv-count">${count}</div><p>candidat${count > 1 ? 's' : ''} présenté${count > 1 ? 's' : ''}</p><p class="exam-muted">La date, les candidats et les informations du jury sont préremplis dans le modèle fourni. Le tampon du centre et la signature de Clément VAILLANT sont apposés dans la zone de l’organisme de formation. Le jury complète les résultats et signe à la main. Le modèle contient 14 places ; une page identique est ajoutée si nécessaire. Les inscriptions annulées et les candidats non présentés sont exclus.</p><div class="exam-actions"><a class="btn btn-primary" href="${esc(data.collective_url)}" target="_blank" rel="noopener">Ouvrir le PV collectif</a><a class="btn btn-outline" href="${esc(data.collective_url)}?download=1" target="_blank" rel="noopener">Télécharger</a></div></div>`;
     renderHistory();
     renderMailOverview();
   }
@@ -160,12 +164,9 @@
         preview = await api(`${base}/jury/${encodeURIComponent(id)}/${kind}/preview`);
         document.getElementById('ssiapExamMailTo').textContent = preview.to;
         document.getElementById('ssiapExamMailSubject').textContent = preview.subject;
-        document.getElementById('ssiapExamMailFrame').srcdoc = preview.html;
+        showMailPreview(preview, kind);
         const sent = data.mail_status?.[id]?.[kind];
         document.getElementById('ssiapExamMailStatus').textContent = sent?.last_sent_at ? 'Dernier envoi : ' + parisDate(sent.last_sent_at) + '. Un nouvel envoi sera effectué si vous cliquez sur Envoyer.' : 'Ce mail n’a pas encore été envoyé.';
-        sendButton.disabled = data.read_only;
-        sendButton.textContent = 'Envoyer ce mail';
-        mailDialog.showModal();
         message('');
       });
     }
@@ -182,17 +183,73 @@
       await load({keepDrafts:true, savedCandidate:form.dataset.candidateForm}); message('Candidat enregistré. Le dossier PDF utilise ces informations.');
     });
   });
+  function showMailPreview(content, kind) {
+    // A fresh frame resets scrolling and avoids reusing a hidden srcdoc document.
+    clearTimeout(previewTimer);
+    mailSendLocked = false;
+    const frame = document.createElement('iframe');
+    frame.id = 'ssiapExamMailFrame';
+    frame.title = 'Contenu du mail au jury';
+    frame.setAttribute('sandbox', '');
+    frame.setAttribute('referrerpolicy', 'no-referrer');
+    mailLoading.textContent = 'Chargement de l’aperçu…';
+    mailLoading.hidden = false;
+    mailText.textContent = content.text;
+    mailText.hidden = true;
+    textButton.textContent = 'Version texte';
+    textButton.setAttribute('aria-pressed', 'false');
+    sendButton.disabled = true;
+    sendButton.textContent = 'Envoyer ce mail';
+    document.getElementById('ssiapExamMailTitle').textContent = kind === 'reminder' ? 'Prévisualiser le rappel' : 'Prévisualiser l’invitation';
+    frame.addEventListener('load', () => {
+      if (frame !== document.getElementById('ssiapExamMailFrame') || preview !== content) return;
+      clearTimeout(previewTimer);
+      mailLoading.hidden = true;
+      sendButton.disabled = data.read_only || mailSendLocked;
+    }, {once:true});
+    frame.srcdoc = content.html;
+    document.getElementById('ssiapExamMailFrame').replaceWith(frame);
+    if (!mailDialog.open) mailDialog.showModal();
+    mailDialog.scrollTop = 0;
+    previewTimer = setTimeout(() => {
+      mailLoading.textContent = 'L’aperçu prend du temps à charger. Vous pouvez consulter la version texte.';
+    }, 12000);
+  }
+  textButton.addEventListener('click', () => {
+    const showText = mailText.hidden;
+    mailText.hidden = !showText;
+    document.getElementById('ssiapExamMailFrame').hidden = showText;
+    textButton.textContent = showText ? 'Version mise en page' : 'Version texte';
+    textButton.setAttribute('aria-pressed', String(showText));
+    if (showText) {
+      clearTimeout(previewTimer);
+      mailLoading.hidden = true;
+      mailText.scrollTop = 0;
+      sendButton.disabled = data.read_only || !preview || mailSendLocked;
+    }
+  });
   mailDialog.querySelectorAll('[data-mail-close]').forEach(button => button.addEventListener('click', () => mailDialog.close()));
+  mailDialog.addEventListener('close', () => {
+    clearTimeout(previewTimer);
+    preview = null;
+    sendButton.disabled = true;
+  });
   sendButton.addEventListener('click', async () => {
     if (!preview || sendButton.disabled) return;
+    const prepared = preview;
+    mailSendLocked = true;
     sendButton.disabled = true; sendButton.textContent = 'Envoi en cours…';
     const mailStatus = document.getElementById('ssiapExamMailStatus');
     try {
-      await post(`${base}/mail/send`, {preview_token:preview.preview_token});
-      mailStatus.textContent = 'Mail envoyé à ' + preview.to;
-      sendButton.textContent = 'Mail envoyé';
+      await post(`${base}/mail/send`, {preview_token:prepared.preview_token});
+      if (preview === prepared) {
+        mailStatus.textContent = 'Mail envoyé à ' + prepared.to;
+        sendButton.textContent = 'Mail envoyé';
+      }
     } catch (error) {
-      mailStatus.textContent = error.message; sendButton.textContent = 'Fermez puis prévisualisez à nouveau';
+      if (preview === prepared) {
+        mailStatus.textContent = error.message; sendButton.textContent = 'Fermez puis prévisualisez à nouveau';
+      }
     }
     try { data = await api(base); renderHistory(); renderMailOverview(); } catch { /* Preserve the confirmed delivery result. */ }
   });

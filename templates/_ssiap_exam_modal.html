@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css', v='20261019-2') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css', v='20261019-3') }}">
 <dialog id="ssiapExamDialog" class="exam-dialog" aria-labelledby="ssiapExamTitle" data-url="{{ url_for('api_ssiap_exam', session_id=session.id) }}">
   <header class="exam-heading"><div><span class="exam-eyebrow">INTÉGRALE ACADEMY</span><h2 id="ssiapExamTitle">Examen SSIAP</h2><p>{{ session.name }}</p></div><button type="button" data-exam-close aria-label="Fermer la modale Examen" class="exam-close">×</button></header>
   <nav class="exam-tabs" aria-label="Rubriques de l’examen">
@@ -16,7 +16,11 @@
 <dialog id="ssiapExamMailDialog" class="exam-dialog exam-mail-dialog" aria-labelledby="ssiapExamMailTitle">
   <header class="exam-heading"><div><span class="exam-eyebrow">AVANT ENVOI</span><h2 id="ssiapExamMailTitle">Prévisualiser le mail</h2></div><button type="button" data-mail-close class="exam-close" aria-label="Fermer l’aperçu">×</button></header>
   <div class="exam-mail-meta"><p>À : <strong id="ssiapExamMailTo"></strong></p><p>Objet : <strong id="ssiapExamMailSubject"></strong></p><p id="ssiapExamMailStatus" role="status"></p></div>
-  <iframe id="ssiapExamMailFrame" title="Contenu du mail au jury" sandbox=""></iframe>
-  <footer class="exam-mail-actions"><button type="button" class="btn btn-outline" data-mail-close>Retour</button><button type="button" id="ssiapExamSend" class="btn btn-primary">Envoyer ce mail</button></footer>
+  <div class="exam-mail-viewport">
+    <p id="ssiapExamMailLoading" class="exam-mail-loading" role="status" hidden>Chargement de l’aperçu…</p>
+    <iframe id="ssiapExamMailFrame" title="Contenu du mail au jury" sandbox=""></iframe>
+    <pre id="ssiapExamMailText" class="exam-mail-text" hidden></pre>
+  </div>
+  <footer class="exam-mail-actions"><button type="button" id="ssiapExamMailTextToggle" class="btn btn-outline" aria-pressed="false">Version texte</button><button type="button" class="btn btn-outline" data-mail-close>Retour</button><button type="button" id="ssiapExamSend" class="btn btn-primary" disabled>Envoyer ce mail</button></footer>
 </dialog>
-<script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261019-2') }}" defer></script>
+<script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261019-3') }}" defer></script>
