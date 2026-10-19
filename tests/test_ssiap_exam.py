@@ -111,25 +111,23 @@ def test_config_preserves_trainee_data_and_rejects_stale_edits(case):
     case[4].assert_not_called()
 
 
-def test_signed_attestations_require_explicit_validation_and_jury_binding(case):
+def test_candidate_controls_only_exam_inclusion(case):
     state = configured(case)
-    row = state['candidates'][0]
-    candidate = {**row['candidate'], 'independence':True, 'ability':True, 'evaluation_date':'2026-10-19'}
-    response = case[0].post(BASE, json={'action':'candidate', 'revision':state['revision'], 'trainee_id':'T1', 'candidate':candidate, 'csrf':state['csrf']})
+    response = case[0].post(BASE, json={'action':'candidate', 'revision':state['revision'], 'trainee_id':'T1',
+        'candidate':{'included':False, 'grade':'19', 'independence':False}, 'csrf':state['csrf']})
     assert response.status_code == 200
-    assert exam.candidate_settings(case[2], case[3])['independence']
+    assert exam.candidate_settings(case[2], case[3]) == {'included':False}
     assert case[3]['ssiap_exam_status'] == 'pending_results'
-    case[2]['ssiap_exam']['config']['jury'][0]['company'] = 'Autre structure'
-    assert not exam.candidate_settings(case[2], case[3])['independence']
-    assert exam.candidate_settings(case[2], case[3])['ability']
+    text = PdfReader(io.BytesIO(case[0].get(view(case)['collective_url']).data)).pages[0].extract_text()
+    assert 'EXEMPLE' not in text
 
 
-@pytest.mark.parametrize('patch', [{'grade':'NaN'}, {'grade':'21'}, {'grade':'-1'}, {'ability':True}, {'included':'true'}])
-def test_invalid_evaluation_is_not_saved(case, patch):
+@pytest.mark.parametrize('value', ['true', None, 1])
+def test_invalid_inclusion_is_not_saved(case, value):
     state = configured(case)
     before = copy.deepcopy(case[2])
     response = case[0].post(BASE, json={'action':'candidate', 'revision':state['revision'], 'trainee_id':'T1',
-        'candidate':{**state['candidates'][0]['candidate'], **patch}, 'csrf':state['csrf']})
+        'candidate':{'included':value}, 'csrf':state['csrf']})
     assert response.status_code == 400 and case[2] == before
 
 
@@ -144,9 +142,9 @@ def test_pdf_order_multipage_identity_portrait_and_pending_results(case):
     assert all(abs(float(p.mediabox.width) - A4[0]) < 1 and abs(float(p.mediabox.height) - A4[1]) < 1 for p in reader.pages)
     text = [page.extract_text() for page in reader.pages]
     assert 'Dossier examen' in text[0] and 'Camille EXEMPLE' in text[0]
-    assert 'Fiche d’évaluation' in text[1]
+    assert 'FICHE D’EVALUATION' in text[1]
     assert all(label in text[index] for index, label in enumerate(['IDENTITE_RECTO', 'IDENTITE_VERSO', 'SST', 'MEDICAL'], 2))
-    assert 'PROJET' in text[6] and 'PROJET' in text[7]
+    assert 'PROJET' not in text[6] and 'PROJET' not in text[7]
     collective = PdfReader(io.BytesIO(case[0].get(state['collective_url']).data))
     assert 'EXEMPLE' in collective.pages[0].extract_text()
     assert 'ANNULE' not in collective.pages[0].extract_text()
@@ -155,11 +153,9 @@ def test_pdf_order_multipage_identity_portrait_and_pending_results(case):
 
 
 def test_complete_dossier_has_real_stamp_and_signature(case):
-    state = configured(case)
+    # Signed automatically, including sessions without a jury or candidate validation.
+    state = view(case)
     row = state['candidates'][0]
-    response = case[0].post(BASE, json={'action':'candidate', 'revision':state['revision'], 'trainee_id':'T1',
-        'candidate':{**row['candidate'], 'independence':True, 'ability':True, 'evaluation_date':'2026-10-19'}, 'csrf':state['csrf']})
-    assert response.status_code == 200
     reader = PdfReader(io.BytesIO(case[0].get(row['dossier_url']).data))
     for page in reader.pages[-2:]:
         assert 'PROJET' not in page.extract_text()
@@ -213,9 +209,10 @@ def test_changed_details_forged_preview_and_failure_are_not_marked_sent(case):
 
 
 def test_stale_legacy_save_retains_exam_state():
-    latest = {'sessions':[{'id':'S', 'ssiap_exam':{'revision':3, 'mail_history':[{'status':'sent'}]}}]}
+    latest = {'ssiap_jury_directory':{'J1':{'email':'jury@example.test'}}, 'sessions':[{'id':'S', 'ssiap_exam':{'revision':3, 'mail_history':[{'status':'sent'}]}}]}
     stale = {'sessions':[{'id':'S', 'ssiap_exam':{'revision':1}, 'name':'Updated name'}]}
     exam.preserve_state(stale, latest)
+    assert stale['ssiap_jury_directory'] == latest['ssiap_jury_directory']
     assert stale['sessions'][0]['ssiap_exam'] == latest['sessions'][0]['ssiap_exam']
     assert stale['sessions'][0]['name'] == 'Updated name'
     assert stale['sessions'][0]['ssiap_exam'] is not latest['sessions'][0]['ssiap_exam']
@@ -228,3 +225,95 @@ def test_session_button_present_only_for_ssiap_and_afc(case):
     response = case[0].get('/admin/sessions/OTHER/trainees')
     assert response.status_code == 200
     assert 'id="btnSsiapExam"' not in response.text
+
+
+def test_directory_reusable_across_sessions_and_keeps_snapshots(case):
+    first = configured(case)
+    assert first['directory'][0]['email'] == 'jury@example.test'
+    old_jury = copy.deepcopy(case[2]['ssiap_exam']['config']['jury'])
+    other = {'id':'S2','training_type':'AFC','trainees':[], 'ssiap_exam_date':case[2]['exam_date']}
+    case[1]['sessions'].append(other)
+    response = case[0].get(BASE.replace('S1','S2'))
+    state = response.json
+    assert state['config']['jury'] == [] and len(state['directory']) == 1
+    member = dict(state['directory'][0], phone='0412345678')
+    config = dict(state['config'], jury=[member])
+    assert case[0].post(BASE.replace('S1','S2'),json={'action':'config','revision':0,'csrf':state['csrf'],'config':config}).status_code == 200
+    assert view(case)['directory'][0]['phone'] == '0412345678'
+    assert case[2]['ssiap_exam']['config']['jury'] == old_jury
+    assert len(view(case)['directory']) == 1
+    old_state = view(case)
+    case[0].post(BASE, json={'action':'config','revision':old_state['revision'],'csrf':old_state['csrf'],'config':dict(old_state['config'], time='09:00')})
+    assert view(case)['directory'][0]['phone'] == '0412345678'
+    # Existing exam juries are discoverable even before any directory write.
+    case[1].pop('ssiap_jury_directory')
+    assert len(view(case)['directory']) == 1
+    case[1]['sessions'].append({'id':'FOREIGN','partner_id':'external-centre','ssiap_exam':{'config':{'jury':[dict(member,id='FOREIGN',email='secret@example.test')]}}})
+    assert len(view(case)['directory']) == 1
+
+
+def test_mail_status_each_kind_failure_retry_and_recipient_change(case):
+    state = configured(case)
+    assert state['mail_status']['J1']['invitation']['status'] == 'not_sent'
+    assert state['mail_status']['J1']['reminder']['status'] == 'not_sent'
+    for kind in ('invitation', 'reminder'):
+        prepared = preview(case,kind)
+        case[0].post(BASE+'/mail/send',json={'csrf':state['csrf'],'preview_token':prepared['preview_token']})
+        assert view(case)['mail_status']['J1'][kind]['last_sent_at']
+    case[4].return_value = {'ok':False}
+    prepared = preview(case)
+    case[0].post(BASE+'/mail/send',json={'csrf':state['csrf'],'preview_token':prepared['preview_token']})
+    status = view(case)['mail_status']['J1']['invitation']
+    assert status['status'] == 'failed' and status['last_sent_at'] and status['sent_count'] == 1
+    case[2]['ssiap_exam']['config']['jury'][0]['email'] = 'new@example.test'
+    assert view(case)['mail_status']['J1']['invitation']['status'] == 'not_sent'
+    assert len(view(case)['history']) == 3
+
+
+def test_official_pv_has_no_grades_or_extra_footer_even_with_legacy_values(case):
+    import fitz
+    state = configured(case)
+    case[2]['ssiap_exam']['candidates']={'T1':{'grade':'19.75','written':'valid','practical':'fit','reason':'LEGACY_DECISION'}}
+    case[3]['ssiap_exam_status']='certified'
+    pdf = case[0].get(state['candidates'][0]['pv_url']).data
+    dossier = case[0].get(state['candidates'][0]['dossier_url']).data
+    individual = fitz.open(stream=pdf,filetype='pdf')
+    combined = fitz.open(stream=dossier,filetype='pdf')
+    assert individual[0].get_pixmap().samples == combined[1].get_pixmap().samples
+    text=individual[0].get_text()
+    assert '19.75' not in text and 'LEGACY_DECISION' not in text
+    assert 'BENSAILA' not in text and 'ADEM' not in text and '08/06/2022' not in text
+    assert 'EXEMPLE' in text and 'Camille' in text
+    # Every jury-writing area is pixel-identical to the imported official form.
+    template=fitz.open(str(Path(gestion.app.root_path)/'templates_word/ssiap_exam/pv_individual_ssiap1.pdf'))
+    rect=fitz.Rect(0,365,595,841)
+    assert individual[0].get_pixmap(clip=rect).samples == template[0].get_pixmap(clip=rect).samples
+
+
+def test_collective_repeats_original_14_places_without_changing_table(case):
+    import fitz
+    from ssiap_exam_pdf import collective
+    state = configured(case)
+    trainees=[dict(case[3],first_name=f'Personne{i}',last_name=f'NOM{i}',ssiap_exam_status='certified') for i in range(29)]
+    doc=fitz.open(stream=collective(case[2],trainees,state['config'],gestion.app.root_path),filetype='pdf')
+    assert len(doc)==3
+    assert all('PROCES VERBAL' in page.get_text() for page in doc)
+    assert 'NOM13' in doc[0].get_text() and 'NOM14' not in doc[0].get_text()
+    assert 'NOM28' in doc[2].get_text()
+    assert all('GEFFROY' not in page.get_text() and 'BENSAILA' not in page.get_text() for page in doc)
+    template=fitz.open(str(Path(gestion.app.root_path)/'templates_word/ssiap_exam/pv_collective_ssiap1.pdf'))
+    results_column=fitz.Rect(365,242,570,520)
+    assert doc[0].get_pixmap(clip=results_column).samples == template[0].get_pixmap(clip=results_column).samples
+
+
+def test_mail_layout_escapes_content_and_preserves_all_exam_details(case):
+    state = configured(case)
+    case[2]['ssiap_exam']['config']['instructions']='<script>alert(1)</script> & accès parking'
+    for kind in ('invitation','reminder'):
+        mail=preview(case,kind)
+        assert '<script>' not in mail['html'] and '&lt;script&gt;' in mail['html']
+        assert 'DATE DE L’EXAMEN' in mail['html'] and 'DÉBUT DES ÉPREUVES' in mail['html']
+        assert '08:30' in mail['html'] and '17:00' in mail['html']
+        assert 'mailto:' in mail['html'] and 'maps/search/' in mail['html']
+        assert 'déjà confirmé' in mail['html'] if kind=='reminder' else 'Confirmer ma présence' in mail['html']
+    case[4].assert_not_called()
