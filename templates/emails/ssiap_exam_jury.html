@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>{{ 'Rappel' if reminder else 'Invitation' }} au jury {{ config.level }}</title>
+<style>body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}table{border-collapse:collapse}img{border:0;outline:none;text-decoration:none}a{color:#087c86}@media(max-width:620px){.outer{padding:12px 8px!important}.pad{padding:26px 22px!important}.hero-title{font-size:30px!important;line-height:36px!important}.stack{display:block!important;width:100%!important}.stack-space{padding-top:18px!important;padding-left:0!important}.desktop-spacer{display:none!important}.action{display:block!important;text-align:center!important}}</style>
+</head><body style="margin:0;padding:0;background:#edf2f6;font-family:Arial,Helvetica,sans-serif;color:#162a3f">
+<div style="display:none;font-size:1px;line-height:1px;color:#edf2f6;max-height:0;overflow:hidden;mso-hide:all">{{ preheader }}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#edf2f6"><tr><td class="outer" align="center" style="padding:36px 14px">
+<!--[if mso]><table role="presentation" width="660"><tr><td><![endif]-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:660px;text-align:left;background:#fff;border-radius:22px;overflow:hidden">
+<tr><td height="5" style="height:5px;background:#dcb868;font-size:1px;line-height:1px">&nbsp;</td></tr>
+<tr><td class="pad" style="padding:30px 38px 34px;background:#0c1c30">
+  <table role="presentation" width="100%"><tr><td width="66"><img src="{{ logo_url }}" width="52" height="52" alt="Intégrale Academy" style="display:block;border-radius:9px"></td><td style="color:#fff;font-size:16px;font-weight:bold;letter-spacing:.4px">INTÉGRALE ACADEMY<br><span style="color:#a8b9c9;font-size:11px;font-weight:normal;letter-spacing:1.2px;line-height:24px">FORMATION &amp; CERTIFICATION</span></td></tr></table>
+  <p style="margin:32px 0 13px;color:#b3ded9;font-size:11px;font-weight:bold;letter-spacing:2px">{{ 'RAPPEL DE VOTRE RENDEZ-VOUS' if reminder else 'INVITATION AU JURY D’EXAMEN' }}</p>
+  <h1 class="hero-title" style="margin:0;color:#fff;font-size:36px;line-height:43px;font-weight:bold;letter-spacing:-.7px">{{ 'Votre prochain' if reminder else 'Votre participation' }}<br>{{ 'rendez-vous ' if reminder else 'au jury ' }}<span style="color:#e5c77e">{{ config.level }}</span></h1>
+  <p style="margin:18px 0 0;color:#c9d5e1;font-size:15px;line-height:23px">{{ day }} {{ long_date }} &nbsp;·&nbsp; {{ config.time }}</p>
+</td></tr>
+<tr><td class="pad" style="padding:32px 38px 20px">
+  <p style="margin:0 0 13px;font-size:17px;line-height:26px;font-weight:bold">Bonjour {{ member.first_name }} {{ member.last_name }},</p>
+  <p style="margin:0;font-size:15px;line-height:25px;color:#53677a">{{ intro }}</p>
+</td></tr>
+<tr><td class="pad" style="padding:12px 38px 28px">
+  <table role="presentation" width="100%" style="background:#f2f7f8;border:1px solid #dfe9ed;border-radius:13px"><tr><td style="padding:23px 24px">
+    <table role="presentation" width="100%"><tr><td class="stack" width="54%" valign="top"><p style="margin:0 0 7px;color:#66818c;font-size:10px;letter-spacing:1.5px;font-weight:bold">DATE DE L’EXAMEN</p><p style="margin:0;font-size:17px;line-height:26px;font-weight:bold">{{ day }}<br>{{ long_date }}</p></td>
+    <td class="stack stack-space" valign="top"><p style="margin:0 0 7px;color:#66818c;font-size:10px;letter-spacing:1.5px;font-weight:bold">DÉBUT DES ÉPREUVES</p><p style="margin:0;font-size:32px;line-height:39px;color:#087c86;font-weight:bold">{{ config.time }}</p></td></tr></table>
+    {% if config.arrival_time or config.end_time %}<table role="presentation" width="100%" style="margin-top:18px;border-top:1px solid #d7e5e8"><tr><td style="padding-top:14px;font-size:13px;line-height:22px;color:#53677a">{% if config.arrival_time %}Accueil du jury <strong style="color:#162a3f">{{ config.arrival_time }}</strong>{% endif %}{% if config.arrival_time and config.end_time %}<br>{% endif %}{% if config.end_time %}Fin prévisionnelle <strong style="color:#162a3f">{{ config.end_time }}</strong>{% endif %}</td></tr></table>{% endif %}
+  </td></tr></table>
+</td></tr>
+<tr><td class="pad" style="padding:0 38px 28px">
+  <table role="presentation" width="100%"><tr><td class="stack" width="70%" valign="top"><p style="margin:0 0 9px;font-size:11px;font-weight:bold;letter-spacing:1.3px;color:#718394">LIEU DE RENDEZ-VOUS</p><p style="margin:0 0 5px;font-size:16px;font-weight:bold;line-height:24px">{{ config.location }}</p><p style="margin:0 0 10px;font-size:14px;line-height:23px;color:#53677a">{{ config.address }}</p><a href="{{ directions_url }}" style="font-size:13px;font-weight:bold;color:#087c86;text-decoration:underline">Préparer mon itinéraire</a></td><td class="stack stack-space" valign="top" style="padding-left:20px"><p style="margin:0 0 9px;font-size:11px;font-weight:bold;letter-spacing:1.3px;color:#718394">CANDIDATS</p><p style="margin:0;font-size:32px;font-weight:bold;color:#162a3f">{{ count }}</p><p style="margin:4px 0 0;font-size:12px;color:#718394">présenté{{ 's' if count != 1 else '' }} à l’examen</p></td></tr></table>
+</td></tr>
+{% if config.instructions %}<tr><td class="pad" style="padding:0 38px 28px"><table role="presentation" width="100%" style="border-left:3px solid #dcb868;background:#fcfaf4"><tr><td style="padding:17px 20px"><p style="margin:0 0 7px;font-size:14px;font-weight:bold">Pour préparer votre venue</p><p style="margin:0;font-size:14px;line-height:23px;color:#53677a;white-space:pre-line">{{ config.instructions }}</p></td></tr></table></td></tr>{% endif %}
+<tr><td class="pad" style="padding:0 38px 30px"><p style="margin:0 0 20px;font-size:14px;line-height:24px;color:#53677a">{{ confirmation }}</p>
+  <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:9px;background:#087c86"><a class="action" href="{{ action_url }}" style="display:inline-block;padding:15px 24px;background:#087c86;border:1px solid #087c86;border-radius:9px;color:#fff;font-size:14px;font-weight:bold;text-decoration:none;mso-padding-alt:0">{{ action_label }}</a></td></tr></table>
+  <p style="margin:15px 0 0;font-size:12px;line-height:20px;color:#718394">En cas d’empêchement ou de retard, merci de prévenir le centre dès que possible.</p>
+</td></tr>
+<tr><td class="pad" style="padding:25px 38px 30px;border-top:1px solid #e5ecf1"><p style="margin:0 0 18px;font-size:14px;line-height:23px;color:#53677a">Merci pour votre participation et votre engagement auprès de nos candidats.</p><p style="margin:0;font-size:14px;line-height:23px">Bien cordialement,<br><strong>{{ config.contact_name }}</strong>{% if config.contact_name|lower != 'intégrale academy' %}<br><span style="color:#718394">Intégrale Academy</span>{% endif %}</p><p style="margin:13px 0 0;font-size:13px;line-height:23px"><a href="{{ phone_url }}" style="color:#087c86;text-decoration:none">{{ config.contact_phone }}</a><br><a href="mailto:{{ config.contact_email }}" style="color:#087c86;text-decoration:none">{{ config.contact_email }}</a></p></td></tr>
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+<p style="margin:20px 0 0;color:#7b8c9c;font-size:11px;line-height:19px;text-align:center">INTÉGRALE ACADEMY<br>Votre rendez-vous {{ config.level }} · {{ long_date }}</p>
+</td></tr></table></body></html>

@@ -10,7 +10,7 @@ import json
 import os
 import re
 import secrets
-from html import escape
+from zoneinfo import ZoneInfo
 
 from flask import abort, jsonify, request, session, send_file, url_for
 from itsdangerous import URLSafeTimedSerializer, BadSignature
@@ -57,15 +57,13 @@ def digest(value):
 
 def candidate_settings(training, trainee):
     stored = state(training).get("candidates", {}).get(str(trainee["id"]), {})
-    result = {"included": True, "grade": "", "written": "", "written_date": "", "practical": "",
-              "practical_date": "", "reason": "", "independence": False, "ability": False,
-              "evaluation_date": "", **stored}
-    result["independence"] = result["independence"] is True and stored.get("jury_fingerprint") == digest(settings(training)["jury"])
-    return result
+    return {"included": stored.get("included", True) is not False}
 
 
 def preserve_state(payload, canonical):
     """Only examination endpoints write this state; unrelated legacy saves cannot erase it."""
+    if isinstance(canonical.get("ssiap_jury_directory"), dict):
+        payload["ssiap_jury_directory"] = copy.deepcopy(canonical["ssiap_jury_directory"])
     by_id = {str(s.get("id")): s for s in canonical.get("sessions", [])}
     for training in payload.get("sessions", []):
         current = by_id.get(str(training.get("id")), {})
@@ -148,27 +146,54 @@ def validate_config(raw):
 def validate_candidate(raw, config):
     if not isinstance(raw, dict):
         raise ValueError("Candidat invalide.")
+    if not isinstance(raw.get("included"), bool):
+        raise ValueError("Précisez si ce candidat est présenté à l’examen.")
+    return {"included": raw["included"]}
+
+
+def jury_directory(data, internal_partner_id):
+    """Reusable contacts, including jurors recorded before the directory existed."""
+    saved = copy.deepcopy(data.get("ssiap_jury_directory") or {})
+    for training in data.get("sessions", []):
+        if training.get("partner_id") not in (None, "", internal_partner_id):
+            continue
+        for member in settings(training)["jury"]:
+            if member.get("id") and member.get("first_name") and member.get("last_name"):
+                saved.setdefault(member["id"], member)
+    unique = {}
+    for member in saved.values():
+        key = (member.get("email") or "").casefold() or member.get("id")
+        if key and (key not in unique or member.get("updated_at", "") > unique[key].get("updated_at", "")):
+            unique[key] = member
+    return sorted(unique.values(), key=lambda m: (m.get("last_name", "").casefold(), m.get("first_name", "").casefold()))
+
+
+def remember_jury(data, members, now, previous=()):
+    directory = data.setdefault("ssiap_jury_directory", {})
+    previous = {m['id']: m for m in previous}
+    fields = ('first_name', 'last_name', 'email', 'phone', 'company', 'role')
+    for member in members:
+        # Stable directory identity; session copies remain snapshots of each exam.
+        match = next((key for key, item in directory.items() if key == member["id"] or
+                      (member["email"] and item.get("email", "").casefold() == member["email"].casefold())), member["id"])
+        old = previous.get(member['id'], {})
+        if match not in directory or any(member.get(k) != old.get(k) for k in fields):
+            directory[match] = {**copy.deepcopy(member), "id": match, "updated_at": now}
+
+
+def mail_status(training, member):
     result = {}
-    for key in ("included", "independence", "ability"):
-        if not isinstance(raw.get(key), bool):
-            raise ValueError("Validez les options du candidat.")
-        result[key] = raw[key]
-    grade = str(raw.get("grade") if raw.get("grade") is not None else "").strip().replace(",", ".")
-    if grade and (not re.fullmatch(r"\d{1,2}(?:\.\d{1,2})?", grade) or not 0 <= float(grade) <= 20):
-        raise ValueError("La note doit être comprise entre 0 et 20.")
-    result["grade"] = grade
-    for key, options in (("written", {"", "valid", "failed"}), ("practical", {"", "fit", "unfit"})):
-        if raw.get(key, "") not in options:
-            raise ValueError("Résultat d’épreuve invalide.")
-        result[key] = raw.get(key, "")
-    for key in ("written_date", "practical_date", "evaluation_date"):
-        result[key] = clean_date(raw.get(key), "Évaluation")
-    result["reason"] = clean_text(raw.get("reason", ""), "Motivation", 650)
-    if result["ability"] and not result["evaluation_date"]:
-        raise ValueError("Renseignez la date de l’évaluation réalisée par le centre.")
-    if result["independence"] and not config["jury"]:
-        raise ValueError("Renseignez le jury avant de valider l’attestation d’indépendance.")
-    result["jury_fingerprint"] = digest(config["jury"])
+    for kind in ("invitation", "reminder"):
+        entries = [entry for entry in state(training).get("mail_history", [])
+                   if entry.get("kind") == kind and entry.get("jury_id") == member.get("id")
+                   and entry.get("to", "").casefold() == member.get("email", "").casefold()]
+        latest = entries[-1] if entries else {}
+        successful = [entry for entry in entries if entry.get("status") == "sent"]
+        last_sent = successful[-1] if successful else {}
+        result[kind] = {"status": latest.get("status", "not_sent"),
+                        "at": latest.get("finished_at") or latest.get("at", ""),
+                        "last_sent_at": last_sent.get("finished_at") or last_sent.get("at", ""),
+                        "sent_count": len(successful)}
     return result
 
 
@@ -212,29 +237,10 @@ def build_mail(training, config, member, kind, count, logo_url):
         raise ValueError("Renseignez une adresse e-mail valide pour ce membre du jury.")
     if not all(config.get(k) for k in ("date", "time", "location", "address")):
         raise ValueError("Renseignez la date, l’heure et le lieu de l’examen avant de préparer le mail.")
-    if dt.date.fromisoformat(config["date"]) < dt.datetime.now(dt.timezone.utc).date():
+    if dt.date.fromisoformat(config["date"]) < dt.datetime.now(ZoneInfo("Europe/Paris")).date():
         raise ValueError("La date de cet examen est passée. Vérifiez-la avant d’envoyer un message.")
-    title = "Rappel de votre participation au jury" if kind == "reminder" else "Votre participation au jury"
-    subject = f"{'Rappel' if kind == 'reminder' else 'Jury'} - Examen {config['level']} du {frdate(config['date'])} à {config['time']}"
-    role = "président du jury" if member["role"] == "president" else "membre du jury"
-    intro = ("Nous vous rappelons votre participation" if kind == "reminder" else "Nous avons le plaisir de vous transmettre les informations relatives à votre participation")
-    lines = [f"Bonjour {member['first_name']} {member['last_name']},", "",
-             f"{intro} en qualité de {role} à l’examen {config['level']} organisé par Intégrale Academy.", "",
-             f"Date : {frdate(config['date'])}", f"Début de l’examen : {config['time']}"]
-    if config["arrival_time"]:
-        lines.append(f"Accueil du jury : {config['arrival_time']}")
-    if config["end_time"]:
-        lines.append(f"Fin prévisionnelle : {config['end_time']}")
-    lines += [f"Lieu : {config['location']}", config["address"], f"Candidats présentés : {count}"]
-    if config["instructions"]:
-        lines += ["", "Informations pratiques", config["instructions"]]
-    lines += ["", "Merci de nous confirmer votre présence en répondant à ce mail. En cas d’empêchement, merci de prévenir le centre dès que possible.",
-              "", "Bien cordialement,", config["contact_name"], config["contact_phone"], config["contact_email"]]
-    text = "\n".join(lines)
-    paragraphs = "".join(f'<p style="margin:0 0 12px;line-height:1.65">{escape(line)}</p>' if line else '<div style="height:8px"></div>' for line in lines)
-    html = f'''<!doctype html><html lang="fr"><head><meta charset="utf-8"></head><body style="margin:0;background:#eef2f7;font-family:Arial,sans-serif;color:#172b43"><table role="presentation" width="100%"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="100%" style="max-width:640px;background:white;border-radius:18px;overflow:hidden"><tr><td style="padding:28px;background:#0c1a2f;color:white"><img src="{escape(logo_url, quote=True)}" alt="Intégrale Academy" width="130"><p style="font-size:12px;letter-spacing:2px;color:#9ed4cb">EXAMEN {escape(config['level'])}</p><h1 style="font-size:27px;margin:10px 0">{title}</h1><p>{frdate(config['date'])} · {config['time']}</p></td></tr><tr><td style="padding:28px">{paragraphs}</td></tr></table></td></tr></table></body></html>'''
-    return {"to": member["email"], "subject": subject, "html": html, "text": text,
-            "reply_to": {"email": config["contact_email"], "name": config["contact_name"]}}
+    from ssiap_exam_mail import render_mail
+    return render_mail(config, member, kind, count, logo_url)
 
 
 def register(app, services):
@@ -286,7 +292,8 @@ def register(app, services):
     @app.get('/api/admin/sessions/<session_id>/ssiap-exam')
     @services.admin_login_required
     def api_ssiap_exam(session_id):
-        training = read(session_id)
+        all_data = services.load_data(run_background_tasks=False)
+        training = get_training(all_data, session_id)
         rows = []
         for trainee in active(training):
             docs = documents(services, trainee)
@@ -299,7 +306,9 @@ def register(app, services):
         return jsonify(ok=True, config=settings(training), revision=state(training).get("revision", 0), candidates=rows,
                        read_only=session.get("admin_role") == "viewer", csrf=session.setdefault("ssiap_exam_csrf", secrets.token_urlsafe(32)),
                        excluded_count=sum(services._trainee_registration_is_cancelled(t) for t in services._session_trainees_list(training)),
-                       history=state(training).get("mail_history", [])[-30:][::-1],
+                       history=state(training).get("mail_history", [])[-60:][::-1],
+                       directory=jury_directory(all_data, services.INTEGRALE_PARTNER_ID),
+                       mail_status={m["id"]: mail_status(training, m) for m in settings(training)["jury"]},
                        collective_url=url_for('admin_ssiap_exam_collective', session_id=session_id))
 
     @app.post('/api/admin/sessions/<session_id>/ssiap-exam')
@@ -315,11 +324,10 @@ def register(app, services):
             try:
                 if payload.get("action") == "config":
                     current["config"] = validate_config(payload.get("config"))
+                    remember_jury(data, current["config"]["jury"], services._now_iso(), settings(training)["jury"])
                 elif payload.get("action") == "candidate":
                     trainee = find_candidate(training, payload.get("trainee_id"))
                     candidate = validate_candidate(payload.get("candidate"), settings(training))
-                    candidate["validated_at"] = services._now_iso()
-                    candidate["validated_by"] = str(session.get("admin_username") or session.get("admin_user_id") or "Administration")
                     current.setdefault("candidates", {})[trainee["id"]] = candidate
                 else:
                     raise ValueError("Action invalide.")
@@ -340,7 +348,7 @@ def register(app, services):
         trainee = find_candidate(training, trainee_id)
         try:
             content = dossier(training, trainee, settings(training), candidate_settings(training, trainee), documents(services, trainee),
-                              services._training_center_signature_assets, app.root_path)
+                              app.root_path)
         except (ValueError, RuntimeError) as exc:
             return str(exc), 422
         return response_pdf(content, f"Dossier_examen_SSIAP_{services.secure_filename(trainee.get('last_name', ''))}_{trainee_id}.pdf")
@@ -363,7 +371,11 @@ def register(app, services):
         from ssiap_exam_pdf import collective
         training = read(session_id)
         candidates = [t for t in active(training) if candidate_settings(training, t)["included"]]
-        return response_pdf(collective(training, candidates, settings(training), app.root_path), f"PV_collectif_SSIAP_{session_id}.pdf")
+        try:
+            content = collective(training, candidates, settings(training), app.root_path)
+        except (ValueError, RuntimeError) as exc:
+            return str(exc), 422
+        return response_pdf(content, f"PV_collectif_SSIAP_{session_id}.pdf")
 
     @app.get('/api/admin/sessions/<session_id>/ssiap-exam/jury/<jury_id>/<kind>/preview')
     @services.admin_login_required

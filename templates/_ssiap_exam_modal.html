@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css', v='20261019-2') }}">
 <dialog id="ssiapExamDialog" class="exam-dialog" aria-labelledby="ssiapExamTitle" data-url="{{ url_for('api_ssiap_exam', session_id=session.id) }}">
   <header class="exam-heading"><div><span class="exam-eyebrow">INTÉGRALE ACADEMY</span><h2 id="ssiapExamTitle">Examen SSIAP</h2><p>{{ session.name }}</p></div><button type="button" data-exam-close aria-label="Fermer la modale Examen" class="exam-close">×</button></header>
   <nav class="exam-tabs" aria-label="Rubriques de l’examen">
@@ -19,4 +19,4 @@
   <iframe id="ssiapExamMailFrame" title="Contenu du mail au jury" sandbox=""></iframe>
   <footer class="exam-mail-actions"><button type="button" class="btn btn-outline" data-mail-close>Retour</button><button type="button" id="ssiapExamSend" class="btn btn-primary">Envoyer ce mail</button></footer>
 </dialog>
-<script src="{{ url_for('static', filename='js/ssiap-exam.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261019-2') }}" defer></script>

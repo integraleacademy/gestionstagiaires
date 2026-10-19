@@ -29,31 +29,52 @@
   function renderCandidate(row) {
     const c = row.candidate;
     return `<article class="exam-card" data-candidate-id="${esc(row.id)}"><div class="exam-candidate-top"><div><div class="exam-candidate-name">${esc(row.first_name)} ${esc(row.last_name)}</div><span class="exam-muted">${c.included ? 'Présenté à l’examen' : 'Non présenté à l’examen'}</span></div><div class="exam-actions"><a class="btn btn-primary" data-dossier-link href="${esc(row.dossier_url)}?download=1" target="_blank" rel="noopener">Dossier examen PDF</a><a class="btn btn-outline" data-dossier-link href="${esc(row.dossier_url)}" target="_blank" rel="noopener">Aperçu</a></div></div>
-      <div class="exam-chips">${row.documents.map(d => chip(d.label + (!d.available ? ' manquant' : d.review ? ' à vérifier' : ''), d.available, !!d.review)).join('')}${chip('Indépendance ' + (c.independence ? 'validée' : 'à valider'), c.independence)}${chip('Capacité ' + (c.ability ? 'validée' : 'à valider'), c.ability)}</div>
+      <div class="exam-chips">${row.documents.map(d => chip(d.label + (!d.available ? ' manquant' : d.review ? ' à vérifier' : ''), d.available, !!d.review)).join('')}${chip('Attestations signées et tamponnées', true)}</div>
       <div class="exam-actions"><a href="${esc(row.edit_url)}" target="_blank" rel="noopener">Ouvrir la fiche et les pièces</a><span class="exam-muted">·</span><a data-dossier-link href="${esc(row.pv_url)}?download=1" target="_blank" rel="noopener">Télécharger le PV individuel</a></div>
-      <details class="exam-details"><summary>Attestations et épreuves</summary><form data-candidate-form="${esc(row.id)}"><fieldset ${data.read_only ? 'disabled' : ''}>
+      <details class="exam-details"><summary>Présentation à l’examen</summary><form data-candidate-form="${esc(row.id)}"><fieldset ${data.read_only ? 'disabled' : ''}>
       <label class="exam-check"><input name="included" type="checkbox" ${c.included ? 'checked' : ''}>Présenter ce candidat à l’examen et l’inclure dans le PV collectif</label>
-      <div class="exam-note">Après validation ci-dessous, les attestations sont signées et tamponnées par le centre. Sans validation, elles portent la mention « Projet ».</div>
-      <label class="exam-check"><input name="independence" type="checkbox" ${c.independence ? 'checked' : ''}>Je confirme que ce candidat n’exerce pas dans la même entreprise ou structure que les examinateurs ou membres du jury renseignés.</label>
-      <label class="exam-check"><input name="ability" type="checkbox" ${c.ability ? 'checked' : ''}>L’évaluation du centre confirme que ce candidat sait rendre compte sur la main courante des anomalies constatées lors d’une ronde et alerter les secours.</label>
-      <div class="exam-grid">${field('Date de l’évaluation par le centre', 'evaluation_date', c.evaluation_date, 'date')}</div>
-      <h4 style="margin-top:22px">Compléter le PV individuel</h4><p class="exam-muted">Les notes et décisions restent vierges tant qu’elles ne sont pas renseignées.</p>
-      <div class="exam-grid three">${field('Note du QCM / 20', 'grade', c.grade, 'number')}${select('Épreuve écrite', 'written', c.written, [['','À renseigner'],['valid','Validé'],['failed','Ajourné']])}${field('Écrit réussi le', 'written_date', c.written_date, 'date')}${select('Épreuve pratique', 'practical', c.practical, [['','À renseigner'],['fit','Apte'],['unfit','Inapte']])}${field('Pratique réussie le', 'practical_date', c.practical_date, 'date')}${textarea('Motivation de l’inaptitude', 'reason', c.reason, 650)}</div>
-      <button type="submit" class="btn btn-primary exam-save">Enregistrer ce candidat</button></fieldset></form></details></article>`;
+      <button type="submit" class="btn btn-primary exam-save">Enregistrer</button></fieldset></form></details></article>`;
   }
+  const parisDate = value => value ? new Date(value).toLocaleString('fr-FR', {timeZone:'Europe/Paris',dateStyle:'short',timeStyle:'short'}) : '';
+  function mailState(member, kind) {
+    const recorded = data.config.jury.find(m => m.id === member.id);
+    if (recorded && recorded.email.toLowerCase() !== (member.email || '').toLowerCase()) return {};
+    return (data.mail_status || {})[member.id]?.[kind] || {};
+  }
+  function mailTracking(member) {
+    return ['invitation', 'reminder'].map(kind => {
+      const sent = mailState(member, kind);
+      const label = kind === 'invitation' ? 'Invitation' : 'Rappel';
+      const labels = {sent:'Envoyé',failed:'Échec de l’envoi',sending:'Envoi en cours ou à vérifier'};
+      const tone = sent.status === 'sent' ? 'sent' : ['failed','sending'].includes(sent.status) ? 'failed' : 'pending';
+      return `<div class="exam-mail-state ${tone}"><span class="exam-mail-state-label">${label}</span><strong>${esc(labels[sent.status] || 'Non envoyé')}</strong><span>${sent.at ? esc(parisDate(sent.at)) : 'Aucun envoi à cette adresse pour cet examen'}</span>${sent.last_sent_at && sent.status !== 'sent' ? `<small>Dernier envoi réussi : ${esc(parisDate(sent.last_sent_at))}</small>` : ''}</div>`;
+    }).join('');
+  }
+  function renderMailOverview() {
+    const members = data.config.jury;
+    const sent = kind => members.filter(m => mailState(m, kind).last_sent_at).length;
+    const area = document.getElementById('ssiapExamMailOverview');
+    if (area) area.innerHTML = `<div class="exam-mail-overview"><div><span>INVITATIONS ENVOYÉES</span><strong>${sent('invitation')} <small>/ ${members.length}</small></strong></div><div><span>RAPPELS ENVOYÉS</span><strong>${sent('reminder')} <small>/ ${members.length}</small></strong></div><p>Suivi des envois pour cet examen<br><span>Dates et heures de Paris</span></p></div>`;
+    configForm.querySelectorAll('[data-juror]').forEach(el => {
+      const member = {id:el.dataset.juror, email:el.querySelector('[name=email]').value};
+      el.querySelector('[data-juror-mail-status]').innerHTML = mailTracking(member);
+    });
+  }
+
   function juror(member) {
-    return `<div class="exam-juror" data-juror="${esc(member.id)}"><div class="exam-juror-head"><strong>Membre du jury</strong><button type="button" class="exam-link-button" data-remove-juror>Retirer de la liste</button></div><div class="exam-grid three">${field('Prénom', 'first_name', member.first_name)}${field('Nom', 'last_name', member.last_name)}${select('Rôle', 'role', member.role, [['member','Membre du jury'],['president','Président du jury']])}${field('E-mail', 'email', member.email, 'email')}${field('Téléphone', 'phone', member.phone, 'tel')}${field('Entreprise ou structure', 'company', member.company)}</div><div class="exam-actions exam-save"><button type="button" class="btn btn-outline" data-preview-kind="invitation">Prévisualiser l’invitation</button><button type="button" class="btn btn-outline" data-preview-kind="reminder">Prévisualiser le rappel</button></div></div>`;
+    return `<div class="exam-juror" data-juror="${esc(member.id)}"><div class="exam-juror-head"><strong>Membre du jury</strong><button type="button" class="exam-link-button" data-remove-juror>Retirer de la liste</button></div><div class="exam-grid three">${field('Prénom', 'first_name', member.first_name)}${field('Nom', 'last_name', member.last_name)}${select('Rôle', 'role', member.role, [['member','Membre du jury'],['president','Président du jury']])}${field('E-mail', 'email', member.email, 'email')}${field('Téléphone', 'phone', member.phone, 'tel')}${field('Entreprise ou structure', 'company', member.company)}</div><div class="exam-juror-mail-status" data-juror-mail-status>${mailTracking(member)}</div><div class="exam-actions exam-save"><button type="button" class="btn btn-outline" data-preview-kind="invitation">Prévisualiser l’invitation</button><button type="button" class="btn btn-outline" data-preview-kind="reminder">Prévisualiser le rappel</button></div></div>`;
   }
   function render() {
     const c = data.config;
     const count = data.candidates.filter(row => row.candidate.included).length;
     document.getElementById('ssiapExamCandidates').innerHTML = `<div class="exam-summary"><div><h3>${data.candidates.length} dossier${data.candidates.length > 1 ? 's' : ''} candidat${data.candidates.length > 1 ? 's' : ''}</h3><p class="exam-muted">Un PDF portrait par candidat, avec les 7 éléments du dossier.${data.excluded_count ? ` ${data.excluded_count} inscription(s) annulée(s) exclue(s).` : ''}</p></div><button type="button" class="btn btn-outline" data-refresh-exam>Actualiser les pièces</button></div>${!c.date || !c.time ? '<div class="exam-note" style="margin-bottom:15px">Renseignez la date et les horaires dans « Organisation et jury » pour compléter les documents et préparer les mails.</div>' : ''}${data.candidates.map(renderCandidate).join('') || '<p class="exam-empty">Aucun candidat actif dans cette session.</p>'}`;
-    configForm.innerHTML = `<fieldset ${data.read_only ? 'disabled' : ''}><div class="exam-card"><h3>Organisation de l’examen</h3><div class="exam-grid three">${select('Niveau', 'level', c.level, [['SSIAP 1','SSIAP 1'],['SSIAP 2','SSIAP 2'],['SSIAP 3','SSIAP 3']])}${field('Date de l’examen SSIAP', 'date', c.date, 'date')}${field('Heure de début', 'time', c.time, 'time')}${field('Accueil du jury', 'arrival_time', c.arrival_time, 'time')}${field('Fin prévisionnelle', 'end_time', c.end_time, 'time')}${field('Lieu', 'location', c.location)}${field('Adresse de l’examen', 'address', c.address, 'text', 'wide')}${field('Agrément SSIAP', 'approval', c.approval, 'text', 'wide')}${textarea('Informations pratiques à inclure dans les mails', 'instructions', c.instructions, 3000)}${textarea('Outils pédagogiques et techniques (PV collectif)', 'equipment', c.equipment, 1500)}</div></div>
+    configForm.innerHTML = `<fieldset ${data.read_only ? 'disabled' : ''}><div class="exam-card"><h3>Organisation de l’examen</h3><div class="exam-grid three">${select('Niveau', 'level', c.level, [['SSIAP 1','SSIAP 1'],['SSIAP 2','SSIAP 2'],['SSIAP 3','SSIAP 3']])}${field('Date de l’examen SSIAP', 'date', c.date, 'date')}${field('Heure de début', 'time', c.time, 'time')}${field('Accueil du jury', 'arrival_time', c.arrival_time, 'time')}${field('Fin prévisionnelle', 'end_time', c.end_time, 'time')}${field('Lieu', 'location', c.location)}${field('Adresse de l’examen', 'address', c.address, 'text', 'wide')}${field('Agrément SSIAP', 'approval', c.approval, 'text', 'wide')}${textarea('Informations pratiques à inclure dans les mails', 'instructions', c.instructions, 3000)}${textarea('Outils pédagogiques et techniques (PV collectif)', 'equipment', c.equipment, 220)}</div></div>
       <div class="exam-card"><h3>Contact du centre</h3><div class="exam-grid three">${field('Nom du contact', 'contact_name', c.contact_name)}${field('E-mail', 'contact_email', c.contact_email, 'email')}${field('Téléphone', 'contact_phone', c.contact_phone, 'tel')}</div></div>
-      <div class="exam-card"><h3>Jury et examinateurs</h3><p class="exam-muted">Ajoutez le président et les autres membres. Chaque mail est prévisualisé avant son envoi. Si la composition du jury change, les attestations d’indépendance doivent être validées à nouveau.</p><div id="ssiapExamJurors">${c.jury.map(juror).join('')}</div><button type="button" data-add-juror class="btn btn-outline">+ Ajouter un membre du jury</button></div><button type="submit" class="btn btn-primary">Enregistrer l’organisation et le jury</button></fieldset>`;
+      <div class="exam-card"><h3>Jury et examinateurs</h3><p class="exam-muted">Les coordonnées sont enregistrées dans votre répertoire et réutilisables pour les autres examens. Les invitations et rappels restent propres à cette session.</p><div id="ssiapExamMailOverview"></div><div class="exam-directory"><label class="exam-field">Choisir un membre déjà enregistré<select id="ssiapExamDirectory"><option value="">Sélectionner dans le répertoire (${data.directory.length})</option>${data.directory.map(m => `<option value="${esc(m.id)}">${esc(m.first_name)} ${esc(m.last_name)}${m.company ? ' · ' + esc(m.company) : ''}${m.email ? ' · ' + esc(m.email) : ''}</option>`).join('')}</select></label><button type="button" data-reuse-juror class="btn btn-outline">Ajouter à cet examen</button></div><div id="ssiapExamJurors">${c.jury.map(juror).join('')}</div><button type="button" data-add-juror class="btn btn-outline">+ Ajouter un membre du jury</button></div><button type="submit" class="btn btn-primary">Enregistrer l’organisation et le jury</button></fieldset>`;
     configDirty = false;
-    document.getElementById('ssiapExamCollective').innerHTML = `<div class="exam-card"><span class="exam-eyebrow" style="color:#008da8">PROCÈS-VERBAL DE LA SESSION</span><h3 style="margin-top:12px">PV collectif ${esc(c.level)}</h3><div class="exam-pv-count">${count}</div><p>candidat${count > 1 ? 's' : ''} présenté${count > 1 ? 's' : ''}</p><p class="exam-muted">Le document reprend les noms, prénoms, la date et le lieu de l’examen, le jury et les résultats enregistrés dans la colonne « Examen » de la liste des stagiaires. Les résultats en attente restent vierges. Les inscriptions annulées et les candidats non présentés sont exclus.</p><div class="exam-actions"><a class="btn btn-primary" href="${esc(data.collective_url)}?download=1" target="_blank" rel="noopener">Télécharger le PV collectif</a><a class="btn btn-outline" href="${esc(data.collective_url)}" target="_blank" rel="noopener">Prévisualiser le PV</a></div></div>`;
+    document.getElementById('ssiapExamCollective').innerHTML = `<div class="exam-card"><span class="exam-eyebrow" style="color:#008da8">PROCÈS-VERBAL DE LA SESSION</span><h3 style="margin-top:12px">PV collectif ${esc(c.level)}</h3><div class="exam-pv-count">${count}</div><p>candidat${count > 1 ? 's' : ''} présenté${count > 1 ? 's' : ''}</p><p class="exam-muted">Le modèle officiel fourni est conservé à l’identique. La date, les candidats et les informations du jury sont préremplis. Les résultats et signatures seront renseignés à la main par le jury. Le modèle contient 14 places ; une page identique est ajoutée si nécessaire. Les inscriptions annulées et les candidats non présentés sont exclus.</p><div class="exam-actions"><a class="btn btn-primary" href="${esc(data.collective_url)}?download=1" target="_blank" rel="noopener">Télécharger le PV collectif</a><a class="btn btn-outline" href="${esc(data.collective_url)}" target="_blank" rel="noopener">Prévisualiser le PV</a></div></div>`;
     renderHistory();
+    renderMailOverview();
   }
   function renderHistory() {
     const labels = {sent:'Envoyé', failed:'Échec de l’envoi', sending:'Envoi en cours ou à vérifier'};
@@ -63,15 +84,13 @@
     const drafts = keepDrafts ? [...dialog.querySelectorAll('[data-candidate-form][data-dirty="true"]')]
       .filter(form => form.dataset.candidateForm !== savedCandidate)
       .map(form => ({id:form.dataset.candidateForm, values:Object.fromEntries(new FormData(form)),
-        checks:Object.fromEntries(['included','independence','ability'].map(key => [key,form.elements[key].checked]))})) : [];
-    const oldJury = data ? JSON.stringify(data.config.jury) : '';
+        checks:Object.fromEntries(['included'].map(key => [key,form.elements[key].checked]))})) : [];
     data = await api(base); render();
     for (const draft of drafts) {
       const form = [...dialog.querySelectorAll('[data-candidate-form]')].find(f => f.dataset.candidateForm === draft.id);
       if (!form) continue;
       Object.entries(draft.values).forEach(([key,value]) => { if (form.elements[key] && form.elements[key].type !== 'checkbox') form.elements[key].value = value; });
       Object.entries(draft.checks).forEach(([key,value]) => { form.elements[key].checked = value; });
-      if (oldJury !== JSON.stringify(data.config.jury)) form.elements.independence.checked = false;
       form.dataset.dirty = 'true'; form.closest('details').open = true;
     }
   }
@@ -102,7 +121,8 @@
     action(async () => { await load(); message(''); });
   });
   dialog.addEventListener('input', event => {
-    if (event.target.closest('#ssiapExamConfig')) configDirty = true;
+    if (event.target.closest('#ssiapExamConfig') && event.target.id !== 'ssiapExamDirectory') configDirty = true;
+    if (event.target.name === 'email' && event.target.closest('[data-juror]')) renderMailOverview();
     const form = event.target.closest('[data-candidate-form]');
     if (form) form.dataset.dirty = 'true';
   });
@@ -115,9 +135,21 @@
       if (configDirty) throw new Error('Enregistrez l’organisation et le jury avant d’actualiser.');
       await load({keepDrafts:true}); message('Pièces actualisées.');
     });
+    if (target.hasAttribute('data-reuse-juror')) {
+      const id = document.getElementById('ssiapExamDirectory').value;
+      const member = data.directory.find(m => m.id === id);
+      if (!member) { message('Choisissez un membre dans le répertoire.', true); return; }
+      const current = collectConfig().jury;
+      if (current.some(m => m.id === member.id || (member.email && m.email.toLowerCase() === member.email.toLowerCase()))) {
+        message('Ce membre figure déjà dans le jury de cet examen.', true); return;
+      }
+      const role = member.role === 'president' && !current.some(m => m.role === 'president') ? 'president' : 'member';
+      document.getElementById('ssiapExamJurors').insertAdjacentHTML('beforeend', juror({...member, role}));
+      configDirty = true; message('Membre ajouté. Enregistrez le jury pour cet examen.');
+    }
     if (target.hasAttribute('data-add-juror')) { document.getElementById('ssiapExamJurors').insertAdjacentHTML('beforeend', juror({id:crypto.randomUUID(), role:'member'})); configDirty = true; }
     if (target.hasAttribute('data-remove-juror')) { target.closest('[data-juror]').remove(); configDirty = true; }
-    if (target.hasAttribute('data-dossier-link') && (configDirty || target.closest('[data-candidate-id]').querySelector('[data-candidate-form]').dataset.dirty === 'true')) {
+    if ((target.hasAttribute('data-dossier-link') || target.closest('#ssiapExamCollective')) && (configDirty || dialog.querySelector('[data-candidate-form][data-dirty="true"]'))) {
       event.preventDefault(); message('Enregistrez vos modifications avant de télécharger ou prévisualiser le dossier.', true);
     }
     if (target.dataset.previewKind) {
@@ -129,7 +161,8 @@
         document.getElementById('ssiapExamMailTo').textContent = preview.to;
         document.getElementById('ssiapExamMailSubject').textContent = preview.subject;
         document.getElementById('ssiapExamMailFrame').srcdoc = preview.html;
-        document.getElementById('ssiapExamMailStatus').textContent = '';
+        const sent = data.mail_status?.[id]?.[kind];
+        document.getElementById('ssiapExamMailStatus').textContent = sent?.last_sent_at ? 'Dernier envoi : ' + parisDate(sent.last_sent_at) + '. Un nouvel envoi sera effectué si vous cliquez sur Envoyer.' : 'Ce mail n’a pas encore été envoyé.';
         sendButton.disabled = data.read_only;
         sendButton.textContent = 'Envoyer ce mail';
         mailDialog.showModal();
@@ -140,11 +173,11 @@
   dialog.addEventListener('submit', event => {
     event.preventDefault();
     const form = event.target;
-    if (form === configForm) action(async () => { await saveConfig(); message('Organisation et jury enregistrés.'); });
+    if (form === configForm) action(async () => { await saveConfig(); message('Organisation enregistrée. Les membres du jury sont disponibles dans votre répertoire.'); });
     if (form.dataset.candidateForm) action(async () => {
       if (configDirty) throw new Error('Enregistrez d’abord l’organisation et le jury. Vos modifications du candidat seront conservées.');
       const raw = Object.fromEntries(new FormData(form));
-      ['included','independence','ability'].forEach(key => { raw[key] = form.elements[key].checked; });
+      ['included'].forEach(key => { raw[key] = form.elements[key].checked; });
       await post(base, {action:'candidate', revision:data.revision, trainee_id:form.dataset.candidateForm, candidate:raw});
       await load({keepDrafts:true, savedCandidate:form.dataset.candidateForm}); message('Candidat enregistré. Le dossier PDF utilise ces informations.');
     });
@@ -158,7 +191,9 @@
       await post(`${base}/mail/send`, {preview_token:preview.preview_token});
       mailStatus.textContent = 'Mail envoyé à ' + preview.to;
       sendButton.textContent = 'Mail envoyé';
-      data = await api(base); renderHistory();
-    } catch (error) { mailStatus.textContent = error.message; sendButton.textContent = 'Fermez puis prévisualisez à nouveau'; }
+    } catch (error) {
+      mailStatus.textContent = error.message; sendButton.textContent = 'Fermez puis prévisualisez à nouveau';
+    }
+    try { data = await api(base); renderHistory(); renderMailOverview(); } catch { /* Preserve the confirmed delivery result. */ }
   });
 })();

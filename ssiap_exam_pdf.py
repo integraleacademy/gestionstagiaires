@@ -1,6 +1,12 @@
 """Portrait examination PDFs, based on the centre's individual and collective PV models."""
 import io
 import os
+import datetime as dt
+import zipfile
+from functools import lru_cache
+from zoneinfo import ZoneInfo
+
+import fitz
 from html import escape
 
 from pypdf import PdfReader, PdfWriter, Transformation
@@ -10,7 +16,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.utils import ImageReader
 from reportlab.lib.units import mm
-from reportlab.platypus import Paragraph, Table, TableStyle
+from reportlab.platypus import Paragraph
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
@@ -82,59 +88,50 @@ def name(trainee):
     return ' '.join([str(trainee.get('first_name') or ''), str(trainee.get('last_name') or '').upper()]).strip()
 
 
-def checkbox(c, x, y, label, checked=False):
-    c.setStrokeColor(MUTED)
-    c.rect(x, y - 9, 9, 9, stroke=1, fill=0)
-    if checked:
-        c.setStrokeColor(TEAL)
-        c.line(x + 2, y - 5, x + 4, y - 7)
-        c.line(x + 4, y - 7, x + 8, y - 2)
-    paragraph(c, label, x + 15, y + 2, 120, 9)
+@lru_cache(maxsize=2)
+def official_template(root, kind):
+    path = os.path.join(root, 'templates_word', 'ssiap_exam', f'pv_{kind}_ssiap1.pdf')
+    with open(path, 'rb') as source:
+        raw = source.read()
+    with fitz.open(stream=raw, filetype='pdf') as document:
+        font = next(f for f in document[0].get_fonts() if f[4] == 'ExamRegular')
+        font_bytes = document.extract_font(font[0])[3]
+    return raw, font_bytes
 
 
-def jury_names(config, role):
-    return ', '.join(name(m) for m in config['jury'] if m['role'] == role)
+def form_text(page, font, text, x, y, width, size=12):
+    text = str(text or '').replace('\n', ' ').strip()
+    if not text:
+        return
+    length = font.text_length(text, fontsize=size)
+    fitted = min(size, size * width / max(length, 1))
+    if fitted < 7:
+        raise ValueError('Une information est trop longue pour le champ du modèle officiel. Réduisez-la avant de télécharger le PV.')
+    page.insert_text((x, y), text, fontname='ExamRegular', fontsize=fitted, color=(0, 0, 0))
 
 
-def signature_boxes(c, config, y, *, collective=False):
-    cols = [('Président du jury', jury_names(config, 'president'), 'Signature et cachet'),
-            ('Membre(s) du jury', jury_names(config, 'member'), 'Signature'),
-            ('Organisme de formation', 'Clément VAILLANT', 'Signature et cachet' if collective else 'Cachet')]
-    cell_width = WIDTH / 3
-    for index, (label, person, hint) in enumerate(cols):
-        x = M + index * cell_width
-        c.setStrokeColor(colors.HexColor('#d7e1eb'))
-        c.rect(x, y - 100, cell_width, 100, stroke=1, fill=0)
-        bottom = paragraph(c, label, x + 8, y - 9, cell_width - 16, 9, bold=True)
-        bottom = paragraph(c, person, x + 8, bottom - 6, cell_width - 16, 8)
-        paragraph(c, hint, x + 8, bottom - 4, cell_width - 16, 7, color=MUTED)
+def check_model(config):
+    if config['level'] != 'SSIAP 1':
+        raise ValueError('Le modèle fourni concerne le SSIAP 1. Un modèle officiel correspondant est nécessaire pour ce niveau.')
+
+
+def form_date(page, font, date, y):
+    text = 'Examen du ' + (frdate(date) if date else '____/____/____')
+    form_text(page, font, text, (float(page.rect.width) - font.text_length(text, fontsize=13)) / 2, y, 300, 13)
 
 
 def individual(training, trainee, config, candidate, root):
-    c, stream = new_pdf('PV individuel - ' + name(trainee))
-    y = header(c, "Fiche d’évaluation", f"{config['level']} · Examen du {frdate(config['date'])}" + (f" à {config['time']}" if config['time'] else ''), root)
-    y = info(c, config, y)
-    y = section(c, 'CANDIDAT', y)
-    y = paragraph(c, f"Nom : {str(trainee.get('last_name') or '').upper()}\nPrénom : {trainee.get('first_name') or ''}", M, y, size=12, bold=True) - 20
-    y = section(c, 'ÉPREUVE ÉCRITE (QCM)', y)
-    paragraph(c, f"Note : {candidate['grade'] or '........'} / 20", M, y, size=12)
-    checkbox(c, M + 215, y - 2, 'VALIDÉ', candidate['written'] == 'valid')
-    checkbox(c, M + 335, y - 2, 'AJOURNÉ', candidate['written'] == 'failed')
-    y = paragraph(c, 'Réussie le : ' + (frdate(candidate['written_date']) if candidate['written_date'] else '................................'), M, y - 29, size=9) - 20
-    y = section(c, 'ÉPREUVE PRATIQUE', y)
-    paragraph(c, 'Évaluation finale', M, y, size=10)
-    checkbox(c, M + 215, y - 2, 'APTE', candidate['practical'] == 'fit')
-    checkbox(c, M + 335, y - 2, 'INAPTE', candidate['practical'] == 'unfit')
-    y = paragraph(c, 'Réussie le : ' + (frdate(candidate['practical_date']) if candidate['practical_date'] else '................................'), M, y - 29, size=9) - 17
-    y = paragraph(c, 'Motivation de l’inaptitude', M, y, size=9, bold=True) - 7
-    c.setStrokeColor(colors.HexColor('#d7e1eb'))
-    box_height = 104
-    c.rect(M, y - box_height, WIDTH, box_height, stroke=1, fill=0)
-    end = paragraph(c, candidate['reason'], M + 10, y - 9, WIDTH - 20, size=9)
-    if end < y - box_height + 5:
-        raise ValueError('La motivation de l’inaptitude est trop longue pour le PV. Réduisez-la.')
-    signature_boxes(c, config, y - box_height - 22)
-    return finish(c, stream)
+    """Fill identity and date only; every jury field is the untouched supplied form."""
+    check_model(config)
+    raw, font_bytes = official_template(root, 'individual')
+    with fitz.open(stream=raw, filetype='pdf') as document:
+        page = document[0]
+        font = fitz.Font(fontbuffer=font_bytes)
+        form_date(page, font, config['date'], 96.2007446)
+        form_text(page, font, 'Nom : ' + str(trainee.get('last_name') or '').upper(), 28.45, 338.05078, 261, 12)
+        form_text(page, font, 'Prénom : ' + str(trainee.get('first_name') or ''), 301.95, 338.05078, 261, 12)
+        document.set_metadata({'title': 'PV individuel SSIAP 1 - ' + name(trainee), 'author': 'Intégrale Academy'})
+        return document.tobytes(garbage=3, deflate=True)
 
 
 def cover(training, trainee, config, candidate, docs, root):
@@ -160,8 +157,8 @@ def cover(training, trainee, config, candidate, docs, root):
     for label, value in details:
         y = paragraph(c, label, M, y, size=8, color=MINT, bold=True) - 4
         y = paragraph(c, value, M, y, size=11, color=colors.white) - 14
-    complete = all(d['available'] and not d['review'] for d in docs) and candidate['independence'] and candidate['ability']
-    status = 'Pièces réunies et attestations validées' if complete else 'Dossier à compléter ou à vérifier'
+    complete = all(d['available'] and not d['review'] for d in docs)
+    status = 'Pièces réunies et attestations signées' if complete else 'Dossier à compléter ou à vérifier'
     y = paragraph(c, status, M, y, size=11, color=MINT, bold=True)
     paragraph(c, 'PV individuel · Identité · Secourisme · Certificat médical\nAttestation d’indépendance · Attestation de capacité', M, y - 12, size=9, color=colors.white)
     paragraph(c, config['contact_email'] + ' · ' + config['contact_phone'], M, 36, size=8, color=MINT)
@@ -171,40 +168,39 @@ def cover(training, trainee, config, candidate, docs, root):
 def attestation(training, trainee, config, candidate, kind, assets, root):
     c, stream = new_pdf('Attestation - ' + name(trainee))
     independence = kind == 'independence'
-    validated = candidate[kind]
     title = 'Attestation d’indépendance' if independence else 'Attestation de capacité'
     y = header(c, title, f"{config['level']} · Examen du {frdate(config['date'])}", root)
     y = info(c, config, y)
-    if not validated:
-        y = section(c, 'PROJET - VALIDATION DU CENTRE NÉCESSAIRE', y)
     y = paragraph(c, name(trainee), M, y, size=21, bold=True) - 24
     intro = 'Je soussigné, Clément VAILLANT, Directeur général d’Intégrale Academy, représentant l’organisme Intégrale Sécurité Formations,'
     if independence:
         body = f"atteste que le candidat {name(trainee)}, présenté à l’examen {config['level']} du {frdate(config['date'])}, n’exerce pas dans la même entreprise ou structure que les examinateurs ou les membres du jury de cet examen."
     else:
-        body = f"atteste qu’à la suite de l’évaluation réalisée par le centre de formation le {frdate(candidate['evaluation_date'])}, le candidat {name(trainee)}, présenté à l’examen {config['level']} du {frdate(config['date'])}, a la capacité de rendre compte sur la main courante des anomalies constatées lors d’une ronde et d’alerter les secours."
+        body = f"atteste qu’à la suite de l’évaluation réalisée par le centre de formation, le candidat {name(trainee)}, présenté à l’examen {config['level']} du {frdate(config['date'])}, a la capacité de rendre compte sur la main courante des anomalies constatées lors d’une ronde et d’alerter les secours."
     y = paragraph(c, intro, M, y, size=12, leading=20) - 20
     y = paragraph(c, body, M, y, size=12, leading=20) - 30
-    if independence and config['jury']:
-        y = paragraph(c, 'Jury désigné pour cet examen', M, y, size=10, bold=True) - 7
-        for member in config['jury']:
-            y = paragraph(c, name(member) + (' - ' + member['company'] if member['company'] else ''), M, y, size=9) - 4
-        y -= 16
-    if validated:
-        y = paragraph(c, 'Fait à Puget-sur-Argens, le ' + frdate(candidate.get('validated_at')), M, y, size=10) - 25
-        y = paragraph(c, 'Clément VAILLANT\nDirecteur général Intégrale Academy', M, y, size=11, bold=True) - 18
-        if y < 120:
-            raise ValueError('Le contenu de l’attestation est trop long. Réduisez les informations du jury.')
-        for key, x, width in [('signature', M, 48 * mm), ('stamp', M + 65 * mm, 58 * mm)]:
-            c.drawImage(ImageReader(io.BytesIO(assets[key])), x, y - 62, width, 62, preserveAspectRatio=True, anchor='c', mask='auto')
-    else:
-        paragraph(c, 'Cette attestation sera signée et tamponnée après validation de son contenu dans la fiche Examen du candidat.', M, y, size=10, color=MUTED)
+    issued_date = dt.datetime.now(ZoneInfo('Europe/Paris')).date().isoformat()
+    y = paragraph(c, 'Fait à Puget-sur-Argens, le ' + frdate(issued_date), M, y, size=10) - 25
+    y = paragraph(c, 'Clément VAILLANT\nDirecteur général Intégrale Academy', M, y, size=11, bold=True) - 18
+    for key, x, width, height in [('signature', M, 48 * mm, 28 * mm), ('stamp', M + 65 * mm, 72 * mm, 28 * mm)]:
+        c.drawImage(ImageReader(io.BytesIO(assets[key])), x, y - height, width, height, preserveAspectRatio=True, anchor='c', mask='auto')
     return finish(c, stream)
 
 
-def dossier(training, trainee, config, candidate, docs, get_assets, root):
+@lru_cache(maxsize=1)
+def signature_assets(root):
+    """Use the exact original stamp and Clément's signature from the SSIAP agreement."""
+    try:
+        with zipfile.ZipFile(os.path.join(root, 'templates_word', 'conventionssiap.docx')) as source:
+            return {'stamp': source.read('word/media/image1.png'),
+                    'signature': source.read('word/media/image2.png')}
+    except (OSError, KeyError, zipfile.BadZipFile) as exc:
+        raise RuntimeError('Le tampon ou la signature de la convention SSIAP est introuvable.') from exc
+
+
+def dossier(training, trainee, config, candidate, docs, root):
     from document_conversion import convert_upload, ConversionError
-    assets = get_assets() if candidate['independence'] or candidate['ability'] else {}
+    assets = signature_assets(root)
     writer = PdfWriter()
     writer.append(io.BytesIO(cover(training, trainee, config, candidate, docs, root)))
     writer.append(io.BytesIO(individual(training, trainee, config, candidate, root)))
@@ -244,6 +240,8 @@ def dossier(training, trainee, config, candidate, docs, get_assets, root):
     for kind in ('independence', 'ability'):
         writer.append(io.BytesIO(attestation(training, trainee, config, candidate, kind, assets, root)))
     for i, page in enumerate(writer.pages, 1):
+        if i == 2:  # Never add a footer, logo or page number to the official PV.
+            continue
         c, stream = new_pdf('Pagination')
         c.setFillColor(MINT if i == 1 else MUTED)
         c.setFont(FONT, 8)
@@ -256,34 +254,42 @@ def dossier(training, trainee, config, candidate, docs, get_assets, root):
 
 
 def collective(training, trainees, config, root):
-    c, stream = new_pdf('Procès-verbal collectif ' + config['level'])
-    pages = [trainees[i:i + 12] for i in range(0, len(trainees), 12)] or [[]]
-    for number, candidates in enumerate(pages, 1):
-        y = header(c, 'Procès-verbal collectif', f"{config['level']} · Examen du {frdate(config['date'])} · Page {number}/{len(pages)}", root)
-        y = info(c, config, y)
-        style = ParagraphStyle('cell', fontName=FONT, fontSize=9, leading=11, textColor=NAVY)
-        rows = [['NOMS', 'PRÉNOMS', 'RÉSULTATS']]
-        for t in candidates:
-            result = {'certified': 'CERTIFIÉ', 'failed': 'NON CERTIFIÉ'}.get(t.get('ssiap_exam_status'), '')
-            rows.append([Paragraph(escape(str(value)), style) for value in (str(t.get('last_name') or '').upper(), t.get('first_name') or '', result)])
-        if not candidates:
-            rows.append(['Aucun candidat présenté', '', ''])
-        table = Table(rows, colWidths=[WIDTH * .34, WIDTH * .31, WIDTH * .35], minRowHeights=[21] * len(rows))
-        table.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, 0), NAVY), ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), BOLD), ('FONTSIZE', (0, 0), (-1, 0), 9),
-            ('GRID', (0, 1), (-1, -1), .5, colors.HexColor('#d7e1eb')), ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 8), ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 5), ('BOTTOMPADDING', (0, 0), (-1, -1), 5)]))
-        _, height = table.wrap(WIDTH, H)
-        table.drawOn(c, M, y - height)
-        y -= height + 18
-        y = paragraph(c, 'Outils pédagogiques et techniques mis en œuvre', M, y, size=9, bold=True) - 5
-        y = paragraph(c, config['equipment'] or '................................................................................................................', M, y, size=9) - 15
-        if y < 170:
-            c.showPage()
-            y = header(c, 'Validation du procès-verbal', f"{config['level']} · Examen du {frdate(config['date'])} · Suite de la liste {number}", root)
-        signature_boxes(c, config, y, collective=True)
-        paragraph(c, 'Procès-verbal dressé par Monsieur Clément VAILLANT, représentant le responsable du centre de formation.', M, y - 113, size=8, color=MUTED)
-        if number < len(pages):
-            c.showPage()
-    return finish(c, stream)
+    """Repeat the unchanged 14-slot model when needed, without extending its table."""
+    check_model(config)
+    raw, font_bytes = official_template(root, 'collective')
+    font = fitz.Font(fontbuffer=font_bytes)
+    output = fitz.open()
+    for start in range(0, max(1, len(trainees)), 14):
+        with fitz.open(stream=raw, filetype='pdf') as document:
+            page = document[0]
+            form_date(page, font, config['date'], 81.75079)
+            for index, trainee in enumerate(trainees[start:start + 14]):
+                y = 256.85077 + index * 20
+                form_text(page, font, str(trainee.get('last_name') or '').upper(), 28.45, y, 145, 14)
+                form_text(page, font, trainee.get('first_name') or '', 180.8, y, 177, 14)
+            equipment = str(config.get('equipment') or '').strip()
+            if equipment:
+                words, lines, line = equipment.split(), [], ''
+                for word in words:
+                    proposal = (line + ' ' + word).strip()
+                    if font.text_length(proposal, fontsize=10) > 530 and line:
+                        lines.append(line)
+                        line = word
+                    else:
+                        line = proposal
+                if line:
+                    lines.append(line)
+                if len(lines) > 2:
+                    raise ValueError('La description des outils est trop longue pour les deux lignes du modèle officiel.')
+                for index, line in enumerate(lines):
+                    form_text(page, font, line, 28.45, 558 + index * 14, 530, 10)
+            presidents = ', '.join(name(m) for m in config['jury'] if m['role'] == 'president')
+            members = ', '.join(name(m) for m in config['jury'] if m['role'] == 'member')
+            form_text(page, font, presidents, 28.45, 640, 260, 10)
+            form_text(page, font, members, 301.25, 640, 260, 10)
+            # Results, appraisals and signature areas remain blank for the jury.
+            output.insert_pdf(document)
+    output.set_metadata({'title': 'Procès-verbal collectif SSIAP 1', 'author': 'Intégrale Academy'})
+    result = output.tobytes(garbage=3, deflate=True)
+    output.close()
+    return result
