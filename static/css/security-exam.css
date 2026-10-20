@@ -1,0 +1,8 @@
+#securityExamDialog .exam-candidate-name{overflow-wrap:anywhere}
+#securityExamDialog .security-exam-selection{margin:14px 0 0}
+#securityExamDialog .security-exam-selection input{accent-color:#008da8}
+#securityExamCalendarNote{margin-bottom:18px}
+#securityExamProgress,#securityExamArchive{margin-top:18px}
+#securityExamProgress p,#securityExamArchive p{margin:5px 0 12px}
+#securityExamProgress{border-left:3px solid #008da8}
+@media(max-width:700px){#securityExamDialog .exam-candidate-top>.exam-actions{width:100%}#securityExamDialog .exam-candidate-top>.exam-actions .btn{flex:1;text-align:center}}

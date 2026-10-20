@@ -24883,6 +24883,7 @@ def _a3p_exam_dossier_public_config(session_item: Dict[str, Any], storage_key: s
         "exam_date": saved.get("exam_date") or _session_get(session_item, "exam_date", ""),
         "epi_training_date": saved.get("epi_training_date") or "",
         "selected_trainee_ids": saved.get("selected_trainee_ids") or [],
+        "revision": saved.get("revision", 0),
         "generation": {
             "available": bool(generation.get("archive_path") and os.path.isfile(generation.get("archive_path"))),
             "created_at": generation.get("created_at") or "",
@@ -24896,7 +24897,7 @@ def _a3p_exam_dossier_public_config(session_item: Dict[str, Any], storage_key: s
 @app.get("/api/admin/sessions/<session_id>/aps-exam-dossiers")
 @admin_login_required
 def api_a3p_exam_dossier_config(session_id: str):
-    data = load_data()
+    data = load_data(run_background_tasks=False)
     profile = _exam_dossier_profile(_exam_dossier_training())
     try:
         session_item = _require_exam_dossier_session(data, session_id, profile["training"])
@@ -24904,7 +24905,109 @@ def api_a3p_exam_dossier_config(session_id: str):
         abort(404)
     except ValueError as exc:
         return jsonify({"ok": False, "message": str(exc)}), 400
-    return jsonify({"ok": True, **_a3p_exam_dossier_public_config(session_item, profile["storage_key"])})
+    config = _a3p_exam_dossier_public_config(session_item, profile["storage_key"])
+    candidates = []
+    for trainee in sorted(_registered_trainees(session_item), key=_trainee_alpha_sort_key):
+        trainee_id = str(trainee.get("id") or "")
+        candidates.append({
+            "id": trainee_id,
+            "first_name": normalize_first_name(trainee.get("first_name") or ""),
+            "last_name": normalize_last_name(trainee.get("last_name") or ""),
+            "dossier_url": url_for("admin_security_exam_dossier", session_id=session_id,
+                                   training_slug=profile["slug"], trainee_id=trainee_id),
+            "edit_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
+            "has_photo": bool(_ssiap_diploma_photo_path(trainee)),
+        })
+    download_endpoint = "admin_download_aps_exam_dossiers" if profile["training"] == "APS" else "admin_download_a3p_exam_dossiers"
+    return jsonify({"ok": True, **config, "candidates": candidates, "training": profile["training"],
+                    "pages": profile["expected_pages"], "read_only": session.get("admin_role") == "viewer",
+                    "csrf": session.setdefault("security_exam_csrf", secrets.token_urlsafe(32)),
+                    "download_url": url_for(download_endpoint, session_id=session_id)})
+
+
+def _security_exam_calendar(payload: Dict[str, Any]) -> Dict[str, str]:
+    values = {key: str(payload.get(key) or "").strip() for key in (
+        "training_start_date", "training_end_date", "exam_date", "epi_training_date"
+    )}
+    for value in values.values():
+        if value:
+            try:
+                parsed = datetime.date.fromisoformat(value)
+                if parsed.isoformat() != value:
+                    raise ValueError()
+            except ValueError:
+                raise ValueError("Une date est invalide. Utilisez le calendrier pour la renseigner.")
+    if values["training_start_date"] and values["training_end_date"] and values["training_end_date"] < values["training_start_date"]:
+        raise ValueError("La date de fin doit être postérieure à la date de début.")
+    return values
+
+
+@app.post("/api/admin/sessions/<session_id>/a3p-exam-dossiers")
+@app.post("/api/admin/sessions/<session_id>/aps-exam-dossiers")
+@admin_login_required
+@admin_write_required
+def api_save_security_exam_calendar(session_id: str):
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        abort(400)
+    token = session.get("security_exam_csrf", "")
+    if not token or not hmac.compare_digest(str(payload.get("csrf") or ""), token):
+        abort(403)
+    try:
+        values = _security_exam_calendar(payload)
+    except ValueError as exc:
+        return jsonify(ok=False, message=str(exc)), 400
+    profile = _exam_dossier_profile(_exam_dossier_training())
+
+    def update(data):
+        try:
+            training = _require_exam_dossier_session(data, session_id, profile["training"])
+        except LookupError:
+            abort(404)
+        except ValueError as exc:
+            return {"ok": False, "message": str(exc), "status": 400}
+        saved = training.get(profile["storage_key"]) or {}
+        if payload.get("revision") != saved.get("revision", 0):
+            return {"ok": False, "message": "Le calendrier a changé. Fermez puis rouvrez la modale avant de réessayer.", "status": 409}
+        training[profile["storage_key"]] = {**saved, **values, "revision": saved.get("revision", 0) + 1}
+        return {"ok": True}
+
+    result = _atomic_update_data(update)
+    return jsonify(result), result.pop("status", 200)
+
+
+@app.get("/admin/sessions/<session_id>/<training_slug>-exam-dossiers/candidates/<trainee_id>/dossier.pdf")
+@admin_login_required
+def admin_security_exam_dossier(session_id: str, training_slug: str, trainee_id: str):
+    if training_slug not in {"aps", "a3p"}:
+        abort(404)
+    profile = _exam_dossier_profile(training_slug.upper())
+    try:
+        training = _require_exam_dossier_session(load_data(run_background_tasks=False), session_id, profile["training"])
+    except (LookupError, ValueError):
+        abort(404)
+    trainee = next((t for t in _registered_trainees(training) if str(t.get("id") or "") == trainee_id), None)
+    if not trainee:
+        abort(404)
+    config = _a3p_exam_dossier_public_config(training, profile["storage_key"])
+    context = _a3p_exam_context(trainee, config)
+    draft = not all(config[key] for key in ("training_start_date", "training_end_date", "exam_date", "epi_training_date"))
+    if draft:
+        for key in ("date_debut_formation", "date_fin_formation", "date_examen", "date_formation_epi",
+                    "date_un_mois_avant_debut_formation", "date_15_jours_avant_examen"):
+            context[key] = context[key] or "À renseigner"
+        context["periode_formation"] = context["date_debut_formation"] + " au " + context["date_fin_formation"]
+    try:
+        content = security_exam_pdf.dossier(profile["training"], trainee, context, app.root_path,
+                                           _ssiap_diploma_photo_path(trainee), draft=draft)
+    except (ValueError, RuntimeError, OSError) as exc:
+        app.logger.exception("Consultation du dossier examen %s impossible", profile["training"])
+        return "Le dossier n’a pas pu être préparé. Réessayez dans quelques instants.", 422
+    filename = secure_filename(f"Dossier examen {profile['training']} {context['nom']} {context['prenom']} {trainee_id}") + ".pdf"
+    response = send_file(BytesIO(content), mimetype="application/pdf", download_name=filename,
+                         as_attachment=request.args.get("download") == "1")
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 def _a3p_exam_context(trainee: Dict[str, Any], values: Dict[str, str]) -> Dict[str, str]:
@@ -25174,6 +25277,7 @@ def api_generate_a3p_exam_dossiers(session_id: str):
         return jsonify({"ok": False, "message": f"La génération a échoué : {exc}"}), 500
 
     session_item[profile["storage_key"]] = {
+        "revision": (session_item.get(profile["storage_key"]) or {}).get("revision", 0) + 1,
         **values,
         "selected_trainee_ids": [str(item.get("id") or "") for item in selected],
         "generation": {"id": generation_id, "archive_path": archive_path, "created_at": _now_iso(),

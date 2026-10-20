@@ -1,0 +1,44 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css', v='20261020-1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/security-exam.css', v='20261020-1') }}">
+<dialog id="securityExamDialog" class="exam-dialog" aria-labelledby="securityExamTitle"
+        data-url="/api/admin/sessions/{{ session.id }}/{{ exam_dossier_slug }}-exam-dossiers">
+  <header class="exam-heading">
+    <div><span class="exam-eyebrow">INTÉGRALE ACADEMY</span><h2 id="securityExamTitle">Dossier examen {{ exam_dossier_label }}</h2><p>{{ session.name }}</p></div>
+    <button type="button" data-security-close class="exam-close" aria-label="Fermer la modale Dossier examen">×</button>
+  </header>
+  <nav class="exam-tabs" aria-label="Rubriques du dossier examen">
+    <button type="button" data-security-tab="candidates" aria-pressed="true">Dossiers candidats</button>
+    <button type="button" data-security-tab="calendar" aria-pressed="false">Calendrier</button>
+  </nav>
+  <div id="securityExamStatus" class="exam-status" role="status" aria-live="polite"></div>
+  <div class="exam-content">
+    <section data-security-panel="candidates">
+      <div class="exam-summary"><div><h3 id="securityExamCount">Dossiers candidats</h3><p class="exam-muted">Consultez ou téléchargez le dossier de chaque candidat.</p></div><button type="button" class="btn btn-outline" data-security-refresh data-lock>Actualiser les dossiers</button></div>
+      <div id="securityExamCalendarNote" class="exam-note" hidden></div>
+      <div id="securityExamCandidates">Chargement des dossiers…</div>
+      <div id="securityExamBulk" class="exam-card" hidden>
+        <h3>Téléchargement groupé</h3>
+        <p class="exam-muted">Un ZIP contenant les dossiers sélectionnés et un PDF regroupé.</p>
+        <div class="exam-actions"><span id="securityExamSelection" class="exam-muted"></span><button type="button" class="btn btn-outline" id="securityExamToggle" data-lock>Tout désélectionner</button><button type="button" class="btn btn-primary" id="securityExamGenerate" data-lock>Préparer le ZIP</button></div>
+        <div id="securityExamProgress" class="exam-note" role="status" hidden><strong>Dossiers d’examen en cours de création</strong><p>Nous préparons les dossiers sélectionnés et le PDF regroupé.</p></div>
+        <div id="securityExamArchive" class="exam-note" hidden><p id="securityExamArchiveMeta"></p><a class="btn btn-outline" id="securityExamArchiveLink">Télécharger le dernier ZIP généré</a></div>
+      </div>
+    </section>
+    <section data-security-panel="calendar" hidden>
+      <form id="securityExamCalendar">
+        <fieldset>
+          <div class="exam-card"><h3>Calendrier de la session</h3><p class="exam-muted">Ces dates sont utilisées dans tous les dossiers. Vous pouvez déjà consulter les dossiers : les dates manquantes seront signalées dans le PDF.</p>
+            <div class="exam-grid">
+              <label class="exam-field">Début de formation<input type="date" name="training_start_date" data-lock></label>
+              <label class="exam-field">Fin de formation<input type="date" name="training_end_date" data-lock></label>
+              <label class="exam-field">Date d’examen<input type="date" name="exam_date" data-lock></label>
+              <label class="exam-field">Formation « équipier de première intervention »<input type="date" name="epi_training_date" data-lock></label>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" data-lock>Enregistrer le calendrier</button>
+        </fieldset>
+      </form>
+    </section>
+  </div>
+</dialog>
+<script src="{{ url_for('static', filename='js/security-exam.js', v='20261020-1') }}" defer></script>

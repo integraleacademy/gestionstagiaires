@@ -268,27 +268,36 @@ def _assessment(c, training, profile, context, root, practical_only=False):
                   size=9, color=MUTED)
 
 
-def dossier(training, trainee, context, root, photo_path=""):
+def dossier(training, trainee, context, root, photo_path="", *, draft=False):
     """Return the complete six-page A3P or seven-page APS candidate PDF."""
     profile = PROFILES[training]
     assets = signature_assets(root)
     c, stream = new_pdf(f"Dossier examen {training} - {context['nom_complet']}")
+    def mark_draft():
+        if draft:
+            paragraph(c, "BROUILLON · CALENDRIER À COMPLÉTER", M, 22, 300, 7, TEAL, bold=True)
+
     _cover(c, training, profile, trainee, context, root, photo_path)
+    mark_draft()
     c.showPage()
     for number, exam in [(2, False), (3, True)]:
         _convocation(c, training, profile, context, root, assets, exam)
         _footer(c, training, number, profile["pages"])
+        mark_draft()
         c.showPage()
     for number, epi in [(4, True), (5, False)]:
         _attestation(c, training, profile, context, root, assets, epi)
         _footer(c, training, number, profile["pages"])
+        mark_draft()
         c.showPage()
     _assessment(c, training, profile, context, root)
     _footer(c, training, 6, profile["pages"])
+    mark_draft()
     if training == "APS":
         c.showPage()
         _assessment(c, training, profile, context, root, practical_only=True)
         _footer(c, training, 7, profile["pages"])
+        mark_draft()
     raw = finish(c, stream)
     validate(raw, training)
     return raw
