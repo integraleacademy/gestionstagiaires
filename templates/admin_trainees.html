@@ -236,17 +236,8 @@
     {% endif %}
     {% endif %}
     {% if not is_read_only %}
-      {% if not is_all_vtc and not is_vtc and not show_vae and not is_dirigeant %}
-      <button class="btn btn-outline" id="btnBulkSst">⬇️ importer les SST en masse</button>
-      <input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
-      {% endif %}
-
       {% if not is_all_vtc and not is_vtc %}
-        <button class="btn btn-outline" id="btnBulkDiplome">⬇️ Importer les diplômes en masse</button>
-        <input id="bulkDiplomeInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
-
-      <button class="btn btn-outline" id="btnBulkAttestation">⬇️ Importer les attestations en masse</button>
-      <input id="bulkAttestationInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+      <button class="btn btn-primary" id="btnBulkImport" type="button" aria-haspopup="dialog" aria-controls="bulkImportDialog">Importer</button>
       {% if show_vae %}
       <button class="btn btn-outline" id="btnBulkParchemin">📜 Parchemin</button>
       <input id="bulkParcheminInput" type="file" multiple accept=".pdf" style="display:none">
@@ -861,6 +852,34 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   </table>
 </div>
 
+{% if not is_read_only and not is_all_vtc and not is_vtc %}
+<dialog id="bulkImportDialog" class="bulk-import-dialog" aria-labelledby="bulkImportTitle" aria-describedby="bulkImportDescription">
+  <header class="bulk-import-heading">
+    <div>
+      <span class="bulk-import-eyebrow">INTÉGRALE ACADEMY</span>
+      <h2 id="bulkImportTitle">Importer</h2>
+      <p>{{ session.name }}</p>
+    </div>
+    <button type="button" class="bulk-import-close" data-bulk-import-close aria-label="Fermer la modale Importer">×</button>
+  </header>
+  <div class="bulk-import-content">
+    <p id="bulkImportDescription">Sélectionnez les documents à importer pour cette session.</p>
+    <div class="bulk-import-actions">
+      {% if not show_vae and not is_dirigeant %}
+      <button class="bulk-import-choice" id="btnBulkSst" type="button">Importer les SST en masse</button>
+      <input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" hidden>
+      {% endif %}
+      <button class="bulk-import-choice" id="btnBulkDiplome" type="button">Importer les diplômes en masse</button>
+      <input id="bulkDiplomeInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" hidden>
+    </div>
+    <p class="bulk-import-formats">PDF, JPG ou PNG · Plusieurs fichiers peuvent être sélectionnés.</p>
+  </div>
+  <footer class="bulk-import-footer">
+    <button type="button" class="btn btn-outline" data-bulk-import-close>Fermer</button>
+  </footer>
+</dialog>
+{% endif %}
+
 {% if is_vtc %}
 <div class="modal-backdrop vtc-convocation-transmission" id="vtcConvocationTransmissionModal" aria-hidden="true" data-static-backdrop>
   <div class="modal vtc-convocation-transmission__dialog" role="dialog" aria-modal="true" aria-labelledby="vtcConvocationTransmissionTitle" aria-describedby="vtcConvocationTransmissionText">
@@ -1234,33 +1253,26 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   </div>
 </div>
 
-<!-- MODALE RESULTAT IMPORT ATTESTATIONS -->
-<div class="modal-backdrop" id="bulkAttestationResultModal" aria-hidden="true">
-  <div class="modal" style="max-width:640px">
-    <div class="modal-head">
-      <div class="modal-title">Import Attestations terminé</div>
-      <button class="icon-btn" data-close-modal="bulkAttestationResultModal">✕</button>
-    </div>
-
-    <div class="modal-body">
-      <div class="hint" id="bulkAttestationSummary" style="margin-bottom:10px;"></div>
-
-      <div id="bulkAttestationFailuresWrap" style="display:none;">
-        <div style="font-weight:900;margin-bottom:6px;">Fichiers non rattachés</div>
-        <div class="hint" style="margin-bottom:8px;">
-          (Nom/prénom introuvables dans le fichier ou document déjà existant)
-        </div>
-        <ul id="bulkAttestationFailures" style="margin:0;padding-left:18px;"></ul>
-      </div>
-    </div>
-
-    <div class="modal-foot">
-      <button class="btn" data-close-modal="bulkAttestationResultModal">OK</button>
-    </div>
-  </div>
-</div>
-
 <style>
+
+.bulk-import-dialog{padding:0;border:0;border-radius:22px;width:min(720px,calc(100vw - 32px));max-width:none;max-height:92vh;color:#172b43;background:#f4f7fb;box-shadow:0 30px 100px #0c1a2f55;overflow:auto;}
+.bulk-import-dialog::backdrop{background:#08162b99;backdrop-filter:blur(3px);}
+.bulk-import-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:25px 30px;background:#0c1a2f;color:#fff;}
+.bulk-import-heading h2{font-size:27px;color:#fff;margin:7px 0;}
+.bulk-import-heading p{color:#c8d5e4;margin:0;font-size:14px;overflow-wrap:anywhere;}
+.bulk-import-eyebrow{color:#9ed4cb;font-size:10px;font-weight:700;letter-spacing:2px;}
+.bulk-import-close{flex-shrink:0;border:1px solid #ffffff50;border-radius:10px;color:#fff;background:transparent;font-size:26px;line-height:1;width:36px;height:36px;cursor:pointer;}
+.bulk-import-content{padding:24px 30px;}
+.bulk-import-content>p{margin:0 0 18px;color:#64748b;font-size:14px;line-height:1.55;}
+.bulk-import-actions{display:grid;gap:14px;}
+.bulk-import-choice{display:flex;align-items:center;gap:16px;width:100%;padding:20px;text-align:left;font:inherit;font-weight:800;color:#172b43;background:#fff;border:1px solid #dce5ee;border-radius:15px;box-shadow:0 3px 8px #0b1b3010;cursor:pointer;transition:border-color .15s,background .15s;}
+.bulk-import-choice::before{content:"↓";display:grid;place-items:center;flex:0 0 44px;height:44px;border-radius:12px;background:#e7f6f7;color:#006e83;font-size:25px;font-weight:600;}
+.bulk-import-choice:hover:not(:disabled){border-color:#008da8;background:#f8fdfe;}
+.bulk-import-dialog button:focus-visible{outline:3px solid #008da8;outline-offset:3px;}
+.bulk-import-choice:disabled{opacity:.55;cursor:wait;}
+.bulk-import-content>.bulk-import-formats{margin:18px 0 0;font-size:12px;}
+.bulk-import-footer{display:flex;justify-content:flex-end;padding:16px 30px;background:#fff;border-top:1px solid #e0e7ef;}
+@media(max-width:700px){.bulk-import-dialog{width:calc(100vw - 12px);max-height:96vh;border-radius:15px;}.bulk-import-heading{padding:20px;}.bulk-import-heading h2{font-size:23px;}.bulk-import-content{padding:20px 16px;}.bulk-import-choice{padding:16px;gap:12px;font-size:14px;}.bulk-import-footer{padding:14px 16px;}}
 
 #traineesTable .col-aps-attendance{min-width:150px;width:165px;vertical-align:middle;}
 .aps-followup{--followup-color:#2563eb;display:flex;flex-direction:column;gap:7px;padding:5px 0;}
@@ -2861,7 +2873,23 @@ body.vae-analysis-filter-active #traineesTable .mini-btn{
     setInterval(autoRefreshExternalStatuses, 15 * 60 * 1000);
   }, 60 * 1000);
 
-  // =========================
+  // Bulk import menu
+const bulkImportDialog = document.getElementById("bulkImportDialog");
+document.getElementById("btnBulkImport")?.addEventListener("click", () => {
+  if (bulkImportDialog && !bulkImportDialog.open) bulkImportDialog.showModal();
+});
+bulkImportDialog?.querySelectorAll("[data-bulk-import-close]").forEach(button => {
+  button.addEventListener("click", () => bulkImportDialog.close());
+});
+bulkImportDialog?.addEventListener("click", event => {
+  if (event.target !== bulkImportDialog) return;
+  const bounds = bulkImportDialog.getBoundingClientRect();
+  if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) {
+    bulkImportDialog.close();
+  }
+});
+
+// =========================
 // Bulk SST upload
 // =========================
 const btnBulkSst = document.getElementById("btnBulkSst");
@@ -2935,6 +2963,7 @@ bulkSstInput?.addEventListener("change", async ()=>{
       if(wrap) wrap.style.display = "none";
     }
 
+    bulkImportDialog?.close();
     openModal("bulkSstResultModal");
     setTimeout(()=>window.location.reload(), 800);
 
@@ -2947,7 +2976,7 @@ bulkSstInput?.addEventListener("change", async ()=>{
     alert("Erreur réseau pendant l'import SST");
   }finally{
     btnBulkSst.disabled = false;
-    btnBulkSst.textContent = "⬇️ importer les SST en masse";
+    btnBulkSst.textContent = "Importer les SST en masse";
   }
 });
 
@@ -3019,92 +3048,14 @@ bulkDiplomeInput?.addEventListener("change", async ()=>{
       if(wrap) wrap.style.display = "none";
     }
 
+    bulkImportDialog?.close();
     openModal("bulkDiplomeResultModal");
 
   }catch(e){
     alert("Erreur réseau pendant l'import Diplômes");
   }finally{
     btnBulkDiplome.disabled = false;
-    btnBulkDiplome.textContent = "⬇️ Importer les diplômes en masse";
-  }
-});
-
-  // =========================
-// Bulk Attestation upload
-// =========================
-const btnBulkAttestation = document.getElementById("btnBulkAttestation");
-const bulkAttestationInput = document.getElementById("bulkAttestationInput");
-
-btnBulkAttestation?.addEventListener("click", ()=>{
-  bulkAttestationInput.value = "";
-  bulkAttestationInput.click();
-});
-
-bulkAttestationInput?.addEventListener("change", async ()=>{
-  const files = [...bulkAttestationInput.files || []];
-  if(!files.length) return;
-
-  const sendNotifications = window.confirm("Envoyer automatiquement les notifications email + SMS aux stagiaires concernés ?");
-
-  const allowed = ["application/pdf","image/jpeg","image/png"];
-  const bad = files.filter(f => !allowed.includes(f.type) && !f.name.toLowerCase().endsWith(".pdf"));
-  if(bad.length){
-    alert("Certains fichiers ne sont pas acceptés (PDF/JPG/PNG).");
-    return;
-  }
-
-  btnBulkAttestation.disabled = true;
-  btnBulkAttestation.textContent = "Import en cours...";
-
-  try{
-    const fd = new FormData();
-    fd.append("send_notifications", sendNotifications ? "1" : "0");
-    files.forEach(f => fd.append("files", f));
-
-    const r = await fetch(`/api/sessions/${sessionId}/attestation/bulk_upload`, {
-      method: "POST",
-      body: fd
-    });
-
-    const res = await r.json();
-
-    if(!r.ok || !res.ok){
-      alert("Erreur import Attestations : " + (res.error || "unknown"));
-      return;
-    }
-
-    const summary = document.getElementById("bulkAttestationSummary");
-    const wrap = document.getElementById("bulkAttestationFailuresWrap");
-    const ul = document.getElementById("bulkAttestationFailures");
-
-    const received = (res.received ?? res.total ?? files.length);
-    const added = res.added_count ?? 0;
-    const failed = res.failed || [];
-
-    if(summary){
-      summary.innerHTML = `<strong>${added} fichiers ajoutés</strong> sur <strong>${received}</strong> reçus.`;
-    }
-
-    if(ul) ul.innerHTML = "";
-    if(failed.length){
-      if(wrap) wrap.style.display = "block";
-      failed.forEach(it=>{
-        const li = document.createElement("li");
-        li.textContent = `${it.filename}${it.reason ? " — " + it.reason : ""}`;
-        ul.appendChild(li);
-      });
-    }else{
-      if(wrap) wrap.style.display = "none";
-    }
-
-    openModal("bulkAttestationResultModal");
-    setTimeout(()=>window.location.reload(), 800);
-    
-  }catch(e){
-    alert("Erreur réseau pendant l'import Attestations");
-  }finally{
-    btnBulkAttestation.disabled = false;
-    btnBulkAttestation.textContent = "⬇️ Importer les attestations en masse";
+    btnBulkDiplome.textContent = "Importer les diplômes en masse";
   }
 });
 
@@ -4468,3 +4419,4 @@ applyRowFilters();
 {% endif %}
 {% if ssiap_exam_supported %}{% include '_ssiap_exam_modal.html' %}{% endif %}
 {% endblock %}
+
