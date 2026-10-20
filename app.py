@@ -24,6 +24,7 @@ import signal
 import atexit
 import sys
 import ssiap_exam
+import security_exam_pdf
 from backup_chronology import backup_chronology_key
 from wedof_requests import (
     entry_kind as wedof_entry_kind,
@@ -24868,9 +24869,7 @@ def _exam_dossier_profile(training: str) -> Dict[str, Any]:
     slug = training.lower()
     return {"training": training, "slug": slug, "storage_key": f"{slug}_exam_dossier",
             "template": "dossierexamenaps.docx" if training == "APS" else "docexamena3p.docx",
-            # The APS Word model has one more rendered page than the A3P model.
-            # Keeping this constraint in the profile prevents APS generation from
-            # being rejected by the historical A3P-only six-page validation.
+            # Preserve the original dossier lengths; APS has a separate practical grid.
             "expected_pages": 7 if training == "APS" else 6,
             "output_dir": APS_EXAM_DOSSIER_DIR if training == "APS" else A3P_EXAM_DOSSIER_DIR}
 
@@ -24888,6 +24887,7 @@ def _a3p_exam_dossier_public_config(session_item: Dict[str, Any], storage_key: s
             "available": bool(generation.get("archive_path") and os.path.isfile(generation.get("archive_path"))),
             "created_at": generation.get("created_at") or "",
             "candidate_count": generation.get("candidate_count") or 0,
+            "current_style": generation.get("style_version") == security_exam_pdf.STYLE_VERSION,
         },
     }
 
@@ -25123,9 +25123,6 @@ def api_generate_a3p_exam_dossiers(session_id: str):
         return jsonify({"ok": False, "message": "Toutes les dates et au moins un candidat sont obligatoires."}), 400
     if values["training_end_date"] < values["training_start_date"]:
         return jsonify({"ok": False, "message": "La date de fin doit être postérieure à la date de début."}), 400
-    template_path = os.path.join(app.root_path, "templates_word", profile["template"])
-    if not os.path.isfile(template_path):
-        return jsonify({"ok": False, "message": f"Le modèle de dossier examen {profile['training']} est introuvable."}), 503
     data = load_data()
     try:
         session_item = _require_exam_dossier_session(data, session_id, profile["training"])
@@ -25143,29 +25140,21 @@ def api_generate_a3p_exam_dossiers(session_id: str):
     os.makedirs(output_dir, exist_ok=True)
     pdf_paths = []
     try:
-        lo_binary = _find_libreoffice_binary()
-        _assert_calibri_font_substitution()
-        prepared_template_path = _prepare_a3p_exam_template(
-            template_path, os.path.join(output_dir, f"modele_dossier_examen_{profile['slug']}.docx")
-        )
-        for trainee in selected:
+        for index, trainee in enumerate(selected, 1):
             display_last = normalize_last_name(trainee.get("last_name") or "")
             display_first = normalize_first_name(trainee.get("first_name") or "")
             base_name = f"Dossier examen {profile['training']} {display_last} {display_first}".strip()
-            safe_base = secure_filename(base_name) or f"Dossier_examen_{profile['training']}_{trainee.get('id')}"
-            docx_path = os.path.join(output_dir, safe_base + ".docx")
-            _replace_a3p_docx_ooxml(prepared_template_path, docx_path, _a3p_exam_context(trainee, values))
-            result = subprocess.run(
-                [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", output_dir, docx_path],
-                check=True, capture_output=True, text=True, timeout=120,
+            safe_base = secure_filename(base_name) or f"Dossier_examen_{profile['training']}"
+            # Numbering keeps two candidates with identical names in separate files.
+            download_name = f"{index:02d} - {base_name}.pdf"
+            pdf_path = os.path.join(output_dir, f"{index:02d}-{safe_base}.pdf")
+            raw = security_exam_pdf.dossier(
+                profile["training"], trainee, _a3p_exam_context(trainee, values),
+                app.root_path, _ssiap_diploma_photo_path(trainee),
             )
-            pdf_path = os.path.join(output_dir, safe_base + ".pdf")
-            if not os.path.isfile(pdf_path):
-                raise RuntimeError(result.stderr or "Le PDF n'a pas été créé.")
-            _validate_a3p_pdf(pdf_path, profile["training"], profile["expected_pages"])
-            pdf_paths.append((pdf_path, base_name + ".pdf"))
-            os.remove(docx_path)
-        os.remove(prepared_template_path)
+            with open(pdf_path, "wb") as pdf_file:
+                pdf_file.write(raw)
+            pdf_paths.append((pdf_path, download_name))
 
         combined_path = os.path.join(output_dir, f"Tous les dossiers examen {profile['training']}.pdf")
         writer = PdfWriter()
@@ -25187,7 +25176,8 @@ def api_generate_a3p_exam_dossiers(session_id: str):
     session_item[profile["storage_key"]] = {
         **values,
         "selected_trainee_ids": [str(item.get("id") or "") for item in selected],
-        "generation": {"id": generation_id, "archive_path": archive_path, "created_at": _now_iso(), "candidate_count": len(selected)},
+        "generation": {"id": generation_id, "archive_path": archive_path, "created_at": _now_iso(),
+                       "candidate_count": len(selected), "style_version": security_exam_pdf.STYLE_VERSION},
     }
     save_data(data)
     download_endpoint = "admin_download_aps_exam_dossiers" if profile["training"] == "APS" else "admin_download_a3p_exam_dossiers"
