@@ -255,9 +255,12 @@ def cover(training, trainee, config, candidate, docs, root, photo_path=''):
     paragraph(c, config['level'], M + 18, 688, WIDTH - 18, 45, GOLD, bold=True)
     paragraph(c, 'Service de sécurité incendie\net d’assistance aux personnes', M + 18, 622,
               WIDTH - 18, 10, colors.white, leading=15)
-    illustration = os.path.join(root, 'static', 'img', 'ssiap-exam-cover-illustration.png')
+    level_one = config['level'] == 'SSIAP 1'
+    illustration_name = 'ssiap1-exam-cover-illustration.png' if level_one else 'ssiap-exam-cover-illustration.png'
+    illustration = os.path.join(root, 'static', 'img', illustration_name)
     if os.path.isfile(illustration):
-        c.drawImage(illustration, W - M - 190, 576, 204, 204,
+        illustration_width, illustration_height = (190, 180) if level_one else (204, 204)
+        c.drawImage(illustration, W - M - 190, 576, illustration_width, illustration_height,
                     preserveAspectRatio=True, anchor='c', mask='auto')
 
     c.setFillColor(colors.white)
