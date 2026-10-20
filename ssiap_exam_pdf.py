@@ -255,6 +255,10 @@ def cover(training, trainee, config, candidate, docs, root, photo_path=''):
     paragraph(c, config['level'], M + 18, 688, WIDTH - 18, 45, GOLD, bold=True)
     paragraph(c, 'Service de sécurité incendie\net d’assistance aux personnes', M + 18, 622,
               WIDTH - 18, 10, colors.white, leading=15)
+    illustration = os.path.join(root, 'static', 'img', 'ssiap-exam-cover-illustration.png')
+    if os.path.isfile(illustration):
+        c.drawImage(illustration, W - M - 190, 576, 204, 204,
+                    preserveAspectRatio=True, anchor='c', mask='auto')
 
     c.setFillColor(colors.white)
     c.setStrokeColor(colors.HexColor('#dce4ea'))
@@ -403,33 +407,83 @@ def dossier(training, trainee, config, candidate, docs, root, photo_path=''):
 
 
 def attendance(training, trainees, config, root):
-    """Print-ready exam-day attendance, with handwritten candidate and jury signatures."""
-    pages = [('Candidats', trainees[i:i + 12], i) for i in range(0, max(1, len(trainees)), 12)]
-    jury = config['jury']
-    pages.extend(('Jury', jury[i:i + 7], i) for i in range(0, len(jury), 7))
+    """Keep candidates and jury together, with readable overflow for large groups."""
+    widths = [26, WIDTH - 244, 109, 109]
+    rows = []
+    for group, people in [('Candidats', trainees), ('Jury', config['jury'])]:
+        for index, person in enumerate(people, 1):
+            title = Paragraph(escape(name(person)), ParagraphStyle(
+                'attendance-name', fontName=BOLD, fontSize=9.5, leading=12, textColor=NAVY))
+            _, title_height = title.wrap(widths[1] - 14, H)
+            detail, detail_height = None, 0
+            if group == 'Jury':
+                role = 'Président du jury' if person['role'] == 'president' else 'Membre du jury'
+                label = role + (' · ' + person['company'] if person.get('company') else '')
+                detail = Paragraph(escape(label), ParagraphStyle(
+                    'attendance-role', fontName=FONT, fontSize=7.5, leading=10, textColor=MUTED))
+                _, detail_height = detail.wrap(widths[1] - 14, H)
+            height = max(42 if detail else 24, title_height + detail_height + (16 if detail else 12))
+            rows.append((group, index, title, title_height, detail, detail_height, height))
+
     c, stream = new_pdf('Feuille de présence - ' + config['level'])
-    for page_number, (group, people, start) in enumerate(pages, 1):
-        y = header(c, 'Feuille de présence', config['level'] + ' · Jour de l’examen · ' + group, root)
+
+    def page_header():
+        c.setFillColor(TEAL)
+        c.rect(0, H - 5, W, 5, fill=1, stroke=0)
+        logo = os.path.join(root, 'static', 'logo-integrale.png')
+        if os.path.isfile(logo):
+            c.drawImage(logo, M, H - 83, 49, 49, preserveAspectRatio=True, anchor='c', mask='auto')
+        paragraph(c, 'INTÉGRALE ACADEMY · EXAMEN ' + config['level'], M + 65, H - 36,
+                  WIDTH - 65, 8, TEAL, bold=True)
+        paragraph(c, 'Feuille de présence', M + 65, H - 51, WIDTH - 65, 23, bold=True)
         hours = config['time'] or 'Horaire à renseigner'
         if config['end_time']:
             hours += ' - ' + config['end_time']
-        y = paragraph(c, 'Examen du ' + frdate(config['date']) + ' · ' + hours, M, y, size=12, bold=True) - 5
+        y = paragraph(c, 'Examen du ' + frdate(config['date']) + ' · ' + hours,
+                      M, H - 105, size=12, bold=True) - 5
         y = paragraph(c, config['location'] + ' · ' + config['address'], M, y, size=9, color=MUTED) - 14
-        y = paragraph(c, 'Émarger pour chaque demi-journée de présence. Indiquer « absent » ou « non concerné » si nécessaire.',
-                      M, y, size=8, color=MUTED) - 15
-        widths = [26, WIDTH - 244, 109, 109]
-        labels = ['N°', 'Nom et prénom' if group == 'Candidats' else 'Membre du jury',
-                  'Matin\nSignature', 'Après-midi\nSignature']
-        c.setFillColor(NAVY)
-        c.roundRect(M, y - 34, WIDTH, 34, 4, fill=1, stroke=0)
-        x = M
-        for label, width in zip(labels, widths):
-            paragraph(c, label, x + 5, y - 5, width - 10, 8, colors.white, bold=True, alignment=0 if x == M + 26 else 1, leading=11)
-            x += width
-        y -= 34
-        row_height = 33 if group == 'Candidats' else 53
-        for index, person in enumerate(people):
-            if index % 2 == 0:
+        return paragraph(c, 'Émarger matin et après-midi. Indiquer « absent » ou « non concerné » si nécessaire.',
+                         M, y, size=8, color=MUTED) - 12
+
+    top = page_header()
+    capacity = top - 110  # Keep the centre's legal footer clear.
+    pages, current, used, previous = [], [], 0, None
+    for row in rows:
+        extra = row[-1] + (30 + (12 if current else 0) if row[0] != previous else 0)
+        if current and used + extra > capacity:
+            pages.append(current)
+            current, used, previous = [], 0, None
+            extra = row[-1] + 30
+        current.append(row)
+        used += extra
+        previous = row[0]
+    if current or not pages:
+        pages.append(current)
+
+    for page_number, page_rows in enumerate(pages, 1):
+        y = top if page_number == 1 else page_header()
+        group_count = len({row[0] for row in page_rows})
+        available = y - 110 - 30 * group_count - 12 * max(0, group_count - 1)
+        # Expand the signature boxes when the group fits comfortably on one page.
+        extra_height = min(10, max(0, available - sum(row[-1] for row in page_rows)) / max(1, len(page_rows)))
+        previous = None
+        for group, index, title, title_height, detail, detail_height, minimum in page_rows:
+            if group != previous:
+                if previous:
+                    y -= 12
+                labels = ['N°', 'Candidats · Nom et prénom' if group == 'Candidats' else 'Membres du jury',
+                          'Matin\nSignature', 'Après-midi\nSignature']
+                c.setFillColor(NAVY)
+                c.roundRect(M, y - 30, WIDTH, 30, 4, fill=1, stroke=0)
+                x = M
+                for label, width in zip(labels, widths):
+                    paragraph(c, label, x + 5, y - (8 if x == M + 26 else 4), width - 10, 8,
+                              colors.white, bold=True, alignment=0 if x == M + 26 else 1, leading=10)
+                    x += width
+                y -= 30
+                previous = group
+            row_height = minimum + extra_height
+            if index % 2 == 1:
                 c.setFillColor(LIGHT)
                 c.rect(M, y - row_height, WIDTH, row_height, fill=1, stroke=0)
             c.setStrokeColor(colors.HexColor('#dce4ea'))
@@ -439,17 +493,16 @@ def attendance(training, trainees, config, root):
             for width in widths[:-1]:
                 x += width
                 c.line(x, y, x, y - row_height)
-            paragraph(c, str(start + index + 1), M + 3, y - 10, widths[0] - 6, 8, MUTED, alignment=1)
-            display = name(person)
-            size = min(10, (widths[1] - 14) / max(pdfmetrics.stringWidth(display, BOLD, 1), 1))
-            bottom = paragraph(c, display, M + 33, y - 9, widths[1] - 14, size, bold=True)
-            if group == 'Jury':
-                role = 'Président du jury' if person['role'] == 'president' else 'Membre du jury'
-                paragraph(c, role + (' · ' + person['company'] if person.get('company') else ''),
-                          M + 33, bottom - 3, widths[1] - 14, 7.5, MUTED, leading=10)
+            paragraph(c, str(index), M + 3, y - (row_height - 12) / 2,
+                      widths[0] - 6, 8, MUTED, alignment=1)
+            text_height = title_height + detail_height + (3 if detail else 0)
+            bottom = y - (row_height - text_height) / 2 - title_height
+            title.drawOn(c, M + 33, bottom)
+            if detail:
+                detail.drawOn(c, M + 33, bottom - 3 - detail_height)
             y -= row_height
-        if not people:
-            paragraph(c, 'Aucun candidat présenté à cet examen.', M, y - 15, size=10, color=MUTED)
+        if not page_rows:
+            paragraph(c, 'Aucun candidat ou membre du jury renseigné pour cet examen.', M, y - 15, size=10, color=MUTED)
         official_identity(c, config)
         c.setFont(FONT, 7)
         c.setFillColor(MUTED)
