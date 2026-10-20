@@ -144,7 +144,7 @@ def test_pdf_order_multipage_identity_portrait_and_pending_results(case):
     assert all(state['config']['approval'] in page_text for page_text in text)
     assert response.headers['Content-Disposition'].startswith('inline;')
     assert case[0].get(row['dossier_url'] + '?download=1').headers['Content-Disposition'].startswith('attachment;')
-    assert 'Dossier examen' in text[0] and 'Camille EXEMPLE' in text[0]
+    assert 'Dossier examen' in text[0] and 'Camille EXEMPLE' in ' '.join(text[0].split())
     assert 'FICHE D’EVALUATION' in text[1]
     assert all(label in text[index] for index, label in enumerate(['IDENTITE_RECTO', 'IDENTITE_VERSO', 'SST', 'MEDICAL'], 2))
     assert 'PROJET' not in text[6] and 'PROJET' not in text[7]
@@ -363,4 +363,81 @@ def test_mail_layout_escapes_content_and_preserves_all_exam_details(case):
         assert '08:30' in mail['html'] and '17:00' in mail['html']
         assert 'mailto:' in mail['html'] and 'maps/search/' in mail['html']
         assert 'déjà confirmé' in mail['html'] if kind=='reminder' else 'Confirmer ma présence' in mail['html']
+    case[4].assert_not_called()
+
+
+def test_portrait_accents_and_official_identity_in_all_generated_pages(case, tmp_path):
+    import fitz
+    from PIL import Image
+    configured(case)
+    case[3].update(first_name='Stéphane', identity_photo='portrait.png')
+    Image.new('RGB', (350, 450), '#c97850').save(tmp_path / 'portrait.png')
+    response = case[0].get(view(case)['candidates'][0]['dossier_url'])
+    with fitz.open(stream=response.data, filetype='pdf') as doc:
+        assert 'Stéphane' in doc[0].get_text()
+        photo = next(im for im in doc[0].get_images() if im[2:4] == (350, 450))
+        rect = doc[0].get_image_rects(photo[0])[0]
+        assert rect.x0 > 420 and rect.y0 > 290 and rect.y1 < 425
+        for page in doc:
+            assert 'Stéphane' in page.get_text() and 'Stephane' not in page.get_text()
+        for page in (doc[-1], doc[-2]):
+            text = page.get_text()
+            assert all(value in text for value in ['840 899 884 00026', '93830600283', '8559A', 'DREETS', 'RCS Fréjus'])
+    # Missing photos remain explicit; unreadable files never break the candidate dossier.
+    (tmp_path / 'portrait.png').write_bytes(b'not-an-image')
+    response = case[0].get(view(case)['candidates'][0]['dossier_url'])
+    assert response.status_code == 200
+    assert 'Photo' in PdfReader(io.BytesIO(response.data)).pages[0].extract_text()
+
+
+def test_photo_token_access_is_checked(case, monkeypatch, tmp_path):
+    from PIL import Image
+    Image.new('RGB', (35, 45)).save(tmp_path / 'portrait.png')
+    case[3]['identity_photo'] = 'portrait.png'
+    assert exam.photo_path(gestion, case[3])
+    monkeypatch.setattr(gestion, '_partner_can_access_upload_token', lambda token: False)
+    assert exam.photo_path(gestion, case[3]) == ''
+
+
+def test_attendance_paginates_included_candidates_and_jury(case):
+    state = configured(case)
+    case[2]['trainees'] += [{'id':str(i), 'first_name':'Élodie', 'last_name':f'CANDIDAT{i:02d}'} for i in range(25)]
+    case[2]['ssiap_exam']['candidates'] = {'T1':{'included':False}}
+    url = state['attendance_url']
+    response = case[0].get(url)
+    assert response.status_code == 200 and response.headers['Content-Disposition'].startswith('inline;')
+    assert 'no-store' in response.headers['Cache-Control']
+    doc = PdfReader(io.BytesIO(response.data))
+    assert len(doc.pages) == 4
+    text = '\n'.join(p.extract_text() for p in doc.pages)
+    assert 'ANNULE' not in text and 'Camille' not in text
+    assert 'Élodie' in text and 'Alex JURY' in text and 'Structure exemple' in text
+    assert 'Matin' in text and 'Après-midi' in text
+    for i in range(25):
+        assert text.count(f'CANDIDAT{i:02d}') == 1
+    assert case[0].get(url+'?download=1').headers['Content-Disposition'].startswith('attachment;')
+    case[2]['partner_id'] = 'other-centre'
+    assert case[0].get(url).status_code == 404
+
+
+def test_reminder_language_and_automatic_schedule(case):
+    state = configured(case)
+    content = preview(case, 'reminder')
+    assert 'Jury d’examen' in content['subject'] and 'Jury d’examen' in content['html']
+    assert 'rendez-vous' not in (content['html'] + content['text']).lower()
+    assert 'rdv' not in (content['html'] + content['text']).lower()
+    plan = state['automatic_reminders']
+    assert plan['time'] == '09:00' and plan['timezone'] == 'Europe/Paris'
+    assert plan['date'] == (dt.date.fromisoformat(state['config']['date'])-dt.timedelta(days=7)).isoformat()
+    assert plan['members']['J1']['status'] == 'scheduled'
+    case[4].assert_not_called()
+
+
+def test_manual_send_cannot_race_with_automatic_reservation(case):
+    state = configured(case)
+    content = preview(case, 'reminder')
+    case[2]['ssiap_exam']['mail_history'] = [{'id':'auto', 'kind':'reminder', 'source':'automatic_j7',
+        'to':'jury@example.test', 'status':'sending', 'exam_date':state['config']['date']}]
+    response = case[0].post(BASE+'/mail/send', json={'csrf':state['csrf'],'preview_token':content['preview_token']})
+    assert response.status_code == 409
     case[4].assert_not_called()

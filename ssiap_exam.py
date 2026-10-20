@@ -186,6 +186,7 @@ def mail_status(training, member):
     for kind in ("invitation", "reminder"):
         entries = [entry for entry in state(training).get("mail_history", [])
                    if entry.get("kind") == kind and entry.get("jury_id") == member.get("id")
+                   and entry.get('exam_date', settings(training)['date']) == settings(training)['date']
                    and entry.get("to", "").casefold() == member.get("email", "").casefold()]
         latest = entries[-1] if entries else {}
         successful = [entry for entry in entries if entry.get("status") == "sent"]
@@ -230,14 +231,33 @@ def documents(services, trainee):
     return groups
 
 
-def build_mail(training, config, member, kind, count, logo_url):
+def photo_path(services, trainee):
+    tokens = [trainee.get('identity_photo')]
+    for document in trainee.get('documents') or []:
+        if document.get('key') == 'photo':
+            tokens.extend([document.get('file'), *(document.get('files') or [])])
+    for token in tokens:
+        if not isinstance(token, str) or not token or not services._partner_can_access_upload_token(token):
+            continue
+        path = services._detokenize_path(token)
+        if os.path.isfile(path) and os.path.getsize(path) <= 25 * 1024 * 1024:
+            return path
+    return ''
+
+
+def active_candidates(services, training):
+    return sorted([t for t in services._session_trainees_list(training) if not services._trainee_registration_is_cancelled(t)],
+                  key=lambda t: (str(t.get('last_name', '')).casefold(), str(t.get('first_name', '')).casefold()))
+
+
+def build_mail(training, config, member, kind, count, logo_url, *, today=None):
     if kind not in {"invitation", "reminder"}:
         raise ValueError("Type de message invalide.")
     if not MAIL_RE.fullmatch(member.get("email", "")):
         raise ValueError("Renseignez une adresse e-mail valide pour ce membre du jury.")
     if not all(config.get(k) for k in ("date", "time", "location", "address")):
         raise ValueError("Renseignez la date, l’heure et le lieu de l’examen avant de préparer le mail.")
-    if dt.date.fromisoformat(config["date"]) < dt.datetime.now(ZoneInfo("Europe/Paris")).date():
+    if dt.date.fromisoformat(config["date"]) < (today or dt.datetime.now(ZoneInfo("Europe/Paris")).date()):
         raise ValueError("La date de cet examen est passée. Vérifiez-la avant d’envoyer un message.")
     from ssiap_exam_mail import render_mail
     return render_mail(config, member, kind, count, logo_url)
@@ -257,8 +277,7 @@ def register(app, services):
         return get_training(services.load_data(run_background_tasks=False), session_id)
 
     def active(training):
-        return sorted([t for t in services._session_trainees_list(training) if not services._trainee_registration_is_cancelled(t)],
-                      key=lambda t: (str(t.get("last_name", "")).casefold(), str(t.get("first_name", "")).casefold()))
+        return active_candidates(services, training)
 
     def find_candidate(training, trainee_id):
         trainee = next((t for t in active(training) if t.get("id") == trainee_id), None)
@@ -292,6 +311,7 @@ def register(app, services):
     @app.get('/api/admin/sessions/<session_id>/ssiap-exam')
     @services.admin_login_required
     def api_ssiap_exam(session_id):
+        from ssiap_exam_reminders import schedule
         all_data = services.load_data(run_background_tasks=False)
         training = get_training(all_data, session_id)
         rows = []
@@ -309,6 +329,8 @@ def register(app, services):
                        history=state(training).get("mail_history", [])[-60:][::-1],
                        directory=jury_directory(all_data, services.INTEGRALE_PARTNER_ID),
                        mail_status={m["id"]: mail_status(training, m) for m in settings(training)["jury"]},
+                       automatic_reminders=schedule(services, training),
+                       attendance_url=url_for('admin_ssiap_exam_attendance', session_id=session_id),
                        collective_url=url_for('admin_ssiap_exam_collective', session_id=session_id))
 
     @app.post('/api/admin/sessions/<session_id>/ssiap-exam')
@@ -348,7 +370,7 @@ def register(app, services):
         trainee = find_candidate(training, trainee_id)
         try:
             content = dossier(training, trainee, settings(training), candidate_settings(training, trainee), documents(services, trainee),
-                              app.root_path)
+                              app.root_path, photo_path(services, trainee))
         except (ValueError, RuntimeError) as exc:
             return str(exc), 422
         return response_pdf(content, f"Dossier_examen_SSIAP_{services.secure_filename(trainee.get('last_name', ''))}_{trainee_id}.pdf")
@@ -376,6 +398,15 @@ def register(app, services):
         except (ValueError, RuntimeError) as exc:
             return str(exc), 422
         return response_pdf(content, f"PV_collectif_SSIAP_{session_id}.pdf")
+
+    @app.get('/admin/sessions/<session_id>/ssiap-exam/presence.pdf')
+    @services.admin_login_required
+    def admin_ssiap_exam_attendance(session_id):
+        from ssiap_exam_pdf import attendance
+        training = read(session_id)
+        candidates = [t for t in active(training) if candidate_settings(training, t)['included']]
+        content = attendance(training, candidates, settings(training), app.root_path)
+        return response_pdf(content, f'Feuille_presence_examen_SSIAP_{session_id}.pdf')
 
     @app.get('/api/admin/sessions/<session_id>/ssiap-exam/jury/<jury_id>/<kind>/preview')
     @services.admin_login_required
@@ -410,8 +441,13 @@ def register(app, services):
             history = training.setdefault("ssiap_exam", {}).setdefault("mail_history", [])
             if any(entry.get("id") == token["nonce"] for entry in history):
                 return {"ok": False, "error": "Cet envoi a déjà été pris en compte. Consultez l’historique.", "status": 409}
+            if any(entry.get('status') == 'sending' and entry.get('kind') == token['kind']
+                   and entry.get('to', '').casefold() == content['to'].casefold()
+                   and entry.get('exam_date') == settings(training)['date'] for entry in history):
+                return {'ok': False, 'error': 'Un envoi est déjà en cours pour ce membre du jury. Consultez l’historique.', 'status': 409}
             history.append({"id": token["nonce"], "to": content["to"], "subject": content["subject"], "kind": token["kind"],
-                            "status": "sending", "at": services._now_iso(), "jury_id": token["jury"]})
+                            "status": "sending", "at": services._now_iso(), "jury_id": token["jury"],
+                            "exam_date": settings(training)['date'], "source": "manual"})
             return {"ok": True, "content": content}
         result = services._atomic_update_data(reserve)
         if not result["ok"]:

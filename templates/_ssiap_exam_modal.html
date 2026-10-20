@@ -1,15 +1,17 @@
-<link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css', v='20261019-3') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css', v='20261020-1') }}">
 <dialog id="ssiapExamDialog" class="exam-dialog" aria-labelledby="ssiapExamTitle" data-url="{{ url_for('api_ssiap_exam', session_id=session.id) }}">
   <header class="exam-heading"><div><span class="exam-eyebrow">INTÉGRALE ACADEMY</span><h2 id="ssiapExamTitle">Examen SSIAP</h2><p>{{ session.name }}</p></div><button type="button" data-exam-close aria-label="Fermer la modale Examen" class="exam-close">×</button></header>
   <nav class="exam-tabs" aria-label="Rubriques de l’examen">
     <button type="button" data-exam-tab="candidates" aria-pressed="true">Dossiers candidats</button>
     <button type="button" data-exam-tab="organization" aria-pressed="false">Organisation et jury</button>
+    <button type="button" data-exam-tab="attendance" aria-pressed="false">Feuille de présence</button>
     <button type="button" data-exam-tab="collective" aria-pressed="false">PV collectif</button>
   </nav>
   <div id="ssiapExamStatus" class="exam-status" role="status" aria-live="polite"></div>
   <div class="exam-content">
     <section data-exam-panel="candidates"><div id="ssiapExamCandidates">Chargement des dossiers…</div></section>
     <section data-exam-panel="organization" hidden><form id="ssiapExamConfig"></form><div id="ssiapExamMailHistory"></div></section>
+    <section data-exam-panel="attendance" hidden><div id="ssiapExamAttendance"></div></section>
     <section data-exam-panel="collective" hidden><div id="ssiapExamCollective"></div></section>
   </div>
 </dialog>
@@ -23,4 +25,4 @@
   </div>
   <footer class="exam-mail-actions"><button type="button" id="ssiapExamMailTextToggle" class="btn btn-outline" aria-pressed="false">Version texte</button><button type="button" class="btn btn-outline" data-mail-close>Retour</button><button type="button" id="ssiapExamSend" class="btn btn-primary" disabled>Envoyer ce mail</button></footer>
 </dialog>
-<script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261019-3') }}" defer></script>
+<script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261020-1') }}" defer></script>

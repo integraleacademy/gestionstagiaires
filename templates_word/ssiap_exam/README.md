@@ -14,3 +14,9 @@ Les PDF sont des exports des originaux avec leur police Comic Sans MS incorporé
 Les signatures et cachets automatiques concernent les deux attestations et la zone réservée à l'organisme de formation sur les deux PV. Ils proviennent des images d'origine de `conventionssiap.docx`. Les zones de signature du membre et du président du jury ne sont jamais signées automatiquement.
 
 Ne pas substituer ces formulaires SSIAP 1 pour un autre niveau.
+
+La couverture du dossier utilise la photo d’identité enregistrée sur la fiche stagiaire, avec contrôle d’accès au fichier et respect de son orientation. Les accents viennent des données d’identité, sans translittération. Les attestations reprennent le SIRET, le NDA et le code NAF de la convention SSIAP, ainsi que la raison sociale et le RCS de l’identité légale du centre.
+
+La feuille de présence est un document distinct : candidats présentés puis membres du jury, avec des cases vierges pour leurs signatures du matin et de l’après-midi. Les deux modèles de PV restent inchangés.
+
+Les rappels automatiques passent par le cron existant `document-reminders` (secret obligatoire), à J−7 entre 09:00 et 20:00 Europe/Paris. Ils utilisent le même modèle que l’aperçu manuel et le même historique. Réservation atomique par session/date/adresse, exclusion des inscriptions annulées et sessions archivées, aucun rattrapage des dates dépassées. Un rappel manuel envoyé à partir de J−7 remplace l’automatique. Un refus explicite permet au plus trois tentatives espacées de 30 minutes ; une réponse incertaine reste à vérifier pour éviter les doublons.

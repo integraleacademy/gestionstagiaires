@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 
 import fitz
 from html import escape
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from pypdf import PdfReader, PdfWriter, Transformation
 from reportlab.pdfgen.canvas import Canvas
@@ -30,6 +31,7 @@ TEAL = colors.HexColor('#008da8')
 MINT = colors.HexColor('#a1d4cb')
 MUTED = colors.HexColor('#546579')
 LIGHT = colors.HexColor('#eef4f8')
+GOLD = colors.HexColor('#e5c77e')
 FONT, BOLD = 'SSIAPSans', 'SSIAPSansBold'
 for font_name, filename in ((FONT, 'DejaVuSans.ttf'), (BOLD, 'DejaVuSans-Bold.ttf')):
     pdfmetrics.registerFont(TTFont(font_name, '/usr/share/fonts/truetype/dejavu/' + filename))
@@ -205,34 +207,96 @@ def individual(training, trainee, config, candidate, root):
         return document.tobytes(garbage=3, deflate=True)
 
 
-def cover(training, trainee, config, candidate, docs, root):
+def official_identity(c, config):
+    """Centre identifiers from the SSIAP agreement and the site's legal identity."""
+    c.setStrokeColor(colors.HexColor('#dce4ea'))
+    c.line(M, 96, W - M, 96)
+    lines = [
+        'Intégrale Sécurité Formations · SASU · Enseigne Intégrale Academy',
+        'SIRET : 840 899 884 00026 · RCS Fréjus 840 899 884 · Code NAF : 8559A',
+        'N° de déclaration d’activité (NDA) : 93830600283 · DREETS Provence-Alpes-Côte d’Azur',
+        'Cet enregistrement ne vaut pas agrément de l’État.',
+        config['contact_email'] + ' · ' + config['contact_phone'],
+    ]
+    for index, text in enumerate(lines):
+        paragraph(c, text, M, 86 - index * 11, size=7.4, color=MUTED, alignment=1)
+
+
+def candidate_portrait(c, path, x, y, width, height):
+    c.setFillColor(LIGHT)
+    c.roundRect(x, y, width, height, 6, fill=1, stroke=0)
+    if path:
+        try:
+            with Image.open(path) as source:
+                photo = ImageOps.exif_transpose(source).convert('RGB')
+                c.drawImage(ImageReader(photo), x + 3, y + 3, width - 6, height - 6,
+                            preserveAspectRatio=True, anchor='c')
+            return
+        except (OSError, ValueError, UnidentifiedImageError, Image.DecompressionBombError):
+            pass
+    paragraph(c, 'Photo\nà ajouter', x + 5, y + height / 2 + 13, width - 10,
+              size=9, color=MUTED, alignment=1)
+
+
+def cover(training, trainee, config, candidate, docs, root, photo_path=''):
     c, stream = new_pdf('Dossier examen SSIAP - ' + name(trainee))
-    c.setFillColor(NAVY)
+    c.setFillColor(colors.HexColor('#f7f9fb'))
     c.rect(0, 0, W, H, fill=1, stroke=0)
-    c.setFillColor(TEAL)
-    c.rect(0, H - 5, W, 5, fill=1, stroke=0)
+    c.setFillColor(NAVY)
+    c.rect(0, 570, W, H - 570, fill=1, stroke=0)
+    c.setFillColor(GOLD)
+    c.rect(M, 594, 3, 130, fill=1, stroke=0)
     logo = os.path.join(root, 'static', 'logo-integrale.png')
     if os.path.isfile(logo):
-        c.drawImage(logo, M, H - 29 * mm, 17 * mm, 17 * mm, preserveAspectRatio=True, mask='auto')
-    paragraph(c, 'INTÉGRALE ACADEMY / DOSSIER CANDIDAT', M + 24 * mm, H - 18 * mm, WIDTH - 24 * mm, 8, colors.white)
-    y = paragraph(c, 'Dossier examen\n' + config['level'], M, H - 45 * mm, size=34, color=colors.white, bold=True, leading=39)
-    y = paragraph(c, name(trainee), M, y - 15, size=21, color=MINT, bold=True) - 18
-    illustration = os.path.join(root, 'static', 'manuals', 'powerpoint-previews', 'ssiap1_recyclage-scene.webp')
-    if os.path.isfile(illustration):
-        image_height = 69 * mm
-        c.drawImage(ImageReader(illustration), M, y - image_height, WIDTH, image_height, preserveAspectRatio=True, anchor='c')
-        y -= image_height + 20
-    details = [('FORMATION', f"Du {frdate(training.get('date_start'))} au {frdate(training.get('date_end'))}"),
-               ('EXAMEN', f"{frdate(config['date'])}" + (f" à {config['time']}" if config['time'] else ' - heure à renseigner')),
-               ('LIEU', config['location'] + '\n' + config['address'])]
-    for label, value in details:
-        y = paragraph(c, label, M, y, size=8, color=MINT, bold=True) - 4
-        y = paragraph(c, value, M, y, size=11, color=colors.white) - 14
+        c.drawImage(logo, M, 756, 46, 46, preserveAspectRatio=True, mask='auto')
+    paragraph(c, 'INTÉGRALE ACADEMY', M + 62, 791, WIDTH - 62, 12, colors.white, bold=True)
+    paragraph(c, 'DOSSIER CANDIDAT · EXAMEN DE CERTIFICATION', M + 62, 770, WIDTH - 62, 7.5, GOLD)
+    paragraph(c, 'Dossier examen', M + 18, 729, WIDTH - 18, 30, colors.white, bold=True)
+    paragraph(c, config['level'], M + 18, 688, WIDTH - 18, 45, GOLD, bold=True)
+    paragraph(c, 'Service de sécurité incendie\net d’assistance aux personnes', M + 18, 622,
+              WIDTH - 18, 10, colors.white, leading=15)
+
+    c.setFillColor(colors.white)
+    c.setStrokeColor(colors.HexColor('#dce4ea'))
+    c.roundRect(M, 411, WIDTH, 143, 10, fill=1, stroke=1)
+    paragraph(c, 'CANDIDAT', M + 18, 537, WIDTH - 156, 8, TEAL, bold=True)
+    first, last = str(trainee.get('first_name') or ''), str(trainee.get('last_name') or '').upper()
+    fitted = min(22, (WIDTH - 156) / max(pdfmetrics.stringWidth(v, BOLD, 1) for v in (first, last, ' ')))
+    paragraph(c, first + '\n' + last, M + 18, 517, WIDTH - 156, fitted, bold=True, leading=28)
+    paragraph(c, 'Référence candidat · ' + str(trainee.get('id') or ''), M + 18, 441,
+              WIDTH - 156, 7.5, MUTED)
+    candidate_portrait(c, photo_path, W - M - 112, 421, 102, 123)
+
+    for x, label in [(M, 'JOUR DE L’EXAMEN'), (M + 265, 'PÉRIODE DE FORMATION')]:
+        paragraph(c, label, x, 387, 225, 8, TEAL, bold=True)
+    paragraph(c, frdate(config['date']), M, 371, 240, 21, bold=True)
+    hours = config['time'] or 'Horaire à renseigner'
+    if config['end_time']:
+        hours += ' - ' + config['end_time']
+    paragraph(c, hours, M, 339, 240, 11, MUTED)
+    paragraph(c, f"Du {frdate(training.get('date_start'))}\nau {frdate(training.get('date_end'))}",
+              M + 265, 367, WIDTH - 265, 12, leading=20)
+    c.setFillColor(LIGHT)
+    c.roundRect(M, 239, WIDTH, 78, 8, fill=1, stroke=0)
+    paragraph(c, 'LIEU DE L’EXAMEN', M + 16, 305, WIDTH - 32, 8, TEAL, bold=True)
+    y = paragraph(c, config['location'], M + 16, 288, WIDTH - 32, 11, bold=True)
+    paragraph(c, config['address'], M + 16, y - 3, WIDTH - 32, 9, MUTED, leading=12)
+    paragraph(c, 'Dans ce dossier', M, 218, size=12, bold=True)
+    contents = ['PV individuel', 'Pièce d’identité', 'SST ou secourisme', 'Certificat médical',
+                'Attestation d’indépendance', 'Attestation de capacité']
+    for index, label in enumerate(contents):
+        x = M + (265 if index >= 3 else 0)
+        top = 192 - (index % 3) * 23
+        c.setFillColor(TEAL)
+        c.circle(x + 7, top - 6, 7, fill=1, stroke=0)
+        paragraph(c, str(index + 1), x, top, 14, 7.5, colors.white, bold=True, alignment=1)
+        paragraph(c, label, x + 22, top, 225, 8.5, MUTED)
     complete = all(d['available'] and not d['review'] for d in docs)
     status = 'Pièces réunies et attestations signées' if complete else 'Dossier à compléter ou à vérifier'
-    y = paragraph(c, status, M, y, size=11, color=MINT, bold=True)
-    paragraph(c, 'PV individuel · Identité · Secourisme · Certificat médical\nAttestation d’indépendance · Attestation de capacité', M, y - 12, size=9, color=colors.white)
-    paragraph(c, config['contact_email'] + ' · ' + config['contact_phone'], M, 36, size=8, color=MINT)
+    paragraph(c, status, M, 106, size=9, color=TEAL, bold=True)
+    c.setStrokeColor(colors.HexColor('#dce4ea'))
+    c.line(M, 66, W - M, 66)
+    paragraph(c, config['contact_email'] + ' · ' + config['contact_phone'], M, 50, size=8, color=MUTED)
     return finish(c, stream)
 
 
@@ -271,7 +335,7 @@ def attestation(training, trainee, config, candidate, kind, assets, root):
     for key, x, width, height in [('signature', W / 2 - 67 * mm, 45 * mm, 27 * mm),
                                  ('stamp', W / 2 + 3 * mm, 64 * mm, 27 * mm)]:
         c.drawImage(ImageReader(io.BytesIO(assets[key])), x, y - height, width, height, preserveAspectRatio=True, anchor='c', mask='auto')
-    paragraph(c, config['contact_email'] + ' · ' + config['contact_phone'], M, 44, size=8, color=MUTED, alignment=1)
+    official_identity(c, config)
     return finish(c, stream)
 
 
@@ -286,11 +350,11 @@ def signature_assets(root):
         raise RuntimeError('Le tampon ou la signature de la convention SSIAP est introuvable.') from exc
 
 
-def dossier(training, trainee, config, candidate, docs, root):
+def dossier(training, trainee, config, candidate, docs, root, photo_path=''):
     from document_conversion import convert_upload, ConversionError
     assets = signature_assets(root)
     writer = PdfWriter()
-    writer.append(io.BytesIO(cover(training, trainee, config, candidate, docs, root)))
+    writer.append(io.BytesIO(cover(training, trainee, config, candidate, docs, root, photo_path)))
     writer.append(io.BytesIO(individual(training, trainee, config, candidate, root)))
     total_bytes = 0
     for group in docs:
@@ -330,12 +394,69 @@ def dossier(training, trainee, config, candidate, docs, root):
     for i, page in enumerate(writer.pages, 1):
         if i == 2:  # The individual PV already carries the same approval footer.
             continue
-        footer = approval_footer(config, dark=i == 1, pagination=f'{i:02d} / {len(writer.pages):02d}')
+        footer = approval_footer(config, pagination=f'{i:02d} / {len(writer.pages):02d}')
         page.merge_page(PdfReader(io.BytesIO(footer)).pages[0])
     writer.add_metadata({'/Title': 'Dossier examen SSIAP - ' + name(trainee), '/Author': 'Intégrale Academy'})
     out = io.BytesIO()
     writer.write(out)
     return out.getvalue()
+
+
+def attendance(training, trainees, config, root):
+    """Print-ready exam-day attendance, with handwritten candidate and jury signatures."""
+    pages = [('Candidats', trainees[i:i + 12], i) for i in range(0, max(1, len(trainees)), 12)]
+    jury = config['jury']
+    pages.extend(('Jury', jury[i:i + 7], i) for i in range(0, len(jury), 7))
+    c, stream = new_pdf('Feuille de présence - ' + config['level'])
+    for page_number, (group, people, start) in enumerate(pages, 1):
+        y = header(c, 'Feuille de présence', config['level'] + ' · Jour de l’examen · ' + group, root)
+        hours = config['time'] or 'Horaire à renseigner'
+        if config['end_time']:
+            hours += ' - ' + config['end_time']
+        y = paragraph(c, 'Examen du ' + frdate(config['date']) + ' · ' + hours, M, y, size=12, bold=True) - 5
+        y = paragraph(c, config['location'] + ' · ' + config['address'], M, y, size=9, color=MUTED) - 14
+        y = paragraph(c, 'Émarger pour chaque demi-journée de présence. Indiquer « absent » ou « non concerné » si nécessaire.',
+                      M, y, size=8, color=MUTED) - 15
+        widths = [26, WIDTH - 244, 109, 109]
+        labels = ['N°', 'Nom et prénom' if group == 'Candidats' else 'Membre du jury',
+                  'Matin\nSignature', 'Après-midi\nSignature']
+        c.setFillColor(NAVY)
+        c.roundRect(M, y - 34, WIDTH, 34, 4, fill=1, stroke=0)
+        x = M
+        for label, width in zip(labels, widths):
+            paragraph(c, label, x + 5, y - 5, width - 10, 8, colors.white, bold=True, alignment=0 if x == M + 26 else 1, leading=11)
+            x += width
+        y -= 34
+        row_height = 33 if group == 'Candidats' else 53
+        for index, person in enumerate(people):
+            if index % 2 == 0:
+                c.setFillColor(LIGHT)
+                c.rect(M, y - row_height, WIDTH, row_height, fill=1, stroke=0)
+            c.setStrokeColor(colors.HexColor('#dce4ea'))
+            c.setLineWidth(.5)
+            c.rect(M, y - row_height, WIDTH, row_height, fill=0, stroke=1)
+            x = M
+            for width in widths[:-1]:
+                x += width
+                c.line(x, y, x, y - row_height)
+            paragraph(c, str(start + index + 1), M + 3, y - 10, widths[0] - 6, 8, MUTED, alignment=1)
+            display = name(person)
+            size = min(10, (widths[1] - 14) / max(pdfmetrics.stringWidth(display, BOLD, 1), 1))
+            bottom = paragraph(c, display, M + 33, y - 9, widths[1] - 14, size, bold=True)
+            if group == 'Jury':
+                role = 'Président du jury' if person['role'] == 'president' else 'Membre du jury'
+                paragraph(c, role + (' · ' + person['company'] if person.get('company') else ''),
+                          M + 33, bottom - 3, widths[1] - 14, 7.5, MUTED, leading=10)
+            y -= row_height
+        if not people:
+            paragraph(c, 'Aucun candidat présenté à cet examen.', M, y - 15, size=10, color=MUTED)
+        official_identity(c, config)
+        c.setFont(FONT, 7)
+        c.setFillColor(MUTED)
+        c.drawString(M, 14, config['approval'])
+        c.drawRightString(W - M, 14, f'{page_number:02d} / {len(pages):02d}')
+        c.showPage()
+    return finish(c, stream)
 
 
 def collective(training, trainees, config, root):

@@ -34,7 +34,7 @@ function setup() {
   get('ssiapExamDialog').dataset.url = base;
   const data = {
     csrf:'test-csrf', read_only:false, history:[], directory:[], excluded_count:0,
-    collective_url:'/collective.pdf', mail_status:{},
+    collective_url:'/collective.pdf', attendance_url:'/attendance.pdf', mail_status:{}, automatic_reminders:{members:{J1:{status:'scheduled',label:'Programmé le 21/10/2026 à partir de 09:00'}}},
     config:{level:'SSIAP 1',date:'2026-10-28',time:'08:30',jury:[{id:'J1',email:'jury@example.test',role:'member'}]},
     candidates:[{id:'T1',first_name:'Camille',last_name:'EXEMPLE',candidate:{included:true},documents:[],
       dossier_url:'/dossier.pdf',pv_url:'/individual.pdf',edit_url:'/candidate'}]
@@ -69,6 +69,8 @@ test('PDF primary actions open inline in a new tab; separate links download', as
   assert.match(ui.get('ssiapExamCandidates').innerHTML, /href="\/dossier.pdf" target="_blank" rel="noopener">Dossier examen PDF/);
   assert.match(ui.get('ssiapExamCollective').innerHTML, /href="\/collective.pdf" target="_blank" rel="noopener">Ouvrir le PV collectif/);
   assert.match(ui.get('ssiapExamCollective').innerHTML, /href="\/collective.pdf\?download=1"/);
+  assert.match(ui.get('ssiapExamAttendance').innerHTML, /href="\/attendance.pdf" target="_blank"/);
+  assert.match(ui.get('ssiapExamConfig').innerHTML, /Programmé le 21\/10\/2026/);
 });
 
 test('reminder reopens with a fresh frame, resets scroll and retains the send lock', async () => {
