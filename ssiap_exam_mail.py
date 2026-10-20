@@ -19,8 +19,8 @@ def render_mail(config, member, kind, count, logo_url):
     numeric_date = date.strftime('%d/%m/%Y')
     reminder = kind == 'reminder'
     role = 'président du jury' if member['role'] == 'president' else 'membre du jury'
-    subject = f"{'Rappel' if reminder else 'Jury'} - Examen {config['level']} du {numeric_date} à {config['time']}"
-    intro = ('Votre prochain rendez-vous approche. Voici les informations utiles pour votre participation'
+    subject = f"{'Rappel - Jury d’examen' if reminder else 'Jury - Examen'} {config['level']} du {numeric_date} à {config['time']}"
+    intro = ('Votre jury d’examen approche. Voici les informations utiles pour votre participation'
              if reminder else 'Nous avons le plaisir de vous accueillir pour participer')
     intro += f" en qualité de {role} à l’examen {config['level']} organisé par Intégrale Academy."
     confirmation = ('Si vous nous avez déjà confirmé votre présence, aucune nouvelle confirmation n’est nécessaire.'

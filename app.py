@@ -38,6 +38,7 @@ import wedof_cancellation_notifications as cpf_cancellation_alerts
 from digiforma_duration import aps_elearning_completion, journal_attendance
 from manual_document_reminders import document_actions, build_content as build_manual_docs_content, content_fingerprint
 from automatic_document_reminders import run as run_automatic_document_reminders, schedule as automatic_document_schedule
+from ssiap_exam_reminders import run as run_ssiap_exam_reminders
 from automatic_training_attestations import run as run_automatic_training_attestations
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 try:
@@ -49500,12 +49501,13 @@ def internal_cron_document_reminders():
     if not expected or not provided or not hmac.compare_digest(expected, provided):
         return jsonify(ok=False, error="forbidden"), 403
     dry_run = (request.get_json(silent=True) or {}).get("dry_run") is True
+    jury_reminders = run_ssiap_exam_reminders(sys.modules[__name__], dry_run=dry_run)
     document_reminders = run_automatic_document_reminders(sys.modules[__name__], dry_run=dry_run)
     training_attestations = run_automatic_training_attestations(sys.modules[__name__], dry_run=dry_run)
     result = {
-        "ok": bool(document_reminders.get("ok")) and bool(training_attestations.get("ok")),
+        "ok": all(job.get('ok') for job in (jury_reminders, document_reminders, training_attestations)),
         "status": "dry_run" if dry_run else (
-            "completed" if document_reminders.get("ok") and training_attestations.get("ok") else "completed_with_issues"
+            "completed" if all(job.get('ok') for job in (jury_reminders, document_reminders, training_attestations)) else "completed_with_issues"
         ),
         "checked": int(document_reminders.get("checked") or 0) + int(training_attestations.get("checked") or 0),
         "due": int(document_reminders.get("due") or 0) + int(training_attestations.get("due") or 0),
@@ -49519,7 +49521,10 @@ def internal_cron_document_reminders():
         "activated_on": document_reminders.get("activated_on") or training_attestations.get("activated_on") or "",
         "document_reminders": document_reminders,
         "training_attestations": training_attestations,
+        "jury_reminders": jury_reminders,
     }
+    for key in ('checked', 'due', 'processed', 'emails_accepted', 'failed'):
+        result[key] += int(jury_reminders.get(key) or 0)
     return jsonify(result), 200 if result["ok"] else 502
 
 

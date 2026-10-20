@@ -32,7 +32,7 @@ def main():
     keys = (
         "ok", "status", "checked", "due", "processed", "emails_accepted",
         "sms_accepted", "entry_sent", "end_sent", "skipped_cancelled",
-        "failed", "activated_on",
+        "failed", "activated_on", "jury_reminders",
     )
     print("Scheduled documents: " + json.dumps({k: result[k] for k in keys if k in result}, ensure_ascii=False), flush=True)
     if not result.get("ok"):
