@@ -378,6 +378,10 @@ def test_portrait_accents_and_official_identity_in_all_generated_pages(case, tmp
         photo = next(im for im in doc[0].get_images() if im[2:4] == (350, 450))
         rect = doc[0].get_image_rects(photo[0])[0]
         assert rect.x0 > 420 and rect.y0 > 290 and rect.y1 < 425
+        illustration = next(im for im in doc[0].get_images() if im[2:4] == (1184, 1328))
+        illustration_rect = doc[0].get_image_rects(illustration[0])[0]
+        assert illustration_rect.x0 > 350 and illustration_rect.y1 < 270
+        assert not illustration_rect.intersects(rect)
         for page in doc:
             assert 'Stéphane' in page.get_text() and 'Stephane' not in page.get_text()
         for page in (doc[-1], doc[-2]):
@@ -399,7 +403,31 @@ def test_photo_token_access_is_checked(case, monkeypatch, tmp_path):
     assert exam.photo_path(gestion, case[3]) == ''
 
 
-def test_attendance_paginates_included_candidates_and_jury(case):
+@pytest.mark.parametrize('candidate_count,jury_count', [(12, 1), (12, 3), (15, 2)])
+def test_attendance_keeps_candidates_and_jury_on_one_page(case, candidate_count, jury_count):
+    import fitz
+    state = configured(case)
+    case[2]['trainees'] += [{'id':str(i), 'first_name':'Élodie', 'last_name':f'CANDIDAT{i:02d}'}
+                           for i in range(candidate_count - 1)]
+    jury = case[2]['ssiap_exam']['config']['jury']
+    jury.extend({**jury[0], 'id':f'J{i}', 'first_name':'Chloé', 'last_name':f'JURY{i}', 'role':'member'}
+                for i in range(2, jury_count + 1))
+    response = case[0].get(state['attendance_url'])
+    assert response.status_code == 200
+    with fitz.open(stream=response.data, filetype='pdf') as document:
+        assert len(document) == 1
+        page = document[0]
+        text = page.get_text()
+        assert all(value in text for value in ['Camille EXEMPLE', 'Alex JURY', 'Structure exemple',
+                                              'Matin', 'Après-midi', '93830600283'])
+        assert 'ANNULE' not in text
+        for label in ['Camille EXEMPLE', 'Alex JURY'] + [f'CANDIDAT{i:02d}' for i in range(candidate_count - 1)] + [f'JURY{i}' for i in range(2, jury_count + 1)]:
+            assert text.count(label) == 1
+            assert page.search_for(label)[0].y1 < float(page.rect.height) - 110
+    case[4].assert_not_called()
+
+
+def test_attendance_paginates_oversized_groups_without_a_separate_jury_page(case):
     state = configured(case)
     case[2]['trainees'] += [{'id':str(i), 'first_name':'Élodie', 'last_name':f'CANDIDAT{i:02d}'} for i in range(25)]
     case[2]['ssiap_exam']['candidates'] = {'T1':{'included':False}}
@@ -408,7 +436,8 @@ def test_attendance_paginates_included_candidates_and_jury(case):
     assert response.status_code == 200 and response.headers['Content-Disposition'].startswith('inline;')
     assert 'no-store' in response.headers['Cache-Control']
     doc = PdfReader(io.BytesIO(response.data))
-    assert len(doc.pages) == 4
+    assert len(doc.pages) == 2
+    assert 'CANDIDAT24' in doc.pages[-1].extract_text() and 'Alex JURY' in doc.pages[-1].extract_text()
     text = '\n'.join(p.extract_text() for p in doc.pages)
     assert 'ANNULE' not in text and 'Camille' not in text
     assert 'Élodie' in text and 'Alex JURY' in text and 'Structure exemple' in text
