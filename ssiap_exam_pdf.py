@@ -259,9 +259,17 @@ def cover(training, trainee, config, candidate, docs, root, photo_path=''):
     illustration_name = 'ssiap1-exam-cover-illustration.png' if level_one else 'ssiap-exam-cover-illustration.png'
     illustration = os.path.join(root, 'static', 'img', illustration_name)
     if os.path.isfile(illustration):
-        illustration_width, illustration_height = (190, 180) if level_one else (204, 204)
-        c.drawImage(illustration, W - M - 190, 576, illustration_width, illustration_height,
+        illustration_width, illustration_height = (190, 142.5) if level_one else (204, 204)
+        illustration_x, illustration_y = W - M - 190, 594 if level_one else 576
+        c.saveState()
+        if level_one:
+            c.setStrokeColor(GOLD)
+            c.setLineWidth(0.7)
+            c.rect(illustration_x - 1, illustration_y - 1,
+                   illustration_width + 2, illustration_height + 2, fill=0, stroke=1)
+        c.drawImage(illustration, illustration_x, illustration_y, illustration_width, illustration_height,
                     preserveAspectRatio=True, anchor='c', mask='auto')
+        c.restoreState()
 
     c.setFillColor(colors.white)
     c.setStrokeColor(colors.HexColor('#dce4ea'))
