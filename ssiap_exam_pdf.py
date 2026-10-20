@@ -229,8 +229,18 @@ def candidate_portrait(c, path, x, y, width, height):
         try:
             with Image.open(path) as source:
                 photo = ImageOps.exif_transpose(source).convert('RGB')
-                c.drawImage(ImageReader(photo), x + 3, y + 3, width - 6, height - 6,
-                            preserveAspectRatio=True, anchor='c')
+                scale = max(width / photo.width, height / photo.height)
+                image_width, image_height = photo.width * scale, photo.height * scale
+                c.saveState()
+                try:
+                    clip = c.beginPath()
+                    clip.roundRect(x, y, width, height, 6)
+                    c.clipPath(clip, stroke=0)
+                    # Fill the frame without distortion; favour the upper part for faces.
+                    c.drawImage(ImageReader(photo), x - (image_width - width) / 2,
+                                y - (image_height - height) * 0.75, image_width, image_height)
+                finally:
+                    c.restoreState()
             return
         except (OSError, ValueError, UnidentifiedImageError, Image.DecompressionBombError):
             pass
@@ -567,3 +577,4 @@ def collective(training, trainees, config, root):
     result = output.tobytes(garbage=3, deflate=True)
     output.close()
     return result
+
