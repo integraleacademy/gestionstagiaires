@@ -378,7 +378,9 @@ def test_portrait_accents_and_official_identity_in_all_generated_pages(case, tmp
         photo = next(im for im in doc[0].get_images() if im[2:4] == (350, 450))
         rect = doc[0].get_image_rects(photo[0])[0]
         assert rect.x0 > 420 and rect.y0 > 290 and rect.y1 < 425
-        illustration = next(im for im in doc[0].get_images() if im[2:4] == (1184, 1328))
+        with Image.open(Path(gestion.app.root_path) / 'static/img/ssiap1-exam-cover-illustration.png') as asset:
+            illustration_size = asset.size
+        illustration = next(im for im in doc[0].get_images() if im[2:4] == illustration_size)
         illustration_rect = doc[0].get_image_rects(illustration[0])[0]
         assert illustration_rect.x0 > 350 and illustration_rect.y1 < 270
         assert not illustration_rect.intersects(rect)
