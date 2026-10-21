@@ -10,3 +10,90 @@
 @media(max-width:700px){.vtc-catalog-hero,.vtc-catalog-intro,.vtc-catalog-grid{grid-template-columns:1fr}.vtc-catalog-hero>img{min-height:0;height:280px}.vtc-catalog-hero>div{padding:28px}.vtc-catalog-stats{grid-template-columns:repeat(3,1fr);gap:18px 12px}.vtc-keypoints,.vtc-recap-grid{grid-template-columns:1fr}.vtc-lesson-hero>img{height:240px}.vtc-lesson-hero figcaption{flex-direction:column}.vtc-learning{font-size:16px}.vtc-final-banner{flex-direction:column;align-items:flex-start;padding:26px}.vtc-diagram{padding:6px}.vtc-diagram figcaption{font-size:11px;padding:10px}.vtc-module-content h3{min-height:0}.vtc-catalog-intro{padding:30px 0}.vtc-exam-notice{padding:18px}.vtc-catalog-stats b{font-size:28px}}
 
 .vtc-case-comparison{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}.vtc-case-comparison article{padding:20px;border:1px solid #d7e4e2;border-radius:14px;background:#f3faf8}.vtc-case-comparison article+article{border-color:#dfd3ef;background:#f7f1fe}.vtc-case-comparison h3{font-size:16px;line-height:1.5;margin:0 0 12px}.vtc-case-comparison p{font-size:15px;line-height:1.75;margin:0}@media(max-width:700px){.vtc-case-comparison{grid-template-columns:1fr}}
+
+/* Keep video, transcript and progress as distinct, comfortably spaced blocks. */
+.vtc-course .native-block--with-video {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.vtc-course .native-block--with-video > * { margin-block: 0; }
+.vtc-course .native-video-shell { box-shadow: 0 8px 24px #281c3a12; }
+.vtc-course .vtc-video-companion { padding: 24px; }
+.vtc-course .vtc-video-scene h3 { margin: 8px 0 16px; }
+.vtc-course .vtc-transcript,
+.vtc-course .native-video-chapters {
+  padding: 20px 22px;
+  border: 1px solid #e2d8ee;
+  border-radius: 14px;
+  background: #fcfaff;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.vtc-course :is(.vtc-transcript, .native-video-chapters) > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  list-style: none;
+  color: #57328d;
+  font-size: 15px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.vtc-course :is(.vtc-transcript, .native-video-chapters) > summary::-webkit-details-marker { display: none; }
+.vtc-course :is(.vtc-transcript, .native-video-chapters) > summary::before {
+  content: '+';
+  flex: 0 0 18px;
+  text-align: center;
+  font-size: 20px;
+  line-height: 1;
+}
+.vtc-course :is(.vtc-transcript, .native-video-chapters)[open] > summary::before { content: '−'; }
+.vtc-course :is(.vtc-transcript, .native-video-chapters)[open] > summary {
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #e7def0;
+}
+.vtc-course :is(.vtc-transcript, .native-video-chapters) > summary:focus-visible {
+  outline: 3px solid #7045bd;
+  outline-offset: 6px;
+  border-radius: 3px;
+}
+.vtc-course .vtc-transcript p { margin: 0 0 18px; font-size: 16px; line-height: 1.8; }
+.vtc-course .vtc-transcript p:last-child { margin-bottom: 0; }
+.vtc-course .native-video-followup { padding: 22px; }
+.vtc-course .native-video-followup > div:first-child { gap: 10px 24px; line-height: 1.6; }
+.vtc-course .native-video-followup p { margin-top: 14px; }
+.vtc-course .native-video-chapters ol { display: grid; gap: 12px; padding-left: 24px; margin: 18px 0 0; }
+.vtc-course .native-video-chapters li { padding-left: 5px; }
+.vtc-course .native-video-chapters .native-button {
+  justify-content: flex-start;
+  gap: 12px;
+  max-width: 100%;
+  text-align: left;
+  line-height: 1.6;
+  white-space: normal;
+}
+.vtc-course .native-video-chapters .native-button > span { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.vtc-course .native-course-nav section + section { margin-top: 28px; }
+.vtc-course .native-course-nav h2 { line-height: 1.5; margin-bottom: 12px; }
+.vtc-course .native-course-nav ol { gap: 7px; }
+.vtc-course .native-course-nav li :is(a, b),
+.vtc-course .native-course-nav li > span { line-height: 1.45; }
+.vtc-course .native-course-nav li a,
+.vtc-course .native-course-nav li > span { padding-block: 10px; gap: 7px 12px; }
+.vtc-course .native-button { white-space: normal; line-height: 1.5; }
+.vtc-course .aps-lesson-navigation { gap: 16px 20px; }
+.vtc-course .native-tracking-explainer { line-height: 1.7; }
+@media (max-width: 620px) {
+  .vtc-course .native-block--with-video { gap: 18px; }
+  .vtc-course :is(.vtc-transcript, .native-video-chapters, .native-video-followup, .vtc-video-companion) { padding: 18px 16px; }
+  .vtc-course .native-video-followup > div:first-child { align-items: flex-start; flex-direction: column; }
+  .vtc-course .aps-lesson-navigation { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .vtc-course .aps-lesson-navigation > .aps-lesson-count { text-align: right; }
+  .vtc-course .aps-lesson-navigation > :is([data-aps-lesson-next], [data-aps-lesson-completion]) {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin-left: 0;
+  }
+}

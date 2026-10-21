@@ -2,6 +2,9 @@ import copy
 import datetime as dt
 import importlib.util
 import json
+import hashlib
+import uuid
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -15,6 +18,7 @@ from tests import test_native_elearning_web as web_tests
 NOW = dt.datetime(2026, 10, 21, 12, tzinfo=dt.timezone.utc)
 DUE = NOW + dt.timedelta(minutes=10)
 KEY = activation.STATE_KEY
+send_email = host.brevo_send_email
 
 
 @pytest.fixture
@@ -196,3 +200,69 @@ def test_gunicorn_starts_scheduler_after_fork_and_stops_it():
     with patch.object(activation, "start_worker") as start:
         settings.post_worker_init(None)
         start.assert_called_once_with(host)
+
+
+@pytest.mark.parametrize("recover_refused", [False, True])
+def test_activation_uses_valid_durable_uuid_in_real_brevo_payload(case, monkeypatch, recover_refused):
+    person = case.data["sessions"][0]["trainees"][0]
+    state = person[KEY]
+    if recover_refused:
+        state.update(activated_at=DUE.isoformat(), email_status="retry_pending",
+                     attempts=12, uncertain_since="", next_attempt_at=DUE.isoformat())
+    calls = []
+    def provider(url, **kwargs):
+        payload = kwargs["json"]
+        key = payload["headers"]["idempotencyKey"]
+        calls.append(key)
+        # Validate the provider's UUID contract, not just a mocked success.
+        assert str(uuid.UUID(key)) == key
+        assert len(key) == 36
+        assert payload["to"] == [{"email": "alice@example.test"}]
+        assert "/espace/public-token" in payload["htmlContent"]
+        status = 429 if len(calls) == 1 else 201
+        response = {"code": "too_many_requests", "message": "Limite temporaire"} if status == 429 else {"messageId": "provider-receipt"}
+        return SimpleNamespace(status_code=status, text=json.dumps(response), json=lambda: response)
+    monkeypatch.setattr(host, "_missing_brevo_config", lambda: [])
+    monkeypatch.setattr(host, "BREVO_SENDER_EMAIL", "formation@example.test")
+    monkeypatch.setattr(host, "BREVO_SENDER_NAME", "Intégrale Academy")
+    monkeypatch.setattr(host, "brevo_send_email", send_email)
+    monkeypatch.setattr(host.requests, "post", provider)
+    activation.process_due(host, data=case.data, now=DUE)
+    assert state["email_status"] == "retry_pending"
+    assert state["last_error"] == "Limite temporaire" and state["last_status_code"] == 429
+    activation.process_due(host, data=case.data, now=DUE + dt.timedelta(minutes=5))
+    activation.process_due(host, data=case.data, now=DUE + dt.timedelta(days=1))
+    assert calls == [str(uuid.UUID(state["id"]))] * 2
+    assert state["email_status"] == "sent" and state["message_id"] == "provider-receipt"
+    assert state["last_error"] == "" and state["last_status_code"] == 201
+    assert len(person["sent_email_history"]) == 1
+
+
+def test_legacy_uncertain_delivery_keeps_its_original_key(case):
+    person = case.data["sessions"][0]["trainees"][0]
+    state = person[KEY]
+    state.update(email_status="retry_pending", uncertain_since=DUE.isoformat(), attempted_to=person["email"])
+    legacy_key = "vtc-access-" + hashlib.sha256(state["id"].encode()).hexdigest()
+    with patch.object(host, "brevo_send_email", return_value={"ok": False, "status_code": 400}):
+        activation.process_due(host, data=case.data, now=DUE + dt.timedelta(minutes=1))
+    assert state["delivery_key"] == legacy_key
+    assert state["uncertain_since"] == DUE.isoformat()
+    with patch.object(host, "brevo_send_email") as send:
+        activation.process_due(host, data=case.data, now=DUE + dt.timedelta(minutes=11))
+        send.assert_not_called()
+    assert state["email_status"] == "needs_review"
+
+
+def test_refusal_detail_and_retry_are_visible_only_to_admin(case):
+    person = case.data["sessions"][0]["trainees"][0]
+    person[KEY]["modules"] = [{"course_id": case.course["id"], "course_version": case.course["version"]}]
+    with patch.object(host, "brevo_send_email", return_value={"ok": False, "status_code": 400, "error": "Format invalide <script>alert(1)</script>"}):
+        activation.process_due(host, data=case.data, now=DUE)
+    case._admin_login()
+    response = case.client.get(f'/admin/sessions/session-aps/stagiaires/{person["id"]}')
+    assert response.status_code == 200
+    assert "Dernier retour d’envoi" in response.text and "Prochaine tentative" in response.text
+    assert "Format invalide &lt;script&gt;" in response.text
+    case._public_login()
+    public = case.client.get("/espace/public-token")
+    assert "Format invalide" not in public.text

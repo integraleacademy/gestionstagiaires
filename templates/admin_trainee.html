@@ -2123,6 +2123,12 @@
       {% elif activation.email_status == 'sending' %}Envoi du mail en cours.
       {% else %}Un email avec le lien de l’espace stagiaire sera envoyé à l’activation.{% endif %}
       </div>
+      {% if activation.last_error and activation.email_status != 'sent' %}
+      <div class="hint" style="margin-top:10px;overflow-wrap:anywhere;">Dernier retour d’envoi : {{ activation.last_error }}{% if activation.last_status_code %} ({{ activation.last_status_code }}){% endif %}</div>
+      {% endif %}
+      {% if activation.email_status == 'retry_pending' and activation.next_attempt_at %}
+      <div class="hint" style="margin-top:6px;">Prochaine tentative : {{ activation.next_attempt_at|frdatetime }}.</div>
+      {% endif %}
     </div>
     {% else %}
     <div class="hint" style="margin-top:6px;">
