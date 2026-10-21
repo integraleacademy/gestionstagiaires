@@ -498,16 +498,19 @@ def create_native_elearning_blueprint(
             abort(404)
         if not public_is_authed(token):
             abort(401)
+        try:
+            session_obj = effective_learner_session(session_obj, trainee)
+        except CourseImportError as exc:
+            abort(403, str(exc))
         if not is_aps_elearning_session(session_obj):
             abort(403)
-        if not session.get("admin_logged_in"):
+        if not session.get("admin_logged_in") and not session_obj.get("vtc_auto_access_available"):
             start_date = session_start_date(session_obj)
             if start_date is None:
                 abort(403)
             if dt.date.today() < start_date:
                 abort(403)
         try:
-            session_obj = effective_learner_session(session_obj, trainee)
             if allows_free_module_navigation(session_obj):
                 session_obj = resolve_vtc_105_session(session_obj, trainee, root() / 'tracking.sqlite3')
         except CourseImportError as exc:
@@ -1655,16 +1658,17 @@ def create_native_elearning_blueprint(
                 trainee_id = str(trainee.get("id") or trainee.get("trainee_id") or "")
                 if not session_obj.get("id") or not trainee_id:
                     continue
-                if assigned_here:
+                if assigned_here or isinstance(trainee.get("vtc_elearning_auto"), dict):
                     try:
                         effective = effective_learner_session(session_obj, trainee)
                         effective = read_transition_session(effective, trainee, root() / 'tracking.sqlite3')
                         rows = current_progress_rows(effective, rows)
                     except CourseImportError as exc:
                         abort(409, str(exc))
-                    module = next(item for item in assigned_modules(effective) if item.get("course_id") == course_id)
-                    session_paths[(str(session_obj.get("id")), trainee_id)] = module
-                    if include_work and course_id.startswith('academy-vtc-'):
+                    module = next((item for item in assigned_modules(effective) if item.get("course_id") == course_id), None)
+                    if module:
+                        session_paths[(str(session_obj.get("id")), trainee_id)] = module
+                    if module and include_work and course_id.startswith('academy-vtc-'):
                         owner = (str(session_obj.get('id')), trainee_id)
                         cma_by_owner[owner] = learner_attempt_summaries(root() / 'tracking.sqlite3', *owner)
                         if cma_by_owner[owner] and not any((r['session_id'], r['trainee_id']) == owner for r in rows):

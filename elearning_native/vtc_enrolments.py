@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import re
+from vtc_elearning_activation import STATE_KEY, is_vtc, learner_session
 
 from .importer import CourseImportError
 from .paths import assigned_modules
@@ -79,6 +80,8 @@ def effective_learner_session(session_obj, trainee):
     resolve them explicitly to v6 instead of silently upgrading old accounts.
     Explicit empty paths remain empty, and other training families are untouched.
     """
+    if is_vtc(session_obj) and isinstance(trainee.get(STATE_KEY), dict):
+        return learner_session(session_obj, trainee)
     modules = assigned_modules(session_obj)
     updated = []
     changed = False

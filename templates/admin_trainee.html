@@ -2105,6 +2105,26 @@
   {% if is_vtc %}
   <div class="card" style="grid-column:1 / -1;margin-top:16px;">
     <div style="font-weight:900;">E-learning candidat</div>
+    {% if trainee.vtc_elearning_auto %}
+    {% set activation = trainee.vtc_elearning_auto %}
+    <div style="margin-top:12px;padding:18px;border-radius:14px;background:#f5f0fc;border:1px solid #e4d8f2;">
+      {% if activation.activated_at %}
+      <strong>✅ Parcours VTC activé</strong>
+      <div class="hint">Disponible dans l’espace stagiaire depuis le {{ activation.activated_at|frdatetime }}.</div>
+      {% else %}
+      <strong>🕒 Activation automatique programmée</strong>
+      <div class="hint">Le {{ activation.due_at|frdatetime }}, soit 10 minutes après l’inscription.</div>
+      {% endif %}
+      <div style="margin-top:8px;">
+      {% if activation.email_status == 'sent' %}📧 Email envoyé le {{ activation.sent_at|frdatetime }} à {{ activation.sent_to }}.
+      {% elif activation.email_status == 'missing_email' %}Renseignez une adresse email valide pour recevoir la notification automatique.
+      {% elif activation.email_status == 'needs_review' %}⚠️ L’envoi du mail doit être vérifié dans Brevo. L’accès e-learning reste disponible.
+      {% elif activation.email_status == 'retry_pending' %}Nouvelle tentative d’envoi du mail programmée.
+      {% elif activation.email_status == 'sending' %}Envoi du mail en cours.
+      {% else %}Un email avec le lien de l’espace stagiaire sera envoyé à l’activation.{% endif %}
+      </div>
+    </div>
+    {% else %}
     <div class="hint" style="margin-top:6px;">
       Saisissez le lien d'accès à la formation théorique e-learning du stagiaire.
       Dès qu'un lien est renseigné, un email et un SMS sont envoyés automatiquement.
@@ -2123,6 +2143,7 @@
         {% if trainee.elearning_link_sms_ok %}<span style="margin-left:8px;">📱 SMS envoyé</span>{% endif %}
       </div>
     </div>
+    {% endif %}
   </div>
   {% endif %}
 

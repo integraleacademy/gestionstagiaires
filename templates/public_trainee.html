@@ -1056,8 +1056,13 @@
         </div>
         <div class="aps-elearning-content">
           <h2 id="apsElearningTitle">Espace e-learning {{ 'VTC' if show_vtc else 'APS' }}</h2>
+          {% if session.vtc_auto_access_available %}
+          <p class="aps-elearning-subtitle">Votre parcours VTC est prêt. Retrouvez vos cours, vidéos et entraînements dans votre espace de formation.</p>
+          <div class="aps-elearning-badge">Votre accès est disponible dès maintenant</div>
+          {% else %}
           <p class="aps-elearning-subtitle">Votre parcours de formation à distance sera activé au démarrage de la formation.</p>
           <div class="aps-elearning-badge">Accès disponible le {{ session.date_start|frdate }}</div>
+          {% endif %}
           <p class="aps-elearning-note">Votre progression restera suivie pendant toute la formation, sans identifiant ni mot de passe à saisir.</p>
           {% if aps_elearning_progress %}
           <section class="aps-attendance{% if aps_elearning_progress.is_complete %} is-complete{% endif %}" id="apsElearningAttendance" aria-labelledby="apsAttendanceTitle">
@@ -1156,7 +1161,9 @@
       {% set elearning_link = (trainee.elearning_link or '')|trim %}
       <div class="card elearning-card">
         <h2>🎓 Accès à votre espace Formation théorique en e-learning</h2>
-        {% if elearning_link %}
+        {% if trainee.vtc_elearning_auto and not trainee.vtc_elearning_auto.activated_at %}
+          <div class="elearning-state">Votre parcours VTC sera disponible 10 minutes après votre inscription. Vous recevrez un email dès son activation.</div>
+        {% elif elearning_link %}
           <div class="elearning-state ready">
             ✅ Votre accès est disponible. Vous pouvez débuter votre formation dès maintenant.
           </div>
