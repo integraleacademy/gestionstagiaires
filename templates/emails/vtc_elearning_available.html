@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Votre espace e-learning VTC est prêt</title>
+<style>@media only screen and (max-width:600px){.outer{padding:12px 6px!important}.pad{padding:28px 22px!important}.headline{font-size:32px!important;line-height:1.15!important}.cta{display:block!important;padding:17px 12px!important}}</style></head>
+<body style="margin:0;padding:0;background:#f3f0f8;color:#252039;font-family:Arial,Helvetica,sans-serif;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#f3f0f8;">Vos cours, vidéos et entraînements VTC vous attendent dans votre espace stagiaire.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f0f8;"><tr><td class="outer" align="center" style="padding:36px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background:#fff;border-radius:24px;overflow:hidden;text-align:left;">
+<tr><td align="center" style="padding:23px 32px;border-bottom:1px solid #eeeaf5;"><img src="{{ logo_url }}" width="104" alt="Intégrale Academy" style="display:block;margin:0 auto;width:104px;max-width:100%;height:auto;border:0;"></td></tr>
+<tr><td class="pad" style="padding:36px 38px 38px;background-color:#30204f;background-image:linear-gradient(125deg,#241939,#533379);color:#fff;">
+<span style="display:inline-block;padding:7px 12px;border:1px solid #84709f;border-radius:30px;font-size:11px;font-weight:bold;letter-spacing:1.7px;color:#e9def9;">VOTRE FORMATION CHAUFFEUR VTC</span>
+<h1 class="headline" style="margin:23px 0 16px;font-size:40px;line-height:1.1;letter-spacing:-1.2px;font-weight:800;color:#fff;">La suite de votre parcours<br><em style="font-family:Georgia,serif;font-weight:normal;color:#d5bcfa;">commence ici.</em></h1>
+<p style="margin:0;font-size:17px;line-height:1.65;color:#ede6f7;">Votre espace e-learning est disponible.<br>Vous pouvez commencer dès maintenant.</p>
+</td></tr>
+<tr><td class="pad" style="padding:32px 38px;">
+<p style="margin:0 0 15px;font-size:17px;line-height:1.6;">Bonjour{% if first_name %} <strong>{{ first_name }}</strong>{% endif %},</p>
+<p style="margin:0 0 24px;font-size:16px;line-height:1.75;color:#5b536b;">Votre formation en ligne vous attend dans votre <strong style="color:#30204f;">espace stagiaire Intégrale Academy</strong>. Retrouvez tout votre parcours VTC au même endroit, depuis votre ordinateur, votre tablette ou votre téléphone.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f4fb;border-radius:16px;">
+<tr><td style="padding:22px 22px 0;font-size:11px;font-weight:bold;letter-spacing:1.5px;color:#8063a0;">À DÉCOUVRIR DANS VOTRE ESPACE</td></tr>
+{% for number, title, detail in [('01','Apprendre et comprendre','Des cours illustrés et des vidéos pour avancer pas à pas.'),('02','Vous entraîner','Des exercices et des entraînements pour préparer l’examen.'),('03','Retrouver votre progression','Reprenez votre parcours là où vous en étiez.') ] %}
+<tr><td style="padding:18px 22px;{% if not loop.last %}border-bottom:1px solid #e9e1f2;{% endif %}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="42" valign="top" style="font-size:13px;line-height:24px;font-weight:bold;color:#9675b8;">{{ number }}</td><td><strong style="font-size:15px;color:#30204f;">{{ title }}</strong><p style="margin:5px 0 0;font-size:14px;line-height:1.6;color:#71677f;">{{ detail }}</p></td></tr></table></td></tr>
+{% endfor %}
+</table>
+<div style="text-align:center;margin:29px 0 12px;"><a class="cta" href="{{ access_url }}" style="display:inline-block;background:#684293;color:#fff;text-decoration:none;font-size:16px;font-weight:bold;padding:17px 27px;border-radius:12px;">Accéder à mon espace stagiaire&nbsp; →</a></div>
+<p style="margin:0;text-align:center;font-size:13px;line-height:1.7;color:#82758f;">Puis cliquez sur <strong>« Accéder à mon parcours VTC »</strong>.</p>
+<p style="margin:28px 0 0;font-family:Georgia,serif;font-style:italic;font-size:19px;line-height:1.5;color:#533379;">Nous vous souhaitons un très bon début de formation !</p>
+<p style="margin:9px 0 0;font-size:14px;color:#71677f;">L’équipe Intégrale Academy</p>
+</td></tr>
+<tr><td class="pad" style="padding:23px 38px;background:#faf9fc;border-top:1px solid #eeeaf5;"><strong style="font-size:14px;color:#30204f;">Une question ? Nous sommes là.</strong><p style="margin:8px 0 0;font-size:14px;line-height:1.7;color:#71677f;">Appelez-nous au <a href="tel:+33422470768" style="color:#684293;text-decoration:none;font-weight:bold;">04 22 47 07 68</a></p></td></tr>
+</table>
+<p style="max-width:530px;margin:18px auto 0;font-size:11px;line-height:1.7;color:#998fa6;text-align:center;">Ce lien donne accès à votre espace personnel. Conservez ce message pour retrouver facilement votre formation.<br>Intégrale Academy · Centre de formation agréé depuis 2018</p>
+</td></tr></table></body></html>

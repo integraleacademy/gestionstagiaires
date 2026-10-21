@@ -111,6 +111,7 @@ from wedof_automation import (automation_dashboard_state, build_automation_dashb
                               sync_folder_automation_status)
 from cpf_tracking import build_cpf_view, has_cpf_financing, has_generated_cpf_invoice
 from vtc_cpf_guidance import build_confirmation_content
+import vtc_elearning_activation
 from partner_postgres import (
     PartnerPostgresDuplicateEmail,
     PartnerPostgresError,
@@ -10015,6 +10016,7 @@ def save_data(
                 canonical if isinstance(canonical, dict) else _empty_data_payload(),
             )
         if isinstance(canonical, dict):
+            vtc_elearning_activation.preserve_state(payload, canonical, _session_trainees_list)
             _preserve_aps_elearning_report_state(payload, canonical)
             _preserve_document_reminder_state(payload, canonical)
             ssiap_exam.preserve_state(payload, canonical)
@@ -27106,6 +27108,7 @@ def api_create_trainee(session_id: str):
 
     from elearning_native.vtc_enrolments import mark_new_vtc_enrolment
     mark_new_vtc_enrolment(s, t)
+    vtc_elearning_activation.schedule_new_enrolment(sys.modules[__name__], s, t)
 
     trainees = _session_trainees_list(s)
     trainees.insert(0, t)
@@ -34030,13 +34033,14 @@ def public_trainee_space(token):
     show_professional_experience_sheet = _professional_experience_sheet_is_required(training_type, _session_get(s, "date_start", ""))
     show_vtc = ("VTC" in (training_type or "").upper())
     is_aps_training = (training_type or "").strip().upper().startswith("APS")
-    has_native_elearning = bool(s.get("aps_native_modules") or s.get("aps_native_course_id"))
-    aps_elearning_enabled = (is_aps_training or (show_vtc and has_native_elearning)) and bool(s.get("aps_elearning_enabled"))
-    aps_elearning_start_date = _session_start_date(s) if aps_elearning_enabled else None
+    display_session = vtc_elearning_activation.learner_session(s, t)
+    has_native_elearning = bool(display_session.get("aps_native_modules") or display_session.get("aps_native_course_id"))
+    aps_elearning_enabled = (is_aps_training or (show_vtc and has_native_elearning)) and bool(display_session.get("aps_elearning_enabled"))
+    aps_elearning_start_date = _session_start_date(display_session) if aps_elearning_enabled else None
     aps_elearning_available = bool(
         aps_elearning_enabled
-        and aps_elearning_start_date
-        and datetime.date.today() >= aps_elearning_start_date
+        and (display_session.get("vtc_auto_access_available")
+             or (aps_elearning_start_date and datetime.date.today() >= aps_elearning_start_date))
     )
 
     aps_elearning_progress = None
@@ -34072,7 +34076,7 @@ def public_trainee_space(token):
 
     return render_template(
         "public_trainee.html",
-        session=_trainee_training_session(s, t),
+        session=_trainee_training_session(display_session, t),
         ssiap_pathway=ssiap_pathways.resolve(s, t),
         trainee=t,
         token=token,

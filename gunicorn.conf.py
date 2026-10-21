@@ -22,3 +22,18 @@ capture_output = True
 # liveness probes are not starved by a long synchronous job.
 max_requests = 0
 max_requests_jitter = 0
+
+
+def post_worker_init(worker):
+    # Start after the fork, including after a deploy/restart without any visit.
+    import app as legacy_app
+    from vtc_elearning_activation import start_worker
+    start_worker(legacy_app)
+
+
+def worker_exit(server, worker):
+    import app as legacy_app
+    state = legacy_app.app.extensions.get("vtc_elearning_worker")
+    if state:
+        state["stop"].set()
+        state["thread"].join(timeout=15)
