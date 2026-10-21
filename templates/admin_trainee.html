@@ -2103,7 +2103,7 @@
   <!-- VISIBILITÉ ESPACE STAGIAIRE -->
   <!-- ===================== -->
   {% if is_vtc %}
-  <div class="card" style="grid-column:1 / -1;margin-top:16px;">
+  <div class="card" id="vtcElearningFollowup" style="grid-column:1 / -1;margin-top:16px;">
     <div style="font-weight:900;">E-learning candidat</div>
     {% if trainee.vtc_elearning_auto %}
     {% set activation = trainee.vtc_elearning_auto %}
@@ -2142,6 +2142,21 @@
         {% if trainee.elearning_link_email_ok %}<span style="margin-left:8px;">📧 Email envoyé</span>{% endif %}
         {% if trainee.elearning_link_sms_ok %}<span style="margin-left:8px;">📱 SMS envoyé</span>{% endif %}
       </div>
+    </div>
+    {% endif %}
+    {% if native_elearning_followup %}
+    {% set followup = native_elearning_followup %}
+    <div style="margin-top:20px;padding-top:18px;border-top:1px solid #e4d8f2;">
+      <h3 style="margin:0 0 12px;font-size:17px;">Suivi e-learning</h3>
+      {% if followup.available %}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px;">
+        <div style="padding:14px;border-radius:12px;background:#f8f6fc;"><div class="hint">Progression des activités</div><strong style="font-size:22px;">{{ '%g'|format(followup.progress_percent) }} %</strong><div class="hint">{{ followup.status_label }}</div></div>
+        <div style="padding:14px;border-radius:12px;background:#f8f6fc;"><div class="hint">Temps actif comptabilisé</div><strong>{{ followup.active_time_label }}</strong><div class="hint">sur {{ followup.required_time_label }}</div></div>
+        <div style="padding:14px;border-radius:12px;background:#f8f6fc;"><div class="hint">Modules terminés</div><strong style="font-size:22px;">{{ followup.completed_modules }} / {{ followup.total_modules }}</strong></div>
+      </div>
+      {% endif %}
+      <p class="hint">Progression par module, temps passé, résultats des examens blancs, copies PDF et historique des connexions.</p>
+      <a class="btn btn-primary" href="{{ followup.url }}">Consulter le suivi détaillé</a>
     </div>
     {% endif %}
   </div>

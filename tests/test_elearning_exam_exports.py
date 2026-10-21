@@ -51,7 +51,8 @@ def evidence_app(tmp_path, monkeypatch):
             raise reporting.CourseImportError("Snapshot unavailable")
         return copy.deepcopy(courses[course_id])
     monkeypatch.setattr(reporting.CourseCatalog, "load_course", load_course)
-    host = SimpleNamespace(PERSIST_DIR=str(tmp_path), _current_partner_id=lambda: session.get("partner_id"))
+    host = SimpleNamespace(PERSIST_DIR=str(tmp_path), _current_partner_id=lambda: session.get("partner_id"),
+                           _is_super_admin_session=lambda: False)
     db_path = tmp_path / "native_elearning" / "tracking.sqlite3"
     NativeElearningStore(db_path)
     store = ExamStore(db_path)

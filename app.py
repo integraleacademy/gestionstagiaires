@@ -112,6 +112,7 @@ from wedof_automation import (automation_dashboard_state, build_automation_dashb
 from cpf_tracking import build_cpf_view, has_cpf_financing, has_generated_cpf_invoice
 from vtc_cpf_guidance import build_confirmation_content
 import vtc_elearning_activation
+import trainee_elearning_reporting
 from partner_postgres import (
     PartnerPostgresDuplicateEmail,
     PartnerPostgresError,
@@ -40110,6 +40111,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         docs_reminder_schedule=_docs_relance_schedule(s, t, activated_on=(data.get("document_reminders_scheduler") or {}).get("activated_on")),
         ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
         aps_elearning_progress=aps_elearning_progress,
+        native_elearning_followup=trainee_elearning_reporting.summary(sys.modules[__name__], s, t),
     )
 
 
