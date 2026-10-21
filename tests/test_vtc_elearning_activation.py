@@ -61,7 +61,7 @@ def test_pending_is_locked_and_activated_is_available_before_formation(case):
     assert case.client.get("/espace/public-token/elearning").status_code == 403
     before = case.client.get("/espace/public-token")
     assert before.status_code == 200
-    assert "10 minutes après votre inscription" in before.text
+    assert "Votre parcours VTC sera disponible dans quelques minutes. Vous recevrez un email dès son activation." in before.text
     with patch.object(host, "brevo_send_email", return_value={"ok": True}):
         activation.process_due(host, data=case.data, now=DUE)
     after = case.client.get("/espace/public-token")

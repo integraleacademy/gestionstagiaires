@@ -1,7 +1,8 @@
-"""Read-only, tenant-scoped reporting for purchased native learning spaces.
+"""Read-only, tenant-scoped reporting for native learning spaces.
 
 The purchase's module versions and virtual session are the source of truth. A
 report never opens the learner's session, creates activity, or changes progress.
+Administrative session trainees provide their resolved individual session view.
 """
 from __future__ import annotations
 
@@ -103,11 +104,12 @@ class ProgressReader:
             return [NativeElearningStore._serialize_progress(row) for row in records]
         return records
 
-    def report(self, order, person, *, detailed=True):
+    def report(self, order, person, *, detailed=True, session_obj=None):
         is_mac_aps = order["course_code"] == "mac-aps"
         course_label = "MAC APS" if is_mac_aps else order["course_code"].upper()
-        session_id, learner_id = "el-" + order["id"], str(person["id"])
-        session_view = read_transition_session({
+        session_id = str(session_obj['id']) if session_obj is not None else "el-" + order["id"]
+        learner_id = str(person["id"])
+        session_view = read_transition_session(session_obj if session_obj is not None else {
             'id': session_id, 'training_type': order['course_code'].upper(),
             'aps_native_path_title': 'Mon parcours ' + order['course_code'].upper(),
             'aps_native_modules': order.get('modules', []),
@@ -331,16 +333,17 @@ class ProgressReader:
                         final["submitted"] = True
         return report
 
-    def exam_attempt(self, order, person, exam_id, version, attempt_id):
+    def exam_attempt(self, order, person, exam_id, version, attempt_id, *, session_obj=None):
         """Authorize the purchased exam edition before reading a saved copy."""
         from elearning_exam_pdf import read_stored_attempt
 
-        report = self.report(order, person, detailed=False)
+        report = self.report(order, person, detailed=False, session_obj=session_obj)
         exam = next((item for item in report["exam_catalogue"]
                      if (item["id"], item["version"]) == (exam_id, version)), None)
         if exam is None:
             return None
-        attempt = read_stored_attempt(self.database_path, "el-" + order["id"], person["id"],
+        session_id = str(session_obj['id']) if session_obj is not None else "el-" + order["id"]
+        attempt = read_stored_attempt(self.database_path, session_id, person["id"],
                                       exam_id, version, attempt_id)
         return {**attempt, "title": exam["title"]} if attempt else None
 
@@ -677,7 +680,7 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
                   p("Données fictives de démonstration : ce document n’atteste d’aucune formation suivie." if specimen else
                     f"Relevé édité pour {centre_name} à partir des traces de sa plateforme. Ce document ne constitue ni une attestation de stage MAC APS ni une attestation SST." if is_mac_aps else
                     f"Attestation éditée pour {centre_name} à partir des traces de sa plateforme e-learning. Elle décrit le suivi pédagogique constaté à la date d’édition ; elle ne vaut ni diplôme ni certification professionnelle.", "small"),
-                  p(f"Référence de commande : {order['id']} · Identifiant du stagiaire : {person['id']}", "small")])
+                  p(f"{'Référence de session' if order.get('source_kind') == 'training_session' else 'Référence de commande'} : {order['id']} · Identifiant du stagiaire : {person['id']}", "small")])
 
     if is_mac_aps and report.get("complement_modules"):
         story.extend([PageBreak(), p("Compléments pédagogiques", "title"), p(identity, "small"),
@@ -799,16 +802,21 @@ def register_routes(host, bp, *, page, customer, partner_data):
     def elearning_progress_connections(oid, learner_id):
         _, order, person, _ = context(oid, learner_id)
         report = ProgressReader(host).report(order, person)
-        output = io.StringIO(newline="")
-        writer = csv.writer(output, delimiter=";")
-        mac_aps = order["course_code"] == "mac-aps"
-        writer.writerow((["Périmètre", "Édition"] if mac_aps else []) + ["Module", "Connexion (Paris)", "Dernière activité (Paris)", "Fin (Paris)", "Temps actif", "Temps actif (secondes)"])
-        for row in report["connections"] + (report.get("complement_connections", []) if mac_aps else []):
-            values = [row[k] for k in ("module", "started_at_label", "last_seen_label", "ended_at_label", "active_time_label", "credited_seconds")]
-            if mac_aps:
-                values = ["Complément" if row.get("pedagogical_scope") == "complement" else "Parcours principal", row.get("version", "")] + values
-            writer.writerow(["'" + str(value) if str(value).lstrip().startswith(("=", "+", "-", "@")) else value for value in values])
-        return Response("\ufeff" + output.getvalue(), content_type="text/csv; charset=utf-8",
-                        headers={"Content-Disposition": 'attachment; filename="releve-connexions.csv"'})
+        return connections_csv(report, order["course_code"])
+
+
+def connections_csv(report, course_code):
+    """Export the same recorded evidence for purchases and training sessions."""
+    output = io.StringIO(newline="")
+    writer = csv.writer(output, delimiter=";")
+    mac_aps = course_code == "mac-aps"
+    writer.writerow((["Périmètre", "Édition"] if mac_aps else []) + ["Module", "Connexion (Paris)", "Dernière activité (Paris)", "Fin (Paris)", "Temps actif", "Temps actif (secondes)"])
+    for row in report["connections"] + (report.get("complement_connections", []) if mac_aps else []):
+        values = [row[k] for k in ("module", "started_at_label", "last_seen_label", "ended_at_label", "active_time_label", "credited_seconds")]
+        if mac_aps:
+            values = ["Complément" if row.get("pedagogical_scope") == "complement" else "Parcours principal", row.get("version", "")] + values
+        writer.writerow(["'" + str(value) if str(value).lstrip().startswith(("=", "+", "-", "@")) else value for value in values])
+    return Response("\ufeff" + output.getvalue(), content_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="releve-connexions.csv"'})
 
 

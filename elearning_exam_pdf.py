@@ -154,7 +154,7 @@ def exam_attempt_pdf(attempt, partner, order, person, *, logo_path=None):
     story += [identity, Spacer(1, 4 * mm),
               p("Édition : " + _text(attempt.get("version")), "small"),
               p("Référence de la tentative : " + _text(attempt.get("attempt_id")), "small"),
-              p("Commande : " + str(order.get("number") or order["id"]) + " · Stagiaire : " + str(person["id"]), "small"),
+              p(("Session : " if order.get("source_kind") == "training_session" else "Commande : ") + str(order.get("number") or order["id"]) + " · Stagiaire : " + str(person["id"]), "small"),
               p("Copie établie à partir des réponses et de la correction enregistrées lors de cette tentative.", "small"),
               Spacer(1, 4 * mm)]
     if not questions or total is None or len(questions) != total:

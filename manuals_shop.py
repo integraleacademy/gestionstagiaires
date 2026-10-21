@@ -25,6 +25,7 @@ import manuals_commerce as commerce
 import elearning_orders
 import elearning_groups
 import elearning_reporting
+import trainee_elearning_reporting
 import organisme_profile
 import elearning_demo
 import mac_aps_demo
@@ -778,6 +779,7 @@ def register(host):
     elearning_orders.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, kick_worker=kick_worker)
     elearning_groups.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, kick_worker=kick_worker)
     elearning_reporting.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data)
+    trainee_elearning_reporting.register_routes(host, bp, page=page)
     organisme_profile.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf)
     elearning_demo.register_routes(host, bp)
     mac_aps_demo.register_routes(host, bp)
