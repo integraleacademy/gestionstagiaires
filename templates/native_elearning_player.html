@@ -16,13 +16,13 @@
   {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261016-aps-presentation') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
   {% if course.aps_reading_revision or course.aps_depth_revision or course.study_plan or course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-depth.css', v=course.aps_reading_revision or course.aps_depth_revision or '20261016-a3p') }}">{% endif %}
-  <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261007-visuals') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261021-reader-spacing') }}">
 {% if course.training_label == 'VTC' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-journey.css', v='20261006-105-1') }}">{% endif %}
 {% if activity.production %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-production.css' if course.training_label == 'VTC' else 'css/aps62-production.css', v='20261012-v12') }}">{% endif %}
 </head>
 <body class="native-elearning-body{{ ' macaps-course' if course.training_label == 'MAC APS' else ' a3p-course' if course.training_label == 'A3P' else ' vtc-course' if course.training_label == 'VTC' else '' }}" style="--course-accent:{{ player_theme.main_color|default('#4f46e5') }};--course-button:{{ player_theme.button_color|default('#ff6b1a') }};--course-text:{{ player_theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
-    <section class="native-block native-block--{{ block.type|lower }}" data-native-block="{{ block.type }}">
+    <section class="native-block native-block--{{ block.type|lower }}{% if block.video and block.video.src %} native-block--with-video{% endif %}" data-native-block="{{ block.type }}">
       {% if block.video and block.video.src %}
         {% if block.video.required or block.video.lesson_explainer %}<h2 class="native-video-title">{{ block.video.title }}</h2>{% endif %}
         {% if block.video.learning_purpose %}<p class="mac-video-note">{{ block.video.learning_purpose }}</p>{% endif %}

@@ -20,6 +20,23 @@ DELAY = dt.timedelta(minutes=10)
 MAIL_RE = re.compile(r"[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+")
 
 
+def _logger(host):
+    gunicorn_logger = logging.getLogger("gunicorn.error")
+    return gunicorn_logger if gunicorn_logger.handlers else host.app.logger
+
+
+def _delivery_key(state):
+    if state.get("delivery_key"):
+        return state["delivery_key"]
+    if state.get("uncertain_since"):
+        # Keep the exact old key while recovering an unconfirmed pre-fix send.
+        # Changing it could bypass the provider's duplicate protection.
+        return "vtc-access-" + hashlib.sha256(state["id"].encode()).hexdigest()
+    # Brevo requires a UUID, not a prefixed SHA-256 digest. This UUID already
+    # belongs to the durable activation and stays identical across retries.
+    return str(uuid.UUID(state["id"]))
+
+
 def clock(now=None):
     value = now or dt.datetime.now(dt.timezone.utc)
     return value.replace(tzinfo=dt.timezone.utc) if value.tzinfo is None else value.astimezone(dt.timezone.utc)
@@ -152,7 +169,9 @@ def _process_one(host, session_id, trainee_id, now):
         if started and (now - started >= dt.timedelta(minutes=10)
                         or state.get("attempted_to") != email):
             state.update(email_status="needs_review", lease_until="")
+            _logger(host).warning("vtc_elearning_email_needs_review trainee_id=%s", trainee_id)
             return {}
+        state["delivery_key"] = _delivery_key(state)
         state.update(email_status="sending", lease_token=lease,
                      lease_until=(now + dt.timedelta(minutes=2)).isoformat(),
                      uncertain_since=state.get("uncertain_since") or now.isoformat(),
@@ -165,18 +184,19 @@ def _process_one(host, session_id, trainee_id, now):
         return
     trainee, email = claimed["trainee"], claimed["email"]
     content = message(host, trainee)
-    delivery_key = "vtc-access-" + hashlib.sha256(trainee[STATE_KEY]["id"].encode()).hexdigest()
+    delivery_key = trainee[STATE_KEY]["delivery_key"]
     try:
         result = host.brevo_send_email(email, content["subject"], content["html"],
             text_content=content["text"], metadata={"purpose": "vtc_elearning_activation",
                 "idempotency_key": delivery_key, "session_id": session_id, "trainee_id": trainee_id})
         result = result if isinstance(result, dict) else {"ok": result is True}
     except Exception:
-        host.app.logger.exception("vtc_elearning_email_unconfirmed trainee_id=%s", trainee_id)
+        _logger(host).exception("vtc_elearning_email_unconfirmed trainee_id=%s", trainee_id)
         result = {"ok": False}
     accepted = result.get("ok") is True
     code = result.get("status_code")
     refused = result.get("not_sent") is True or (isinstance(code, int) and 400 <= code < 500 and code != 408)
+    error = "" if accepted else " ".join(str(result.get("error") or "Envoi non confirmé par Brevo.").split())[:500]
 
     def finish(data):
         # A transfer during the network call must still retain the delivery receipt.
@@ -190,6 +210,7 @@ def _process_one(host, session_id, trainee_id, now):
                 state.update(revision=state["revision"] + 1,
                     email_status="sent" if accepted else "retry_pending",
                     lease_until="", message_id=str(result.get("message_id") or ""),
+                    last_status_code=code, last_error=error,
                     next_attempt_at=(now + dt.timedelta(seconds=300 if refused else 60)).isoformat())
                 if accepted or (refused and not claimed["had_uncertain_attempt"]):
                     state["uncertain_since"] = ""
@@ -203,8 +224,9 @@ def _process_one(host, session_id, trainee_id, now):
         return {}
 
     host._atomic_update_data(finish)
-    host.app.logger.info("vtc_elearning_activation trainee_id=%s email_status=%s", trainee_id,
-                         "sent" if accepted else "retry_pending")
+    log = _logger(host).info if accepted else _logger(host).warning
+    log("vtc_elearning_activation trainee_id=%s email_status=%s status_code=%s error=%s", trainee_id,
+        "sent" if accepted else "retry_pending", code, error)
 
 
 def process_due(host, *, now=None, data=None):
@@ -218,7 +240,7 @@ def process_due(host, *, now=None, data=None):
                 try:
                     _process_one(host, training["id"], trainee["id"], now)
                 except Exception:
-                    host.app.logger.exception("vtc_elearning_activation_failed trainee_id=%s", trainee.get("id"))
+                    _logger(host).exception("vtc_elearning_activation_failed trainee_id=%s", trainee.get("id"))
 
 
 def start_worker(host):
@@ -226,8 +248,7 @@ def start_worker(host):
     if host.app.testing or host.app.extensions.get("vtc_elearning_worker"):
         return
     stop = threading.Event()
-    gunicorn_logger = logging.getLogger("gunicorn.error")
-    logger = gunicorn_logger if gunicorn_logger.handlers else host.app.logger
+    logger = _logger(host)
 
     def run():
         logger.info("vtc_elearning_worker_started delay_seconds=600")
