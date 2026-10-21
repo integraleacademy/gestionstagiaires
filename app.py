@@ -20720,12 +20720,23 @@ def _sales_trainee_anchor_date(trainee: Dict[str, Any], training_label: str) -> 
     return _parse_flexible_date(action_dates.get("diplome_obtenu"))
 
 
-def _sales_trainee_price(trainee: Dict[str, Any], training_type: str, training_label: str) -> int:
-    adjusted_price = _parse_positive_int(trainee.get("sales_tracking_amount"))
-    if adjusted_price > 0:
-        return adjusted_price
-    unit_price = _sales_training_unit_price(training_type, training_label)
-    return unit_price if unit_price > 0 else _parse_positive_int(trainee.get("training_price"))
+def _sales_trainee_price(trainee: Dict[str, Any], training_type: str, training_label: str) -> float:
+    """Use the trainee's recorded price before falling back to catalogue prices."""
+    for field in ("sales_tracking_amount", "training_price"):
+        raw_price = trainee.get(field)
+        if raw_price is None or not str(raw_price).strip():
+            continue
+        try:
+            normalized_price = "".join(str(raw_price).split()).replace("€", "")
+            price_cents = money_value_to_cents(normalized_price)
+        except ValueError:
+            continue
+        # A zero sales adjustment historically means "no adjustment"; a zero
+        # training price is an explicitly free course and must stay at zero.
+        if price_cents < 0 or (field == "sales_tracking_amount" and price_cents == 0):
+            continue
+        return cents_to_money(price_cents)
+    return _sales_training_unit_price(training_type, training_label)
 
 
 def _build_sales_tracking_metrics(
@@ -20861,7 +20872,7 @@ def _build_sales_tracking_metrics(
 
     current_month_row = monthly_rows[today.month - 1] if selected_year == today.year else None
     current_month_objective = _parse_positive_int(current_month_row.get("objective") if current_month_row else 0)
-    current_month_revenue = _parse_positive_int(current_month_row.get("revenue") if current_month_row else 0)
+    current_month_revenue = round(current_month_row.get("revenue", 0), 2) if current_month_row else 0
     current_month_inscriptions = int(current_month_row.get("inscriptions") or 0) if current_month_row else 0
     current_month_progress_ratio = (current_month_revenue / current_month_objective) if current_month_objective > 0 else 0
     current_month_remaining = max(current_month_objective - current_month_revenue, 0) if current_month_objective > 0 else 0
