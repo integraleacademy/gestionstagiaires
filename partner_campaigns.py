@@ -21,6 +21,7 @@ from flask import abort, flash, jsonify, make_response, redirect, render_templat
 
 MAX_BYTES = 2 * 1024 * 1024
 MAX_CONTACTS = 5000
+CONTACTED_SQL = "EXISTS (SELECT 1 FROM outreach_deliveries d WHERE d.contact_id=c.id AND d.status IN ('sent','sending','uncertain'))"
 PREVIOUS_TEMPLATE_COPY = {
     "subject": "Un espace e-learning pour chacun de vos stagiaires — APS & A3P",
     "intro": "Et si vos prochaines sessions commençaient avec un e-learning déjà prêt ? Nous-mêmes centre de formation, nous avons conçu des parcours concrets pour vos stagiaires et un suivi précis pour votre équipe.",
@@ -67,6 +68,7 @@ def db(host, write=False):
             attempt INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY(campaign_id, contact_id));
           CREATE INDEX IF NOT EXISTS outreach_pending ON outreach_deliveries(campaign_id, status);
+          CREATE INDEX IF NOT EXISTS outreach_contacted ON outreach_deliveries(contact_id, status);
         """)
         if write:
             conn.execute("BEGIN IMMEDIATE")
@@ -218,22 +220,29 @@ def campaign_view(conn, campaign_id):
     return result
 
 
+def contact_scope(query="", batch=""):
+    where, args = "c.unsubscribed_at=''", []
+    query, batch = query.strip()[:200], batch.strip()
+    if query:
+        where += " AND (c.email LIKE ? ESCAPE '\\' OR c.centre LIKE ? ESCAPE '\\')"
+        escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        args += ["%" + escaped + "%"] * 2
+    if batch:
+        where += " AND c.batch_id=?"
+        args.append(batch)
+    return where, args
+
+
 def context(host):
     with db(host) as conn:
         template = saved_template(conn)
         q = (request.args.get("contacts_q") or "").strip()[:200]
         batch = (request.args.get("batch") or "").strip()
-        where, args = "c.unsubscribed_at=''", []
-        if q:
-            where += " AND (c.email LIKE ? ESCAPE '\\' OR c.centre LIKE ? ESCAPE '\\')"
-            escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-            args += ["%" + escaped + "%"] * 2
-        if batch:
-            where += " AND c.batch_id=?"
-            args.append(batch)
+        where, args = contact_scope(q, batch)
         count = conn.execute("SELECT count(*) FROM outreach_contacts c WHERE " + where, args).fetchone()[0]
+        eligible_count = conn.execute("SELECT count(*) FROM outreach_contacts c WHERE " + where + " AND NOT " + CONTACTED_SQL, args).fetchone()[0]
         page = max(1, request.args.get("contacts_page", 1, type=int))
-        contacts = [dict(r) for r in conn.execute("SELECT c.*, (SELECT max(sent_at) FROM outreach_deliveries d WHERE d.contact_id=c.id AND d.status='sent') AS last_sent FROM outreach_contacts c WHERE " + where + " ORDER BY c.created_at DESC,c.email LIMIT 100 OFFSET ?", args + [(page-1)*100])]
+        contacts = [dict(r) for r in conn.execute("SELECT c.*, " + CONTACTED_SQL + " AS already_contacted, (SELECT max(sent_at) FROM outreach_deliveries d WHERE d.contact_id=c.id AND d.status='sent') AS last_sent FROM outreach_contacts c WHERE " + where + " ORDER BY c.created_at DESC,c.email LIMIT 100 OFFSET ?", args + [(page-1)*100])]
         staged = None
         iid = request.args.get("import", "")
         if iid:
@@ -247,7 +256,7 @@ def context(host):
         deliveries = [dict(r) for r in conn.execute("SELECT c.email,c.centre,d.* FROM outreach_deliveries d JOIN outreach_contacts c ON c.id=d.contact_id WHERE d.campaign_id=? ORDER BY c.email LIMIT 100", (campaign["id"],))] if campaign else []
         history = [campaign_view(conn, r[0]) for r in conn.execute("SELECT id FROM outreach_campaigns ORDER BY created_at DESC LIMIT 15")]
         total = conn.execute("SELECT count(*) FROM outreach_contacts WHERE unsubscribed_at=''").fetchone()[0]
-    return dict(outreach_template=template, outreach_contacts=contacts, outreach_count=count,
+    return dict(outreach_template=template, outreach_contacts=contacts, outreach_count=count, outreach_eligible_count=eligible_count,
                 outreach_total=total, outreach_page=page, outreach_query=q, outreach_batch=batch,
                 outreach_import=staged, outreach_campaign=campaign, outreach_deliveries=deliveries,
                 outreach_history=history, outreach_labels=LABELS, outreach_request_key=uuid.uuid4().hex)
@@ -385,18 +394,16 @@ def register(host):
             existing = conn.execute("SELECT id FROM outreach_campaigns WHERE request_key=?", (request_key,)).fetchone()
             if existing:
                 return back(campaign=existing[0])
-            if request.form.get("selection") == "all":
-                batch = request.form.get("batch", "")
-                rows = conn.execute("SELECT * FROM outreach_contacts WHERE unsubscribed_at=''" + (" AND batch_id=?" if batch else ""), (batch,) if batch else ()).fetchall()
-            else:
-                ids = set(selection)
-                rows = [r for r in conn.execute("SELECT * FROM outreach_contacts WHERE unsubscribed_at=''") if r["id"] in ids]
+            where, args = contact_scope(request.form.get("contacts_q", ""), request.form.get("batch", ""))
             if not request.form.get("include_contacted"):
-                contacted = {r[0] for r in conn.execute("SELECT DISTINCT contact_id FROM outreach_deliveries WHERE status IN ('sent','sending','uncertain')")}
-                rows = [r for r in rows if r["id"] not in contacted]
-            if not rows or len(rows) > MAX_CONTACTS:
-                flash("Sélectionnez entre 1 et 5 000 contacts éligibles. Les contacts déjà sollicités sont exclus par défaut.", "error")
-                return back()
+                where += " AND NOT " + CONTACTED_SQL
+            rows = conn.execute("SELECT c.id FROM outreach_contacts c WHERE " + where, args).fetchall()
+            if request.form.get("selection") != "all":
+                ids = set(selection)
+                rows = [r for r in rows if r["id"] in ids]
+            if not rows:
+                flash("Aucun destinataire éligible dans cette sélection. Les contacts déjà sollicités sont exclus par défaut.", "error")
+                return back(contacts_q=request.form.get("contacts_q", ""), batch=request.form.get("batch", ""))
             campaign_id = uuid.uuid4().hex
             template = saved_template(conn)
             name = (request.form.get("name") or "Présentation e-learning APS & A3P").strip()[:180]
