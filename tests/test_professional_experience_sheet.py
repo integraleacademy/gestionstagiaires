@@ -97,7 +97,7 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertIn('id="professionalExperienceModal"', html)
         self.assertIn("professional-experience.js", html)
 
-    def test_public_page_shows_sheet_for_vtc_training_even_when_documents_are_hidden(self):
+    def test_public_page_hides_sheet_for_vtc_training(self):
         self.payload["sessions"][0]["name"] = "VTC Juin 2026"
         self.payload["sessions"][0]["training_type"] = "VTC"
         self.payload["sessions"][0]["date_start"] = "2026-06-09"
@@ -107,9 +107,9 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertIn("Fiche expérience professionnelle", html)
-        self.assertIn("data-pro-sheet-open", html)
-        self.assertIn('id="professionalExperienceModal"', html)
+        self.assertNotIn("Fiche expérience professionnelle", html)
+        self.assertNotIn("data-pro-sheet-open", html)
+        self.assertNotIn('id="professionalExperienceModal"', html)
 
     def test_public_tracking_shows_test_fr_and_cnaps_for_aps(self):
         self.payload["sessions"][0].update({
@@ -451,6 +451,23 @@ if (!addHandler.includes("renumber();") || !removeHandler.includes("renumber();"
                     gestion_app._professional_experience_sheet_is_required("DIRIGEANT VAE", start_date)
                 )
 
+    def test_vtc_does_not_require_show_or_accept_experience_sheet(self):
+        training = self.payload["sessions"][0]
+        training.update(training_type="CHAUFFEUR VTC", date_start="2026-11-03")
+        trainee = training["trainees"][0]
+        gestion_app.ensure_documents_schema_for_trainee(trainee, "CHAUFFEUR VTC")
+        for document in trainee["documents"]:
+            document.update(status="CONFORME", file="uploads/document.pdf")
+        self.assertFalse(gestion_app._professional_experience_sheet_is_required("CHAUFFEUR VTC", "2026-11-03"))
+        self.assertTrue(gestion_app.dossier_is_complete(trainee, "CHAUFFEUR VTC", "2026-11-03"))
+        self.assertTrue(gestion_app.required_docs_are_deposited(trainee, "CHAUFFEUR VTC", "2026-11-03"))
+        self._authenticate_public()
+        page = self.client.get("/espace/public-token").get_data(as_text=True)
+        self.assertNotIn("Fiche expérience professionnelle", page)
+        self.assertNotIn('id="professionalExperienceModal"', page)
+        self.assertNotIn("professional-experience.js", page)
+        self.assertEqual(self.client.post("/espace/public-token/fiche-experience-professionnelle", json=self._valid_payload()).status_code, 404)
+
     def test_training_starting_on_cutoff_date_does_not_show_or_accept_sheet(self):
         self.payload["sessions"][0]["name"] = "APS du 8 juin 2026"
         self.payload["sessions"][0]["training_type"] = "APS"
@@ -554,7 +571,7 @@ if (!addHandler.includes("renumber();") || !removeHandler.includes("renumber();"
         self.assertIn("A CONTRÔLER", row)
         self.assertIn("CONFORME", row)
         self.assertIn("NON CONFORME", row)
-        self.assertIn("Voir et imprimer la fiche", row)
+        self.assertIn("Voir et imprimer", row)
         self.assertNotIn("Consulter", row)
         self.assertNotIn("Responsable sécurité", row)
         self.assertNotIn("Consulter les réponses", html)

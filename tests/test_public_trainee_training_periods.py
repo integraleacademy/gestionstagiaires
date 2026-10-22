@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 import app as gestion_app
+from lxml import html
 
 
 class PublicTraineeTrainingPeriodsTests(unittest.TestCase):
@@ -98,6 +99,42 @@ class PublicTraineeTrainingPeriodsTests(unittest.TestCase):
         self.assertNotIn('class="info-label">Dates de formation</div>', body)
         self.assertNotIn('class="info-label">Distanciel</div>', body)
         self.assertNotIn('class="info-label">Présentiel</div>', body)
+
+    def test_vtc_displays_three_separate_dates_with_change_notice(self):
+        response = self._render_session({
+            "training_type": "CHAUFFEUR VTC", "exam_theory_date": "2026-10-27",
+            "practice_training_date": "2026-11-09", "exam_practice_date": "2026-11-23",
+        })
+        page = html.fromstring(response.data)
+        for key, label, date in (
+            ("theory_exam", "Examen théorique", "27/10/2026"),
+            ("practice_training", "Formation pratique", "09/11/2026"),
+            ("practice_exam", "Examen pratique", "23/11/2026"),
+        ):
+            card = page.xpath(f'//*[@data-vtc-date="{key}"]')[0]
+            self.assertIn(label, card.text_content())
+            self.assertIn(date, card.text_content())
+            self.assertIn("Sous réserve de modifications", card.text_content())
+        self.assertNotIn("Fiche expérience professionnelle", page.text_content())
+        chamber = page.xpath('//section[@aria-labelledby="vtcChamberTitle"]')[0]
+        assistance = page.xpath('//section[@aria-labelledby="vtcAssistanceTitle"]')[0]
+        self.assertIs(chamber.getparent(), assistance.getparent())
+        self.assertEqual(page.xpath('//a[@href="tel:0492125338"]')[0].get("class"),
+                         page.xpath('//a[@href="tel:0494619925"]')[0].get("class"))
+
+    def test_vtc_missing_practical_dates_do_not_reuse_the_theory_date(self):
+        response = self._render_session({"training_type": "VTC"})
+        page = html.fromstring(response.data)
+        self.assertIn("13/10/2026", page.xpath('//*[@data-vtc-date="theory_exam"]')[0].text_content())
+        for key in ("practice_training", "practice_exam"):
+            self.assertIn("Date à venir", page.xpath(f'//*[@data-vtc-date="{key}"]')[0].text_content())
+
+    def test_vtc_supports_legacy_exam_dates(self):
+        response = self._render_session({"training_type": "VTC", "exam_date": "",
+            "date_examen_theorique": "2026-10-27", "date_examen_pratique": "2026-11-23"})
+        page = html.fromstring(response.data)
+        self.assertIn("27/10/2026", page.xpath('//*[@data-vtc-date="theory_exam"]')[0].text_content())
+        self.assertIn("23/11/2026", page.xpath('//*[@data-vtc-date="practice_exam"]')[0].text_content())
 
 
 if __name__ == "__main__":
