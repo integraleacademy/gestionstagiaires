@@ -15,8 +15,7 @@ def training():
         "id": "AFC-TEST", "name": "AFC APS + SSIAP NOVEMBRE 2026", "training_type": "APS",
         "partner_id": app.INTEGRALE_PARTNER_ID,
         "date_start": "2026-11-16", "date_end": "2027-02-15",
-        "afc_aps_start": "2026-11-16", "afc_aps_end": "2026-12-18", "exam_date": "2026-12-21",
-        "afc_ssiap_start": "2027-02-01", "afc_ssiap_end": "2027-02-15", "ssiap_exam_date": "2027-02-16",
+        "exam_date": "2026-12-21", "ssiap_exam_date": "2027-02-16",
         "trainees": [],
     }
 
@@ -45,7 +44,7 @@ def test_afc_does_not_compute_or_move_aps_exam(training):
     assert not afc_schedule.enabled({"name": "APS novembre", "training_type": "APS"})
 
 
-def test_create_and_partial_update_preserve_separate_periods(client, training):
+def test_create_and_partial_update_use_one_period_and_two_exams(client, training):
     data = {"sessions": []}
     payload = {k: v for k, v in training.items() if k not in {"id", "trainees"}}
     with patch.object(app, "load_data", return_value=data), patch.object(app, "save_data"):
@@ -59,15 +58,16 @@ def test_create_and_partial_update_preserve_separate_periods(client, training):
         assert result.status_code == 200
         assert saved["date_end"] == "2027-02-15"
         assert saved["exam_date"] == "2026-12-21"
-        assert saved["afc_aps_end"] == "2026-12-18"
+        assert saved["date_start"] == "2026-11-16"
+        assert not any(key.startswith(("afc_aps_", "afc_ssiap_")) for key in saved)
         assert saved["ssiap_exam"]["config"]["date"] == "2027-02-17"
         assert saved["ssiap_exam"]["revision"] == 2
 
 
 @pytest.mark.parametrize("payload", [
-    {"afc_aps_end": "2026-11-01"}, {"exam_date": "2026-12-01"},
-    {"ssiap_exam_date": "2027-01-25"}, {"afc_ssiap_start": "2027-02-30"},
-    {"afc_aps_start": ["2026-11-16"]},
+    {"date_end": "2026-11-01"}, {"exam_date": "2026-12-32"},
+    {"ssiap_exam_date": "2027-02-30"}, {"date_start": "2027-02-30"},
+    {"exam_date": ["2026-12-21"]},
 ])
 def test_session_validation_is_atomic(client, training, payload):
     before = copy.deepcopy(training)
@@ -133,8 +133,9 @@ def test_documents_use_individual_dates_and_both_exams_without_mutation(training
         assert values["date_convocation"] == "23/11/2026"
         assert values["date_examen_aps"] == "21/12/2026"
         assert values["date_examen_ssiap"] == "16/02/2027"
-        assert "18/12/2026" in values["periode_aps"]
-        assert "15/02/2027" in values["periode_ssiap"]
+        assert values["periode_formation"] == "du 23/11/2026 au 16/02/2027"
+        assert "periode_aps" not in values
+        assert "periode_ssiap" not in values
     assert training == before
     assert app._automation_document_config(training)["slug"] == "afc"
     assert app._can_send_convocation_without_signed_convention(training)
@@ -146,7 +147,7 @@ def test_documents_use_individual_dates_and_both_exams_without_mutation(training
         app._replace_docx_xml_placeholders(str(out), values)
         paragraphs = list(app._iter_docx_paragraphs(Document(out)))
         text = "\n".join(p.text for p in paragraphs)
-        for date in ("23/11/2026", "16/02/2027", "21/12/2026", "18/12/2026", "15/02/2027"):
+        for date in ("23/11/2026", "16/02/2027", "21/12/2026"):
             assert date in text
         if name.startswith("convention"):
             remaining, anchors = app._assert_aps_convention_has_no_business_placeholders(str(out))
@@ -165,12 +166,24 @@ def test_email_and_document_revision_follow_individual_calendar(training, traine
     assert revision != afc_schedule.revision(training, trainee)
 
 
-def test_legacy_afc_requires_missing_component_dates_before_document_generation(training, trainee):
-    del training["afc_ssiap_end"]
-    with pytest.raises(ValueError, match="Fin SSIAP 1"):
+def test_missing_exam_date_is_reported_before_document_generation(training, trainee):
+    del training["ssiap_exam_date"]
+    with pytest.raises(ValueError, match="Examen SSIAP 1"):
         app._build_aps_convocation_context(training, trainee)
-    with pytest.raises(ValueError, match="Fin SSIAP 1"):
+    with pytest.raises(ValueError, match="Examen SSIAP 1"):
         app._aps_convention_replacements(training, trainee)
+
+
+def test_retired_component_dates_do_not_constrain_or_appear_in_documents(client, training, trainee):
+    training.update(afc_aps_start="2027-04-01", afc_aps_end="2026-10-01",
+                    afc_ssiap_start="2027-05-01", afc_ssiap_end="2027-04-01")
+    with patch.object(app, "load_data", return_value={"sessions": [training]}), patch.object(app, "save_data"):
+        response = client.post(f"/api/sessions/{training['id']}/update", json={"exam_date": "2026-12-01"})
+    assert response.status_code == 200
+    for values in (app._build_aps_convocation_context(training, trainee), app._aps_convention_replacements(training, trainee)):
+        assert values["date_examen_aps"] == "01/12/2026"
+        assert values["periode_formation"] == "du 23/11/2026 au 16/02/2027"
+        assert "01/04/2027" not in str(values)
 
 
 def test_session_page_exposes_afc_fields_and_does_not_change_dates(client, training):
@@ -180,8 +193,10 @@ def test_session_page_exposes_afc_fields_and_does_not_change_dates(client, train
         response = client.get("/admin/sessions")
     assert response.status_code == 200
     text = response.get_data(as_text=True)
-    for label in ("Examen APS", "Examen SSIAP 1", "Début SSIAP 1", "Fin APS"):
+    for label in ("Examen APS", "Examen SSIAP 1", "Début formation", "Fin formation"):
         assert label in text
+    for retired in ("AfcApsStart", "AfcApsEnd", "AfcSsiapStart", "AfcSsiapEnd", "afc_aps_", "afc_ssiap_"):
+        assert retired not in text
     assert 'data-afc-enabled="1"' in text
     assert training["exam_date"] == before["exam_date"]
     assert training["date_end"] == before["date_end"]

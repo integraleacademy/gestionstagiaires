@@ -1,6 +1,6 @@
-"""AFC APS + SSIAP calendars and individual enrolment dates.
+"""One AFC training period, two exam dates and individual enrolment dates.
 
-Legacy AFC sessions are recognised without guessing their component dates.
+APS and SSIAP 1 are included in the same overall AFC training period.
 All projections are copies: generating one trainee's documents must never
 change the shared session or another trainee's dates.
 """
@@ -11,13 +11,10 @@ import re
 
 
 SESSION_DATES = {
-    "afc_aps_start": "Début APS",
-    "afc_aps_end": "Fin APS",
     "exam_date": "Examen APS",
-    "afc_ssiap_start": "Début SSIAP 1",
-    "afc_ssiap_end": "Fin SSIAP 1",
     "ssiap_exam_date": "Examen SSIAP 1",
 }
+PERIOD_DATES = {"date_start": "Début de formation", "date_end": "Fin de formation"}
 TRAINEE_DATES = {
     "training_date_start": "Début de formation du stagiaire",
     "training_date_end": "Fin de formation du stagiaire",
@@ -59,24 +56,12 @@ def session_update(training, payload):
     merged = {**training, **payload, **result}
     if not enabled(merged):
         return result
-    for key, label in {**SESSION_DATES, "date_start": "Début de session", "date_end": "Fin de session"}.items():
+    for key, label in {**SESSION_DATES, **PERIOD_DATES}.items():
         if key in payload:
             result[key] = date(payload[key], label)
     merged.update(result)
-    for prefix, label, exam in (("afc_aps", "APS", "exam_date"), ("afc_ssiap", "SSIAP 1", "ssiap_exam_date")):
-        start, end = merged.get(prefix + "_start", ""), merged.get(prefix + "_end", "")
-        _ordered(start, end, label)
-        if merged.get(exam) and (end or start) and merged[exam] < (end or start):
-            raise ValueError(f"L’examen {label} ne peut pas précéder la fin de cette formation.")
-    # Global dates remain editable (e.g. additional AFC workshops). Derive
-    # them from component dates only when no global period has been supplied.
-    for key, candidates, operation in (
-        ("date_start", ("afc_aps_start", "afc_ssiap_start"), min),
-        ("date_end", ("afc_aps_end", "afc_ssiap_end"), max),
-    ):
-        values = [merged.get(k) for k in candidates if merged.get(k)]
-        if not merged.get(key) and values:
-            result[key] = merged[key] = operation(values)
+    # Exams can occur during the overall AFC period. Retired component
+    # dates, if present on older records, never constrain this calendar.
     _ordered(merged.get("date_start"), merged.get("date_end"), "Session AFC")
     return result
 
@@ -109,17 +94,16 @@ def effective_session(training, trainee):
 def document_context(training, trainee, fr_date, *, strict=False):
     if not enabled(training):
         return {}
+    effective = effective_session(training, trainee)
     if strict:
-        missing = [label for key, label in SESSION_DATES.items() if not training.get(key)]
+        required = {**PERIOD_DATES, **SESSION_DATES}
+        missing = [label for key, label in required.items() if not effective.get(key)]
         if missing:
             raise ValueError("Complétez le calendrier AFC dans la session : " + ", ".join(missing) + ".")
-        session_update(training, {key: training.get(key) for key in SESSION_DATES})
+        session_update(effective, {key: effective.get(key) for key in required})
         trainee_update(training, trainee, {key: trainee.get(key, "") for key in TRAINEE_DATES})
-    effective = effective_session(training, trainee)
     def period(start, end):
         return f"du {fr_date(start)} au {fr_date(end)}" if start and end else "À renseigner"
-    aps = period(training.get("afc_aps_start"), training.get("afc_aps_end"))
-    ssiap = period(training.get("afc_ssiap_start"), training.get("afc_ssiap_end"))
     aps_exam = fr_date(training.get("exam_date") or "") or "À renseigner"
     ssiap_exam = fr_date(training.get("ssiap_exam_date") or "") or "À renseigner"
     return {
@@ -129,9 +113,8 @@ def document_context(training, trainee, fr_date, *, strict=False):
         "date_debut": fr_date(effective["date_start"]), "date_fin": fr_date(effective["date_end"]),
         "date_convocation": fr_date(effective["date_start"]),
         "periode_formation": period(effective["date_start"], effective["date_end"]),
-        "periode_aps": aps, "periode_ssiap": ssiap,
         "date_examen_aps": aps_exam, "date_examen_ssiap": ssiap_exam,
-        "detail_parcours": f"APS : {aps}\nExamen APS : {aps_exam}\nSSIAP 1 : {ssiap}\nExamen SSIAP 1 : {ssiap_exam}",
+        "detail_parcours": f"Parcours AFC : APS + SSIAP 1\nExamen APS : {aps_exam}\nExamen SSIAP 1 : {ssiap_exam}",
     }
 
 

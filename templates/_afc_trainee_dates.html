@@ -12,8 +12,8 @@
     <div id="afcIndividualFeedback" class="afc-individual__feedback" role="status" aria-live="polite"></div>
   </form>
   <div class="afc-calendar__grid">
-    <div><strong>APS</strong><p>{{ session.afc_aps_start|frdate or 'À renseigner' }} → {{ session.afc_aps_end|frdate or 'À renseigner' }}<br>Examen : {{ session.exam_date|frdate or 'À renseigner' }}</p></div>
-    <div><strong>SSIAP 1</strong><p>{{ session.afc_ssiap_start|frdate or 'À renseigner' }} → {{ session.afc_ssiap_end|frdate or 'À renseigner' }}<br>Examen : {{ session.ssiap_exam_date|frdate or 'À renseigner' }}</p></div>
+    <div><strong>Examen APS</strong><p>{{ session.exam_date|frdate or 'À renseigner' }}</p></div>
+    <div><strong>Examen SSIAP 1</strong><p>{{ session.ssiap_exam_date|frdate or 'À renseigner' }}</p></div>
   </div>
   {% if (trainee.afc_dates_changed_at or session.afc_dates_changed_at) and (trainee.convocation_aps_pdf_path or trainee.convention_aps_pdf_path or trainee.convention_status in ['signed', 'signing']) %}
   <p>Les dates ont été modifiées. Les nouveaux aperçus utilisent ce calendrier. Les documents déjà transmis ou signés sont conservés : vérifiez-les avant de générer une nouvelle convention ou de renvoyer la convocation.</p>

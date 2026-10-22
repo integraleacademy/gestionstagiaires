@@ -5,18 +5,14 @@
   </span>
 </label>
 <div id="{{ prefix }}AfcCalendar" class="afc-calendar" style="grid-column:1/-1;display:none;">
-  <div class="afc-calendar__intro"><strong>Calendrier des deux formations</strong><p>La période globale de la session reste le calendrier par défaut. Les dates de chaque stagiaire peuvent être personnalisées dans sa fiche.</p></div>
+  <div class="afc-calendar__intro"><strong>Examens du parcours AFC</strong><p>APS et SSIAP 1 sont compris dans les mêmes dates de début et de fin de formation, indiquées ci-dessous. Les dates de chaque stagiaire peuvent être personnalisées dans sa fiche.</p></div>
   <div class="afc-calendar__grid">
     <fieldset class="afc-calendar__course">
       <legend>APS</legend>
-      <label>Début APS<input id="{{ prefix }}AfcApsStart" type="date"></label>
-      <label>Fin APS<input id="{{ prefix }}AfcApsEnd" type="date"></label>
       <label>Examen APS<input id="{{ prefix }}AfcApsExam" type="date"></label>
     </fieldset>
     <fieldset class="afc-calendar__course afc-calendar__course--ssiap">
       <legend>SSIAP 1</legend>
-      <label>Début SSIAP 1<input id="{{ prefix }}AfcSsiapStart" type="date"></label>
-      <label>Fin SSIAP 1<input id="{{ prefix }}AfcSsiapEnd" type="date"></label>
       <label>Examen SSIAP 1<input id="{{ prefix }}AfcSsiapExam" type="date"></label>
     </fieldset>
   </div>

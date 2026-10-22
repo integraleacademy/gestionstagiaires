@@ -26238,7 +26238,7 @@ def _compute_aps_period_dates(date_start: str, presentiel_start: str = "") -> Di
 
 
 def _sync_aps_period_dates(session_obj: Dict[str, Any]) -> None:
-    # AFC has two independently scheduled courses. Never infer an APS exam
+    # AFC has one training period and two separate exams. Never infer an APS exam
     # from the end of the full AFC session or overwrite its global period.
     if afc_schedule.enabled(session_obj):
         return

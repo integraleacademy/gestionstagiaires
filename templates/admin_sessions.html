@@ -931,9 +931,7 @@
         <strong>{{ s.date_start|frdate }} → {{ s.date_end|frdate }}</strong>
       </div>
       {% if s.afc_enabled %}
-      <div class="session-date-row"><span class="session-date-row__icon session-date-row__icon--text" aria-hidden="true">APS</span><span class="session-date-row__label">Formation APS</span><strong>{{ s.afc_aps_start|frdate or 'À renseigner' }} → {{ s.afc_aps_end|frdate or 'À renseigner' }}</strong></div>
       <div class="session-date-row"><span class="session-date-row__icon session-date-row__icon--text" aria-hidden="true">EX</span><span class="session-date-row__label">Examen APS</span><strong>{{ s.exam_date|frdate or 'À renseigner' }}</strong></div>
-      <div class="session-date-row"><span class="session-date-row__icon session-date-row__icon--text" aria-hidden="true">🔥</span><span class="session-date-row__label">Formation SSIAP 1</span><strong>{{ s.afc_ssiap_start|frdate or 'À renseigner' }} → {{ s.afc_ssiap_end|frdate or 'À renseigner' }}</strong></div>
       <div class="session-date-row"><span class="session-date-row__icon session-date-row__icon--text" aria-hidden="true">EX</span><span class="session-date-row__label">Examen SSIAP 1</span><strong>{{ s.ssiap_exam_date|frdate or 'À renseigner' }}</strong></div>
       {% else %}
       {% if is_aps %}
@@ -1053,7 +1051,7 @@
       <a class="btn session-action session-action--primary" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">👥 Voir les stagiaires</a>
       {% if not is_read_only %}
         {% if (s.training_type or '').upper().startswith('SSIAP') %}<a class="btn btn-outline session-action" href="{{ url_for('admin_ssiap_pathways',session_id=s.id) }}">Parcours SSIAP / SST</a>{% endif %}
-        <button class="btn btn-outline session-action" data-afc-enabled="{{ '1' if s.afc_enabled else '0' }}" data-afc-aps-start="{{ s.afc_aps_start }}" data-afc-aps-end="{{ s.afc_aps_end }}" data-afc-ssiap-start="{{ s.afc_ssiap_start }}" data-afc-ssiap-end="{{ s.afc_ssiap_end }}" data-ssiap-exam-date="{{ s.ssiap_exam_date }}" data-edit-session="{{ s.id }}" data-training-type="{{ s.training_type }}" data-date-start="{{ s.date_start }}" data-date-end="{{ s.date_end }}" data-exam-date="{{ s.exam_date }}" data-exam-theory-date="{{ s.exam_theory_date }}" data-exam-practice-date="{{ s.exam_practice_date }}" data-practice-training-date="{{ s.practice_training_date }}" data-aps-remote-start="{{ s.aps_remote_start }}" data-aps-remote-end="{{ s.aps_remote_end }}" data-aps-in-person-start="{{ s.aps_in_person_start }}" data-aps-in-person-end="{{ s.aps_in_person_end }}" data-dirigeant-remote-start="{{ s.dirigeant_remote_start }}" data-dirigeant-remote-end="{{ s.dirigeant_remote_end }}" data-dirigeant-in-person-start="{{ s.dirigeant_in_person_start }}" data-dirigeant-in-person-end="{{ s.dirigeant_in_person_end }}" data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">✏️ Modifier</button>
+        <button class="btn btn-outline session-action" data-afc-enabled="{{ '1' if s.afc_enabled else '0' }}" data-ssiap-exam-date="{{ s.ssiap_exam_date }}" data-edit-session="{{ s.id }}" data-training-type="{{ s.training_type }}" data-date-start="{{ s.date_start }}" data-date-end="{{ s.date_end }}" data-exam-date="{{ s.exam_date }}" data-exam-theory-date="{{ s.exam_theory_date }}" data-exam-practice-date="{{ s.exam_practice_date }}" data-practice-training-date="{{ s.practice_training_date }}" data-aps-remote-start="{{ s.aps_remote_start }}" data-aps-remote-end="{{ s.aps_remote_end }}" data-aps-in-person-start="{{ s.aps_in_person_start }}" data-aps-in-person-end="{{ s.aps_in_person_end }}" data-dirigeant-remote-start="{{ s.dirigeant_remote_start }}" data-dirigeant-remote-end="{{ s.dirigeant_remote_end }}" data-dirigeant-in-person-start="{{ s.dirigeant_in_person_start }}" data-dirigeant-in-person-end="{{ s.dirigeant_in_person_end }}" data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">✏️ Modifier</button>
         <button class="btn btn-outline session-action" data-archive-session="{{ s.id }}">📦 Archiver</button>
         <button class="btn btn-danger session-action session-action--danger" data-delete-session="{{ s.id }}">🗑️ Supprimer</button>
       {% endif %}
@@ -2221,8 +2219,7 @@
     const enabled = isAfcForm(prefix);
     if(!enabled) return {afc_enabled:false};
     const value = suffix => document.getElementById(`${prefix}Afc${suffix}`)?.value || "";
-    return {afc_enabled:true, afc_aps_start:value("ApsStart"), afc_aps_end:value("ApsEnd"),
-      exam_date:value("ApsExam"), afc_ssiap_start:value("SsiapStart"), afc_ssiap_end:value("SsiapEnd"), ssiap_exam_date:value("SsiapExam")};
+    return {afc_enabled:true, exam_date:value("ApsExam"), ssiap_exam_date:value("SsiapExam")};
   }
 
   function toggleAfcFields(prefix, type){
@@ -2448,7 +2445,7 @@
       document.getElementById("editDirigeantInPersonEnd").value = btn.getAttribute("data-dirigeant-in-person-end") || "";
 
       document.getElementById("editAfcEnabled").checked = btn.dataset.afcEnabled === "1";
-      for(const [suffix, key] of Object.entries({ApsStart:"afcApsStart", ApsEnd:"afcApsEnd", ApsExam:"examDate", SsiapStart:"afcSsiapStart", SsiapEnd:"afcSsiapEnd", SsiapExam:"ssiapExamDate"})){
+      for(const [suffix, key] of Object.entries({ApsExam:"examDate", SsiapExam:"ssiapExamDate"})){
         document.getElementById(`editAfc${suffix}`).value = btn.dataset[key] || "";
       }
       refreshApsPeriodPreview("edit");
