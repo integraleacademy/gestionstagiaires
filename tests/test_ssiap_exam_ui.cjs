@@ -55,13 +55,33 @@ function setup() {
     setTimeout:() => 1, clearTimeout:() => {}, console
   });
   const settle = () => new Promise(resolve => setImmediate(resolve));
-  return {get, sent, settle, async preview(kind) {
+  return {get, sent, settle, data, async preview(kind) {
     const button = new Element(); button.dataset.previewKind = kind;
     await get('ssiapExamDialog').emit('click',{target:button,preventDefault(){}});
     await settle();
     return get('ssiapExamMailFrame');
   }};
 }
+
+test('jury history explains attempts and renders provider errors as text', async () => {
+  const ui = setup();
+  ui.data.history = [
+    {status:'failed',source:'automatic_j7',attempt_number:1,retryable:false,status_code:400,
+     error:'Invalid <img src=x onerror=alert(1)>',to:'jury@example.test',subject:'Rappel'},
+    {status:'failed',source:'automatic_j7',attempt_number:3,to:'jury@example.test',subject:'Ancien rappel'},
+    {status:'unknown',error:'Timeout',to:'jury@example.test',subject:'À vérifier'}
+  ];
+  await ui.get('btnSsiapExam').emit('click'); await ui.settle();
+  const history = ui.get('ssiapExamMailHistory').innerHTML;
+  assert.match(history, /tentative 1\/3/);
+  assert.match(history, /HTTP 400/);
+  assert.match(history, /Invalid &lt;img/);
+  assert.doesNotMatch(history, /<img/);
+  assert.match(history, /Motif non conservé pour cet ancien envoi/);
+  assert.match(history, /Aucune nouvelle tentative automatique/);
+  assert.match(history, /Vérifiez la réception avant de réessayer/);
+  assert.equal(ui.sent.length, 0);
+});
 
 test('PDF primary actions open inline in a new tab; separate links download', async () => {
   const ui = setup();
@@ -101,3 +121,4 @@ test('reminder reopens with a fresh frame, resets scroll and retains the send lo
   await ui.get('ssiapExamMailTextToggle').emit('click');
   assert.equal(ui.get('ssiapExamSend').disabled, true);
 });
+

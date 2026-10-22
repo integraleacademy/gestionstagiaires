@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 from flask import abort, jsonify, request, session, send_file, url_for
 from itsdangerous import URLSafeTimedSerializer, BadSignature
+from ssiap_exam_mail import delivery_outcome
 
 DEFAULTS = {
     "level": "SSIAP 1", "date": "", "time": "", "end_time": "", "arrival_time": "",
@@ -457,16 +458,20 @@ def register(app, services):
             sent = services.brevo_send_email(content["to"], content["subject"], content["html"], text_content=content["text"],
                 metadata={"purpose": "ssiap_exam_" + token["kind"], "session_id": session_id},
                 reply_to=content["reply_to"])
-            ok = sent.get("ok") is True if isinstance(sent, dict) else sent is True
-            message_id = str(sent.get("message_id") or "") if isinstance(sent, dict) else ""
         except Exception:
             app.logger.exception("SSIAP jury email delivery failed")
-            ok, message_id = False, ""
+            sent = {'ok': False, 'error': 'Erreur technique pendant l’envoi. Réception à vérifier avant toute nouvelle tentative.'}
+        outcome = delivery_outcome(sent)
+        ok = outcome['status'] == 'sent'
+        if not ok:
+            app.logger.warning('SSIAP_JURY_MAIL_FAILED session=%s attempt=%s status=%s http=%s error=%s',
+                session_id, token['nonce'], outcome['status'], outcome['status_code'], outcome['error'])
         def finish(data):
             training = get_training(data, session_id)
             for entry in state(training).get("mail_history", []):
                 if entry.get("id") == token["nonce"]:
-                    entry.update(status="sent" if ok else "failed", finished_at=services._now_iso(), message_id=message_id)
+                    entry.update(outcome, finished_at=services._now_iso())
             return {}
         services._atomic_update_data(finish)
-        return jsonify(ok=ok, error="" if ok else "L’envoi n’a pas été confirmé par le service mail. Consultez l’historique avant de réessayer."), 200 if ok else 502
+        return jsonify(ok=ok, error=outcome['error']), 200 if ok else 502
+
