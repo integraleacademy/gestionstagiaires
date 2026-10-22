@@ -113,6 +113,7 @@ from cpf_tracking import build_cpf_view, has_cpf_financing, has_generated_cpf_in
 from vtc_cpf_guidance import build_confirmation_content
 import vtc_elearning_activation
 import trainee_elearning_reporting
+from elearning_native import aps_enrolments
 from partner_postgres import (
     PartnerPostgresDuplicateEmail,
     PartnerPostgresError,
@@ -34045,7 +34046,7 @@ def public_trainee_space(token):
     show_professional_experience_sheet = _professional_experience_sheet_is_required(training_type, _session_get(s, "date_start", ""))
     show_vtc = ("VTC" in (training_type or "").upper())
     is_aps_training = (training_type or "").strip().upper().startswith("APS")
-    display_session = vtc_elearning_activation.learner_session(s, t)
+    display_session = aps_enrolments.learner_session(vtc_elearning_activation.learner_session(s, t))
     has_native_elearning = bool(display_session.get("aps_native_modules") or display_session.get("aps_native_course_id"))
     aps_elearning_enabled = (is_aps_training or (show_vtc and has_native_elearning)) and bool(display_session.get("aps_elearning_enabled"))
     aps_elearning_start_date = _session_start_date(display_session) if aps_elearning_enabled else None
@@ -39976,7 +39977,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     # ✅ deliverables
     t.setdefault("deliverables", {})
     _private_documents(t)
-    if _is_aps_elearning_session(s):
+    if _is_aps_elearning_session(s) and not aps_enrolments.is_native_aps_session(s):
         _aps_elearning_tracking(t)
         _aps_elearning_signature_state(t)
 
@@ -40035,7 +40036,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     if not t["registration_cancelled"]:
         _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
     aps_elearning_progress = None
-    if _is_aps_elearning_session(s):
+    if _is_aps_elearning_session(s) and not aps_enrolments.is_native_aps_session(s):
         if not t["registration_cancelled"]:
             _refresh_yousign_aps_elearning_status_if_pending(data, s, trainees, t)
         aps_tracking = _aps_elearning_tracking(t)

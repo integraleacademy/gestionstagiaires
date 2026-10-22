@@ -53,6 +53,7 @@ from .production_ai import ProductionAIService, ProductionAIError, build_course_
 from .assessment import describe_history
 from .vtc_adaptive import select_activity as select_vtc_activity
 from .vtc_enrolments import effective_learner_session
+from . import aps_enrolments
 from .vtc_productions import public_production as public_vtc_production
 from .vtc_production_work import VtcWrittenWork, WrittenWorkError, is_vtc_production
 from . import vtc_ai
@@ -1298,8 +1299,11 @@ def create_native_elearning_blueprint(
         session_obj = find_session(load_data(), session_id)
         if not session_obj or not _is_aps_training(session_obj):
             abort(404)
+        session_obj = aps_enrolments.learner_session(session_obj)
         modules = load_path(session_obj)
-        outlines = {(course["id"], course["version"]): course_outline(course) for course in catalog().list_courses() if not course.get("preview_only")}
+        # A fixed session only needs its assigned courses, not the full library.
+        courses = [] if session_obj.get('aps_native_automatic') else catalog().list_courses()
+        outlines = {(course["id"], course["version"]): course_outline(course) for course in courses if not course.get("preview_only")}
         for item in modules:
             if item["outline"]:
                 outline = item["outline"]
@@ -1311,7 +1315,7 @@ def create_native_elearning_blueprint(
                 "catalog": list(outlines.values()), "modules": assigned_modules(session_obj),
                 "revision": path_revision(session_obj), "csrfToken": _csrf_token(),
                 "saveUrl": url_for("native_elearning.admin_save_path", session_id=session_id),
-                "readOnly": session.get("admin_role") == "viewer",
+                "readOnly": session.get("admin_role") == "viewer" or bool(session_obj.get('aps_native_automatic')),
             },
         )
 
@@ -1327,6 +1331,8 @@ def create_native_elearning_blueprint(
         session_obj = find_session(data, session_id)
         if not session_obj or not _is_aps_training(session_obj):
             abort(404)
+        if aps_enrolments.is_native_aps_session(session_obj):
+            return jsonify({"ok": False, "error": "Cette session utilise automatiquement le parcours APS complet."}), 409
         if payload.get("revision") != path_revision(session_obj):
             return jsonify({"ok": False, "error": "Ce parcours a été modifié dans une autre fenêtre. Rechargez la page avant de l’enregistrer."}), 409
         title = payload.get("title", "")
@@ -1340,6 +1346,8 @@ def create_native_elearning_blueprint(
             target = find_session(canonical, session_id)
             if not target or not _is_aps_training(target):
                 abort(404)
+            if aps_enrolments.is_native_aps_session(target):
+                raise Conflict("Cette session utilise automatiquement le parcours APS complet.")
             # Recheck under the application's canonical storage lock, not just
             # against the earlier request snapshot. Only this session changes.
             if payload.get("revision") != path_revision(target):
