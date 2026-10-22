@@ -279,7 +279,7 @@ class PublicTraineeLoginTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Documents de formation", body)
         self.assertIn("/espace/PUBLIC-TOKEN/download/convention-vtc.pdf", body)
-        self.assertIn("/espace/PUBLIC-TOKEN/download/convocation-vtc.pdf", body)
+        self.assertIn("/espace/PUBLIC-TOKEN/convocation.pdf", body)
 
     def test_unsigned_convention_token_belongs_to_trainee(self):
         trainee = {"convention_signature": {"unsigned_pdf_token": "convention.pdf"}}
