@@ -205,10 +205,12 @@ def remember_jury(data, members, now, previous=()):
 
 def mail_status(training, member):
     result = {}
+    current_date = settings(training)['date']
     for kind in ("invitation", "reminder"):
         entries = [entry for entry in state(training).get("mail_history", [])
                    if entry.get("kind") == kind and entry.get("jury_id") == member.get("id")
-                   and entry.get('exam_date', settings(training)['date']) == settings(training)['date']
+                   and current_date and (entry.get('exam_date') == current_date or
+                       (not entry.get('exam_date') and frdate(current_date) in str(entry.get('subject') or '')))
                    and entry.get("to", "").casefold() == member.get("email", "").casefold()]
         latest = entries[-1] if entries else {}
         successful = [entry for entry in entries if entry.get("status") == "sent"]

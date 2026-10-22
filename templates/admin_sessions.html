@@ -671,6 +671,23 @@
   .trainee-session-result:hover,.trainee-session-result:focus{outline:0;background:#eff6ff;color:#1d4ed8;}
   .trainee-session-search__status{margin-top:7px;color:#64748b;font-size:12px;font-weight:750;}
 
+  .session-jury{margin-top:12px;padding:11px 12px;border:1px solid #dbe4ef;border-radius:12px;background:#f8fafc;}
+  .session-jury__header{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:#334155;}
+  .session-jury__count{color:#64748b;font-size:11px;white-space:nowrap;}
+  .session-jury__members{list-style:none;margin:8px 0 0;padding:0;}
+  .session-jury__member{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;padding:7px 0;}
+  .session-jury__member + .session-jury__member{border-top:1px solid #e2e8f0;}
+  .session-jury__identity{flex:1 1 140px;min-width:0;font-size:12px;font-weight:800;color:#0f172a;overflow-wrap:anywhere;}
+  .session-jury__role{display:block;color:#64748b;font-size:10px;font-weight:600;}
+  .session-jury__badges{display:flex;flex-wrap:wrap;gap:5px;}
+  .session-jury__badge{display:inline-flex;align-items:center;gap:4px;padding:4px 6px;border-radius:6px;background:#e2e8f0;color:#475569;font-size:10.5px;font-weight:700;}
+  .session-jury__badge:focus-visible{outline:2px solid #2563eb;outline-offset:2px;}
+  .session-jury__badge--sent{background:#dcfce7;color:#166534;}
+  .session-jury__badge--scheduled,.session-jury__badge--sending{background:#e0f2fe;color:#075985;}
+  .session-jury__badge--failed{background:#fee2e2;color:#991b1b;}
+  .session-jury__badge--unknown,.session-jury__badge--incomplete{background:#fef3c7;color:#92400e;}
+  .session-jury__empty{margin:7px 0 0;color:#64748b;font-size:12px;}
+
   @media (min-width: 861px){
     body.endpoint-admin-sessions .dashboard-grid{gap:8px;margin-top:10px;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));}
     body.endpoint-admin-sessions .dashboard-total-card{margin-top:10px;padding:13px 15px;border-radius:14px;}
@@ -950,6 +967,35 @@
       </div>
       {% endif %}
     </div>
+
+    {% if s.exam_jury is defined and s.exam_jury is not none %}
+    <section class="session-jury" aria-label="Organisation et jury">
+      <div class="session-jury__header">
+        <strong>Organisation et jury</strong>
+        {% if s.exam_jury.members %}<span class="session-jury__count">{{ s.exam_jury.members|length }} membre{{ 's' if s.exam_jury.members|length > 1 else '' }}</span>{% endif %}
+      </div>
+      {% if s.exam_jury.members %}
+      <ul class="session-jury__members">
+        {% for member in s.exam_jury.members %}
+        <li class="session-jury__member">
+          <div class="session-jury__identity">{{ member.name }}{% if member.president %}<span class="session-jury__role">Président du jury</span>{% endif %}</div>
+          <div class="session-jury__badges">
+            {% if member.email_missing %}
+            <span class="session-jury__badge session-jury__badge--incomplete">⚠️ E-mail à renseigner</span>
+            {% else %}
+              {% for badge in member.badges %}
+              <span class="session-jury__badge session-jury__badge--{{ badge.state }}" title="{{ badge.detail }}" aria-label="{{ badge.detail }}" tabindex="0"><span aria-hidden="true">{{ badge.icon }}</span>{{ badge.label }}</span>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="session-jury__empty">Jury à renseigner</p>
+      {% endif %}
+    </section>
+    {% endif %}
 
     {% if s.show_cash_payment_alert %}
     <div class="session-alert">
