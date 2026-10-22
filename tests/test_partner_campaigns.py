@@ -317,3 +317,74 @@ def test_bulk_selection_respects_search_import_and_contact_exclusions(setup):
     cid3=create(setup,request_key='c'*32,selection='selected',contact_id=['scope-4','other-batch','other-centre'],**scope)
     assert client.get('/admin/partners/campaigns/'+cid3+'/status').json['total']==1
     assert not mails
+
+
+def test_manuals_model_has_separate_settings_and_preserves_legacy_campaign(setup):
+    client,token,mails=setup
+    contacts=seed(setup)
+    # Existing snapshots have no model field and must remain e-learning emails.
+    with outreach.db(host,True) as conn:
+        conn.execute('INSERT INTO outreach_campaigns (id,name,template,created_at,request_key) VALUES (?,?,?,?,?)',
+            ('legacy','Campagne existante',json.dumps(outreach.DEFAULT_TEMPLATE),outreach.now(),'legacy-request'))
+    learning={**outreach.DEFAULT_TEMPLATE,'subject':'Notre offre e-learning personnalisée'}
+    client.post('/admin/partners/campaigns/template',data={'csrf_token':token,**learning})
+    manual={**outreach.MANUALS_TEMPLATE,'model':'manuals','intro':'Des manuels pour <notre centre>.'}
+    saved=client.post('/admin/partners/campaigns/template',data={'csrf_token':token,**manual})
+    assert saved.status_code==303 and parse_qs(urlsplit(saved.location).query)['model']==['manuals']
+    with outreach.db(host) as conn:
+        assert outreach.saved_template(conn)['subject']==learning['subject']
+        assert outreach.saved_template(conn,'manuals')['intro']==manual['intro']
+    preview=client.get('/admin/partners/campaigns/preview?model=manuals')
+    assert preview.status_code==200 and 'Des manuels pour &lt;notre centre&gt;.' in preview.text
+    assert 'https://integraleconnect.com/manuels' in preview.text and 'clement-memoji.png' in preview.text
+    assert '/static/manuals/aps.jpg' in preview.text and '50 à 99' in preview.text
+    assert 'PARCOURS APS' not in preview.text
+    legacy=client.get('/admin/partners/campaigns/preview?campaign=legacy')
+    assert 'PARCOURS APS' in legacy.text and 'Des manuels pour' not in legacy.text
+    assert not mails
+    assert client.get('/admin/partners/campaigns/preview?model=unknown').status_code==400
+    assert client.post('/admin/partners/campaigns/create',data={'csrf_token':token,'model':'unknown','request_key':'d'*32}).status_code==400
+
+
+def test_manuals_campaign_snapshots_prices_and_sends_the_selected_model(setup,monkeypatch):
+    client,token,mails=setup
+    seed(setup)
+    cid=create(setup,model='manuals')
+    base='/admin/partners/campaigns/'+cid
+    snapshot=client.get(base+'/status').json
+    assert snapshot['template']['kind']=='manuals' and snapshot['template']['books'][0]['price']==2000
+    assert snapshot['name']=='Présentation des manuels de formation'
+    # The shop catalogue and the editable text may change after a campaign is prepared.
+    monkeypatch.setattr(outreach,'CATALOGUE',tuple({**book,'price':9700,'bulk_price':9500} for book in outreach.CATALOGUE))
+    client.post('/admin/partners/campaigns/template',data={'csrf_token':token,'model':'manuals',**outreach.MANUALS_TEMPLATE,'subject':'Nouveau modèle'})
+    current=client.get('/admin/partners/campaigns/preview?model=manuals')
+    assert '>97 €<' in current.text
+    frozen=client.get('/admin/partners/campaigns/preview?campaign='+cid)
+    assert '>20 €<' in frozen.text and '>97 €<' not in frozen.text
+    assert not mails
+    client.post(base+'/start',data={'csrf_token':token,'confirm':'yes'})
+    for _ in range(3):client.post(base+'/next',data={'csrf_token':token})
+    assert len(mails)==2 and mails[0][0][1]==outreach.MANUALS_TEMPLATE['subject']
+    assert mails[0][1]['metadata']['kind']=='manuals_campaign'
+    assert len(mails[0][1]['metadata']['idempotency_key'])==36
+    assert '>20 €<' in mails[0][0][2] and '>97 €<' not in mails[0][0][2]
+    assert '/communications/desinscription/' in mails[0][0][2]
+    assert 'APS : 20 € TTC de 50 à 99 exemplaires ; 18 € TTC dès 100 exemplaires.' in mails[0][1]['text_content']
+    assert 'MANUELS DE FORMATION' in mails[0][1]['text_content'] and 'e-learning' not in mails[0][1]['text_content']
+
+
+def test_manuals_editor_keeps_model_through_import_and_preview(setup):
+    client,token,mails=setup
+    page=client.get('/admin/partners?tab=campaigns&model=manuals')
+    assert page.status_code==200 and 'value="Présentation des manuels de formation"' in page.text
+    assert 'name="aps_price"' not in page.text
+    assert 'Aperçu du modèle Manuels de formation' in page.text
+    assert 'campaigns/preview?model=manuals' in page.text
+    imported=client.post('/admin/partners/campaigns/import',data={'csrf_token':token,'model':'manuals','contacts_text':'centre@example.test'})
+    query=parse_qs(urlsplit(imported.location).query)
+    assert query['model']==['manuals']
+    confirmed=client.post('/admin/partners/campaigns/import/'+query['import'][0]+'/confirm',data={'csrf_token':token,'model':'manuals'})
+    assert parse_qs(urlsplit(confirmed.location).query)['model']==['manuals']
+    preview=client.post('/admin/partners/campaigns/preview',data={'csrf_token':token,'model':'manuals',**outreach.MANUALS_TEMPLATE})
+    assert preview.status_code==200 and 'Découvrir les manuels' in preview.text
+    assert not mails

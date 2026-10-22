@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ offer.subject }}</title>
+  <style>
+    @media screen and (max-width:600px){
+      .email-pad{padding-left:24px!important;padding-right:24px!important}
+      .email-title{font-size:37px!important;line-height:43px!important}
+      .email-wrap{width:100%!important}
+      .book-cell{padding-left:5px!important;padding-right:5px!important}
+      .book-label{font-size:12px!important}
+      .signature-avatar{display:block!important;width:100%!important;padding:0 0 18px!important}
+      .signature-copy{display:block!important;width:100%!important}
+    }
+    @media screen and (max-width:360px){.email-pad{padding-left:18px!important;padding-right:18px!important}}
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#edf2f4;color:#15243b;font-family:Arial,Helvetica,sans-serif">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">APS, A3P, SSIAP, SST… 15 manuels illustrés, votre logo et la livraison inclus. Dès 50 exemplaires par titre.</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#edf2f4">
+<tr><td align="center" style="padding:28px 10px">
+<table role="presentation" class="email-wrap" width="640" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border-radius:20px;overflow:hidden">
+  {% if test %}<tr><td style="padding:12px 24px;background:#fff4d6;text-align:center;font-size:12px;color:#795a17">APERÇU DE TEST · Aucun envoi à votre liste de contacts</td></tr>{% endif %}
+  <tr><td><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td width="20%" bgcolor="#1789ae" style="height:5px;font-size:1px;line-height:5px">&nbsp;</td><td width="20%" bgcolor="#ef4c48" style="font-size:1px;line-height:5px">&nbsp;</td><td width="20%" bgcolor="#cb700e" style="font-size:1px;line-height:5px">&nbsp;</td><td width="20%" bgcolor="#7951a8" style="font-size:1px;line-height:5px">&nbsp;</td><td width="20%" bgcolor="#27835b" style="font-size:1px;line-height:5px">&nbsp;</td></tr></table></td></tr>
+  <tr><td class="email-pad" style="padding:30px 40px 24px;background:#0b192f">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td width="68"><img src="{{ base }}/static/logo-integrale.png" alt="Intégrale Academy" width="54" style="display:block;width:54px;height:auto;border:0"></td><td style="color:#e5ecf4;font-size:13px;letter-spacing:2px;font-weight:700">INTÉGRALE ACADEMY<br><span style="color:#a0d5c7;font-size:10px;line-height:22px;letter-spacing:2px">COLLECTION FORMATION</span></td></tr></table>
+  </td></tr>
+  <tr><td class="email-pad" style="padding:6px 40px 30px;background:#0b192f">
+    <p style="margin:0 0 18px;color:#a0d5c7;font-size:11px;line-height:18px;letter-spacing:1.4px;font-weight:700">POUR LES CENTRES DE FORMATION</p>
+    <h1 class="email-title" style="margin:0;color:#ffffff;font-size:48px;line-height:55px;letter-spacing:-1.2px">Des manuels<br><span style="color:#a0d5c7;font-family:Georgia,serif;font-style:italic;font-weight:400">à votre image.</span></h1>
+    <p style="margin:20px 0 0;color:#d6dfeb;font-size:16px;line-height:26px">APS, A3P, SSIAP… Donnez à vos stagiaires<br>un support qu’ils auront envie de garder.</p>
+  </td></tr>
+  <tr><td class="email-pad" style="padding:0 32px 28px;background:#0b192f">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="table-layout:fixed"><tr>
+      {% for book in featured %}<td class="book-cell" width="33.33%" align="center" valign="bottom" style="padding:0 8px">
+        <a href="{{ catalogue_url }}/{{ book.code }}" style="text-decoration:none"><img src="{{ base }}/static/manuals/{{ book.code }}.jpg" alt="Couverture du manuel {{ book.name }}" width="170" style="display:block;width:100%;max-width:170px;height:auto;border:0"></a>
+        <p class="book-label" style="margin:14px 0 0;padding-top:12px;border-top:3px solid {{ book.color }};color:#ffffff;font-size:14px;font-weight:700;line-height:20px">{{ book.name }}</p>
+      </td>{% endfor %}
+    </tr></table>
+  </td></tr>
+  <tr><td class="email-pad" style="padding:18px 40px;background:#a0d5c7;color:#153a35;text-align:center;font-size:14px;line-height:23px;font-weight:700">Votre logo sur la couverture. La livraison incluse.</td></tr>
+  <tr><td class="email-pad" style="padding:32px 40px 26px">
+    <p style="margin:0 0 14px;font-size:16px;line-height:25px">Bonjour{% if contact and contact.centre %} à l’équipe de <strong>{{ contact.centre }}</strong>{% endif %},</p>
+    <p style="margin:0;color:#536176;font-size:16px;line-height:27px;white-space:pre-line">{{ offer.intro }}</p>
+  </td></tr>
+  <tr><td class="email-pad" style="padding:0 40px 28px">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f7f8;border-radius:14px"><tr><td style="padding:23px 24px">
+      <p style="margin:0 0 9px;color:#173c36;font-size:17px;font-weight:700;line-height:24px">Un support qui travaille avec vous.</p>
+      <p style="margin:0;color:#536176;font-size:14px;line-height:24px">Des illustrations pour comprendre. Des situations métier pour faire le lien avec le terrain. Un livre à annoter pendant les cours et à retrouver au moment des révisions.</p>
+    </td></tr></table>
+  </td></tr>
+  <tr><td class="email-pad" style="padding:4px 40px 30px">
+    <p style="margin:0 0 8px;color:#318574;font-size:10px;letter-spacing:2px;font-weight:700">VOS PROCHAINES SESSIONS</p>
+    <h2 style="margin:0 0 12px;font-size:26px;line-height:33px;letter-spacing:-.5px">Des tarifs pensés<br>pour votre centre.</h2>
+    <p style="margin:0 0 20px;color:#536176;font-size:14px;line-height:23px">Prix unitaires TTC, personnalisation et livraison incluses.</p>
+    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:14px;line-height:22px">
+      <thead><tr><th scope="col" align="left" style="padding:12px 8px;background:#eef4f5;font-size:12px;color:#526579">Manuel</th><th scope="col" align="center" style="padding:12px 6px;background:#eef4f5;font-size:12px;color:#526579">50 à 99<br>exemplaires</th><th scope="col" align="center" style="padding:12px 6px;background:#e4f2ec;font-size:12px;color:#226650">Dès 100<br>exemplaires</th></tr></thead>
+      <tbody>{% for book in featured %}<tr><th scope="row" align="left" style="padding:15px 8px;border-bottom:1px solid #e4eaef;color:{{ book.color }}">{{ book.name }}</th><td align="center" style="padding:15px 6px;border-bottom:1px solid #e4eaef;font-size:19px;font-weight:700">{{ book.price_label }} €</td><td align="center" style="padding:15px 6px;background:#f1f8f4;border-bottom:1px solid #dcebe2;font-size:19px;font-weight:700;color:#226650">{{ book.bulk_label }} €</td></tr>{% endfor %}</tbody>
+    </table>
+    <p style="margin:14px 0 0;font-size:12px;line-height:20px;color:#6a7789">Commande à partir de 50 exemplaires par manuel. Le tarif dégressif s’applique dès 100 exemplaires d’un même titre.</p>
+  </td></tr>
+  <tr><td class="email-pad" style="padding:0 40px 30px">
+    <h2 style="margin:0 0 8px;font-size:26px;line-height:33px;letter-spacing:-.5px">15 manuels. <span style="font-family:Georgia,serif;font-style:italic;font-weight:400;color:#318574">5 univers.</span></h2>
+    <p style="margin:0 0 22px;color:#536176;font-size:14px;line-height:23px">Pour la formation initiale et l’actualisation des compétences.</p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+      {% for label,books in groups %}<tr><td style="padding:0 0 16px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td style="border-left:3px solid {{ books[0].color }};padding:0 0 0 15px">
+        <h3 style="margin:0 0 5px;font-size:14px;line-height:22px">{{ label }}</h3>
+        <p style="margin:0;color:#637184;font-size:13px;line-height:22px">{% if label == 'Sécurité incendie' %}SSIAP 1, 2 et 3 · Recyclage / remise à niveau SSIAP 1, 2 et 3{% else %}{{ books|map(attribute='name')|join(' · ') }}{% endif %}</p>
+      </td></tr></table></td></tr>{% endfor %}
+    </table>
+  </td></tr>
+  <tr><td class="email-pad" style="padding:32px 40px;background:#0b192f;text-align:center">
+    <h2 style="margin:0 0 13px;color:#ffffff;font-size:27px;line-height:34px">Équipez votre prochaine session.</h2>
+    <p style="margin:0 0 23px;color:#d0dbe8;font-size:15px;line-height:25px">Découvrez les aperçus, choisissez vos manuels<br>et commandez sur Intégrale Connect.<br>Votre centre. Votre logo. Vos manuels.</p>
+    <table role="presentation" align="center" cellspacing="0" cellpadding="0"><tr><td bgcolor="#a0d5c7" style="border-radius:9px;text-align:center"><a href="{{ catalogue_url }}" style="display:inline-block;padding:17px 24px;color:#0b192f;text-decoration:none;font-size:15px;font-weight:700;border:1px solid #a0d5c7;border-radius:9px">Découvrir les manuels&nbsp;→</a></td></tr></table>
+    <p style="margin:20px 0 0;color:#a0d5c7;font-size:12px;line-height:20px">Commande en ligne · Personnalisation incluse · Dès 50 exemplaires</p>
+  </td></tr>
+  <tr><td class="email-pad" style="padding:28px 40px">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td class="signature-avatar" width="112" valign="top" style="width:112px;padding:0 20px 0 0"><img src="{{ base }}/static/images/connect-home/clement-memoji.png" alt="Memoji de Clément Vaillant" width="88" height="88" style="display:block;width:88px;height:88px;padding:4px;background:#ffffff;border:2px solid #96cec1;border-radius:50%"></td><td class="signature-copy" valign="top"><p style="margin:0 0 7px;font-size:16px;font-weight:700">Clément VAILLANT</p><p style="margin:0 0 16px;color:#6a7789;font-size:12px;line-height:20px">Directeur général Intégrale Academy<br>Président Intégrale Group</p><p style="margin:0;font-size:14px;line-height:25px"><a href="tel:+33422470768" style="color:#236958;text-decoration:none">04 22 47 07 68</a><br><a href="mailto:clement@integraleacademy.com" style="color:#236958;text-decoration:none">clement@integraleacademy.com</a></p></td></tr></table>
+  </td></tr>
+</table>
+<table role="presentation" class="email-wrap" width="640" cellspacing="0" cellpadding="0" style="width:100%;max-width:640px"><tr><td style="padding:22px 24px;text-align:center;color:#7b8797;font-size:11px;line-height:18px">Intégrale Sécurité Formations · Enseigne Intégrale Academy<br>Manuels de formation pour les organismes et les centres de formation.<br>{% if unsubscribe_url %}<a href="{{ unsubscribe_url }}" style="color:#657485;text-decoration:underline">Ne plus recevoir ces présentations</a>{% else %}Le lien de désinscription personnel est ajouté lors de l’envoi aux contacts.{% endif %}</td></tr></table>
+</td></tr></table>
+</body>
+</html>
