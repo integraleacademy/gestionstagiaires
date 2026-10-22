@@ -153,8 +153,10 @@ def run(services, *, now=None, dry_run=False, limit=10):
             if not retry_allowed(previous, local):
                 return {}
             count = sum(candidate_settings(training, t)['included'] for t in active_candidates(services, training))
+            from jury_planning import mail_context
             content = build_mail(training, config, member, 'reminder', count,
-                                 services.APP_BASE_URL.rstrip('/') + '/static/logo-integrale.png', today=local.date())
+                                 services.APP_BASE_URL.rstrip('/') + '/static/logo-integrale.png', today=local.date(),
+                                 planning=mail_context(services, current, training, member, today=local.date()))
             # Brevo requires a UUID, not the former prefixed SHA-256 string.
             # Keep it stable across retries and distinct for each exam/recipient.
             delivery_key = str(uuid.uuid5(uuid.NAMESPACE_URL,

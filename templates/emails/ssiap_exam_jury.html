@@ -29,6 +29,23 @@
   <table role="presentation" width="100%"><tr><td class="stack" width="70%" valign="top"><p style="margin:0 0 9px;font-size:11px;font-weight:bold;letter-spacing:1.3px;color:#718394">LIEU DE L’EXAMEN</p><p style="margin:0 0 5px;font-size:16px;font-weight:bold;line-height:24px">{{ config.location }}</p><p style="margin:0 0 10px;font-size:14px;line-height:23px;color:#53677a">{{ config.address }}</p><a href="{{ directions_url }}" style="font-size:13px;font-weight:bold;color:#087c86;text-decoration:underline">Préparer mon itinéraire</a></td><td class="stack stack-space" valign="top" style="padding-left:20px"><p style="margin:0 0 9px;font-size:11px;font-weight:bold;letter-spacing:1.3px;color:#718394">CANDIDATS</p><p style="margin:0;font-size:32px;font-weight:bold;color:#162a3f">{{ count }}</p><p style="margin:4px 0 0;font-size:12px;color:#718394">présenté{{ 's' if count != 1 else '' }} à l’examen</p></td></tr></table>
 </td></tr>
 {% if config.instructions %}<tr><td class="pad" style="padding:0 38px 28px"><table role="presentation" width="100%" style="border-left:3px solid #dcb868;background:#fcfaf4"><tr><td style="padding:17px 20px"><p style="margin:0 0 7px;font-size:14px;font-weight:bold">Pour préparer votre venue</p><p style="margin:0;font-size:14px;line-height:23px;color:#53677a;white-space:pre-line">{{ config.instructions }}</p></td></tr></table></td></tr>{% endif %}
+{% if planning %}
+<tr><td class="pad" style="padding:0 38px 28px">
+  <table role="presentation" width="100%" style="background:#f2f7f8;border:1px solid #dfe9ed;border-radius:13px"><tr><td style="padding:23px 24px">
+    <p style="margin:0 0 8px;color:#087c86;font-size:10px;letter-spacing:1.5px;font-weight:bold">VOTRE PLANNING PERSONNEL</p>
+    <h2 style="margin:0 0 16px;font-size:19px;line-height:26px;color:#162a3f">Vos autres dates de jury</h2>
+    {% for item in planning.dates %}
+    <p style="margin:0;padding:12px 0;border-top:1px solid #d7e5e8;font-size:13px;line-height:22px;color:#53677a"><strong style="color:#162a3f">{{ item.date_label }}</strong><br>{{ item.level }} · {{ item.time or 'Horaire à confirmer' }}<br>{{ item.role }} · {{ item.location or 'Lieu à confirmer' }}</p>
+    {% endfor %}
+    {% for item in planning.undated %}
+    <p style="margin:0;padding:12px 0;border-top:1px solid #d7e5e8;font-size:13px;line-height:22px;color:#53677a"><strong style="color:#162a3f">Date à confirmer · {{ item.level }}</strong><br>{{ item.location or 'Lieu à confirmer' }}</p>
+    {% endfor %}
+    {% if not planning.dates and not planning.undated %}<p style="margin:0 0 16px;font-size:13px;line-height:22px;color:#53677a">Aucune autre date de jury programmée pour le moment.</p>{% endif %}
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:16px"><tr><td style="border-radius:9px;background:#0c1c30"><a class="action" href="{{ planning.url }}" style="display:inline-block;padding:15px 22px;background:#0c1c30;border:1px solid #0c1c30;border-radius:9px;color:#fff;font-size:14px;font-weight:bold;text-decoration:none;mso-padding-alt:0">Voir mes dates de jury</a></td></tr></table>
+    <p style="margin:14px 0 0;font-size:12px;line-height:20px;color:#718394">Retrouvez votre planning à jour, avec les horaires et les lieux de vos prochaines participations. Ce lien est personnel.</p>
+  </td></tr></table>
+</td></tr>
+{% endif %}
 <tr><td class="pad" style="padding:0 38px 30px"><p style="margin:0 0 20px;font-size:14px;line-height:24px;color:#53677a">{{ confirmation }}</p>
   <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:9px;background:#087c86"><a class="action" href="{{ action_url }}" style="display:inline-block;padding:15px 24px;background:#087c86;border:1px solid #087c86;border-radius:9px;color:#fff;font-size:14px;font-weight:bold;text-decoration:none;mso-padding-alt:0">{{ action_label }}</a></td></tr></table>
   <p style="margin:15px 0 0;font-size:12px;line-height:20px;color:#718394">En cas d’empêchement ou de retard, merci de prévenir le centre dès que possible.</p>

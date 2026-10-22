@@ -35,7 +35,7 @@ def delivery_outcome(result):
             'message_id': str(result.get('message_id') or '')[:250]}
 
 
-def render_mail(config, member, kind, count, logo_url):
+def render_mail(config, member, kind, count, logo_url, *, planning=None):
     date = dt.date.fromisoformat(config['date'])
     day = DAYS[date.weekday()]
     long_date = f'{date.day} {MONTHS[date.month - 1]} {date.year}'
@@ -59,11 +59,22 @@ def render_mail(config, member, kind, count, logo_url):
     lines += [f"Lieu : {config['location']}", config['address'], f'Candidats présentés : {count}']
     if config['instructions']:
         lines += ['', 'Informations pratiques', config['instructions']]
+    if planning:
+        lines += ['', 'Vos autres dates de jury']
+        for item in planning['dates']:
+            lines.append(f"{item['date_label']} · {item['level']} · {item['time'] or 'Horaire à confirmer'}")
+            lines.append(f"{item['role']} · {item['location'] or 'Lieu à confirmer'}")
+        for item in planning['undated']:
+            lines.append(f"Date à confirmer · {item['level']} · {item['location'] or 'Lieu à confirmer'}")
+        if not planning['dates'] and not planning['undated']:
+            lines.append('Aucune autre date de jury programmée pour le moment.')
+        lines += ['Voir mes dates de jury : ' + planning['url'],
+                  'Retrouvez votre planning à jour, avec les horaires et les lieux de vos prochaines participations.']
     lines += ['', confirmation, 'En cas d’empêchement ou de retard, merci de prévenir le centre dès que possible.',
               '', 'Merci pour votre participation et votre engagement auprès de nos candidats.', '',
               'Bien cordialement,', config['contact_name'], 'Intégrale Academy', config['contact_phone'], config['contact_email']]
     html = _templates.get_template('emails/ssiap_exam_jury.html').render(
-        config=config, member=member, reminder=reminder, role=role, count=count, logo_url=logo_url,
+        config=config, member=member, reminder=reminder, role=role, count=count, logo_url=logo_url, planning=planning,
         day=day, long_date=long_date, intro=intro, confirmation=confirmation,
         action_label=action_label, action_url=action_url,
         directions_url='https://www.google.com/maps/search/?' + urlencode({'api': '1', 'query': config['address']}),

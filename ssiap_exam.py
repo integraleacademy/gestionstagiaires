@@ -276,7 +276,7 @@ def active_candidates(services, training):
                   key=lambda t: (str(t.get('last_name', '')).casefold(), str(t.get('first_name', '')).casefold()))
 
 
-def build_mail(training, config, member, kind, count, logo_url, *, today=None):
+def build_mail(training, config, member, kind, count, logo_url, *, today=None, planning=None):
     if kind not in {"invitation", "reminder"}:
         raise ValueError("Type de message invalide.")
     if not MAIL_RE.fullmatch(member.get("email", "")):
@@ -286,10 +286,13 @@ def build_mail(training, config, member, kind, count, logo_url, *, today=None):
     if dt.date.fromisoformat(config["date"]) < (today or dt.datetime.now(ZoneInfo("Europe/Paris")).date()):
         raise ValueError("La date de cet examen est passée. Vérifiez-la avant d’envoyer un message.")
     from ssiap_exam_mail import render_mail
-    return render_mail(config, member, kind, count, logo_url)
+    return render_mail(config, member, kind, count, logo_url, planning=planning)
 
 
 def register(app, services):
+    from jury_planning import mail_context, register as register_planning
+    register_planning(app, services)
+
     def get_training(data, session_id, *, security=False):
         training = services.find_session(data, session_id)
         if not training or not (security_exam_jury.level(training) if security else supported(training)):
@@ -301,9 +304,6 @@ def register(app, services):
 
     def jury_training(data, session_id):
         return get_training(data, session_id, security='/security-exam' in request.path)
-
-    def read_jury(session_id):
-        return jury_training(services.load_data(run_background_tasks=False), session_id)
 
     def read(session_id):
         return get_training(services.load_data(run_background_tasks=False), session_id)
@@ -331,14 +331,15 @@ def register(app, services):
         response.headers["Cache-Control"] = "private, no-store"
         return response
 
-    def mail(training, jury_id, kind):
+    def mail(data, training, jury_id, kind):
         config = settings(training)
         member = next((m for m in config["jury"] if m["id"] == jury_id), None)
         if not member:
             raise ValueError("Membre du jury introuvable.")
         count = sum(candidate_settings(training, t)["included"] for t in active(training))
         return build_mail(training, config, member, kind, count,
-                          url_for("static", filename="logo-integrale.png", _external=True))
+                          url_for("static", filename="logo-integrale.png", _external=True),
+                          planning=mail_context(services, data, training, member))
 
     @app.get('/api/admin/sessions/<session_id>/ssiap-exam')
     @services.admin_login_required
@@ -467,7 +468,8 @@ def register(app, services):
     @services.admin_login_required
     def api_ssiap_exam_mail_preview(session_id, jury_id, kind):
         try:
-            content = mail(read_jury(session_id), jury_id, kind)
+            data = services.load_data(run_background_tasks=False)
+            content = mail(data, jury_training(data, session_id), jury_id, kind)
         except ValueError as exc:
             return jsonify(ok=False, error=str(exc)), 400
         token = URLSafeTimedSerializer(app.secret_key, salt="ssiap-exam-mail").dumps({
@@ -490,7 +492,7 @@ def register(app, services):
         def reserve(data):
             training = jury_training(data, session_id)
             try:
-                content = mail(training, token["jury"], token["kind"])
+                content = mail(data, training, token["jury"], token["kind"])
             except ValueError as exc:
                 return {"ok": False, "error": str(exc), "status": 409}
             if not hmac.compare_digest(digest(content), token["fingerprint"]):

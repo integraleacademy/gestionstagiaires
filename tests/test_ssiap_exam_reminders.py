@@ -34,7 +34,7 @@ def setup():
         _session_trainees_list=lambda s:s.get('trainees',[]),
         _trainee_registration_is_cancelled=lambda t:t.get('registration_cancelled',False),
         INTEGRALE_PARTNER_ID='internal', APP_BASE_URL='https://centre.example.test',
-        brevo_send_email=send, app=SimpleNamespace(logger=Mock()))
+        brevo_send_email=send, app=SimpleNamespace(logger=Mock(), secret_key='test-only-jury-planning-secret'))
     return services, data, training, config, member, send
 
 
@@ -44,7 +44,9 @@ def test_exact_j7_shared_template_durable_history_and_no_duplicates(setup):
     assert run(services, now=clock())['emails_accepted'] == 1
     assert run(services, now=clock(hour=10))['processed'] == 0
     assert run(services, now=clock('2026-10-22'))['processed'] == 0
-    expected = exam.build_mail(training,config,member,'reminder',1,services.APP_BASE_URL+'/static/logo-integrale.png',today=clock().date())
+    from jury_planning import mail_context
+    expected = exam.build_mail(training,config,member,'reminder',1,services.APP_BASE_URL+'/static/logo-integrale.png',
+        today=clock().date(), planning=mail_context(services, data, training, member, today=clock().date()))
     assert send.call_args.args == (expected['to'],expected['subject'],expected['html'])
     assert send.call_args.kwargs['text_content'] == expected['text']
     assert send.call_args.kwargs['reply_to'] == expected['reply_to']
