@@ -6372,6 +6372,10 @@ def normalize_last_name(value: str) -> str:
     collapsed = _collapse_spaces(value)
     return collapsed.upper()
 
+def normalize_city(value: str) -> str:
+    return _collapse_spaces(value).upper()
+
+
 def normalize_first_name(value: str) -> str:
     collapsed = _collapse_spaces(value)
     lowered = collapsed.lower()
@@ -26998,12 +27002,12 @@ def api_create_trainee(session_id: str):
     last_name = normalize_last_name(payload.get("last_name") or "")
     first_name = normalize_first_name(payload.get("first_name") or "")
     birth_date = (payload.get("birth_date") or "").strip()
-    birth_city = (payload.get("birth_city") or "").strip()
+    birth_city = normalize_city(payload.get("birth_city") or "")
     email = (payload.get("email") or "").strip()
     phone = (payload.get("phone") or "").strip()
     address = (payload.get("address") or "").strip()
     zip_code = (payload.get("zip_code") or "").strip()
-    city = (payload.get("city") or "").strip()
+    city = normalize_city(payload.get("city") or "")
     cpf_amount = (payload.get("cpf_amount") or "").strip()
     personal_amount = (payload.get("personal_amount") or "").strip()
     other_amount = (payload.get("other_amount") or "").strip()
@@ -27570,6 +27574,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
                 t[k] = normalize_last_name(v)
             elif k == "first_name":
                 t[k] = normalize_first_name(v)
+            elif k in {"city", "birth_city"}:
+                t[k] = normalize_city(v)
             elif k == "elearning_link":
                 t[k] = v.strip()
             elif k == "vtc_exam_center":
@@ -30630,10 +30636,77 @@ def public_download_file(token: str, file_token: str):
         abort(403)
 
     full = _detokenize_path(file_token)
-    if not os.path.exists(full):
+    if not os.path.isfile(full):
+        if file_token == t.get("convocation_aps_pdf_token"):
+            return redirect(url_for("public_training_convocation", token=token))
         abort(404)
 
-    return send_file(full, as_attachment=False)
+    return send_file(full, as_attachment=bool(request.args.get("download") == "1"))
+
+
+@app.get("/espace/<token>/convention/signee.pdf")
+def public_signed_convention(token: str):
+    data = load_data(run_background_tasks=False)
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+    if not _public_is_authed(token):
+        return redirect(url_for("public_trainee_login", token=token))
+    if not _public_trainee_convention_is_signed(t):
+        abort(404)
+    return _serve_signed_convention(
+        data, s, _session_trainees_list(s), t,
+        url_for("public_trainee_space", token=token), public=True,
+    )
+
+
+def _public_convocation_has_record(trainee):
+    return any(trainee.get(key) for key in (
+        "convocation_aps_pdf_token", "convocation_aps_pdf_path",
+        "convocation_aps_generated_at", "convocation_aps_sent_at",
+    ))
+
+
+@app.get("/espace/<token>/convocation.pdf")
+def public_training_convocation(token: str):
+    data = load_data(run_background_tasks=False)
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t or not _public_convocation_has_record(t):
+        abort(404)
+    if not _public_is_authed(token):
+        return redirect(url_for("public_trainee_login", token=token))
+    # Prefer the issued document, including files saved before a disk move.
+    stored_path = str(t.get("convocation_aps_pdf_path") or "")
+    stored_token = str(t.get("convocation_aps_pdf_token") or "")
+    candidates = [stored_path] if stored_path else []
+    if stored_token:
+        candidates.append(_detokenize_path(stored_token))
+    for root in _aps_convocation_allowed_pdf_roots():
+        for source in (stored_path, stored_token):
+            if source:
+                candidates.append(os.path.join(root, os.path.basename(source)))
+    pdf_path = next((path for path in candidates
+                     if _aps_convocation_pdf_is_allowed(path) and _is_pdf_file(path)), "")
+    if not pdf_path:
+        # Recreate only an already issued document; never send a new email.
+        if _trainee_registration_is_cancelled(t) or not _automation_document_config(s).get("enabled"):
+            flash("Votre convocation n’est pas disponible. Merci de contacter l’équipe pédagogique.", "error")
+            return redirect(url_for("public_trainee_space", token=token))
+        try:
+            docx_path, pdf_path = _generate_aps_convocation_files(s, t, str(s.get("id") or ""), str(t.get("id") or ""))
+            if not _aps_convocation_pdf_is_allowed(pdf_path) or not _is_pdf_file(pdf_path):
+                raise RuntimeError("Invalid regenerated convocation PDF")
+            t["convocation_aps_docx_path"] = docx_path
+        except Exception:
+            app.logger.exception("[CONVOCATION] Public PDF recovery failed trainee_id=%s", t.get("id"))
+            flash("La préparation de votre convocation a échoué. Merci de réessayer ou de contacter l’équipe pédagogique.", "error")
+            return redirect(url_for("public_trainee_space", token=token))
+    t["convocation_aps_pdf_path"] = pdf_path
+    t["convocation_aps_pdf_token"] = _store_public_file_token(pdf_path)
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
+    save_data(data)
+    return send_file(pdf_path, mimetype="application/pdf", as_attachment=True, download_name=os.path.basename(pdf_path))
 
 
 @app.get("/espace/<token>/factures/<line_id>")
@@ -33996,6 +34069,10 @@ def public_trainee_space(token):
     if not session.get("admin_logged_in") and not t.get("public_has_logged_in"):
         _mark_public_login(data, s, t)
 
+    for city_key in ("birth_city", "city"):
+        if isinstance(t.get(city_key), str):
+            t[city_key] = normalize_city(t[city_key])
+
     training_type = _session_get(s, "training_type", "")
     _refresh_trainee_hebergement_status(s, t)
     _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
@@ -34107,6 +34184,7 @@ def public_trainee_space(token):
         ssiap_medical_from_date=ssiap_medical_from_date,
         public_invoices=public_invoices,
         public_qcus=public_qcus,
+        public_convocation_available=_public_convocation_has_record(t),
         document_upload_error=session.pop("document_upload_error", None),
         document_upload_max_bytes=MAX_UPLOAD_BYTES,
     )
@@ -34601,7 +34679,7 @@ def public_infos_update(token: str):
             vv = v.strip()
             if vv == "":
                 continue
-            t[k] = vv
+            t[k] = normalize_city(vv) if k in {"city", "birth_city"} else vv
         else:
             # si jamais tu envoies autre chose
             t[k] = v
@@ -39553,8 +39631,8 @@ def _aps_convocation_allowed_pdf_roots() -> List[str]:
 
 
 def _aps_convocation_pdf_is_allowed(pdf_path: str) -> bool:
-    abs_pdf_path = os.path.abspath(pdf_path)
-    return any(abs_pdf_path.startswith(root + os.sep) for root in _aps_convocation_allowed_pdf_roots())
+    abs_pdf_path = os.path.realpath(pdf_path)
+    return any(abs_pdf_path.startswith(os.path.realpath(root) + os.sep) for root in _aps_convocation_allowed_pdf_roots())
 
 
 def _convocation_email_training_labels(session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
@@ -50455,6 +50533,22 @@ def admin_view_signed_convention(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         abort(404)
+    return _serve_signed_convention(data, s, trainees, t, url_for(
+        "admin_trainee_page", session_id=session_id, trainee_id=trainee_id, _anchor="automationHub",
+    ))
+
+
+def _serve_signed_convention(data, s, trainees, t, unavailable_url, *, public=False):
+    """Serve only a signed PDF; recover from Yousign without sending any email."""
+    session_id, trainee_id = str(s.get("id") or ""), str(t.get("id") or "")
+
+    def notify(message, category):
+        flash(
+            "Votre convention signée n’est pas encore disponible au téléchargement. Merci de contacter l’équipe pédagogique."
+            if public else message,
+            category,
+        )
+
     state = _yousign_state(t)
     abs_path = _existing_yousign_signed_convention_pdf(state, trainee_id)
     if not abs_path:
@@ -50463,8 +50557,8 @@ def admin_view_signed_convention(session_id: str, trainee_id: str):
                 "[YOUSIGN] signed convention recovery unavailable trainee_id=%s reason=not_configured",
                 trainee_id,
             )
-            flash("Impossible de récupérer la convention signée : Yousign n’est pas configuré.", "error")
-            return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, _anchor="automationHub"))
+            notify("Impossible de récupérer la convention signée : Yousign n’est pas configuré.", "error")
+            return redirect(unavailable_url)
         request_id = ""
         try:
             recovered_request = _find_stored_completed_yousign_convention_request(t)
@@ -50483,8 +50577,8 @@ def admin_view_signed_convention(session_id: str, trainee_id: str):
                 s["trainees"] = trainees
                 s.pop("stagiaires", None)
                 save_data(data)
-                flash(recovery_message, "error")
-                return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, _anchor="automationHub"))
+                notify(recovery_message, "error")
+                return redirect(unavailable_url)
             # A read/recovery must not schedule a new convocation or overwrite
             # a newer signature request with an older, completed request.
             abs_path = _download_yousign_signed_pdf(request_id, trainee_id)
@@ -50546,11 +50640,11 @@ def admin_view_signed_convention(session_id: str, trainee_id: str):
                     "[YOUSIGN] unable to persist convention recovery error trainee_id=%s",
                     trainee_id,
                 )
-            flash(recovery_message, "error")
-            return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, _anchor="automationHub"))
+            notify(recovery_message, "error")
+            return redirect(unavailable_url)
     if not abs_path:
-        flash("Le PDF signé est introuvable. Importez-le depuis le bloc Convention.", "error")
-        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, _anchor="automationHub"))
+        notify("Le PDF signé est introuvable. Importez-le depuis le bloc Convention.", "error")
+        return redirect(unavailable_url)
     as_attachment = str(request.args.get("download") or "").strip().lower() in {"1", "true", "yes", "on"}
     return send_file(abs_path, mimetype="application/pdf", as_attachment=as_attachment, download_name=os.path.basename(abs_path))
 

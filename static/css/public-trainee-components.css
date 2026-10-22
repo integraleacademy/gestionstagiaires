@@ -1,0 +1,58 @@
+/* Learner portal: learning access and personal assistance. */
+.public-wrap .learning-entry-card {
+  padding: 30px;
+  gap: 22px;
+  border: 1px solid #d4e3f5;
+  border-radius: 24px;
+  background: radial-gradient(ellipse at 100% 0, #dceeff 0, transparent 55%), #f8fbff;
+  box-shadow: 0 12px 32px #163c6710;
+}
+.public-wrap .learning-entry-card::before { height: 0; }
+.public-wrap .learning-entry-card .aps-elearning-icon {
+  width: 60px;
+  height: 60px;
+  background: #173e72;
+  box-shadow: 0 8px 20px #173e7220;
+}
+.public-wrap .learning-entry-card .aps-elearning-icon svg { width: 28px; height: 28px; }
+.learning-kicker { margin: 0 0 9px; font-size: 11px; letter-spacing: .13em; text-transform: uppercase; font-weight: 800; color: #42678b; }
+.public-wrap .learning-entry-card h2 { color: #122e50; font-size: clamp(23px, 3vw, 29px); letter-spacing: -.04em; line-height: 1.15; }
+.public-wrap .learning-entry-card .aps-elearning-subtitle { margin-top: 10px; color: #4b617a; font-size: 14px; max-width: 660px; }
+.public-wrap .learning-entry-card .aps-elearning-badge { padding: 8px 12px; gap: 7px; color: #204e7e; background: #fff; border-color: #cbdff4; font-weight: 750; box-shadow: none; }
+.public-wrap .learning-entry-card .aps-elearning-badge.is-ready { color: #08734e; background: #edf9f3; border-color: #bde5d0; }
+.public-wrap .learning-entry-card .aps-elearning-pending { color: #5c7188; background: none; border: 0; border-top: 1px solid #d9e6f3; border-radius: 0; padding: 14px 0 0; margin-top: 20px; font-size: 13px; font-weight: 500; }
+.public-wrap .learning-entry-card .aps-elearning-actions { margin-top: 22px; gap: 14px; }
+.public-wrap .learning-entry-card .aps-elearning-actions .btn { background: #173e72; border-color: #173e72; padding: 13px 20px; border-radius: 12px; box-shadow: 0 6px 14px #173e721a; }
+.public-wrap .learning-entry-card .aps-elearning-actions .btn:hover { background: #23528e; }
+.public-wrap .learning-entry-card .aps-elearning-copy-status { color: #5b718a; font-size: 12px; font-weight: 500; }
+.public-wrap .vtc-assistance { padding: 26px; border: 1px solid #dce5ef; border-radius: 24px; background: #f5f8fc; box-shadow: none; }
+.assist-header { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+.assist-header-icon { flex: 0 0 auto; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; font-size: 23px; background: #fff; border: 1px solid #e0e8f2; }
+.assist-kicker { margin: 0 0 4px; color: #62728a; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.public-wrap .vtc-assistance h3 { margin: 0; text-align: left; color: #122e50; font-size: 24px; letter-spacing: -.035em; }
+.public-wrap .vtc-assistance .assist-subtitle { margin: 7px 0 0; text-align: left; color: #62728a; font-weight: 500; font-size: 13px; line-height: 1.5; }
+.public-wrap .vtc-assistance ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; margin: 0; }
+.public-wrap .assist-item { padding: 20px; gap: 13px; border: 1px solid #e3eaf3; border-radius: 18px; background: #fff; box-shadow: 0 4px 12px #193e6a04; color: #62728a; font-size: 13px; line-height: 1.55; }
+.public-wrap .assist-item > div:last-child { min-width: 0; flex: 1; }
+.public-wrap .assist-icon { width: 40px; height: 40px; border-radius: 50%; background: #edf3fb; font-size: 20px; }
+.public-wrap .assist-title { font-size: 16px; color: #17314e; margin: 0 0 7px; }
+.public-wrap .assist-actions { margin-top: 16px; gap: 9px; }
+.public-wrap .vtc-assistance .assist-btn { padding: 10px 13px; border: 1px solid #173e72; border-radius: 10px; background: #173e72; color: #fff; font-size: 12px; font-weight: 700; line-height: 1.45; transition: background .15s; }
+.public-wrap .vtc-assistance .assist-btn.secondary { background: #fff; border-color: #d5e0ee; color: #214d7b; }
+.public-wrap .vtc-assistance .assist-btn:hover { background: #28558d; color: #fff; }
+.public-wrap .vtc-assistance .assist-btn:focus-visible,
+.public-wrap .learning-entry-card a:focus-visible { outline: 3px solid #5ca1ef; outline-offset: 3px; }
+.public-wrap #city, .public-wrap #birth_city { text-transform: uppercase; }
+@media (max-width: 640px) {
+  .public-wrap .learning-entry-card { padding: 22px; gap: 16px; }
+  .public-wrap .learning-entry-card .aps-elearning-icon { width: 46px; height: 46px; }
+  .public-wrap .learning-entry-card .aps-elearning-actions .btn { width: 100%; text-align: center; justify-content: center; }
+  .public-wrap .vtc-assistance { padding: 18px; }
+  .public-wrap .assist-item { padding: 16px; flex-direction: column; }
+  .public-wrap .assist-item > div:last-child { width: 100%; }
+  .public-wrap .assist-actions { flex-direction: column; }
+  .public-wrap .assist-btn { justify-content: center; }
+  .public-wrap .document-card .document-actions { grid-column: 1 / -1; width: 100%; }
+}
+
+.public-document-alert { margin: 0 0 18px; padding: 16px 18px; border: 1px solid #f1d69d; border-radius: 14px; background: #fff9ed; color: #73501c; line-height: 1.6; }

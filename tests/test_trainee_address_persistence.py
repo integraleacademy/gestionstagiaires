@@ -51,7 +51,7 @@ class TraineeAddressPersistenceTests(unittest.TestCase):
         trainee = self.saved_data["sessions"][0]["trainees"][0]
         self.assertEqual(trainee["address"], "650 Route d’Aumont")
         self.assertEqual(trainee["zip_code"], "15130")
-        self.assertEqual(trainee["city"], "Arpajon-sur-Cère")
+        self.assertEqual(trainee["city"], "ARPAJON-SUR-CÈRE")
 
     def test_reloaded_trainee_keeps_saved_initial_number(self):
         data = self._data()
