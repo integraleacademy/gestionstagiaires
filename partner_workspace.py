@@ -139,7 +139,7 @@ def platform_context(host, data):
     """One merchant dashboard using the existing canonical orders and settings."""
     from manuals_shop import csrf_token
     tabs = (("organisations", "Organismes"), ("orders", "Commandes"),
-            ("invoices", "Factures"), ("campaigns", "Campagnes e-learning"), ("settings", "Facturation et TVA"))
+            ("invoices", "Factures"), ("campaigns", "Campagnes e-mail"), ("settings", "Facturation et TVA"))
     active = request.args.get("tab", "organisations")
     if active not in dict(tabs):
         active = "organisations"

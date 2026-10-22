@@ -1,4 +1,4 @@
-"""Platform-only e-learning outreach: reviewed imports and explicit, resumable sends.
+"""Platform-only outreach: reviewed imports and explicit, resumable sends.
 
 Separate SQLite storage on the existing persistent volume keeps prospects out of
 partner authentication and billing. No email is sent by imports, reads or deploys.
@@ -18,6 +18,7 @@ from functools import wraps
 from pathlib import Path
 
 from flask import abort, flash, jsonify, make_response, redirect, render_template, request, url_for
+from manuals_catalogue import CATALOGUE, CATEGORIES
 
 MAX_BYTES = 2 * 1024 * 1024
 MAX_CONTACTS = 5000
@@ -30,6 +31,14 @@ DEFAULT_TEMPLATE = {
     "subject": "E-learning APS & A3P : créez les accès de vos stagiaires en toute autonomie",
     "intro": "Vous formez aux métiers de la sécurité privée ? Nous aussi. Avec Intégrale Connect, proposez à vos stagiaires nos parcours e-learning APS et A3P, conçus par un centre de formation pour les centres de formation. Créez leurs accès en totale autonomie sur integraleconnect.com et suivez leur progression depuis votre espace organisme.",
     "aps_price": "59", "a3p_price": "89",
+}
+MANUALS_TEMPLATE = {
+    "subject": "APS, A3P, SSIAP : des manuels de formation à votre image",
+    "intro": "Et si vos stagiaires repartaient avec un manuel aux couleurs de votre centre ? Découvrez nos 15 manuels de formation illustrés : des situations professionnelles, des schémas et des repères concrets pour accompagner vos cours et les révisions. Votre logo sur la couverture et la livraison sont inclus dans nos tarifs.",
+}
+TEMPLATE_MODELS = {
+    "elearning": {"settings_id": 1, "label": "E-learning APS & A3P", "campaign_name": "Présentation e-learning APS & A3P", "defaults": DEFAULT_TEMPLATE},
+    "manuals": {"settings_id": 2, "label": "Manuels de formation", "campaign_name": "Présentation des manuels de formation", "defaults": MANUALS_TEMPLATE},
 }
 LABELS = {"pending": "À envoyer", "sending": "En cours", "sent": "Accepté par Brevo", "failed": "Échec", "uncertain": "À vérifier", "skipped": "Exclu (désinscrit ou bloqué)"}
 
@@ -149,14 +158,22 @@ def parse_import(content, filename="contacts.txt"):
     return {"contacts": contacts, "invalid": invalid, "duplicates": duplicate_count}
 
 
+def template_kind(value):
+    kind = value or "elearning"
+    if kind not in TEMPLATE_MODELS:
+        raise ValueError("Choisissez un modèle de mail disponible.")
+    return kind
+
+
 def template_from(form):
-    result = {}
+    kind = template_kind(form.get("model"))
+    result = {"kind": kind}
     for field, limit in (("subject", 180), ("intro", 1400)):
         value = str(form.get(field) or "").strip()
         if not value or len(value) > limit or (field == "subject" and any(c in value for c in "\r\n")):
             raise ValueError("Renseignez un objet (180 caractères maximum) et une introduction (1 400 caractères maximum).")
         result[field] = value
-    for field in ("aps_price", "a3p_price"):
+    for field in (("aps_price", "a3p_price") if kind == "elearning" else ()):
         price = str(form.get(field) or "").strip().replace(",", ".")
         if not re.fullmatch(r"\d{1,4}(?:\.\d{1,2})?", price) or float(price) <= 0:
             raise ValueError("Renseignez des tarifs TTC valides.")
@@ -164,9 +181,15 @@ def template_from(form):
     return result
 
 
-def saved_template(conn):
-    row = conn.execute("SELECT payload FROM outreach_settings WHERE id=1").fetchone()
-    template = {**DEFAULT_TEMPLATE, **(json.loads(row[0]) if row else {})}
+def saved_template(conn, kind="elearning"):
+    kind = template_kind(kind)
+    model = TEMPLATE_MODELS[kind]
+    row = conn.execute("SELECT payload FROM outreach_settings WHERE id=?", (model["settings_id"],)).fetchone()
+    template = {**model["defaults"], **(json.loads(row[0]) if row else {}), "kind": kind}
+    if kind == "manuals":
+        # Snapshot the catalogue with the campaign so later price edits cannot change it.
+        template["books"] = [dict(book) for book in CATALOGUE]
+        return template
     # Refresh untouched defaults while preserving the centre's own copy and prices.
     for field, previous in PREVIOUS_TEMPLATE_COPY.items():
         if template[field] == previous:
@@ -174,11 +197,48 @@ def saved_template(conn):
     return template
 
 
+def save_template(conn, template):
+    settings_id = TEMPLATE_MODELS[template["kind"]]["settings_id"]
+    conn.execute("INSERT OR REPLACE INTO outreach_settings VALUES (?, ?)", (settings_id, json.dumps(template)))
+
+
+def manuals_mail_content(template, base, contact, unsubscribe, test):
+    catalogue_url = "https://integraleconnect.com/manuels"
+    books = [dict(book, price_label=f"{book['price']/100:g}".replace(".", ","),
+                  bulk_label=f"{book['bulk_price']/100:g}".replace(".", ","))
+             for book in template.get("books", CATALOGUE)]
+    featured = [next(book for book in books if book["code"] == code) for code in ("aps", "a3p", "ssiap1")]
+    groups = [(label, [book for book in books if book["category"] == code]) for code, label in CATEGORIES]
+    body = render_template("emails/partner_manuals.html", offer=template, contact=contact, base=base,
+                           catalogue_url=catalogue_url, featured=featured, groups=groups,
+                           unsubscribe_url=unsubscribe, test=test)
+    text = ("INTÉGRALE ACADEMY — MANUELS DE FORMATION\n"
+            "Des manuels illustrés, personnalisés avec le logo de votre centre.\n\n"
+            f"{template['intro']}\n\n"
+            "VOTRE LOGO ET LA LIVRAISON INCLUS\n"
+            "Commandez à partir de 50 exemplaires par manuel. Tarifs dégressifs dès 100 exemplaires d’un même titre.\n\n")
+    for label, group in groups:
+        text += label.upper() + "\n"
+        for book in group:
+            text += f"{book['name']} : {book['price_label']} € TTC de 50 à 99 exemplaires ; {book['bulk_label']} € TTC dès 100 exemplaires.\n"
+        text += "\n"
+    text += ("Un support à annoter pendant les cours et à conserver pour les révisions.\n"
+             "Choisissez vos manuels, indiquez les quantités et transmettez votre logo depuis Intégrale Connect.\n"
+             f"Découvrir les manuels et commander : {catalogue_url}\n\n"
+             "Clément VAILLANT\nDirecteur général Intégrale Academy – Président Intégrale Group\n"
+             "clement@integraleacademy.com — 04 22 47 07 68\n")
+    if unsubscribe:
+        text += "\nNe plus recevoir ces présentations : " + unsubscribe
+    return body, text
+
+
 def mail_content(host, template, contact=None, test=False):
     base = host._public_base_url().rstrip("/")
     if not base.startswith("https://"):
         base = "https://gestionstagiaires-r5no.onrender.com"
     unsubscribe = base + "/communications/desinscription/" + contact["unsubscribe_token"] if contact else ""
+    if template.get("kind") == "manuals":
+        return manuals_mail_content(template, base, contact, unsubscribe, test)
     demo_url = "https://integraleconnect.com"
     presentation_url = demo_url + "/e-learning"
     body = render_template("emails/partner_elearning.html", offer=template, contact=contact,
@@ -242,7 +302,12 @@ def contact_scope(query="", batch=""):
 
 def context(host):
     with db(host) as conn:
-        template = saved_template(conn)
+        campaign = campaign_view(conn, request.args["campaign"]) if request.args.get("campaign") else None
+        try:
+            kind = template_kind(request.args.get("model") or (campaign["template"].get("kind") if campaign else None))
+        except ValueError:
+            abort(400)
+        template = saved_template(conn, kind)
         q = (request.args.get("contacts_q") or "").strip()[:200]
         batch = (request.args.get("batch") or "").strip()
         where, args = contact_scope(q, batch)
@@ -259,14 +324,14 @@ def context(host):
                 known = {r[0] for r in conn.execute("SELECT email FROM outreach_contacts")}
                 staged["existing"] = sum(c["email"] in known for c in staged["contacts"])
                 staged["new_count"] = len(staged["contacts"]) - staged["existing"]
-        campaign = campaign_view(conn, request.args["campaign"]) if request.args.get("campaign") else None
         deliveries = [dict(r) for r in conn.execute("SELECT c.email,c.centre,d.* FROM outreach_deliveries d JOIN outreach_contacts c ON c.id=d.contact_id WHERE d.campaign_id=? ORDER BY c.email LIMIT 100", (campaign["id"],))] if campaign else []
         history = [campaign_view(conn, r[0]) for r in conn.execute("SELECT id FROM outreach_campaigns ORDER BY created_at DESC LIMIT 15")]
         total = conn.execute("SELECT count(*) FROM outreach_contacts WHERE unsubscribed_at=''").fetchone()[0]
     return dict(outreach_template=template, outreach_contacts=contacts, outreach_count=count, outreach_eligible_count=eligible_count,
                 outreach_total=total, outreach_page=page, outreach_query=q, outreach_batch=batch,
                 outreach_import=staged, outreach_campaign=campaign, outreach_deliveries=deliveries,
-                outreach_history=history, outreach_labels=LABELS, outreach_request_key=uuid.uuid4().hex)
+                outreach_history=history, outreach_labels=LABELS, outreach_request_key=uuid.uuid4().hex,
+                outreach_model=kind, outreach_models=TEMPLATE_MODELS)
 
 
 def register(host):
@@ -286,6 +351,7 @@ def register(host):
         return guarded
 
     def back(**kwargs):
+        kwargs.setdefault("model", request.values.get("model", "elearning"))
         return redirect(url_for("admin_partners", tab="campaigns", **kwargs), code=303)
 
     @host.app.post("/admin/partners/campaigns/template")
@@ -297,8 +363,8 @@ def register(host):
             flash(str(exc), "error")
         else:
             with db(host, True) as conn:
-                conn.execute("INSERT OR REPLACE INTO outreach_settings VALUES (1, ?)", (json.dumps(template),))
-            flash("Votre modèle e-learning est enregistré.", "success")
+                save_template(conn, template)
+            flash("Votre modèle « " + TEMPLATE_MODELS[template["kind"]]["label"] + " » est enregistré.", "success")
         return back()
 
     @host.app.route("/admin/partners/campaigns/preview", methods=["GET", "POST"])
@@ -309,7 +375,7 @@ def register(host):
                 template = campaign_view(conn, request.args["campaign"])["template"]
             else:
                 try:
-                    template = template_from(request.form) if request.method == "POST" else saved_template(conn)
+                    template = template_from(request.form) if request.method == "POST" else saved_template(conn, template_kind(request.args.get("model")))
                 except ValueError as exc:
                     return str(exc), 400
         body, _ = mail_content(host, template)
@@ -331,10 +397,10 @@ def register(host):
             flash(str(exc), "error")
             return back()
         with db(host, True) as conn:
-            conn.execute("INSERT OR REPLACE INTO outreach_settings VALUES (1, ?)", (json.dumps(template),))
+            save_template(conn, template)
         body, text = mail_content(host, template, test=True)
         result = host.brevo_send_email(email, "[TEST] " + template["subject"], body, text_content=text,
-            metadata={"kind": "elearning_campaign_test"}, reply_to={"email": "clement@integraleacademy.com", "name": "Clément VAILLANT"})
+            metadata={"kind": template["kind"] + "_campaign_test"}, reply_to={"email": "clement@integraleacademy.com", "name": "Clément VAILLANT"})
         flash("E-mail de test accepté par le service d’envoi." if result.get("ok") else "Le test n’a pas pu être envoyé : " + str(result.get("error") or "Erreur du service d’envoi."), "success" if result.get("ok") else "error")
         return back()
 
@@ -393,6 +459,10 @@ def register(host):
     @host.app.post("/admin/partners/campaigns/create")
     @admin
     def partner_campaign_create():
+        try:
+            kind = template_kind(request.form.get("model"))
+        except ValueError as exc:
+            abort(400, str(exc))
         selection = list(dict.fromkeys(request.form.getlist("contact_id")))
         request_key = request.form.get("request_key", "")
         if not re.fullmatch(r"[0-9a-f]{32}", request_key):
@@ -412,8 +482,8 @@ def register(host):
                 flash("Aucun destinataire éligible dans cette sélection. Les contacts déjà sollicités sont exclus par défaut.", "error")
                 return back(contacts_q=request.form.get("contacts_q", ""), batch=request.form.get("batch", ""))
             campaign_id = uuid.uuid4().hex
-            template = saved_template(conn)
-            name = (request.form.get("name") or "Présentation e-learning APS & A3P").strip()[:180]
+            template = saved_template(conn, kind)
+            name = (request.form.get("name") or TEMPLATE_MODELS[kind]["campaign_name"]).strip()[:180]
             conn.execute("INSERT INTO outreach_campaigns(id,name,template,created_at,request_key) VALUES(?,?,?,?,?)", (campaign_id, name, json.dumps(template), now(), request_key))
             conn.executemany("INSERT INTO outreach_deliveries(campaign_id,contact_id) VALUES(?,?)", [(campaign_id, r["id"]) for r in rows])
         return back(campaign=campaign_id)
@@ -493,7 +563,7 @@ def register(host):
         try:
             body, text = mail_content(host, campaign["template"], contact)
             result = host.brevo_send_email(contact["email"], campaign["template"]["subject"], body,
-                text_content=text, metadata={"kind": "elearning_campaign", "idempotency_key": delivery_idempotency_key(campaign_id, contact["id"], attempt)},
+                text_content=text, metadata={"kind": campaign["template"].get("kind", "elearning") + "_campaign", "idempotency_key": delivery_idempotency_key(campaign_id, contact["id"], attempt)},
                 reply_to={"email": "clement@integraleacademy.com", "name": "Clément VAILLANT"})
             # Network/5xx errors can conceal provider acceptance. Never silently retry them.
             state = "sent" if result.get("ok") else "failed" if result.get("not_sent") or (result.get("status_code") and 400 <= result["status_code"] < 500) else "uncertain"
