@@ -11,6 +11,12 @@
       .email-wrap{width:100%!important}
       .book-cell{padding-left:5px!important;padding-right:5px!important}
       .book-label{font-size:12px!important}
+      .preview-cell{padding-left:5px!important;padding-right:5px!important}
+      .preview-caption{padding:14px 10px!important}
+      .preview-caption strong{font-size:13px!important;line-height:19px!important;min-height:57px}
+      .preview-caption p:first-child{min-height:32px}
+      .collection-cover{width:58px!important;padding-right:12px!important}
+      .collection-cover img{width:46px!important}
       .signature-avatar{display:block!important;width:100%!important;padding:0 0 18px!important}
       .signature-copy{display:block!important;width:100%!important}
     }
@@ -46,10 +52,21 @@
     <p style="margin:0;color:#536176;font-size:16px;line-height:27px;white-space:pre-line">{{ offer.intro }}</p>
   </td></tr>
   <tr><td class="email-pad" style="padding:0 40px 28px">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f7f8;border-radius:14px"><tr><td style="padding:23px 24px">
-      <p style="margin:0 0 9px;color:#173c36;font-size:17px;font-weight:700;line-height:24px">Un support qui travaille avec vous.</p>
-      <p style="margin:0;color:#536176;font-size:14px;line-height:24px">Des illustrations pour comprendre. Des situations métier pour faire le lien avec le terrain. Un livre à annoter pendant les cours et à retrouver au moment des révisions.</p>
-    </td></tr></table>
+    <p style="margin:0 0 8px;color:#318574;font-size:10px;letter-spacing:2px;font-weight:700">FEUILLETEZ LA COLLECTION</p>
+    <h2 style="margin:0 0 12px;font-size:26px;line-height:33px;letter-spacing:-.5px">À l’intérieur, <span style="font-family:Georgia,serif;font-style:italic;font-weight:400;color:#318574">du concret.</span></h2>
+    <p style="margin:0 0 22px;color:#536176;font-size:14px;line-height:23px">Des scènes métier et des schémas pour apprendre en images.</p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="table-layout:fixed"><tr>
+      {% for code,image,label,title,color in [('a3p','a3p-scene','A3P · SITUATIONS MÉTIER','Se projeter sur le terrain.','#28795f'),('ssiap1','ssiap1-schema','SSIAP 1 · SCHÉMAS','Comprendre par l’image.','#c64042')] %}
+      <td class="preview-cell" width="50%" valign="top" style="padding:0 {{ '9px 0 0' if loop.first else '0 0 9px' }}">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f7f8;border:1px solid #e1e8ec;border-radius:12px;overflow:hidden"><tr><td>
+          <a href="{{ catalogue_url }}/{{ code }}#apercus" style="text-decoration:none"><img src="{{ base }}/static/manuals/email-previews/{{ image }}.jpg" alt="Page intérieure {{ label }}" width="270" style="display:block;width:100%;height:auto;border:0"></a>
+        </td></tr><tr><td class="preview-caption" style="padding:18px 16px;border-top:3px solid {{ color }}">
+          <p style="margin:0 0 9px;color:{{ color }};font-size:9px;line-height:16px;letter-spacing:.5px;font-weight:700">{{ label }}</p>
+          <strong style="display:block;font-size:16px;line-height:23px;color:#173047">{{ title }}</strong>
+          <p style="margin:12px 0 0;font-size:12px;line-height:20px"><a href="{{ catalogue_url }}/{{ code }}#apercus" style="color:#276f5e;text-decoration:underline;font-weight:700">Feuilleter le manuel&nbsp;→</a></p>
+        </td></tr></table>
+      </td>{% endfor %}
+    </tr></table>
   </td></tr>
   <tr><td class="email-pad" style="padding:4px 40px 30px">
     <p style="margin:0 0 8px;color:#318574;font-size:10px;letter-spacing:2px;font-weight:700">VOS PROCHAINES SESSIONS</p>
@@ -65,7 +82,9 @@
     <h2 style="margin:0 0 8px;font-size:26px;line-height:33px;letter-spacing:-.5px">15 manuels. <span style="font-family:Georgia,serif;font-style:italic;font-weight:400;color:#318574">5 univers.</span></h2>
     <p style="margin:0 0 22px;color:#536176;font-size:14px;line-height:23px">Pour la formation initiale et l’actualisation des compétences.</p>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-      {% for label,books in groups %}<tr><td style="padding:0 0 16px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td style="border-left:3px solid {{ books[0].color }};padding:0 0 0 15px">
+      {% for label,books in groups %}<tr><td style="padding:0 0 18px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
+      <td class="collection-cover" width="78" valign="top" style="width:78px;padding:0 16px 0 0"><a href="{{ catalogue_url }}/{{ books[0].code }}#apercus" style="text-decoration:none"><img src="{{ base }}/static/manuals/{{ books[0].code }}.jpg" alt="{{ label }} : couverture {{ books[0].name }}" width="62" style="display:block;width:62px;height:auto;border:1px solid #e1e8ec"></a></td>
+      <td valign="middle" style="border-bottom:1px solid #e8edf1;padding:8px 0 16px">
         <h3 style="margin:0 0 5px;font-size:14px;line-height:22px">{{ label }}</h3>
         <p style="margin:0;color:#637184;font-size:13px;line-height:22px">{% if label == 'Sécurité incendie' %}SSIAP 1, 2 et 3 · Recyclage / remise à niveau SSIAP 1, 2 et 3{% else %}{{ books|map(attribute='name')|join(' · ') }}{% endif %}</p>
       </td></tr></table></td></tr>{% endfor %}
