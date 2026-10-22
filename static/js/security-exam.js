@@ -17,8 +17,10 @@
     status.className = 'exam-status ' + (error ? 'error' : 'success');
   }
   function showTab(name) {
+    if (name !== 'organization' && !dialog.dispatchEvent(new Event('exam-jury-before-leave', {cancelable:true}))) return;
     dialog.querySelectorAll('[data-security-panel]').forEach(el => { el.hidden = el.dataset.securityPanel !== name; });
     dialog.querySelectorAll('[data-security-tab]').forEach(el => el.setAttribute('aria-pressed', String(el.dataset.securityTab === name)));
+    if (name === 'organization') dialog.dispatchEvent(new Event('exam-jury-load'));
   }
   async function api(url, payload) {
     const options = {credentials:'same-origin', headers:{Accept:'application/json'}};
@@ -89,6 +91,9 @@
     message('Chargement…');
     action(async () => { await load(); message(''); });
   });
+  dialog.addEventListener('exam-jury-saved', () => {
+    action(async () => { await load(true); message('La date d’examen a été mise à jour dans le calendrier et les dossiers.'); });
+  });
   form.addEventListener('input', () => { dirty = true; });
   form.addEventListener('submit', event => {
     event.preventDefault();
@@ -106,7 +111,10 @@
     const target = event.target.closest('button,a');
     if (!target) return;
     if (target.hasAttribute('data-security-close')) dialog.close();
-    if (target.dataset.securityTab) showTab(target.dataset.securityTab);
+    if (target.dataset.securityTab) {
+      if (dirty && target.dataset.securityTab !== 'calendar') { message('Enregistrez le calendrier avant de changer de rubrique.', true); return; }
+      showTab(target.dataset.securityTab);
+    }
     if (target.hasAttribute('data-security-pdf') && (dirty || busy)) {
       event.preventDefault();
       if (dirty) { showTab('calendar'); message('Enregistrez le calendrier avant d’ouvrir un dossier.', true); }

@@ -167,6 +167,7 @@
       </select>
     {% endif %}
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
+    {% if is_desp_initial and security_jury_supported %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Organisation et jury</button>{% endif %}
     {% if ssiap_exam_supported %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Examen</button>{% endif %}
     {% if is_aps_training and session.aps_elearning_enabled and not is_read_only %}
     <button class="btn btn-outline" id="btnImportDigiforma" type="button">Importer les relevés Digiforma</button>
@@ -899,6 +900,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 {% endif %}
 
 
+{% if is_desp_initial and security_jury_supported %}{% with jury_session=session %}{% include '_security_jury_modal.html' %}{% endwith %}{% endif %}
 {% if (is_a3p_header or is_aps_header) and not is_read_only %}
 {% include '_security_exam_modal.html' %}
 {% endif %}

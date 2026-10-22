@@ -11,6 +11,7 @@ import os
 import re
 import secrets
 from zoneinfo import ZoneInfo
+import security_exam_jury
 
 from flask import abort, jsonify, request, session, send_file, url_for
 from itsdangerous import URLSafeTimedSerializer, BadSignature
@@ -38,12 +39,27 @@ def supported(training):
     return "SSIAP" in label or "AFC" in label or "AFC" in name
 
 
+def state_key(training):
+    return "security_exam" if security_exam_jury.level(training) else "ssiap_exam"
+
+
+def jury_supported(training):
+    return supported(training) or bool(security_exam_jury.level(training))
+
+
 def state(training):
-    value = training.get("ssiap_exam")
+    value = training.get(state_key(training))
     return value if isinstance(value, dict) else {}
 
 
 def settings(training):
+    level = security_exam_jury.level(training)
+    if level:
+        defaults = {**DEFAULTS, "approval": ""}
+        if 'PARIS' in f"{training.get('training_type', '')} {training.get('name', '')}".upper():
+            defaults.update(location="Intégrale Academy – Paris", address="")
+        return {**defaults, **state(training).get("config", {}),
+                "level": level, "date": security_exam_jury.exam_date(training)}
     # An AFC's generic exam_date belongs to APS, not necessarily to SSIAP.
     afc = "AFC" in (str(training.get("training_type") or "") + " " + str(training.get("name") or "")).upper()
     date = training.get("ssiap_exam_date") or ("" if afc else training.get("exam_date")) or ""
@@ -68,8 +84,9 @@ def preserve_state(payload, canonical):
     by_id = {str(s.get("id")): s for s in canonical.get("sessions", [])}
     for training in payload.get("sessions", []):
         current = by_id.get(str(training.get("id")), {})
-        if isinstance(current.get("ssiap_exam"), dict):
-            training["ssiap_exam"] = copy.deepcopy(current["ssiap_exam"])
+        for key in ("ssiap_exam", "security_exam"):
+            if isinstance(current.get(key), dict):
+                training[key] = copy.deepcopy(current[key])
 
 
 def frdate(value):
@@ -98,12 +115,16 @@ def clean_text(value, label, limit):
     return value
 
 
-def validate_config(raw):
+def validate_config(raw, *, level=None):
     if not isinstance(raw, dict):
         raise ValueError("Paramètres invalides.")
     result = {k: clean_text(raw.get(k, DEFAULTS[k]), k, limit) for k, limit in LIMITS.items()}
-    if result["level"] not in {"SSIAP 1", "SSIAP 2", "SSIAP 3"}:
-        raise ValueError("Niveau SSIAP invalide.")
+    allowed = {level} if level else {"SSIAP 1", "SSIAP 2", "SSIAP 3"}
+    if result["level"] not in allowed:
+        raise ValueError("Formation d’examen invalide.")
+    if level:
+        result["approval"] = ""
+        result["equipment"] = ""
     result["date"] = clean_date(raw.get("date"), "Examen")
     for key in ("time", "end_time", "arrival_time"):
         value = str(raw.get(key) or "").strip()
@@ -247,6 +268,8 @@ def photo_path(services, trainee):
 
 
 def active_candidates(services, training):
+    if security_exam_jury.level(training) and hasattr(services, '_registered_trainees'):
+        return services._registered_trainees(training)
     return sorted([t for t in services._session_trainees_list(training) if not services._trainee_registration_is_cancelled(t)],
                   key=lambda t: (str(t.get('last_name', '')).casefold(), str(t.get('first_name', '')).casefold()))
 
@@ -265,14 +288,20 @@ def build_mail(training, config, member, kind, count, logo_url, *, today=None):
 
 
 def register(app, services):
-    def get_training(data, session_id):
+    def get_training(data, session_id, *, security=False):
         training = services.find_session(data, session_id)
-        if not training or not supported(training):
+        if not training or not (security_exam_jury.level(training) if security else supported(training)):
             abort(404)
         # The official seal below belongs to Intégrale Academy only.
         if training.get("partner_id") not in (None, "", services.INTEGRALE_PARTNER_ID):
             abort(404)
         return training
+
+    def jury_training(data, session_id):
+        return get_training(data, session_id, security='/security-exam' in request.path)
+
+    def read_jury(session_id):
+        return jury_training(services.load_data(run_background_tasks=False), session_id)
 
     def read(session_id):
         return get_training(services.load_data(run_background_tasks=False), session_id)
@@ -334,21 +363,43 @@ def register(app, services):
                        attendance_url=url_for('admin_ssiap_exam_attendance', session_id=session_id),
                        collective_url=url_for('admin_ssiap_exam_collective', session_id=session_id))
 
+    @app.get('/api/admin/sessions/<session_id>/security-exam')
+    @services.admin_login_required
+    def api_security_exam(session_id):
+        from ssiap_exam_reminders import schedule
+        data = services.load_data(run_background_tasks=False)
+        training = get_training(data, session_id, security=True)
+        config = settings(training)
+        return jsonify(ok=True, config=config, revision=state(training).get("revision", 0),
+                       candidates=[{"id": t["id"], "candidate": {"included": True}} for t in active(training)],
+                       read_only=session.get("admin_role") == "viewer",
+                       csrf=session.setdefault("ssiap_exam_csrf", secrets.token_urlsafe(32)),
+                       history=state(training).get("mail_history", [])[-60:][::-1],
+                       directory=jury_directory(data, services.INTEGRALE_PARTNER_ID),
+                       mail_status={m["id"]: mail_status(training, m) for m in config["jury"]},
+                       automatic_reminders=schedule(services, training))
+
+    @app.post('/api/admin/sessions/<session_id>/security-exam')
     @app.post('/api/admin/sessions/<session_id>/ssiap-exam')
     @services.admin_login_required
     @services.admin_write_required
     def api_ssiap_exam_save(session_id):
         payload = csrf_payload()
         def update(data):
-            training = get_training(data, session_id)
+            training = jury_training(data, session_id)
             current = copy.deepcopy(state(training))
             if payload.get("revision") != current.get("revision", 0):
                 return {"ok": False, "error": "Ces informations ont changé. Fermez puis rouvrez la modale avant de réessayer.", "status": 409}
+            if (security_exam_jury.level(training) and payload.get("action") == "config"
+                    and "expected_date" in payload and payload["expected_date"] != settings(training)["date"]):
+                return {"ok": False, "error": "La date de l’examen a changé. Fermez puis rouvrez la modale avant de réessayer.", "status": 409}
             try:
                 if payload.get("action") == "config":
-                    current["config"] = validate_config(payload.get("config"))
+                    current["config"] = validate_config(payload.get("config"), level=security_exam_jury.level(training) or None)
                     remember_jury(data, current["config"]["jury"], services._now_iso(), settings(training)["jury"])
-                elif payload.get("action") == "candidate":
+                    if security_exam_jury.level(training):
+                        security_exam_jury.sync_date(training, current["config"]["date"])
+                elif payload.get("action") == "candidate" and supported(training):
                     trainee = find_candidate(training, payload.get("trainee_id"))
                     candidate = validate_candidate(payload.get("candidate"), settings(training))
                     current.setdefault("candidates", {})[trainee["id"]] = candidate
@@ -358,7 +409,7 @@ def register(app, services):
                 return {"ok": False, "error": str(exc), "status": 400}
             current["revision"] = current.get("revision", 0) + 1
             current["updated_at"] = services._now_iso()
-            training["ssiap_exam"] = current
+            training[state_key(training)] = current
             return {"ok": True, "revision": current["revision"]}
         result = services._atomic_update_data(update)
         return jsonify(result), result.pop("status", 200)
@@ -409,17 +460,19 @@ def register(app, services):
         content = attendance(training, candidates, settings(training), app.root_path)
         return response_pdf(content, f'Feuille_presence_examen_SSIAP_{session_id}.pdf')
 
+    @app.get('/api/admin/sessions/<session_id>/security-exam/jury/<jury_id>/<kind>/preview')
     @app.get('/api/admin/sessions/<session_id>/ssiap-exam/jury/<jury_id>/<kind>/preview')
     @services.admin_login_required
     def api_ssiap_exam_mail_preview(session_id, jury_id, kind):
         try:
-            content = mail(read(session_id), jury_id, kind)
+            content = mail(read_jury(session_id), jury_id, kind)
         except ValueError as exc:
             return jsonify(ok=False, error=str(exc)), 400
         token = URLSafeTimedSerializer(app.secret_key, salt="ssiap-exam-mail").dumps({
-            "session": session_id, "jury": jury_id, "kind": kind, "fingerprint": digest(content), "nonce": secrets.token_hex(20)})
+            "session": session_id, "family": "security" if "/security-exam" in request.path else "ssiap", "jury": jury_id, "kind": kind, "fingerprint": digest(content), "nonce": secrets.token_hex(20)})
         return jsonify(ok=True, **content, preview_token=token)
 
+    @app.post('/api/admin/sessions/<session_id>/security-exam/mail/send')
     @app.post('/api/admin/sessions/<session_id>/ssiap-exam/mail/send')
     @services.admin_login_required
     @services.admin_write_required
@@ -429,17 +482,18 @@ def register(app, services):
             token = URLSafeTimedSerializer(app.secret_key, salt="ssiap-exam-mail").loads(str(payload.get("preview_token", "")), max_age=3600)
         except BadSignature:
             return jsonify(ok=False, error="Aperçu expiré. Prévisualisez à nouveau le mail."), 409
-        if token.get("session") != session_id:
+        family = "security" if "/security-exam" in request.path else "ssiap"
+        if token.get("session") != session_id or token.get("family", "ssiap") != family:
             abort(403)
         def reserve(data):
-            training = get_training(data, session_id)
+            training = jury_training(data, session_id)
             try:
                 content = mail(training, token["jury"], token["kind"])
             except ValueError as exc:
                 return {"ok": False, "error": str(exc), "status": 409}
             if not hmac.compare_digest(digest(content), token["fingerprint"]):
                 return {"ok": False, "error": "Les informations ont changé. Prévisualisez à nouveau le mail.", "status": 409}
-            history = training.setdefault("ssiap_exam", {}).setdefault("mail_history", [])
+            history = training.setdefault(state_key(training), {}).setdefault("mail_history", [])
             if any(entry.get("id") == token["nonce"] for entry in history):
                 return {"ok": False, "error": "Cet envoi a déjà été pris en compte. Consultez l’historique.", "status": 409}
             if any(entry.get('status') == 'sending' and entry.get('kind') == token['kind']
@@ -456,7 +510,7 @@ def register(app, services):
         content = result["content"]
         try:
             sent = services.brevo_send_email(content["to"], content["subject"], content["html"], text_content=content["text"],
-                metadata={"purpose": "ssiap_exam_" + token["kind"], "session_id": session_id},
+                metadata={"purpose": family + "_exam_" + token["kind"], "session_id": session_id},
                 reply_to=content["reply_to"])
         except Exception:
             app.logger.exception("SSIAP jury email delivery failed")
@@ -467,7 +521,7 @@ def register(app, services):
             app.logger.warning('SSIAP_JURY_MAIL_FAILED session=%s attempt=%s status=%s http=%s error=%s',
                 session_id, token['nonce'], outcome['status'], outcome['status_code'], outcome['error'])
         def finish(data):
-            training = get_training(data, session_id)
+            training = jury_training(data, session_id)
             for entry in state(training).get("mail_history", []):
                 if entry.get("id") == token["nonce"]:
                     entry.update(outcome, finished_at=services._now_iso())

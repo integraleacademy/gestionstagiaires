@@ -1,6 +1,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css', v='20261020-1') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/security-exam.css', v='20261020-1') }}">
 <dialog id="securityExamDialog" class="exam-dialog" aria-labelledby="securityExamTitle"
+        {% if security_jury_supported %}data-jury-url="{{ url_for('api_security_exam', session_id=session.id) }}"{% endif %}
         data-url="/api/admin/sessions/{{ session.id }}/{{ exam_dossier_slug }}-exam-dossiers">
   <header class="exam-heading">
     <div><span class="exam-eyebrow">INTÉGRALE ACADEMY</span><h2 id="securityExamTitle">Dossier examen {{ exam_dossier_label }}</h2><p>{{ session.name }}</p></div>
@@ -8,6 +9,7 @@
   </header>
   <nav class="exam-tabs" aria-label="Rubriques du dossier examen">
     <button type="button" data-security-tab="candidates" aria-pressed="true">Dossiers candidats</button>
+    {% if security_jury_supported %}<button type="button" data-security-tab="organization" aria-pressed="false">Organisation et jury</button>{% endif %}
     <button type="button" data-security-tab="calendar" aria-pressed="false">Calendrier</button>
   </nav>
   <div id="securityExamStatus" class="exam-status" role="status" aria-live="polite"></div>
@@ -24,6 +26,7 @@
         <div id="securityExamArchive" class="exam-note" hidden><p id="securityExamArchiveMeta"></p><a class="btn btn-outline" id="securityExamArchiveLink">Télécharger le dernier ZIP généré</a></div>
       </div>
     </section>
+    {% if security_jury_supported %}<section data-security-panel="organization" hidden>{% include '_security_jury_form.html' %}</section>{% endif %}
     <section data-security-panel="calendar" hidden>
       <form id="securityExamCalendar">
         <fieldset>
@@ -41,4 +44,8 @@
     </section>
   </div>
 </dialog>
-<script src="{{ url_for('static', filename='js/security-exam.js', v='20261020-1') }}" defer></script>
+<script src="{{ url_for('static', filename='js/security-exam.js', v='20261022-jury-1') }}" defer></script>
+{% if security_jury_supported %}
+{% include '_exam_jury_mail_dialog.html' %}
+<script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261022-jury-1') }}" defer></script>
+{% endif %}
