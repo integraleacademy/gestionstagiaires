@@ -59,7 +59,7 @@
 
 .public-wrap .vtc-date-chip { background: #f7f9fd; }
 .info-date-note { margin-top: 6px; font-size: 11px; line-height: 1.5; color: #64748b; font-style: italic; }
-.public-wrap .vtc-credentials-card { grid-column: 1 / -1; margin-top: 0; padding: 28px; border: 1px solid #dce5ef; border-radius: 24px; background: #fff; box-shadow: 0 8px 28px #173e7208; }
+.public-wrap .vtc-credentials-card { grid-column: 1 / -1; margin-top: 24px; padding: 28px; border: 1px solid #dce5ef; border-radius: 24px; background: #fff; box-shadow: 0 8px 28px #173e7208; }
 .vtc-chamber-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
 .vtc-chamber-icon { flex: 0 0 auto; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; background: #edf3fb; color: #173e72; }
 .vtc-chamber-icon svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -78,7 +78,7 @@
 .vtc-panel-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
 .public-wrap .vtc-credentials-panel input { background: #fff; }
 .public-wrap .vtc-status-item { padding: 16px; border-color: #cce8d9; background: #f1faf5; color: #22543d; font-size: 14px; font-weight: 500; line-height: 1.65; box-shadow: none; }
-.public-wrap .vtc-assistance-standalone { grid-column: 1 / -1; margin-top: 0; }
+.public-wrap .vtc-assistance-standalone { grid-column: 1 / -1; margin-top: 24px; }
 .public-wrap .vtc-portal-link:focus-visible { outline: 3px solid #5ca1ef; outline-offset: 3px; }
 @media (max-width: 640px) {
   .public-wrap .vtc-credentials-card { padding: 20px; }
