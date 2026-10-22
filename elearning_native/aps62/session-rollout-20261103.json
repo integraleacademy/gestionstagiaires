@@ -1,0 +1,95 @@
+{
+  "version": "20261012-aps62-v12",
+  "modules": [
+    {
+      "course_id": "academy-aps62-01",
+      "course_version": "20261012-aps62-v12",
+      "title": "Le cadre de la sécurité privée",
+      "required_minutes": 240
+    },
+    {
+      "course_id": "academy-aps62-02",
+      "course_version": "20261012-aps62-v12",
+      "title": "Responsabilité et droit pénal",
+      "required_minutes": 180
+    },
+    {
+      "course_id": "academy-aps62-03",
+      "course_version": "20261012-aps62-v12",
+      "title": "Flagrance et article 73",
+      "required_minutes": 120
+    },
+    {
+      "course_id": "academy-aps62-04",
+      "course_version": "20261012-aps62-v12",
+      "title": "Libertés et données personnelles",
+      "required_minutes": 60
+    },
+    {
+      "course_id": "academy-aps62-05",
+      "course_version": "20261012-aps62-v12",
+      "title": "République, égalité et dignité",
+      "required_minutes": 180
+    },
+    {
+      "course_id": "academy-aps62-06",
+      "course_version": "20261012-aps62-v12",
+      "title": "Déontologie au quotidien",
+      "required_minutes": 240
+    },
+    {
+      "course_id": "academy-aps62-07",
+      "course_version": "20261012-aps62-v12",
+      "title": "Comprendre et apaiser les conflits",
+      "required_minutes": 300
+    },
+    {
+      "course_id": "academy-aps62-08",
+      "course_version": "20261012-aps62-v12",
+      "title": "Consignes et comptes rendus",
+      "required_minutes": 300
+    },
+    {
+      "course_id": "academy-aps62-09",
+      "course_version": "20261012-aps62-v12",
+      "title": "Justifier ses décisions",
+      "required_minutes": 180
+    },
+    {
+      "course_id": "academy-aps62-10",
+      "course_version": "20261012-aps62-v12",
+      "title": "Prévention et risques industriels",
+      "required_minutes": 420
+    },
+    {
+      "course_id": "academy-aps62-11",
+      "course_version": "20261012-aps62-v12",
+      "title": "Sensibilisation au risque électrique",
+      "required_minutes": 120
+    },
+    {
+      "course_id": "academy-aps62-12",
+      "course_version": "20261012-aps62-v12",
+      "title": "Prévenir la menace terroriste",
+      "required_minutes": 420
+    },
+    {
+      "course_id": "academy-aps62-13",
+      "course_version": "20261012-aps62-v12",
+      "title": "La main courante numérique",
+      "required_minutes": 120
+    },
+    {
+      "course_id": "academy-aps62-14",
+      "course_version": "20261012-aps62-v12",
+      "title": "Décider face à une infraction",
+      "required_minutes": 420
+    },
+    {
+      "course_id": "academy-aps62-15",
+      "course_version": "20261012-aps62-v12",
+      "title": "Sécuriser un événement",
+      "required_minutes": 420
+    }
+  ]
+}

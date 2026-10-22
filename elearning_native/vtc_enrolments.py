@@ -14,6 +14,7 @@ from .importer import CourseImportError
 from .paths import assigned_modules
 from .vtc_lesson_videos import COURSE_VERSION, REQUIRED_VERSION
 from .vtc_productions import VERSION as PROGRAMME_VERSION
+from . import aps_enrolments
 
 MARKER = 'vtc_lesson_video_version'
 PROGRAMME_MARKER = 'vtc_programme_version'
@@ -80,6 +81,8 @@ def effective_learner_session(session_obj, trainee):
     resolve them explicitly to v6 instead of silently upgrading old accounts.
     Explicit empty paths remain empty, and other training families are untouched.
     """
+    if aps_enrolments.is_native_aps_session(session_obj):
+        return aps_enrolments.learner_session(session_obj)
     if is_vtc(session_obj) and isinstance(trainee.get(STATE_KEY), dict):
         return learner_session(session_obj, trainee)
     modules = assigned_modules(session_obj)

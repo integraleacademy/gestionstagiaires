@@ -4,9 +4,10 @@
 <div class="np-shell" id="nativePathBuilder">
   <a class="np-back" href="{{ url_for('native_elearning.admin_macaps_catalog' if training_label == 'MAC APS' else 'native_elearning.admin_a3p_catalog' if training_label == 'A3P' else 'native_elearning.admin_vtc_catalog' if training_label == 'VTC' else 'native_elearning.admin_catalog') }}">← Bibliothèque et sessions</a>
   <header class="np-header">
-    <div><span class="np-eyebrow">Ingénierie pédagogique · {{ training_label }}</span><h1>Composer le parcours</h1><p>{{ training_session.name or training_session.id }} · {{ training_session.date_start or 'Date à renseigner' }}</p></div>
+    <div><span class="np-eyebrow">Ingénierie pédagogique · {{ training_label }}</span><h1>{{ 'Parcours APS automatique' if training_session.aps_native_automatic else 'Composer le parcours' }}</h1><p>{{ training_session.name or training_session.id }} · {{ training_session.date_start or 'Date à renseigner' }}</p></div>
     <span class="np-badge">{{ 'Accès ouvert après affectation et à la date de début' if training_label in ['A3P', 'MAC APS'] else 'E-learning activé' if training_session.aps_elearning_enabled else 'E-learning à activer dans la session' }}</span>
   </header>
+  {% if training_session.aps_native_automatic %}<p class="np-panel">Les sessions APS avec e-learning débutant à partir du 03/11/2026 utilisent automatiquement le parcours APS complet : 15 modules, 62 heures. Le suivi individuel est disponible dans chaque fiche stagiaire.</p>{% endif %}
   <div class="np-layout">
     <aside class="np-library np-panel">
       <span class="np-eyebrow">1 · Ajouter</span><h2>Vos modules disponibles</h2>

@@ -13,14 +13,16 @@ from elearning_reporting import ProgressReader, certificate_pdf, connections_csv
 from elearning_native.importer import CourseImportError
 from elearning_native.paths import assigned_modules
 from elearning_native.vtc_enrolments import effective_learner_session
+from elearning_native.aps_enrolments import is_native_aps_session
 from vtc_elearning_activation import STATE_KEY, is_vtc
 
 
 def source_for(training, person):
-    if not is_vtc(training):
+    native_aps = is_native_aps_session(training)
+    if not native_aps and not is_vtc(training):
         return None
     activation = person.get(STATE_KEY)
-    if isinstance(activation, dict):
+    if not native_aps and isinstance(activation, dict):
         # Administrators may inspect the assigned path before its activation.
         # Do not use the learner view, which correctly hides pending modules.
         effective = {**training, 'aps_native_modules': activation.get('modules') or []}
@@ -30,13 +32,13 @@ def source_for(training, person):
     if not modules:
         return None
     source = {'id': str(training['id']), 'source_kind': 'training_session',
-              'course_code': 'vtc', 'group_name': training.get('name') or training.get('nom') or '',
+              'course_code': 'aps' if native_aps else 'vtc', 'group_name': training.get('name') or training.get('nom') or '',
               'modules': modules}
     return source, {**effective, 'aps_native_modules': modules}
 
 
 def summary(host, training, person):
-    if not is_vtc(training):
+    if not is_vtc(training) and not is_native_aps_session(training):
         return None
     link = url_for('manuals_shop.trainee_elearning_progress', session_id=training['id'], trainee_id=person['id'])
     try:
@@ -96,8 +98,9 @@ def register_routes(host, bp, *, page):
         report = ProgressReader(host).report(source, person, session_obj=effective)
         return page('elearning_progress.html', partner=partner, order=source, person=person,
                     group=None, report=report, course=learning.COURSES[source['course_code']], staff=True,
-                    back_url=url_for('admin_trainee_page', session_id=session_id, trainee_id=trainee_id) + '#vtcElearningFollowup',
-                    activation_pending=bool(person.get(STATE_KEY) and not person[STATE_KEY].get('activated_at')),
+                    back_url=url_for('admin_trainee_page', session_id=session_id, trainee_id=trainee_id)
+                        + ('#apsElearningFollowup' if source['course_code'] == 'aps' else '#vtcElearningFollowup'),
+                    activation_pending=source['course_code'] == 'vtc' and bool(person.get(STATE_KEY) and not person[STATE_KEY].get('activated_at')),
                     report_link=lambda suffix='', **values: url_for('manuals_shop.trainee_elearning_progress' + suffix,
                         session_id=session_id, trainee_id=trainee_id, **values))
 

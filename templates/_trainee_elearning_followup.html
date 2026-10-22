@@ -1,0 +1,15 @@
+    {% if native_elearning_followup %}
+    {% set followup = native_elearning_followup %}
+    <div style="margin-top:20px;padding-top:18px;border-top:1px solid #e4d8f2;">
+      <h3 style="margin:0 0 12px;font-size:17px;">Suivi e-learning</h3>
+      {% if followup.available %}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px;">
+        <div style="padding:14px;border-radius:12px;background:#f8f6fc;"><div class="hint">Progression des activités</div><strong style="font-size:22px;">{{ '%g'|format(followup.progress_percent) }} %</strong><div class="hint">{{ followup.status_label }}</div></div>
+        <div style="padding:14px;border-radius:12px;background:#f8f6fc;"><div class="hint">Temps actif comptabilisé</div><strong>{{ followup.active_time_label }}</strong><div class="hint">sur {{ followup.required_time_label }}</div></div>
+        <div style="padding:14px;border-radius:12px;background:#f8f6fc;"><div class="hint">Modules terminés</div><strong style="font-size:22px;">{{ followup.completed_modules }} / {{ followup.total_modules }}</strong></div>
+      </div>
+      {% endif %}
+      <p class="hint">Progression par module, temps passé, résultats des examens blancs, copies PDF et historique des connexions.</p>
+      <a class="btn btn-primary" href="{{ followup.url }}">Consulter le suivi détaillé</a>
+    </div>
+    {% endif %}

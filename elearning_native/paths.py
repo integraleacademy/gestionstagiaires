@@ -11,6 +11,7 @@ from .videos import course_videos, videos_complete
 from .video_compatibility import compatible_progress
 from .assessment import summary_for
 from .mac_aps_timing import FIXED_MINUTES, is_timed_course, objective_progress
+from . import aps_enrolments
 
 
 MAX_PATH_MODULES = 100
@@ -24,6 +25,8 @@ def allows_free_module_navigation(session_obj: Mapping[str, Any]) -> bool:
 
 
 def assigned_modules(session_obj: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    if aps_enrolments.is_native_aps_session(session_obj):
+        return aps_enrolments.modules()
     # An explicit empty path must not fall back to the old single-course field.
     if isinstance(session_obj.get("aps_native_modules"), list):
         return [dict(item) for item in session_obj["aps_native_modules"] if isinstance(item, Mapping)]
