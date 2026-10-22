@@ -217,7 +217,14 @@ def campaign_view(conn, campaign_id):
     result["counts"] = {r[0]: r[1] for r in conn.execute("SELECT status, count(*) FROM outreach_deliveries WHERE campaign_id=? GROUP BY status", (campaign_id,))}
     result["total"] = sum(result["counts"].values())
     result["remaining"] = result["counts"].get("pending", 0)
+    failure = conn.execute("SELECT error FROM outreach_deliveries WHERE campaign_id=? AND status IN ('failed','uncertain') AND error!='' ORDER BY started DESC,contact_id LIMIT 1", (campaign_id,)).fetchone()
+    result["last_error"] = failure[0] if failure else ""
     return result
+
+
+def delivery_idempotency_key(campaign_id, contact_id, attempt):
+    # Brevo requires a UUID. Keep it stable for the same delivery attempt.
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"outreach-{campaign_id}-{contact_id}-{attempt}"))
 
 
 def contact_scope(query="", batch=""):
@@ -486,7 +493,7 @@ def register(host):
         try:
             body, text = mail_content(host, campaign["template"], contact)
             result = host.brevo_send_email(contact["email"], campaign["template"]["subject"], body,
-                text_content=text, metadata={"kind": "elearning_campaign", "idempotency_key": f"outreach-{campaign_id}-{contact['id']}-{attempt}"},
+                text_content=text, metadata={"kind": "elearning_campaign", "idempotency_key": delivery_idempotency_key(campaign_id, contact["id"], attempt)},
                 reply_to={"email": "clement@integraleacademy.com", "name": "Clément VAILLANT"})
             # Network/5xx errors can conceal provider acceptance. Never silently retry them.
             state = "sent" if result.get("ok") else "failed" if result.get("not_sent") or (result.get("status_code") and 400 <= result["status_code"] < 500) else "uncertain"

@@ -3,11 +3,15 @@ import io
 import json
 import re
 import time
+import uuid
+from types import SimpleNamespace
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
 import app as host
 import partner_campaigns as outreach
+
+REAL_BREVO_SEND = host.brevo_send_email
 
 
 @pytest.fixture
@@ -161,6 +165,70 @@ def test_failed_and_ambiguous_results_pause_without_resending(setup,monkeypatch)
     client.post(base+'/start',data={'csrf_token':token,'confirm':'yes'})
     result=client.post(base+'/next',data={'csrf_token':token}).json
     assert result['done'] and result['counts']['uncertain']==1
+
+
+def test_campaign_recovery_uses_uuid_in_real_brevo_payload(setup,monkeypatch):
+    client,token,_=setup
+    contacts=seed(setup)
+    cid=create(setup)
+    base='/admin/partners/campaigns/'+cid
+    # Reproduce the production campaign: one confirmed refusal, the rest pending.
+    with outreach.db(host,True) as conn:
+        conn.execute("UPDATE outreach_campaigns SET status='paused' WHERE id=?",(cid,))
+        conn.execute("UPDATE outreach_deliveries SET status='failed',attempt=1,error='Idempotency key exceeds char limit' WHERE campaign_id=? AND contact_id=?",(cid,contacts[0]['id']))
+    payloads=[]
+    def provider(url,*,headers,json,timeout):
+        assert url=='https://api.brevo.com/v3/smtp/email'
+        payloads.append(json)
+        key=json.get('headers',{}).get('idempotencyKey','')
+        try:
+            valid=len(key)==36 and str(uuid.UUID(key))==key
+        except ValueError:
+            valid=False
+        response={'messageId':f'mock-{len(payloads)}'} if valid else {'code':'invalid_parameter','message':'Idempotency key exceeds char limit'}
+        return SimpleNamespace(status_code=201 if valid else 400,text='',json=lambda:response)
+    monkeypatch.setattr(host.requests,'post',provider)
+    monkeypatch.setattr(host,'brevo_send_email',REAL_BREVO_SEND)
+    assert client.post(base+'/start',data={'csrf_token':token,'confirm':'yes','retry_failed':'yes'}).status_code==200
+    for _ in range(3):
+        result=client.post(base+'/next',data={'csrf_token':token}).json
+    assert result['status']=='completed' and result['counts']=={'sent':2}
+    assert len(payloads)==2
+    assert len({p['headers']['idempotencyKey'] for p in payloads})==2
+    assert [p['to'] for p in payloads]==[[{'email':c['email']}] for c in contacts]
+    assert all(p['replyTo']['email']=='clement@integraleacademy.com' for p in payloads)
+    assert not result['last_error']
+    # A second resume must not resend the two messages already accepted.
+    client.post(base+'/start',data={'csrf_token':token,'confirm':'yes','retry_failed':'yes'})
+    assert client.post(base+'/next',data={'csrf_token':token}).json['done']
+    assert len(payloads)==2
+
+
+def test_delivery_key_is_stable_and_scoped_to_one_attempt():
+    campaign,contact=uuid.uuid4().hex,uuid.uuid4().hex
+    key=outreach.delivery_idempotency_key(campaign,contact,1)
+    assert len(key)==36 and str(uuid.UUID(key))==key
+    assert key==outreach.delivery_idempotency_key(campaign,contact,1)
+    assert len({key,outreach.delivery_idempotency_key(campaign,contact,2),
+                outreach.delivery_idempotency_key(campaign,uuid.uuid4().hex,1),
+                outreach.delivery_idempotency_key(uuid.uuid4().hex,contact,1)})==4
+
+
+def test_failure_reason_is_visible_on_response_and_reload(setup,monkeypatch):
+    client,token,_=setup
+    seed(setup)
+    cid=create(setup)
+    base='/admin/partners/campaigns/'+cid
+    error='Idempotency key exceeds char limit <script>alert(1)</script>'
+    monkeypatch.setattr(host,'brevo_send_email',lambda *a,**k:{'ok':False,'status_code':400,'error':error})
+    client.post(base+'/start',data={'csrf_token':token,'confirm':'yes'})
+    result=client.post(base+'/next',data={'csrf_token':token}).json
+    assert result['status']=='paused' and result['last_error']==error
+    page=client.get('/admin/partners',query_string={'tab':'campaigns','campaign':cid})
+    assert 'id="pc-send-error" role="alert" hidden' not in page.text
+    assert 'id="pc-error-detail">Idempotency key exceeds char limit &lt;script&gt;' in page.text
+    assert '<script>alert(1)</script>' not in page.text
+    assert 'id="pc-retry-option" hidden' not in page.text
 
 
 def test_stale_claim_and_pause_and_resend_filter(setup):

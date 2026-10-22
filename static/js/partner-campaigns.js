@@ -46,6 +46,9 @@
   const start = panel.querySelector('#pc-start');
   const pause = panel.querySelector('#pc-pause');
   const message = panel.querySelector('#pc-send-status');
+  const sendError = panel.querySelector('#pc-send-error');
+  const errorDetail = panel.querySelector('#pc-error-detail');
+  const retryOption = panel.querySelector('#pc-retry-option');
   const confirm = panel.querySelector('#pc-confirm');
   const csrf = root.querySelector('[name="csrf_token"]').value;
   let running = false;
@@ -61,6 +64,9 @@
     if (!data.counts) return;
     panel.querySelectorAll('[data-count]').forEach(node => { node.textContent = data.counts[node.dataset.count] || 0; });
     panel.querySelector('progress').value = data.total - (data.counts.pending || 0) - (data.counts.sending || 0);
+    sendError.hidden = !data.last_error;
+    errorDetail.textContent = data.last_error || '';
+    retryOption.hidden = !data.counts.failed;
   }
   start.disabled = !confirm.checked;
   confirm.addEventListener('change', () => { if (!running) start.disabled = !confirm.checked; });
@@ -83,7 +89,7 @@
           break;
         }
         if (data.done) {
-          message.textContent = data.status === 'paused' ? 'Envoi mis en pause après une erreur. Consultez le détail avant de reprendre.' : data.status === 'completed' ? 'Traitement terminé. Actualisez le détail pour consulter chaque résultat.' : 'Envoi en pause. Les destinataires restants sont conservés.';
+          message.textContent = data.counts.uncertain ? 'Certains résultats sont incertains : vérifiez-les dans Brevo. Ils ne seront pas renvoyés automatiquement.' : data.status === 'paused' && data.counts.failed ? 'L’envoi s’est arrêté après un refus. Les destinataires en attente sont conservés.' : data.status === 'completed' ? 'Traitement terminé. Actualisez le détail pour consulter chaque résultat.' : 'Envoi en pause. Les destinataires restants sont conservés.';
           break;
         }
         message.textContent = `${data.counts.sent || 0} / ${data.total} mails acceptés par Brevo. Envoi en cours…`;
