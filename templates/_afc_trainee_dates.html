@@ -1,0 +1,44 @@
+{% if session.afc_enabled %}
+{% include "_afc_style.html" %}
+<section class="afc-individual" aria-labelledby="afcIndividualTitle">
+  <h2 id="afcIndividualTitle">Dates de formation de ce stagiaire</h2>
+  <p>Parcours AFC APS + SSIAP 1. Laissez un champ vide pour utiliser la date de la session : {{ session.date_start|frdate }} → {{ session.date_end|frdate }}.</p>
+  <form id="afcIndividualDatesForm">
+    <div class="afc-individual__fields">
+      <label for="afcTraineeStart">Date de début<input id="afcTraineeStart" type="date" value="{{ trainee.training_date_start or '' }}" {% if is_read_only %}disabled{% endif %}></label>
+      <label for="afcTraineeEnd">Date de fin<input id="afcTraineeEnd" type="date" value="{{ trainee.training_date_end or '' }}" {% if is_read_only %}disabled{% endif %}></label>
+      <button class="btn btn-primary" type="submit" {% if is_read_only %}disabled{% endif %}>Enregistrer les dates</button>
+    </div>
+    <div id="afcIndividualFeedback" class="afc-individual__feedback" role="status" aria-live="polite"></div>
+  </form>
+  <div class="afc-calendar__grid">
+    <div><strong>APS</strong><p>{{ session.afc_aps_start|frdate or 'À renseigner' }} → {{ session.afc_aps_end|frdate or 'À renseigner' }}<br>Examen : {{ session.exam_date|frdate or 'À renseigner' }}</p></div>
+    <div><strong>SSIAP 1</strong><p>{{ session.afc_ssiap_start|frdate or 'À renseigner' }} → {{ session.afc_ssiap_end|frdate or 'À renseigner' }}<br>Examen : {{ session.ssiap_exam_date|frdate or 'À renseigner' }}</p></div>
+  </div>
+  {% if (trainee.afc_dates_changed_at or session.afc_dates_changed_at) and (trainee.convocation_aps_pdf_path or trainee.convention_aps_pdf_path or trainee.convention_status in ['signed', 'signing']) %}
+  <p>Les dates ont été modifiées. Les nouveaux aperçus utilisent ce calendrier. Les documents déjà transmis ou signés sont conservés : vérifiez-les avant de générer une nouvelle convention ou de renvoyer la convocation.</p>
+  {% endif %}
+</section>
+<script>
+(()=>{
+  const form = document.getElementById('afcIndividualDatesForm');
+  form.addEventListener('submit', async event=>{
+    event.preventDefault();
+    const button = form.querySelector('button');
+    if(button.disabled) return;
+    const feedback = document.getElementById('afcIndividualFeedback');
+    button.disabled = true;
+    feedback.textContent = 'Enregistrement…';
+    try{
+      const response = await fetch({{ url_for('api_update_trainee', session_id=session.id, trainee_id=trainee.id)|tojson }}, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({training_date_start:document.getElementById('afcTraineeStart').value, training_date_end:document.getElementById('afcTraineeEnd').value})
+      });
+      const result = await response.json();
+      if(!response.ok || !result.ok) throw new Error(result.error || 'Enregistrement impossible.');
+      window.location.reload();
+    }catch(error){feedback.textContent = error.message || 'Erreur réseau. Réessayez.';button.disabled = false;}
+  });
+})();
+</script>
+{% endif %}

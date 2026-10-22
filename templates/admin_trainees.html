@@ -498,6 +498,11 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
      style="text-decoration:none;">
     {% if not is_vtc and (t.identity_photo or "")|trim %}📷 {% endif %}{% if t.public_has_logged_in %}🛜 {% endif %}{% if t.test_fr_file_token %}✏️ {% endif %}{{ t.last_name or "" }}
   </a>
+  {% if session.afc_enabled and afc_training_dates %}
+  {% set dates = afc_training_dates.get(t.id, {}) %}
+  <div class="muted" style="font-size:12px;margin-top:7px;">{{ dates.date_start|frdate }} → {{ dates.date_end|frdate }}</div>
+  <a href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=t.id) }}#afcIndividualTitle" style="font-size:12px;">Modifier les dates</a>
+  {% endif %}
   {% if t.registration_cancelled %}
   <div><span class="registration-cancelled-badge">Inscription annulée</span></div>
   {% endif %}

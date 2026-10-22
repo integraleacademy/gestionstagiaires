@@ -12,6 +12,7 @@ import re
 import secrets
 from zoneinfo import ZoneInfo
 import security_exam_jury
+import afc_schedule
 
 from flask import abort, jsonify, request, session, send_file, url_for
 from itsdangerous import URLSafeTimedSerializer, BadSignature
@@ -36,7 +37,7 @@ DOC_GROUPS = [("identity", "Pièce d’identité", {"id"}),
 def supported(training):
     label = str(training.get("training_type") or training.get("type") or "").upper()
     name = str(training.get("name") or training.get("nom") or "").upper()
-    return "SSIAP" in label or "AFC" in label or "AFC" in name
+    return afc_schedule.enabled(training) or "SSIAP" in label or "AFC" in label or "AFC" in name
 
 
 def state_key(training):
@@ -61,7 +62,7 @@ def settings(training):
         return {**defaults, **state(training).get("config", {}),
                 "level": level, "date": security_exam_jury.exam_date(training)}
     # An AFC's generic exam_date belongs to APS, not necessarily to SSIAP.
-    afc = "AFC" in (str(training.get("training_type") or "") + " " + str(training.get("name") or "")).upper()
+    afc = afc_schedule.enabled(training) or "AFC" in (str(training.get("training_type") or "") + " " + str(training.get("name") or "")).upper()
     date = training.get("ssiap_exam_date") or ("" if afc else training.get("exam_date")) or ""
     match = re.search(r"SSIAP\s*([123])", str(training.get("training_type") or ""), re.I)
     return {**DEFAULTS, "date": date, "level": "SSIAP " + (match.group(1) if match else "1"),

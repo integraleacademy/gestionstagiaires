@@ -24,6 +24,7 @@ import signal
 import atexit
 import sys
 import ssiap_exam
+import afc_schedule
 from exam_jury_overview import summary as exam_jury_summary
 import security_exam_pdf
 from backup_chronology import backup_chronology_key
@@ -9201,7 +9202,7 @@ def _send_vtc_credentials_missing_reminders(data: Dict[str, Any]) -> bool:
 
 
 def _trainee_training_session(session_obj, trainee):
-    return ssiap_pathways.effective_session(session_obj, trainee)
+    return afc_schedule.effective_session(ssiap_pathways.effective_session(session_obj, trainee), trainee)
 
 
 def _trainee_start_date(session_obj, trainee):
@@ -9219,7 +9220,7 @@ def _ssiap_document_template(session_obj, trainee, kind, fallback):
 
 
 def _ssiap_document_filename(base, session_obj, trainee):
-    revision = ssiap_pathways.revision(session_obj, trainee)
+    revision = afc_schedule.revision(session_obj, trainee) or ssiap_pathways.revision(session_obj, trainee)
     return f"{base}_{revision}_{uuid.uuid4().hex[:8]}" if revision else base
 
 
@@ -13114,8 +13115,8 @@ def _session_has_afc_marker(session_name: str) -> bool:
     return "AFC" in (session_name or "").upper()
 
 
-def _sync_trainee_afc_medical_requirement(trainee: Dict[str, Any], session_name: str) -> bool:
-    required = _session_has_afc_marker(session_name)
+def _sync_trainee_afc_medical_requirement(trainee: Dict[str, Any], session_name: str, afc_enabled: bool = False) -> bool:
+    required = afc_enabled or _session_has_afc_marker(session_name)
     trainee["afc_medical_required"] = required
     return required
 
@@ -14776,7 +14777,7 @@ def public_vae_desp_submit():
         "ssiap_exam_date": "",
     }
 
-    _sync_trainee_afc_medical_requirement(trainee, _session_get(target_session, "name", ""))
+    _sync_trainee_afc_medical_requirement(trainee, _session_get(target_session, "name", ""), afc_schedule.enabled(target_session))
     ensure_documents_schema_for_trainee(trainee, training_type)
     trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type, _session_get(target_session, "date_start", "")) else "incomplete"
 
@@ -17774,6 +17775,7 @@ def admin_sessions():
             training_type_class = "other"
 
         out_sessions.append({
+            **afc_schedule.view(s),
             "id": s.get("id"),
             "name": _session_get(s, "name", ""),
             "training_type": _session_get(s, "training_type", ""),
@@ -25419,6 +25421,9 @@ def admin_trainees(session_id: str):
         "prospects_comment": _session_get(s, "prospects_comment", ""),
     }
 
+    session_view.update(afc_schedule.view(s))
+    session_view["afc_dates_changed_at"] = s.get("afc_dates_changed_at", "")
+
     trainees = _session_trainees_list(s)
     training_type = session_view["training_type"]
 
@@ -25438,7 +25443,7 @@ def admin_trainees(session_id: str):
         if fn:
             t["first_name"] = fn
 
-        _sync_trainee_afc_medical_requirement(t, session_view["name"])
+        _sync_trainee_afc_medical_requirement(t, session_view["name"], afc_schedule.enabled(s))
         ensure_documents_schema_for_trainee(t, training_type)
         _sync_convention_status_from_yousign(t)
         t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
@@ -25693,6 +25698,7 @@ def admin_trainees(session_id: str):
 
     return render_template(
         "admin_trainees.html",
+        afc_training_dates={t.get("id"): _trainee_training_session(s, t) for t in trainees} if afc_schedule.enabled(s) else {},
         session={**session_view, "ssiap_pathways": s.get("ssiap_pathways")},
         ssiap_supported=ssiap_pathways.supported(s),
         ssiap_exam_supported=ssiap_exam.supported(s) and s.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID),
@@ -26232,6 +26238,10 @@ def _compute_aps_period_dates(date_start: str, presentiel_start: str = "") -> Di
 
 
 def _sync_aps_period_dates(session_obj: Dict[str, Any]) -> None:
+    # AFC has two independently scheduled courses. Never infer an APS exam
+    # from the end of the full AFC session or overwrite its global period.
+    if afc_schedule.enabled(session_obj):
+        return
     training_type = (_session_get(session_obj, "training_type", "") or "").strip().upper()
     if not training_type.startswith("APS"):
         for key in ("aps_remote_start", "aps_remote_end", "aps_in_person_start", "aps_in_person_end", "aps_in_person_hours", "aps_in_person_days", "aps_computed_exam_date"):
@@ -26299,6 +26309,7 @@ def _session_duplicate_key(session_obj: dict, partner_id: str = "") -> tuple:
         (session_obj.get("exam_practice_date") or "").strip(),
         (session_obj.get("practice_training_date") or "").strip(),
         (session_obj.get("aps_in_person_start") or "").strip(),
+        *((True, *(session_obj.get(k) or "" for k in afc_schedule.SESSION_DATES)) if afc_schedule.enabled(session_obj) else ()),
     )
 
 
@@ -26848,6 +26859,10 @@ def api_create_session():
         "trainees": [],
         "archived": False,
     }
+    try:
+        s.update(afc_schedule.session_update(s, payload))
+    except ValueError as exc:
+        return jsonify(ok=False, error=str(exc)), 400
     _sync_aps_period_dates(s)
 
     duplicate_key = _session_duplicate_key(s)
@@ -26872,6 +26887,16 @@ def api_update_session(session_id: str):
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    try:
+        payload.update(afc_schedule.session_update(s, payload))
+        if afc_schedule.enabled({**s, **payload}):
+            for trainee in _session_trainees_list(s):
+                afc_schedule.trainee_update({**s, **payload}, trainee, {
+                    key: trainee.get(key, "") for key in afc_schedule.TRAINEE_DATES
+                })
+    except ValueError as exc:
+        return jsonify(ok=False, error=str(exc)), 400
+    afc_calendar_changed = any(s.get(k, "") != payload[k] for k in (*afc_schedule.SESSION_DATES, "date_start", "date_end") if k in payload)
     if "ssiap_pathways" in payload or (ssiap_pathways.enabled(s) and any(k in payload for k in ("date_start", "date_end"))):
         try:
             config = ssiap_pathways.validate({**s, **payload}, payload.get("ssiap_pathways", s.get("ssiap_pathways")))
@@ -26928,6 +26953,18 @@ def api_update_session(session_id: str):
 
     if "ssiap_pathways" in payload:
         s["ssiap_pathways"] = payload["ssiap_pathways"]
+    if "afc_enabled" in payload:
+        s["afc_enabled"] = payload["afc_enabled"]
+    for key in afc_schedule.SESSION_DATES:
+        if key in payload:
+            s[key] = payload[key]
+    if afc_calendar_changed and afc_schedule.enabled(s):
+        s["afc_dates_changed_at"] = _now_iso()
+        if "ssiap_exam_date" in payload and isinstance(s.get("ssiap_exam"), dict):
+            exam = s["ssiap_exam"]
+            if isinstance(exam.get("config"), dict) and exam["config"].get("date") != s.get("ssiap_exam_date"):
+                exam["config"]["date"] = s.get("ssiap_exam_date", "")
+                exam["revision"] = int(exam.get("revision") or 0) + 1
     _sync_aps_period_dates(s)
     s["updated_at"] = _now_iso()
     save_data(data)
@@ -27122,6 +27159,10 @@ def api_create_trainee(session_id: str):
         "ypareo_cursus_id": "",
         "ypareo_cursus_erreur": "",
     }
+    try:
+        t.update(afc_schedule.trainee_update(s, t, payload))
+    except ValueError as exc:
+        return jsonify(ok=False, error=str(exc)), 400
     if crm_transfer:
         crm_payload = crm_transfer.get("payload") or {}
         t["crm_contact_id"] = str(crm_payload.get("crm_contact_id") or "")
@@ -27132,7 +27173,7 @@ def api_create_trainee(session_id: str):
     if ssiap_pathways.enabled(s):
         t["ssiap_pathway"] = pathway_choice
 
-    _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
+    _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""), afc_schedule.enabled(s))
     ensure_documents_schema_for_trainee(t, training_type)
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
 
@@ -27360,6 +27401,12 @@ def api_update_trainee(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    try:
+        payload.update(afc_schedule.trainee_update(s, t, payload))
+    except ValueError as exc:
+        return jsonify(ok=False, error=str(exc)), 400
+    if any(t.get(k, "") != payload[k] for k in afc_schedule.TRAINEE_DATES if k in payload):
+        t["afc_dates_changed_at"] = _now_iso()
     previous_trainee = copy.deepcopy(t)
     previous_registration_cancelled = _trainee_registration_is_cancelled(t)
     previous_vtc_theory_status = (t.get("vtc_theory_status_manual") or "").strip().lower()
@@ -27374,6 +27421,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
     # Your template uses:
     # - convention_status, test_fr_status, dossier_status, financement_status, vae_status, comment, cnaps
     allowed = {
+        "training_date_start",
+        "training_date_end",
         "convention_status",
         "convention_saisie_done",
         "convention_signed_done",
@@ -32979,7 +33028,7 @@ def _manual_docs_preview(session_obj, trainee, *, today=None, automatic_stage=No
         return None, "Formation déjà commencée."
     training_type = str(_session_get(session_obj, "training_type", "") or "").strip().upper()
     t = copy.deepcopy(trainee)
-    _sync_trainee_afc_medical_requirement(t, _session_get(session_obj, "name", ""))
+    _sync_trainee_afc_medical_requirement(t, _session_get(session_obj, "name", ""), afc_schedule.enabled(session_obj))
     actions = document_actions(t, required_docs_for_training(training_type, t), training_type=training_type,
                                experience_required=_professional_experience_sheet_is_required(training_type, start_date.isoformat()))
     missing = [] if infos_is_complete_for_training(t, training_type) else [line.removeprefix("- ") for line in infos_missing_text(t, training_type).splitlines() if line]
@@ -34088,7 +34137,7 @@ def public_trainee_space(token):
 
     training_type = _session_get(s, "training_type", "")
     _refresh_trainee_hebergement_status(s, t)
-    _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
+    _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""), afc_schedule.enabled(s))
 
     # ✅ aligne la liste des docs requis
     ensure_documents_schema_for_trainee(t, training_type)
@@ -34142,6 +34191,7 @@ def public_trainee_space(token):
     } if show_vtc else {}
     is_aps_training = (training_type or "").strip().upper().startswith("APS")
     display_session = aps_enrolments.learner_session(vtc_elearning_activation.learner_session(s, t))
+    display_session = {**display_session, **afc_schedule.view(s)}
     has_native_elearning = bool(display_session.get("aps_native_modules") or display_session.get("aps_native_course_id"))
     aps_elearning_enabled = (is_aps_training or (show_vtc and has_native_elearning)) and bool(display_session.get("aps_elearning_enabled"))
     aps_elearning_start_date = _session_start_date(display_session) if aps_elearning_enabled else None
@@ -34791,7 +34841,7 @@ def public_doc_check(token: str, doc_key: str):
     if not s or not t:
         abort(404)
     training_type = _session_get(s, "training_type", "")
-    _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
+    _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""), afc_schedule.enabled(s))
     ensure_documents_schema_for_trainee(t, training_type)
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
@@ -34825,7 +34875,7 @@ def public_doc_upload(token: str, doc_key: str):
         abort(404)
 
     training_type = _session_get(s, "training_type", "")
-    _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
+    _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""), afc_schedule.enabled(s))
     ensure_documents_schema_for_trainee(t, training_type)
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
@@ -35096,6 +35146,10 @@ def _automation_training_text(session_obj: Dict[str, Any]) -> str:
 
 def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
     text = _automation_training_text(session_obj)
+    if afc_schedule.enabled(session_obj):
+        return {"enabled": True, "slug": "afc", "label": "AFC APS + SSIAP 1",
+                "convention_template": "conventionafc.docx", "convocation_template": "convocationafc.docx",
+                "entry_template": "attestationentreessiap.docx", "end_template": "attestationfinssiap.docx"}
     if "VAE" in text:
         return {"enabled": True, "slug": "vae", "label": "VAE", "convention_template": "conventionvae.docx"}
     if "A3P" in text:
@@ -35122,7 +35176,7 @@ def _can_send_convocation_without_signed_convention(session_obj: Dict[str, Any])
     convention workflow for these sessions.
     """
     slug = str(_automation_document_config(session_obj).get("slug") or "")
-    return slug.startswith("desp_") or slug == "ssiap"
+    return slug.startswith("desp_") or slug in {"ssiap", "afc"}
 
 
 def _automation_partner_module_enabled() -> bool:
@@ -39106,6 +39160,7 @@ def _split_address_lines(address: str, max_lines: int = 4) -> List[str]:
 
 
 def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    session_obj = _trainee_training_session(dict(session_obj), trainee)
     config = _automation_document_config(session_obj)
     is_dirigeant = str(config.get("slug") or "").startswith("desp_")
     required = [
@@ -39192,6 +39247,7 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         "h_elearning": "62", "h_presentiel": "113", "h_total": "175", "duree_exam": "07h00",
     }
     context.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
+    context.update(afc_schedule.document_context(session_obj, trainee, fr_date, strict=True))
     return context
 
 
@@ -39497,7 +39553,7 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
     if personal_amount in (None, ""):
         personal_amount = "0"
     other_amount = _first_non_empty(trainee.get("other_amount"), trainee.get("montant_autre"), default="0")
-    session_periods = _session_period_replacements(session_obj)
+    session_periods = _session_period_replacements(_trainee_training_session(session_obj, trainee))
     date_start = session_periods["date_debut_formation"]
     date_end = session_periods["date_fin_formation"]
     periode = session_periods["periode_formation"]
@@ -39561,6 +39617,7 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
         "date_edition": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
     }
     replacements.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
+    replacements.update(afc_schedule.document_context(session_obj, trainee, fr_date, strict=True))
     return {key: str(replacements.get(key) or "") for key in replacements}
 
 
@@ -39663,6 +39720,10 @@ def _convocation_email_training_labels(session_obj: Optional[Dict[str, Any]] = N
 
 def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end: str = "", session_obj: Optional[Dict[str, Any]] = None, trainee: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
     pathway = ssiap_pathways.resolve(session_obj or {}, trainee or {}) if trainee is not None else None
+    afc = afc_schedule.document_context(session_obj or {}, trainee or {}, fr_date)
+    if afc:
+        effective = _trainee_training_session(session_obj, trainee or {})
+        date_start, date_end = effective.get("date_start"), effective.get("date_end")
     if pathway:
         date_start, date_end = pathway["date_start"], pathway["date_end"]
     short_label, long_label = _convocation_email_training_labels(session_obj)
@@ -39686,6 +39747,8 @@ def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end
     if pathway:
         details = ssiap_pathways.document_context(session_obj, trainee, fr_date)["detail_parcours"]
         session_line += "<p>" + html.escape(details).replace("\n", "<br>") + "</p>"
+    if afc:
+        session_line += "<p><strong>Calendrier de la session AFC</strong><br>" + html.escape(afc["detail_parcours"]).replace("\n", "<br>") + "</p>"
     period_sentence = f" qui se déroulera {period_label}" if period_label else ""
     introduction = (
         "Votre inscription est prise en compte. Voici les informations pour préparer votre entrée en formation."
@@ -40036,6 +40099,9 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         "aps_elearning_enabled": bool(s.get("aps_elearning_enabled")),
     }
 
+    session_view.update(afc_schedule.view(s))
+    session_view["afc_dates_changed_at"] = s.get("afc_dates_changed_at", "")
+
     trainees = _session_trainees_list(s)
     # Keep the individual trainee sheet consistent with the session roster: a
     # NUB recovered by the CNAPS tracking page must also enable the live title
@@ -40062,7 +40128,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     _remember_admin_trainee_consultation(session_id, trainee_id)
 
     training_type = session_view["training_type"]
-    _sync_trainee_afc_medical_requirement(t, session_view["name"])
+    _sync_trainee_afc_medical_requirement(t, session_view["name"], afc_schedule.enabled(s))
     default_price = default_training_price(training_type)
 
     # ✅ IMPORTANT : on impose la liste de documents selon la formation (et supprime dom)

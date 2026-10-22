@@ -1217,6 +1217,12 @@
               <div><div class="info-label">{{ label }}</div><div class="info-value">{{ vtc_dates.get(key)|frdate if vtc_dates.get(key) else 'Date à venir' }}</div><div class="info-date-note">Sous réserve de modifications</div></div>
             </div>
             {% endfor %}
+          {% elif session.afc_enabled %}
+            <div class="info-chip info-chip--wide"><div><div class="info-label">Votre période de formation AFC</div><div class="info-value">{{ date_range(session.date_start, session.date_end) }}</div></div></div>
+            <div class="info-chip"><div><div class="info-label">Calendrier APS de la session</div><div class="info-value">{{ date_range(session.afc_aps_start, session.afc_aps_end) }}</div></div></div>
+            <div class="info-chip"><div><div class="info-label">Examen APS</div><div class="info-value">{{ session.exam_date|frdate or 'Date à venir' }}</div></div></div>
+            <div class="info-chip"><div><div class="info-label">Calendrier SSIAP 1 de la session</div><div class="info-value">{{ date_range(session.afc_ssiap_start, session.afc_ssiap_end) }}</div></div></div>
+            <div class="info-chip"><div><div class="info-label">Examen SSIAP 1</div><div class="info-value">{{ session.ssiap_exam_date|frdate or 'Date à venir' }}</div></div></div>
           {% elif show_split_training_dates %}
             <div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span><div><div class="info-label">Examen</div><div class="info-value">{{ session.exam_date|frdate if session.exam_date else 'Date à venir' }}</div></div></div>
             <div class="info-chip info-chip--wide"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span><div><div class="info-label">Dates de formation</div><div class="info-value">{{ date_range(session.date_start, session.date_end) }}</div></div></div>

@@ -1,10 +1,11 @@
 """Profiles and shared calendar for initial private-security exam juries."""
 import re
+import afc_schedule
 
 
 def level(training):
     descriptor = f"{training.get('training_type') or training.get('type') or ''} {training.get('name') or training.get('nom') or ''}".upper()
-    if re.search(r'\b(?:VAE|MAC|RECYCLAGE|RAN|SSIAP|AFC)\b', descriptor):
+    if afc_schedule.enabled(training) or re.search(r'\b(?:VAE|MAC|RECYCLAGE|RAN|SSIAP|AFC)\b', descriptor):
         return ''
     if re.search(r'\b(?:DESP|DIRIGEANT)\b', descriptor):
         return 'DESP initial'

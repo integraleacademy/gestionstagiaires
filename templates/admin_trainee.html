@@ -870,6 +870,9 @@
         <span>Examen théorique : <strong>{{ theory_date|frdate }}</strong></span>
         <span>Examen pratique : <strong>{{ practice_date|frdate }}</strong></span>
         <span>Formation pratique : <strong>{{ practice_training_date|frdate }}</strong></span>
+      {% elif session.afc_enabled %}
+        <span>Examen APS : <strong>{{ session.exam_date|frdate or 'À renseigner' }}</strong></span>
+        <span>Examen SSIAP 1 : <strong>{{ session.ssiap_exam_date|frdate or 'À renseigner' }}</strong></span>
       {% else %}
         <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
       {% endif %}
@@ -965,6 +968,7 @@
   <span>Le dossier reste conservé, mais cette personne est exclue des effectifs, des ventes et de tous les KPI{% if trainee.registration_cancelled_at %} depuis le {{ trainee.registration_cancelled_at|frdatetime }}{% endif %}.</span>
 </div>
 
+{% include "_afc_trainee_dates.html" %}
 <div class="modal-backdrop" id="cancellationIndemnityModal" aria-hidden="true">
   <div class="modal cancellation-calculator-modal" role="dialog" aria-modal="true" aria-labelledby="cancellationCalculatorTitle">
     <div class="modal-head">
