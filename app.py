@@ -24,6 +24,7 @@ import signal
 import atexit
 import sys
 import ssiap_exam
+from exam_jury_overview import summary as exam_jury_summary
 import security_exam_pdf
 from backup_chronology import backup_chronology_key
 from wedof_requests import (
@@ -17814,6 +17815,7 @@ def admin_sessions():
             "jury_pending": jury_counts["pending"],
             "jury_present": jury_counts["present"],
             "jury_absent": jury_counts["absent"],
+            "exam_jury": exam_jury_summary(sys.modules[__name__], s),
             "aps_elearning_enabled": bool(s.get("aps_elearning_enabled")),
             "exclude_from_sales_tracking": bool(s.get("exclude_from_sales_tracking")),
         })
