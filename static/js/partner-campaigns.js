@@ -1,0 +1,78 @@
+(() => {
+  'use strict';
+  const root = document.querySelector('[data-campaigns]');
+  if (!root) return;
+  const pageToggle = root.querySelector('#pc-select-page');
+  pageToggle?.addEventListener('change', () => root.querySelectorAll('[name="contact_id"]').forEach(input => { input.checked = pageToggle.checked; }));
+  root.querySelectorAll('[data-exclude-contact]').forEach(button => button.addEventListener('click', event => {
+    if (!window.confirm('Exclure ce contact des prochains envois ?')) event.preventDefault();
+  }));
+  const panel = root.querySelector('[data-campaign-id]');
+  if (!panel) return;
+  const start = panel.querySelector('#pc-start');
+  const pause = panel.querySelector('#pc-pause');
+  const message = panel.querySelector('#pc-send-status');
+  const confirm = panel.querySelector('#pc-confirm');
+  const csrf = root.querySelector('[name="csrf_token"]').value;
+  let running = false;
+  let stopRequested = false;
+  async function post(url, extra = {}) {
+    const response = await fetch(url, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams({csrf_token:csrf,...extra}), credentials:'same-origin'});
+    const type = response.headers.get('content-type') || '';
+    const data = type.includes('application/json') ? await response.json() : {};
+    if (!response.ok || !type.includes('application/json')) throw new Error(data.error || 'La session a expiré ou la requête a échoué. Rechargez la page pour vérifier les résultats.');
+    return data;
+  }
+  function update(data) {
+    if (!data.counts) return;
+    panel.querySelectorAll('[data-count]').forEach(node => { node.textContent = data.counts[node.dataset.count] || 0; });
+    panel.querySelector('progress').value = data.total - (data.counts.pending || 0) - (data.counts.sending || 0);
+  }
+  start.disabled = !confirm.checked;
+  confirm.addEventListener('change', () => { if (!running) start.disabled = !confirm.checked; });
+  start.addEventListener('click', async () => {
+    if (running || !confirm.checked) return;
+    running = true;
+    stopRequested = false;
+    start.disabled = true;
+    pause.hidden = false;
+    pause.disabled = false;
+    message.classList.remove('pc-error');
+    message.textContent = 'Envoi en cours… Gardez cette page ouverte.';
+    try {
+      await post(panel.dataset.startUrl, {confirm:'yes', retry_failed:panel.querySelector('#pc-retry')?.checked ? 'yes' : 'no'});
+      while (!stopRequested) {
+        const data = await post(panel.dataset.nextUrl);
+        update(data);
+        if (data.busy) {
+          message.textContent = 'Un envoi est déjà en cours. Rechargez la page dans quelques instants pour reprendre.';
+          break;
+        }
+        if (data.done) {
+          message.textContent = data.status === 'paused' ? 'Envoi mis en pause après une erreur. Consultez le détail avant de reprendre.' : data.status === 'completed' ? 'Traitement terminé. Actualisez le détail pour consulter chaque résultat.' : 'Envoi en pause. Les destinataires restants sont conservés.';
+          break;
+        }
+        message.textContent = `${data.counts.sent || 0} / ${data.total} mails acceptés par Brevo. Envoi en cours…`;
+        await new Promise(resolve => setTimeout(resolve, 350));
+      }
+      if (stopRequested) message.textContent = 'Envoi en pause. Vous pouvez reprendre les destinataires restants plus tard.';
+    } catch (error) {
+      message.classList.add('pc-error');
+      message.textContent = `${error.message} Aucun renvoi automatique n’est effectué : consultez les résultats avant de reprendre.`;
+    } finally {
+      running = false;
+      start.disabled = !confirm.checked;
+      start.textContent = 'Reprendre les envois restants';
+      pause.hidden = true;
+    }
+  });
+  pause.addEventListener('click', async () => {
+    stopRequested = true;
+    pause.disabled = true;
+    try { await post(panel.dataset.pauseUrl); }
+    catch (error) { message.textContent = error.message; }
+  });
+  window.addEventListener('beforeunload', event => {
+    if (running) { event.preventDefault(); event.returnValue = ''; }
+  });
+})();

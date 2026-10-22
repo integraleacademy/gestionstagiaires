@@ -7,7 +7,7 @@
 <div class="pw platform-hub" data-partner-workspace>
   {% for category,message in get_flashed_messages(with_categories=true) %}<div class="pw-notice {{ 'error' if category == 'error' }}" role="status">{{ message }}</div>{% endfor %}
   <header class="pw-hero"><div><div class="pw-eyebrow">INTÉGRALE CONNECT · ADMINISTRATION</div><h1>Organismes de formation</h1><p>Manuels, clés USB, e-learning et facturation : toute la gestion de votre boutique.</p></div><a class="pw-button light" href="{{ url_for('admin_partner_new') }}">+ Nouveau partenaire</a></header>
-  {% include 'manuals/_sales_settings.html' %}
+  {% if platform_tab != 'campaigns' %}{% include 'manuals/_sales_settings.html' %}{% endif %}
   <nav class="pw-tabs" aria-label="Gestion des organismes et de la boutique">{% for key,label in platform_tabs %}<a href="{{ url_for('admin_partners', tab=key) }}" {% if platform_tab == key %}aria-current="page"{% endif %}>{{ label }}{% if key == 'orders' %}<span>{{ platform_orders|length }}</span>{% elif key == 'invoices' %}<span>{{ platform_invoices|length }}</span>{% endif %}</a>{% endfor %}</nav>
   <div class="pw-panel">
     {% if platform_tab == 'organisations' %}
@@ -15,6 +15,8 @@
       {% include 'partners/_platform_organisations.html' %}
     {% elif platform_tab in ['orders','invoices'] %}
       {% include 'partners/_platform_orders.html' %}
+    {% elif platform_tab == 'campaigns' %}
+      {% include 'partners/_campaigns.html' %}
     {% else %}
       <div class="pw-section-head"><div><h2>Facturation et TVA</h2><p>Réglages communs aux commandes de tous les organismes.</p></div></div>
       {% if missing_taxes %}<div class="pw-notice error">TVA à renseigner : {{ missing_taxes|join(', ') }}.</div>{% endif %}
