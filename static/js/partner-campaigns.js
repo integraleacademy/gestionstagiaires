@@ -3,7 +3,41 @@
   const root = document.querySelector('[data-campaigns]');
   if (!root) return;
   const pageToggle = root.querySelector('#pc-select-page');
-  pageToggle?.addEventListener('change', () => root.querySelectorAll('[name="contact_id"]').forEach(input => { input.checked = pageToggle.checked; }));
+  const audience = root.querySelector('#pc-audience');
+  const contacts = [...root.querySelectorAll('[name="contact_id"]')];
+  const includeContacted = root.querySelector('[name="include_contacted"]');
+  const recipientCount = root.querySelector('#pc-recipient-count');
+  const prepareButtons = [...root.querySelectorAll('[data-create-submit]')];
+  function updateAudience(reset = false) {
+    if (!audience || !recipientCount) return;
+    const all = audience.value === 'all';
+    const eligible = input => includeContacted.checked || input.dataset.contacted !== '1';
+    contacts.forEach(input => {
+      input.disabled = all || !eligible(input);
+      if (all) input.checked = eligible(input);
+      else if (reset || !eligible(input)) input.checked = false;
+    });
+    const available = contacts.filter(eligible);
+    const checked = available.filter(input => input.checked).length;
+    pageToggle.disabled = all || !available.length;
+    pageToggle.checked = !!available.length && checked === available.length;
+    pageToggle.indeterminate = !all && checked > 0 && checked < available.length;
+    const count = all ? Number(recipientCount.dataset[includeContacted.checked ? 'total' : 'eligible']) : checked;
+    const label = `${count.toLocaleString('fr-FR')} destinataire${count === 1 ? '' : 's'}`;
+    recipientCount.textContent = all ? `${label} dans une seule campagne, toutes les pages incluses.` : `${label} parmi les contacts cochés sur cette page.`;
+    prepareButtons.forEach(button => {
+      button.disabled = count === 0;
+      button.textContent = `Préparer l’envoi à ${count.toLocaleString('fr-FR')} contact${count === 1 ? '' : 's'} →`;
+    });
+  }
+  audience?.addEventListener('change', () => updateAudience(true));
+  includeContacted?.addEventListener('change', () => updateAudience());
+  pageToggle?.addEventListener('change', () => {
+    contacts.filter(input => !input.disabled).forEach(input => { input.checked = pageToggle.checked; });
+    updateAudience();
+  });
+  contacts.forEach(input => input.addEventListener('change', () => updateAudience()));
+  updateAudience();
   root.querySelectorAll('[data-exclude-contact]').forEach(button => button.addEventListener('click', event => {
     if (!window.confirm('Exclure ce contact des prochains envois ?')) event.preventDefault();
   }));

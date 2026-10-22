@@ -208,3 +208,44 @@ def test_single_test_send_saves_copy_and_results_export_is_safe(setup):
     assert report.status_code==200 and "'=1+1" in report.text
     assert 'a@exemple.fr' in report.text and 'b@exemple.fr' in report.text
     assert len(mails)==1
+
+
+def test_entire_list_is_not_limited_by_pagination_or_import_size(setup):
+    client,token,mails=setup
+    with outreach.db(host,True) as conn:
+        conn.executemany('INSERT INTO outreach_contacts (id,email,centre,batch_id,created_at,unsubscribe_token) VALUES (?,?,?,?,?,?)',
+            [(f'bulk-{i}',f'centre-{i:05d}@exemple.fr','Centre sécurité','bulk',outreach.now(),f'token-{i}') for i in range(5001)])
+    page=client.get('/admin/partners?tab=campaigns')
+    assert page.text.count('name="contact_id"')==100
+    assert '<option value="all" selected>' in page.text
+    assert 'data-total="5001" data-eligible="5001"' in page.text
+    cid=create(setup)
+    status=client.get('/admin/partners/campaigns/'+cid+'/status').json
+    assert status['total']==5001 and status['counts']['pending']==5001 and status['status']=='draft'
+    assert not mails
+
+
+def test_bulk_selection_respects_search_import_and_contact_exclusions(setup):
+    client,token,mails=setup
+    with outreach.db(host,True) as conn:
+        conn.executemany('INSERT INTO outreach_contacts (id,email,centre,batch_id,created_at,unsubscribe_token) VALUES (?,?,?,?,?,?)',
+            [(f'scope-{i}',f'scope-{i:03d}@exemple.fr','Sécurité_100%','batch-a',outreach.now(),f'scope-token-{i}') for i in range(130)]
+            + [('other-batch','other-batch@exemple.fr','Sécurité_100%','batch-b',outreach.now(),'other-batch-token'),
+               ('other-centre','other-centre@exemple.fr','SécuritéA100x','batch-a',outreach.now(),'other-centre-token')])
+        conn.execute("UPDATE outreach_contacts SET unsubscribed_at=? WHERE id='scope-0'",(outreach.now(),))
+        conn.execute('INSERT INTO outreach_campaigns (id,name,template,created_at,request_key) VALUES (?,?,?,?,?)',
+            ('previous','Précédente',json.dumps(outreach.DEFAULT_TEMPLATE),outreach.now(),'previous-request'))
+        conn.executemany('INSERT INTO outreach_deliveries (campaign_id,contact_id,status) VALUES (?,?,?)',
+            [('previous',f'scope-{i}',state) for i,state in enumerate(('sent','sending','uncertain'),1)])
+    scope={'batch':'batch-a','contacts_q':'Sécurité_100%'}
+    page=client.get('/admin/partners',query_string={'tab':'campaigns',**scope})
+    assert 'data-total="129" data-eligible="126"' in page.text
+    cid=create(setup,**scope)
+    with outreach.db(host) as conn:
+        recipients={r[0] for r in conn.execute('SELECT contact_id FROM outreach_deliveries WHERE campaign_id=?',(cid,))}
+    assert recipients=={f'scope-{i}' for i in range(4,130)}
+    cid2=create(setup,request_key='b'*32,include_contacted='yes',**scope)
+    assert client.get('/admin/partners/campaigns/'+cid2+'/status').json['total']==129
+    cid3=create(setup,request_key='c'*32,selection='selected',contact_id=['scope-4','other-batch','other-centre'],**scope)
+    assert client.get('/admin/partners/campaigns/'+cid3+'/status').json['total']==1
+    assert not mails
