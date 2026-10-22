@@ -24902,7 +24902,9 @@ def _a3p_exam_dossier_public_config(session_item: Dict[str, Any], storage_key: s
     return {
         "training_start_date": saved.get("training_start_date") or _session_get(session_item, "date_start", ""),
         "training_end_date": saved.get("training_end_date") or _session_get(session_item, "date_end", ""),
-        "exam_date": saved.get("exam_date") or _session_get(session_item, "exam_date", ""),
+        "exam_date": (ssiap_exam.security_exam_jury.exam_date(session_item)
+                      if ssiap_exam.security_exam_jury.level(session_item)
+                      else saved.get("exam_date") or _session_get(session_item, "exam_date", "")),
         "epi_training_date": saved.get("epi_training_date") or "",
         "selected_trainee_ids": saved.get("selected_trainee_ids") or [],
         "revision": saved.get("revision", 0),
@@ -24992,6 +24994,8 @@ def api_save_security_exam_calendar(session_id: str):
         if payload.get("revision") != saved.get("revision", 0):
             return {"ok": False, "message": "Le calendrier a changé. Fermez puis rouvrez la modale avant de réessayer.", "status": 409}
         training[profile["storage_key"]] = {**saved, **values, "revision": saved.get("revision", 0) + 1}
+        if ssiap_exam.security_exam_jury.level(training):
+            ssiap_exam.security_exam_jury.sync_date(training, values["exam_date"])
         return {"ok": True}
 
     result = _atomic_update_data(update)
@@ -25255,6 +25259,9 @@ def api_generate_a3p_exam_dossiers(session_id: str):
         abort(404)
     except ValueError as exc:
         return jsonify({"ok": False, "message": str(exc)}), 400
+    if (session_item.get("security_exam", {}).get("config")
+            and values["exam_date"] != ssiap_exam.security_exam_jury.exam_date(session_item)):
+        return jsonify(ok=False, message="La date de l’examen a changé. Actualisez les dossiers avant de préparer le ZIP."), 409
     trainee_by_id = {str(item.get("id") or ""): item for item in _registered_trainees(session_item)}
     selected = [trainee_by_id[item_id] for item_id in selected_ids if item_id in trainee_by_id]
     if not selected:
@@ -25687,6 +25694,7 @@ def admin_trainees(session_id: str):
         session={**session_view, "ssiap_pathways": s.get("ssiap_pathways")},
         ssiap_supported=ssiap_pathways.supported(s),
         ssiap_exam_supported=ssiap_exam.supported(s) and s.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID),
+        security_jury_supported=bool(ssiap_exam.security_exam_jury.level(s)) and s.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID),
         trainees=trainees,
         stats=stats,
         show_hosting=show_hosting,
@@ -55543,6 +55551,7 @@ def admin_exam_detail(session_id: str):
     attempts = exam.get("desp_training_qcu_attempts") if isinstance(exam.get("desp_training_qcu_attempts"), list) else []
     exam_attempts = exam.get("desp_exam_qcu_attempts") if isinstance(exam.get("desp_exam_qcu_attempts"), list) else []
     return render_template("admin_exam_detail.html", exam=exam, trainees=_registered_trainees(exam),
+                           security_jury_supported=bool(ssiap_exam.security_exam_jury.level(exam)) and exam.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID),
                            attempts=_desp_attempts_for_registered_trainees(exam, attempts),
                            exam_attempts=_desp_attempts_for_registered_trainees(exam, exam_attempts),
                            qcu_limit=DESP_TRAINING_QCU_LIMIT,

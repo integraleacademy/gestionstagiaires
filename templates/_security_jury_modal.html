@@ -1,0 +1,7 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css', v='20261020-1') }}">
+<dialog id="ssiapExamDialog" class="exam-dialog" aria-labelledby="ssiapExamTitle" data-organization-only="true" data-url="{{ url_for('api_security_exam', session_id=jury_session.id) }}">
+  <header class="exam-heading"><div><span class="exam-eyebrow">INTÉGRALE ACADEMY</span><h2 id="ssiapExamTitle">Organisation et jury · DESP initial</h2><p>{{ jury_session.name }}</p></div><button type="button" data-exam-close aria-label="Fermer la modale Examen" class="exam-close">×</button></header>
+  <div class="exam-content">{% include '_security_jury_form.html' %}</div>
+</dialog>
+{% include '_exam_jury_mail_dialog.html' %}
+<script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261022-jury-1') }}" defer></script>

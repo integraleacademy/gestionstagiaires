@@ -6,7 +6,7 @@ import uuid
 from zoneinfo import ZoneInfo
 
 from ssiap_exam import (MAIL_RE, active_candidates, build_mail, candidate_settings,
-                        digest, frdate, settings, state, supported)
+                        digest, frdate, settings, state, state_key, jury_supported)
 from ssiap_exam_mail import delivery_outcome
 
 PARIS = ZoneInfo('Europe/Paris')
@@ -27,7 +27,7 @@ def due_date(config):
 
 
 def eligible(services, training):
-    return (supported(training) and not training.get('archived') and not training.get('cancelled')
+    return (jury_supported(training) and not training.get('archived') and not training.get('cancelled')
             and training.get('partner_id') in (None, '', services.INTEGRALE_PARTNER_ID)
             and bool(state(training).get('config')))
 
@@ -158,14 +158,14 @@ def run(services, *, now=None, dry_run=False, limit=10):
             # Brevo requires a UUID, not the former prefixed SHA-256 string.
             # Keep it stable across retries and distinct for each exam/recipient.
             delivery_key = str(uuid.uuid5(uuid.NAMESPACE_URL,
-                'ssiap-j7-' + digest([session_id, exam_date, recipient.casefold()])))
+                state_key(training).removesuffix('_exam') + '-j7-' + digest([session_id, exam_date, recipient.casefold()])))
             entry = {'id': secrets.token_hex(20), 'to': content['to'], 'subject': content['subject'],
                      'kind': 'reminder', 'source': 'automatic_j7', 'status': 'sending',
                      'at': local.isoformat(), 'jury_id': jury_id, 'exam_date': exam_date,
                      'scheduled_for': due_date(config).isoformat(), 'idempotency_key': delivery_key,
                      'attempt_number': (previous or {}).get('attempt_number', 0) + 1}
-            training.setdefault('ssiap_exam', {}).setdefault('mail_history', []).append(entry)
-            return {'content': content, 'entry_id': entry['id'], 'delivery_key': delivery_key}
+            training.setdefault(state_key(training), {}).setdefault('mail_history', []).append(entry)
+            return {'content': content, 'entry_id': entry['id'], 'delivery_key': delivery_key, 'purpose': state_key(training) + '_reminder'}
 
         reserved = services._atomic_update_data(reserve)
         if not reserved:
@@ -175,7 +175,7 @@ def run(services, *, now=None, dry_run=False, limit=10):
         try:
             result = services.brevo_send_email(content['to'], content['subject'], content['html'],
                 text_content=content['text'], reply_to=content['reply_to'],
-                metadata={'purpose': 'ssiap_exam_reminder', 'source': 'automatic_j7', 'session_id': session_id,
+                metadata={'purpose': reserved['purpose'], 'source': 'automatic_j7', 'session_id': session_id,
                           'idempotency_key': reserved['delivery_key']})
         except Exception:
             services.app.logger.exception('SSIAP automatic jury reminder delivery unconfirmed')

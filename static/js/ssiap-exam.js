@@ -1,8 +1,9 @@
 (() => {
   'use strict';
-  const dialog = document.getElementById('ssiapExamDialog');
+  const dialog = document.getElementById('ssiapExamDialog') || document.getElementById('securityExamDialog');
   if (!dialog) return;
-  const base = dialog.dataset.url;
+  const organizationOnly = dialog.dataset.organizationOnly === 'true' || !!dialog.dataset.juryUrl;
+  const base = dialog.dataset.juryUrl || dialog.dataset.url;
   const status = document.getElementById('ssiapExamStatus');
   const configForm = document.getElementById('ssiapExamConfig');
   const mailDialog = document.getElementById('ssiapExamMailDialog');
@@ -72,13 +73,13 @@
   function render() {
     const c = data.config;
     const count = data.candidates.filter(row => row.candidate.included).length;
-    document.getElementById('ssiapExamCandidates').innerHTML = `<div class="exam-summary"><div><h3>${data.candidates.length} dossier${data.candidates.length > 1 ? 's' : ''} candidat${data.candidates.length > 1 ? 's' : ''}</h3><p class="exam-muted">Un PDF portrait par candidat, avec les 7 éléments du dossier.${data.excluded_count ? ` ${data.excluded_count} inscription(s) annulée(s) exclue(s).` : ''}</p></div><button type="button" class="btn btn-outline" data-refresh-exam>Actualiser les pièces</button></div>${!c.date || !c.time ? '<div class="exam-note" style="margin-bottom:15px">Renseignez la date et les horaires dans « Organisation et jury » pour compléter les documents et préparer les mails.</div>' : ''}${data.candidates.map(renderCandidate).join('') || '<p class="exam-empty">Aucun candidat actif dans cette session.</p>'}`;
-    configForm.innerHTML = `<fieldset ${data.read_only ? 'disabled' : ''}><div class="exam-card"><h3>Organisation de l’examen</h3><div class="exam-grid three">${select('Niveau', 'level', c.level, [['SSIAP 1','SSIAP 1'],['SSIAP 2','SSIAP 2'],['SSIAP 3','SSIAP 3']])}${field('Date de l’examen SSIAP', 'date', c.date, 'date')}${field('Heure de début', 'time', c.time, 'time')}${field('Accueil du jury', 'arrival_time', c.arrival_time, 'time')}${field('Fin prévisionnelle', 'end_time', c.end_time, 'time')}${field('Lieu', 'location', c.location)}${field('Adresse de l’examen', 'address', c.address, 'text', 'wide')}${field('Agrément SSIAP', 'approval', c.approval, 'text', 'wide')}${textarea('Informations pratiques à inclure dans les mails', 'instructions', c.instructions, 3000)}${textarea('Outils pédagogiques et techniques (PV collectif)', 'equipment', c.equipment, 220)}</div></div>
+    if (!organizationOnly) document.getElementById('ssiapExamCandidates').innerHTML = `<div class="exam-summary"><div><h3>${data.candidates.length} dossier${data.candidates.length > 1 ? 's' : ''} candidat${data.candidates.length > 1 ? 's' : ''}</h3><p class="exam-muted">Un PDF portrait par candidat, avec les 7 éléments du dossier.${data.excluded_count ? ` ${data.excluded_count} inscription(s) annulée(s) exclue(s).` : ''}</p></div><button type="button" class="btn btn-outline" data-refresh-exam>Actualiser les pièces</button></div>${!c.date || !c.time ? '<div class="exam-note" style="margin-bottom:15px">Renseignez la date et les horaires dans « Organisation et jury » pour compléter les documents et préparer les mails.</div>' : ''}${data.candidates.map(renderCandidate).join('') || '<p class="exam-empty">Aucun candidat actif dans cette session.</p>'}`;
+    configForm.innerHTML = `<fieldset ${data.read_only ? 'disabled' : ''}><div class="exam-card"><h3>Organisation de l’examen</h3><div class="exam-grid three">${organizationOnly ? `<label class="exam-field">Formation<input name="level" value="${esc(c.level)}" readonly></label>` : select('Niveau', 'level', c.level, [['SSIAP 1','SSIAP 1'],['SSIAP 2','SSIAP 2'],['SSIAP 3','SSIAP 3']])}${field(organizationOnly ? 'Date de l’examen' : 'Date de l’examen SSIAP', 'date', c.date, 'date')}${field('Heure de début', 'time', c.time, 'time')}${field('Accueil du jury', 'arrival_time', c.arrival_time, 'time')}${field('Fin prévisionnelle', 'end_time', c.end_time, 'time')}${field('Lieu', 'location', c.location)}${field('Adresse de l’examen', 'address', c.address, 'text', 'wide')}${organizationOnly ? '' : field('Agrément SSIAP', 'approval', c.approval, 'text', 'wide')}${textarea('Informations pratiques à inclure dans les mails', 'instructions', c.instructions, 3000)}${organizationOnly ? '' : textarea('Outils pédagogiques et techniques (PV collectif)', 'equipment', c.equipment, 220)}</div></div>
       <div class="exam-card"><h3>Contact du centre</h3><div class="exam-grid three">${field('Nom du contact', 'contact_name', c.contact_name)}${field('E-mail', 'contact_email', c.contact_email, 'email')}${field('Téléphone', 'contact_phone', c.contact_phone, 'tel')}</div></div>
       <div class="exam-card"><h3>Jury et examinateurs</h3><p class="exam-muted">Les coordonnées sont enregistrées dans votre répertoire et réutilisables pour les autres examens. Les invitations et rappels restent propres à cette session.</p><div class="exam-note">Rappel automatique à J−7, à partir de 09:00 (heure de Paris), pour les membres du jury enregistrés avec une adresse e-mail valide. Le mail reprend l’aperçu ci-dessous. Un rappel déjà envoyé à partir de J−7 évite un nouvel envoi automatique.</div><div id="ssiapExamMailOverview"></div><div class="exam-directory"><label class="exam-field">Choisir un membre déjà enregistré<select id="ssiapExamDirectory"><option value="">Sélectionner dans le répertoire (${data.directory.length})</option>${data.directory.map(m => `<option value="${esc(m.id)}">${esc(m.first_name)} ${esc(m.last_name)}${m.company ? ' · ' + esc(m.company) : ''}${m.email ? ' · ' + esc(m.email) : ''}</option>`).join('')}</select></label><button type="button" data-reuse-juror class="btn btn-outline">Ajouter à cet examen</button></div><div id="ssiapExamJurors">${c.jury.map(juror).join('')}</div><button type="button" data-add-juror class="btn btn-outline">+ Ajouter un membre du jury</button></div><button type="submit" class="btn btn-primary">Enregistrer l’organisation et le jury</button></fieldset>`;
     configDirty = false;
-    document.getElementById('ssiapExamCollective').innerHTML = `<div class="exam-card"><span class="exam-eyebrow" style="color:#008da8">PROCÈS-VERBAL DE LA SESSION</span><h3 style="margin-top:12px">PV collectif ${esc(c.level)}</h3><div class="exam-pv-count">${count}</div><p>candidat${count > 1 ? 's' : ''} présenté${count > 1 ? 's' : ''}</p><p class="exam-muted">La date, les candidats et les informations du jury sont préremplis dans le modèle fourni. Le tampon du centre et la signature de Clément VAILLANT sont apposés dans la zone de l’organisme de formation. Le jury complète les résultats et signe à la main. Le modèle contient 14 places ; une page identique est ajoutée si nécessaire. Les inscriptions annulées et les candidats non présentés sont exclus.</p><div class="exam-actions"><a class="btn btn-primary" href="${esc(data.collective_url)}" target="_blank" rel="noopener">Ouvrir le PV collectif</a><a class="btn btn-outline" href="${esc(data.collective_url)}?download=1" target="_blank" rel="noopener">Télécharger</a></div></div>`;
-    document.getElementById('ssiapExamAttendance').innerHTML = `<div class="exam-card"><span class="exam-eyebrow" style="color:#008da8">JOUR DE L’EXAMEN</span><h3 style="margin-top:12px">Feuille de présence ${esc(c.level)}</h3><div class="exam-pv-count">${count}</div><p>candidat${count > 1 ? 's' : ''} et ${c.jury.length} membre${c.jury.length > 1 ? 's' : ''} du jury</p><p class="exam-muted">La date, les horaires et les noms sont préremplis. Imprimez la feuille pour recueillir les signatures du matin et de l’après-midi. Les candidats et le jury sont regroupés sur la même feuille. Les inscriptions annulées et les candidats non présentés sont exclus.</p><div class="exam-actions"><a class="btn btn-primary" href="${esc(data.attendance_url)}" target="_blank" rel="noopener">Ouvrir la feuille de présence</a><a class="btn btn-outline" href="${esc(data.attendance_url)}?download=1" target="_blank" rel="noopener">Télécharger</a></div></div>`;
+    if (!organizationOnly) document.getElementById('ssiapExamCollective').innerHTML = `<div class="exam-card"><span class="exam-eyebrow" style="color:#008da8">PROCÈS-VERBAL DE LA SESSION</span><h3 style="margin-top:12px">PV collectif ${esc(c.level)}</h3><div class="exam-pv-count">${count}</div><p>candidat${count > 1 ? 's' : ''} présenté${count > 1 ? 's' : ''}</p><p class="exam-muted">La date, les candidats et les informations du jury sont préremplis dans le modèle fourni. Le tampon du centre et la signature de Clément VAILLANT sont apposés dans la zone de l’organisme de formation. Le jury complète les résultats et signe à la main. Le modèle contient 14 places ; une page identique est ajoutée si nécessaire. Les inscriptions annulées et les candidats non présentés sont exclus.</p><div class="exam-actions"><a class="btn btn-primary" href="${esc(data.collective_url)}" target="_blank" rel="noopener">Ouvrir le PV collectif</a><a class="btn btn-outline" href="${esc(data.collective_url)}?download=1" target="_blank" rel="noopener">Télécharger</a></div></div>`;
+    if (!organizationOnly) document.getElementById('ssiapExamAttendance').innerHTML = `<div class="exam-card"><span class="exam-eyebrow" style="color:#008da8">JOUR DE L’EXAMEN</span><h3 style="margin-top:12px">Feuille de présence ${esc(c.level)}</h3><div class="exam-pv-count">${count}</div><p>candidat${count > 1 ? 's' : ''} et ${c.jury.length} membre${c.jury.length > 1 ? 's' : ''} du jury</p><p class="exam-muted">La date, les horaires et les noms sont préremplis. Imprimez la feuille pour recueillir les signatures du matin et de l’après-midi. Les candidats et le jury sont regroupés sur la même feuille. Les inscriptions annulées et les candidats non présentés sont exclus.</p><div class="exam-actions"><a class="btn btn-primary" href="${esc(data.attendance_url)}" target="_blank" rel="noopener">Ouvrir la feuille de présence</a><a class="btn btn-outline" href="${esc(data.attendance_url)}?download=1" target="_blank" rel="noopener">Télécharger</a></div></div>`;
     renderHistory();
     renderMailOverview();
   }
@@ -127,18 +128,28 @@
   }
   async function saveConfig() {
     if (!configForm.reportValidity()) throw new Error('Vérifiez les champs du jury et de l’organisation.');
-    await post(base, {action:'config', revision:data.revision, config:collectConfig()});
+    await post(base, {action:'config', revision:data.revision, expected_date:data.config.date, config:collectConfig()});
     await load({keepDrafts:true});
+    if (dialog.dataset.juryUrl) dialog.dispatchEvent(new Event('exam-jury-saved'));
   }
   async function action(work) {
     if (busy) return;
     busy = true;
     try { await work(); } catch (error) { message(error.message, true); } finally { busy = false; }
   }
-  document.getElementById('btnSsiapExam').addEventListener('click', () => {
+  document.getElementById('btnSsiapExam')?.addEventListener('click', () => {
     dialog.showModal();
     message('Chargement…');
     action(async () => { await load(); message(''); });
+  });
+  dialog.addEventListener('exam-jury-load', () => {
+    if (!configDirty) action(async () => { await load(); message(''); });
+  });
+  dialog.addEventListener('exam-jury-before-leave', event => {
+    if (configDirty || busy) {
+      event.preventDefault();
+      message('Enregistrez l’organisation et le jury avant de changer de rubrique.', true);
+    }
   });
   dialog.addEventListener('input', event => {
     if (event.target.closest('#ssiapExamConfig') && event.target.id !== 'ssiapExamDirectory') configDirty = true;
@@ -188,8 +199,9 @@
     }
   });
   dialog.addEventListener('submit', event => {
-    event.preventDefault();
     const form = event.target;
+    if (form !== configForm && !form.dataset.candidateForm) return;
+    event.preventDefault();
     if (form === configForm) action(async () => { await saveConfig(); message('Organisation enregistrée. Les membres du jury sont disponibles dans votre répertoire.'); });
     if (form.dataset.candidateForm) action(async () => {
       if (configDirty) throw new Error('Enregistrez d’abord l’organisation et le jury. Vos modifications du candidat seront conservées.');
