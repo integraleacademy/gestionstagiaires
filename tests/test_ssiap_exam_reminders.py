@@ -139,7 +139,7 @@ def test_explicit_refusal_retries_after_thirty_minutes_with_same_key(setup):
 
 def test_retry_is_bounded_and_unknown_delivery_is_never_repeated(setup):
     services,_,training,_,_,send=setup
-    send.return_value={'ok':False,'not_sent':True}
+    send.return_value={'ok':False,'status_code':429,'error':'Too many requests'}
     for hour in (9,10,11): assert run(services,now=clock(hour=hour))['processed']==1
     assert run(services,now=clock(hour=12))['processed']==0
     training['ssiap_exam']['mail_history']=[]
@@ -158,3 +158,129 @@ def test_changed_address_between_read_and_reservation_is_not_sent(setup):
     services._atomic_update_data=concurrent_change
     assert run(services,now=clock())['processed']==0
     send.assert_not_called()
+
+
+def test_brevo_uuid_is_valid_stable_and_scoped_to_exam_and_recipient(setup):
+    import uuid
+    services,_,training,config,member,send=setup
+    run(services,now=clock())
+    key=send.call_args.kwargs['metadata']['idempotency_key']
+    assert str(uuid.UUID(key)) == key
+    training['ssiap_exam']['mail_history']=[]
+    member['email']=member['email'].upper()
+    run(services,now=clock())
+    assert send.call_args.kwargs['metadata']['idempotency_key']==key
+    training['ssiap_exam']['mail_history']=[]
+    member['email']='another@example.test'
+    run(services,now=clock())
+    assert send.call_args.kwargs['metadata']['idempotency_key']!=key
+
+
+@pytest.mark.parametrize('result', [
+    {'ok':False,'status_code':400,'error':'Invalid idempotency key'},
+    {'ok':False,'status_code':401,'error':'Key not found'},
+    {'ok':False,'status_code':403,'error':'IP not authorized'},
+    {'ok':False,'not_sent':True,'error':'Configuration Brevo incomplète'},
+])
+def test_permanent_refusal_is_recorded_and_not_retried(setup,result):
+    services,_,training,_,_,send=setup
+    send.return_value=result
+    assert run(services,now=clock())['failed']==1
+    entry=training['ssiap_exam']['mail_history'][0]
+    assert entry['error']==result['error']
+    assert entry['status_code']==result.get('status_code')
+    assert entry['not_sent'] is True and entry['retryable'] is False
+    assert run(services,now=clock(hour=10))['processed']==0
+    assert send.call_count==1
+    services.app.logger.warning.assert_called_once()
+
+
+@pytest.mark.parametrize('code',[408,500,502,None])
+def test_uncertain_provider_response_preserves_reason_without_retry(setup,code):
+    services,_,training,_,_,send=setup
+    send.return_value={'ok':False,'status_code':code,'error':'Provider response unavailable'}
+    run(services,now=clock())
+    entry=training['ssiap_exam']['mail_history'][0]
+    assert entry['status']=='unknown' and entry['not_sent'] is False
+    assert entry['error']=='Provider response unavailable'
+    assert run(services,now=clock(hour=10))['processed']==0
+    assert send.call_count==1
+
+
+def test_reminder_reaches_brevo_transport_with_uuid_and_saves_refusal(setup):
+    """Exercise the real transport against the documented UUID contract, offline."""
+    import ast
+    import re
+    import uuid
+    from pathlib import Path
+    from typing import Any, Dict, List, Optional
+    services,_,training,_,_,_=setup
+    module=ast.parse((Path(__file__).parents[1]/'app.py').read_text())
+    function=next(node for node in module.body if isinstance(node,ast.FunctionDef) and node.name=='brevo_send_email')
+    payloads=[]
+    def provider(url,*,headers,json,timeout):
+        assert url=='https://api.brevo.com/v3/smtp/email'
+        payloads.append(json)
+        try:
+            uuid.UUID(json['headers']['idempotencyKey'])
+            code,body=201,{'messageId':'contract-test-accepted'}
+        except ValueError:
+            code,body=400,{'message':'Invalid idempotency key'}
+        return SimpleNamespace(status_code=code,text=str(body),json=lambda:body)
+    namespace=dict(Optional=Optional,List=List,Dict=Dict,Any=Any,re=re,
+        requests=SimpleNamespace(post=provider),_missing_brevo_config=lambda:[],
+        _is_blocked_email_recipient=lambda email:False,BREVO_API_KEY='test-only',
+        BREVO_SENDER_EMAIL='sender@example.test',BREVO_SENDER_NAME='Test',
+        _safe_brevo_log=Mock(),_now_iso=lambda:clock().isoformat(),
+        has_request_context=lambda:False,_brevo_no_credit_detected=lambda text:False)
+    exec(compile(ast.Module(body=[function],type_ignores=[]),'app.py','exec'),namespace)
+    transport=namespace['brevo_send_email']
+    old_key='ssiap-j7-'+exam.digest(['S1','2026-10-28','jury@example.test'])
+    assert transport('jury@example.test','Test','<p>Test</p>',metadata={'idempotency_key':old_key})['status_code']==400
+    services.brevo_send_email=transport
+    assert run(services,now=clock())['emails_accepted']==1
+    entry=training['ssiap_exam']['mail_history'][0]
+    assert entry['message_id']=='contract-test-accepted' and entry['error']==''
+    assert payloads[-1]['replyTo']['email']==exam.DEFAULTS['contact_email']
+    assert len(payloads)==2
+
+
+@pytest.mark.parametrize('result,expected',[
+    ({'ok':False,'status_code':400,'error':'Invalid request'},'failed'),
+    ({'ok':False,'error':'Provider timeout'},'unknown'),
+    ({'ok':True,'message_id':'accepted'},'sent'),
+])
+def test_manual_jury_route_keeps_exact_delivery_result_and_duplicate_lock(setup,result,expected):
+    from flask import Flask
+    services,_,training,config,_,send=setup
+    config['date']=(dt.datetime.now(dt.timezone.utc).date()+dt.timedelta(days=7)).isoformat()
+    app=Flask(__name__)
+    app.secret_key='test-only'
+    services.app=app
+    services.admin_login_required=lambda fn:fn
+    services.admin_write_required=lambda fn:fn
+    services._now_iso=lambda:clock().isoformat()
+    exam.register(app,services)
+    client=app.test_client()
+    with client.session_transaction() as session:
+        session['ssiap_exam_csrf']='test-csrf'
+    base='/api/admin/sessions/S1/ssiap-exam'
+    preview=client.get(base+'/jury/J1/reminder/preview')
+    assert preview.status_code==200
+    payload={'csrf':'test-csrf','preview_token':preview.json['preview_token']}
+    send.return_value=result
+    response=client.post(base+'/mail/send',json=payload)
+    assert response.status_code==(200 if expected=='sent' else 502)
+    entry=training['ssiap_exam']['mail_history'][0]
+    assert entry['status']==expected and entry['error']==result.get('error','')
+    assert response.json['error']==entry['error']
+    assert client.post(base+'/mail/send',json=payload).status_code==409
+    assert send.call_count==1
+
+
+def test_provider_error_redacts_api_key_and_control_characters():
+    from ssiap_exam_mail import delivery_outcome
+    outcome=delivery_outcome({'ok':False,'status_code':401,'error':'Rejected xkeysib-secret_123\r\nvalue'})
+    assert 'secret_123' not in outcome['error'] and '\n' not in outcome['error']
+    assert outcome['retryable'] is False
+

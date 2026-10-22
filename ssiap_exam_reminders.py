@@ -2,10 +2,12 @@
 import datetime as dt
 import secrets
 import time
+import uuid
 from zoneinfo import ZoneInfo
 
 from ssiap_exam import (MAIL_RE, active_candidates, build_mail, candidate_settings,
                         digest, frdate, settings, state, supported)
+from ssiap_exam_mail import delivery_outcome
 
 PARIS = ZoneInfo('Europe/Paris')
 
@@ -57,7 +59,8 @@ def retry_allowed(attempt, now):
     if not attempt:
         return True
     if not (attempt.get('source') == 'automatic_j7' and attempt.get('status') == 'failed'
-            and attempt.get('not_sent') is True and attempt.get('attempt_number', 1) < 3):
+            and attempt.get('not_sent') is True and attempt.get('retryable') is not False
+            and attempt.get('attempt_number', 1) < 3):
         return False
     try:
         previous = dt.datetime.fromisoformat(attempt['at'].replace('Z', '+00:00'))
@@ -152,7 +155,10 @@ def run(services, *, now=None, dry_run=False, limit=10):
             count = sum(candidate_settings(training, t)['included'] for t in active_candidates(services, training))
             content = build_mail(training, config, member, 'reminder', count,
                                  services.APP_BASE_URL.rstrip('/') + '/static/logo-integrale.png', today=local.date())
-            delivery_key = 'ssiap-j7-' + digest([session_id, exam_date, recipient.casefold()])
+            # Brevo requires a UUID, not the former prefixed SHA-256 string.
+            # Keep it stable across retries and distinct for each exam/recipient.
+            delivery_key = str(uuid.uuid5(uuid.NAMESPACE_URL,
+                'ssiap-j7-' + digest([session_id, exam_date, recipient.casefold()])))
             entry = {'id': secrets.token_hex(20), 'to': content['to'], 'subject': content['subject'],
                      'kind': 'reminder', 'source': 'automatic_j7', 'status': 'sending',
                      'at': local.isoformat(), 'jury_id': jury_id, 'exam_date': exam_date,
@@ -171,25 +177,24 @@ def run(services, *, now=None, dry_run=False, limit=10):
                 text_content=content['text'], reply_to=content['reply_to'],
                 metadata={'purpose': 'ssiap_exam_reminder', 'source': 'automatic_j7', 'session_id': session_id,
                           'idempotency_key': reserved['delivery_key']})
-            result = result if isinstance(result, dict) else {'ok': result is True}
         except Exception:
             services.app.logger.exception('SSIAP automatic jury reminder delivery unconfirmed')
-            result = {'ok': False}
-        accepted = result.get('ok') is True
-        # Retry only an explicit refusal, never an uncertain provider timeout or crash.
-        code = result.get('status_code')
-        not_sent = result.get('not_sent') is True or (isinstance(code, int) and 400 <= code < 500 and code != 408)
+            result = {'ok': False, 'error': 'Erreur technique pendant l’envoi. Réception à vérifier avant toute nouvelle tentative.'}
+        outcome = delivery_outcome(result)
+        accepted = outcome['status'] == 'sent'
+        if not accepted:
+            services.app.logger.warning('SSIAP_JURY_MAIL_FAILED session=%s attempt=%s status=%s http=%s error=%s',
+                session_id, reserved['entry_id'], outcome['status'], outcome['status_code'], outcome['error'])
 
         def finish(current):
             training = services.find_session(current, session_id)
             for entry in state(training or {}).get('mail_history', []):
                 if entry.get('id') == reserved['entry_id']:
-                    entry.update(status='sent' if accepted else ('failed' if not_sent else 'unknown'),
-                                 finished_at=local_clock(now).isoformat(), not_sent=not_sent,
-                                 message_id=str(result.get('message_id') or ''))
+                    entry.update(outcome, finished_at=local_clock(now).isoformat())
             return {}
 
         services._atomic_update_data(finish)
         report['emails_accepted' if accepted else 'failed'] += 1
     report['ok'] = report['failed'] == 0
     return report
+

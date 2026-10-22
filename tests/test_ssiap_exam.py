@@ -208,7 +208,7 @@ def test_changed_details_forged_preview_and_failure_are_not_marked_sent(case):
     prepared = preview(case)
     case[4].return_value = {'ok':False}
     assert case[0].post(BASE + '/mail/send', json={'csrf':state['csrf'], 'preview_token':prepared['preview_token']}).status_code == 502
-    assert view(case)['history'][0]['status'] == 'failed'
+    assert view(case)['history'][0]['status'] == 'unknown'
 
 
 def test_stale_legacy_save_retains_exam_state():
@@ -267,7 +267,7 @@ def test_mail_status_each_kind_failure_retry_and_recipient_change(case):
     prepared = preview(case)
     case[0].post(BASE+'/mail/send',json={'csrf':state['csrf'],'preview_token':prepared['preview_token']})
     status = view(case)['mail_status']['J1']['invitation']
-    assert status['status'] == 'failed' and status['last_sent_at'] and status['sent_count'] == 1
+    assert status['status'] == 'unknown' and status['last_sent_at'] and status['sent_count'] == 1
     case[2]['ssiap_exam']['config']['jury'][0]['email'] = 'new@example.test'
     assert view(case)['mail_status']['J1']['invitation']['status'] == 'not_sent'
     assert len(view(case)['history']) == 3
@@ -472,3 +472,4 @@ def test_manual_send_cannot_race_with_automatic_reservation(case):
     response = case[0].post(BASE+'/mail/send', json={'csrf':state['csrf'],'preview_token':content['preview_token']})
     assert response.status_code == 409
     case[4].assert_not_called()
+

@@ -84,7 +84,21 @@
   }
   function renderHistory() {
     const labels = {sent:'Envoyé', failed:'Échec de l’envoi', sending:'Envoi en cours ou à vérifier',unknown:'Envoi à vérifier'};
-    document.getElementById('ssiapExamMailHistory').innerHTML = `<div class="exam-card" style="margin-top:22px"><h3>Historique des mails au jury</h3>${data.history.length ? data.history.map(entry => `<div class="exam-history"><strong>${esc(labels[entry.status] || entry.status)}</strong> · ${esc(entry.at ? new Date(entry.at).toLocaleString('fr-FR', {timeZone:'Europe/Paris'}) : '')}<br>${esc(entry.to)}<br>${esc(entry.subject)}${entry.source === 'automatic_j7' ? '<br><span class="exam-muted">Rappel automatique J−7</span>' : ''}</div>`).join('') : '<p class="exam-muted">Aucun mail envoyé pour cet examen.</p>'}</div>`;
+    const details = entry => {
+      const automatic = entry.source === 'automatic_j7';
+      const attempt = automatic && entry.attempt_number ? ` · tentative ${esc(entry.attempt_number)}/3` : '';
+      let content = automatic ? `<br><span class="exam-muted">Rappel automatique J−7${attempt}</span>` : '';
+      if (['failed', 'unknown'].includes(entry.status)) {
+        const reason = entry.error || 'Motif non conservé pour cet ancien envoi.';
+        content += `<br><span><strong>Motif :</strong> ${esc(reason)}${entry.status_code ? ` (HTTP ${esc(entry.status_code)})` : ''}</span>`;
+        if (automatic && entry.status === 'failed' && (entry.retryable === false || entry.attempt_number >= 3)) {
+          content += '<br><span class="exam-muted">Aucune nouvelle tentative automatique. Vérifiez le motif avant de renvoyer le rappel.</span>';
+        }
+        if (entry.status === 'unknown') content += '<br><span class="exam-muted">Vérifiez la réception avant de réessayer pour éviter un doublon.</span>';
+      }
+      return content;
+    };
+    document.getElementById('ssiapExamMailHistory').innerHTML = `<div class="exam-card" style="margin-top:22px"><h3>Historique des mails au jury</h3>${data.history.length ? data.history.map(entry => `<div class="exam-history"><strong>${esc(labels[entry.status] || entry.status)}</strong> · ${esc(entry.at ? new Date(entry.at).toLocaleString('fr-FR', {timeZone:'Europe/Paris'}) : '')}<br>${esc(entry.to)}<br>${esc(entry.subject)}${details(entry)}</div>`).join('') : '<p class="exam-muted">Aucun mail envoyé pour cet examen.</p>'}</div>`;
   }
   async function load({keepDrafts = false, savedCandidate = ''} = {}) {
     const drafts = keepDrafts ? [...dialog.querySelectorAll('[data-candidate-form][data-dirty="true"]')]
@@ -256,3 +270,4 @@
     try { data = await api(base); renderHistory(); renderMailOverview(); } catch { /* Preserve the confirmed delivery result. */ }
   });
 })();
+
