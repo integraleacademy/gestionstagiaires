@@ -3013,7 +3013,7 @@ def public_dirigeant_initial_attestation_template():
     return send_file(
         template_path,
         mimetype="application/pdf",
-        as_attachment=True,
+        as_attachment=request.args.get("download") == "1",
         download_name="attestation-honneur-examen-desp.pdf",
     )
 
@@ -3031,7 +3031,7 @@ def public_ssiap_medical_certificate_template():
     return send_file(
         template_path,
         mimetype="application/pdf",
-        as_attachment=True,
+        as_attachment=request.args.get("download") == "1",
         download_name="certificat-medical-ssiap.pdf",
     )
 
@@ -13380,8 +13380,11 @@ def _professional_experience_sheet_is_required(
     training_type: str,
     training_start_date: Any = "",
 ) -> bool:
-    """Require the sheet for VAE or a formation starting after 8 June 2026."""
-    if "VAE" in (training_type or "").strip().upper():
+    """Require the sheet for VAE or recent formations, except VTC."""
+    normalized_training = (training_type or "").strip().upper()
+    if "VTC" in normalized_training:
+        return False
+    if "VAE" in normalized_training:
         return True
     start_datetime = _parse_iso_datetime(str(training_start_date or ""))
     if not start_datetime:
@@ -30706,7 +30709,7 @@ def public_training_convocation(token: str):
     s["trainees"] = _session_trainees_list(s)
     s.pop("stagiaires", None)
     save_data(data)
-    return send_file(pdf_path, mimetype="application/pdf", as_attachment=True, download_name=os.path.basename(pdf_path))
+    return send_file(pdf_path, mimetype="application/pdf", as_attachment=request.args.get("download") == "1", download_name=os.path.basename(pdf_path))
 
 
 @app.get("/espace/<token>/factures/<line_id>")
@@ -34122,6 +34125,11 @@ def public_trainee_space(token):
     show_vae = ("VAE" in (training_type or "").upper())
     show_professional_experience_sheet = _professional_experience_sheet_is_required(training_type, _session_get(s, "date_start", ""))
     show_vtc = ("VTC" in (training_type or "").upper())
+    vtc_dates = {
+        "theory_exam": _session_get(s, "exam_theory_date", "") or _session_get(s, "exam_date", ""),
+        "practice_training": _session_get(s, "practice_training_date", ""),
+        "practice_exam": _session_get(s, "exam_practice_date", ""),
+    } if show_vtc else {}
     is_aps_training = (training_type or "").strip().upper().startswith("APS")
     display_session = aps_enrolments.learner_session(vtc_elearning_activation.learner_session(s, t))
     has_native_elearning = bool(display_session.get("aps_native_modules") or display_session.get("aps_native_course_id"))
@@ -34174,6 +34182,7 @@ def public_trainee_space(token):
         show_vae=show_vae,
         show_professional_experience_sheet=show_professional_experience_sheet,
         show_vtc=show_vtc,
+        vtc_dates=vtc_dates,
         is_aps_training=is_aps_training,
         aps_elearning_enabled=aps_elearning_enabled,
         aps_elearning_available=aps_elearning_available,

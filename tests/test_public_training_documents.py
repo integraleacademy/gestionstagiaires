@@ -95,7 +95,7 @@ def test_missing_convocation_is_regenerated_without_resending(learner):
         response = learner.client.get('/espace/learner-token/convocation.pdf')
     assert response.status_code == 200
     assert response.mimetype == 'application/pdf'
-    assert 'attachment' in response.headers['Content-Disposition']
+    assert 'inline' in response.headers['Content-Disposition']
     assert learner.trainee['convocation_aps_sent_at'] == '2026-10-01T09:00:00Z'
     generate_pdf.assert_called_once()
     learner.save.assert_called_once()
@@ -149,6 +149,50 @@ def test_signed_document_buttons_and_recovery_notice_are_visible(learner):
     body = response.get_data(as_text=True)
     assert response.status_code == 200
     assert 'Votre convention signée n’est pas encore disponible' in body
-    assert '/espace/learner-token/convention/signee.pdf?download=1' in body
+    assert '/espace/learner-token/convention/signee.pdf' in body
+    assert 'signee.pdf?download=1' not in body
     assert 'id="city" value="FRÉJUS"' in body
     assert 'id="birth_city" value="PARIS"' in body
+
+
+@pytest.mark.parametrize('training_type', ['APS', 'VTC'])
+def test_convocation_opens_inline_for_all_training_types(learner, training_type):
+    learner.session['training_type'] = training_type
+    path = learner.convocations / 'convocation.pdf'
+    path.write_bytes(b'%PDF-1.4\nissued convocation')
+    for endpoint in ('convocation.pdf', 'download/' + learner.trainee['convocation_aps_pdf_token']):
+        response = learner.client.get('/espace/learner-token/' + endpoint)
+        assert response.status_code == 200
+        assert response.data == path.read_bytes()
+        assert response.headers['Content-Disposition'].startswith('inline;')
+        assert response.mimetype == 'application/pdf'
+    learner.mail.assert_not_called()
+
+
+@pytest.mark.parametrize('endpoint', [
+    'attestation-honneur-examen-desp.pdf', 'certificat-medical-ssiap.pdf',
+])
+def test_public_document_templates_open_inline(endpoint, tmp_path):
+    from flask import send_file as flask_send_file
+    path = tmp_path / 'template.pdf'
+    path.write_bytes(b'%PDF-1.4\ntemplate')
+    with patch.object(portal.os.path, 'exists', return_value=True), \
+         patch.object(portal, 'send_file', side_effect=lambda _, **kw: flask_send_file(path, **kw)):
+        response = portal.app.test_client().get('/espace/modeles/' + endpoint)
+    assert response.status_code == 200
+    assert response.headers['Content-Disposition'].startswith('inline;')
+
+
+@pytest.mark.parametrize('training_type', ['APS', 'VTC', 'DIRIGEANT INITIAL'])
+def test_public_document_links_open_new_tab_without_forcing_download(learner, training_type):
+    from lxml import html
+    learner.session['training_type'] = training_type
+    learner.trainee['public_has_logged_in'] = True
+    learner.trainee['deliverables'] = {'diplome': 'uploads/diplome.pdf', 'carte_sst': 'uploads/sst.pdf'}
+    page = html.fromstring(learner.client.get('/espace/learner-token').data)
+    links = page.xpath('//a[contains(@href, "/download/") or contains(@href, ".pdf") or contains(@href, "/factures/")]')
+    assert links
+    for link in links:
+        assert link.get('target') == '_blank', link.get('href')
+        assert link.get('download') is None
+        assert 'download=1' not in link.get('href')
