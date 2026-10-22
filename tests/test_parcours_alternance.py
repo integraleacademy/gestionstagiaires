@@ -80,6 +80,12 @@ def test_submission_is_persisted_before_mail_and_idempotent(setup):
     assert response.json['email_sent'] is True
     assert send.call_count == 2
     assert {c.args[0] for c in send.call_args_list} == {'clement@integraleacademy.com','alice@example.test'}
+    candidate_mail = next(c for c in send.call_args_list if c.args[0] == 'alice@example.test')
+    staff_mail = next(c for c in send.call_args_list if c.args[0] == 'clement@integraleacademy.com')
+    assert candidate_mail.kwargs['reply_to']['email'] == 'aurelie@integraleacademy.com'
+    assert staff_mail.kwargs['reply_to']['email'] == 'alice@example.test'
+    assert '04 87 83 06 15' in candidate_mail.args[2]
+    assert '07 69 39 04 57' in candidate_mail.kwargs['text_content']
     raw = json.loads(rows()[0]['payload'])
     assert raw['last_name'] == 'EXEMPLE'
     assert 'judicial_clear' not in raw

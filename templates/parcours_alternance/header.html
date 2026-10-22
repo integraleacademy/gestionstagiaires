@@ -1,0 +1,8 @@
+<header class="academy-header">
+  <div class="wrap academy-header-inner">
+    <a class="academy-home" href="{{ url_for('parcours_alternance.landing') }}" aria-label="Intégrale Academy — Parcours sécurité en alternance">{% include 'parcours_alternance/logo.html' %}</a>
+    <nav class="academy-navigation" aria-label="Navigation principale"><a href="#parcours">Le parcours</a><a href="#calendrier">Ton année</a><a href="#financement">Financement</a><a href="#faq">FAQ</a><a href="#contact">Contact</a></nav>
+    <div class="academy-header-actions"><a class="header-call" href="tel:+33487830615">Appeler Aurélie</a><a class="button button-gold" href="{{ url_for('parcours_alternance.application') }}">Je candidate <span aria-hidden="true">↗</span></a></div>
+    <details class="header-menu"><summary>Menu <span aria-hidden="true">⌄</span></summary><nav aria-label="Navigation mobile"><a href="#parcours">Le parcours</a><a href="#calendrier">Ton année 2027</a><a href="#financement">Formation et salaire</a><a href="#entreprise">Ton entreprise</a><a href="#faq">Tes questions</a><a href="#contact">Contacter Aurélie</a><a class="button button-gold" href="{{ url_for('parcours_alternance.application') }}">Je candidate ↗</a></nav></details>
+  </div>
+</header>

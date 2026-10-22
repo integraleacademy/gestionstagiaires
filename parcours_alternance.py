@@ -21,7 +21,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 YEAR = 2027
 PUBLIC_URL = "https://www.integraleconnect.com/parcoursalternance"
 ADMIN_URL = "https://gestionstagiaires-r5no.onrender.com/admin/parcours-alternance"
-CONTACT = "ecole@integraleacademy.com"
+CONTACT = "aurelie@integraleacademy.com"
 STATUSES = {"new": "Nouvelle", "contacted": "À recontacter", "interview": "Entretien prévu", "accepted": "Retenue", "declined": "Non retenue", "archived": "Archivée"}
 SITUATIONS = ("En études", "En emploi", "En recherche d’emploi", "En reconversion", "Autre situation")
 SLOTS = ("Le matin", "L’après-midi", "Peu importe")
@@ -154,10 +154,10 @@ def deliver(host, application_id, *, automatic=False):
         body = host.app.jinja_env.get_template("parcours_alternance/email.html").render( item=item, staff=staff, public_url=PUBLIC_URL,
                                admin_url=ADMIN_URL, contact=CONTACT)
         plain = (f"Nouvelle candidature : {item['first_name']} {item['last_name']}. Consultez le dossier : {ADMIN_URL}/{application_id}" if staff else
-                 f"Bonjour {item['first_name']}, ta candidature au parcours sécurité en alternance 2027 est bien enregistrée sous la référence {application_id}. Notre équipe va étudier ton projet et te recontacter. Ce message ne vaut pas admission. Contact : {CONTACT}, 04 22 47 07 68.")
+                 f"Bonjour {item['first_name']}, ta candidature au parcours sécurité en alternance 2027 est bien enregistrée sous la référence {application_id}. Notre équipe va étudier ton projet et te recontacter. Ce message ne vaut pas admission. Contact : Aurélie BAYARD-CHAUSSEZ, {CONTACT}, 04 87 83 06 15 ou 07 69 39 04 57.")
         try:
             result = host.brevo_send_email(recipient, title, body, text_content=plain,
-                sender_name="Intégrale Academy", reply_to={"email": item["email"] if staff else CONTACT, "name": item["first_name"] if staff else "Intégrale Academy"},
+                sender_name="Intégrale Academy", reply_to={"email": item["email"] if staff else CONTACT, "name": item["first_name"] if staff else "Aurélie · Intégrale Academy"},
                 metadata={"purpose": "parcours_alternance_" + kind, "idempotency_key": f"alternance-{application_id}-{kind}"})
             ok = result.get("ok") is True if isinstance(result, dict) else result is True
         except Exception:
