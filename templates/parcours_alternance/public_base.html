@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Parcours sécurité en alternance 2027 · Intégrale Academy{% endblock %}</title>
+<meta name="description" content="Moins de 26 ans ? Prépare l’APS, l’A3P et le SSIAP 1 en un an à Puget-sur-Argens. Formation gratuite pour l’apprenti, alternance rémunérée. Candidate en ligne.">
+<link rel="canonical" href="{{ public_url }}"><meta name="theme-color" content="#142338">
+<meta property="og:title" content="1 an. 3 formations. Ton avenir dans la sécurité."><meta property="og:description" content="Ton parcours sécurité en alternance, gratuit pour toi. Rentrée janvier 2027 à Puget-sur-Argens."><meta property="og:image" content="https://www.integraleconnect.com/static/parcours-alternance/aps.webp"><meta property="og:type" content="website">
+<link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='parcours-alternance/style.css') }}?v=1">
+{% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<a class="skip-link" href="#main">Aller au contenu</a>
+{% block body %}{% endblock %}
+</body></html>

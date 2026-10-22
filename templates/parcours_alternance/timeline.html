@@ -1,0 +1,6 @@
+<ol class="timeline">
+{% for phase in timeline %}
+<li class="phase phase--{{ phase.kind }}"><span class="phase-number">0{{ loop.index }}</span><div><span class="phase-period">{{ phase.period }} 2027</span><h3>{{ phase.title }}</h3><p>{{ phase.detail }}</p></div></li>
+{% endfor %}
+</ol>
+<p class="fineprint">Calendrier prévisionnel : les dates précises, les examens et les transitions entre école et entreprise seront confirmés lors de l’inscription. Les formations A3P et SSIAP 1 interrompent les périodes en entreprise indiquées. Les missions dépendent des qualifications et autorisations obtenues.</p>

@@ -751,6 +751,7 @@
       <summary class="btn btn-outline">⚙️ Outils</summary>
       <div class="admin-action-panel">
         <div class="admin-action-section">Gestion</div>
+        {% if is_super_admin and not is_partner_space %}<a class="btn btn-outline" href="{{ url_for('parcours_alternance.inbox') }}">🎓 PARCOURS ALTERNANCE</a>{% endif %}
         {% if not is_partner_space %}<a class="btn btn-outline" href="{{ url_for('admin_afc') }}">AFC</a>{% endif %}
         {% if partner_has_module('automations') %}<a class="btn btn-outline" href="{{ url_for('admin_sessions_conventions') }}">Conventions</a>{% else %}<span class="btn btn-outline module-locked">🔒 Conventions</span>{% endif %}
         {% if partner_has_module('automations') %}<a class="btn btn-primary" href="{{ url_for('admin_sessions_automations') }}">⚡ Automatisations</a>{% else %}<span class="btn btn-primary module-locked">🔒 Automatisations</span>{% endif %}

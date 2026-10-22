@@ -55882,6 +55882,8 @@ ssiap_routes.register(app, sys.modules[__name__])
 ssiap_exam.register(app, sys.modules[__name__])
 
 manuals_shop.register(sys.modules[__name__])
+import parcours_alternance
+parcours_alternance.register(sys.modules[__name__])
 import partner_workspace
 partner_workspace.register(sys.modules[__name__])
 
