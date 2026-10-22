@@ -185,12 +185,23 @@ def test_stale_claim_and_pause_and_resend_filter(setup):
 def test_single_test_send_saves_copy_and_results_export_is_safe(setup):
     client,token,mails=setup
     seed(setup)
-    form={**outreach.DEFAULT_TEMPLATE,'subject':'Mon modèle modifié','test_email':'test@exemple.fr','csrf_token':token}
+    with outreach.db(host,True) as conn:
+        previous={**outreach.DEFAULT_TEMPLATE,**outreach.PREVIOUS_TEMPLATE_COPY,'aps_price':'65'}
+        conn.execute('INSERT INTO outreach_settings (id,payload) VALUES (1,?)',(json.dumps(previous),))
+        refreshed=outreach.saved_template(conn)
+        assert refreshed['subject']==outreach.DEFAULT_TEMPLATE['subject']
+        assert refreshed['intro']==outreach.DEFAULT_TEMPLATE['intro']
+        assert refreshed['aps_price']=='65'
+    form={**outreach.DEFAULT_TEMPLATE,'subject':'Mon modèle modifié','intro':'Mon introduction personnalisée','test_email':'test@exemple.fr','csrf_token':token}
     assert client.post('/admin/partners/campaigns/test',data=form).status_code==303
     assert len(mails)==1 and mails[0][0][0]=='test@exemple.fr'
     assert mails[0][0][1]=='[TEST] Mon modèle modifié'
+    assert 'href="https://integraleconnect.com"' in mails[0][0][2]
+    assert 'mailto:clement@integraleacademy.com?subject=' not in mails[0][0][2]
+    assert 'Demander une démonstration : https://integraleconnect.com' in mails[0][1]['text_content']
     with outreach.db(host,True) as conn:
         assert outreach.saved_template(conn)['subject']=='Mon modèle modifié'
+        assert outreach.saved_template(conn)['intro']=='Mon introduction personnalisée'
         conn.execute("UPDATE outreach_contacts SET centre='=1+1'")
     cid=create(setup)
     report=client.get('/admin/partners/campaigns/'+cid+'/results.csv')

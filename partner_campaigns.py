@@ -16,15 +16,18 @@ from contextlib import contextmanager
 from email.utils import parseaddr
 from functools import wraps
 from pathlib import Path
-from urllib.parse import quote
 
 from flask import abort, flash, jsonify, make_response, redirect, render_template, request, url_for
 
 MAX_BYTES = 2 * 1024 * 1024
 MAX_CONTACTS = 5000
-DEFAULT_TEMPLATE = {
+PREVIOUS_TEMPLATE_COPY = {
     "subject": "Un espace e-learning pour chacun de vos stagiaires — APS & A3P",
     "intro": "Et si vos prochaines sessions commençaient avec un e-learning déjà prêt ? Nous-mêmes centre de formation, nous avons conçu des parcours concrets pour vos stagiaires et un suivi précis pour votre équipe.",
+}
+DEFAULT_TEMPLATE = {
+    "subject": "E-learning APS & A3P : créez les accès de vos stagiaires en toute autonomie",
+    "intro": "Vous formez aux métiers de la sécurité privée ? Nous aussi. Avec Intégrale Connect, proposez à vos stagiaires nos parcours e-learning APS et A3P, conçus par un centre de formation pour les centres de formation. Créez leurs accès en totale autonomie sur integraleconnect.com et suivez leur progression depuis votre espace organisme.",
     "aps_price": "59", "a3p_price": "89",
 }
 LABELS = {"pending": "À envoyer", "sending": "En cours", "sent": "Accepté par Brevo", "failed": "Échec", "uncertain": "À vérifier", "skipped": "Exclu (désinscrit ou bloqué)"}
@@ -161,7 +164,12 @@ def template_from(form):
 
 def saved_template(conn):
     row = conn.execute("SELECT payload FROM outreach_settings WHERE id=1").fetchone()
-    return json.loads(row[0]) if row else dict(DEFAULT_TEMPLATE)
+    template = {**DEFAULT_TEMPLATE, **(json.loads(row[0]) if row else {})}
+    # Refresh untouched defaults while preserving the centre's own copy and prices.
+    for field, previous in PREVIOUS_TEMPLATE_COPY.items():
+        if template[field] == previous:
+            template[field] = DEFAULT_TEMPLATE[field]
+    return template
 
 
 def mail_content(host, template, contact=None, test=False):
@@ -169,12 +177,20 @@ def mail_content(host, template, contact=None, test=False):
     if not base.startswith("https://"):
         base = "https://gestionstagiaires-r5no.onrender.com"
     unsubscribe = base + "/communications/desinscription/" + contact["unsubscribe_token"] if contact else ""
-    demo_url = "mailto:clement@integraleacademy.com?subject=" + quote("Demande de démonstration e-learning pour mon centre")
-    presentation_url = base + "/e-learning"
+    demo_url = "https://integraleconnect.com"
+    presentation_url = demo_url + "/e-learning"
     body = render_template("emails/partner_elearning.html", offer=template, contact=contact,
                            base=base, demo_url=demo_url, presentation_url=presentation_url,
                            unsubscribe_url=unsubscribe, test=test)
-    text = (f"INTÉGRALE ACADEMY — E-LEARNING\n\n{template['intro']}\n\n"
+    text = (f"INTÉGRALE ACADEMY — E-LEARNING APS & A3P\n"
+            "Pour les centres de formation aux métiers de la sécurité.\n\n"
+            f"{template['intro']}\n\n"
+            "CRÉEZ VOS ACCÈS E-LEARNING EN TOTALE AUTONOMIE\n"
+            f"Tout se passe sur {demo_url}, depuis votre espace organisme :\n"
+            "1. Créez votre compte centre sur Intégrale Connect.\n"
+            "2. Choisissez le parcours APS ou A3P, ajoutez vos stagiaires et validez votre commande.\n"
+            "3. Après confirmation du paiement, envoyez vous-même les accès à la date de votre choix. "
+            "Chaque stagiaire reçoit son lien personnel par e-mail.\n\n"
             "Un espace individuel pour vos stagiaires : cours, activités et évaluations.\n"
             "Un suivi pour votre équipe : temps actif par module, progression et justificatifs.\n\n"
             f"APS : {template['aps_price']} € TTC par stagiaire — parcours de 62 h.\n"
@@ -182,8 +198,9 @@ def mail_content(host, template, contact=None, test=False):
             "Séquences à distance selon le référentiel applicable. APS ADEF : 50 h 30 éligibles ; "
             "parcours à adapter au certificateur. A3P : éligibilité au distanciel à valider avec votre certificateur.\n\n"
             f"Découvrez les parcours : {presentation_url}\n"
-            "Demandez votre démonstration : clement@integraleacademy.com — 04 22 47 07 68\n\n"
-            "Clément VAILLANT\nDirecteur général Intégrale Academy – Président Intégrale Group\n")
+            f"Demander une démonstration : {demo_url}\n\n"
+            "Clément VAILLANT\nDirecteur général Intégrale Academy – Président Intégrale Group\n"
+            "clement@integraleacademy.com — 04 22 47 07 68\n")
     if unsubscribe:
         text += "\nNe plus recevoir ces présentations : " + unsubscribe
     return body, text
