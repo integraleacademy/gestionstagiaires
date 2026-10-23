@@ -179,6 +179,9 @@
       </select>
     {% endif %}
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
+    {% if afc_hours_supported %}
+    <a class="btn btn-outline" id="btnAfcHoursExport" href="{{ url_for('admin_afc_hours', session_id=session.id) }}">Export Excel AFC</a>
+    {% endif %}
     {% if is_desp_initial and security_jury_supported %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Organisation et jury</button>{% endif %}
     {% if ssiap_exam_supported and not session.afc_enabled %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Examen</button>{% endif %}
     {% if is_aps_training and session.aps_elearning_enabled and not is_read_only %}

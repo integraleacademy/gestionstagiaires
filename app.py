@@ -26,6 +26,7 @@ import sys
 import ssiap_exam
 import afc_schedule
 import afc_enrolments
+import afc_hours
 import exam_context
 from exam_jury_overview import summary as exam_jury_summary
 import security_exam_pdf
@@ -25706,6 +25707,7 @@ def admin_trainees(session_id: str):
     return render_template(
         "admin_trainees.html",
         afc_training_dates={t.get("id"): _trainee_training_session(s, t) for t in trainees} if afc_schedule.enabled(s) else {},
+        afc_hours_supported=afc_enrolments.supported(sys.modules[__name__], s),
         session={**session_view, "ssiap_pathways": s.get("ssiap_pathways")},
         ssiap_supported=ssiap_pathways.supported(s),
         ssiap_exam_supported=ssiap_exam.supported(s) and s.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID),
@@ -55975,6 +55977,7 @@ import ssiap_routes
 ssiap_routes.register(app, sys.modules[__name__])
 ssiap_exam.register(app, sys.modules[__name__])
 afc_enrolments.register(app, sys.modules[__name__])
+afc_hours.register(app, sys.modules[__name__])
 
 manuals_shop.register(sys.modules[__name__])
 import parcours_alternance

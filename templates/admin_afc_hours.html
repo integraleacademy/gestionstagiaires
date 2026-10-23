@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='afc-hours.css') }}">
+<div class="afc-hours" id="afcHours" data-save-url="{{ url_for('api_afc_hours', session_id=training.id) }}" data-export-url="{{ url_for('admin_afc_hours_excel', session_id=training.id) }}">
+  <a class="afc-hours-back" href="{{ url_for('admin_trainees', session_id=training.id) }}">← Retour aux stagiaires</a>
+  <header class="afc-hours-heading">
+    <div><span class="afc-hours-eyebrow">PARCOURS AFC · APS + SSIAP 1</span><h1>Export Excel AFC</h1><p>{{ training.name }}</p></div>
+    <div class="afc-hours-badge"><strong>{{ afc_state.rows|length }}</strong><span>candidats inscrits</span></div>
+  </header>
+  <p class="afc-hours-intro">La répartition suit les résultats au test de positionnement : les 8 notes les plus faibles correspondent à 54 h, les 2 suivantes à 40 h et les 2 meilleures à 0 h. L’enregistrement applique aussi la date de début au dossier de chaque candidat.</p>
+  <div class="afc-hours-common" aria-label="Heures communes à tous les candidats">
+    <div><strong>273 h</strong><span>Formation professionnelle</span></div>
+    <div><strong>21 h</strong><span>Préparation à l’après-formation</span></div>
+    <div><strong>45 h</strong><span>Soutien personnalisé</span></div>
+  </div>
+  <section class="afc-hours-profiles" aria-label="Répartition des profils RAN">
+    {% for hours, title in [('54', 'RAN complète'), ('40', 'RAN partielle'), ('0', 'Sans RAN')] %}
+    <div class="afc-hours-profile" data-profile-card="{{ hours }}">
+      <div class="afc-hours-profile-top"><span>{{ title }}</span><strong>{{ hours }} h</strong></div>
+      <div class="afc-hours-count"><strong data-count="{{ hours }}">{{ afc_state.counts[hours] }}</strong>{% if afc_state.target %}<span>/ {{ afc_state.target[hours] }} candidats</span>{% else %}<span>candidats</span>{% endif %}</div>
+      <span class="afc-hours-entry" data-profile-date="{{ hours }}"></span>
+    </div>
+    {% endfor %}
+  </section>
+  <details class="afc-hours-calendar">
+    <summary>Dates d’entrée selon le planning</summary>
+    <p>{% if training.id == '1c391db936' %}Planning du 23/10/2026 : RAN du 16 au 25 novembre. Le parcours à 40 h débute après les deux premières journées de 7 h. L’accueil commun a lieu le 26 novembre.{% else %}Renseignez les dates d’entrée à partir du planning de cette session.{% endif %}</p>
+    <div class="afc-hours-date-fields">
+      {% for hours, title in [('54', 'RAN complète · 54 h'), ('40', 'RAN partielle · 40 h'), ('0', 'Sans RAN · 0 h')] %}
+      <label>{{ title }}<input type="date" data-entry-date="{{ hours }}" aria-label="Date de début {{ title }}" value="{{ afc_state.dates[hours] }}" min="{{ training.date_start }}" max="{{ training.date_end }}" {% if afc_state.read_only %}disabled{% endif %}></label>
+      {% endfor %}
+    </div>
+  </details>
+  <section class="afc-hours-candidates">
+    <div class="afc-hours-table-heading"><div><h2>Profils des candidats</h2><p id="afcHoursProgress" aria-live="polite"></p></div>
+      {% if not afc_state.read_only %}<div class="afc-hours-table-tools"><button class="btn btn-outline" type="button" id="afcHoursSuggest" {% if not afc_state.suggestion.profiles %}disabled{% endif %}>Répartir selon les notes</button><button class="btn btn-outline" type="button" id="afcHoursFill">Compléter les profils restants à 54 h</button></div>{% endif %}
+    </div>
+    <p class="afc-hours-score-note">Dernier test identifié pour chaque candidat. {% if afc_state.suggestion.issue %}{{ afc_state.suggestion.issue }}{% endif %} <a href="{{ url_for('admin_positioning_tests') }}" target="_blank" rel="noopener">Voir les résultats des tests</a></p>
+    <div class="afc-hours-scroll" role="region" aria-label="Profils et dates des candidats" tabindex="0">
+      <table class="afc-hours-table">
+        <thead><tr><th>Nom</th><th>Prénom</th><th>Test de positionnement</th><th>Profil RAN</th><th>Début de formation</th><th>Total du parcours</th></tr></thead>
+        <tbody>
+          {% for row in afc_state.rows %}
+          <tr data-trainee="{{ row.id }}">
+            <td><strong>{{ row.last_name }}</strong></td><td>{{ row.first_name }}</td>
+            <td class="afc-hours-score">{% if row.test %}<a href="{{ url_for('admin_positioning_test_detail', test_id=row.test.id) }}" target="_blank" rel="noopener"><strong>{{ '%g'|format(row.test.score) }}/{{ '%g'|format(row.test.total) }}</strong><small>{{ ('%.2f'|format(row.test.over_20)).replace('.', ',') }}/20</small></a>{% else %}<span>Résultat à vérifier</span>{% endif %}</td>
+            <td><select aria-label="Profil RAN de {{ row.first_name }} {{ row.last_name }}" data-ran-choice {% if afc_state.read_only %}disabled{% endif %}>
+              <option value="" {% if row.ran_hours is none %}selected{% endif %}>À choisir</option>
+              <option value="54" {% if row.ran_hours == 54 %}selected{% endif %}>RAN complète · 54 h</option>
+              <option value="40" {% if row.ran_hours == 40 %}selected{% endif %}>RAN partielle · 40 h</option>
+              <option value="0" {% if row.ran_hours == 0 %}selected{% endif %}>Sans RAN · 0 h</option>
+            </select></td>
+            <td data-row-start>—</td><td data-row-total>—</td>
+          </tr>
+          {% else %}<tr><td colspan="6">Aucun candidat inscrit dans cette session.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <div class="afc-hours-actions">
+    <div><p id="afcHoursMessage" role="status" aria-live="polite"></p><span>Excel : nom, prénom, quatre volumes horaires et date de début.</span></div>
+    <div class="afc-hours-buttons">
+      {% if not afc_state.read_only %}<button class="btn btn-outline" id="afcHoursSave" type="button">Enregistrer</button>{% endif %}
+      <button class="btn btn-primary" id="afcHoursExport" type="button" disabled>{% if afc_state.read_only %}Exporter le tableau Excel{% else %}Enregistrer et exporter Excel{% endif %}</button>
+    </div>
+  </div>
+</div>
+<script type="application/json" id="afcHoursState">{{ afc_state|tojson }}</script>
+<script src="{{ url_for('static', filename='js/afc-hours.js') }}" defer></script>
+{% endblock %}
