@@ -25,6 +25,8 @@ import atexit
 import sys
 import ssiap_exam
 import afc_schedule
+import afc_enrolments
+import exam_context
 from exam_jury_overview import summary as exam_jury_summary
 import security_exam_pdf
 from backup_chronology import backup_chronology_key
@@ -11657,7 +11659,7 @@ def _reactivate_trainee_automations(trainee: Dict[str, Any]) -> None:
 
 def _registered_trainees(source: Any) -> List[Dict[str, Any]]:
     """Return active registrations without deleting cancelled records."""
-    trainees = _session_trainees_list(source) if isinstance(source, dict) else source
+    trainees = _session_trainees_list(source) if isinstance(source, (dict, exam_context.ExamContext)) else source
     if not isinstance(trainees, list):
         return []
     return [
@@ -24880,7 +24882,7 @@ def _require_exam_dossier_session(data: Dict[str, Any], session_id: str, trainin
     label = f"{_session_get(session_item, 'training_type', '')} {_session_get(session_item, 'name', '')}".upper()
     if training not in label:
         raise ValueError(f"Cette action est réservée aux sessions {training}.")
-    return session_item
+    return ssiap_exam.for_family(session_item, "security")
 
 
 def _require_a3p_session(data: Dict[str, Any], session_id: str) -> Dict[str, Any]:
@@ -24905,7 +24907,8 @@ def _a3p_exam_dossier_public_config(session_item: Dict[str, Any], storage_key: s
     generation = saved.get("generation") if isinstance(saved.get("generation"), dict) else {}
     return {
         "training_start_date": saved.get("training_start_date") or _session_get(session_item, "date_start", ""),
-        "training_end_date": saved.get("training_end_date") or _session_get(session_item, "date_end", ""),
+        "training_end_date": (_session_get(session_item, "date_end", "") if afc_schedule.enabled(session_item)
+                              else saved.get("training_end_date") or _session_get(session_item, "date_end", "")),
         "exam_date": (ssiap_exam.security_exam_jury.exam_date(session_item)
                       if ssiap_exam.security_exam_jury.level(session_item)
                       else saved.get("exam_date") or _session_get(session_item, "exam_date", "")),
@@ -24994,6 +24997,8 @@ def api_save_security_exam_calendar(session_id: str):
             abort(404)
         except ValueError as exc:
             return {"ok": False, "message": str(exc), "status": 400}
+        if afc_schedule.enabled(training):
+            values["training_end_date"] = training.get("date_end", "")
         saved = training.get(profile["storage_key"]) or {}
         if payload.get("revision") != saved.get("revision", 0):
             return {"ok": False, "message": "Le calendrier a changé. Fermez puis rouvrez la modale avant de réessayer.", "status": 409}
@@ -25263,6 +25268,8 @@ def api_generate_a3p_exam_dossiers(session_id: str):
         abort(404)
     except ValueError as exc:
         return jsonify({"ok": False, "message": str(exc)}), 400
+    if afc_schedule.enabled(session_item):
+        values["training_end_date"] = session_item.get("date_end", "")
     if (session_item.get("security_exam", {}).get("config")
             and values["exam_date"] != ssiap_exam.security_exam_jury.exam_date(session_item)):
         return jsonify(ok=False, message="La date de l’examen a changé. Actualisez les dossiers avant de préparer le ZIP."), 409
@@ -25702,7 +25709,7 @@ def admin_trainees(session_id: str):
         session={**session_view, "ssiap_pathways": s.get("ssiap_pathways")},
         ssiap_supported=ssiap_pathways.supported(s),
         ssiap_exam_supported=ssiap_exam.supported(s) and s.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID),
-        security_jury_supported=bool(ssiap_exam.security_exam_jury.level(s)) and s.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID),
+        security_jury_supported=bool(ssiap_exam.security_exam_jury.level(ssiap_exam.for_family(s, "security"))) and s.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID),
         trainees=trainees,
         stats=stats,
         show_hosting=show_hosting,
@@ -27032,6 +27039,13 @@ def api_create_trainee(session_id: str):
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    afc_candidate_id = str(payload.get("afc_candidate_id") or "").strip()
+    if afc_candidate_id:
+        try:
+            candidate = afc_enrolments.validate(sys.modules[__name__], data, s, afc_candidate_id)
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 400
+        payload = {**afc_enrolments.fields(candidate), **payload}
     crm_prefill_id = str(payload.get("crm_prefill") or "").strip()
     crm_transfer = None
     if crm_prefill_id:
@@ -27181,29 +27195,27 @@ def api_create_trainee(session_id: str):
     mark_new_vtc_enrolment(s, t)
     vtc_elearning_activation.schedule_new_enrolment(sys.modules[__name__], s, t)
 
-    trainees = _session_trainees_list(s)
-    trainees.insert(0, t)
-
     enrolled_at = ""
     if afc_candidate_id:
-        afc_bucket = _afc_bucket(data)
-        afc_candidate = next(
-            (candidate for candidate in (afc_bucket.get("candidates") or []) if str(candidate.get("id") or "") == afc_candidate_id),
-            None,
-        )
-        if afc_candidate is not None:
-            enrolled_at = str(afc_candidate.get("enrolled_at") or "").strip() or _now_iso()
-            afc_candidate["enrolled_at"] = enrolled_at
+        _apply_pending_cnaps_imports_for_trainee(data, s, t)
+        result = _atomic_update_data(lambda current: afc_enrolments.insert(
+            sys.modules[__name__], current, session_id, afc_candidate_id, t))
+        if not result["ok"]:
+            return jsonify(result), result.get("status", 409)
+        enrolled_at = result["enrolled_at"]
+    else:
+        trainees = _session_trainees_list(s)
+        trainees.insert(0, t)
 
-    _apply_pending_cnaps_imports_for_trainee(data, s, t)
+        _apply_pending_cnaps_imports_for_trainee(data, s, t)
 
-    s["trainees"] = trainees
-    s.pop("stagiaires", None)
-    if crm_transfer:
-        data["crm_prefill_transfers"] = [item for item in data.get("crm_prefill_transfers", [])
-                                           if not hmac.compare_digest(str(item.get("id") or ""), crm_prefill_id)]
-    increment_partner_trainee_usage(data, s.get("partner_id") or _current_partner_id() or INTEGRALE_PARTNER_ID, t)
-    save_data(data)
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        if crm_transfer:
+            data["crm_prefill_transfers"] = [item for item in data.get("crm_prefill_transfers", [])
+                                               if not hmac.compare_digest(str(item.get("id") or ""), crm_prefill_id)]
+        increment_partner_trainee_usage(data, s.get("partner_id") or _current_partner_id() or INTEGRALE_PARTNER_ID, t)
+        save_data(data)
 
     # ✅ ENVOI MAIL + SMS à la création (optionnel)
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
@@ -27315,7 +27327,23 @@ def api_create_trainee(session_id: str):
     # laisser l’administrateur vérifier l’aperçu PDF avant toute transmission,
     # uniquement lorsque le module automatisations est actif pour le partenaire.
     automation_enabled = _automation_is_enabled(s)
-    save_data(data)
+    if afc_candidate_id:
+        def finish_afc_import(current):
+            current_session = find_session(current, session_id)
+            current_trainee = find_trainee(current_session, trainee_id) if current_session else None
+            if current_trainee:
+                for key in ("access_sent_at", "access_sent_email_ok", "access_sent_sms_ok"):
+                    current_trainee[key] = t[key]
+                if t.get("sent_email_history"):
+                    history = current_trainee.setdefault("sent_email_history", [])
+                    for entry in reversed(t["sent_email_history"]):
+                        if entry not in history:
+                            history.insert(0, entry)
+                    current_trainee["sent_email_history"] = history[:200]
+            return {}
+        _atomic_update_data(finish_afc_import)
+    else:
+        save_data(data)
 
     return jsonify({
         "ok": True,
@@ -55946,6 +55974,7 @@ if _partner_postgres_active():
 import ssiap_routes
 ssiap_routes.register(app, sys.modules[__name__])
 ssiap_exam.register(app, sys.modules[__name__])
+afc_enrolments.register(app, sys.modules[__name__])
 
 manuals_shop.register(sys.modules[__name__])
 import parcours_alternance

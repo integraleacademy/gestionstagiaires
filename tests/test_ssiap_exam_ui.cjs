@@ -41,7 +41,7 @@ function setup() {
   };
   const sent = [];
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../static/js/ssiap-exam.js'), 'utf8'), {
-    document:{getElementById:get,createElement:() => new Element()},
+    document:{getElementById:get,querySelectorAll:() => [get("ssiapExamDialog")],createElement:() => new Element()},
     fetch:async (url, options = {}) => {
       let result = data;
       if (url.endsWith('/preview')) {

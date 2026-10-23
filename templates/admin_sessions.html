@@ -1263,12 +1263,12 @@
           <input id="sessionTCity" type="text" placeholder="Ville actuelle">
         </label>
         <div id="sessionAfcDatesField" style="grid-column:1/-1;display:none;">
-          <div class="label">Dates individuelles AFC (facultatives)</div>
+          <div class="label">Dates de formation AFC</div>
           <div class="afc-calendar__grid">
             <label>Début du stagiaire<input id="sessionTAfcStart" type="date"></label>
-            <label>Fin du stagiaire<input id="sessionTAfcEnd" type="date"></label>
+            <label>Fin commune de la session<input id="sessionTAfcEnd" type="date" readonly></label>
           </div>
-          <p class="hint">Laissez vide pour reprendre les dates de la session. Ces dates figurent sur les convocations et les conventions.</p>
+          <p class="hint">Laissez le début vide pour reprendre celui de la session. La date de fin est commune à tous les stagiaires.</p>
         </div>
         <label id="sessionVtcRealTrainingDatesField" style="grid-column:1/-1;display:none;">
           <div class="label" style="font-weight:900;color:#f97316;">Dates réelles de formation VTC</div>
@@ -1670,7 +1670,7 @@
       zip_code: (document.getElementById("sessionTZipCode")?.value || "").trim(),
       city: (document.getElementById("sessionTCity")?.value || "").trim(),
       vtc_real_training_dates: (document.getElementById("sessionTVtcRealTrainingDates")?.value || "").trim(),
-      ...(afc ? {training_date_start:document.getElementById("sessionTAfcStart").value, training_date_end:document.getElementById("sessionTAfcEnd").value} : {}),
+      ...(afc ? {training_date_start:document.getElementById("sessionTAfcStart").value} : {}),
       carte_pro_ok: !!document.getElementById("sessionTCarteProOk")?.checked,
       crm_prefill: crmPrefillTransfer?.id || "",
     };
@@ -1859,7 +1859,7 @@
     dates.style.display = current?.afc_enabled ? "" : "none";
     if(dates.dataset.sessionId !== current?.id){
       document.getElementById("sessionTAfcStart").value = "";
-      document.getElementById("sessionTAfcEnd").value = "";
+      document.getElementById("sessionTAfcEnd").value = current?.date_end || "";
       dates.dataset.sessionId = current?.id || "";
     }
     const target=availableSessionsForCreate.find(s=>s.id===document.getElementById("traineeTargetSession")?.value);

@@ -71,7 +71,11 @@ def trainee_update(training, trainee, payload):
         return {}
     if not enabled(training):
         raise ValueError("Les dates individuelles sont disponibles pour les sessions AFC APS + SSIAP 1.")
-    result = {key: date(payload[key], label) for key, label in TRAINEE_DATES.items() if key in payload}
+    # Retire individual end dates, including values sent by an older open form.
+    # The empty stored value always follows subsequent session end-date changes.
+    result = {"training_date_end": ""}
+    if "training_date_start" in payload:
+        result["training_date_start"] = date(payload["training_date_start"], TRAINEE_DATES["training_date_start"])
     effective = effective_session(training, {**trainee, **result})
     _ordered(effective.get("date_start"), effective.get("date_end"), "Période du stagiaire")
     return result
@@ -87,7 +91,7 @@ def effective_session(training, trainee):
     return {
         **training, "afc_enabled": True,
         "date_start": trainee.get("training_date_start") or training.get("date_start") or training.get("date_debut") or "",
-        "date_end": trainee.get("training_date_end") or training.get("date_end") or training.get("date_fin") or "",
+        "date_end": training.get("date_end") or training.get("date_fin") or "",
     }
 
 

@@ -1,0 +1,15 @@
+<section class="afc-picker" data-afc-picker data-url="{{ url_for('api_afc_session_candidates', session_id=session.id) }}">
+  <input type="hidden" id="afcSelectedCandidateId">
+  <div class="afc-picker-heading"><div><strong>Un candidat déjà dans votre liste AFC ?</strong><p>Retrouvez sa fiche et reprenez ses coordonnées.</p></div><button type="button" class="btn btn-outline" data-afc-open>Importer depuis AFC</button></div>
+  <div data-afc-search-panel hidden>
+    <label for="afcCandidateSearch" class="label">Rechercher par nom, prénom, e-mail ou identifiant France Travail</label>
+    <input id="afcCandidateSearch" type="search" autocomplete="off" placeholder="Rechercher un candidat AFC…">
+    <div data-afc-results class="afc-picker-results"></div>
+  </div>
+  <p data-afc-feedback role="status" aria-live="polite"></p>
+  <button type="button" data-afc-clear class="btn btn-outline" hidden>Annuler la sélection AFC</button>
+</section>
+<style>
+.afc-picker{padding:20px;margin-bottom:24px;background:#f0f7ff;border:1px solid #ccddf5;border-radius:18px}.afc-picker-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.afc-picker p{margin:7px 0;color:#526784;font-size:14px}.afc-picker [data-afc-search-panel]{margin-top:18px}.afc-picker-results{max-height:260px;overflow:auto;margin-top:12px;display:grid;gap:8px}.afc-picker-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;background:#fff;border:1px solid #dce5f1;border-radius:12px}.afc-picker-row span{display:block;font-size:12px;color:#526784;margin-top:4px}.afc-picker-row button{flex-shrink:0}.afc-picker [hidden]{display:none!important}
+</style>
+<script src="{{ url_for('static', filename='js/afc-candidate-picker.js', v='20261023-1') }}" defer></script>

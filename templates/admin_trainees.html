@@ -32,7 +32,8 @@
         <span>Examen pratique : <strong>{{ vtc_practice_exam_date|frdate }}</strong></span>
         {% endif %}
       {% else %}
-        <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
+        <span>{{ "Examen APS" if session.afc_enabled else "Examen" }} : <strong>{{ session.exam_date|frdate }}</strong></span>
+        {% if session.afc_enabled %}<span>Examen SSIAP : <strong>{{ session.ssiap_exam_date|frdate }}</strong></span>{% endif %}
       {% endif %}
 
     </div>
@@ -112,6 +113,17 @@
 </div>
 {% endif %}
 
+{% if session.afc_enabled and ssiap_exam_supported %}
+<div class="afc-exam-navigation" aria-label="Examens de la session AFC">
+  <button class="afc-exam-tab afc-exam-tab--aps" id="btnA3pExamDossier" type="button" aria-haspopup="dialog" aria-controls="securityExamDialog"><strong>Examen APS</strong><span>{{ session.exam_date|frdate or 'Date à renseigner' }} · Dossiers, organisation et jury</span></button>
+  <button class="afc-exam-tab afc-exam-tab--ssiap" id="btnSsiapExam" type="button" aria-haspopup="dialog" aria-controls="ssiapExamDialog"><strong>Examen SSIAP</strong><span>{{ session.ssiap_exam_date|frdate or 'Date à renseigner' }} · Dossiers, organisation et jury</span></button>
+</div>
+<style>
+.afc-exam-navigation{display:flex;gap:14px;margin:20px 0 24px;flex-wrap:wrap}
+.afc-exam-tab{flex:1;min-width:240px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:18px 22px;border:1px solid #cbdcf6;border-left:5px solid #2563eb;border-radius:16px;background:#eff6ff;color:#163879;cursor:pointer;text-align:left;font:inherit}
+.afc-exam-tab strong{font-size:19px}.afc-exam-tab span{font-size:13px;line-height:1.5}.afc-exam-tab:hover{box-shadow:0 5px 18px #0f172a12}.afc-exam-tab--ssiap{border-color:#f2cdcd;border-left-color:#dc2626;background:#fff5f5;color:#8c2525}
+</style>
+{% endif %}
 <div class="page-head" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
   <h2 style="margin:0;">Stagiaires</h2>
 
@@ -168,7 +180,7 @@
     {% endif %}
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
     {% if is_desp_initial and security_jury_supported %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Organisation et jury</button>{% endif %}
-    {% if ssiap_exam_supported %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Examen</button>{% endif %}
+    {% if ssiap_exam_supported and not session.afc_enabled %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Examen</button>{% endif %}
     {% if is_aps_training and session.aps_elearning_enabled and not is_read_only %}
     <button class="btn btn-outline" id="btnImportDigiforma" type="button">Importer les relevés Digiforma</button>
     {% endif %}
@@ -227,7 +239,7 @@
        title="Télécharger toutes les étiquettes Word de la session">🏷️ Étiquettes WORD</a>
     {% endif %}
     {% if is_a3p_header or is_aps_header %}
-    {% if not is_read_only %}
+    {% if not is_read_only and not session.afc_enabled %}
     <button class="btn btn-primary" id="btnA3pExamDossier" type="button" aria-haspopup="dialog" aria-controls="securityExamDialog">📁 Dossier examen</button>
     {% endif %}
     {% if is_a3p_header %}
@@ -906,7 +918,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
 
 {% if is_desp_initial and security_jury_supported %}{% with jury_session=session %}{% include '_security_jury_modal.html' %}{% endwith %}{% endif %}
-{% if (is_a3p_header or is_aps_header) and not is_read_only %}
+{% if (is_a3p_header or is_aps_header) and (not is_read_only or session.afc_enabled) %}
 {% include '_security_exam_modal.html' %}
 {% endif %}
 
@@ -1078,6 +1090,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
     </div>
 
     <div class="modal-body trainee-create-body">
+      {% if session.afc_enabled %}{% include '_afc_candidate_picker.html' %}{% endif %}
       <div class="form-grid trainee-create-grid">
         {% if ssiap_supported and session.ssiap_pathways %}<label><div class="label">Parcours</div><select id="tSsiapPathway"><option value="ssiap">SSIAP seul</option><option value="ssiap_sst" {% if not session.ssiap_pathways.sst_dates %}disabled{% endif %}>SSIAP + SST</option></select></label>{% endif %}
         <label>
@@ -1117,6 +1130,10 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <div class="label">Ville actuelle (facultatif)</div>
           <input id="tCity" type="text" placeholder="Ville actuelle">
         </label>
+        {% if session.afc_enabled %}
+        <label><div class="label">Début du stagiaire (facultatif)</div><input id="tAfcStart" type="date" max="{{ session.date_end }}"><div class="hint">Par défaut : {{ session.date_start|frdate }}</div></label>
+        <label><div class="label">Fin commune de la session</div><input type="date" value="{{ session.date_end }}" readonly><div class="hint">Identique pour tous les stagiaires AFC.</div></label>
+        {% endif %}
         {% if is_vtc %}
         <label style="grid-column:1/-1;">
           <div class="label" style="font-weight:900;color:#f97316;">Dates réelles de formation VTC</div>
@@ -3590,6 +3607,10 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     openModal("createTraineeModal");
   });
 
+  if (new URLSearchParams(window.location.search).get('openCreateTrainee') === '1') {
+    document.getElementById('btnOpenCreateTrainee')?.click();
+  }
+
   // =========================
   // create trainee
   // =========================
@@ -3772,6 +3793,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           vtc_real_training_dates,
           carte_pro_ok,
           send_access,
+          ...(document.getElementById("tAfcStart") ? {training_date_start:document.getElementById("tAfcStart").value, afc_candidate_id:document.getElementById("afcSelectedCandidateId").value} : {}),
           ...(document.getElementById("tSsiapPathway") ? {ssiap_pathway:document.getElementById("tSsiapPathway").value} : {})
         })
       });

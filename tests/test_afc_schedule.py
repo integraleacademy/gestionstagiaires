@@ -118,7 +118,7 @@ def test_new_trainee_dates_are_saved_before_any_document_automation(client, trai
     assert response.status_code == 200, response.json
     saved = training["trainees"][0]
     assert saved["training_date_start"] == "2026-11-23"
-    assert saved["training_date_end"] == "2027-02-16"
+    assert saved["training_date_end"] == ""
     assert app._build_aps_convocation_context(training, saved)["date_convocation"] == "23/11/2026"
     mail.assert_not_called()
 
@@ -129,11 +129,11 @@ def test_documents_use_individual_dates_and_both_exams_without_mutation(training
     convention = app._aps_convention_replacements(training, trainee)
     for values in (context, convention):
         assert values["date_debut_formation"] == "23/11/2026"
-        assert values["date_fin_formation"] == "16/02/2027"
+        assert values["date_fin_formation"] == "15/02/2027"
         assert values["date_convocation"] == "23/11/2026"
         assert values["date_examen_aps"] == "21/12/2026"
         assert values["date_examen_ssiap"] == "16/02/2027"
-        assert values["periode_formation"] == "du 23/11/2026 au 16/02/2027"
+        assert values["periode_formation"] == "du 23/11/2026 au 15/02/2027"
         assert "periode_aps" not in values
         assert "periode_ssiap" not in values
     assert training == before
@@ -182,7 +182,7 @@ def test_retired_component_dates_do_not_constrain_or_appear_in_documents(client,
     assert response.status_code == 200
     for values in (app._build_aps_convocation_context(training, trainee), app._aps_convention_replacements(training, trainee)):
         assert values["date_examen_aps"] == "01/12/2026"
-        assert values["periode_formation"] == "du 23/11/2026 au 16/02/2027"
+        assert values["periode_formation"] == "du 23/11/2026 au 15/02/2027"
         assert "01/04/2027" not in str(values)
 
 

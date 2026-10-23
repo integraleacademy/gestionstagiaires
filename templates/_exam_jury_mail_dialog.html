@@ -1,10 +1,10 @@
-<dialog id="ssiapExamMailDialog" class="exam-dialog exam-mail-dialog" aria-labelledby="ssiapExamMailTitle">
-  <header class="exam-heading"><div><span class="exam-eyebrow">AVANT ENVOI</span><h2 id="ssiapExamMailTitle">Prévisualiser le mail</h2></div><button type="button" data-mail-close class="exam-close" aria-label="Fermer l’aperçu">×</button></header>
-  <div class="exam-mail-meta"><p>À : <strong id="ssiapExamMailTo"></strong></p><p>Objet : <strong id="ssiapExamMailSubject"></strong></p><p id="ssiapExamMailStatus" role="status"></p></div>
+<dialog id="{{ jury_prefix|default("ssiapExam") }}MailDialog" class="exam-dialog exam-mail-dialog" aria-labelledby="{{ jury_prefix|default("ssiapExam") }}MailTitle">
+  <header class="exam-heading"><div><span class="exam-eyebrow">AVANT ENVOI</span><h2 id="{{ jury_prefix|default("ssiapExam") }}MailTitle">Prévisualiser le mail</h2></div><button type="button" data-mail-close class="exam-close" aria-label="Fermer l’aperçu">×</button></header>
+  <div class="exam-mail-meta"><p>À : <strong id="{{ jury_prefix|default("ssiapExam") }}MailTo"></strong></p><p>Objet : <strong id="{{ jury_prefix|default("ssiapExam") }}MailSubject"></strong></p><p id="{{ jury_prefix|default("ssiapExam") }}MailStatus" role="status"></p></div>
   <div class="exam-mail-viewport">
-    <p id="ssiapExamMailLoading" class="exam-mail-loading" role="status" hidden>Chargement de l’aperçu…</p>
-    <iframe id="ssiapExamMailFrame" title="Contenu du mail au jury" sandbox=""></iframe>
-    <pre id="ssiapExamMailText" class="exam-mail-text" hidden></pre>
+    <p id="{{ jury_prefix|default("ssiapExam") }}MailLoading" class="exam-mail-loading" role="status" hidden>Chargement de l’aperçu…</p>
+    <iframe id="{{ jury_prefix|default("ssiapExam") }}MailFrame" title="Contenu du mail au jury" sandbox=""></iframe>
+    <pre id="{{ jury_prefix|default("ssiapExam") }}MailText" class="exam-mail-text" hidden></pre>
   </div>
-  <footer class="exam-mail-actions"><button type="button" id="ssiapExamMailTextToggle" class="btn btn-outline" aria-pressed="false">Version texte</button><button type="button" class="btn btn-outline" data-mail-close>Retour</button><button type="button" id="ssiapExamSend" class="btn btn-primary" disabled>Envoyer ce mail</button></footer>
+  <footer class="exam-mail-actions"><button type="button" id="{{ jury_prefix|default("ssiapExam") }}MailTextToggle" class="btn btn-outline" aria-pressed="false">Version texte</button><button type="button" class="btn btn-outline" data-mail-close>Retour</button><button type="button" id="{{ jury_prefix|default("ssiapExam") }}Send" class="btn btn-primary" disabled>Envoyer ce mail</button></footer>
 </dialog>

@@ -13,6 +13,7 @@ import secrets
 from zoneinfo import ZoneInfo
 import security_exam_jury
 import afc_schedule
+from exam_context import all_exams, for_family
 
 from flask import abort, jsonify, request, session, send_file, url_for
 from itsdangerous import URLSafeTimedSerializer, BadSignature
@@ -65,8 +66,11 @@ def settings(training):
     afc = afc_schedule.enabled(training) or "AFC" in (str(training.get("training_type") or "") + " " + str(training.get("name") or "")).upper()
     date = training.get("ssiap_exam_date") or ("" if afc else training.get("exam_date")) or ""
     match = re.search(r"SSIAP\s*([123])", str(training.get("training_type") or ""), re.I)
-    return {**DEFAULTS, "date": date, "level": "SSIAP " + (match.group(1) if match else "1"),
-            **state(training).get("config", {})}
+    config = {**DEFAULTS, "date": date, "level": "SSIAP " + (match.group(1) if match else "1"),
+              **state(training).get("config", {})}
+    if afc_schedule.enabled(training):
+        config.update(date=date, level="SSIAP 1")
+    return config
 
 
 def digest(value):
@@ -177,7 +181,7 @@ def validate_candidate(raw, config):
 def jury_directory(data, internal_partner_id):
     """Reusable contacts, including jurors recorded before the directory existed."""
     saved = copy.deepcopy(data.get("ssiap_jury_directory") or {})
-    for training in data.get("sessions", []):
+    for training in all_exams(data.get("sessions", [])):
         if training.get("partner_id") not in (None, "", internal_partner_id):
             continue
         for member in settings(training)["jury"]:
@@ -296,6 +300,7 @@ def register(app, services):
 
     def get_training(data, session_id, *, security=False):
         training = services.find_session(data, session_id)
+        training = for_family(training, 'security' if security else 'ssiap')
         if not training or not (security_exam_jury.level(training) if security else supported(training)):
             abort(404)
         # The official seal below belongs to Intégrale Academy only.
@@ -403,6 +408,11 @@ def register(app, services):
                     remember_jury(data, current["config"]["jury"], services._now_iso(), settings(training)["jury"])
                     if security_exam_jury.level(training):
                         security_exam_jury.sync_date(training, current["config"]["date"])
+                    elif afc_schedule.enabled(training):
+                        current['config']['level'] = 'SSIAP 1'
+                        training['ssiap_exam_date'] = current['config']['date']
+                    if afc_schedule.enabled(training):
+                        training['afc_dates_changed_at'] = services._now_iso()
                 elif payload.get("action") == "candidate" and supported(training):
                     trainee = find_candidate(training, payload.get("trainee_id"))
                     candidate = validate_candidate(payload.get("candidate"), settings(training))

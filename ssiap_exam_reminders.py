@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 from ssiap_exam import (MAIL_RE, active_candidates, build_mail, candidate_settings,
                         digest, frdate, settings, state, state_key, jury_supported)
 from ssiap_exam_mail import delivery_outcome
+from exam_context import all_exams, for_family
 
 PARIS = ZoneInfo('Europe/Paris')
 
@@ -118,7 +119,7 @@ def run(services, *, now=None, dry_run=False, limit=10):
         return report
     data = services.load_data(run_background_tasks=False)
     candidates, seen = [], set()
-    for training in data.get('sessions', []):
+    for training in all_exams(data.get('sessions', [])):
         if not eligible(services, training):
             continue
         config = settings(training)
@@ -126,22 +127,22 @@ def run(services, *, now=None, dry_run=False, limit=10):
             continue  # No bulk catch-up of old exam reminders on deployment.
         for member in config['jury']:
             report['checked'] += 1
-            identity = (training['id'], member.get('email', '').casefold())
+            identity = (training['id'], state_key(training), member.get('email', '').casefold())
             if (identity not in seen and not preparation_error(services, training, config, member)
                     and retry_allowed(attempt_for(training, member, config), local)):
                 seen.add(identity)
-                candidates.append((training['id'], member['id'], config['date'], member['email']))
+                candidates.append((training['id'], state_key(training).removesuffix('_exam'), member['id'], config['date'], member['email']))
     report['due'] = len(candidates)
     if dry_run:
         report['status'] = 'dry_run'
         return report
     started = time.monotonic()
-    for session_id, jury_id, exam_date, recipient in candidates:
+    for session_id, family, jury_id, exam_date, recipient in candidates:
         if report['processed'] >= limit or time.monotonic() - started > 90:
             break
 
         def reserve(current):
-            training = services.find_session(current, session_id)
+            training = for_family(services.find_session(current, session_id), family)
             if not training or not eligible(services, training):
                 return {}
             config = settings(training)
@@ -189,7 +190,7 @@ def run(services, *, now=None, dry_run=False, limit=10):
                 session_id, reserved['entry_id'], outcome['status'], outcome['status_code'], outcome['error'])
 
         def finish(current):
-            training = services.find_session(current, session_id)
+            training = for_family(services.find_session(current, session_id), family)
             for entry in state(training or {}).get('mail_history', []):
                 if entry.get('id') == reserved['entry_id']:
                     entry.update(outcome, finished_at=local_clock(now).isoformat())

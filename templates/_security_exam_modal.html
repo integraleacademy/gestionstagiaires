@@ -1,7 +1,8 @@
+{% set jury_prefix = "apsJury" if session.afc_enabled else "ssiapExam" %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css', v='20261020-1') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/security-exam.css', v='20261020-1') }}">
 <dialog id="securityExamDialog" class="exam-dialog" aria-labelledby="securityExamTitle"
-        {% if security_jury_supported %}data-jury-url="{{ url_for('api_security_exam', session_id=session.id) }}"{% endif %}
+        {% if security_jury_supported %}data-jury-prefix="{{ jury_prefix }}" data-jury-url="{{ url_for('api_security_exam', session_id=session.id) }}"{% endif %}
         data-url="/api/admin/sessions/{{ session.id }}/{{ exam_dossier_slug }}-exam-dossiers">
   <header class="exam-heading">
     <div><span class="exam-eyebrow">INTÉGRALE ACADEMY</span><h2 id="securityExamTitle">Dossier examen {{ exam_dossier_label }}</h2><p>{{ session.name }}</p></div>
@@ -33,7 +34,7 @@
           <div class="exam-card"><h3>Calendrier de la session</h3><p class="exam-muted">Ces dates sont utilisées dans tous les dossiers. Vous pouvez déjà consulter les dossiers : les dates manquantes seront signalées dans le PDF.</p>
             <div class="exam-grid">
               <label class="exam-field">Début de formation<input type="date" name="training_start_date" data-lock></label>
-              <label class="exam-field">Fin de formation<input type="date" name="training_end_date" data-lock></label>
+              <label class="exam-field">Fin de formation<input type="date" name="training_end_date" {% if session.afc_enabled %}readonly title="Date commune : fin de session AFC"{% endif %} data-lock></label>
               <label class="exam-field">Date d’examen<input type="date" name="exam_date" data-lock></label>
               <label class="exam-field">Formation « équipier de première intervention »<input type="date" name="epi_training_date" data-lock></label>
             </div>
@@ -44,8 +45,8 @@
     </section>
   </div>
 </dialog>
-<script src="{{ url_for('static', filename='js/security-exam.js', v='20261022-jury-1') }}" defer></script>
+<script src="{{ url_for('static', filename='js/security-exam.js', v='20261023-afc-1') }}" defer></script>
 {% if security_jury_supported %}
 {% include '_exam_jury_mail_dialog.html' %}
-<script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261022-jury-1') }}" defer></script>
+<script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261023-afc-1') }}" defer></script>
 {% endif %}

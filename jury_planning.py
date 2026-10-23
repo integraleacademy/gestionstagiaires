@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 from flask import make_response
 
 import ssiap_exam as exam
+from exam_context import all_exams
 from ssiap_exam_mail import DAYS, MONTHS
 
 
@@ -25,8 +26,8 @@ def access_token(services, email):
 
 
 def _assignments(services, data):
-    for training in data.get('sessions', []):
-        if (not isinstance(training, dict) or not exam.jury_supported(training)
+    for training in all_exams(s for s in data.get('sessions', []) if isinstance(s, dict)):
+        if (not exam.jury_supported(training)
                 or training.get('partner_id') not in (None, '', services.INTEGRALE_PARTNER_ID)):
             continue
         if not exam.state(training).get('config'):
@@ -54,16 +55,17 @@ def agenda(services, data, email, *, today=None):
         if date and date < today:
             continue
         identity = str(training.get('id') or '')
-        if identity in seen:
+        exam_identity = (identity, exam.state_key(training))
+        if exam_identity in seen:
             continue
-        seen.add(identity)
+        seen.add(exam_identity)
         contact_email = config.get('contact_email') or ''
         phone = str(config.get('contact_phone') or '')
         entry = {key: str(config.get(key) or '') for key in (
             'level', 'time', 'arrival_time', 'end_time', 'location', 'address', 'instructions',
             'contact_name', 'contact_email', 'contact_phone')}
         entry.update(
-            session_id=identity, date=date.isoformat() if date else '',
+            session_id=identity, exam_family=exam.state_key(training), date=date.isoformat() if date else '',
             date_label=(f'{DAYS[date.weekday()]} {date.day} {MONTHS[date.month - 1]} {date.year}' if date else 'Date à confirmer'),
             day=str(date.day) if date else '—',
             month=(MONTHS[date.month - 1] + ' ' + str(date.year)) if date else 'À confirmer',
@@ -84,8 +86,8 @@ def mail_context(services, data, training, member, *, today=None):
     current_id = str(training.get('id') or '')
     return {
         'url': services.APP_BASE_URL.rstrip('/') + '/jury/planning/' + access_token(services, member['email']),
-        'dates': [item for item in planning['upcoming'] if item['session_id'] != current_id],
-        'undated': [item for item in planning['undated'] if item['session_id'] != current_id],
+        'dates': [item for item in planning['upcoming'] if (item['session_id'], item['exam_family']) != (current_id, exam.state_key(training))],
+        'undated': [item for item in planning['undated'] if (item['session_id'], item['exam_family']) != (current_id, exam.state_key(training))],
     }
 
 

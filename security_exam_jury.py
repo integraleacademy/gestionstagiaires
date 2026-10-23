@@ -4,6 +4,8 @@ import afc_schedule
 
 
 def level(training):
+    if afc_schedule.enabled(training):
+        return 'APS' if training.get('_exam_family') == 'security' else ''
     descriptor = f"{training.get('training_type') or training.get('type') or ''} {training.get('name') or training.get('nom') or ''}".upper()
     if afc_schedule.enabled(training) or re.search(r'\b(?:VAE|MAC|RECYCLAGE|RAN|SSIAP|AFC)\b', descriptor):
         return ''
@@ -16,6 +18,8 @@ def level(training):
 
 
 def exam_date(training):
+    if afc_schedule.enabled(training):
+        return training.get('exam_date') or ''
     saved = training.get('security_exam') or {}
     if saved.get('config'):
         # Session edits must also update the date used by reminders and dossiers.
