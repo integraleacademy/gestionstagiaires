@@ -1,0 +1,13 @@
+{% if aps_kickoff and aps_kickoff.available %}
+<section class="trainee-overview-card documents-card" aria-labelledby="apsKickoffTitle">
+  <div>
+    <p class="card-kicker">Votre formation APS</p>
+    <h2 id="apsKickoffTitle" class="card-title">Votre réunion de lancement APS</h2>
+  </div>
+  <p style="color:var(--muted);line-height:1.6;margin:12px 0 16px;">Retrouvez le diaporama de votre session : le calendrier, les 14 UV, le fonctionnement du e-learning et votre accueil au centre de formation.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;">
+    <a class="btn" href="{{ url_for('public_aps_kickoff_pdf', token=token_safe) }}" target="_blank" rel="noopener">Consulter le diaporama</a>
+    <a class="btn outline" href="{{ url_for('public_aps_kickoff_pdf', token=token_safe, download=1) }}">Télécharger le PDF</a>
+  </div>
+</section>
+{% endif %}

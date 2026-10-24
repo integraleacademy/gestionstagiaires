@@ -1254,6 +1254,8 @@
       <div class="document-card"><span class="document-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 2v4M16 2v4M8 12h8M8 16h5"/></svg></span><div><div class="document-title">Convocation à la formation</div><div class="document-subtitle">{{ 'Disponible' if public_convocation_available else 'Disponible prochainement' }}</div></div>{% if public_convocation_available %}<span class="pill blue">Disponible</span><a class="btn outline small" href="{{ url_for('public_training_convocation', token=token_safe) }}" target="_blank" rel="noopener">Consulter</a>{% else %}<span class="pill gray">À venir</span><span></span>{% endif %}</div>
     </div></section>{% endif %}
 
+    {% include 'aps_kickoff_card.html' %}
+
     {% if not trainee.public_hide_infos %}
 <!-- Encadré : infos à compléter (autosave) -->
 {% if show_vtc or is_security_training %}
