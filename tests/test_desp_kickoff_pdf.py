@@ -12,6 +12,7 @@ import pytest
 
 import afc_schedule
 import desp_kickoff as kickoff
+import desp_calendar
 
 ROOT = Path(__file__).resolve().parents[1]
 # Exercise the app's actual course/site routing without booting unrelated services.
@@ -148,7 +149,7 @@ def test_all_dynamic_dates_and_correct_site_update_without_mutations(case):
     assert 'en centre' not in text.lower()
     assert 'SESSION INITIALE À '+('PARIS' if city == 'paris' else 'PUGET-SUR-ARGENS') in document[0].get_text()
     assert '19 février 2027' in document[16].get_text()
-    assert 'Dates 2027' in document[4].get_text()
+    assert 'JANVIER 2027' in document[4].get_text() and 'FÉVRIER 2027' in document[4].get_text()
     assert '4 janvier au 5 février' in document[4].get_text()
     assert '8 au 18 février' in document[4].get_text()
     assert '174 h de e-learning' in text and '70 h' in text
@@ -170,11 +171,41 @@ def test_cross_year_calendar_retains_years_and_leap_day(case):
                     dirigeant_remote_start='2027-12-13', dirigeant_remote_end='2028-01-28',
                     dirigeant_in_person_start='2028-02-01', dirigeant_in_person_end='2028-02-28')
     document = pymupdf.open(stream=kickoff.pdf(services, training), filetype='pdf')
-    assert 'Dates 2027 – 2028' in document[4].get_text()
+    assert all(month in document[4].get_text() for month in ('DÉCEMBRE 2027', 'JANVIER 2028', 'FÉVRIER 2028'))
     calendar = document[4].get_text().replace('\n', ' ')
     assert '13 décembre 2027 au 28 janvier 2028' in calendar
     assert '1 au 28 février 2028' in calendar and '29 février 2028' in calendar
     assert '29 février 2028' in document[16].get_text()
+
+
+def test_calendar_cells_distinguish_phase_boundaries_and_exam(case):
+    _, _, services, training, _, _ = case
+    dates = kickoff.schedule(services, training)
+    cells = {item['day']: item for item in desp_calendar.layout(dates, 'Paris') if 'day' in item}
+    assert cells['2027-01-03']['phase'] == 'outside'
+    assert cells['2027-01-04']['fill'] == desp_calendar.BLUE
+    assert cells['2027-02-05']['phase'] == 'remote'
+    assert cells['2027-02-06']['phase'] == 'outside'
+    assert cells['2027-02-08']['fill'] == desp_calendar.GREEN
+    assert cells['2027-02-18']['phase'] == 'onsite'
+    assert cells['2027-02-19']['fill'] == desp_calendar.GOLD
+    assert cells['2027-02-19']['bold']
+    assert cells['2027-02-20']['phase'] == 'outside'
+    # Date coordinates agree with weekdays: 4 January 2027 is a Monday.
+    assert cells['2027-01-04']['x'] == 60
+
+
+def test_long_sessions_use_a_readable_timeline(case):
+    _, _, services, training, _, _ = case
+    training.update(dirigeant_remote_start='2026-11-02', dirigeant_remote_end='2027-01-29',
+                    dirigeant_in_person_start='2027-02-01', dirigeant_in_person_end='2027-02-18',
+                    exam_date='2027-02-19')
+    dates = kickoff.schedule(services, training)
+    items = desp_calendar.layout(dates, 'Paris')
+    assert not any('day' in item for item in items)
+    assert len([item for item in items if item['name'].startswith('timeline-bar')]) == 3
+    doc = pymupdf.open(stream=kickoff.pdf(services, training), filetype='pdf')
+    assert 'Présentiel au centre de formation' in doc[4].get_text()
 
 
 def test_release_uses_paris_midnight_in_winter_and_summer(monkeypatch):

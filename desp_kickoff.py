@@ -13,9 +13,10 @@ from zoneinfo import ZoneInfo
 
 from flask import abort, redirect, request, send_file, url_for
 import aps_kickoff as shared
+import desp_calendar
 
 ASSETS = Path(__file__).with_name('desp_kickoff_assets')
-VERSION = '20261024-1'
+VERSION = '20261024-2-calendar'
 DATE_FIELDS = ('date_start', 'date_end', 'dirigeant_remote_start', 'dirigeant_remote_end',
                'dirigeant_in_person_start', 'dirigeant_in_person_end', 'exam_date')
 CITIES = {'paris': 'Paris', 'puget': 'Puget-sur-Argens'}
@@ -110,18 +111,11 @@ def _build_pdf(key):
     remote_end, onsite = dates['dirigeant_remote_end'], dates['dirigeant_in_person_start']
     city = CITIES[payload['location']]
     french, period = shared.french, shared.period
-    years = str(start.year) if start.year == exam.year else f'{start.year} – {exam.year}'
-    # Cross-year dates carry their year in the calendar to remove any ambiguity.
     year = start.year != exam.year
     values = {
         (1, 'text-1-3'): period(start, end),
         (1, 'text-1-4'): 'Examen le '+french(exam),
         (4, 'text-4-4'): 'L’examen final a lieu le '+french(exam)+', après la fin de la formation.',
-        (5, 'calendar-year'): 'Dates '+years,
-        (5, 'calendar-remote'): period(start, remote_end, year=year),
-        (5, 'calendar-deadline'): french(remote_end, year=year),
-        (5, 'calendar-onsite'): period(onsite, end, year=year),
-        (5, 'calendar-exam'): french(exam, year=year),
         (6, 'text-6-2'): ('Du '+french(start, year=year)).upper(),
         (6, 'text-6-3'): ('Au '+french(exam)).upper(),
         (6, 'text-6-5'): 'À distance, réservez le temps nécessaire aux 174 h de e-learning.\n'
@@ -139,6 +133,7 @@ def _build_pdf(key):
     with fitz.open(ASSETS/(payload['location']+'.pdf')) as doc:
         for spec in json.loads((ASSETS/(payload['location']+'.json')).read_text()):
             _block(doc[spec['page']-1], spec, values[(spec['page'], spec['name'])])
+        desp_calendar.draw_pdf(doc[4], dates, city)
         doc.set_metadata({'title': f'Réunion de lancement DESP {city} — '+french(start),
                           'author': 'Intégrale Academy', 'subject': 'Session du '+period(start, end)})
         doc.subset_fonts()

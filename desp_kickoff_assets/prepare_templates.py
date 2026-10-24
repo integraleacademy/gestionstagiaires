@@ -52,13 +52,13 @@ def prepare(source, exported_pdf, city):
                 w, h = (int(ext.get(a))/12700 for a in ('cx', 'cy'))
                 remove(name, fitz.Rect(x, y, x+w, y+h))
             if number == 5:
-                rows = [('calendar-year', 155, 201.5), ('calendar-remote', 201.5, 265.25),
-                        ('calendar-deadline', 265.25, 329), ('calendar-onsite', 329, 392.7),
-                        ('calendar-exam', 392.7, 456.5)]
-                for name, top, bottom in rows:
-                    remove(name, fitz.Rect(232.5, top, 505, bottom-5))
+                # Month grids are recomposed from saved session dates, including year changes.
+                page.add_redact_annot(fitz.Rect(35, 30, 925, 500), fill=False)
             page.apply_redactions(images=0, graphics=0)
-        assert len(specs) == 18, (city, len(specs))
+            if number == 5:
+                page.draw_rect(fitz.Rect(35, 30, 925, 500), color=None,
+                               fill=(1, 253/255, 248/255), overlay=True)
+        assert len(specs) == 13, (city, len(specs))
         assert not any('2026' in p.get_text() for p in doc), 'Unreplaced session date'
         doc.set_metadata({'title': f'Réunion de lancement DESP {city} — modèle',
                           'author': 'Intégrale Academy'})
@@ -70,5 +70,5 @@ def prepare(source, exported_pdf, city):
 
 if __name__ == '__main__':
     for city, label, month in [('paris', 'Paris', 'octobre'), ('puget', 'Puget', 'novembre')]:
-        basename = f'Diaporama DESP {label} {month} 2026'
+        basename = f'Diaporama_DESP_{label}_{month}_2026_calendrier_visuel'
         prepare(Path(sys.argv[1])/(basename+'.pptx'), Path(sys.argv[2])/(basename+'.pdf'), city)
