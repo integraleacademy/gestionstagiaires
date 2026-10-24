@@ -137,6 +137,17 @@
       line-height:1.45;
     }
 
+    .sheet-afc .label-grid{ gap:22mm; }
+    .sheet-afc .content-wrap{ width:82mm; flex:0 0 82mm; }
+    .sheet-afc .photo-name{ font-size:4.1mm; max-height:none; overflow:visible; }
+    .sheet-afc .logo{ width:24mm; margin-bottom:3mm; }
+    .sheet-afc .trainee-name{ font-size:5mm; white-space:normal; overflow-wrap:anywhere; }
+    .sheet-afc .formation{ font-size:4.9mm; }
+    .sheet-afc .formation span{ color:#111827; background:#7dd3fc; padding:0 1.2mm; border-radius:1mm; }
+    .formation-details{ text-align:center; font-size:4mm; font-weight:700; line-height:1.4; margin:1mm 0; }
+    .formation-details span{ display:block; }
+    .sheet-afc .checklist{ margin-top:5mm; font-size:3.8mm; line-height:1.45; }
+
     @media print {
       @page { size: A4 portrait; margin: 0; }
       *{
@@ -160,7 +171,7 @@
     </div>
   </div>
 
-  <main class="sheet">
+  <main class="sheet{% if is_afc %} sheet-afc{% endif %}">
     <section class="label-grid">
       <div class="photo-wrap">
         <div class="photo-box">
@@ -175,6 +186,9 @@
         <img class="logo" src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Connect">
         <p class="trainee-name">{{ trainee_name }}</p>
         <p class="formation{% if formation_extra_label %} formation-vae{% endif %}{% if formation_label == 'FORMATION DESP' %} formation-desp{% elif formation_label == 'FORMATION TFP APS' %} formation-aps{% elif formation_label == 'FORMATION A3P' %} formation-a3p{% elif formation_label == 'FORMATION DESP VAE' %} formation-desp-vae{% endif %}"><span>{{ formation_label }}</span></p>
+        {% if is_afc %}
+          <div class="formation-details"><span>APS + SSIAP 1 + SST</span><span>Habilitation électrique</span></div>
+        {% endif %}
         {% if formation_extra_label %}
           <p class="formation-extra"><span>{{ formation_extra_label }}</span></p>
         {% endif %}

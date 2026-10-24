@@ -31740,9 +31740,44 @@ def _ssiap_etiquette_checklist(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
     return checklist
 
 
+def _afc_etiquette_checklist(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Keep the AFC print view and Word exports on the same dossier checklist."""
+    docs_by_key = {
+        (document.get("key") or "").strip(): document
+        for document in (trainee.get("documents") or [])
+        if isinstance(document, dict)
+    }
+    checklist = [{
+        "label": "Convention de formation signée",
+        "checked": ((trainee.get("convention_status") or "").strip().lower() == "signed"
+                    or _trainee_convention_is_signed(copy.deepcopy(trainee))),
+    }]
+    for label, key in (
+        ("Pièce d’identité", "id"),
+        ("Carte vitale", "carte_vitale_doc"),
+        ("Photo d’identité", "photo"),
+        ("Autorisation préalable CNAPS", "cnaps_doc"),
+        ("Fiche CNIL signée", ""),
+        ("Test de français", "test_fr_status"),
+        ("SST à jour", ""),
+        ("Certificat médical de moins de 3 mois", "certificat_medical_ssiap_afc"),
+        ("Dossier examen APS", ""),
+        ("Dossier examen SSIAP 1", ""),
+    ):
+        checked = False
+        if key == "test_fr_status":
+            checked = (trainee.get("test_fr_status") or "").strip().lower() == "validated"
+        elif key:
+            checked = ((docs_by_key.get(key) or {}).get("status") or "").strip().upper() == "CONFORME"
+        checklist.append({"label": label, "checked": checked})
+    return checklist
+
+
 def _build_etiquette_docx_bytes(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> bytes:
     training_type = (_session_get(session_obj, "training_type", "") or "").strip().upper()
-    template_name = _etiquette_template_name(training_type)
+    is_afc = afc_schedule.enabled(session_obj)
+    label_session = afc_schedule.effective_session(session_obj, trainee)
+    template_name = "etiquette_afc.docx" if is_afc else _etiquette_template_name(training_type)
     if not template_name:
         abort(400, f"Aucun modèle Word prévu pour la formation : {training_type}")
 
@@ -31754,11 +31789,15 @@ def _build_etiquette_docx_bytes(session_obj: Dict[str, Any], trainee: Dict[str, 
     replacements = {
         "{{NOM}}": (trainee.get("last_name", "") or "").upper(),
         "{{PRENOM}}": (trainee.get("first_name", "") or "").upper(),
-        "{{FORMATION}}": _session_get(session_obj, "name", ""),
-        "{{TYPE_FORMATION}}": training_type,
-        "{{DATES}}": f"{fr_date(_session_get(session_obj,'date_start',''))} → {fr_date(_session_get(session_obj,'date_end',''))}",
+        "{{FORMATION}}": afc_schedule.TITLE if is_afc else _session_get(session_obj, "name", ""),
+        "{{TYPE_FORMATION}}": "AFC" if is_afc else training_type,
+        "{{DATES}}": f"{fr_date(_session_get(label_session,'date_start',''))} → {fr_date(_session_get(label_session,'date_end',''))}",
     }
-    if training_type.startswith("SSIAP"):
+    if is_afc:
+        for index, item in enumerate(_afc_etiquette_checklist(trainee)):
+            marker = "✓" if item["checked"] else "○"
+            replacements[f"{{{{AFC_ITEM_{index}}}}}"] = f"{marker}  {item['label']}"
+    elif training_type.startswith("SSIAP"):
         for index, item in enumerate(_ssiap_etiquette_checklist(trainee)):
             marker = "✓" if item["checked"] else "○"
             replacements[f"{{{{SSIAP_ITEM_{index}}}}}"] = f"{marker}  {item['label']}"
@@ -31963,14 +32002,20 @@ def admin_etiquette_print_page(session_id: str, trainee_id: str):
             checked = checklist_status_map[item]
         checklist.append({"label": item, "checked": checked})
 
-    if training_type.startswith("SSIAP"):
+    is_afc = afc_schedule.enabled(s)
+    label_session = afc_schedule.effective_session(s, t)
+    if is_afc:
+        formation_label_text = "FORMATION AFC"
+        checklist = _afc_etiquette_checklist(t)
+    elif training_type.startswith("SSIAP"):
         checklist = _ssiap_etiquette_checklist(t)
 
     return render_template(
         "admin_etiquette_print.html",
         trainee_name=f"{(t.get('last_name') or '').upper()} {(t.get('first_name') or '').upper()}".strip(),
         formation_label=formation_label_text,
-        date_range=f"{fr_date(_session_get(s,'date_start',''))} → {fr_date(_session_get(s,'date_end',''))}",
+        is_afc=is_afc,
+        date_range=f"{fr_date(_session_get(label_session,'date_start',''))} → {fr_date(_session_get(label_session,'date_end',''))}",
         checklist=checklist,
         photo_url=photo_url,
         back_url=url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),

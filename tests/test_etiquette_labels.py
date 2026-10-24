@@ -31,6 +31,93 @@ class EtiquetteLabelsTests(unittest.TestCase):
             sess["admin_logged_in"] = True
         return client
 
+    def _afc_session(self, trainees):
+        return {
+            "id": "AFC1", "name": "AFC APS + SSIAP novembre 2026", "training_type": "APS", "afc_enabled": True,
+            "date_start": "2026-11-02", "date_end": "2027-01-15", "trainees": trainees,
+        }
+
+    def test_afc_print_and_word_share_individual_dates_and_dossier_statuses(self):
+        trainee = {
+            "id": "TAFC", "last_name": "Exemple", "first_name": "Camille",
+            "training_date_start": "2026-11-09", "training_date_end": "2026-12-30",
+            "convention_status": "signing", "convention_signature": {"status": "done"},
+            "test_fr_status": "validated",
+            "documents": [
+                {"key": "id", "status": "CONFORME"},
+                {"key": "carte_vitale_doc", "status": "A CONTRÔLER"},
+                {"key": "photo", "status": "NON CONFORME"},
+                {"key": "cnaps_doc", "status": "CONFORME"},
+                {"key": "certificat_medical_ssiap_afc", "status": " conforme "},
+                {"key": "certificat_medical_ssiap", "status": "NON CONFORME"},
+                {"key": "certif_med", "status": "NON CONFORME"},
+            ],
+        }
+        expected = [
+            (True, "Convention de formation signée"), (True, "Pièce d’identité"),
+            (False, "Carte vitale"), (False, "Photo d’identité"), (True, "Autorisation préalable CNAPS"),
+            (False, "Fiche CNIL signée"), (True, "Test de français"), (False, "SST à jour"),
+            (True, "Certificat médical de moins de 3 mois"),
+            (False, "Dossier examen APS"), (False, "Dossier examen SSIAP 1"),
+        ]
+        data = {"sessions": [self._afc_session([trainee])]}
+        client = self._admin_client()
+        route = "/admin/sessions/AFC1/stagiaires/TAFC/etiquette"
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "save_data"):
+            response = client.get(route)
+            self.assertEqual(response.status_code, 200)
+            page = response.get_data(as_text=True)
+            rows = re.findall(r'<li><span class="checklist-prefix">(.*?)</span><span>(.*?)</span></li>', page)
+            self.assertEqual([(mark == "✔️", html.unescape(label)) for mark, label in rows], expected)
+            word_response = client.get(route + ".docx")
+        self.assertEqual(word_response.status_code, 200)
+        doc = Document(BytesIO(word_response.data))
+        paragraphs = ["".join(node.xpath(".//w:t/text()")) for node in doc.element.xpath(".//w:p")]
+        word_text = "\n".join(paragraphs)
+        for text in (page, word_text):
+            for content in ("FORMATION AFC", "APS + SSIAP 1 + SST", "Habilitation électrique", "09/11/2026 → 15/01/2027"):
+                self.assertIn(content, text)
+            self.assertNotIn("02/11/2026", text)
+            self.assertNotIn("30/12/2026", text)
+            self.assertNotIn("{{", text)
+        for checked, label in expected:
+            self.assertIn(f"{'✓' if checked else '○'}  {label}", paragraphs)
+        self.assertEqual(trainee["training_date_start"], "2026-11-09")
+        for section in doc.sections:
+            source = section._sectPr.find(qn("w:paperSrc"))
+            self.assertEqual(source.get(qn("w:first")), "261")
+            self.assertEqual(source.get(qn("w:other")), "261")
+
+    def test_afc_bulk_word_uses_each_start_and_the_common_end(self):
+        trainees = [
+            {"id": "T1", "last_name": "Exemple", "first_name": "Camille", "training_date_start": "2026-11-09"},
+            {"id": "T2", "last_name": "Test", "first_name": "Alex", "training_date_end": "2026-11-10"},
+        ]
+        data = {"sessions": [self._afc_session(trainees)]}
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "save_data"):
+            response = self._admin_client().get("/admin/sessions/AFC1/stagiaires/etiquettes-word.zip")
+        self.assertEqual(response.status_code, 200)
+        with zipfile.ZipFile(BytesIO(response.data)) as archive:
+            self.assertEqual(len(archive.namelist()), 2)
+            for filename in archive.namelist():
+                doc = Document(BytesIO(archive.read(filename)))
+                text = "\n".join(doc.element.xpath(".//w:t/text()"))
+                start = "09/11/2026" if "T1" in filename else "02/11/2026"
+                self.assertIn(start + " → 15/01/2027", text)
+                self.assertIn("FORMATION AFC", text)
+                self.assertEqual(text.count("○"), 11)
+                self.assertNotIn("{{", text)
+
+    def test_explicit_afc_opt_out_preserves_the_aps_label(self):
+        trainee = {"id": "T1", "last_name": "Exemple", "first_name": "Camille", "training_date_start": "2026-11-09"}
+        training = self._afc_session([trainee])
+        training["afc_enabled"] = False
+        text = "\n".join(Document(BytesIO(gestion_app._build_etiquette_docx_bytes(training, trainee))).element.xpath(".//w:t/text()"))
+        self.assertIn("FORMATION TFP APS", text)
+        self.assertIn("02/11/2026 → 15/01/2027", text)
+        self.assertNotIn("Dossier examen SSIAP 1", text)
+        self.assertNotIn("FORMATION AFC", text)
+
     def test_ssiap_print_and_word_show_the_same_document_statuses(self):
         trainee = {
             "id": "TSSIAP", "last_name": "Exemple", "first_name": "Camille",
