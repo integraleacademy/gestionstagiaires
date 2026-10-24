@@ -83,3 +83,41 @@ def test_a3p_templates_keep_learner_name_and_distinguish_module_duration():
             assert '{{ nom_complet }}' in text
             assert 'Période du parcours A3P' in text
             assert ('14 heures' if name=='attestationstua3p.docx' else 'Durée du parcours A3P') in text
+
+
+def template_text(name):
+    from lxml import etree
+    with ZipFile(Path(app.app.root_path)/'templates_word'/name) as z:
+        tree=etree.fromstring(z.read('word/document.xml'))
+        return ' '.join(tree.xpath('//w:t/text()',namespaces={'w':'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}))
+
+
+def test_afc_uses_original_aps_models_and_omits_payment_language_outside_convention():
+    for stem in ('attestationentree','attestationfin'):
+        afc=template_text(stem+'afc.docx')
+        assert '{{ formation_nom }}' in afc and '{{ afc_document_duration }}' in afc
+        assert not any(t in afc.lower() for t in ['financement','france travail','ran','175 heures','distanciel'])
+        with ZipFile(Path(app.app.root_path)/'templates_word'/(stem+'aps.docx')) as source, ZipFile(Path(app.app.root_path)/'templates_word'/(stem+'afc.docx')) as output:
+            for path in source.namelist():
+                if path.startswith('word/media/') or path in ('word/styles.xml','word/header1.xml','word/footer1.xml'):
+                    assert source.read(path)==output.read(path)
+    convention=template_text('conventionafc.docx')
+    assert 'Article 11 - Cas de différend' in convention and 'RÈGLEMENT INTÉRIEUR' in convention
+    assert '0 €' in convention and 'France Travail' in convention
+    assert not any(t in convention for t in ['tenu de payer','facturée :','175 heures','62 heures','30 %','au plus tard 5 jours'])
+    convocation=template_text('convocationafc.docx')
+    assert not any(t in convocation.lower() for t in ['financement','reste à charge','facturation','frais pédagogiques'])
+    import re
+    assert not re.search(r'\bRAN\b',convocation)
+    with ZipFile(Path(app.app.root_path)/'templates_word'/'convocationafc.docx') as z:
+        assert 'word/media/image1.png' not in z.namelist()
+    _,email=app._build_aps_convocation_email('Camille',session_obj={'training_type':'APS','afc_enabled':True},trainee={})
+    assert 'financement' not in email.lower() and 'reste à charge' not in email.lower()
+
+
+def test_three_a3p_colours_and_requested_disclaimers_removed():
+    for filename,colour in [('attestationfina3p.docx','24715B'),('attestationconducteura3p.docx','2D5B88'),('attestationstua3p.docx','A9573C')]:
+        with ZipFile(Path(app.app.root_path)/'templates_word'/filename) as z:
+            xml=z.read('word/document.xml').decode()
+        assert colour in xml
+        assert 'Cette attestation constate le suivi du module' not in template_text(filename)

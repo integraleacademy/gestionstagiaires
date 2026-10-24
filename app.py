@@ -39844,7 +39844,6 @@ def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end
         session_line += "<p>" + html.escape(details).replace("\n", "<br>") + "</p>"
     if afc:
         session_line += "<p><strong>Calendrier de la session AFC</strong><br>" + html.escape(afc["detail_parcours"]).replace("\n", "<br>") + "</p>"
-        session_line += "<p><strong>Financement France Travail :</strong> action de formation conventionnée dans le cadre d’un marché France Travail. Aucun frais de formation à votre charge (0 €).</p>"
     period_sentence = f" qui se déroulera {period_label}" if period_label else ""
     introduction = (
         "Votre inscription est prise en compte. Voici les informations pour préparer votre entrée en formation."

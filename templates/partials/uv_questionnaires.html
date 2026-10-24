@@ -1,32 +1,32 @@
 {% if uv_questionnaires %}
-<section class="card" id="questionnaires-uv" style="grid-column:1/-1;margin:20px 0;">
-  <h2>Questionnaires de fin d’UV · {{ uv_questionnaires.label }}</h2>
-  <p style="padding:12px;border-left:4px solid #c29635;background:#fff6df;"><strong>{{ uv_questionnaires.notice }}</strong></p>
-  <p>20 questions par UV. La correction est accessible au stagiaire après la remise de ses réponses.</p>
-  {% if not uv_questionnaires.available %}
-  <p><strong>{% if uv_questionnaires.cancelled %}Accès fermé : inscription annulée.{% elif uv_questionnaires.start_label %}Ouverture dans l’espace stagiaire le {{ uv_questionnaires.start_label }}, au début de la formation pratique.{% else %}En attente de la date de début de la formation pratique.{% if uv_admin %} Renseignez la date de début du présentiel dans la session.{% endif %}{% endif %}</strong></p>
-  {% endif %}
-  <div style="overflow-x:auto;">
-  <table style="width:100%;border-collapse:collapse;">
-    <thead><tr><th style="text-align:left;padding:10px;">Unité de valeur</th><th style="text-align:left;padding:10px;">État</th><th style="text-align:left;padding:10px;">Questionnaire</th></tr></thead>
-    <tbody>
-    {% for uv in uv_questionnaires.units %}
-    <tr style="border-top:1px solid #e2e8f0;">
-      <td style="padding:10px;">UV {{ uv.number }} · {{ uv.title }}</td>
-      <td style="padding:10px;white-space:nowrap;">{% if uv.completed %}Remis · {{ uv.score }}/20{% else %}À réaliser{% endif %}</td>
-      <td style="padding:10px;">
-      {% if uv_admin %}
-        <a href="{{ url_for('admin_uv_questionnaire', session_id=session.id, trainee_id=trainee.id, number=uv.number) }}">Prévisualiser</a> ·
-        <a href="{{ url_for('admin_uv_questionnaire_pdf', session_id=session.id, trainee_id=trainee.id, number=uv.number) }}">PDF vierge</a>
-        {% if uv.completed %} · <a href="{{ url_for('admin_uv_questionnaire_pdf', session_id=session.id, trainee_id=trainee.id, number=uv.number, mode='answers') }}">Réponses et correction (PDF)</a>{% endif %}
-      {% elif uv_questionnaires.available %}
-        <a href="{{ url_for('public_uv_questionnaire', token=token, number=uv.number) }}">{% if uv.completed %}Voir ma correction{% else %}Répondre aux 20 questions{% endif %}</a>
-      {% else %}Disponible au début du présentiel{% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+<style>
+.uvhub{grid-column:1/-1;margin:24px 0;border:1px solid #dce5ef;border-radius:22px;background:#fff;overflow:hidden;box-shadow:0 8px 30px #142d4610;color:#172e48}.uvhub summary{list-style:none;cursor:pointer;display:flex;gap:18px;align-items:center;padding:26px;background:linear-gradient(115deg,#152b46,#24486b);color:#fff}.uvhub summary::-webkit-details-marker{display:none}.uvhub summary:focus-visible{outline:3px solid #d9ae55;outline-offset:-5px}.uvhub-icon{display:grid;place-items:center;width:56px;height:56px;flex:0 0 56px;border-radius:16px;background:#ffffff14;color:#e6c27c}.uvhub-heading{flex:1;min-width:0}.uvhub .uvhub-heading h2{margin:4px 0 8px;color:white;font-size:clamp(18px,2.2vw,23px);line-height:1.3}.uvhub-kicker{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#c9d8e8;font-weight:700}.uvhub-meta{font-size:13px;color:#d8e5f2;line-height:1.5}.uvhub-chevron{width:32px;height:32px;border:1px solid #ffffff40;border-radius:50%;display:grid;place-items:center;flex:0 0 32px;transition:transform .2s}.uvhub[open] .uvhub-chevron{transform:rotate(180deg)}.uvhub-body{padding:24px}.uvhub-instructions{display:flex;gap:12px;justify-content:space-between;align-items:start;flex-wrap:wrap;margin-bottom:22px}.uvhub-instructions p{font-size:14px;line-height:1.6;margin:0;max-width:720px}.uvhub-pill{display:inline-flex;align-items:center;white-space:nowrap;padding:8px 12px;border-radius:99px;background:#eef4fb;font-size:12px;font-weight:700;color:#24496e}.uvhub-lock{padding:14px 16px;margin-bottom:20px;border-radius:12px;background:#f6f8fb;font-size:14px;line-height:1.6}.uvhub-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.uvhub-unit{border:1px solid #dce5ef;border-radius:16px;padding:20px;background:#fff}.uvhub-unit-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.uvhub-number{font-size:12px;font-weight:800;color:#24496e;letter-spacing:.04em}.uvhub-state{font-size:11px;font-weight:700;color:#65758a;background:#f0f3f7;padding:5px 9px;border-radius:99px}.uvhub-state.is-done{background:#e9f7ef;color:#216b4a}.uvhub .uvhub-unit h3{font-size:16px;line-height:1.45;margin:0 0 18px;font-weight:700;color:#172e48}.uvhub-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.uvhub .uvhub-link{display:inline-flex;align-items:center;justify-content:center;padding:10px 13px;border-radius:10px;border:1px solid #dce5ef;color:#24496e;font-size:12px;font-weight:700;text-decoration:none;line-height:1.4;background:white}.uvhub .uvhub-link.is-primary{background:#183a59;color:white;border-color:#183a59}.uvhub .uvhub-link:hover{box-shadow:0 3px 12px #152b4620;transform:translateY(-1px)}.uvhub-disabled{font-size:12px;color:#728196;line-height:1.5}@media(max-width:700px){.uvhub summary{padding:20px 16px;gap:12px}.uvhub-icon{display:none}.uvhub-body{padding:16px}.uvhub-grid{grid-template-columns:1fr}.uvhub .uvhub-heading h2{font-size:18px}}
+</style>
+<details class="uvhub" id="questionnaires-uv">
+  <summary>
+    <span class="uvhub-icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-3H4V4Zm16 0h-4a3 3 0 0 0-3 3v14a4 4 0 0 1 4-3h3V4Z"/></svg></span>
+    <span class="uvhub-heading"><span class="uvhub-kicker">{{ uv_questionnaires.label }} · Votre parcours pédagogique</span><h2>{{ uv_questionnaires.title }}</h2><span class="uvhub-meta">{{ uv_questionnaires.units|length }} unités · 20 questions par UV · {{ uv_questionnaires.completed_count }} / {{ uv_questionnaires.units|length }} remises</span></span>
+    <span class="uvhub-chevron" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
+  </summary>
+  <div class="uvhub-body">
+    <div class="uvhub-instructions"><p><strong>À réaliser en cours, en présence du formateur.</strong><br>Une question à la fois. Retrouvez votre score et la correction expliquée à la fin du questionnaire.</p><span class="uvhub-pill">45 secondes / question</span></div>
+    {% if not uv_questionnaires.available %}<div class="uvhub-lock">{% if uv_questionnaires.cancelled %}Accès fermé : inscription annulée.{% elif uv_questionnaires.start_label %}Ouverture dans l’espace stagiaire le <strong>{{ uv_questionnaires.start_label }}</strong>, au début du présentiel.{% else %}En attente de la date de début du présentiel.{% if uv_admin %} Renseignez cette date dans la session.{% endif %}{% endif %}</div>{% endif %}
+    <div class="uvhub-grid">
+      {% for uv in uv_questionnaires.units %}
+      <article class="uvhub-unit">
+        <div class="uvhub-unit-top"><span class="uvhub-number">UV {{ '%02d'|format(uv.number) }}</span><span class="uvhub-state{% if uv.completed %} is-done{% endif %}">{% if uv.completed %}Remis · {{ uv.score }}/20{% else %}À réaliser{% endif %}</span></div>
+        <h3>{{ uv.title }}</h3>
+        <div class="uvhub-actions">
+          {% if uv_admin %}
+          <a class="uvhub-link is-primary" href="{{ url_for('admin_uv_questionnaire', session_id=session.id, trainee_id=trainee.id, number=uv.number) }}">Prévisualiser</a>
+          <a class="uvhub-link" href="{{ url_for('admin_uv_questionnaire_pdf', session_id=session.id, trainee_id=trainee.id, number=uv.number) }}">PDF vierge ↓</a>
+          {% if uv.completed %}<a class="uvhub-link" href="{{ url_for('admin_uv_questionnaire_pdf', session_id=session.id, trainee_id=trainee.id, number=uv.number, mode='answers') }}">Réponses et correction ↓</a>{% endif %}
+          {% elif uv_questionnaires.available %}<a class="uvhub-link is-primary" href="{{ url_for('public_uv_questionnaire', token=token, number=uv.number) }}">{% if uv.completed %}Voir ma correction{% else %}Commencer le questionnaire →{% endif %}</a>
+          {% else %}<span class="uvhub-disabled">Disponible au début du présentiel</span>{% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
   </div>
-</section>
+</details>
 {% endif %}

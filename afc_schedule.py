@@ -128,6 +128,7 @@ def document_context(training, trainee, fr_date, *, strict=False):
         "afc_preparation_hours": str(COMMON_HOURS[1]),
         "afc_soutien_hours": str(COMMON_HOURS[2]),
         "afc_ran_duration": f"{ran} h" if known_ran else "Selon le PIF (0 à 54 h)",
+        "afc_document_duration": f"{common + ran} heures" if known_ran else "Selon le programme individuel de formation",
         "afc_total_duration": f"{common + ran} h" if known_ran else f"{common} h hors RAN ; durée finale selon le PIF",
         "montant_financement_personnel": "0", "montant_financement_personnel_eur": "0 €",
         "montant_personnel": "0", "montant_personnel_eur": "0 €",
@@ -140,5 +141,5 @@ def revision(training, trainee):
         return ""
     value = {"session": view(training), "period": {
         key: effective_session(training, trainee).get(key) for key in ("date_start", "date_end")},
-        "trainee": trainee.get("id"), "ran_hours": trainee.get("afc_ran_hours"), "document_version": 2}
+        "trainee": trainee.get("id"), "ran_hours": trainee.get("afc_ran_hours"), "document_version": 3}
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()[:12]
