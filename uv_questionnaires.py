@@ -251,6 +251,19 @@ def register(app, services):
         response.headers['Cache-Control'] = 'private, no-store'
         return response
 
+    @app.get('/admin/sessions/<session_id>/stagiaires/<trainee_id>/questionnaires-uv/<int:number>/tester')
+    @services.admin_login_required
+    def admin_uv_questionnaire_demo(session_id, trainee_id, number):
+        training, trainee, course, row, _ = admin_pair(session_id, trainee_id, number)
+        response = app.make_response(render_template('uv_questionnaire.html',
+            training=training, trainee=trainee, course=course, number=number, title=row['title'],
+            questionnaire_title=TITLE, questions=[], demo_questions=row['questions'], demo=True,
+            result=None, correction=False, admin_preview=True, notice=NOTICE,
+            seconds_per_question=QUESTION_SECONDS,
+            back_url=url_for('admin_trainee_page', session_id=session_id, trainee_id=trainee_id)))
+        response.headers['Cache-Control'] = 'private, no-store'
+        return response
+
     @app.get('/admin/sessions/<session_id>/stagiaires/<trainee_id>/questionnaires-uv/<int:number>.pdf')
     @services.admin_login_required
     def admin_uv_questionnaire_pdf(session_id, trainee_id, number):

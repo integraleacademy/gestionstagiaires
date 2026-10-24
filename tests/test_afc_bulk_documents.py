@@ -1,0 +1,209 @@
+import copy
+import uuid
+from unittest.mock import Mock
+
+import pytest
+
+import app
+
+BASE = '/api/admin/sessions/S1/afc-documents'
+
+
+@pytest.fixture
+def case(monkeypatch, tmp_path):
+    trainee = {'id':'T1','first_name':'Camille','last_name':'MARTIN','email':'camille@example.test',
+               'phone':'0612345678','training_date_start':'2026-11-18','afc_ran_hours':40}
+    training = {'id':'S1','name':'AFC APS + SSIAP 1','training_type':'APS','afc_enabled':True,
+                'date_start':'2026-11-16','date_end':'2027-02-15','exam_date':'2027-01-21',
+                'ssiap_exam_date':'2027-02-15','trainees':[trainee]}
+    data = {'sessions':[training]}
+    monkeypatch.setattr(app,'load_data',lambda **kw:copy.deepcopy(data))
+    monkeypatch.setattr(app,'save_data',Mock())
+    monkeypatch.setattr(app,'_atomic_update_data',lambda fn:fn(data))
+    monkeypatch.setattr(app,'_automation_partner_module_enabled',lambda:True)
+    monkeypatch.setattr(app,'_store_public_file_token',lambda p:'file-token')
+    monkeypatch.setattr(app,'_aps_convocation_pdf_is_allowed',lambda p:True)
+    def generate(s,t,*args):
+        docx,pdf=tmp_path/(t['id']+'.docx'),tmp_path/(t['id']+'.pdf')
+        docx.write_bytes(b'docx');pdf.write_bytes(b'PDF TEST')
+        return str(docx),str(pdf)
+    generators={kind:Mock(side_effect=generate) for kind in ('convention','convocation')}
+    for kind,fn in generators.items():monkeypatch.setattr(app,'_generate_aps_'+kind+'_files',fn)
+    monkeypatch.setattr(app,'_prepare_yousign_pdf_and_fields',lambda p,**kw:(p,[]))
+    signatures=[]
+    def signature(s,t,*args,**kwargs):
+        state=t.setdefault('convention_signature',{})
+        if not state.get('signature_request_id'):
+            signatures.append(t['id']);state.update(signature_request_id='SIG-'+t['id'],status='ongoing',signature_link='https://example.test/sign')
+        return state
+    monkeypatch.setattr(app,'create_yousign_convention_signature',signature)
+    def deliver(*args,**kwargs):
+        kwargs['trainee'].setdefault('sent_email_history',[]).insert(0,{'to_email':args[0],'subject':args[1],'sent_at':'2026-10-24T18:00:00Z'})
+        return {'ok':True,'status_code':201,'message_id':'msg-test'}
+    mail=Mock(side_effect=deliver);monkeypatch.setattr(app,'brevo_send_email',mail)
+    client=app.app.test_client()
+    with client.session_transaction() as cookie:cookie.update(admin_logged_in=True,admin_role='admin')
+    return client,data,training,trainee,generators,mail,signatures
+
+
+def prepared(client,document='convention',action='generate',index=0):
+    plan=client.get(BASE,query_string={'document':document,'action':action}).json
+    row=plan['rows'][index]
+    payload=dict(csrf=plan['csrf'],document=document,action=action,revision=row['revision'],request_id=uuid.uuid4().hex)
+    return row,payload
+
+
+@pytest.mark.parametrize('document,action',[('convention','generate'),('convocation','generate'),('convention','send'),('convocation','send')])
+def test_four_actions_and_request_replay(case,document,action):
+    client,_,_,trainee,generators,mail,signatures=case
+    row,payload=prepared(client,document,action)
+    assert row['eligible']
+    response=client.post(row['execute_url'],json=payload)
+    assert response.status_code==200 and response.json['ok'],response.json
+    assert client.post(row['execute_url'],json=payload).json==response.json
+    assert mail.call_count==(action=='send')
+    assert len(signatures)==(document=='convention' and action=='send')
+    assert generators[document].call_count==(not(document=='convention' and action=='send'))
+    assert trainee['afc_document_operations'][document]['status']=='done'
+    if action=='send':
+        assert 'afc-documents-' in mail.call_args.kwargs['metadata']['idempotency_key']
+        assert len(trainee['sent_email_history'])==1
+        assert not prepared(client,document,action)[0]['eligible']
+    else:
+        assert trainee[document+'_aps_pdf_path']
+
+
+def test_prepare_is_read_only_and_uses_individual_dates(case):
+    client,data,_,trainee,generators,mail,signatures=case
+    before=copy.deepcopy(data)
+    row,payload=prepared(client)
+    assert data==before and not mail.called and not signatures
+    assert not any(fn.called for fn in generators.values())
+    trainee['training_date_start']='2026-11-20'
+    result=client.post(row['execute_url'],json=payload).json
+    assert not result['ok'] and 'changé' in result['message']
+    assert not any(fn.called for fn in generators.values())
+
+
+@pytest.mark.parametrize('change,document,action,reason',[
+    ({'registration_cancelled':True},'convention','send','annulée'),
+    ({'convention_status':'signed'},'convention','generate','signée'),
+    ({'convocation_aps_sent_at':'2026-10-24'},'convocation','send','envoyée'),
+    ({'email':''},'convocation','send','e-mail'),
+    ({'phone':''},'convention','send','Téléphone'),
+    ({'convention_signature':{'signature_request_id':'sig','status':'ongoing','signature_link':'https://example.test/sign'}},'convention','generate','signature'),
+])
+def test_exclusions(case,change,document,action,reason):
+    client,_,_,trainee,_,mail,_=case
+    trainee.update(change)
+    row,_=prepared(client,document,action)
+    assert not row['eligible'] and reason in row['reason']
+    assert not mail.called
+
+
+def test_afc_only_auth_viewer_csrf_and_invalid_action(case):
+    client,_,training,_,_,mail,_=case
+    row,payload=prepared(client)
+    assert client.post(row['execute_url'],json={**payload,'csrf':'bad'}).status_code==403
+    assert client.post(row['execute_url'],json={**payload,'action':'delete'}).status_code==400
+    training.update(afc_enabled=False,name='APS')
+    assert client.get(BASE,query_string={'document':'convention','action':'generate'}).status_code==404
+    assert client.post(row['execute_url'],json=payload).status_code==404
+    training.update(afc_enabled=True)
+    with client.session_transaction() as cookie:cookie['admin_role']='viewer'
+    assert client.post(row['execute_url'],json=payload).status_code==403
+    assert client.get(BASE,query_string={'document':'convention','action':'generate'}).status_code==403
+    with client.session_transaction() as cookie:cookie.clear()
+    assert client.post(row['execute_url'],json=payload).status_code==401
+    assert not mail.called
+
+
+def test_failed_email_preserves_signature_and_retry_reuses_it(case):
+    client,_,_,trainee,_,mail,signatures=case
+    mail.side_effect=None;mail.return_value={'ok':False,'status_code':400,'error':'Adresse refusée'}
+    row,payload=prepared(client,'convention','send')
+    assert not client.post(row['execute_url'],json=payload).json['ok']
+    assert trainee['convention_signature']['signature_request_id']=='SIG-T1'
+    assert not trainee['convention_signature'].get('signature_email_sent_at')
+    mail.return_value={'ok':True,'status_code':201}
+    row,payload=prepared(client,'convention','send')
+    assert client.post(row['execute_url'],json=payload).json['ok']
+    assert signatures==['T1'] and mail.call_count==2
+
+
+def test_uncertain_email_is_not_automatically_repeated(case):
+    client,_,_,trainee,_,mail,_=case
+    mail.side_effect=None;mail.return_value={'ok':False,'status_code':None,'error':'Timeout'}
+    row,payload=prepared(client,'convocation','send')
+    assert not client.post(row['execute_url'],json=payload).json['ok']
+    assert trainee['afc_document_operations']['convocation']['status']=='uncertain'
+    client.post(row['execute_url'],json=payload)
+    assert mail.call_count==1
+    assert not prepared(client,'convocation','send')[0]['eligible']
+
+
+def test_cancelled_during_generation_prevents_email(case):
+    client,_,_,trainee,generators,mail,_=case
+    generate=generators['convocation'].side_effect
+    def cancel(*args):
+        paths=generate(*args);trainee['registration_cancelled']=True;return paths
+    generators['convocation'].side_effect=cancel
+    row,payload=prepared(client,'convocation','send')
+    result=client.post(row['execute_url'],json=payload).json
+    assert not result['ok'] and not mail.called
+
+
+def test_second_request_during_generation_does_not_duplicate_delivery(case):
+    client,_,_,trainee,generators,mail,_=case
+    row,payload=prepared(client,'convocation','send')
+    generate=generators['convocation'].side_effect
+    def concurrent_request(*args):
+        duplicate=client.post(row['execute_url'],json={**payload,'request_id':uuid.uuid4().hex})
+        assert duplicate.json['skipped'] and 'en cours' in duplicate.json['message']
+        return generate(*args)
+    generators['convocation'].side_effect=concurrent_request
+    assert client.post(row['execute_url'],json=payload).json['ok']
+    assert generators['convocation'].call_count==1 and mail.call_count==1
+    assert trainee['afc_document_operations']['convocation']['status']=='done'
+
+
+def test_webhook_and_unrelated_edits_survive_delivery(case):
+    client,_,_,trainee,_,mail,_=case
+    deliver=mail.side_effect
+    def webhook(*args,**kwargs):
+        trainee['notes']='Concurrent update'
+        trainee['convention_signature'].update(status='done',signed_at='2026-10-24',signed_pdf_path='/keep/signed.pdf')
+        return deliver(*args,**kwargs)
+    mail.side_effect=webhook
+    row,payload=prepared(client,'convention','send')
+    assert client.post(row['execute_url'],json=payload).json['ok']
+    assert trainee['notes']=='Concurrent update'
+    assert trainee['convention_signature']['status']=='done'
+    assert trainee['convention_signature']['signed_pdf_path']=='/keep/signed.pdf'
+    assert trainee['convention_signature']['signature_email_sent_at']
+
+
+def test_one_failure_does_not_prevent_next_learner(case):
+    client,_,training,trainee,generators,mail,_=case
+    training['trainees'].append(dict(trainee,id='T2',first_name='Alex',email='alex@example.test'))
+    original=generators['convocation'].side_effect
+    def generate(s,t,*args):
+        if t['id']=='T1':raise RuntimeError('Test PDF failure')
+        return original(s,t,*args)
+    generators['convocation'].side_effect=generate
+    for index,expected in [(0,False),(1,True)]:
+        row,payload=prepared(client,'convocation','send',index)
+        assert client.post(row['execute_url'],json=payload).json['ok'] is expected
+    assert mail.call_count==1 and mail.call_args.args[0]=='alex@example.test'
+
+
+def test_buttons_only_on_writable_afc_session(case):
+    client,_,training,_,_,_,_=case
+    html=client.get('/admin/sessions/S1/trainees').text
+    assert 'id="afc-documents"' in html
+    assert html.count('data-afc-document=')==4
+    training.update(afc_enabled=False,name='APS')
+    assert 'id="afc-documents"' not in client.get('/admin/sessions/S1/trainees').text
+    training.update(afc_enabled=True)
+    with client.session_transaction() as cookie:cookie['admin_role']='viewer'
+    assert 'id="afc-documents"' not in client.get('/admin/sessions/S1/trainees').text

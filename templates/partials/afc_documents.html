@@ -1,0 +1,16 @@
+{% if session.afc_enabled and not is_read_only %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/afc-documents.css', v='20261024a') }}">
+<section class="afc-documents" id="afc-documents" data-preview-url="{{ url_for('admin_afc_documents_preview', session_id=session.id) }}">
+  <div class="afc-documents-heading"><span class="afc-documents-kicker">Parcours AFC</span><h2>Documents de la session</h2><p>Préparez et envoyez les documents de tous les stagiaires.</p></div>
+  <div class="afc-document-actions"><div><strong>Conventions de formation</strong><div><button type="button" data-afc-document="convention" data-afc-action="generate">Générer toutes les conventions</button><button type="button" class="afc-doc-primary" data-afc-document="convention" data-afc-action="send">Envoyer toutes les conventions</button></div></div><div><strong>Convocations</strong><div><button type="button" data-afc-document="convocation" data-afc-action="generate">Générer toutes les convocations</button><button type="button" class="afc-doc-primary" data-afc-document="convocation" data-afc-action="send">Envoyer toutes les convocations</button></div></div></div>
+</section>
+<dialog id="afc-documents-dialog" class="afc-doc-dialog" aria-labelledby="afc-doc-title">
+  <header><div><span class="afc-documents-kicker">Documents AFC</span><h2 id="afc-doc-title"></h2></div><button type="button" data-afc-doc-close aria-label="Fermer">×</button></header>
+  <div class="afc-doc-content"><p id="afc-doc-description"></p><div id="afc-doc-feedback" role="status" aria-live="polite"></div><progress id="afc-doc-progress" value="0" max="1" hidden></progress>
+    <div class="afc-doc-table-wrap"><table><thead><tr><th>Stagiaire</th><th>Document</th><th>Résultat</th></tr></thead><tbody id="afc-doc-rows"></tbody></table></div>
+    <p class="afc-doc-help">Les inscriptions annulées et les documents déjà envoyés ou signés sont exclus. Un renvoi individuel reste possible depuis la fiche du stagiaire.</p>
+  </div>
+  <footer><button type="button" data-afc-doc-close>Fermer</button><button type="button" class="afc-doc-primary" id="afc-doc-run" disabled></button></footer>
+</dialog>
+<script src="{{ url_for('static', filename='js/afc-documents.js', v='20261024a') }}" defer></script>
+{% endif %}

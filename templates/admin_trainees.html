@@ -113,6 +113,8 @@
 </div>
 {% endif %}
 
+{% include 'partials/afc_documents.html' %}
+
 {% if session.afc_enabled and ssiap_exam_supported %}
 <div class="afc-exam-navigation" aria-label="Examens de la session AFC">
   <button class="afc-exam-tab afc-exam-tab--aps" id="btnA3pExamDossier" type="button" aria-haspopup="dialog" aria-controls="securityExamDialog"><strong>Examen APS</strong><span>{{ session.exam_date|frdate or 'Date à renseigner' }} · Dossiers, organisation et jury</span></button>

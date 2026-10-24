@@ -1,6 +1,7 @@
 import copy
 import datetime as dt
 from io import BytesIO
+from unittest.mock import Mock
 
 import pytest
 from pypdf import PdfReader
@@ -177,6 +178,7 @@ def test_admin_pdf_blank_and_correction(case):
     assert client.get(path).status_code==200
     assert client.get(path.replace('T1','other')).status_code==404
     blank=client.get(path+'.pdf')
+    assert all(page.images for page in PdfReader(BytesIO(blank.data)).pages)
     text='\n'.join(p.extract_text() for p in PdfReader(BytesIO(blank.data)).pages)
     assert 'Bonne réponse' not in text and 'Camille MARTIN' in text
     assert "Questionnaire de fin d'UV" in text and 'Evaluation formative' in text
@@ -204,3 +206,29 @@ def test_portal_admin_closed_accordions_and_sst_hidden(case,monkeypatch):
     training['date_start']='2026-10-25'
     for path in ('/espace/token-test','/admin/sessions/S1/stagiaires/T1'):
         assert 'id="questionnaires-uv"' not in client.get(path).text
+
+
+def test_hidden_until_answering_available_but_admin_can_try_demo(case,monkeypatch):
+    client,training,trainee,_=case
+    monkeypatch.setattr(app,'save_data',lambda data:None)
+    training['aps_in_person_start']='2026-11-10'
+    trainee.update(documents=[],public_has_logged_in=True)
+    assert 'id="questionnaires-uv"' not in client.get('/espace/token-test').text
+    demo='/admin/sessions/S1/stagiaires/T1/questionnaires-uv/2/tester'
+    assert client.get(demo).status_code==302
+    admin(client)
+    page=client.get('/admin/sessions/S1/stagiaires/T1')
+    assert 'uvhub--admin' in page.text and 'Tester le questionnaire' in page.text
+    before=copy.deepcopy(trainee)
+    mutate=Mock()
+    monkeypatch.setattr(app,'_atomic_update_data',mutate)
+    response=client.get(demo)
+    assert response.status_code==200 and 'data-demo="true"' in response.text
+    assert 'uq-demo-data' in response.text and 'Aucune réponse ni note' in response.text
+    assert trainee==before and not mutate.called
+    assert client.post(demo).status_code==405
+    assert client.get(demo.replace('/2/','/1/')).status_code==404
+    training['aps_in_person_start']='2026-11-09'
+    assert 'id="questionnaires-uv"' in client.get('/espace/token-test').text
+    trainee['registration_cancelled']=True
+    assert 'id="questionnaires-uv"' not in client.get('/espace/token-test').text
