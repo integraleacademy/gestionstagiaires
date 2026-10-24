@@ -1,9 +1,10 @@
-"""Prepare the supplied 24-slide DESP decks for session-specific PDF overlays.
+"""Prepare the supplied 34-slide DESP decks for session-specific PDF overlays.
 
 Offline maintenance only. First export both PowerPoints to PDF with LibreOffice.
 Usage: python prepare_templates.py SOURCE_PPTX_DIRECTORY EXPORTED_PDF_DIRECTORY
 """
 import json
+import posixpath
 from pathlib import Path
 import sys
 import zipfile
@@ -18,6 +19,7 @@ NAMES = {
     8: ['text-8-4'], 14: ['text-12-1'], 17: ['text-15-0'],
     24: ['text-22-3', 'text-22-5', 'text-22-8'],
 }
+SOURCE_PAGES = {1: 1, 4: 4, 6: 6, 7: 7, 10: 8, 18: 14, 24: 17, 34: 24}
 NS = {'a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
       'p': 'http://schemas.openxmlformats.org/presentationml/2006/main'}
 
@@ -25,7 +27,14 @@ NS = {'a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
 def prepare(source, exported_pdf, city):
     specs = []
     with zipfile.ZipFile(source) as archive, fitz.open(exported_pdf) as doc:
-        assert len(doc) == 24
+        assert len(doc) == 34
+        presentation = ET.fromstring(archive.read('ppt/presentation.xml'))
+        relationships = ET.fromstring(archive.read('ppt/_rels/presentation.xml.rels'))
+        paths = {r.get('Id'): posixpath.normpath(posixpath.join('ppt', r.get('Target')))
+                 if not r.get('Target').startswith('/') else r.get('Target').lstrip('/')
+                 for r in relationships}
+        rel_ns = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+        ordered = [paths[s.get('{'+rel_ns+'}id')] for s in presentation.find('p:sldIdLst', NS)]
         for number, page in enumerate(doc, 1):
             spans = [s for b in page.get_text('dict')['blocks']
                      for line in b.get('lines', []) for s in line['spans']]
@@ -35,16 +44,16 @@ def prepare(source, exported_pdf, city):
                     (fitz.Rect(s['bbox']).tl+fitz.Rect(s['bbox']).br)/2)]
                 assert matching, (city, number, name)
                 first = matching[0]
-                specs.append(dict(page=number, name=name, rect=list(box),
+                specs.append(dict(page=number, source_page=SOURCE_PAGES[number], name=name, rect=list(box),
                                   origin=first['origin'], size=first['size'],
                                   bold='Bold' in first['font'], color=first['color']))
                 for span in matching:
                     page.add_redact_annot(fitz.Rect(span['bbox']) + (-.2, -.2, .2, .2), fill=False)
 
-            xml = ET.fromstring(archive.read(f'ppt/slides/slide{number}.xml'))
+            xml = ET.fromstring(archive.read(ordered[number-1]))
             for shape in xml.xpath('.//p:sp', namespaces=NS):
                 name = shape.xpath('string(p:nvSpPr/p:cNvPr/@name)', namespaces=NS)
-                if name not in NAMES.get(number, []):
+                if name not in NAMES.get(SOURCE_PAGES.get(number), []):
                     continue
                 off = shape.find('p:spPr/a:xfrm/a:off', NS)
                 ext = shape.find('p:spPr/a:xfrm/a:ext', NS)
@@ -70,5 +79,5 @@ def prepare(source, exported_pdf, city):
 
 if __name__ == '__main__':
     for city, label, month in [('paris', 'Paris', 'octobre'), ('puget', 'Puget', 'novembre')]:
-        basename = f'Diaporama_DESP_{label}_{month}_2026_calendrier_visuel'
+        basename = f'Diaporama_DESP_{label}_{month}_2026_version_enrichie'
         prepare(Path(sys.argv[1])/(basename+'.pptx'), Path(sys.argv[2])/(basename+'.pdf'), city)

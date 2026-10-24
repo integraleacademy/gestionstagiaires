@@ -145,24 +145,24 @@ def test_all_dynamic_dates_and_correct_site_update_without_mutations(case):
     assert training == before and kickoff.pdf(services, training) == content
     document = pymupdf.open(stream=content, filetype='pdf')
     text = '\n'.join(page.get_text() for page in document)
-    assert len(document) == 24 and '2026' not in text
+    assert len(document) == 34 and '2026' not in text
     assert 'en centre' not in text.lower()
     assert 'SESSION INITIALE À '+('PARIS' if city == 'paris' else 'PUGET-SUR-ARGENS') in document[0].get_text()
-    assert '19 février 2027' in document[16].get_text()
+    assert '19 février 2027' in document[23].get_text()
     assert 'JANVIER 2027' in document[4].get_text() and 'FÉVRIER 2027' in document[4].get_text()
     assert '4 janvier au 5 février' in document[4].get_text()
     assert '8 au 18 février' in document[4].get_text()
     assert '174 h de e-learning' in text and '70 h' in text
     assert '28 mars 2025' in document[2].get_text() and '28 mars 2027' in document[2].get_text()
-    assert 'Votre accès au e-learning est ouvert.' in document[23].get_text()
+    assert 'Votre accès au e-learning est ouvert.' in document[33].get_text()
     if city == 'paris':
-        assert '53 rue des' in document[13].get_text() and '75010 Paris' in document[13].get_text()
+        assert '53 rue des' in document[17].get_text() and '75010 Paris' in document[17].get_text()
     else:
-        assert 'PUGET-SUR-ARGENS' in document[13].get_text()
+        assert 'PUGET-SUR-ARGENS' in document[17].get_text()
     training['exam_date'] = '2027-02-20'
     revised = kickoff.pdf(services, training)
     assert revised != content
-    assert '20 février 2027' in pymupdf.open(stream=revised, filetype='pdf')[16].get_text()
+    assert '20 février 2027' in pymupdf.open(stream=revised, filetype='pdf')[23].get_text()
 
 
 def test_cross_year_calendar_retains_years_and_leap_day(case):
@@ -175,7 +175,24 @@ def test_cross_year_calendar_retains_years_and_leap_day(case):
     calendar = document[4].get_text().replace('\n', ' ')
     assert '13 décembre 2027 au 28 janvier 2028' in calendar
     assert '1 au 28 février 2028' in calendar and '29 février 2028' in calendar
-    assert '29 février 2028' in document[16].get_text()
+    assert '29 février 2028' in document[23].get_text()
+
+
+def test_enrichment_preserves_program_hours_project_diagram_and_guidance(case):
+    _, _, services, training, _, _ = case
+    document = pymupdf.open(stream=kickoff.pdf(services, training), filetype='pdf')
+    remote = document[10].get_text()
+    onsite = document[18].get_text()
+    for label in ('Droit du travail', 'Environnement juridique', 'Gestion administrative', 'Marchés et appels'):
+        assert label in remote
+    assert all(str(hours) in remote.splitlines() for hours in (40, 44, 60, 30, 174))
+    assert all(str(hours) in onsite.splitlines() for hours in (40, 20, 5, 70))
+    assert 'Indicateurs de réussite' in document[15].get_text()
+    assert 'Exemple pédagogique fictif' in document[16].get_text()
+    assert 'Business plan' in document[22].get_text()
+    assert 'Entraînez-vous aux questions' in document[27].get_text()
+    assert 'Relisez votre convocation' in document[28].get_text()
+    assert 'Un message utile' in document[31].get_text()
 
 
 def test_calendar_cells_distinguish_phase_boundaries_and_exam(case):

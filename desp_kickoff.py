@@ -1,6 +1,6 @@
 """DESP Paris/Puget kickoff decks, released on the first training day.
 
-The supplied 24-slide decks retain their programme, artwork and site details.
+The enriched 34-slide decks retain the artwork, calendar and site details.
 Only session dates and the first-day e-learning wording are composed at runtime.
 """
 from datetime import date, datetime
@@ -16,7 +16,7 @@ import aps_kickoff as shared
 import desp_calendar
 
 ASSETS = Path(__file__).with_name('desp_kickoff_assets')
-VERSION = '20261024-2-calendar'
+VERSION = '20261024-3-enriched'
 DATE_FIELDS = ('date_start', 'date_end', 'dirigeant_remote_start', 'dirigeant_remote_end',
                'dirigeant_in_person_start', 'dirigeant_in_person_end', 'exam_date')
 CITIES = {'paris': 'Paris', 'puget': 'Puget-sur-Argens'}
@@ -132,7 +132,7 @@ def _build_pdf(key):
     }
     with fitz.open(ASSETS/(payload['location']+'.pdf')) as doc:
         for spec in json.loads((ASSETS/(payload['location']+'.json')).read_text()):
-            _block(doc[spec['page']-1], spec, values[(spec['page'], spec['name'])])
+            _block(doc[spec['page']-1], spec, values[(spec.get('source_page', spec['page']), spec['name'])])
         desp_calendar.draw_pdf(doc[4], dates, city)
         doc.set_metadata({'title': f'Réunion de lancement DESP {city} — '+french(start),
                           'author': 'Intégrale Academy', 'subject': 'Session du '+period(start, end)})
