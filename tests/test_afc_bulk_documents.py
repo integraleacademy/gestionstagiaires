@@ -17,6 +17,7 @@ def case(monkeypatch, tmp_path):
                 'date_start':'2026-11-16','date_end':'2027-02-15','exam_date':'2027-01-21',
                 'ssiap_exam_date':'2027-02-15','trainees':[trainee]}
     data = {'sessions':[training]}
+    monkeypatch.setattr(app,'DATA_FILE',str(tmp_path/'data.json'))
     monkeypatch.setattr(app,'load_data',lambda **kw:copy.deepcopy(data))
     monkeypatch.setattr(app,'save_data',Mock())
     monkeypatch.setattr(app,'_atomic_update_data',lambda fn:fn(data))
@@ -159,7 +160,7 @@ def test_second_request_during_generation_does_not_duplicate_delivery(case):
     generate=generators['convocation'].side_effect
     def concurrent_request(*args):
         duplicate=client.post(row['execute_url'],json={**payload,'request_id':uuid.uuid4().hex})
-        assert duplicate.json['skipped'] and 'en cours' in duplicate.json['message']
+        assert duplicate.status_code==202 and duplicate.json['pending']
         return generate(*args)
     generators['convocation'].side_effect=concurrent_request
     assert client.post(row['execute_url'],json=payload).json['ok']
@@ -207,3 +208,95 @@ def test_buttons_only_on_writable_afc_session(case):
     training.update(afc_enabled=True)
     with client.session_transaction() as cookie:cookie['admin_role']='viewer'
     assert 'id="afc-documents"' not in client.get('/admin/sessions/S1/trainees').text
+
+
+@pytest.mark.parametrize('document',['convention','convocation'])
+def test_completed_generation_is_reused_until_content_changes_or_file_is_missing(case,document):
+    client,_,_,trainee,generators,mail,_=case
+    row,payload=prepared(client,document)
+    assert client.post(row['execute_url'],json=payload).json['ok']
+    again,_=prepared(client,document)
+    assert not again['eligible'] and 'Déjà générée' in again['reason']
+    assert client.post(row['execute_url'],json={**payload,'request_id':uuid.uuid4().hex}).json['skipped']
+    assert generators[document].call_count==1 and not mail.called
+    trainee['training_date_start']='2026-11-20'
+    assert prepared(client,document)[0]['eligible']
+    trainee['training_date_start']='2026-11-18'
+    from pathlib import Path
+    Path(trainee[document+'_aps_pdf_path']).unlink()
+    assert prepared(client,document)[0]['eligible']
+
+
+def test_legacy_generated_documents_survive_reload_and_are_not_repeated(case):
+    client,_,_,trainee,generators,_,_=case
+    row,payload=prepared(client)
+    assert client.post(row['execute_url'],json=payload).json['ok']
+    trainee['afc_document_operations']['convention'].pop('revision')
+    assert not prepared(client)[0]['eligible']
+    assert generators['convention'].call_count==1
+    trainee['updated_at']='2099-01-01T00:00:00Z'
+    assert prepared(client)[0]['eligible']
+
+
+@pytest.mark.parametrize('document,action',[('convention','generate'),('convocation','generate'),('convocation','send')])
+def test_restart_during_preparation_can_resume_safely(case,document,action):
+    client,_,_,trainee,generators,mail,_=case
+    row,payload=prepared(client,document,action)
+    generate=generators[document].side_effect
+    generators[document].side_effect=SystemExit('Simulated process shutdown')
+    with pytest.raises(SystemExit):client.post(row['execute_url'],json=payload)
+    assert trainee['afc_document_operations'][document]['status']=='running'
+    assert trainee['afc_document_operations'][document]['phase']=='preparing'
+    assert prepared(client,document,action)[0]['eligible']
+    generators[document].side_effect=generate
+    response=client.post(row['execute_url'],json=payload)
+    assert response.json['ok'] and generators[document].call_count==2
+    assert mail.call_count==(action=='send')
+
+
+@pytest.mark.parametrize('document',['convention','convocation'])
+def test_restart_during_delivery_never_resends(case,document):
+    client,_,_,trainee,_,mail,_=case
+    row,payload=prepared(client,document,'send')
+    mail.side_effect=SystemExit('Provider accepted but process stopped before saving its response')
+    with pytest.raises(SystemExit):client.post(row['execute_url'],json=payload)
+    assert trainee['afc_document_operations'][document]['phase']=='delivery'
+    result=client.post(row['execute_url'],json=payload).json
+    assert not result['ok'] and 'vérifiez' in result['message']
+    assert trainee['afc_document_operations'][document]['status']=='uncertain'
+    assert mail.call_count==1
+
+
+def test_restart_during_signature_creation_never_creates_a_second_request(case,monkeypatch):
+    client,_,_,trainee,_,mail,_=case
+    create=Mock(side_effect=SystemExit('Yousign response lost'))
+    monkeypatch.setattr(app,'create_yousign_convention_signature',create)
+    row,payload=prepared(client,'convention','send')
+    with pytest.raises(SystemExit):client.post(row['execute_url'],json=payload)
+    result=client.post(row['execute_url'],json=payload).json
+    assert not result['ok'] and create.call_count==1 and not mail.called
+    assert trainee['afc_document_operations']['convention']['status']=='uncertain'
+
+
+def test_temporary_store_failure_returns_retryable_json(case,monkeypatch):
+    client,data,_,_,generators,mail,_=case
+    row,payload=prepared(client)
+    mutate=Mock(side_effect=OSError('Temporarily unavailable'))
+    monkeypatch.setattr(app,'_atomic_update_data',mutate)
+    response=client.post(row['execute_url'],json=payload)
+    assert response.status_code==503 and response.json['retryable']
+    assert not generators['convention'].called and not mail.called
+    monkeypatch.setattr(app,'_atomic_update_data',lambda fn:fn(data))
+    assert client.post(row['execute_url'],json=payload).json['ok']
+
+
+def test_csrf_expiration_returns_recoverable_code_without_mutating(case):
+    client,data,_,_,generators,mail,_=case
+    row,payload=prepared(client)
+    before=copy.deepcopy(data)
+    with client.session_transaction() as cookie:cookie.pop('afc_documents_csrf')
+    result=client.post(row['execute_url'],json=payload)
+    assert result.status_code==403 and result.json['code']=='csrf_expired'
+    assert data==before and not generators['convention'].called and not mail.called
+    fresh=client.get(BASE,query_string={'document':'convention','action':'generate'}).json
+    assert client.post(row['execute_url'],json={**payload,'csrf':fresh['csrf']}).json['ok']

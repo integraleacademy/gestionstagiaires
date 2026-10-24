@@ -1,6 +1,8 @@
 """AFC document batches: one reserved, independently persisted operation per learner."""
 import base64
 import copy
+from contextlib import contextmanager
+import fcntl
 import hashlib
 import hmac
 import json
@@ -9,9 +11,35 @@ import re
 import secrets
 
 from flask import abort, jsonify, request, session, url_for
+from werkzeug.exceptions import HTTPException
 
 DOCUMENTS = {'convention', 'convocation'}
 ACTIONS = {'generate', 'send'}
+
+
+@contextmanager
+def operation_lock(services, session_id, trainee_id, document):
+    """A process exit releases this lock, unlike a persisted 'running' flag."""
+    scope = services._current_partner_id()
+    key = hashlib.sha256(json.dumps([scope, session_id, trainee_id, document]).encode()).hexdigest()
+    directory = Path(services.DATA_FILE).parent / 'afc_document_locks'
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with (directory / (key + '.lock')).open('a') as handle:
+        acquired = False
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            acquired = True
+        except BlockingIOError:
+            pass
+        try:
+            yield acquired
+        finally:
+            if acquired:
+                fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def external_action_may_have_started(operation):
+    return operation.get('action') == 'send' and operation.get('phase') not in {'preparing', 'prepared'}
 
 
 class DeliveryError(RuntimeError):
@@ -28,6 +56,25 @@ def fingerprint(services, training, trainee, document):
     build = services._aps_convention_replacements if document == 'convention' else services._build_aps_convocation_context
     value = {'context': build(training, trainee), 'email': trainee.get('email'), 'phone': trainee.get('phone')}
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def generation_is_current(services, training, trainee, document):
+    operation = (trainee.get('afc_document_operations') or {}).get(document) or {}
+    path = Path(str(trainee.get(document + '_aps_pdf_path') or ''))
+    if (operation.get('action') != 'generate' or operation.get('status') != 'done'
+            or not (operation.get('result') or {}).get('ok')):
+        return False
+    try:
+        if not path.is_file() or not path.stat().st_size:
+            return False
+        if operation.get('revision'):
+            return operation['revision'] == fingerprint(services, training, trainee, document)
+    except (OSError, ValueError, TypeError):
+        return False
+    # Documents prepared by the first batch version have no content fingerprint.
+    # Reuse them only while neither the dossier nor the session has been edited.
+    finished = str(operation.get('finished_at') or '')
+    return bool(finished and all(str(item.get('updated_at') or '') <= finished for item in (training, trainee)))
 
 
 def reason(services, training, trainee, document, action, *, check_operation=True):
@@ -49,13 +96,16 @@ def reason(services, training, trainee, document, action, *, check_operation=Tru
                 return 'Demande de signature à vérifier dans la fiche stagiaire.'
     elif trainee.get('convocation_aps_sent_at'):
         return 'Convocation déjà envoyée.'
-    if check_operation and operation.get('status') in {'running', 'uncertain'}:
-        return 'Traitement en cours ou à vérifier dans la fiche stagiaire.'
+    if check_operation and (operation.get('status') == 'uncertain'
+                            or operation.get('status') == 'running' and external_action_may_have_started(operation)):
+        return 'Envoi interrompu : résultat à vérifier dans la fiche stagiaire.'
     effective = services.afc_schedule.effective_session(training, trainee)
     if not effective.get('date_start') or not effective.get('date_end'):
         return 'Dates individuelles de formation manquantes.'
     if not trainee.get('first_name') or not trainee.get('last_name'):
         return 'Nom ou prénom manquant.'
+    if action == 'generate' and generation_is_current(services, training, trainee, document):
+        return 'Déjà générée : PDF disponible dans la fiche stagiaire.'
     if action == 'send':
         if not re.fullmatch(r'[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+', str(trainee.get('email') or '').strip()):
             return 'Adresse e-mail manquante ou invalide.'
@@ -112,13 +162,29 @@ def register(app, services):
     @services.admin_write_required
     def admin_afc_document_execute(session_id, trainee_id):
         payload = request.get_json(silent=True) or {}
+        if not isinstance(payload, dict):
+            return jsonify(ok=False, error='Demande invalide.'), 400
         expected = str(session.get('afc_documents_csrf') or '')
         if not expected or not hmac.compare_digest(str(payload.get('csrf') or ''), expected):
-            abort(403)
+            return jsonify(ok=False, error='Actualisation de la session nécessaire.', code='csrf_expired'), 403
         document, action = payload.get('document'), payload.get('action')
         request_id = str(payload.get('request_id') or '')
-        if document not in DOCUMENTS or action not in ACTIONS or not re.fullmatch(r'[a-f0-9-]{32,36}', request_id):
-            abort(400)
+        if (not isinstance(document, str) or not isinstance(action, str) or document not in DOCUMENTS
+                or action not in ACTIONS or not re.fullmatch(r'[a-f0-9-]{32,36}', request_id)):
+            return jsonify(ok=False, error='Demande invalide.'), 400
+        try:
+            with operation_lock(services, session_id, trainee_id, document) as acquired:
+                if not acquired:
+                    return jsonify(ok=False, pending=True, message='Traitement en cours, vérification automatique…'), 202
+                return execute(session_id, trainee_id, payload)
+        except HTTPException as exc:
+            return jsonify(ok=False, error='Ce dossier ou cette action n’est plus accessible.'), exc.code
+        except Exception:
+            app.logger.exception('AFC document persistence unavailable document=%s trainee_id=%s', document, trainee_id)
+            return jsonify(ok=False, error='Le serveur est momentanément indisponible. Le traitement va reprendre.', retryable=True), 503
+
+    def execute(session_id, trainee_id, payload):
+        document, action, request_id = payload['document'], payload['action'], payload['request_id']
 
         def reserve(data):
             training, trainee = pair(data, session_id, trainee_id)
@@ -126,12 +192,19 @@ def register(app, services):
             previous = operations.get(document) or {}
             if previous.get('id') == request_id and previous.get('action') == action and previous.get('result'):
                 return {'cached': previous['result']}
+            if previous.get('status') == 'running' and external_action_may_have_started(previous):
+                # We hold the file lock, so the earlier process is no longer working.
+                # Its last external call may nevertheless have reached the provider.
+                result = dict(ok=False, message='Envoi interrompu : vérifiez le résultat dans la fiche avant un nouvel envoi.')
+                previous.update(status='uncertain', result=result, finished_at=services._now_iso())
+                return {'cached': result}
             blocked = reason(services, training, trainee, document, action)
             if blocked:
                 return {'cached': dict(ok=True, skipped=True, message=blocked)}
             if fingerprint(services, training, trainee, document) != payload.get('revision'):
                 return {'cached': dict(ok=False, message='Le dossier a changé. Rechargez la liste avant de continuer.')}
-            operations[document] = dict(id=request_id, action=action, status='running', started_at=services._now_iso(),
+            operations[document] = dict(id=request_id, action=action, status='running', phase='preparing',
+                                        revision=payload['revision'], started_at=services._now_iso(),
                                         actor=str(session.get('admin_username') or 'admin'))
             return {'training': copy.deepcopy({k:v for k,v in training.items() if k not in {'trainees','stagiaires'}}),
                     'trainee': copy.deepcopy(trainee)}
@@ -154,7 +227,7 @@ def register(app, services):
             if document == 'convention' and signed(services, current):
                 raise DeliveryError('La convention vient d’être signée. Aucun nouvel envoi effectué.')
 
-        def persist(result=None):
+        def persist(result=None, phase=None):
             def mutate(data):
                 current_training, current = pair(data, session_id, trainee_id)
                 operation = (current.get('afc_document_operations') or {}).get(document) or {}
@@ -184,12 +257,15 @@ def register(app, services):
                 if result is not None:
                     operation.update(status='uncertain' if uncertain else 'done' if result['ok'] else 'failed',
                                      finished_at=services._now_iso(), result=result)
+                if phase is not None:
+                    operation['phase'] = phase
                 return {'ok': True}
             services._atomic_update_data(mutate)
 
         def deliver(subject, html, *, text='', attachments=None):
             nonlocal uncertain
             verify_current()
+            persist(phase='delivery')
             uncertain = True
             outcome = services.brevo_send_email(str(trainee['email']).strip(), subject, html, trainee=trainee,
                 text_content=text, attachments=attachments or [], metadata={'idempotency_key': 'afc-documents-'+request_id})
@@ -205,10 +281,11 @@ def register(app, services):
             now = services._now_iso()
             if document == 'convention' and action == 'send':
                 # Generation alone never creates a signature request or sends an email.
+                persist(phase='signature')
                 uncertain = True
                 state = services.create_yousign_convention_signature(training, trainee, session_id, trainee_id)
                 uncertain = False
-                persist()  # Keep the signature request even if the subsequent email fails.
+                persist(phase='prepared')  # Keep the signature request even if the subsequent email fails.
                 subject, html, text = services._build_yousign_signature_link_email(training, trainee, state['signature_link'])
                 deliver(subject, html, text=text)
                 state.update(signature_email_sent_at=services._now_iso(), signature_email_last_error='')
