@@ -27,6 +27,7 @@ import ssiap_exam
 import afc_schedule
 import uv_questionnaires
 import aps_kickoff
+import desp_kickoff
 import a3p_documents
 import afc_documents
 import afc_enrolments
@@ -34288,6 +34289,7 @@ def public_trainee_space(token):
         public_invoices=public_invoices,
         public_qcus=public_qcus,
         aps_kickoff=aps_kickoff.view(sys.modules[__name__], s, t),
+        desp_kickoff=desp_kickoff.view(sys.modules[__name__], s, t),
         uv_questionnaires=uv_questionnaires.view(sys.modules[__name__], s, t),
         a3p_attestations=a3p_documents.view(sys.modules[__name__], s, t, token),
         public_convocation_available=_public_convocation_has_record(t),
@@ -56074,6 +56076,7 @@ afc_enrolments.register(app, sys.modules[__name__])
 afc_hours.register(app, sys.modules[__name__])
 uv_questionnaires.register(app, sys.modules[__name__])
 aps_kickoff.register(app, sys.modules[__name__])
+desp_kickoff.register(app, sys.modules[__name__])
 a3p_documents.register(app, sys.modules[__name__])
 afc_documents.register(app, sys.modules[__name__])
 
