@@ -25,6 +25,7 @@ import atexit
 import sys
 import ssiap_exam
 import afc_schedule
+import uv_questionnaires
 import afc_enrolments
 import afc_hours
 import exam_context
@@ -34283,6 +34284,7 @@ def public_trainee_space(token):
         ssiap_medical_from_date=ssiap_medical_from_date,
         public_invoices=public_invoices,
         public_qcus=public_qcus,
+        uv_questionnaires=uv_questionnaires.view(sys.modules[__name__], s, t),
         public_convocation_available=_public_convocation_has_record(t),
         document_upload_error=session.pop("document_upload_error", None),
         document_upload_max_bytes=MAX_UPLOAD_BYTES,
@@ -35177,9 +35179,9 @@ def _automation_training_text(session_obj: Dict[str, Any]) -> str:
 def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
     text = _automation_training_text(session_obj)
     if afc_schedule.enabled(session_obj):
-        return {"enabled": True, "slug": "afc", "label": "AFC APS + SSIAP 1",
+        return {"enabled": True, "slug": "afc", "label": afc_schedule.TITLE,
                 "convention_template": "conventionafc.docx", "convocation_template": "convocationafc.docx",
-                "entry_template": "attestationentreessiap.docx", "end_template": "attestationfinssiap.docx"}
+                "entry_template": "attestationentreeafc.docx", "end_template": "attestationfinafc.docx"}
     if "VAE" in text:
         return {"enabled": True, "slug": "vae", "label": "VAE", "convention_template": "conventionvae.docx"}
     if "A3P" in text:
@@ -35195,6 +35197,12 @@ def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
     if text.startswith("APS") or " APS" in text:
         return {"enabled": True, "slug": "aps", "label": "APS", "convention_template": "conventionaps.docx", "entry_template": "attestationentreeaps.docx", "end_template": "attestationfinaps.docx", "convocation_template": "convocationaps.docx"}
     return {"enabled": False}
+
+
+def _a3p_has_driver_attestation(session_obj: Dict[str, Any]) -> bool:
+    text = _automation_training_text(session_obj)
+    return (_automation_document_config(session_obj).get("slug") == "a3p"
+            and not re.search(r"\b(MAC|VAE)\b", text))
 
 
 def _can_send_convocation_without_signed_convention(session_obj: Dict[str, Any]) -> bool:
@@ -39007,6 +39015,7 @@ def _aps_entry_attestation_base_filename(trainee: Dict[str, Any], trainee_id: st
 
 
 def _build_aps_entry_attestation_context(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    session_obj = _trainee_training_session(session_obj, trainee)
     first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
     last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
     full_name = f"{last_name} {first_name}".strip()
@@ -39021,6 +39030,7 @@ def _build_aps_entry_attestation_context(session_obj: Dict[str, Any], trainee: D
         "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
     }
     context.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
+    context.update(afc_schedule.document_context(session_obj, trainee, fr_date))
     return context
 
 
@@ -39065,6 +39075,7 @@ def _aps_end_attestation_base_filename(trainee: Dict[str, Any], trainee_id: str 
 
 
 def _build_aps_end_attestation_context(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    session_obj = _trainee_training_session(session_obj, trainee)
     first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
     last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
     full_name = f"{last_name} {first_name}".strip()
@@ -39082,6 +39093,7 @@ def _build_aps_end_attestation_context(session_obj: Dict[str, Any], trainee: Dic
         "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
     }
     context.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
+    context.update(afc_schedule.document_context(session_obj, trainee, fr_date))
     return context
 
 
@@ -39111,6 +39123,55 @@ def _generate_aps_end_attestation_files(session_obj: Dict[str, Any], trainee: Di
     return final_docx_path, final_pdf_path
 
 
+def _generate_a3p_module_attestation_files(session_obj, trainee, session_id="", trainee_id="", *, kind):
+    if not _a3p_has_driver_attestation(session_obj):
+        raise ValueError("Les attestations complémentaires sont réservées à la formation A3P initiale.")
+    templates = {"conducteur_autorite": "attestationconducteura3p.docx", "stu": "attestationstua3p.docx"}
+    template = os.path.join(app.root_path, "templates_word", templates[kind])
+    os.makedirs(APS_END_ATTESTATION_DIR, exist_ok=True)
+    base = (f"attestation_{kind}_a3p_{_safe_filename_part(trainee.get('id') or trainee_id)}"
+            f"_{uuid.uuid4().hex[:10]}")
+    docx_path = os.path.join(APS_END_ATTESTATION_DIR, base + ".docx")
+    pdf_path = os.path.join(APS_END_ATTESTATION_DIR, base + ".pdf")
+    shutil.copyfile(template, docx_path)
+    _replace_docx_xml_placeholders(docx_path, _build_aps_end_attestation_context(session_obj, trainee))
+    _assert_docx_has_no_unresolved_variables(docx_path)
+    # A separate profile prevents simultaneous document jobs sharing a LO process.
+    with tempfile.TemporaryDirectory(prefix="a3p-driver-lo-") as profile:
+        from pathlib import Path
+        command = [_find_libreoffice_binary(), "-env:UserInstallation=" + Path(profile).as_uri(),
+                   "--headless", "--convert-to", "pdf", "--outdir", APS_END_ATTESTATION_DIR, docx_path]
+        subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
+    if not os.path.isfile(pdf_path) or os.path.getsize(pdf_path) == 0:
+        raise RuntimeError("Le PDF de l’attestation complémentaire A3P n’a pas pu être généré.")
+    return docx_path, pdf_path
+
+
+def _generate_a3p_driver_attestation_files(session_obj, trainee, session_id="", trainee_id=""):
+    return _generate_a3p_module_attestation_files(session_obj, trainee, session_id, trainee_id, kind="conducteur_autorite")
+
+
+def _generate_a3p_stu_attestation_files(session_obj, trainee, session_id="", trainee_id=""):
+    return _generate_a3p_module_attestation_files(session_obj, trainee, session_id, trainee_id, kind="stu")
+
+
+def _end_attestation_attachments(session_obj, trainee, session_id, trainee_id, pdf_path):
+    paths = [pdf_path]
+    driver = {}
+    if _a3p_has_driver_attestation(session_obj):
+        driver_docx, driver_pdf = _generate_a3p_driver_attestation_files(session_obj, trainee, session_id, trainee_id)
+        driver = {"docx_path": driver_docx, "pdf_path": driver_pdf}
+        paths.append(driver_pdf)
+        stu_docx, stu_pdf = _generate_a3p_stu_attestation_files(session_obj, trainee, session_id, trainee_id)
+        driver["stu"] = {"docx_path": stu_docx, "pdf_path": stu_pdf}
+        paths.append(stu_pdf)
+    attachments = []
+    for path in paths:
+        with open(path, "rb") as handle:
+            attachments.append({"name": os.path.basename(path), "content": base64.b64encode(handle.read()).decode("ascii")})
+    return attachments, driver
+
+
 def _attestation_email_training_labels(session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
     config = _automation_document_config(session_obj or {})
     slug = str(config.get("slug") or "").strip().lower()
@@ -39138,9 +39199,13 @@ def _build_aps_end_attestation_email(first_name: str, date_end: str = "", sessio
     safe_long_label = html.escape(long_label)
     period = fr_date(date_end) if date_end else ""
     period_line = f"<p><strong>Date de fin de formation :</strong> {html.escape(period)}</p>" if period else ""
+    driver_line = ("<p>Deux attestations complémentaires sont également jointes : votre attestation de conducteur d’autorité "
+                   "et votre attestation de Secourisme tactique d’urgence (STU), pour les modules suivis pendant la formation A3P.</p>"
+                   if _a3p_has_driver_attestation(session_obj or {}) else "")
     html_body = f"""<!doctype html><html lang="fr"><body style="font-family:Arial,Helvetica,sans-serif;color:#172033;line-height:1.6;">
       <p>Bonjour {safe_first_name},</p>
       <p>Veuillez trouver en pièce jointe votre attestation de fin de formation {safe_long_label}.</p>
+      {driver_line}
       {period_line}
       <p>Bien cordialement,<br>Intégrale Academy</p>
     </body></html>"""
@@ -39779,10 +39844,11 @@ def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end
         session_line += "<p>" + html.escape(details).replace("\n", "<br>") + "</p>"
     if afc:
         session_line += "<p><strong>Calendrier de la session AFC</strong><br>" + html.escape(afc["detail_parcours"]).replace("\n", "<br>") + "</p>"
+        session_line += "<p><strong>Financement France Travail :</strong> action de formation conventionnée dans le cadre d’un marché France Travail. Aucun frais de formation à votre charge (0 €).</p>"
     period_sentence = f" qui se déroulera {period_label}" if period_label else ""
     introduction = (
         "Votre inscription est prise en compte. Voici les informations pour préparer votre entrée en formation."
-        if pathway else "Nous avons bien reçu votre Convention de formation signée et nous vous en remercions."
+        if pathway or afc else "Nous avons bien reçu votre Convention de formation signée et nous vous en remercions."
     )
 
     html_body = f'''<!doctype html>
@@ -40059,6 +40125,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         "has_convocation": is_aps_automation,
         "has_entry_attestation": has_entry_attestation,
         "has_end_attestation": has_end_attestation,
+        "has_a3p_driver_attestation": _a3p_has_driver_attestation(session_obj),
         "planned_automations": planned_automations,
         "global_status": global_status,
         "ready_documents": ready_documents,
@@ -40306,6 +40373,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
         aps_elearning_progress=aps_elearning_progress,
         native_elearning_followup=trainee_elearning_reporting.summary(sys.modules[__name__], s, t),
+        uv_questionnaires=uv_questionnaires.view(sys.modules[__name__], s, t),
     )
 
 
@@ -49206,10 +49274,9 @@ def admin_send_aps_end_attestation(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "Attestation de fin non configurée pour cette formation"}), 400
     try:
         docx_path, pdf_path = _generate_aps_end_attestation_files(s, t, session_id, trainee_id)
-        with open(pdf_path, "rb") as fh:
-            encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
+        attachments, driver = _end_attestation_attachments(s, t, session_id, trainee_id, pdf_path)
         subject, html_content = _build_aps_end_attestation_email(str(t.get("first_name") or ""), _session_get(s, "date_end", ""), s, t)
-        email_ok = brevo_send_email(str(t.get("email") or "").strip(), subject, html_content, trainee=t, attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}])
+        email_ok = brevo_send_email(str(t.get("email") or "").strip(), subject, html_content, trainee=t, attachments=attachments)
         if not email_ok:
             raise RuntimeError("Impossible d’envoyer l’attestation de fin : échec d’envoi email")
         sent_at = _now_iso()
@@ -49220,6 +49287,8 @@ def admin_send_aps_end_attestation(session_id: str, trainee_id: str):
         t["attestation_fin_aps_docx_path"] = docx_path
         t["attestation_fin_aps_pdf_token"] = _store_public_file_token(pdf_path)
         t["attestation_fin_aps_last_error"] = ""
+        if driver:
+            t["a3p_driver_attestation"] = {**driver, "sent_at": sent_at}
         t["updated_at"] = sent_at
         s["trainees"] = trainees
         s.pop("stagiaires", None)
@@ -49235,6 +49304,25 @@ def admin_send_aps_end_attestation(session_id: str, trainee_id: str):
         s.pop("stagiaires", None)
         save_data(data)
         return jsonify({"ok": False, "error": message}), 400
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/attestation-stu-a3p/preview", defaults={"kind": "stu"})
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/attestation-conducteur-a3p/preview", defaults={"kind": "conducteur"})
+@admin_login_required
+def admin_preview_a3p_driver_attestation(session_id: str, trainee_id: str, kind: str):
+    data = load_data()
+    s, _, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t or not _a3p_has_driver_attestation(s):
+        abort(404)
+    if _trainee_registration_is_cancelled(t):
+        return make_response(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, 409)
+    try:
+        generate = _generate_a3p_stu_attestation_files if kind == "stu" else _generate_a3p_driver_attestation_files
+        _, pdf_path = generate(s, t, session_id, trainee_id)
+        return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
+    except Exception as exc:
+        app.logger.exception("[ATTESTATION CONDUCTEUR A3P] Aperçu impossible")
+        return make_response(f"Aperçu impossible : {html.escape(str(exc))}", 400)
+
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/automation/status")
 @admin_login_required
@@ -49386,7 +49474,9 @@ def admin_preview_convention(session_id: str, trainee_id: str):
 CONVENTION_FINANCING_FIELDS = ("training_price", "cpf_amount", "personal_amount", "other_amount")
 
 
-def _apply_convention_financing_payload(trainee: Dict[str, Any], payload: Dict[str, Any]) -> None:
+def _apply_convention_financing_payload(trainee: Dict[str, Any], payload: Dict[str, Any], session_obj=None) -> None:
+    if afc_schedule.enabled(session_obj or {}):
+        return  # AFC conventions never require personal/CPF financing inputs.
     for key in CONVENTION_FINANCING_FIELDS:
         if key in payload:
             trainee[key] = str(payload.get(key) or "").strip()
@@ -49407,7 +49497,7 @@ def api_update_convention_financing(session_id: str, trainee_id: str):
     if not _financing_partner_module_enabled():
         return jsonify({"ok": False, "error": "module_locked", "module": "financing"}), 403
     payload = request.get_json(silent=True) or {}
-    _apply_convention_financing_payload(t, payload)
+    _apply_convention_financing_payload(t, payload, s)
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
@@ -49427,7 +49517,7 @@ def api_create_convention_signature(session_id: str, trainee_id: str):
     if not _automation_is_enabled(s, t):
         return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     payload = request.get_json(silent=True) or {}
-    _apply_convention_financing_payload(t, payload)
+    _apply_convention_financing_payload(t, payload, s)
     try:
         force_new = str(payload.get("force_new") or "").lower() in {"1", "true", "yes", "on"}
         state = create_yousign_convention_signature(s, t, session_id, trainee_id, force_new=force_new)
@@ -55978,6 +56068,7 @@ ssiap_routes.register(app, sys.modules[__name__])
 ssiap_exam.register(app, sys.modules[__name__])
 afc_enrolments.register(app, sys.modules[__name__])
 afc_hours.register(app, sys.modules[__name__])
+uv_questionnaires.register(app, sys.modules[__name__])
 
 manuals_shop.register(sys.modules[__name__])
 import parcours_alternance

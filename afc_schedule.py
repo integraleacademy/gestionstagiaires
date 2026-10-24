@@ -19,7 +19,7 @@ TRAINEE_DATES = {
     "training_date_start": "Début de formation du stagiaire",
     "training_date_end": "Fin de formation du stagiaire",
 }
-TITLE = "AFC APS + SSIAP 1"
+TITLE = "AFC APS + SSIAP 1 + SST + Habilitation électrique"
 
 
 def enabled(training):
@@ -110,6 +110,10 @@ def document_context(training, trainee, fr_date, *, strict=False):
         return f"du {fr_date(start)} au {fr_date(end)}" if start and end else "À renseigner"
     aps_exam = fr_date(training.get("exam_date") or "") or "À renseigner"
     ssiap_exam = fr_date(training.get("ssiap_exam_date") or "") or "À renseigner"
+    from afc_hours import COMMON_HOURS, PROFILES
+    ran = trainee.get("afc_ran_hours")
+    known_ran = type(ran) is int and ran in PROFILES
+    common = sum(COMMON_HOURS)
     return {
         "formation_nom": TITLE, "nom_pedagogique": TITLE,
         "date_debut_formation": fr_date(effective["date_start"]),
@@ -118,7 +122,16 @@ def document_context(training, trainee, fr_date, *, strict=False):
         "date_convocation": fr_date(effective["date_start"]),
         "periode_formation": period(effective["date_start"], effective["date_end"]),
         "date_examen_aps": aps_exam, "date_examen_ssiap": ssiap_exam,
-        "detail_parcours": f"Parcours AFC : APS + SSIAP 1\nExamen APS : {aps_exam}\nExamen SSIAP 1 : {ssiap_exam}",
+        "detail_parcours": f"Parcours {TITLE}\nExamen APS : {aps_exam}\nExamen SSIAP 1 : {ssiap_exam}\nSST et habilitation électrique : selon le planning individuel.",
+        "reference_marche_afc": str(training.get("afc_market_reference") or "Marché France Travail - Action de formation conventionnée (AFC)"),
+        "afc_formation_hours": str(COMMON_HOURS[0]),
+        "afc_preparation_hours": str(COMMON_HOURS[1]),
+        "afc_soutien_hours": str(COMMON_HOURS[2]),
+        "afc_ran_duration": f"{ran} h" if known_ran else "Selon le PIF (0 à 54 h)",
+        "afc_total_duration": f"{common + ran} h" if known_ran else f"{common} h hors RAN ; durée finale selon le PIF",
+        "montant_financement_personnel": "0", "montant_financement_personnel_eur": "0 €",
+        "montant_personnel": "0", "montant_personnel_eur": "0 €",
+        "montant_cpf": "0", "montant_cpf_eur": "0 €", "montant_ttc": "0 €",
     }
 
 
@@ -127,5 +140,5 @@ def revision(training, trainee):
         return ""
     value = {"session": view(training), "period": {
         key: effective_session(training, trainee).get(key) for key in ("date_start", "date_end")},
-        "trainee": trainee.get("id")}
+        "trainee": trainee.get("id"), "ran_hours": trainee.get("afc_ran_hours"), "document_version": 2}
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()[:12]

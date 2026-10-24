@@ -1,0 +1,32 @@
+{% if uv_questionnaires %}
+<section class="card" id="questionnaires-uv" style="grid-column:1/-1;margin:20px 0;">
+  <h2>Questionnaires de fin d’UV · {{ uv_questionnaires.label }}</h2>
+  <p style="padding:12px;border-left:4px solid #c29635;background:#fff6df;"><strong>{{ uv_questionnaires.notice }}</strong></p>
+  <p>20 questions par UV. La correction est accessible au stagiaire après la remise de ses réponses.</p>
+  {% if not uv_questionnaires.available %}
+  <p><strong>{% if uv_questionnaires.cancelled %}Accès fermé : inscription annulée.{% elif uv_questionnaires.start_label %}Ouverture dans l’espace stagiaire le {{ uv_questionnaires.start_label }}, au début de la formation pratique.{% else %}En attente de la date de début de la formation pratique.{% if uv_admin %} Renseignez la date de début du présentiel dans la session.{% endif %}{% endif %}</strong></p>
+  {% endif %}
+  <div style="overflow-x:auto;">
+  <table style="width:100%;border-collapse:collapse;">
+    <thead><tr><th style="text-align:left;padding:10px;">Unité de valeur</th><th style="text-align:left;padding:10px;">État</th><th style="text-align:left;padding:10px;">Questionnaire</th></tr></thead>
+    <tbody>
+    {% for uv in uv_questionnaires.units %}
+    <tr style="border-top:1px solid #e2e8f0;">
+      <td style="padding:10px;">UV {{ uv.number }} · {{ uv.title }}</td>
+      <td style="padding:10px;white-space:nowrap;">{% if uv.completed %}Remis · {{ uv.score }}/20{% else %}À réaliser{% endif %}</td>
+      <td style="padding:10px;">
+      {% if uv_admin %}
+        <a href="{{ url_for('admin_uv_questionnaire', session_id=session.id, trainee_id=trainee.id, number=uv.number) }}">Prévisualiser</a> ·
+        <a href="{{ url_for('admin_uv_questionnaire_pdf', session_id=session.id, trainee_id=trainee.id, number=uv.number) }}">PDF vierge</a>
+        {% if uv.completed %} · <a href="{{ url_for('admin_uv_questionnaire_pdf', session_id=session.id, trainee_id=trainee.id, number=uv.number, mode='answers') }}">Réponses et correction (PDF)</a>{% endif %}
+      {% elif uv_questionnaires.available %}
+        <a href="{{ url_for('public_uv_questionnaire', token=token, number=uv.number) }}">{% if uv.completed %}Voir ma correction{% else %}Répondre aux 20 questions{% endif %}</a>
+      {% else %}Disponible au début du présentiel{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endif %}

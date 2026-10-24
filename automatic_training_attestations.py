@@ -278,6 +278,7 @@ def run(services, *, now=None, dry_run=False, limit=5):
             continue
 
         try:
+            driver = {}
             if kind == "entry":
                 docx_path, pdf_path = services._generate_aps_entry_attestation_files(training, trainee, session_id, trainee_id)
                 subject, html_content = services._build_aps_entry_attestation_email(
@@ -288,8 +289,11 @@ def run(services, *, now=None, dry_run=False, limit=5):
                 subject, html_content = services._build_aps_end_attestation_email(
                     str(trainee.get("first_name") or ""), services._session_get(training, "date_end", ""), training, trainee,
                 )
-            with open(pdf_path, "rb") as handle:
-                encoded_pdf = base64.b64encode(handle.read()).decode("ascii")
+            if kind == "end":
+                attachments, driver = services._end_attestation_attachments(training, trainee, session_id, trainee_id, pdf_path)
+            else:
+                with open(pdf_path, "rb") as handle:
+                    attachments = [{"name": os.path.basename(pdf_path), "content": base64.b64encode(handle.read()).decode("ascii")}]
         except Exception as exc:
             message = str(exc) or "Génération de l’attestation impossible"
             services.app.logger.exception("automatic_training_attestation generation kind=%s", kind)
@@ -326,6 +330,7 @@ def run(services, *, now=None, dry_run=False, limit=5):
                 "html": html_content,
                 "pdf_path": pdf_path,
                 "docx_path": docx_path,
+                "driver_attestation": driver,
             })
             return {"send": True}
 
@@ -339,13 +344,14 @@ def run(services, *, now=None, dry_run=False, limit=5):
             "html": html_content,
             "pdf_path": pdf_path,
             "docx_path": docx_path,
+            "driver_attestation": driver,
         })
         try:
             result = services.brevo_send_email(
                 attempt["email"],
                 subject,
                 html_content,
-                attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}],
+                attachments=attachments,
                 metadata={
                     "purpose": "automatic_training_attestation",
                     "attestation_kind": kind,
@@ -383,6 +389,8 @@ def run(services, *, now=None, dry_run=False, limit=5):
                 current_trainee[config["pdf_key"]] = pdf_path
                 current_trainee[config["docx_key"]] = docx_path
                 current_trainee[config["token_key"]] = services._store_public_file_token(pdf_path)
+                if driver:
+                    current_trainee["a3p_driver_attestation"] = {**driver, "sent_at": finished_at}
                 current_trainee[config["error_key"]] = ""
                 history = current_trainee.setdefault("sent_email_history", [])
                 if not any(item.get("automation_id") == attempt_id for item in history if isinstance(item, dict)):

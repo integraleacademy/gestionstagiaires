@@ -854,7 +854,9 @@
   {% set in_person_end = session.dirigeant_in_person_end or session.date_end %}
 {% endif %}
 
-{% if 'A3P' in tt %}
+{% if session.afc_enabled %}
+  {% set formation_label = "Formation sécurité France Travail Agent de prévention et de sécurité (APS) + SSIAP 1 + SST + Habilitation électrique" %}
+{% elif 'A3P' in tt %}
   {% set formation_label = "Agent de protection physique des personnes (A3P)" %}
 {% elif 'APS' in tt %}
   {% set formation_label = "Agent de prévention et de sécurité (APS)" %}
@@ -994,6 +996,8 @@
   {% if is_dirigeant_vae %}
   <div class="vae-welcome-banner">🚀 Bienvenue dans votre Espace VAE Dirigeant d'entreprise de sécurité privée (DESP)</div>
   {% endif %}
+
+  {% with uv_admin=false %}{% include 'partials/uv_questionnaires.html' %}{% endwith %}
 
   {% if public_qcus %}
   <section class="card" style="margin-bottom:18px;border:1px solid #c7d2fe;background:linear-gradient(135deg,#fff,#eef2ff);">
@@ -1199,12 +1203,12 @@
     {% set cnaps_up = (trainee.cnaps or '')|upper %}
     {% set cnaps_done = cnaps_up in ['ACCEPTE','ACCEPTÉ','DELIVREE','DÉLIVRÉE','VALIDE','VALIDEE','VALIDÉE','CARTE PROFESSIONNELLE OK'] %}
     {% set hosting_done = show_hosting and trainee.hosting_status == 'reserved' %}
-    {% set progress_count = (1 if not is_dirigeant_vae else 0) + (1 if convention_done else 0) + (1 if financement_done else 0) + (1 if dossier_done else 0) + (1 if is_aps_or_a3p_training and test_fr_done else 0) + (1 if is_aps_or_a3p_training and cnaps_done else 0) + (1 if hosting_done else 0) %}
-    {% set progress_total = (4 if not is_dirigeant_vae else 3) + (2 if is_aps_or_a3p_training else 0) + (1 if show_hosting else 0) %}
+    {% set progress_count = (1 if not is_dirigeant_vae else 0) + (1 if convention_done else 0) + (1 if financement_done and not session.afc_enabled else 0) + (1 if dossier_done else 0) + (1 if is_aps_or_a3p_training and test_fr_done else 0) + (1 if is_aps_or_a3p_training and cnaps_done else 0) + (1 if hosting_done else 0) %}
+    {% set progress_total = (4 if not is_dirigeant_vae else 3) - (1 if session.afc_enabled else 0) + (2 if is_aps_or_a3p_training else 0) + (1 if show_hosting else 0) %}
     {% set progress_percent = (progress_count * 100 // progress_total) if progress_total else 0 %}
 
     <section class="trainee-overview-card formation-card" aria-labelledby="formationTitle">
-      <div class="formation-hero"><div class="icon-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg></div><div><p class="card-kicker">Votre formation</p><h2 id="formationTitle" class="card-title">{{ (trainee.first_name or '')|capitalize }} {{ (trainee.last_name or '')|upper }}</h2><div class="formation-subtitle">{{ formation_label }}{% if training_type_label %} — {{ training_type_label }}{% endif %}</div></div></div>
+      <div class="formation-hero"><div class="icon-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg></div><div><p class="card-kicker">Votre formation</p><h2 id="formationTitle" class="card-title">{{ (trainee.first_name or '')|capitalize }} {{ (trainee.last_name or '')|upper }}</h2><div class="formation-subtitle">{{ formation_label }}{% if training_type_label and not session.afc_enabled %} — {{ training_type_label }}{% endif %}</div></div></div>
       <div class="formation-info-grid">
         <div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></span><div><div class="info-label">Parcours</div><div class="info-value">{{ 'Formation initiale' if 'initial' in (training_type_label or '')|lower else training_type_label }}</div></div></div>
         {% if not is_dirigeant_vae %}
@@ -1241,7 +1245,7 @@
       {% if is_aps_or_a3p_training %}<div class="step-item {{ 'done' if test_fr_done else 'current' if trainee.test_fr_status in ['in_progress','relance'] else 'future' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg></span><div><div class="step-title">Test de français</div></div>{{ pill_for('test_fr', trainee.test_fr_status or 'soon') }}</div>
       <div class="step-item {{ 'done' if cnaps_done else 'current' if cnaps_up in ['INSTRUCTION','EN INSTRUCTION','EN_INSTRUCTION','TRANSMIS','ENREGISTRE','ENREGISTRÉ'] else 'blocked' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></span><div><div class="step-title">CNAPS</div></div>{{ pill_for('cnaps', trainee.cnaps or 'INCONNU') }}</div>{% endif %}
       {% if show_hosting %}<div class="step-item {{ 'done' if hosting_done else 'blocked' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg></span><div><div class="step-title">Hébergement</div>{% if not hosting_done %}<div class="step-desc">Aucun hébergement réservé</div>{% endif %}</div><div class="step-actions">{{ pill_for('hosting', trainee.hosting_status or 'unknown') }}{% if not hosting_done %}<a class="btn outline small" target="_blank" rel="noopener" href="https://assistance-alw9.onrender.com/hebergement">Réserver</a>{% endif %}</div></div>{% endif %}
-      <div class="step-item {{ 'done' if financement_done else 'current' if trainee.financement_status == 'in_review' else 'future' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span><div><div class="step-title">Financement validé</div></div>{% if financement_done %}<span class="pill green">Validé</span>{% elif trainee.financement_status == 'in_review' %}<span class="pill blue">En cours</span>{% else %}<span class="pill gray">À venir</span>{% endif %}</div>
+{% if not session.afc_enabled %}      <div class="step-item {{ 'done' if financement_done else 'current' if trainee.financement_status == 'in_review' else 'future' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span><div><div class="step-title">Financement validé</div></div>{% if financement_done %}<span class="pill green">Validé</span>{% elif trainee.financement_status == 'in_review' %}<span class="pill blue">En cours</span>{% else %}<span class="pill gray">À venir</span>{% endif %}</div>{% endif %}
       <div class="step-item {{ 'done' if dossier_done else 'blocked' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><div><div class="step-title">Dossier complet</div></div>{{ pill_for('dossier', 'complete' if dossier_done else 'incomplete') }}</div>
     </div></section>{% endif %}
 

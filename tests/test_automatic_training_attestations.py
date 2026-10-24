@@ -87,6 +87,30 @@ def test_end_attestation_is_sent_once_on_training_end_date(attestation_case):
     assert email.call_count == 2
 
 
+@pytest.mark.parametrize('fail_stu', [False, True])
+def test_a3p_automatic_end_attestation_has_all_three_documents(attestation_case, monkeypatch, tmp_path, fail_stu):
+    _, training, trainee, email = attestation_case
+    training.update(training_type='A3P', name='A3P')
+    trainee['attestation_entree_aps_sent_at'] = '2026-09-19'
+    driver=tmp_path/'driver.pdf'; driver.write_bytes(b'driver')
+    stu=tmp_path/'stu.pdf'; stu.write_bytes(b'stu')
+    monkeypatch.setattr(gestion,'_generate_a3p_driver_attestation_files',lambda *args:('driver.docx',str(driver)))
+    def generate_stu(*args):
+        if fail_stu:raise RuntimeError('STU generation failed')
+        return 'stu.docx',str(stu)
+    monkeypatch.setattr(gestion,'_generate_a3p_stu_attestation_files',generate_stu)
+    report=run(gestion,now=clock('2026-10-09'))
+    if fail_stu:
+        assert report['failed']==1
+        email.assert_not_called()
+    else:
+        assert report['end_sent']==1
+        assert len(email.call_args.kwargs['attachments'])==3
+        assert trainee['a3p_driver_attestation']['stu']['pdf_path']==str(stu)
+        run(gestion,now=clock('2026-10-09',10))
+        assert email.call_count==1
+
+
 def test_cancelled_registration_is_never_generated_or_emailed(attestation_case):
     _, _, trainee, email = attestation_case
     trainee["registration_cancelled"] = True
