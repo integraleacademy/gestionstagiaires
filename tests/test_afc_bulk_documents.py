@@ -1,5 +1,6 @@
 import copy
 import uuid
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
@@ -7,6 +8,8 @@ import pytest
 import app
 
 BASE = '/api/admin/sessions/S1/afc-documents'
+BREVO_TRANSPORT = app.brevo_send_email
+CREATE_SIGNATURE = app.create_yousign_convention_signature
 
 
 @pytest.fixture
@@ -67,11 +70,87 @@ def test_four_actions_and_request_replay(case,document,action):
     assert generators[document].call_count==(not(document=='convention' and action=='send'))
     assert trainee['afc_document_operations'][document]['status']=='done'
     if action=='send':
-        assert 'afc-documents-' in mail.call_args.kwargs['metadata']['idempotency_key']
+        key=mail.call_args.kwargs['metadata']['idempotency_key']
+        assert len(key)==36 and str(uuid.UUID(key))==key
         assert len(trainee['sent_email_history'])==1
         assert not prepared(client,document,action)[0]['eligible']
     else:
         assert trainee[document+'_aps_pdf_path']
+
+
+@pytest.fixture
+def brevo_transport(case,monkeypatch):
+    """Run the real email adapter with Brevo's UUID contract, entirely offline."""
+    calls,accepted=[],set()
+    monkeypatch.setattr(app,'brevo_send_email',BREVO_TRANSPORT)
+    monkeypatch.setattr(app,'_missing_brevo_config',lambda:[])
+    monkeypatch.setattr(app,'_is_blocked_email_recipient',lambda email:False)
+    monkeypatch.setattr(app,'BREVO_API_KEY','test-only')
+    monkeypatch.setattr(app,'BREVO_SENDER_EMAIL','sender@example.test')
+    monkeypatch.setattr(app,'BREVO_SENDER_NAME','Test Academy')
+    monkeypatch.setattr(app,'_safe_brevo_log',Mock())
+    def provider(url,*,headers,json,timeout):
+        assert url=='https://api.brevo.com/v3/smtp/email'
+        calls.append(copy.deepcopy(json))
+        key=json.get('headers',{}).get('idempotencyKey','')
+        try:
+            if len(key)>36:
+                raise ValueError('Idempotency key exceeds char limit')
+            if str(uuid.UUID(key))!=key:
+                raise ValueError('Invalid idempotency key')
+        except ValueError as exc:
+            code,body=400,{'code':'invalid_parameter','message':str(exc)}
+        else:
+            if key in accepted:
+                code,body=400,{'code':'duplicate_parameter','message':'Idempotency key already used'}
+            else:
+                accepted.add(key)
+                code,body=201,{'messageId':'offline-message-'+str(len(accepted))}
+        return SimpleNamespace(status_code=code,text=str(body),json=lambda:body)
+    monkeypatch.setattr(app.requests,'post',provider)
+    return calls,accepted
+
+
+@pytest.mark.parametrize('document',['convention','convocation'])
+@pytest.mark.parametrize('request_format',['hex','hyphenated'])
+def test_batch_of_twelve_reaches_real_email_adapter_with_valid_distinct_keys(case,brevo_transport,document,request_format):
+    client,_,training,trainee,_,_,signatures=case
+    training['trainees']=[dict(copy.deepcopy(trainee),id='T'+str(i),email=f'learner{i}@example.test') for i in range(1,13)]
+    calls,accepted=brevo_transport
+    plan=client.get(BASE,query_string={'document':document,'action':'send'}).json
+    assert len(plan['rows'])==12 and all(row['eligible'] for row in plan['rows'])
+    for row in plan['rows']:
+        token=uuid.uuid4()
+        payload=dict(csrf=plan['csrf'],document=document,action='send',revision=row['revision'],
+                     request_id=token.hex if request_format=='hex' else str(token))
+        result=client.post(row['execute_url'],json=payload)
+        assert result.status_code==200 and result.json['ok'],result.json
+        assert client.post(row['execute_url'],json=payload).json==result.json
+    assert len(calls)==len(accepted)==12
+    assert len(signatures)==(12 if document=='convention' else 0)
+    assert all(len(message['headers']['idempotencyKey'])==36 for message in calls)
+    assert all(bool(message.get('attachment'))==(document=='convocation') for message in calls)
+    assert not any(row['eligible'] for row in client.get(BASE,query_string={'document':document,'action':'send'}).json['rows'])
+
+
+def test_relaunch_after_old_key_rejection_reuses_existing_yousign_request(case,brevo_transport,monkeypatch):
+    client,_,_,trainee,_,_,_=case
+    trainee['convention_signature']={'signature_request_id':'existing-signature','signature_link':'https://example.test/sign-existing',
+                                    'status':'ongoing','unsigned_pdf_path':'existing.pdf'}
+    trainee['afc_document_operations']={'convention':{'id':str(uuid.uuid4()),'action':'send','phase':'delivery','status':'failed',
+                                                     'result':{'ok':False,'message':'Idempotency key exceeds char limit'}}}
+    monkeypatch.setattr(app,'create_yousign_convention_signature',CREATE_SIGNATURE)
+    yousign=Mock(side_effect=AssertionError('An existing signature request must be reused'))
+    monkeypatch.setattr(app,'_yousign_json',yousign)
+    row,payload=prepared(client,'convention','send')
+    assert row['eligible']
+    assert client.post(row['execute_url'],json=payload).json['ok']
+    assert not yousign.called
+    assert trainee['convention_signature']['signature_request_id']=='existing-signature'
+    assert trainee['convention_signature']['signature_email_sent_at']
+    assert len(brevo_transport[0])==len(brevo_transport[1])==1
+    assert 'https://example.test/sign-existing' in brevo_transport[0][0]['htmlContent']
+    assert not prepared(client,'convention','send')[0]['eligible']
 
 
 def test_prepare_is_read_only_and_uses_individual_dates(case):

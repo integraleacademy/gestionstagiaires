@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import re
 import secrets
+import uuid
 
 from flask import abort, jsonify, request, session, url_for
 from werkzeug.exceptions import HTTPException
@@ -267,8 +268,12 @@ def register(app, services):
             verify_current()
             persist(phase='delivery')
             uncertain = True
+            # Brevo expects a UUID (36 characters), never a prefixed request ID.
+            # Keep it stable for this operation and distinct for each document.
+            delivery_key = str(uuid.uuid5(uuid.NAMESPACE_URL,
+                f'afc-documents:{session_id}:{trainee_id}:{document}:{request_id}'))
             outcome = services.brevo_send_email(str(trainee['email']).strip(), subject, html, trainee=trainee,
-                text_content=text, attachments=attachments or [], metadata={'idempotency_key': 'afc-documents-'+request_id})
+                text_content=text, attachments=attachments or [], metadata={'idempotency_key': delivery_key})
             if isinstance(outcome, bool):
                 outcome = {'ok': outcome, 'not_sent': not outcome}
             if not outcome.get('ok'):
