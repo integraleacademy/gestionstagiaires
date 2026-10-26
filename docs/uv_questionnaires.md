@@ -24,6 +24,20 @@ Après la vingtième question, le score et la remise définitive sont enregistr�
 
 Ne pas modifier une version déjà utilisée : créer un nouveau fichier daté et changer `VERSION`. Conserver les anciennes banques pour relire les remises et produire leurs corrigés fidèlement. Une tentative commencée continue avec sa version initiale.
 
+### Révision du 26 octobre 2026
+
+La version active `20261026.json` conserve les 21 questionnaires accessibles, soit 420 questions : 13 UV APS et 8 UV A3P, toujours 20 questions par UV, 45 secondes par question et une seule bonne réponse. Les UV SST restent exclues. La banque du 24 octobre est conservée sans modification pour les tentatives commencées et les résultats antérieurs.
+
+180 questions ont été réécrites : 8 dans chacune des 13 UV APS, 8 dans chacune des UV A3P 2, 3, 4, 5, 7, 8 et 9, et les 20 questions de l'UV 6 A3P. Les autres questions sont conservées. Les révisions introduisent des situations de mission, quatre propositions plausibles (deux pour le vrai/faux) et des corrections expliquant les limites de la bonne réponse. Les positions des bonnes réponses varient. Le champ `revised_in` identifie les questions révisées.
+
+Les sept captures A3P fournies le 26 octobre sont reprises dans les questions 1 à 7 de l'UV 6 : définition et fonctions de S2, lecture des lieux par l'épaule, conciergerie, mallette triptyque, posture professionnelle face aux opinions politiques et porte à tambour. S2 est présenté comme la terminologie du dispositif étudié, pas comme une désignation universelle. L'usage de la porte latérale suppose un passage disponible, vérifié et coordonné. La question politique porte sur le prosélytisme en mission, sans inventer une interdiction légale générale de toute expression.
+
+Les références consultées figurent dans `sources` de la nouvelle banque : fiche RNCP38002 de France compétences ; CSI L613-2, R631-9, R631-27 ; CPP article 73 ; prévention incendie et ATEX de l'INRS ; plan d'intervention SST ; consignes gouvernementales en cas d'attaque. Elles étayent les notions générales et ne rendent pas ces questions officielles. La formation pratique reste nécessaire, notamment pour les palpations, interventions physiques et gestes de secours.
+
+Les tests de régression couvrent le contenu des deux versions, les choix à deux et quatre réponses, l'absence de corrigé transmis avant remise, la notation, la reprise d'une tentative du 24 octobre après activation de la nouvelle banque et ses corrigés historiques HTML/PDF. Les règles d'éligibilité, de présence déclarée et de remise définitive restent celles décrites ci-dessus.
+
+La pagination des PDF vierges s'adapte à la hauteur des questions : chaque carte reste entière et le saut forcé après quatre questions est supprimé pour éviter une page presque vide lorsque les nouveaux choix occupent davantage de place.
+
 Références pédagogiques : programmes fournis ; Code de la sécurité intérieure, livre VI et L613-2 ; Code de procédure pénale, article 73 ; Code pénal, articles 122-5 et 122-7 ; principes SST de l’INRS. Les questions de gestes pratiques renvoient aux techniques enseignées et à leur évaluation encadrée.
 
 ## Documents AFC et A3P

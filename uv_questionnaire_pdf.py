@@ -8,7 +8,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Flowable, KeepTogether, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Flowable, KeepTogether
 
 NAVY = colors.HexColor('#182f49')
 BLUE = colors.HexColor('#285d83')
@@ -103,8 +103,9 @@ def build(training, trainee, course, row, result=None, correction=False, *, titl
              p(notice,small),Spacer(1,14)]
     story=[KeepTogether(info)]
     for i,q in enumerate(row['questions'],1):
-        if not (correction or result) and i > 1 and (i-1) % 4 == 0:
-            story.append(PageBreak())
+        # Let complete question cards flow according to their measured height.
+        # A fixed break every four questions leaves near-empty pages when the
+        # first page's identity block or longer choices cause an earlier break.
         selected=result.get('answers',{}).get(q['id']) if result else None
         story += [Question(i,q,normal,bold,small,selected,correction or bool(result)),Spacer(1,10)]
     def page(c,d):

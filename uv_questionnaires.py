@@ -15,7 +15,7 @@ from flask import abort, jsonify, redirect, render_template, request, send_file,
 
 import afc_schedule
 
-VERSION = '20261024'
+VERSION = '20261026'
 TITLE = "Questionnaire de fin d'UV - Evaluation formative"
 COHORT_START = date(2026, 10, 26)
 QUESTION_SECONDS = 45

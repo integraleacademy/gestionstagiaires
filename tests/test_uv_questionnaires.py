@@ -1,5 +1,7 @@
 import copy
 import datetime as dt
+import hashlib
+from html import unescape
 from io import BytesIO
 from unittest.mock import Mock
 
@@ -57,6 +59,82 @@ def test_bank_preserved_but_sst_unavailable():
             assert len({q['id'] for q in row['questions']})==20
             assert len({q['prompt'] for q in row['questions']})==20
             for q in row['questions']:assert q['answer'] in {o['id'] for o in q['options']}
+
+
+def test_revised_content_and_archived_bank_are_consistent():
+    archived = uv.BANK_DIR / '20261024.json'
+    assert hashlib.sha256(archived.read_bytes()).hexdigest() == '637281afeb89bcd5dbf6dceda0794a64776bdc725f33b840bff6ef09fd80ec2f'
+    assert uv.VERSION == uv.bank()['version'] == '20261026'
+    revised = []
+    examples = []
+    active_count = 0
+    for course, data in uv.bank()['courses'].items():
+        for row in data['units']:
+            if not uv.unit(course, row['number']):
+                continue
+            active_count += len(row['questions'])
+            changed = [q for q in row['questions'] if q.get('revised_in') == uv.VERSION]
+            assert len(changed) == (20 if (course, row['number']) == ('a3p', 6) else 8)
+            revised.extend(changed)
+            for q in changed:
+                assert len(q['options']) in (2, 4)
+                assert len({o['text'].strip().casefold() for o in q['options']}) == len(q['options'])
+                assert len({o['id'] for o in q['options']}) == len(q['options'])
+                assert q['explanation'].strip()
+                if q.get('editorial_origin'):
+                    examples.append((course, row['number'], q['id']))
+    assert active_count == 420 and len(revised) == 180
+    assert examples == [('a3p', 6, f'q{i:02}') for i in range(1, 8)]
+
+
+def test_old_attempt_finishes_with_its_original_questions_and_correction(case):
+    client, _, trainee, _ = case
+    old = uv.unit('aps', 2, '20261024')
+    trainee['uv_questionnaire_attempts'] = {'aps': {'2': dict(
+        version='20261024', answers={}, index=0, deadline=1045,
+        started_at='2026-10-26T09:00:00')}}
+    state = post(client).json
+    for q in old['questions']:
+        assert state['question']['prompt'] == q['prompt']
+        assert 'answer' not in state['question'] and 'explanation' not in state['question']
+        state = post(client, 'answer', question_id=q['id'], answer=q['answer']).json
+    assert state == {'completed': True, 'score': 20}
+    assert trainee['uv_questionnaires']['aps']['2']['version'] == '20261024'
+    page = client.get(PATH).text
+    assert old['questions'][0]['explanation'] in page
+    assert uv.unit('aps', 2)['questions'][0]['explanation'] not in page
+    admin(client)
+    response = client.get('/admin/sessions/S1/stagiaires/T1/questionnaires-uv/2.pdf?mode=answers')
+    text = '\n'.join(p.extract_text() for p in PdfReader(BytesIO(response.data)).pages)
+    assert old['questions'][0]['prompt'] in text
+    assert 'Score : 20/20' in text
+
+
+def test_a3p_new_questions_true_false_and_four_choices_are_graded(case):
+    client, training, trainee, _ = case
+    training['training_type'] = 'A3P'
+    path = '/espace/token-test/questionnaires-uv/6'
+    def submit(action='sync', **kwargs):
+        return client.post(path, json=dict(csrf='csrf-test', action=action, **kwargs))
+    questions = uv.unit('a3p', 6)['questions']
+    assert len(questions[5]['options']) == 2
+    assert all(len(q['options']) == 4 for i,q in enumerate(questions) if i != 5)
+    state = submit('start', in_class='yes').json
+    # Reject an option that exists on other questions but not on this one,
+    # without advancing, and count a deliberate wrong true/false response.
+    for i, q in enumerate(questions):
+        assert state['question']['options'] == q['options']
+        assert set(state['question']) == {'id', 'prompt', 'options'}
+        if i == 5:
+            assert submit('answer', question_id=q['id'], answer='4').status_code == 400
+            assert submit().json['index'] == 6
+            answer = next(o['id'] for o in q['options'] if o['id'] != q['answer'])
+        else:
+            answer = q['answer']
+        state = submit('answer', question_id=q['id'], answer=answer).json
+    assert state == {'completed': True, 'score': 19}
+    assert trainee['uv_questionnaires']['a3p']['6']['version'] == '20261026'
+    assert questions[5]['explanation'] in unescape(client.get(path).text)
 
 
 @pytest.mark.parametrize('kind,expected',[('APS','aps'),('A3P','a3p'),('APS MAC',''),('MAC A3P',''),('A3P VAE',''),('SST',''),('SSIAP','')])
