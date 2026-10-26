@@ -87,8 +87,10 @@ test('PDF primary actions open inline in a new tab; separate links download', as
   const ui = setup();
   await ui.get('btnSsiapExam').emit('click'); await ui.settle();
   assert.match(ui.get('ssiapExamCandidates').innerHTML, /href="\/dossier.pdf" target="_blank" rel="noopener">Dossier examen PDF/);
-  assert.match(ui.get('ssiapExamCollective').innerHTML, /href="\/collective.pdf" target="_blank" rel="noopener">Ouvrir le PV collectif/);
-  assert.match(ui.get('ssiapExamCollective').innerHTML, /href="\/collective.pdf\?download=1"/);
+  assert.doesNotMatch(ui.get('ssiapExamCandidates').innerHTML, /PV individuel|PV collectif|\/individual.pdf/);
+  assert.match(ui.get('ssiapExamCandidates').innerHTML, /6 éléments du dossier/);
+  assert.equal(ui.get('ssiapExamCollective').innerHTML, undefined);
+  assert.doesNotMatch(ui.get('ssiapExamConfig').innerHTML, /PV collectif/);
   assert.match(ui.get('ssiapExamAttendance').innerHTML, /href="\/attendance.pdf" target="_blank"/);
   assert.match(ui.get('ssiapExamConfig').innerHTML, /Programmé le 21\/10\/2026/);
 });

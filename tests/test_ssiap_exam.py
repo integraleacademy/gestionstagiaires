@@ -138,16 +138,18 @@ def test_pdf_order_multipage_identity_portrait_and_pending_results(case):
     assert response.status_code == 200 and response.mimetype == 'application/pdf'
     assert 'no-store' in response.headers['Cache-Control']
     reader = PdfReader(io.BytesIO(response.data))
-    assert len(reader.pages) == 8
+    assert len(reader.pages) == 7
     assert all(abs(float(p.mediabox.width) - A4[0]) < 1 and abs(float(p.mediabox.height) - A4[1]) < 1 for p in reader.pages)
     text = [page.extract_text() for page in reader.pages]
     assert all(state['config']['approval'] in page_text for page_text in text)
     assert response.headers['Content-Disposition'].startswith('inline;')
     assert case[0].get(row['dossier_url'] + '?download=1').headers['Content-Disposition'].startswith('attachment;')
     assert 'Dossier examen' in text[0] and 'Camille EXEMPLE' in ' '.join(text[0].split())
-    assert 'FICHE D’EVALUATION' in text[1]
-    assert all(label in text[index] for index, label in enumerate(['IDENTITE_RECTO', 'IDENTITE_VERSO', 'SST', 'MEDICAL'], 2))
-    assert 'PROJET' not in text[6] and 'PROJET' not in text[7]
+    assert all('PV individuel' not in page and 'PV collectif' not in page
+               and 'FICHE D’EVALUATION' not in page and 'PROCES VERBAL' not in page for page in text)
+    assert all(label in text[index] for index, label in enumerate(['IDENTITE_RECTO', 'IDENTITE_VERSO', 'SST', 'MEDICAL'], 1))
+    assert all(f'{index:02d} / 07' in page for index, page in enumerate(text, 1))
+    assert 'PROJET' not in text[5] and 'PROJET' not in text[6]
     collective = PdfReader(io.BytesIO(case[0].get(state['collective_url']).data))
     assert 'EXEMPLE' in collective.pages[0].extract_text()
     assert 'ANNULE' not in collective.pages[0].extract_text()
@@ -225,6 +227,8 @@ def test_session_button_present_only_for_ssiap_and_afc(case):
     response = case[0].get('/admin/sessions/S1/trainees')
     assert response.status_code == 200
     assert 'id="btnSsiapExam"' in response.text and 'ssiap-exam.js' in response.text
+    assert 'data-exam-tab="collective"' not in response.text
+    assert 'data-exam-panel="collective"' not in response.text
     response = case[0].get('/admin/sessions/OTHER/trainees')
     assert response.status_code == 200
     assert 'id="btnSsiapExam"' not in response.text
@@ -279,10 +283,7 @@ def test_official_pv_keeps_jury_assessment_areas_blank_even_with_legacy_values(c
     case[2]['ssiap_exam']['candidates']={'T1':{'grade':'19.75','written':'valid','practical':'fit','reason':'LEGACY_DECISION'}}
     case[3]['ssiap_exam_status']='certified'
     pdf = case[0].get(state['candidates'][0]['pv_url']).data
-    dossier = case[0].get(state['candidates'][0]['dossier_url']).data
     individual = fitz.open(stream=pdf,filetype='pdf')
-    combined = fitz.open(stream=dossier,filetype='pdf')
-    assert individual[0].get_pixmap().samples == combined[1].get_pixmap().samples
     text=individual[0].get_text()
     assert '19.75' not in text and 'LEGACY_DECISION' not in text
     assert 'BENSAILA' not in text and 'ADEM' not in text and '08/06/2022' not in text

@@ -307,7 +307,7 @@ def cover(training, trainee, config, candidate, docs, root, photo_path=''):
     y = paragraph(c, config['location'], M + 16, 288, WIDTH - 32, 11, bold=True)
     paragraph(c, config['address'], M + 16, y - 3, WIDTH - 32, 9, MUTED, leading=12)
     paragraph(c, 'Dans ce dossier', M, 218, size=12, bold=True)
-    contents = ['PV individuel', 'Pièce d’identité', 'SST ou secourisme', 'Certificat médical',
+    contents = ['Pièce d’identité', 'SST ou secourisme', 'Certificat médical',
                 'Attestation d’indépendance', 'Attestation de capacité']
     for index, label in enumerate(contents):
         x = M + (265 if index >= 3 else 0)
@@ -380,7 +380,6 @@ def dossier(training, trainee, config, candidate, docs, root, photo_path=''):
     assets = signature_assets(root)
     writer = PdfWriter()
     writer.append(io.BytesIO(cover(training, trainee, config, candidate, docs, root, photo_path)))
-    writer.append(io.BytesIO(individual(training, trainee, config, candidate, root)))
     total_bytes = 0
     for group in docs:
         if not group['available']:
@@ -417,8 +416,6 @@ def dossier(training, trainee, config, candidate, docs, root, photo_path=''):
     for kind in ('independence', 'ability'):
         writer.append(io.BytesIO(attestation(training, trainee, config, candidate, kind, assets, root)))
     for i, page in enumerate(writer.pages, 1):
-        if i == 2:  # The individual PV already carries the same approval footer.
-            continue
         footer = approval_footer(config, pagination=f'{i:02d} / {len(writer.pages):02d}')
         page.merge_page(PdfReader(io.BytesIO(footer)).pages[0])
     writer.add_metadata({'/Title': 'Dossier examen SSIAP - ' + name(trainee), '/Author': 'Intégrale Academy'})

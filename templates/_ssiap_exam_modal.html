@@ -5,15 +5,13 @@
     <button type="button" data-exam-tab="candidates" aria-pressed="true">Dossiers candidats</button>
     <button type="button" data-exam-tab="organization" aria-pressed="false">Organisation et jury</button>
     <button type="button" data-exam-tab="attendance" aria-pressed="false">Feuille de présence</button>
-    <button type="button" data-exam-tab="collective" aria-pressed="false">PV collectif</button>
   </nav>
   <div id="ssiapExamStatus" class="exam-status" role="status" aria-live="polite"></div>
   <div class="exam-content">
     <section data-exam-panel="candidates"><div id="ssiapExamCandidates">Chargement des dossiers…</div></section>
     <section data-exam-panel="organization" hidden><form id="ssiapExamConfig"></form><div id="ssiapExamMailHistory"></div></section>
     <section data-exam-panel="attendance" hidden><div id="ssiapExamAttendance"></div></section>
-    <section data-exam-panel="collective" hidden><div id="ssiapExamCollective"></div></section>
   </div>
 </dialog>
 {% include '_exam_jury_mail_dialog.html' %}
-<script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261023-afc-1') }}" defer></script>
+<script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261026-without-pv-1') }}" defer></script>
