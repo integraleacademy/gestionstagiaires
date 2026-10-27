@@ -29,6 +29,7 @@ import uv_questionnaires
 import aps_kickoff
 import desp_kickoff
 import a3p_documents
+import training_convocations
 import afc_documents
 import afc_enrolments
 import afc_hours
@@ -30782,10 +30783,17 @@ def admin_download_signed_aps_elearning_tracking_table(session_id: str, trainee_
 
 @app.get("/espace/<token>/download/<path:file_token>")
 def public_download_file(token: str, file_token: str):
-    data = load_data()
+    data = load_data(run_background_tasks=False)
     s, t = find_session_and_trainee_by_token(data, token)
     if not s or not t:
         abort(404)
+
+    # Old download links must resolve to the current convocation as well.
+    if training_convocations.owns_download(t, file_token):
+        values = {"token": token}
+        if request.args.get("download") == "1":
+            values["download"] = "1"
+        return redirect(url_for("public_training_convocation", **values))
 
     # Sécurité : le fichier doit appartenir à CE stagiaire
     if not _token_belongs_to_trainee(t, file_token):
@@ -30831,38 +30839,16 @@ def public_training_convocation(token: str):
         abort(404)
     if not _public_is_authed(token):
         return redirect(url_for("public_trainee_login", token=token))
-    # Prefer the issued document, including files saved before a disk move.
-    stored_path = str(t.get("convocation_aps_pdf_path") or "")
-    stored_token = str(t.get("convocation_aps_pdf_token") or "")
-    candidates = [stored_path] if stored_path else []
-    if stored_token:
-        candidates.append(_detokenize_path(stored_token))
-    for root in _aps_convocation_allowed_pdf_roots():
-        for source in (stored_path, stored_token):
-            if source:
-                candidates.append(os.path.join(root, os.path.basename(source)))
-    pdf_path = next((path for path in candidates
-                     if _aps_convocation_pdf_is_allowed(path) and _is_pdf_file(path)), "")
-    if not pdf_path:
-        # Recreate only an already issued document; never send a new email.
-        if _trainee_registration_is_cancelled(t) or not _automation_document_config(s).get("enabled"):
-            flash("Votre convocation n’est pas disponible. Merci de contacter l’équipe pédagogique.", "error")
-            return redirect(url_for("public_trainee_space", token=token))
-        try:
-            docx_path, pdf_path = _generate_aps_convocation_files(s, t, str(s.get("id") or ""), str(t.get("id") or ""))
-            if not _aps_convocation_pdf_is_allowed(pdf_path) or not _is_pdf_file(pdf_path):
-                raise RuntimeError("Invalid regenerated convocation PDF")
-            t["convocation_aps_docx_path"] = docx_path
-        except Exception:
-            app.logger.exception("[CONVOCATION] Public PDF recovery failed trainee_id=%s", t.get("id"))
-            flash("La préparation de votre convocation a échoué. Merci de réessayer ou de contacter l’équipe pédagogique.", "error")
-            return redirect(url_for("public_trainee_space", token=token))
-    t["convocation_aps_pdf_path"] = pdf_path
-    t["convocation_aps_pdf_token"] = _store_public_file_token(pdf_path)
-    s["trainees"] = _session_trainees_list(s)
-    s.pop("stagiaires", None)
-    save_data(data)
-    return send_file(pdf_path, mimetype="application/pdf", as_attachment=request.args.get("download") == "1", download_name=os.path.basename(pdf_path))
+    try:
+        pdf_path = training_convocations.current_pdf(sys.modules[__name__], s, t)
+    except Exception:
+        app.logger.exception("[CONVOCATION] Public PDF refresh failed trainee_id=%s", t.get("id"))
+        flash("La mise à jour de votre convocation a échoué. Merci de réessayer ou de contacter l’équipe pédagogique.", "error")
+        return redirect(url_for("public_trainee_space", token=token))
+    response = send_file(pdf_path, mimetype="application/pdf", as_attachment=request.args.get("download") == "1",
+                         download_name=os.path.basename(pdf_path), conditional=False)
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 @app.get("/espace/<token>/factures/<line_id>")
@@ -39516,51 +39502,46 @@ def _render_docx_with_python_template(template_path: str, output_docx_path: str,
 
 
 def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
+    from pathlib import Path
+
     template_path = _ssiap_document_template(session_obj, trainee, "convocation", _aps_template_path)
     app.logger.info("[CONVOCATION APS] Modèle Word utilisé : %s", template_path)
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"Modèle Word obligatoire manquant : gestionstagiaires/templates_word/{os.path.basename(template_path)}")
-    context = _build_aps_convocation_context(session_obj, trainee)
+    context = _build_aps_convocation_context(copy.deepcopy(session_obj), copy.deepcopy(trainee))
+    source_hash = training_convocations.source_hash(context, template_path)
     app.logger.info("[CONVOCATION APS] Données injectées : stagiaire=%s formation=%s période=%s examen=%s", context.get("nom_complet"), context.get("formation_nom"), context.get("periode_formation"), context.get("date_examen"))
     doc_slug = _automation_document_config(session_obj).get("slug") or "aps"
-    base = f"convocation_{_safe_filename_part(doc_slug)}_{_safe_filename_part(trainee.get('id') or trainee_id)}"
+    base = f"convocation_{_safe_filename_part(doc_slug)}_{_safe_filename_part(trainee.get('id') or trainee_id)}_{source_hash[:16]}"
     base = _ssiap_document_filename(base, session_obj, trainee)
     final_docx_path = os.path.join(APS_CONVOCATION_DIR, base + ".docx")
     final_pdf_path = os.path.join(APS_CONVOCATION_DIR, base + ".pdf")
-    protected_template_path = os.path.join(APS_CONVOCATION_DIR, base + "_template.docx")
     os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
-    shutil.copyfile(template_path, protected_template_path)
-    anchor_replacements = _protect_yousign_smart_anchors_in_docx(protected_template_path)
-    try:
-        _render_docx_with_python_template(protected_template_path, final_docx_path, context)
-    finally:
+    # Convert in isolation, then publish complete files. A failed or concurrent
+    # refresh must never delete the previously issued PDF.
+    with tempfile.TemporaryDirectory(prefix=".convocation-", dir=APS_CONVOCATION_DIR) as staging:
+        protected_template_path = os.path.join(staging, "template.docx")
+        staged_docx = os.path.join(staging, base + ".docx")
+        staged_pdf = os.path.join(staging, base + ".pdf")
+        shutil.copyfile(template_path, protected_template_path)
+        anchor_replacements = _protect_yousign_smart_anchors_in_docx(protected_template_path)
+        _render_docx_with_python_template(protected_template_path, staged_docx, context)
+        _restore_yousign_smart_anchors_in_docx(staged_docx, anchor_replacements)
+        if not os.path.isfile(staged_docx) or os.path.getsize(staged_docx) <= 0:
+            raise RuntimeError("Le DOCX final de convocation APS est introuvable ou vide.")
+        command = [_find_libreoffice_binary(), "-env:UserInstallation=" + Path(staging, "profile").as_uri(),
+                   "--headless", "--convert-to", "pdf", "--outdir", staging, staged_docx]
         try:
-            os.remove(protected_template_path)
-        except OSError:
-            pass
-    _restore_yousign_smart_anchors_in_docx(final_docx_path, anchor_replacements)
-    app.logger.info("[CONVOCATION APS] DOCX final généré : %s", final_docx_path)
-    if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
-        raise RuntimeError("Le DOCX final de convocation APS est introuvable ou vide.")
-    final_docx_size = os.path.getsize(final_docx_path)
-    app.logger.info("[CONVOCATION APS] Taille DOCX final : %s octets", final_docx_size)
-    lo_binary = _find_libreoffice_binary()
-    output_dir = APS_CONVOCATION_DIR
-    command = [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", output_dir, final_docx_path]
-    app.logger.info("[CONVOCATION APS] Binaire LibreOffice trouvé : %s", lo_binary)
-    app.logger.info("[CONVOCATION APS] Chemin PDF attendu : %s", final_pdf_path)
-    app.logger.info("[CONVOCATION APS] Commande conversion : %s", " ".join(command))
-    if os.path.exists(final_pdf_path): os.remove(final_pdf_path)
-    try:
-        subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
-    except subprocess.CalledProcessError as exc:
-        app.logger.error("[CONVOCATION APS] Conversion LibreOffice impossible (code %s)", exc.returncode)
-        app.logger.error("[CONVOCATION APS] stdout LibreOffice: %s", (exc.stdout or "").strip())
-        app.logger.error("[CONVOCATION APS] stderr LibreOffice: %s", (exc.stderr or "").strip())
-        raise RuntimeError(f"Conversion LibreOffice impossible : {(exc.stderr or exc.stdout or '').strip()}") from exc
-    app.logger.info("[CONVOCATION APS] PDF final généré : %s", final_pdf_path)
-    if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
-        raise RuntimeError("Le PDF final de convocation APS est introuvable ou vide après conversion LibreOffice.")
+            subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
+        except subprocess.CalledProcessError as exc:
+            raise RuntimeError(f"Conversion LibreOffice impossible : {(exc.stderr or exc.stdout or '').strip()}") from exc
+        if not os.path.isfile(staged_pdf) or os.path.getsize(staged_pdf) <= 0:
+            raise RuntimeError("Le PDF final de convocation APS est introuvable ou vide après conversion LibreOffice.")
+        os.replace(staged_docx, final_docx_path)
+        os.replace(staged_pdf, final_pdf_path)
+    training_convocations.remember_download(trainee)
+    trainee["convocation_aps_source_hash"] = source_hash
+    trainee["convocation_aps_source_pdf_path"] = final_pdf_path
     return final_docx_path, final_pdf_path
 
 
@@ -51216,15 +51197,19 @@ def webhooks_yousign():
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-aps.pdf")
 @admin_login_required
 def admin_view_aps_convocation(session_id: str, trainee_id: str):
-    data = load_data()
+    data = load_data(run_background_tasks=False)
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
-    if not s or not t or not _is_aps_session(s):
+    if not s or not t or not _is_aps_session(s) or not _public_convocation_has_record(t):
         abort(404)
-    pdf_path = str(t.get("convocation_aps_pdf_path") or "")
-    abs_path = os.path.abspath(pdf_path) if pdf_path else ""
-    if not abs_path or not _aps_convocation_pdf_is_allowed(abs_path) or not os.path.exists(abs_path):
-        abort(404)
-    return send_file(abs_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(abs_path))
+    try:
+        pdf_path = training_convocations.current_pdf(sys.modules[__name__], s, t)
+    except Exception:
+        app.logger.exception("[CONVOCATION] Admin PDF refresh failed trainee_id=%s", trainee_id)
+        return make_response("La mise à jour de la convocation a échoué. Merci de réessayer.", 503)
+    response = send_file(pdf_path, mimetype="application/pdf", as_attachment=False,
+                         download_name=os.path.basename(pdf_path), conditional=False)
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 

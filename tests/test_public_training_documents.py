@@ -15,13 +15,17 @@ def learner(tmp_path):
     trainee = {
         'id': 'T-PUBLIC', 'public_token': 'learner-token',
         'first_name': 'Alice', 'last_name': 'DUPONT', 'birth_date': '1990-01-01',
+        'email': 'alice@example.test',
         'convention_status': 'signed', 'convention_signature': {'status': 'done'},
         'convocation_aps_pdf_token': 'generated_documents/convocations_aps/convocation.pdf',
         'convocation_aps_pdf_path': '/old-disk/convocation.pdf',
+        'convocation_aps_source_pdf_path': '/old-disk/convocation.pdf',
         'convocation_aps_sent_at': '2026-10-01T09:00:00Z',
     }
     session = {'id': 'S-PUBLIC', 'name': 'Formation APS', 'training_type': 'APS',
-               'date_start': '2026-11-03', 'date_end': '2026-12-08', 'trainees': [trainee]}
+               'date_start': '2026-11-03', 'date_end': '2026-12-08',
+               'exam_date': '2026-12-09', 'trainees': [trainee]}
+    trainee['convocation_aps_source_hash'] = portal.training_convocations.current_source_hash(portal, session, trainee)
     data = {'sessions': [session]}
     client = portal.app.test_client()
     with client.session_transaction() as auth:
@@ -32,8 +36,13 @@ def learner(tmp_path):
          patch.object(portal, 'YOUSIGN_SIGNED_DIR', str(signed)), \
          patch.object(portal, 'APS_CONVOCATION_DIR', str(convocations)), \
          patch.object(portal, 'brevo_send_email') as mail:
-        yield SimpleNamespace(client=client, trainee=trainee, session=session, signed=signed,
-                              convocations=convocations, save=save, mail=mail)
+        def atomic(mutate):
+            result = mutate(data)
+            save(data)
+            return result
+        with patch.object(portal, '_atomic_update_data', side_effect=atomic):
+            yield SimpleNamespace(client=client, trainee=trainee, session=session, signed=signed,
+                                  convocations=convocations, save=save, mail=mail)
 
 
 def test_signed_convention_opens_and_downloads_without_admin_session(learner):
@@ -87,9 +96,10 @@ def test_documents_require_this_learners_login(learner, path):
 
 
 def test_missing_convocation_is_regenerated_without_resending(learner):
-    def generate(*args):
+    def generate(training, trainee, *args):
         path = learner.convocations / 'convocation.pdf'
         path.write_bytes(b'%PDF-1.4\nconvocation')
+        trainee['convocation_aps_source_hash'] = portal.training_convocations.current_source_hash(portal, training, trainee)
         return str(path.with_suffix('.docx')), str(path)
     with patch.object(portal, '_generate_aps_convocation_files', side_effect=generate) as generate_pdf:
         response = learner.client.get('/espace/learner-token/convocation.pdf')
@@ -158,10 +168,12 @@ def test_signed_document_buttons_and_recovery_notice_are_visible(learner):
 @pytest.mark.parametrize('training_type', ['APS', 'VTC'])
 def test_convocation_opens_inline_for_all_training_types(learner, training_type):
     learner.session['training_type'] = training_type
+    learner.trainee['convocation_aps_source_hash'] = portal.training_convocations.current_source_hash(
+        portal, learner.session, learner.trainee)
     path = learner.convocations / 'convocation.pdf'
     path.write_bytes(b'%PDF-1.4\nissued convocation')
     for endpoint in ('convocation.pdf', 'download/' + learner.trainee['convocation_aps_pdf_token']):
-        response = learner.client.get('/espace/learner-token/' + endpoint)
+        response = learner.client.get('/espace/learner-token/' + endpoint, follow_redirects=True)
         assert response.status_code == 200
         assert response.data == path.read_bytes()
         assert response.headers['Content-Disposition'].startswith('inline;')
