@@ -5,6 +5,8 @@ import re
 import unicodedata
 from typing import Any, Dict, Iterable, List, Optional
 
+from wedof_funding import FRANCE_TRAVAIL_FIELDS, extract_france_travail_funding
+
 
 def normalize_email(value: Any) -> str:
     return str(value or "").strip().lower()
@@ -64,7 +66,7 @@ def extract_folder(folder: Dict[str, Any]) -> Dict[str, Any]:
             "external_id", "state", "type", "first_name", "last_name", "email",
             "phone", "start_date", "end_date", "training_title",
             "training_duration", "total_amount", "cpf_amount",
-            "france_travail_amount", "candidate_amount", "created_at",
+            *FRANCE_TRAVAIL_FIELDS, "candidate_amount", "created_at",
             "updated_at", "wedof_url", "waiting_reason", "step_dates",
             "billing_state", "invoice_number", "qonto_invoice_id",
             "qonto_invoice_number", "invoice_status", "invoice_paid_at",
@@ -82,9 +84,9 @@ def extract_folder(folder: Dict[str, Any]) -> Dict[str, Any]:
         "end_date": _nested(folder, "trainingActionInfo.sessionEndDate", "trainingActionInfo.endDate", "trainingActionInfo.session.endDate", "data.trainingActionInfo.sessionEndDate", "session.endDate", "session.sessionEndDate", "session.dateEnd", "endDate", "dateEnd"),
         "training_title": _nested(folder, "trainingActionInfo.title", "trainingActionInfo.name", "data.trainingActionInfo.title", "session.title", "trainingTitle"),
         "training_duration": _nested(folder, "trainingActionInfo.trainingDuration", "trainingActionInfo.duration", "data.trainingActionInfo.trainingDuration", "trainingDuration"),
-        "total_amount": _nested(folder, "pricing.totalAmount", "financing.totalAmount", "trainingActionInfo.price", "totalAmount"),
+        "total_amount": _nested(folder, "trainingActionInfo.totalIncl", "pricing.totalAmount", "financing.totalAmount", "trainingActionInfo.price", "totalAmount"),
         "cpf_amount": _nested(folder, "pricing.cpfAmount", "financing.cpfAmount", "cpfAmount"),
-        "france_travail_amount": _nested(folder, "pricing.franceTravailAmount", "financing.franceTravailAmount", "franceTravailAmount"),
+        **extract_france_travail_funding(folder, _nested(folder, "pricing.franceTravailAmount", "financing.franceTravailAmount", "franceTravailAmount")),
         "candidate_amount": _nested(folder, "pricing.attendeeAmount", "financing.remainingAmount", "attendeeAmount", "remainingAmount"),
         "created_at": _nested(folder, "createdAt", "dateCreated", "data.createdAt"),
         "updated_at": _nested(folder, "updatedAt", "data.updatedAt"),

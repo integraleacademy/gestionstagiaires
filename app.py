@@ -40515,6 +40515,7 @@ def _cpf_public_snapshot(remote: Dict[str, Any]) -> Dict[str, Any]:
     now = _now_iso()
     allowed = ("external_id", "state", "type", "first_name", "last_name", "email", "start_date", "end_date",
                "training_title", "total_amount", "cpf_amount", "france_travail_amount", "candidate_amount",
+               "france_travail_status", "france_travail_requested_amount",
                "created_at", "updated_at", "waiting_reason", "step_dates", "qonto_invoice_id",
                "qonto_invoice_number", "invoice_number", "billing_state", "invoice_status",
                "invoice_paid_at")
