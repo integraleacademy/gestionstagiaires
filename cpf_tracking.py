@@ -9,6 +9,8 @@ import re
 from typing import Any, Dict, Iterable, Optional
 from zoneinfo import ZoneInfo
 
+from wedof_funding import funding_amount
+
 PARIS = ZoneInfo("Europe/Paris")
 CPF_STEPS = (
     "En attente d’acceptation", "Accepté", "En formation",
@@ -320,6 +322,42 @@ def automation_view(external_id: str, statuses: Iterable[Dict[str, Any]], runs: 
     return {"actions": actual, "last_run": relevant_runs[-1] if relevant_runs else None}
 
 
+def france_travail_view(snapshot: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Presentation only: the grant stays inside the existing CPF financing."""
+    amount = funding_amount(snapshot.get("france_travail_amount"))
+    requested = funding_amount(snapshot.get("france_travail_requested_amount"))
+    status = snapshot.get("france_travail_status")
+    if not status and amount is not None and float(amount) > 0:
+        status = "validated"
+    if not status or (status == "validated" and amount == "0.00"):
+        return None
+    if status == "validated":
+        label, tone = "Financement France Travail", "blue"
+        detail = "Abondement validé · inclus dans le financement CPF"
+        display_amount = amount
+    elif status == "inProgress":
+        label, tone = "France Travail · en cours", "orange"
+        detail = "Montant demandé · accord de France Travail en attente"
+        display_amount = requested
+    elif status == "refused":
+        label, tone = "France Travail · refusé", "red"
+        detail = "Demande refusée · aucun abondement accordé"
+        display_amount = None
+    else:
+        label, tone = "France Travail · à vérifier", "gray"
+        detail = "Statut de la demande non communiqué"
+        display_amount = None
+    state = str(snapshot.get("state") or "").casefold()
+    if status == "validated" and state.startswith(("cancel", "reject", "refus", "abandon")):
+        label, tone = "France Travail · dossier annulé ou refusé", "gray"
+        detail = "Abondement initial · dossier annulé ou refusé"
+    return {
+        "status": status, "label": label, "tone": tone, "detail": detail,
+        "amount": display_amount,
+        "amount_label": format_euro(display_amount),
+    }
+
+
 def build_cpf_view(trainee: Dict[str, Any], session_obj: Dict[str, Any], data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if not has_cpf_financing(trainee):
         return None
@@ -341,5 +379,6 @@ def build_cpf_view(trainee: Dict[str, Any], session_obj: Dict[str, Any], data: D
         data.get("wedof_automation_runs", []), snapshot,
     )
     result["money"] = {k: format_euro(snapshot.get(k)) for k in ("total_amount", "cpf_amount", "france_travail_amount", "candidate_amount")}
+    result["france_travail"] = france_travail_view(snapshot)
     result["last_sync_label"] = format_paris_datetime(snapshot.get("synced_at") or (link or {}).get("last_seen_at"))
     return result

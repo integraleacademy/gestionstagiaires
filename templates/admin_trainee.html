@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 {% set read_only_attr = "disabled" if is_read_only else "" %}
+{% from '_cpf_france_travail.html' import funding_badge, funding_card %}
+{% set france_travail = (cpf_tracking.france_travail|default(none)) if cpf_tracking else none %}
 
 {% set pre_reception_open = request.args.get("pre_reception") %}
 {% set is_vtc = "VTC" in (session.training_type or "")|upper %}
@@ -19,6 +21,17 @@
 {% set vtc_book_address_complete = (trainee.address or "")|trim and (trainee.zip_code or "")|trim and (trainee.city or "")|trim %}
 
 <style>
+
+  .cpf-ft-badge{display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px 9px;max-width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;color:#1e40af;font-size:12px;font-weight:850;line-height:1.45;white-space:normal}
+  .cpf-ft-badge strong{font-size:13px;white-space:nowrap}
+  .cpf-ft-badge--orange{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+  .cpf-ft-badge--red{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+  .cpf-ft-badge--gray{background:#f8fafc;border-color:#e2e8f0;color:#475569}
+  .cpf-ft-card{margin-top:12px;padding:12px;border:1px solid #dbeafe;border-radius:14px;background:linear-gradient(135deg,#f8fbff,#fff);min-width:0}
+  .cpf-ft-card__detail{margin-top:7px;font-size:12px;font-weight:750;line-height:1.5;color:#334155}
+  .cpf-ft-card__sync{margin-top:5px;font-size:11px;line-height:1.4;color:#64748b}
+  .cpf-ft-card__sync--warning{color:#9a3412}
+  .finance-line__cpf-funding{display:block;margin-top:7px;font-size:12px;line-height:1.45;font-weight:750;color:#1e40af;white-space:normal}
 
   .admin-trainee-hero.is-registration-cancelled{
     border:2px solid #ef4444;
@@ -1224,6 +1237,7 @@
 
 
 <div class="trainee-contact-chip-row">
+  {{ funding_badge(france_travail) }}
   {% if trainee.email %}
     <a class="btn btn-outline btn-uniform" href="mailto:{{ trainee.email }}">✉️ Envoyer un e-mail</a>
   {% endif %}
@@ -1464,10 +1478,11 @@
     <div class="cpf-info">
       <div class="cpf-info__item"><span>N° dossier CPF</span><strong>{{ d.external_id or 'Non communiqué' }}</strong></div><div class="cpf-info__item"><span>Statut exact WEDOF</span><strong>{{ d.state or 'Non communiqué' }}</strong></div>
       <div class="cpf-info__item"><span>Montant formation</span><strong>{{ cpf.money.total_amount }}</strong></div><div class="cpf-info__item"><span>Financé par le CPF</span><strong>{{ cpf.money.cpf_amount }}</strong></div>
-      {% if d.france_travail_amount not in [none,''] %}<div class="cpf-info__item"><span>Abondement France Travail</span><strong>{{ cpf.money.france_travail_amount }}</strong></div>{% endif %}{% if d.candidate_amount not in [none,''] %}<div class="cpf-info__item"><span>Reste candidat</span><strong>{{ cpf.money.candidate_amount }}</strong></div>{% endif %}
+      {% if d.candidate_amount is defined and d.candidate_amount not in [none,''] %}<div class="cpf-info__item"><span>Reste candidat</span><strong>{{ cpf.money.candidate_amount }}</strong></div>{% endif %}
       <div class="cpf-info__item"><span>Formation</span><strong>{{ d.training_title or session.training_type or 'Non communiqué' }}</strong></div><div class="cpf-info__item"><span>Dates</span><strong>{{ d.start_date|frdate if d.start_date else 'Non communiqué' }} — {{ d.end_date|frdate if d.end_date else 'Non communiqué' }}</strong></div>
       {% if d.created_at %}<div class="cpf-info__item"><span>Création du dossier</span><strong>{{ d.created_at|frdatetime }}</strong></div>{% endif %}<div class="cpf-info__item"><span>Dernière synchronisation</span><strong>{{ cpf.last_sync_label }}</strong></div>
     </div>
+    {{ funding_card(france_travail, cpf.last_sync_label, cpf.sync_error) }}
     <div class="cpf-stepper" aria-label="Parcours du dossier CPF">{% for step in cpf.steps %}<div class="cpf-step is-{{ step.state }}"><span class="cpf-step__dot">{% if step.state == 'done' %}✓{% else %}{{ loop.index }}{% endif %}</span>{{ step.label }}{% if step.date %}<small>{{ step.date }}</small>{% endif %}{% if step.state == 'current' %}<span class="cpf-current">Étape actuelle</span>{% endif %}</div>{% endfor %}</div>
     <section class="cpf-automations"><h3>Automatisations du dossier</h3><div class="cpf-auto-grid">{% for action in cpf.automation.actions %}<article class="cpf-auto"><span class="cpf-badge cpf-badge--{{ action.tone }}">{{ action.status }}</span><strong>{{ action.action }}</strong><div class="hint">{{ action.detail }}{% if action.retry_at != 'Non communiqué' %}<br>Prochaine tentative : {{ action.retry_at }}{% endif %}</div></article>{% endfor %}</div><form method="post" action="{{ url_for('admin_trainee_cpf_unlink',session_id=session.id,trainee_id=trainee.id) }}" style="margin-top:16px" onsubmit="return confirm('Retirer cette association CPF ? Cette correction sera historisée.');"><input type="hidden" name="confirm_unlink" value="UNLINK"><button class="btn btn-outline" type="submit" {% if is_read_only %}disabled{% endif %}>Corriger l’association</button></form></section>
   {% else %}
@@ -4921,6 +4936,8 @@ function updateDocsRelanceState(status, plannedDateIso){
   const cashPaymentEnabled = document.getElementById('cashPaymentEnabled');
   const cashPaymentSettled = document.getElementById('cashPaymentSettled');
   let cpfValidated = {{ (trainee.cpf_validated or false)|tojson }};
+  const cpfFranceTravail = {{ france_travail|tojson }};
+  const cpfFranceTravailHtml = {{ funding_card(france_travail, cpf_tracking.last_sync_label if cpf_tracking else '', cpf_tracking.sync_error if cpf_tracking else '')|tojson }};
   const cashPaymentAmount = document.getElementById('cashPaymentAmount');
   const label = s => ({paid:'Payée',sent:'Envoyée',finalized:'Facture finalisée',draft:'Brouillon créé',cancelled:'Non facturé',deleted:'Non facturé',not_invoiced:'Non facturé',not_generated:'Non facturé'}[s]||'Non facturé');
   const cls = s => s==='paid'?'green':(['sent','finalized'].includes(s)?'blue':(s==='draft'?'orange':'gray'));
@@ -5265,7 +5282,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       ...(showDirectDebitKpi?[{label:'Prélèvements',icon:'↻',value:`${c.mensualitesPayees}/${c.totalMensualites}`,badge:[badge(inst[0],inst[1]),mandate.hasSigned?badge('✅ Mandat OK','green'):(mandate.hasSent?badge('⚠ Mandat de prélèvement en cours de validation','orange'):''),qontoSchedule.hasScheduledInQonto?badge('✅ Échéancier OK','green'):(qontoSchedule.needsQontoScheduling?badge('⚠ Échéancier à programmer dans Qonto','orange'):'')].filter(Boolean).join(''),tone:qontoSchedule.needsQontoScheduling?'orange':inst[1],meta:qontoSchedule.needsQontoScheduling?'Le mandat est validé, mais les échéances ne sont pas encore créées dans Qonto. Cliquez sur Programmer les échéances.':(c.prochaineEcheance?`Prochain : ${formatIsoDateFr(installmentDate(c.prochaineEcheance))} — ${fmtMoney(c.prochaineEcheance.amount)}`:'Aucune prochaine échéance'),mandateAction:!mandate.hasSent,scheduleAction:qontoSchedule.needsQontoScheduling,rescheduleAction:c.nombreRejets>0}]:[]),
       {label:'Payé',icon:(pay[1]==='green'?'✓':'✕'),iconTone:pay[1]==='green'?'green':'red',value:`${fmtMoney(c.totalPaye)} / ${fmtMoney(c.objectifFacturation)}`,badge:badge(pay[0],pay[1]),tone:(c.objectifFacturation>0&&c.totalPaye<c.objectifFacturation)?'orange':pay[1],meta:`Reste à payer : ${fmtMoney(Math.max(c.resteAPayer,0))}`}
     ];
-    const renderCard=card=>`<div class="finance-summary-card ${card.cpf?'finance-summary-card--cpf ':''}is-${card.tone}"><div class="finance-summary-card__top"><span>${card.label}</span><span class="finance-summary-card__icon ${card.iconTone?`finance-summary-card__icon--${card.iconTone}`:''}">${card.icon}</span></div><div class="finance-summary-card__value">${card.value}</div>${card.cpf?`<div class="finance-summary-card__cpf-meter"><span style="width:${cpfValidated?100:0}%"></span></div>`:''}<div class="finance-summary-card__cpf-actions"><span>${card.badge}</span>${card.cpf&&!readOnly?`<button class="finance-summary-card__cpf-btn ${cpfValidated?'finance-summary-card__cpf-btn--undo':''}" type="button" data-cpf-toggle="${cpfValidated?'0':'1'}" title="${cpfValidated?'Annuler validation CPF':'Valider le CPF'}" aria-label="${cpfValidated?'Annuler validation CPF':'Valider le CPF'}">${cpfValidated?'✕':'✅'}</button>`:''}</div><div class="finance-summary-card__meta">${card.meta}</div>${card.cpfInvoiceHtml||''}${card.rescheduleAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-reschedule-rejected-debit style="margin-top:8px;width:100%;justify-content:center">Reprogrammer un prélèvement</button>':''}${card.mandateAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-create-mandate style="margin-top:8px;width:100%;justify-content:center">Créer un mandat de prélèvement</button>':''}${card.scheduleAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-schedule-qonto style="margin-top:8px;width:100%;justify-content:center">Programmer les échéances</button>':''}</div>`;
+    const renderCard=card=>`<div class="finance-summary-card ${card.cpf?'finance-summary-card--cpf ':''}is-${card.tone}"><div class="finance-summary-card__top"><span>${card.label}</span><span class="finance-summary-card__icon ${card.iconTone?`finance-summary-card__icon--${card.iconTone}`:''}">${card.icon}</span></div><div class="finance-summary-card__value">${card.value}</div>${card.cpf?`<div class="finance-summary-card__cpf-meter"><span style="width:${cpfValidated?100:0}%"></span></div>`:''}<div class="finance-summary-card__cpf-actions"><span>${card.badge}</span>${card.cpf&&!readOnly?`<button class="finance-summary-card__cpf-btn ${cpfValidated?'finance-summary-card__cpf-btn--undo':''}" type="button" data-cpf-toggle="${cpfValidated?'0':'1'}" title="${cpfValidated?'Annuler validation CPF':'Valider le CPF'}" aria-label="${cpfValidated?'Annuler validation CPF':'Valider le CPF'}">${cpfValidated?'✕':'✅'}</button>`:''}</div><div class="finance-summary-card__meta">${card.meta}</div>${card.cpf?cpfFranceTravailHtml:''}${card.cpfInvoiceHtml||''}${card.rescheduleAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-reschedule-rejected-debit style="margin-top:8px;width:100%;justify-content:center">Reprogrammer un prélèvement</button>':''}${card.mandateAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-create-mandate style="margin-top:8px;width:100%;justify-content:center">Créer un mandat de prélèvement</button>':''}${card.scheduleAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-schedule-qonto style="margin-top:8px;width:100%;justify-content:center">Programmer les échéances</button>':''}</div>`;
     document.getElementById('financeSummaryCards').innerHTML=`<section class="finance-kpi-group finance-kpi-group--funding" aria-labelledby="financeFundingKpisTitle"><div class="finance-kpi-group__head"><div><span class="finance-kpi-group__eyebrow">Origine des fonds</span><h3 id="financeFundingKpisTitle">Financement</h3></div><span class="finance-kpi-group__count">${fundingCards.length} indicateur${fundingCards.length===1?'':'s'}</span></div><div class="finance-summary-grid" style="--finance-kpi-count:${fundingCards.length}">${fundingCards.map(renderCard).join('')}</div></section><section class="finance-kpi-group finance-kpi-group--payment" aria-labelledby="financePaymentKpisTitle"><div class="finance-kpi-group__head"><div><span class="finance-kpi-group__eyebrow">Encaissements</span><h3 id="financePaymentKpisTitle">Paiement</h3></div><span class="finance-kpi-group__count">${paymentCards.length} indicateur${paymentCards.length===1?'':'s'}</span></div><div class="finance-summary-grid" style="--finance-kpi-count:${paymentCards.length}">${paymentCards.map(renderCard).join('')}</div></section>`;
     document.querySelector('[data-reschedule-rejected-debit]')?.addEventListener('click',openRescheduleRejectedDebitModal);
     document.querySelector('[data-create-mandate]')?.addEventListener('click',()=>{const line=currentLines.find(l=>String(l.financingType||l.financingLabel||'').toLowerCase().includes('personnel'))||currentLines.find(l=>!isCpfQontoLine(l));if(line)openCreateMandateModal(line);else alert('Aucune ligne de financement compatible.');});
@@ -5298,7 +5315,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       const paymentStatus=String(bucket?.payment_status||'').toLowerCase();
       const trackedState=paymentStatus==='paid'?['Facture payée','green']:(['partially_paid','partial'].includes(paymentStatus)?['Paiement partiel','orange']:(paymentStatus==='draft'?['Brouillon Qonto','blue']:(['canceled','cancelled'].includes(paymentStatus)?['Facture annulée','red']:(paymentStatus==='control'?['À contrôler','red']:['En attente de paiement','orange']))));
       const st=qontoTracked?trackedState:(external?[wedofBilled?'Facturée dans WEDOF':'Géré hors plateforme','green']:statusFromRatio(paid,planned,{none:'Non prévu',zero:'Non payé',partial:'Paiement partiel',done:'Payé',over:'Trop-perçu'}));
-      return `<div class="finance-line ${typeClass}"><strong>${esc(name)}</strong><div><span class="finance-mini-label">Prévu</span>${fmtMoney(planned)}</div><div><span class="finance-mini-label">Facturé</span>${fmtMoney(inv)}</div>${external&&!qontoTracked?'<div><span class="finance-mini-label">Paiement</span>Géré hors plateforme</div><div><span class="finance-mini-label">À encaisser ici</span>0,00 €</div>':`<div><span class="finance-mini-label">Payé</span>${fmtMoney(paid)}</div><div><span class="finance-mini-label">Reste à payer</span>${fmtMoney(Math.max(remaining,0))}</div>`}${badge(st[0],st[1])}</div>`;
+      return `<div class="finance-line ${typeClass}"><strong>${esc(name)}${name==='CPF'&&cpfFranceTravail?.status==='validated'?`<small class="finance-line__cpf-funding">Dont France Travail : ${esc(cpfFranceTravail.amount_label)}</small>`:''}</strong><div><span class="finance-mini-label">Prévu</span>${fmtMoney(planned)}</div><div><span class="finance-mini-label">Facturé</span>${fmtMoney(inv)}</div>${external&&!qontoTracked?'<div><span class="finance-mini-label">Paiement</span>Géré hors plateforme</div><div><span class="finance-mini-label">À encaisser ici</span>0,00 €</div>':`<div><span class="finance-mini-label">Payé</span>${fmtMoney(paid)}</div><div><span class="finance-mini-label">Reste à payer</span>${fmtMoney(Math.max(remaining,0))}</div>`}${badge(st[0],st[1])}</div>`;
     }).join('');
   }
   function firstInvoiceToGenerate(){return currentLines.find(line=>!isCpfQontoLine(line)&&!lineHasGeneratedInvoice(line));}

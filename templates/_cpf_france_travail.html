@@ -1,0 +1,15 @@
+{% macro funding_badge(funding) -%}
+{% if funding %}<span class="cpf-ft-badge cpf-ft-badge--{{ funding.tone }}"><span>{{ funding.label }}</span>{% if funding.amount is not none %}<strong>{{ funding.amount_label }}</strong>{% endif %}</span>{% endif %}
+{%- endmacro %}
+
+{% macro funding_card(funding, last_sync='', sync_error='') -%}
+{% if funding %}
+<div class="cpf-ft-card" data-france-travail-status="{{ funding.status }}">
+  {{ funding_badge(funding) }}
+  {% if funding.status == 'validated' and funding.amount is none %}<div class="cpf-ft-card__detail">Montant non communiqué par WEDOF</div>{% endif %}
+  <div class="cpf-ft-card__detail">{{ funding.detail }}</div>
+  {% if sync_error %}<div class="cpf-ft-card__sync cpf-ft-card__sync--warning">Dernières données connues · {{ sync_error }}</div>{% endif %}
+  {% if last_sync %}<div class="cpf-ft-card__sync">WEDOF · {{ last_sync }}</div>{% endif %}
+</div>
+{% endif %}
+{%- endmacro %}
