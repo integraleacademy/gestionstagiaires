@@ -946,6 +946,7 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                                statuses: Iterable[Dict[str, Any]] = (), exceptions: Iterable[Dict[str, Any]] = (),
                                local_associations: Iterable[Dict[str, Any]] = (),
                                actions: Iterable[Dict[str, Any]] = (),
+                               manual_anomalies: Iterable[Dict[str, Any]] = (),
                                invoiced_external_ids: Iterable[str] = ()) -> Dict[str, Any]:
     """Construit les lignes sans accès réseau et sans déduire de dates depuis les sessions locales."""
     links_by_id = {str(x.get("external_id") or ""): x for x in links
@@ -955,6 +956,10 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
     rows = []
     status_by_id = {str(x.get("external_id") or ""): x for x in statuses if isinstance(x, dict)}
     invoiced_ids = {str(external_id) for external_id in invoiced_external_ids if str(external_id)}
+    manual_anomaly_ids = {
+        str(item.get("external_id") or "") for item in manual_anomalies
+        if isinstance(item, dict) and item.get("active") is True
+    }
     successful_service_actions = {
         str(item.get("external_id") or "")
         for item in actions
@@ -1098,8 +1103,13 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
             and row.get("wedof_type") == "cpf"
             and row.get("state") in ALL_STATES
         )
+        row["manual_anomaly"] = row["external_id"] in manual_anomaly_ids
+        row["to_associate"] = row["manual_link_required"] and not row["manual_anomaly"]
+        if row["manual_anomaly"]:
+            row["tab"] = "anomaly"
         row["unlinked_since_tracking_start"] = (
             not row["linked"]
+            and not row["manual_anomaly"]
             # Un dossier terminé reste dans l'historique WEDOF, mais son
             # rattachement n'est plus une opération à traiter. L'indicateur
             # doit donc refléter les seuls dossiers encore actifs.
@@ -1115,6 +1125,6 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
              "invoiced":sum(x["invoiced"] for x in rows),
              "planned":sum(x["automation_status"] in {"planned", "quota_blocked", "retry_pending"} for x in rows), "entry_success":sum(x["entry_success"] for x in rows), "service_success":sum(x["service_success"] for x in rows),
              "blocked":sum(x["automation_blocked"] for x in rows),
-             "to_associate":sum(x["manual_link_required"] for x in rows),
+             "to_associate":sum(x["to_associate"] for x in rows),
              "unlinked":sum(x["unlinked_since_tracking_start"] for x in rows)}
     return {"rows": rows, "stats": stats}

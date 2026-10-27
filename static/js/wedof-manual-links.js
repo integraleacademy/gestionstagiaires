@@ -207,6 +207,8 @@
     badge.textContent = payload.association;
     badge.className = 'wedof-badge is-neutral';
     currentRow.querySelector('[data-manual-link]')?.closest('.wedof-manual-action')?.remove();
+    const anomalyCheckbox = currentRow.querySelector('[data-wedof-anomaly-toggle]');
+    if (anomalyCheckbox && !anomalyCheckbox.checked) anomalyCheckbox.form.remove();
     currentRow.dataset.wedofToAssociate = 'false';
     document.dispatchEvent(new CustomEvent('wedof:association-updated'));
   }

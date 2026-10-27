@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261027-manual-anomaly') }}">
 {% set st = wedof_dashboard.stats %}
 {% set active_section = wedof_active_section|default('consumption', true) %}
 {% set state_labels = {
@@ -363,7 +363,7 @@
               data-wedof-panel="{{ item.tab }}"
               data-wedof-planned="{{ 'true' if item.automation_status in ['planned','quota_blocked','retry_pending'] else 'false' }}"
               data-wedof-invoiced="{{ 'true' if item.invoiced else 'false' }}"
-              data-wedof-to-associate="{{ 'true' if item.manual_link_required else 'false' }}"
+              data-wedof-to-associate="{{ 'true' if item.to_associate else 'false' }}"
               data-wedof-row="{{ item.external_id|e }}"
               {% if item.tab != 'accepted' %}hidden{% endif %}
             >
@@ -456,6 +456,21 @@
                       >Associer manuellement</button>
                     </div>
                   {% endif %}
+                  {% if item.manual_link_required or item.manual_anomaly %}
+                    <form method="post" action="{{ url_for('admin_wedof_manual_anomaly') }}" data-wedof-anomaly-form>
+                      <input type="hidden" name="external_id" value="{{ item.external_id|e }}">
+                      <input type="hidden" name="csrf" value="{{ wedof_anomaly_csrf }}">
+                      <input type="hidden" name="tab" value="{{ 'anomaly' if item.manual_anomaly else 'to_associate' }}">
+                      <label class="wedof-anomaly-toggle">
+                        <input type="checkbox" name="marked" value="1" data-wedof-anomaly-toggle
+                               {% if item.manual_anomaly %}checked{% endif %}
+                               {% if session.get('admin_role') == 'viewer' %}disabled{% endif %}>
+                        <span>Classer en anomalie</span>
+                      </label>
+                      <small>{{ 'Décochez pour retirer ce classement.' if item.manual_anomaly else 'Retire ce dossier du compteur « À associer ».' }}</small>
+                      <noscript><button type="submit" class="btn btn-outline">Enregistrer</button></noscript>
+                    </form>
+                  {% endif %}
                 </div>
               </td>
               <td data-label="Actions">
@@ -490,6 +505,7 @@
                       <br><strong>Session locale :</strong> {{ item.session }}
                       <br><strong>Stagiaire local :</strong> {{ item.trainee }}
                       <br><strong>Source :</strong> {{ item.association }}
+                      {% if item.manual_anomaly %}<br><strong>Classement :</strong> anomalie signalée manuellement{% endif %}
                       {% if item.anomaly_reasons %}<br><strong>Blocage :</strong> {{ item.anomaly_reasons|join(' · ') }}{% endif %}
                     </div>
                   </details>
@@ -720,8 +736,8 @@
 <div id="wedof-manual-feedback" class="wedof-toast is-success" role="status" hidden></div>
 
 <script src="{{ url_for('static', filename='js/wedof-loading.js') }}" defer></script>
-<script src="{{ url_for('static', filename='js/admin-wedof-dashboard.js', v='20261001-to-associate') }}" defer></script>
-<script src="{{ url_for('static', filename='js/wedof-manual-links.js', v='20261001-to-associate') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin-wedof-dashboard.js', v='20261027-manual-anomaly') }}" defer></script>
+<script src="{{ url_for('static', filename='js/wedof-manual-links.js', v='20261027-manual-anomaly') }}" defer></script>
 
 <script>
   (() => {

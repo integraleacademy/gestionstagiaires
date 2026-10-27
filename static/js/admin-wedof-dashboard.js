@@ -66,6 +66,13 @@
   };
   let activeFilter = 'accepted';
 
+  document.querySelectorAll('[data-wedof-anomaly-toggle]').forEach(checkbox => {
+    checkbox.addEventListener('change', () => {
+      checkbox.form.elements.tab.value = activeFilter;
+      checkbox.form.requestSubmit();
+    });
+  });
+
   function show(filter, {scroll = true} = {}) {
     activeFilter = filter;
     const matcher = rowMatches[filter] || rowMatches.accepted;

@@ -9576,6 +9576,7 @@ def _empty_data_payload() -> Dict[str, Any]:
         "wedof_automation_status": [],
         "wedof_automation_actions": [],
         "wedof_automation_blocks": [],
+        "wedof_manual_anomalies": [],
         "wedof_automation_runs": [],
         "wedof_automation_sync": {"states": {}},
         "crm_integration_requests": [],
@@ -9685,6 +9686,7 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
                     loaded["wedof_automation_status"] = []
                 if not isinstance(loaded.get("wedof_automation_actions"), list): loaded["wedof_automation_actions"] = []
                 if not isinstance(loaded.get("wedof_automation_blocks"), list): loaded["wedof_automation_blocks"] = []
+                if not isinstance(loaded.get("wedof_manual_anomalies"), list): loaded["wedof_manual_anomalies"] = []
                 if not isinstance(loaded.get("wedof_automation_runs"), list): loaded["wedof_automation_runs"] = []
                 if not isinstance(loaded.get("wedof_automation_sync"), dict): loaded["wedof_automation_sync"] = {"states": {}}
                 _ensure_multi_partner_payload(loaded)
@@ -9729,6 +9731,7 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
         data["wedof_automation_status"] = []
     if not isinstance(data.get("wedof_automation_actions"), list): data["wedof_automation_actions"] = []
     if not isinstance(data.get("wedof_automation_blocks"), list): data["wedof_automation_blocks"] = []
+    if not isinstance(data.get("wedof_manual_anomalies"), list): data["wedof_manual_anomalies"] = []
     if not isinstance(data.get("wedof_automation_runs"), list): data["wedof_automation_runs"] = []
     if not isinstance(data.get("wedof_automation_sync"), dict): data["wedof_automation_sync"] = {"states": {}}
 
@@ -10041,6 +10044,10 @@ def save_data(
                 payload["qonto_oauth"] = canonical["qonto_oauth"]
             if not scoped_partner_id and isinstance(canonical.get("integrale_watch"), dict):
                 payload["integrale_watch"] = canonical["integrale_watch"]
+            # Manual WEDOF classifications are only edited atomically by their
+            # dedicated route. A stale form or synchronization must retain them.
+            if not scoped_partner_id and isinstance(canonical.get("wedof_manual_anomalies"), list):
+                payload["wedof_manual_anomalies"] = canonical["wedof_manual_anomalies"]
         _ensure_multi_partner_payload(payload)
         normalize_all_partner_subscriptions(payload)
         return payload
@@ -19215,6 +19222,7 @@ def admin_wedof_requests():
         "admin_wedof.html",
         **_wedof_requests_context(),
         wedof_active_section=requested_section,
+        wedof_anomaly_csrf=session.setdefault("wedof_anomaly_csrf", secrets.token_urlsafe(32)),
         wedof_cancellations=cancellations,
         wedof_api_key_configured=bool((os.environ.get("WEDOF_API_KEY") or "").strip()),
         **_admin_wedof_execution_flags(),
@@ -19224,6 +19232,7 @@ def admin_wedof_requests():
         wedof_dashboard=build_automation_dashboard([], links=data.get("wedof_links", []),
             statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_blocks", []),
             local_associations=displayed_links, actions=data.get("wedof_automation_actions", []),
+            manual_anomalies=data.get("wedof_manual_anomalies", []),
             invoiced_external_ids=_wedof_invoiced_external_ids(data)),
         wedof_last_run=(data.get("wedof_automation_runs") or [{}])[-1],
         wedof_sync=data.get("wedof_automation_sync", {}),
@@ -19408,6 +19417,54 @@ def admin_wedof_automation_analyze():
     return redirect(url_for("admin_wedof_requests", section="state"))
 
 
+@app.post("/admin/wedof/manual-anomaly")
+@admin_login_required
+@admin_write_required
+def admin_wedof_manual_anomaly():
+    token = str(session.get("wedof_anomaly_csrf") or "")
+    if not token or not hmac.compare_digest(token, str(request.form.get("csrf") or "")):
+        abort(403)
+    external_id = str(request.form.get("external_id") or "").strip()
+    marked = request.form.get("marked", "0")
+    if not external_id or len(external_id) > 200 or marked not in {"0", "1"}:
+        return jsonify(ok=False, error="Classement invalide."), 400
+    active = marked == "1"
+    now = datetime.datetime.now(ZoneInfo("Europe/Paris")).isoformat()
+
+    def mutate(data):
+        records = data.get("wedof_manual_anomalies", [])
+        current = next((item for item in records if isinstance(item, dict)
+                        and item.get("external_id") == external_id), None)
+        # Validate against the current canonical data while holding the write
+        # lock, so an association made in another tab cannot be overwritten.
+        dashboard = build_automation_dashboard(
+            [], links=data.get("wedof_links", []), statuses=data.get("wedof_automation_status", []),
+            actions=data.get("wedof_automation_actions", []), manual_anomalies=records,
+        )
+        row = next((item for item in dashboard["rows"] if item["external_id"] == external_id), None)
+        if not (current and current.get("active") is True) and not (row and row["manual_link_required"]):
+            raise ValueError("Ce dossier n’est plus à associer. La liste a été actualisée.")
+        if current:
+            current.update(active=active, updated_at=now)
+        elif active:
+            data.setdefault("wedof_manual_anomalies", []).append({
+                "external_id": external_id, "active": True, "created_at": now, "updated_at": now,
+            })
+        return data
+
+    try:
+        _atomic_update_data(mutate)
+    except ValueError as exc:
+        flash(str(exc), "error")
+    else:
+        flash("Dossier classé en anomalie et retiré du compteur « À associer »." if active
+              else "Classement manuel en anomalie retiré. Les compteurs ont été actualisés.", "success")
+    tab = request.form.get("tab")
+    if tab not in {"accepted", "training", "service", "invoiced", "planned", "to_associate", "anomaly"}:
+        tab = "to_associate" if active else "anomaly"
+    return redirect(url_for("admin_wedof_requests", section="state", tab=tab))
+
+
 @app.post("/admin/wedof/automation/block")
 @admin_login_required
 @admin_write_required
@@ -19496,6 +19553,7 @@ def admin_wedof_matching_preview():
             accepted + in_training + service_done, links=data.get("wedof_links", []),
             statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_exceptions", []),
             local_associations=_wedof_links_for_display(data), actions=data.get("wedof_automation_actions", []),
+            manual_anomalies=data.get("wedof_manual_anomalies", []),
             invoiced_external_ids=_wedof_invoiced_external_ids(data),
         )
         displayed_by_id = {str(x.get("external_id") or ""): x for x in _wedof_links_for_display(data)}
@@ -19518,6 +19576,7 @@ def admin_wedof_matching_preview():
         "admin_wedof.html",
         **_wedof_requests_context(),
         wedof_active_section="state",
+        wedof_anomaly_csrf=session.setdefault("wedof_anomaly_csrf", secrets.token_urlsafe(32)),
         wedof_api_key_configured=True,
         **_admin_wedof_execution_flags(),
         matching_preview=preview,

@@ -2,6 +2,33 @@
   vertical-align: top;
 }
 
+.wedof-anomaly-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: #9f1239;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.wedof-anomaly-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  accent-color: #e11d48;
+  cursor: pointer;
+}
+
+.wedof-anomaly-toggle + small {
+  display: block;
+  margin-top: 5px;
+  color: var(--wedof-muted);
+  line-height: 1.4;
+}
+
 .wedof-request-actions > summary {
   margin-top: 6px;
 }
