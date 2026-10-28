@@ -49,10 +49,31 @@ test('review renders actual birth sentence, result counts and filters', async t 
   const ui = await setup(t);
   assert.match(ui.form().textContent, /Clément VAILLANT, né le 16\/09\/1993 à SALLANCHES \(74\)/);
   assert.equal(ui.doc.querySelector('[data-diploma-generate-all]').disabled,true);
+  assert.equal(ui.doc.querySelector('[data-diploma-letter-preview]').disabled,false);
+  assert.equal(ui.doc.querySelector('[data-diploma-letter-hint]').hidden,false);
   const filter = ui.doc.getElementById('ssiapDiplomaFilter');
   filter.value = 'failed'; filter.dispatchEvent(new ui.w.Event('change'));
   assert.equal(ui.form().hidden,true);
   assert.equal(ui.doc.querySelector('[data-diploma-id=T2]').hidden,false);
+});
+
+test('SDIS preview remains usable before results and does not change them', async t => {
+  const ui = await setup(t);
+  await ui.click('[data-diploma-letter-preview]');
+  assert.equal(ui.calls.at(-1).action,'letter_preview');
+  assert.equal(ui.data.candidates[0].values.result,'pending_results');
+});
+
+test('photo changes update the card without discarding birth or result drafts', async t => {
+  const ui = await setup(t);
+  assert.ok(ui.form().querySelector('[data-identity-photo-edit]'));
+  ui.edit('first_name','Prénom corrigé');
+  ui.edit('result','certified');
+  ui.doc.dispatchEvent(new ui.w.CustomEvent('identity-photo-updated',{detail:{id:'T1',photo_available:true,photo_url:'/portrait-new.jpg'}}));
+  assert.equal(ui.form().elements.first_name.value,'Prénom corrigé');
+  assert.equal(ui.form().elements.result.value,'certified');
+  assert.equal(ui.form().dataset.dirty,'true');
+  assert.equal(ui.data.candidates[0].values.first_name,'Clément');
 });
 
 test('uppercase city and foreign country update the preview sentence without losing drafts', async t => {

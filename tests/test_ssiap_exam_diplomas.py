@@ -204,6 +204,19 @@ def test_sdis_preview_uses_certified_drafts_and_does_not_reserve_numbers(case):
     assert 'X-SSIAP-Diploma-Numbers' not in response.headers
 
 
+def test_sdis_preview_without_certified_candidates_is_available_but_final_is_blocked(case):
+    before = case[1].read_bytes()
+    content = text(post(case, 'letter_preview'))
+    assert 'Aucun candidat certifié renseigné' in content
+    assert '28/10/2026' in content
+    assert 'VAR-2026-042' in content
+    assert 'VAILLANT' not in content.replace('Clément VAILLANT', '')
+    assert 'APERÇU' in content
+    assert case[1].read_bytes() == before
+    assert post(case, 'letter').status_code == 400
+    assert not json.loads(case[1].read_text()).get('ssiap_diploma_sequences')
+
+
 def test_sdis_final_letter_numbers_match_diplomas_and_repeated_letters(case):
     row = view(case)['candidates'][0]
     row['values']['result'] = 'certified'

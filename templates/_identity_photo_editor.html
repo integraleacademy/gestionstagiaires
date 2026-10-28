@@ -1,0 +1,22 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/identity-photo.css', v='20261028-1') }}">
+<dialog id="identityPhotoDialog" class="identity-photo-dialog" aria-labelledby="identityPhotoTitle">
+  <header><div><h2 id="identityPhotoTitle">Recadrer la photo</h2><p data-photo-person></p></div><button type="button" data-photo-close aria-label="Fermer le recadrage">×</button></header>
+  <div class="identity-photo-layout">
+    <div class="identity-photo-stage"><canvas width="700" height="900" tabindex="0" role="img" aria-label="Aperçu du cadrage de la photo. Déplacez-la à la souris ou avec les flèches du clavier."></canvas><div class="identity-photo-grid" aria-hidden="true"></div><p data-photo-empty hidden>Aucune photo. Ajoutez-en une pour commencer.</p></div>
+    <div class="identity-photo-tools">
+      <strong>Format 35 × 45 mm</strong>
+      <label>Redresser <output data-photo-angle-value>0°</output><input data-photo-angle type="range" min="-45" max="45" step="0.1" value="0" aria-label="Redresser la photo"></label>
+      <label>Zoom <output data-photo-zoom-value>100 %</output><input data-photo-zoom type="range" min="1" max="10" step="0.01" value="1" aria-label="Zoom de la photo"></label>
+      <div class="identity-photo-zoom-buttons"><button type="button" data-photo-zoom-out aria-label="Réduire le zoom de la photo">−</button><button type="button" data-photo-zoom-in aria-label="Agrandir le portrait">+</button></div>
+      <button type="button" data-photo-rotate>Tourner de 90°</button><button type="button" data-photo-center>Recentrer</button>
+      <p>Déplacez la photo dans le cadre. Utilisez les lignes pour aligner les yeux.</p>
+      <button type="button" data-photo-upload>Ajouter / remplacer la photo</button><input type="file" data-photo-file accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
+      <small>JPG, PNG ou WebP · 10 Mo maximum.</small>
+      <button type="button" data-photo-reset>Rétablir la photo originale</button>
+      <p>L’original est conservé. Le cadrage enregistré est utilisé dans la fiche et les diplômes.</p>
+    </div>
+  </div>
+  <p class="identity-photo-status" data-photo-status role="status" aria-live="polite"></p>
+  <footer><button type="button" data-photo-close>Annuler</button><button type="button" class="identity-photo-save" data-photo-save disabled>Enregistrer le cadrage</button></footer>
+</dialog>
+<script src="{{ url_for('static', filename='js/identity-photo.js', v='20261028-1') }}" defer></script>

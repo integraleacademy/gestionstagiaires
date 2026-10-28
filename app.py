@@ -29169,7 +29169,7 @@ def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
             return True
 
     # Photo identité (optionnel mais utile)
-    if (t.get("identity_photo") or "").strip() == file_token:
+    if file_token in {str(t.get("identity_photo") or "").strip(), str(t.get("identity_photo_original") or "").strip()}:
         return True
 
     conv_sig = t.get("convention_signature") if isinstance(t.get("convention_signature"), dict) else {}
@@ -34619,6 +34619,8 @@ def admin_upload_identity_photo(session_id: str, trainee_id: str):
 
     # ✅ on sauvegarde le token dans le stagiaire
     t["identity_photo"] = token
+    t.pop("identity_photo_original", None)
+    t.pop("identity_photo_crop", None)
     t["updated_at"] = _now_iso()
 
     s["trainees"] = trainees
@@ -55822,6 +55824,8 @@ if _partner_postgres_active():
 import ssiap_routes
 ssiap_routes.register(app, sys.modules[__name__])
 ssiap_exam.register(app, sys.modules[__name__])
+import identity_photos
+identity_photos.register(app, sys.modules[__name__])
 afc_enrolments.register(app, sys.modules[__name__])
 afc_hours.register(app, sys.modules[__name__])
 uv_questionnaires.register(app, sys.modules[__name__])

@@ -24,11 +24,16 @@
   function message(text, error = false) { status.textContent = text; status.className = error ? 'error' : ''; }
   const input = (label, key, value, type = 'text') => `<label class="exam-field">${label}<input name="${key}" type="${type}" value="${esc(value)}" maxlength="120"></label>`;
   const select = (label, key, value, options, cls = '') => `<label class="exam-field ${cls}">${label}<select name="${key}" data-result="${esc(value)}">${options.map(([v,t]) => `<option value="${v}"${v === value ? ' selected' : ''}>${t}</option>`).join('')}</select></label>`;
+  function portrait(row) {
+    const name = `${row.values.first_name} ${row.values.last_name}`;
+    const content = `<span data-identity-photo-view data-photo-id="${esc(row.id)}">${row.photo_available ? `<img src="${esc(row.photo_url)}" alt="Photo de ${esc(name)}" loading="lazy">` : '<span class="identity-photo-placeholder">Ajouter une photo</span>'}</span>`;
+    return data.read_only ? `<div class="diploma-portrait">${content}</div>` : `<button type="button" class="identity-photo-trigger diploma-portrait" data-identity-photo-edit data-photo-id="${esc(row.id)}" data-photo-api="${esc(row.photo_api)}" data-photo-name="${esc(name)}" aria-label="Recadrer ou remplacer la photo de ${esc(name)}">${content}<small>Recadrer</small></button>`;
+  }
   function card(row) {
     const v = row.values;
     return `<form class="exam-card diploma-form" data-diploma-id="${esc(row.id)}" data-birth-department-url="${esc(data.department_url)}"><fieldset ${data.read_only ? 'disabled' : ''}>
-      <div class="exam-candidate-top"><div><h4 class="exam-candidate-name">${esc(v.first_name)} ${esc(v.last_name)}</h4>${!row.included ? '<span class="exam-chip warn">Non présenté à l’examen</span>' : ''}</div>${select('Résultat de l’examen','result',v.result,[['pending_results','En attente de résultat'],['certified','Certifié'],['failed','Ajourné']],'diploma-result')}</div>
-      <p class="diploma-identity" data-diploma-identity></p><div class="diploma-meta"><span class="diploma-number">${row.number ? 'N° ' + esc(row.number) : 'Numéro attribué à la génération'}</span><span class="exam-muted" data-diploma-date></span><span class="exam-chip ${row.photo_available ? 'ok' : 'warn'}">${row.photo_available ? 'Photo disponible' : 'Photo absente'}</span></div>
+      <div class="exam-candidate-top"><div class="diploma-person">${portrait(row)}<div><h4 class="exam-candidate-name">${esc(v.first_name)} ${esc(v.last_name)}</h4>${!row.included ? '<span class="exam-chip warn">Non présenté à l’examen</span>' : ''}</div></div>${select('Résultat de l’examen','result',v.result,[['pending_results','En attente de résultat'],['certified','Certifié'],['failed','Ajourné']],'diploma-result')}</div>
+      <p class="diploma-identity" data-diploma-identity></p><div class="diploma-meta"><span class="diploma-number">${row.number ? 'N° ' + esc(row.number) : 'Numéro attribué à la génération'}</span><span class="exam-muted" data-diploma-date></span><span data-diploma-photo-status class="exam-chip ${row.photo_available ? 'ok' : 'warn'}">${row.photo_available ? 'Photo disponible' : 'Photo absente'}</span></div>
       <p class="diploma-missing" data-diploma-missing hidden></p>
       <details class="exam-details"><summary>Vérifier / modifier les informations du diplôme</summary><div class="exam-grid three">
       ${select('Civilité','civility',v.civility,[['Monsieur','Monsieur'],['Madame','Madame']])}${input('Prénom','first_name',v.first_name)}${input('Nom','last_name',v.last_name)}
@@ -69,7 +74,10 @@
     panel.querySelector('[data-diploma-save]').disabled = busy || data.read_only || !dirty;
     panel.querySelector('[data-diploma-preview-all]').disabled = busy || !certified;
     panel.querySelector('[data-diploma-generate-all]').disabled = busy || data.read_only || !certified;
-    panel.querySelector('[data-diploma-letter-preview]').disabled = busy || !certified;
+    panel.querySelector('[data-diploma-letter-preview]').disabled = busy;
+    const letterHint = panel.querySelector('[data-diploma-letter-hint]');
+    letterHint.hidden = !!certified;
+    letterHint.textContent = 'Vous pouvez prévisualiser le courrier dès maintenant. Pour générer le courrier définitif, renseignez les résultats des candidats certifiés.';
     panel.querySelector('[data-diploma-letter]').disabled = busy || data.read_only || !certified;
     panel.querySelector('[data-diploma-exam-reference]').textContent = `Examen du ${date(data.exam_date)} · ${data.exam_number ? 'N° ' + data.exam_number : 'Numéro à renseigner dans Organisation et jury'}`;
     panel.querySelector('[data-diploma-refresh]').disabled = busy;
@@ -177,6 +185,19 @@
     if (button.hasAttribute('data-diploma-letter-preview')) act(() => pdf('letter_preview'));
     if (button.hasAttribute('data-diploma-letter')) act(() => pdf('letter'));
     if (button.hasAttribute('data-diploma-organization')) dialog.querySelector('[data-exam-tab="organization"]').click();
+  });
+  document.addEventListener('identity-photo-updated', event => {
+    const row = data?.candidates.find(item => item.id === event.detail.id);
+    if (!row) return;
+    row.photo_available = event.detail.photo_available;
+    row.photo_url = event.detail.photo_url;
+    const form = forms().find(item => item.dataset.diplomaId === row.id);
+    if (form) {
+      const chip = form.querySelector('[data-diploma-photo-status]');
+      chip.textContent = row.photo_available ? 'Photo disponible' : 'Photo absente';
+      chip.className = 'exam-chip ' + (row.photo_available ? 'ok' : 'warn');
+    }
+    message('Photo enregistrée. Elle sera utilisée dans les prochains diplômes.');
   });
   search.addEventListener('input', refresh); filter.addEventListener('change', refresh);
   dialog.addEventListener('click', event => { if (event.target.closest('[data-exam-tab="diplomas"]') && !data) act(load); });

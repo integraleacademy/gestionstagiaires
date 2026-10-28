@@ -87,6 +87,8 @@ def diplomas_pdf(diplomas, template_path, draw_photo, *, preview=False):
 
 
 def sdis_letter(diplomas, config, root, *, preview=False):
+    if not diplomas and not preview:
+        raise ValueError('Aucun candidat certifié et présenté à cet examen.')
     from ssiap_exam_pdf import FONT, BOLD, signature_assets
     assets = signature_assets(root)
     output = BytesIO()
@@ -103,7 +105,10 @@ def sdis_letter(diplomas, config, root, *, preview=False):
     p = lambda text, style=body: Paragraph(text, style)
     safe = lambda value: escape(str(value or ''))
     number = str(config.get('exam_number') or 'À renseigner')
-    date = diplomas[0]['exam_date']
+    try:
+        date = dt.date.fromisoformat(str(config.get('date') or '')).strftime('%d/%m/%Y')
+    except ValueError:
+        date = diplomas[0]['exam_date'] if diplomas else 'À renseigner'
     level = str(config.get('level') or 'SSIAP 1')
     approval = str(config.get('approval') or 'Agrément SSIAP n°8323 délivré par la Préfecture du Var le 29/05/2026')
     today = dt.datetime.now(ZoneInfo('Europe/Paris')).strftime('%d/%m/%Y')
@@ -118,22 +123,29 @@ def sdis_letter(diplomas, config, root, *, preview=False):
     recipient = [Spacer(1, 10*mm), p('<b>DDSIS du Var</b><br/>Groupement Prévention - Secrétariat<br/>24, Allée de Vaugrenier - ZAC Les Ferrières<br/><b>83490 LE MUY</b>')]
     addresses = Table([[sender, recipient]], colWidths=[84*mm, 84*mm], hAlign='LEFT')
     addresses.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'), ('LEFTPADDING',(0,0),(-1,-1),0), ('RIGHTPADDING',(0,0),(-1,-1),0)]))
+    enclosure = ('ci-joint le <b>diplôme</b> du candidat certifié' if len(diplomas) == 1 else
+                 f'ci-joints les <b>{len(diplomas)} diplômes</b> des candidats certifiés' if diplomas else
+                 'ci-joints les diplômes des candidats certifiés')
     story = [addresses, Spacer(1, 4*mm), p(f'À Puget-sur-Argens, le {today}', right),
              p(f'Objet : transmission des diplômes {safe(level)}<br/>Examen n° {safe(number)} du {safe(date)}', heading),
              p(safe(approval), small), Spacer(1, 3*mm), p('Madame, Monsieur,'),
-             p(f'Je vous prie de trouver ci-joints les <b>{len(diplomas)} diplômes</b> des candidats certifiés à l’issue de notre examen <b>{safe(level)} n° {safe(number)}</b>, organisé le <b>{safe(date)}</b> dans les locaux d’Intégrale Academy, <b>54 chemin du Carreou, 83480 Puget-sur-Argens</b>, pour signature par le représentant du DDSIS.'),
+             p(f'Je vous prie de trouver {enclosure} à l’issue de notre examen <b>{safe(level)} n° {safe(number)}</b>, organisé le <b>{safe(date)}</b> dans les locaux d’Intégrale Academy, <b>54 chemin du Carreou, 83480 Puget-sur-Argens</b>, pour signature par le représentant du DDSIS.'),
              p('La liste des candidats certifiés et les références des diplômes transmis figurent ci-dessous :')]
     table_rows = [[p(label, header_cell) for label in ['N°', 'Candidat certifié', 'Date de<br/>naissance', 'Lieu de naissance', 'Numéro de diplôme']]]
     for index, row in enumerate(diplomas, 1):
         name = row['name'].removeprefix('Monsieur ').removeprefix('Madame ')
         table_rows.append([p(str(index), cell), p(safe(name), cell), p(safe(row['birth_date']), cell),
                            p(safe(row['birth_place']), cell), p(safe(row.get('number') or 'À générer'), cell)])
+    if not diplomas:
+        table_rows.append([p('<b>Aucun candidat certifié renseigné pour le moment.</b><br/>La liste sera complétée après la saisie des résultats dans l’onglet Diplômes.', cell), '', '', '', ''])
     table = Table(table_rows, colWidths=[8*mm, 40*mm, 24*mm, 46*mm, 50*mm], repeatRows=1, hAlign='LEFT')
     table.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),navy), ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
                                ('LEFTPADDING',(0,0),(-1,-1),5),('RIGHTPADDING',(0,0),(-1,-1),5),
                                ('TOPPADDING',(0,0),(-1,-1),4),('BOTTOMPADDING',(0,0),(-1,-1),4),
                                ('ROWBACKGROUNDS',(0,1),(-1,-1),[colors.white, colors.HexColor('#f3f6f8')]),
                                ('LINEBELOW',(0,0),(-1,0),0.5,navy), ('LINEBELOW',(0,1),(-1,-1),0.25,colors.HexColor('#dce3e8'))]))
+    if not diplomas:
+        table.setStyle(TableStyle([('SPAN',(0,1),(-1,1)), ('BACKGROUND',(0,1),(-1,1),colors.HexColor('#fff5d9'))]))
     story.append(table)
 
     def asset(name, width):
@@ -147,7 +159,7 @@ def sdis_letter(diplomas, config, root, *, preview=False):
     story.append(KeepTogether([Spacer(1, 4*mm),
         p('Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.'),
         p('<b>Clément VAILLANT</b><br/>Directeur général - Intégrale Academy'), signature,
-        p(f'Pièces jointes : {len(diplomas)} diplôme(s) {safe(level)}.', small)]))
+        p(f'Pièces jointes : {len(diplomas)} diplôme(s) {safe(level)}.' if diplomas else 'Pièces jointes : liste à compléter après les résultats.', small)]))
 
     def footer(pdf, doc):
         pdf.saveState()

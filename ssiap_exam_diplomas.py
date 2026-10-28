@@ -10,6 +10,7 @@ import secrets
 from flask import abort, jsonify, request, send_file, session, url_for
 
 import ssiap_exam as exam
+from identity_photos import photo_metadata
 
 
 FIELDS = ("civility", "first_name", "last_name", "birth_date", "birth_city",
@@ -107,7 +108,8 @@ def register(app, services, get_training):
                  "revision": revision(services, training, t),
                  "included": exam.candidate_settings(training, t)["included"],
                  "number": str(t.get("ssiap_diploma_number") or ""),
-                 "photo_available": bool(services._ssiap_diploma_photo_path(t)),
+                 **{key: value for key, value in photo_metadata(services, session_id=training['id'], trainee=t).items()
+                    if key in {'photo_available', 'photo_url', 'photo_api'}},
                  "missing": missing(services, values(services, training, t))}
                 for t in exam.active_candidates(services, training)]
 
@@ -177,7 +179,7 @@ def register(app, services, get_training):
                 status = result.pop("status", 200)
                 return jsonify(result), status
 
-            if not services.REPORTLAB_LIBRARY_AVAILABLE or not os.path.exists(services.SSIAP_DIPLOMA_TEMPLATE):
+            if not services.REPORTLAB_LIBRARY_AVAILABLE or (not is_letter and not os.path.exists(services.SSIAP_DIPLOMA_TEMPLATE)):
                 return jsonify(ok=False, error="Le modèle ou le moteur PDF est indisponible."), 503
             candidate_id = payload.get("trainee_id")
             if is_letter and candidate_id is not None:
@@ -195,7 +197,7 @@ def register(app, services, get_training):
                 elif services._ssiap_exam_status(trainee) != "certified" or not exam.candidate_settings(training, trainee)["included"]:
                     continue
                 candidates.append(trainee)
-            if not candidates:
+            if not candidates and not (is_letter and is_preview):
                 raise ValueError("Aucun candidat certifié et présenté à cet examen.")
             config = exam.settings(training)
             if is_letter and not is_preview:

@@ -1176,37 +1176,16 @@
 
   <!-- PHOTO À GAUCHE -->
   <div class="trainee-photo-block">
+    {% set photo_api = url_for('admin_identity_photo', session_id=session.id, trainee_id=trainee.id) %}
     {% if not is_read_only %}
-      <form id="photoForm" method="post" enctype="multipart/form-data"
-            action="{{ url_for('admin_upload_identity_photo', session_id=session.id, trainee_id=trainee.id) }}">
-        <input id="photoInput" type="file" name="file" accept="image/*" required style="display:none;">
-        <label for="photoInput" style="display:block;cursor:pointer;">
-          {% if trainee.identity_photo %}
-            <img
-              src="{{ url_for('admin_view_upload', path=trainee.identity_photo) }}"
-              alt="Photo d'identité"
-              class="trainee-photo"
-            />
-          {% else %}
-            <div class="trainee-photo trainee-photo--empty">
-              Aucune photo
-            </div>
-          {% endif %}
-        </label>
-      </form>
-    {% else %}
-      {% if trainee.identity_photo %}
-        <img
-          src="{{ url_for('admin_view_upload', path=trainee.identity_photo) }}"
-          alt="Photo d'identité"
-          class="trainee-photo"
-        />
-      {% else %}
-        <div class="trainee-photo trainee-photo--empty">
-          Aucune photo
-        </div>
-      {% endif %}
-    {% endif %}
+      <button type="button" class="identity-photo-trigger" data-identity-photo-edit data-photo-api="{{ photo_api }}" data-photo-id="{{ trainee.id }}" data-photo-name="{{ trainee.first_name }} {{ trainee.last_name }}" aria-label="Recadrer ou remplacer la photo de {{ trainee.first_name }} {{ trainee.last_name }}">
+        <span data-identity-photo-view data-photo-id="{{ trainee.id }}" data-photo-class="trainee-photo">
+          {% if trainee.identity_photo %}<img src="{{ url_for('admin_identity_photo_image', session_id=session.id, trainee_id=trainee.id) }}" alt="Photo d’identité" class="trainee-photo">{% else %}<span class="identity-photo-placeholder">Ajouter une photo</span>{% endif %}
+        </span><small>Recadrer / remplacer</small>
+      </button>
+    {% elif trainee.identity_photo %}
+      <img src="{{ url_for('admin_identity_photo_image', session_id=session.id, trainee_id=trainee.id) }}" alt="Photo d’identité" class="trainee-photo">
+    {% else %}<div class="trainee-photo trainee-photo--empty">Aucune photo</div>{% endif %}
     {% if not (is_vtc and not dossier_is_complete) %}
       <div class="trainee-dossier-status">
         <span class="pill {% if dossier_is_complete %}pill-green{% else %}pill-red{% endif %}">
@@ -2351,13 +2330,7 @@
 
 
 
-<script>
-  document.getElementById("photoInput")?.addEventListener("change", function(){
-    if(this.files && this.files.length > 0){
-      document.getElementById("photoForm")?.submit();
-    }
-  });
-</script>
+{% include '_identity_photo_editor.html' %}
 
 
 <div class="grid trainee-grid two-cols{% if is_vtc %} trainee-grid--vtc{% endif %}" style="gap:12px;margin-top:12px;">
