@@ -339,7 +339,8 @@ def test_manuals_model_has_separate_settings_and_preserves_legacy_campaign(setup
         assert outreach.saved_template(conn,'manuals')['intro']==manual['intro']
     preview=client.get('/admin/partners/campaigns/preview?model=manuals')
     assert preview.status_code==200 and 'Des manuels pour &lt;notre centre&gt;.' in preview.text
-    assert 'https://integraleconnect.com/manuels' in preview.text and 'clement-memoji.png' in preview.text
+    assert 'https://integraleconnect.com/manuels' in preview.text and 'L’équipe Intégrale Academy' in preview.text
+    assert 'clement-memoji.png' not in preview.text and 'Clément VAILLANT' not in preview.text
     assert '/static/manuals/aps.jpg' in preview.text and '50 à 99' in preview.text
     assert 'PARCOURS APS' not in preview.text
     legacy=client.get('/admin/partners/campaigns/preview?campaign=legacy')

@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 import app as host
-from email_design import render_email
+from email_design import render_email, normalize_email_text_signature
 
 
 class EmailAudit(HTMLParser):
@@ -70,6 +70,8 @@ def test_every_catalogue_preview_has_one_complete_shell_and_left_aligned_body():
         assert 'class="academy-pad academy-content" align="left"' in source
         assert "font-style:italic" in source and "On avance avec vous." in source
         assert "max-width:640px" in source and "@media(max-width:600px)" in source
+        assert "Clément VAILLANT" not in source and "clement-memoji" not in source, title
+        assert "".join(audit.text).count("L’équipe Intégrale Academy") == 1, title
 
 
 @pytest.mark.parametrize("training", ["A3P", "APS", "DIRIGEANT", "SSIAP 1", "VTC"])
@@ -88,7 +90,7 @@ def test_document_emails_keep_training_dates_escaped_names_and_download_guidance
         assert audit.shells == 1 and not audit.errors and not audit.stack
 
 
-def test_legacy_content_keeps_every_action_and_warning_with_one_director_signature():
+def test_legacy_content_keeps_actions_and_warnings_with_one_team_signature():
     source = render_email('''<h2>📝 Test de français</h2><p>Bonjour Camille,</p>
       <p style="color:#b91c1c">Date limite : 12/11/2026</p>
       <p><a href="https://example.test/access?t=a&amp;key=b" style="display:inline-block;background:#1f8f4a;color:white;padding:12px">Accéder au test</a></p>
@@ -99,11 +101,40 @@ def test_legacy_content_keeps_every_action_and_warning_with_one_director_signatu
     assert "Date limite : 12/11/2026" in source and "color:#b91c1c" in source
     assert "background:#1f8f4a" not in source
     assert "background:#285ac8" in source
-    assert "".join(audit.text).count("Clément VAILLANT") == 1
+    assert "Clément VAILLANT" not in source
+    assert "".join(audit.text).count("L’équipe Intégrale Academy") == 1
     assert "Merci par avance," in source
     team_source = render_email("<p>Bonne journée,<br>L'équipe Intégrale Academy</p>")
     assert "".join(EmailAudit(team_source).text).count("L’équipe Intégrale Academy") == 1
     assert "L'équipe Intégrale Academy" not in team_source
+
+
+@pytest.mark.parametrize("signature", ["team", "clement", "clement_general", "unknown"])
+def test_signature_is_team_unless_cassandre_is_explicitly_selected(signature):
+    source = render_email("<p>Votre formation vous attend.</p>", signature=signature)
+    assert "L’équipe Intégrale Academy" in source
+    assert "Clément" not in source and "clement@" not in source and "clement-memoji" not in source
+    cassandre = render_email("<p>Votre formation vous attend.</p>", signature="cassandre")
+    assert "Cassandre MENARD" in cassandre and "cassandre@integraleacademy.com" in cassandre
+
+
+def test_saved_mail_signatures_are_replaced_without_changing_recipient_names():
+    old = "Bonjour Clément VAILLANT,\nVotre dossier est prêt.\n\nClément VAILLANT - Intégrale Academy"
+    updated = normalize_email_text_signature(old)
+    assert updated == "Bonjour Clément VAILLANT,\nVotre dossier est prêt.\n\nL’équipe Intégrale Academy"
+    source = render_email("<p>Bonjour Camille,</p><p>Clément VAILLANT - Intégrale Academy</p>")
+    assert "Clément VAILLANT" not in source
+    assert "L’équipe Intégrale Academy" in source
+
+
+@pytest.mark.parametrize("contact,expected", [("Clément VAILLANT", "L’équipe Intégrale Academy"), ("Cassandre MENARD", "Cassandre MENARD")])
+def test_jury_html_and_text_use_an_allowed_signature(contact, expected):
+    import ssiap_exam
+    from ssiap_exam_mail import render_mail
+    config = dict(ssiap_exam.DEFAULTS, date="2026-11-20", time="09:00", contact_name=contact)
+    message = render_mail(config, {"first_name": "Camille", "last_name": "MARTIN", "email": "jury@example.test", "role": "president"}, "invitation", 12, "")
+    assert expected in message["html"] and expected in message["text"]
+    assert "Clément VAILLANT" not in message["html"] and "Clément VAILLANT" not in message["text"]
 
 
 def test_registration_and_access_builders_escape_names_and_keep_personal_links():

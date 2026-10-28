@@ -76,6 +76,6 @@ On avance avec vous.
   </td></tr>
   </table>
 {% endblock %}
-{% block email_signature %}{% with email_signature='clement' %}{% include 'emails/_signature.html' %}{% endwith %}{% endblock %}
+{% block email_signature %}{% with email_signature='team' %}{% include 'emails/_signature.html' %}{% endwith %}{% endblock %}
 {% block email_footer %}{{ super() }}<tr><td align="center" style="padding:16px 22px;background:#eef2f7;font-size:11px;line-height:18px;color:#60728e">{% if unsubscribe_url %}<a href="{{ unsubscribe_url }}" style="color:#60728e;text-decoration:underline">Ne plus recevoir ces présentations</a>{% else %}Le lien de désinscription personnel est ajouté lors de l’envoi aux contacts.{% endif %}</td></tr>{% endblock %}
 {% block email_styles %}<style>@media(max-width:600px){.email-column{display:block!important;width:100%!important;box-sizing:border-box!important;padding:8px 0!important}.book-cell{padding-left:4px!important;padding-right:4px!important}.preview-caption{padding:12px!important}.collection-cover{width:58px!important;padding-right:12px!important}.collection-cover img{width:46px!important}}</style>{% endblock %}

@@ -89,6 +89,14 @@ def style_fragment(content):
     return Markup("".join(parser.parts))
 
 
+def normalize_email_text_signature(content):
+    """Retire the old sign-off in saved mail templates, preserving recipient names."""
+    return re.sub(
+        r"(?im)^Clément VAILLANT(?:[ \t]*[-–—·][ \t]*(?:Directeur[ \t]+)?Intégrale Academy|[ \t]*\nDirecteur(?: général)?[ \t]+Intégrale Academy(?:[ \t]*[-–—·][ \t]*Président Intégrale Group)?)[ \t]*$",
+        "L’équipe Intégrale Academy", str(content or ""),
+    )
+
+
 def render_email(content, *, title="", eyebrow="VOTRE PARCOURS DE FORMATION",
                  subtitle="On avance avec vous.", preheader="", signature="team",
                  logo_url="", footer_text="", show_logo=True):
@@ -101,13 +109,15 @@ def render_email(content, *, title="", eyebrow="VOTRE PARCOURS DE FORMATION",
             title = re.sub(r"^[^\wÀ-ÿ]+", "", title).strip()
         content = content[heading.end():]
     # Replace the legacy director signature only, preserving any preceding prose.
-    director = r"(?:<strong>)?Clément VAILLANT(?:</strong>)?\s*<br\s*/?>\s*Directeur(?:\s*[·–—-])?\s*Intégrale Academy"
+    director = r"(?:<strong>)?Clément VAILLANT(?:</strong>)?\s*<br\s*/?>\s*Directeur(?: général)?(?:\s*[·–—-])?\s*Intégrale (?:Academy|Sécurité Formations)(?:\s*[-–—·]\s*Président Intégrale Group)?"
     if re.search(director, content, re.I):
         content = re.sub(director, "", content, flags=re.I)
         content = re.sub(r"<p\b[^>]*>\s*</p>", "", content, flags=re.I)
-        signature = "clement"
+        signature = "team"
+    # Saved AFC templates may still contain a plain sign-off inside a paragraph.
+    content = re.sub(r"<p\b[^>]*>\s*Clément VAILLANT\s*[-–—·]\s*Intégrale Academy\s*</p>", "", content, flags=re.I)
     # The common signature also replaces the old plain-text team sign-off.
-    content = re.sub(r"(?:<br\s*/?>\s*)?(?:<strong>)?L[’']équipe Intégrale Academy(?:</strong>)?(?=\s*</p>)", "", content, flags=re.I)
+    content = re.sub(r"(?:<br\s*/?>\s*)?(?:<strong>)?L[’']équipe Intégrale Academy(?:</strong>)?(?=\s*</(?:p|td)>)", "", content, flags=re.I)
     content = re.sub(r"<p\b[^>]*>\s*</p>", "", content, flags=re.I)
     title = title or "Votre formation, à vos côtés"
     return _templates.get_template("emails/_message.html").render(

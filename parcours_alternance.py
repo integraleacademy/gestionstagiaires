@@ -155,6 +155,7 @@ def deliver(host, application_id, *, automatic=False):
                                admin_url=ADMIN_URL, contact=CONTACT)
         plain = (f"Nouvelle candidature : {item['first_name']} {item['last_name']}. Consultez le dossier : {ADMIN_URL}/{application_id}" if staff else
                  f"Bonjour {item['first_name']}, ta candidature au parcours sécurité en alternance 2027 est bien enregistrée sous la référence {application_id}. Notre équipe va étudier ton projet et te recontacter. Ce message ne vaut pas admission. Contact : Aurélie BAYARD-CHAUSSEZ, {CONTACT}, 04 87 83 06 15 ou 07 69 39 04 57.")
+        plain += "\n\nL’équipe Intégrale Academy"
         try:
             result = host.brevo_send_email(recipient, title, body, text_content=plain,
                 sender_name="Intégrale Academy", reply_to={"email": item["email"] if staff else CONTACT, "name": item["first_name"] if staff else "Aurélie · Intégrale Academy"},
