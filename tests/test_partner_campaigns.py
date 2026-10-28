@@ -1,4 +1,5 @@
 """Outreach imports and sending are explicit, isolated, durable and retry-safe."""
+import base64
 import io
 import json
 import re
@@ -126,6 +127,7 @@ def test_template_escaping_snapshots_and_individual_delivery(setup):
     assert 'b@exemple.fr' not in mails[0][0][2]
     assert '/communications/desinscription/' in mails[0][0][2]
     assert mails[0][1]['reply_to']['email']=='clement@integraleacademy.com'
+    assert all(not options.get('attachments') for _, options in mails)
     assert mails[0][1]['metadata']['idempotency_key']!=mails[1][1]['metadata']['idempotency_key']
     client.post(base+'/start',data={'csrf_token':token,'confirm':'yes'})
     client.post(base+'/next',data={'csrf_token':token})
@@ -263,6 +265,7 @@ def test_single_test_send_saves_copy_and_results_export_is_safe(setup):
     form={**outreach.DEFAULT_TEMPLATE,'subject':'Mon modèle modifié','intro':'Mon introduction personnalisée','test_email':'test@exemple.fr','csrf_token':token}
     assert client.post('/admin/partners/campaigns/test',data=form).status_code==303
     assert len(mails)==1 and mails[0][0][0]=='test@exemple.fr'
+    assert not mails[0][1].get('attachments')
     assert mails[0][0][1]=='[TEST] Mon modèle modifié'
     assert 'href="https://integraleconnect.com"' in mails[0][0][2]
     assert 'mailto:clement@integraleacademy.com?subject=' not in mails[0][0][2]
@@ -371,6 +374,66 @@ def test_manuals_campaign_snapshots_prices_and_sends_the_selected_model(setup,mo
     assert '/communications/desinscription/' in mails[0][0][2]
     assert 'APS : 20 € TTC de 50 à 99 exemplaires ; 18 € TTC dès 100 exemplaires.' in mails[0][1]['text_content']
     assert 'MANUELS DE FORMATION' in mails[0][1]['text_content'] and 'e-learning' not in mails[0][1]['text_content']
+    for _, options in mails:
+        assert len(options['attachments']) == 1
+        assert options['attachments'][0]['name'] == 'Brochure Manuels Integrale Connect.pdf'
+        assert base64.b64decode(options['attachments'][0]['content'], validate=True) == outreach.MANUALS_BROCHURE_PATH.read_bytes()
+        assert 'en pièce jointe' in options['text_content']
+
+
+@pytest.mark.parametrize('test_send', [True, False])
+def test_manuals_brochure_reaches_brevo_payload(setup, monkeypatch, test_send):
+    client, token, _ = setup
+    payloads = []
+    def provider(url, *, headers, json, timeout):
+        payloads.append(json)
+        return SimpleNamespace(status_code=201, text='', json=lambda: {'messageId': 'mock-manuals'})
+    monkeypatch.setattr(host.requests, 'post', provider)
+    monkeypatch.setattr(host, 'brevo_send_email', REAL_BREVO_SEND)
+    if test_send:
+        response = client.post('/admin/partners/campaigns/test', data={
+            'csrf_token': token, 'model': 'manuals', 'test_email': 'test@example.test', **outreach.MANUALS_TEMPLATE})
+        assert response.status_code == 303
+    else:
+        seed(setup)
+        cid = create(setup, model='manuals')
+        base = '/admin/partners/campaigns/' + cid
+        client.post(base + '/start', data={'csrf_token': token, 'confirm': 'yes'})
+        assert client.post(base + '/next', data={'csrf_token': token}).json['counts']['sent'] == 1
+    assert len(payloads) == 1
+    attachment, = payloads[0]['attachment']
+    assert attachment['name'] == 'Brochure Manuels Integrale Connect.pdf'
+    assert base64.b64decode(attachment['content'], validate=True) == outreach.MANUALS_BROCHURE_PATH.read_bytes()
+    assert 'en pièce jointe' in payloads[0]['htmlContent']
+    assert 'en pièce jointe' in payloads[0]['textContent']
+
+
+@pytest.mark.parametrize('brochure_content', [None, b'not a PDF'])
+def test_unavailable_brochure_blocks_test_and_pauses_campaign(setup, monkeypatch, tmp_path, brochure_content):
+    client, token, mails = setup
+    original_path = outreach.MANUALS_BROCHURE_PATH
+    unavailable_path = tmp_path / 'brochure.pdf'
+    if brochure_content is not None:
+        unavailable_path.write_bytes(brochure_content)
+    monkeypatch.setattr(outreach, 'MANUALS_BROCHURE_PATH', unavailable_path)
+    response = client.post('/admin/partners/campaigns/test', data={
+        'csrf_token': token, 'model': 'manuals', 'test_email': 'test@example.test', **outreach.MANUALS_TEMPLATE}, follow_redirects=True)
+    assert response.status_code == 200 and 'Aucun e-mail n’a été envoyé.' in response.text
+    assert not mails
+    seed(setup)
+    cid = create(setup, model='manuals')
+    base = '/admin/partners/campaigns/' + cid
+    client.post(base + '/start', data={'csrf_token': token, 'confirm': 'yes'})
+    result = client.post(base + '/next', data={'csrf_token': token}).json
+    assert result['status'] == 'paused' and result['counts'] == {'failed': 1, 'pending': 1}
+    assert 'Aucun e-mail n’a été envoyé.' in result['last_error']
+    assert not mails
+    # A missing local file is a confirmed non-send and can safely be retried after repair.
+    monkeypatch.setattr(outreach, 'MANUALS_BROCHURE_PATH', original_path)
+    client.post(base + '/start', data={'csrf_token': token, 'confirm': 'yes', 'retry_failed': 'yes'})
+    result = client.post(base + '/next', data={'csrf_token': token}).json
+    assert result['counts'] == {'pending': 1, 'sent': 1}
+    assert len(mails) == 1 and mails[0][1]['attachments']
 
 
 def test_manuals_editor_keeps_model_through_import_and_preview(setup):
@@ -380,6 +443,7 @@ def test_manuals_editor_keeps_model_through_import_and_preview(setup):
     assert 'name="aps_price"' not in page.text
     assert 'Aperçu du modèle Manuels de formation' in page.text
     assert 'campaigns/preview?model=manuals' in page.text
+    assert 'Pièce jointe automatique' in page.text and 'brochure-manuels-integrale-connect.pdf' in page.text
     imported=client.post('/admin/partners/campaigns/import',data={'csrf_token':token,'model':'manuals','contacts_text':'centre@example.test'})
     query=parse_qs(urlsplit(imported.location).query)
     assert query['model']==['manuals']

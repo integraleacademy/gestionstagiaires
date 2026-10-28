@@ -3,6 +3,7 @@
 Separate SQLite storage on the existing persistent volume keeps prospects out of
 partner authentication and billing. No email is sent by imports, reads or deploys.
 """
+import base64
 import csv
 import io
 import json
@@ -22,6 +23,8 @@ from manuals_catalogue import CATALOGUE, CATEGORIES
 
 MAX_BYTES = 2 * 1024 * 1024
 MAX_CONTACTS = 5000
+MANUALS_BROCHURE_PATH = Path(__file__).resolve().parent / "static/manuals/brochure-manuels-integrale-connect.pdf"
+MANUALS_BROCHURE_NAME = "Brochure Manuels Integrale Connect.pdf"
 CONTACTED_SQL = "EXISTS (SELECT 1 FROM outreach_deliveries d WHERE d.contact_id=c.id AND d.status IN ('sent','sending','uncertain'))"
 PREVIOUS_TEMPLATE_COPY = {
     "subject": "Un espace e-learning pour chacun de vos stagiaires — APS & A3P",
@@ -202,6 +205,22 @@ def save_template(conn, template):
     conn.execute("INSERT OR REPLACE INTO outreach_settings VALUES (?, ?)", (settings_id, json.dumps(template)))
 
 
+class CampaignAttachmentError(ValueError):
+    """A required attachment could not be prepared; no send was attempted."""
+
+
+def mail_attachments(template):
+    if template.get("kind") != "manuals":
+        return []
+    try:
+        content = MANUALS_BROCHURE_PATH.read_bytes()
+    except OSError as exc:
+        raise CampaignAttachmentError("La brochure des manuels est indisponible. Aucun e-mail n’a été envoyé.") from exc
+    if not content.startswith(b"%PDF-"):
+        raise CampaignAttachmentError("La brochure des manuels est illisible. Aucun e-mail n’a été envoyé.")
+    return [{"name": MANUALS_BROCHURE_NAME, "content": base64.b64encode(content).decode("ascii")}]
+
+
 def manuals_mail_content(template, base, contact, unsubscribe, test):
     catalogue_url = "https://integraleconnect.com/manuels"
     books = [dict(book, price_label=f"{book['price']/100:g}".replace(".", ","),
@@ -215,6 +234,7 @@ def manuals_mail_content(template, base, contact, unsubscribe, test):
     text = ("INTÉGRALE ACADEMY — MANUELS DE FORMATION\n"
             "Des manuels illustrés, personnalisés avec le logo de votre centre.\n\n"
             f"{template['intro']}\n\n"
+            "Retrouvez la brochure de la collection en pièce jointe.\n\n"
             "VOTRE LOGO ET LA LIVRAISON INCLUS\n"
             "Commandez à partir de 50 exemplaires par manuel. Tarifs dégressifs dès 100 exemplaires d’un même titre.\n\n")
     for label, group in groups:
@@ -393,6 +413,7 @@ def register(host):
             return back()
         try:
             template = template_from(request.form)
+            attachments = mail_attachments(template)
         except ValueError as exc:
             flash(str(exc), "error")
             return back()
@@ -400,6 +421,7 @@ def register(host):
             save_template(conn, template)
         body, text = mail_content(host, template, test=True)
         result = host.brevo_send_email(email, "[TEST] " + template["subject"], body, text_content=text,
+            attachments=attachments,
             metadata={"kind": template["kind"] + "_campaign_test"}, reply_to={"email": "clement@integraleacademy.com", "name": "Clément VAILLANT"})
         flash("E-mail de test accepté par le service d’envoi." if result.get("ok") else "Le test n’a pas pu être envoyé : " + str(result.get("error") or "Erreur du service d’envoi."), "success" if result.get("ok") else "error")
         return back()
@@ -562,11 +584,15 @@ def register(host):
             conn.execute("UPDATE outreach_deliveries SET status='sending',started=?,attempt=?,error='' WHERE campaign_id=? AND contact_id=?", (time.time(), attempt, campaign_id, contact["id"]))
         try:
             body, text = mail_content(host, campaign["template"], contact)
+            attachments = mail_attachments(campaign["template"])
             result = host.brevo_send_email(contact["email"], campaign["template"]["subject"], body,
+                attachments=attachments,
                 text_content=text, metadata={"kind": campaign["template"].get("kind", "elearning") + "_campaign", "idempotency_key": delivery_idempotency_key(campaign_id, contact["id"], attempt)},
                 reply_to={"email": "clement@integraleacademy.com", "name": "Clément VAILLANT"})
             # Network/5xx errors can conceal provider acceptance. Never silently retry them.
             state = "sent" if result.get("ok") else "failed" if result.get("not_sent") or (result.get("status_code") and 400 <= result["status_code"] < 500) else "uncertain"
+        except CampaignAttachmentError as exc:
+            result, state = {"error": str(exc), "not_sent": True}, "failed"
         except Exception:
             host.app.logger.exception("outreach_delivery_failed campaign=%s", campaign_id)
             result, state = {"error": "Résultat d’envoi inconnu. Vérifiez ce destinataire dans Brevo."}, "uncertain"
