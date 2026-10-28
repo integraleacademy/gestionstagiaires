@@ -12390,6 +12390,7 @@ def fetch_hebergement_status(
     session_date_start: str = "",
     session_date_end: str = "",
 ) -> Optional[str]:
+    """Return a confirmed hosting status, or None when lookup is inconclusive."""
     if not HEBERGEMENT_STATUS_ENDPOINT:
         return None
 
@@ -12766,9 +12767,16 @@ def fetch_hebergement_status(
                 trainee_session_dates=sorted(expected_session_dates),
             )
 
-            if isinstance(data, dict) and data.get("reserved") is True:
-                _debug_log("réservation détectée via reserved=true", final_url=final_url)
-                return "reserved"
+            if isinstance(data, dict):
+                if data.get("ok") is False:
+                    return None
+                if data.get("reserved") is True:
+                    _debug_log("réservation détectée via reserved=true", final_url=final_url)
+                    return "reserved"
+                if data.get("ok") is True and data.get("reserved") is False:
+                    # A successful negative lookup is authoritative after an
+                    # admin cancellation. Missing/invalid responses remain None.
+                    return "unknown"
 
             if _payload_contains_reservation(data):
                 _debug_log("réservation détectée côté hébergement", payload_type=type(data).__name__)
@@ -12789,16 +12797,12 @@ def _refresh_trainee_hebergement_status(
     session_item: Dict[str, Any],
     trainee: Dict[str, Any],
 ) -> bool:
-    """Refresh one A3P trainee's hosting status without ever downgrading it."""
+    """Sync confirmed reservations and cancellations, preserving status on errors."""
     training_type = str(_session_get(session_item, "training_type", "") or "").strip().upper()
     if training_type != "A3P":
         return False
 
     current_status = str(trainee.get("hosting_status") or "unknown").strip().lower() or "unknown"
-    if current_status == "reserved":
-        trainee["hosting_status"] = "reserved"
-        return False
-
     remote_status = fetch_hebergement_status(
         str(trainee.get("email") or "").strip().lower(),
         last_name=normalize_last_name(trainee.get("last_name") or ""),
@@ -12807,12 +12811,12 @@ def _refresh_trainee_hebergement_status(
         session_date_start=_session_get(session_item, "date_start", ""),
         session_date_end=_session_get(session_item, "date_end", ""),
     )
-    if remote_status != "reserved":
+    if remote_status not in {"reserved", "unknown"}:
         trainee["hosting_status"] = current_status
         return False
 
-    trainee["hosting_status"] = "reserved"
-    return True
+    trainee["hosting_status"] = remote_status
+    return remote_status != current_status
 
 
 def _is_charles_debouvry_debug_target(*, email: str = "", last_name: str = "", first_name: str = "") -> bool:
@@ -25548,88 +25552,7 @@ def admin_trainees(session_id: str):
 
         # hosting only for A3P
         if session_view["training_type"] == "A3P" and not t["registration_cancelled"]:
-            # ✅ règle anti-bug : on ne downgrade JAMAIS "reserved"
-            current = (t.get("hosting_status") or "unknown").strip().lower()
-            should_refresh_hosting = current != "reserved"
-            _log_charles_hebergement_trace(
-                "admin_trainees",
-                "état local avant rendu",
-                email=email,
-                last_name=ln,
-                first_name=fn,
-                session_name=session_view["name"],
-                session_date_start=session_view["date_start"],
-                session_date_end=session_view["date_end"],
-                current_hosting_status=current,
-                auto_refresh_external=auto_refresh_external,
-                should_refresh_hosting_on_render=should_refresh_hosting,
-            )
-
-            if should_refresh_hosting:
-                _log_charles_hebergement_trace(
-                    "admin_trainees",
-                    "appel fetch_hebergement_status depuis le rendu serveur",
-                    email=email,
-                    last_name=ln,
-                    first_name=fn,
-                    session_name=session_view["name"],
-                    session_date_start=session_view["date_start"],
-                    session_date_end=session_view["date_end"],
-                )
-                hb = fetch_hebergement_status(
-                    email,
-                    last_name=ln,
-                    first_name=fn,
-                    session_name=session_view["name"],
-                    session_date_start=session_view["date_start"],
-                    session_date_end=session_view["date_end"],
-                )
-            else:
-                hb = None
-                _log_charles_hebergement_trace(
-                    "admin_trainees",
-                    "fetch_hebergement_status non appelé au rendu serveur",
-                    email=email,
-                    last_name=ln,
-                    first_name=fn,
-                    session_name=session_view["name"],
-                    session_date_start=session_view["date_start"],
-                    session_date_end=session_view["date_end"],
-                    reason="status_local_deja_reserved",
-                )
-
-            _log_charles_hebergement_trace(
-                "admin_trainees",
-                "résultat fetch_hebergement_status au rendu serveur",
-                email=email,
-                last_name=ln,
-                first_name=fn,
-                session_name=session_view["name"],
-                session_date_start=session_view["date_start"],
-                session_date_end=session_view["date_end"],
-                fetch_result=hb,
-                current_hosting_status=current,
-            )
-
-            if hb == "reserved":
-                t["hosting_status"] = "reserved"
-            elif current == "reserved":
-                # on garde reserved quoi qu'il arrive
-                t["hosting_status"] = "reserved"
-            else:
-                # sinon on garde l'ancien si on n'a pas mieux
-                t["hosting_status"] = current if current else "unknown"
-            _log_charles_hebergement_trace(
-                "admin_trainees",
-                "valeur finale sauvegardée avant template",
-                email=email,
-                last_name=ln,
-                first_name=fn,
-                session_name=session_view["name"],
-                session_date_start=session_view["date_start"],
-                session_date_end=session_view["date_end"],
-                final_hosting_status=t.get("hosting_status"),
-            )
+            _refresh_trainee_hebergement_status(s, t)
         elif session_view["training_type"] != "A3P":
             t.pop("hosting_status", None)
 
@@ -28135,62 +28058,8 @@ def api_refresh_trainee_external(session_id: str, trainee_id: str):
 
     training_type = _session_get(s, "training_type", "")
     if training_type == "A3P":
-        current_hosting = (t.get("hosting_status") or "unknown").strip().lower() or "unknown"
-        _log_charles_hebergement_trace(
-            "api_refresh_trainee_external",
-            "état local avant refresh API",
-            email=email,
-            last_name=ln,
-            first_name=fn,
-            session_name=_session_get(s, "name", ""),
-            session_date_start=_session_get(s, "date_start", ""),
-            session_date_end=_session_get(s, "date_end", ""),
-            current_hosting_status=current_hosting,
-        )
-        _log_charles_hebergement_trace(
-            "api_refresh_trainee_external",
-            "appel fetch_hebergement_status depuis l'API",
-            email=email,
-            last_name=ln,
-            first_name=fn,
-            session_name=_session_get(s, "name", ""),
-            session_date_start=_session_get(s, "date_start", ""),
-            session_date_end=_session_get(s, "date_end", ""),
-        )
-        hb = fetch_hebergement_status(
-            email,
-            last_name=ln,
-            first_name=fn,
-            session_name=_session_get(s, "name", ""),
-            session_date_start=_session_get(s, "date_start", ""),
-            session_date_end=_session_get(s, "date_end", ""),
-        )
-        _log_charles_hebergement_trace(
-            "api_refresh_trainee_external",
-            "résultat fetch_hebergement_status depuis l'API",
-            email=email,
-            last_name=ln,
-            first_name=fn,
-            session_name=_session_get(s, "name", ""),
-            session_date_start=_session_get(s, "date_start", ""),
-            session_date_end=_session_get(s, "date_end", ""),
-            fetch_result=hb,
-            current_hosting_status=current_hosting,
-        )
-        if hb == "reserved" and current_hosting != "reserved":
-            t["hosting_status"] = "reserved"
+        if _refresh_trainee_hebergement_status(s, t):
             changed = True
-        _log_charles_hebergement_trace(
-            "api_refresh_trainee_external",
-            "valeur finale après refresh API",
-            email=email,
-            last_name=ln,
-            first_name=fn,
-            session_name=_session_get(s, "name", ""),
-            session_date_start=_session_get(s, "date_start", ""),
-            session_date_end=_session_get(s, "date_end", ""),
-            final_hosting_status=t.get("hosting_status"),
-        )
     else:
         if "hosting_status" in t:
             t.pop("hosting_status", None)
