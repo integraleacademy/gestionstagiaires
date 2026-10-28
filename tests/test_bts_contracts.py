@@ -132,6 +132,13 @@ class LifecycleTests(unittest.TestCase):
         with self.assertRaises(SignatureError): send_signature(self.store,self.rid,self.package,api,'Test')
         self.assertFalse(any(c[1].endswith('/activate') for c in api.calls))
 
+    def test_presentiel_package_without_london_sends_and_archives_both_documents(self):
+        self.package['documents'].pop('mobilite')
+        api = self.signed()
+        self.assertEqual(len(api.docs), 2)
+        self.assertEqual([len(p['fields']) for p in api.people], [2, 1, 1])
+        self.assertTrue(all(d.get('signed_pdf') for d in self.package['documents'].values()))
+
     def test_timeout_is_checkpointed_and_blocks_duplicate_creation(self):
         api=FakeYousign(self.store,self.package)
         with patch.object(api,'call',side_effect=SignatureError('Timeout',ambiguous=True)) as call:

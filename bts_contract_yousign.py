@@ -73,8 +73,10 @@ def signers_for(package):
 
 
 def ensure_files(store, package, signed=False):
-    required = {"cerfa", "formation"} | ({"mobilite"} if package["settings"]["teaching_mode"] == "presentiel" else set())
-    if set(package["documents"]) != required:
+    required = {"cerfa", "formation"}
+    # New packages contain two documents; keep historical London archives readable.
+    allowed = required | ({"mobilite"} if package["settings"]["teaching_mode"] == "presentiel" else set())
+    if not required <= set(package["documents"]) <= allowed:
         raise WorkspaceError("Générez tous les documents correspondant au mode de formation.")
     for document in package["documents"].values():
         key = "signed_pdf" if signed else "pdf"
