@@ -58,7 +58,7 @@ def view(case):
 def configured(case):
     client, _, training, _, _ = case
     state = view(case)
-    config = {**state['config'], 'time':'08:30', 'arrival_time':'08:00', 'end_time':'17:00',
+    config = {**state['config'], 'exam_number':'VAR-2026-042', 'time':'08:30', 'arrival_time':'08:00', 'end_time':'17:00',
               'jury':[{'id':'J1', 'first_name':'Alex', 'last_name':'JURY', 'role':'president',
                        'email':'jury@example.test', 'phone':'0400000000', 'company':'Structure exemple'}]}
     response = client.post(BASE, json={'action':'config', 'revision':state['revision'], 'config':config, 'csrf':state['csrf']})
@@ -105,6 +105,8 @@ def test_config_preserves_trainee_data_and_rejects_stale_edits(case):
     before = copy.deepcopy(case[3])
     state = configured(case)
     assert case[3] == before
+    assert state["config"]["exam_number"] == "VAR-2026-042"
+    assert case[2]["ssiap_exam"]["config"]["exam_number"] == "VAR-2026-042"
     assert case[1]['sessions'][1] == {'id':'OTHER', 'training_type':'APS', 'trainees':[]}
     response = case[0].post(BASE, json={'action':'config', 'config':state['config'], 'revision':0, 'csrf':state['csrf']})
     assert response.status_code == 409

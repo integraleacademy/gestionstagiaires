@@ -24145,7 +24145,7 @@ SSIAP_DIPLOMA_TEMPLATE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "templates",
     "static",
-    "diplomes1.jpg",
+    "diplome-ssiap1-20261028.pdf",
 )
 SSIAP_DIPLOMA_LOCK_FILE = os.path.join(PERSIST_DIR, "ssiap_diplomas.lock")
 SSIAP_DIPLOMA_NUMBER_RE = re.compile(r"^083-8323-1-(\d{4})-(\d{5})$")
@@ -24346,6 +24346,7 @@ def _ssiap_diploma_row(session_item: Dict[str, Any], trainee: Dict[str, Any], *,
         ),
         "birth_place": _ssiap_birth_place_label(trainee, lookup_department=lookup_department),
         "exam_date": _ssiap_diploma_exam_date(session_item, trainee),
+        "exam_number": str(ssiap_exam.settings(ssiap_exam.for_family(session_item, "ssiap")).get("exam_number") or "").strip(),
         "number": str(trainee.get("ssiap_diploma_number") or "").strip(),
         "photo_path": _ssiap_diploma_photo_path(trainee),
     }
@@ -24420,7 +24421,7 @@ def _delete_trainee_from_session(
 
 
 def _reserve_ssiap_diploma_numbers(
-    session_id: str, trainee_id: Optional[str] = None
+    session_id: str, trainee_id: Optional[str] = None, *, require_exam_date_match: bool = False
 ) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
     os.makedirs(os.path.dirname(SSIAP_DIPLOMA_LOCK_FILE) or ".", exist_ok=True)
     with open(SSIAP_DIPLOMA_LOCK_FILE, "a+", encoding="utf-8") as lock_file:
@@ -24462,11 +24463,17 @@ def _reserve_ssiap_diploma_numbers(
             if not selected_trainees:
                 raise ValueError("Aucun stagiaire certifié dans cette session SSIAP.")
 
+            exam_config = ssiap_exam.settings(ssiap_exam.for_family(session_item, "ssiap"))
+            if not str(exam_config.get("exam_number") or "").strip():
+                raise ValueError("Renseignez le numéro d’examen dans Examen → Organisation et jury avant de générer les diplômes.")
+
             exam_years = set()
             missing = []
             for trainee in selected_trainees:
                 missing_fields = []
                 diploma_row = _ssiap_diploma_row(session_item, trainee)
+                if require_exam_date_match and (not exam_config.get("date") or diploma_row["exam_date"] != _diploma_date_fr(exam_config["date"])):
+                    raise ValueError("La date d’examen de chaque diplôme doit correspondre à celle de cet examen avant de préparer le courrier SDIS.")
                 diploma_first_name = str(
                     trainee.get("ssiap_diploma_first_name") or trainee.get("first_name") or ""
                 ).strip()
@@ -24599,95 +24606,8 @@ def _draw_pdf_cover_image(pdf_canvas, image_path: str, x: float, y: float, width
         return False
 
 def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]], *, preview: bool = False) -> BytesIO:
-    from reportlab.lib.pagesizes import A4, landscape
-    from reportlab.lib.units import mm
-    from reportlab.lib.utils import ImageReader
-    from reportlab.pdfgen import canvas
-
-    template_width, template_height = 2000, 1414
-    page_width, page_height = landscape(A4)
-    scale_x = page_width / template_width
-    scale_y = page_height / template_height
-    output = BytesIO()
-    pdf = canvas.Canvas(output, pagesize=(page_width, page_height), pageCompression=1)
-    background = ImageReader(SSIAP_DIPLOMA_TEMPLATE)
-
-    def draw_text(
-        text: str,
-        x: float,
-        y_from_top: float,
-        max_width: float,
-        font_size: float = 21,
-    ) -> None:
-        _draw_fitted_pdf_text(
-            pdf,
-            text,
-            x * scale_x,
-            page_height - (y_from_top * scale_y),
-            max_width * scale_x,
-            font_size * scale_y,
-            min_font_size=15 * scale_y,
-            font_size_step=scale_y,
-        )
-
-    def draw_missing_title_accent() -> None:
-        # The source image says “A PERSONNES”. Add the grave accent as a vector
-        # overlay so the diploma reads “À PERSONNES” without modifying the JPG.
-        accent = pdf.beginPath()
-        accent.moveTo(1260 * scale_x, page_height - (187 * scale_y))
-        accent.lineTo(1267 * scale_x, page_height - (187 * scale_y))
-        accent.lineTo(1276 * scale_x, page_height - (195 * scale_y))
-        accent.lineTo(1268 * scale_x, page_height - (195 * scale_y))
-        accent.close()
-        pdf.saveState()
-        pdf.setFillColorRGB(42 / 255, 42 / 255, 42 / 255)
-        pdf.drawPath(accent, fill=1, stroke=0)
-        pdf.restoreState()
-
-    for diploma in diplomas:
-        pdf.drawImage(
-            background,
-            0,
-            0,
-            width=page_width,
-            height=page_height,
-            preserveAspectRatio=False,
-        )
-        draw_missing_title_accent()
-        photo_width = 35 * mm
-        photo_height = 45 * mm
-        photo_right_margin = 5 * mm
-        photo_top_margin = 12 * mm
-        _draw_pdf_cover_image(
-            pdf,
-            str(diploma.get("photo_path") or ""),
-            page_width - photo_right_margin - photo_width,
-            page_height - photo_top_margin - photo_height,
-            photo_width,
-            photo_height,
-        )
-        # Coordinates are authored against the 2000 × 1414 template and scaled to physical A4 landscape.
-        draw_text(diploma["exam_date"], 1445, 771, 300)
-        draw_text(diploma["name"], 1080, 846, 650)
-        draw_text(diploma["birth_date"], 1080, 883, 300)
-        draw_text(diploma["birth_place"], 1080, 921, 650)
-        draw_text(diploma["name"], 1120, 1108, 620)
-        draw_text(diploma["number"], 1170, 1145, 430)
-        draw_text(diploma["exam_date"], 420, 1166, 300)
-        if preview:
-            pdf.saveState()
-            pdf.setFillColorRGB(0.55, 0.55, 0.55)
-            pdf.setFillAlpha(0.35)
-            pdf.translate(page_width / 2, page_height / 2)
-            pdf.rotate(25)
-            pdf.setFont("Helvetica-Bold", 38)
-            pdf.drawCentredString(0, 0, "APERÇU - NON VALABLE")
-            pdf.restoreState()
-        pdf.showPage()
-
-    pdf.save()
-    output.seek(0)
-    return output
+    from ssiap_diploma_documents import diplomas_pdf
+    return diplomas_pdf(diplomas, SSIAP_DIPLOMA_TEMPLATE, _draw_pdf_cover_image, preview=preview)
 
 
 def _find_ssiap_trainee(session_id: str, trainee_id: str) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:

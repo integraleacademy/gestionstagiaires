@@ -6,11 +6,12 @@
   const candidates = document.getElementById('ssiapDiplomaCandidates');
   const status = document.getElementById('ssiapDiplomaStatus');
   const preview = document.getElementById('ssiapDiplomaPreview');
+  const viewer = new window.SsiapPdfPreview(preview);
   const search = document.getElementById('ssiapDiplomaSearch');
   const filter = document.getElementById('ssiapDiplomaFilter');
   const keys = ['civility','first_name','last_name','birth_date','birth_city','birth_department','birth_country','exam_date','result'];
   const labels = {first_name:'prénom',last_name:'nom',birth_date:'date de naissance',birth_city:'ville de naissance',birth_department:'département',birth_country:'pays de naissance',exam_date:'date d’examen'};
-  let data, busy = false, dirty = false, previewUrl;
+  let data, busy = false, dirty = false;
   const lookups = new WeakMap();
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const normalize = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
@@ -68,6 +69,9 @@
     panel.querySelector('[data-diploma-save]').disabled = busy || data.read_only || !dirty;
     panel.querySelector('[data-diploma-preview-all]').disabled = busy || !certified;
     panel.querySelector('[data-diploma-generate-all]').disabled = busy || data.read_only || !certified;
+    panel.querySelector('[data-diploma-letter-preview]').disabled = busy || !certified;
+    panel.querySelector('[data-diploma-letter]').disabled = busy || data.read_only || !certified;
+    panel.querySelector('[data-diploma-exam-reference]').textContent = `Examen du ${date(data.exam_date)} · ${data.exam_number ? 'N° ' + data.exam_number : 'Numéro à renseigner dans Organisation et jury'}`;
     panel.querySelector('[data-diploma-refresh]').disabled = busy;
     let empty = candidates.querySelector('.diploma-empty');
     if (!empty) { empty = document.createElement('p'); empty.className = 'diploma-empty'; candidates.append(empty); }
@@ -131,26 +135,28 @@
     try { await work(); } catch (error) { message(error.message, true); }
     finally { busy = false; refresh(); }
   }
-  function openPreview(blob) {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    previewUrl = URL.createObjectURL(blob);
-    preview.querySelector('iframe').src = previewUrl + '#view=Fit&navpanes=0';
-    preview.querySelector('[data-diploma-open-preview]').href = previewUrl;
-    if (!preview.open) preview.showModal();
-  }
   async function pdf(action, id) {
-    if (action === 'generate') { message('Enregistrement et génération des diplômes…'); await save(); }
+    const isPreview = action === 'preview' || action === 'letter_preview';
+    const isLetter = action === 'letter' || action === 'letter_preview';
+    if (!isPreview) { message(isLetter ? 'Préparation du courrier SDIS…' : 'Enregistrement et génération des diplômes…'); await save(); }
     else message('Préparation de l’aperçu…');
-    const result = data.read_only && action === 'preview'
-      ? await response({}, panel.dataset.url + '/preview' + (id ? '?trainee_id=' + encodeURIComponent(id) : ''))
-      : await post({action, ...(id ? {trainee_id:id} : {}), candidates:action === 'preview' ? drafts() : []});
+    const query = new URLSearchParams();
+    if (id) query.set('trainee_id', id);
+    if (isLetter) query.set('document', 'letter');
+    const result = data.read_only && isPreview
+      ? await response({}, panel.dataset.url + '/preview' + (query.size ? '?' + query : ''))
+      : await post({action, ...(id ? {trainee_id:id} : {}), candidates:isPreview ? drafts() : []});
     const blob = await result.blob();
-    if (action === 'preview') { openPreview(blob); message('Aperçu prêt. Aucun numéro attribué.'); return; }
+    const filename = (isPreview ? 'apercu-' : '') + (isLetter ? 'courrier-SDIS.pdf' : 'diplomes-SSIAP.pdf');
+    const options = isLetter ? {filename, title:isPreview ? 'Prévisualisation du courrier SDIS' : 'Courrier SDIS prêt à imprimer', description:isPreview ? 'Aperçu de vérification · Aucun numéro n’est attribué.' : 'Les numéros de diplôme sont enregistrés. Joignez les diplômes correspondants à votre envoi postal.'} : {filename};
+    if (isPreview) { await viewer.open(blob, options); message('Aperçu prêt. Aucun numéro attribué.'); return; }
     window.dispatchEvent(new CustomEvent('ssiap-diplomas-generated', {detail:JSON.parse(result.headers.get('X-SSIAP-Diploma-Numbers') || '{}')}));
     const url = URL.createObjectURL(blob), link = document.createElement('a');
-    link.href = url; link.download = 'diplomes-SSIAP.pdf'; document.body.append(link); link.click(); link.remove();
+    link.href = url; link.download = filename; document.body.append(link); link.click(); link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
-    await load(); message('Diplômes générés et téléchargés. Les numéros sont enregistrés.');
+    await load();
+    if (isLetter) await viewer.open(blob, options);
+    message(isLetter ? 'Courrier SDIS généré et téléchargé. Les numéros de diplôme sont enregistrés.' : 'Diplômes générés et téléchargés. Les numéros sont enregistrés.');
   }
   panel.addEventListener('input', event => { if (event.target.closest('[data-diploma-id]')) {refresh(); message(dirty ? 'Modifications à enregistrer.' : '');} });
   panel.addEventListener('change', event => { if (event.target.closest('[data-diploma-id]')) {refresh(); message(dirty ? 'Modifications à enregistrer.' : '');} });
@@ -168,12 +174,20 @@
     }
     if (button.hasAttribute('data-diploma-preview') || button.hasAttribute('data-diploma-preview-all')) act(() => pdf('preview', id));
     if (button.hasAttribute('data-diploma-generate') || button.hasAttribute('data-diploma-generate-all')) act(() => pdf('generate', id));
+    if (button.hasAttribute('data-diploma-letter-preview')) act(() => pdf('letter_preview'));
+    if (button.hasAttribute('data-diploma-letter')) act(() => pdf('letter'));
+    if (button.hasAttribute('data-diploma-organization')) dialog.querySelector('[data-exam-tab="organization"]').click();
   });
   search.addEventListener('input', refresh); filter.addEventListener('change', refresh);
   dialog.addEventListener('click', event => { if (event.target.closest('[data-exam-tab="diplomas"]') && !data) act(load); });
-  dialog.addEventListener('ssiap-exam-loaded', () => { if (!dirty && !busy) { data = undefined; if (!panel.hidden) act(load); } });
+  dialog.addEventListener('ssiap-exam-loaded', event => {
+    if (data && event.examConfig) {
+      data.exam_number = event.examConfig.exam_number;
+      data.exam_date = event.examConfig.date;
+      refresh();
+    }
+    if (!dirty && !busy) { data = undefined; if (!panel.hidden) act(load); }
+  });
   // Closing the exam retains the draft. Clicking its backdrop never closes it.
   window.addEventListener('beforeunload', event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } });
-  preview.querySelectorAll('[data-diploma-preview-close]').forEach(button => button.addEventListener('click', () => preview.close()));
-  preview.addEventListener('close', () => { preview.querySelector('iframe').removeAttribute('src'); if (previewUrl) URL.revokeObjectURL(previewUrl); previewUrl = null; });
 })();

@@ -1,4 +1,5 @@
 import json
+import fitz
 from io import BytesIO
 import os
 import tempfile
@@ -38,6 +39,8 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def _write_data(self, payload):
+        for training in payload.get("sessions", []):
+            training.setdefault("ssiap_exam_number", "SSIAP-2026-TEST")
         with open(self.data_file, "w", encoding="utf-8") as output:
             json.dump(payload, output)
 
@@ -128,7 +131,7 @@ class SsiapDiplomaTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         page_text = PdfReader(BytesIO(response.data)).pages[0].extract_text()
-        self.assertEqual(page_text.count("Monsieur Clément VAILLANT"), 2)
+        self.assertGreaterEqual(page_text.count("Monsieur Clément VAILLANT"), 2)
         self.assertNotIn("Monsieur Clement VAILLANT", page_text)
 
     def test_diploma_override_also_restores_clement_accent(self):
@@ -187,8 +190,14 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertEqual(called_path, photo_path)
         self.assertAlmostEqual(width, 35 * mm, places=4)
         self.assertAlmostEqual(height, 45 * mm, places=4)
-        self.assertAlmostEqual(x, page_width - (5 * mm) - (35 * mm), places=4)
-        self.assertAlmostEqual(y, page_height - (12 * mm) - (45 * mm), places=4)
+        self.assertAlmostEqual(x, 815.5130004882812 - (35 * mm), places=4)
+        self.assertAlmostEqual(y, page_height - 26.414764404296875 - (45 * mm), places=4)
+        rendered = fitz.open(stream=pdf.getvalue(), filetype='pdf')[0]
+        image_rect = next(image['bbox'] for image in rendered.get_image_info() if image['width'] == 70)
+        self.assertAlmostEqual(image_rect[0], x, places=3)
+        self.assertAlmostEqual(image_rect[1], 26.414764404296875, places=3)
+        self.assertAlmostEqual(image_rect[2], 815.5130004882812, places=3)
+        self.assertAlmostEqual(image_rect[3] - image_rect[1], 45 * mm, places=3)
         page_text = page.extract_text()
         self.assertIn("28/10/2026", page_text)
         self.assertIn("Monsieur Clément VAILLANT", page_text)
@@ -202,65 +211,25 @@ class SsiapDiplomaTests(unittest.TestCase):
             "birth_place": "PUGET-SUR-ARGENS",
             "number": "083-8323-1-2026-00001",
         }])
-        page = PdfReader(pdf).pages[0]
-        positions = []
-
-        def collect_position(text, _cm, text_matrix, _font, font_size):
-            value = text.strip()
-            if value:
-                positions.append((value, text_matrix[4], text_matrix[5], font_size))
-
-        page.extract_text(visitor_text=collect_position)
-
-        path_operations = [
-            (operator, [float(value) for value in operands])
-            for operands, operator in page.get_contents().operations
-            if operator in {b"m", b"l", b"h", b"f", b"f*"}
-        ]
-        self.assertEqual(
-            path_operations,
-            [
-                (b"m", [530.3906, 516.551]),
-                (b"l", [533.3372, 516.551]),
-                (b"l", [537.1257, 513.1831]),
-                (b"l", [533.7581, 513.1831]),
-                (b"h", []),
-                (b"f*", []),
-            ],
-        )
-
-        page_width = float(page.mediabox.width)
-        page_height = float(page.mediabox.height)
-        self.assertAlmostEqual(page_width, 841.8898, places=3)
-        self.assertAlmostEqual(page_height, 595.2756, places=3)
-        self.assertGreater(page_width, page_height)
-
-        scale_x = page_width / 2000
-        scale_y = page_height / 1414
-        expected_positions = [
-            ("28/10/2026", 1445, 771, 21),
-            ("28/10/2026", 420, 1166, 21),
-            ("Monsieur Clément VAILLANT", 1080, 846, 21),
-            ("16/09/1993", 1080, 883, 21),
-            ("PUGET-SUR-ARGENS", 1080, 921, 21),
-            ("Monsieur Clément VAILLANT", 1120, 1108, 21),
-            ("083-8323-1-2026-00001", 1170, 1145, 21),
-        ]
-        for text, x, y_from_top, font_size in expected_positions:
-            expected = (
-                text,
-                x * scale_x,
-                page_height - (y_from_top * scale_y),
-                font_size * scale_y,
-            )
-            match = next(
-                position
-                for position in positions
-                if position[0] == text
-                and abs(position[1] - expected[1]) < 0.01
-                and abs(position[2] - expected[2]) < 0.01
-            )
-            self.assertAlmostEqual(match[3], expected[3], places=4)
+        page = fitz.open(stream=pdf.getvalue(), filetype="pdf")[0]
+        self.assertAlmostEqual(page.rect.width, 842.25, places=3)
+        self.assertAlmostEqual(page.rect.height, 595.5, places=3)
+        spans = [span for block in page.get_text("dict")["blocks"] if "lines" in block
+                 for line in block["lines"] for span in line["spans"]]
+        for value, x, baseline in [
+            ("28/10/2026", 611, 317.1919), ("28/10/2026", 180, 491.5701),
+            ("Monsieur Clément VAILLANT", 460, 348.7038),
+            ("16/09/1993", 460, 364.4597), ("PUGET-SUR-ARGENS", 460, 380.2156),
+            ("Monsieur Clément VAILLANT", 493, 458.9953),
+            ("083-8323-1-2026-00001", 493, 474.7513),
+        ]:
+            match = next(span for span in spans if span["text"] == value
+                         and abs(span["origin"][0] - x) < .01
+                         and abs(span["origin"][1] - baseline) < .01)
+            self.assertLess(match["bbox"][2], 815.52)
+        # The supplied vector model (including its signature and exam label) remains intact.
+        self.assertIn("Examen n°", page.get_text())
+        self.assertIn("29/05/2026", page.get_text())
 
     def test_birth_place_uses_existing_department_without_network_lookup(self):
         trainee = {

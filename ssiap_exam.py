@@ -24,11 +24,11 @@ DEFAULTS = {
     "location": "Intégrale Academy", "address": "54 chemin du Carreou, 83480 PUGET SUR ARGENS",
     "contact_name": "Intégrale Academy", "contact_email": "ecole@integraleacademy.com",
     "contact_phone": "04 22 47 07 68", "approval": "Agrément SSIAP n°8323 délivré par la Préfecture du Var le 29/05/2026",
-    "instructions": "", "equipment": "", "jury": [],
+    "instructions": "", "equipment": "", "jury": [], "exam_number": "",
 }
 LIMITS = {"level": 12, "location": 160, "address": 300, "contact_name": 120,
           "contact_email": 254, "contact_phone": 40, "approval": 250,
-          "instructions": 3000, "equipment": 1500}
+          "instructions": 3000, "equipment": 1500, "exam_number": 80}
 MAIL_RE = re.compile(r"[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+")
 DOC_GROUPS = [("identity", "Pièce d’identité", {"id"}),
               ("first_aid", "SST ou secourisme", {"attestation_secourisme_ssiap"}),
@@ -66,7 +66,7 @@ def settings(training):
     afc = afc_schedule.enabled(training) or "AFC" in (str(training.get("training_type") or "") + " " + str(training.get("name") or "")).upper()
     date = training.get("ssiap_exam_date") or ("" if afc else training.get("exam_date")) or ""
     match = re.search(r"SSIAP\s*([123])", str(training.get("training_type") or ""), re.I)
-    config = {**DEFAULTS, "date": date, "level": "SSIAP " + (match.group(1) if match else "1"),
+    config = {**DEFAULTS, "date": date, "exam_number": str(training.get("ssiap_exam_number") or ""), "level": "SSIAP " + (match.group(1) if match else "1"),
               **state(training).get("config", {})}
     if afc_schedule.enabled(training):
         config.update(date=date, level="SSIAP 1")

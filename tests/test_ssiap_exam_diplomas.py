@@ -16,7 +16,7 @@ def case(monkeypatch, tmp_path):
     trainee = {'id':'T1', 'first_name':'Clément', 'last_name':'Vaillant', 'birth_date':'1993-09-16',
                'birth_city':'Sallanches', 'birth_country':'France', 'birth_department':'74',
                'ssiap_exam_status':'pending_results'}
-    training = {'id':'S1', 'training_type':'SSIAP 1', 'name':'SSIAP OCTOBRE', 'exam_date':'2026-10-28',
+    training = {'id':'S1', 'training_type':'SSIAP 1', 'name':'SSIAP OCTOBRE', 'exam_date':'2026-10-28', 'ssiap_exam_number':'VAR-2026-042',
                 'trainees':[trainee, {**trainee, 'id':'T2','last_name':'ZAUTRE','ssiap_exam_status':'failed'},
                             {**trainee, 'id':'CANCELLED','registration_cancelled':True}]}
     path.write_text(json.dumps({'sessions':[training, {'id':'APS','training_type':'APS','trainees':[]}]}))
@@ -186,3 +186,92 @@ def test_afc_uses_its_ssiap_exam_date_for_diplomas(case):
 def test_tab_is_present_only_in_ssiap_examination(case):
     assert 'data-exam-tab="diplomas"' in case[0].get('/admin/sessions/S1/trainees').text
     assert 'data-exam-tab="diplomas"' not in case[0].get('/admin/sessions/APS/trainees').text
+
+
+def test_sdis_preview_uses_certified_drafts_and_does_not_reserve_numbers(case):
+    row = view(case)['candidates'][0]
+    row['values'].update(result='certified', birth_city='Abidjan', birth_country="Côte d'Ivoire")
+    before = case[1].read_bytes()
+    response = post(case, 'letter_preview', [row])
+    content = text(response)
+    for expected in ['DDSIS du Var', 'Groupement Prévention - Secrétariat', 'Allée de Vaugrenier',
+                     '83490 LE MUY', '54 chemin du Carreou', '8323', '29/05/2026',
+                     'VAR-2026-042', '28/10/2026', '16/09/1993', 'ABIDJAN', "Côte d'Ivoire",
+                     'Clément VAILLANT', 'À générer', 'APERÇU']:
+        assert expected in content
+    assert 'ZAUTRE' not in content
+    assert case[1].read_bytes() == before
+    assert 'X-SSIAP-Diploma-Numbers' not in response.headers
+
+
+def test_sdis_final_letter_numbers_match_diplomas_and_repeated_letters(case):
+    row = view(case)['candidates'][0]
+    row['values']['result'] = 'certified'
+    assert post(case, 'save', [row]).status_code == 200
+    letter = post(case, 'letter')
+    content = text(letter)
+    assert 'APERÇU' not in content
+    numbers = json.loads(letter.headers['X-SSIAP-Diploma-Numbers'])
+    assert set(numbers) == {'T1'}
+    assert numbers['T1'] in content
+    assert post(case, 'letter').headers['X-SSIAP-Diploma-Numbers'] == letter.headers['X-SSIAP-Diploma-Numbers']
+    diploma = post(case, 'generate')
+    assert diploma.headers['X-SSIAP-Diploma-Numbers'] == letter.headers['X-SSIAP-Diploma-Numbers']
+    assert 'VAR-2026-042' in text(diploma)
+    assert len(PdfReader(io.BytesIO(letter.data)).pages[-1].images) >= 2  # real signature and stamp
+
+
+def test_missing_exam_number_blocks_final_documents_without_allocating(case):
+    stored = json.loads(case[1].read_text())
+    stored['sessions'][0].pop('ssiap_exam_number')
+    stored['sessions'][0]['trainees'][0]['ssiap_exam_status'] = 'certified'
+    case[1].write_text(json.dumps(stored))
+    assert view(case)['exam_number'] == ''
+    for action in ('generate', 'letter'):
+        response = post(case, action)
+        assert response.status_code == 400
+        assert 'numéro' in response.json['error']
+        assert not json.loads(case[1].read_text()).get('ssiap_diploma_sequences')
+    assert 'À renseigner' in text(post(case, 'preview'))
+
+
+def test_sdis_rejects_mismatched_dates_single_candidate_and_unauthorized_generation(case):
+    row = view(case)['candidates'][0]
+    row['values'].update(result='certified', exam_date='2026-11-01')
+    assert post(case, 'save', [row]).status_code == 200
+    assert post(case, 'letter').status_code == 400
+    assert post(case, 'letter_preview', trainee_id='T1').status_code == 400
+    assert not json.loads(case[1].read_text()).get('ssiap_diploma_sequences')
+    with case[0].session_transaction() as session:
+        session['admin_role'] = 'viewer'
+    assert post(case, 'letter').status_code == 403
+    assert case[0].get(BASE + '/preview?document=letter').status_code == 200
+
+
+def test_sdis_multipage_table_repeats_headings_and_preserves_all_names():
+    from ssiap_diploma_documents import sdis_letter
+    rows = [{'name':f'Madame Camille EXEMPLE-{i:02}', 'birth_date':'16/09/1993',
+             'birth_place':"ABIDJAN (Côte d'Ivoire)", 'exam_date':'28/10/2026',
+             'number':f'083-8323-1-2026-{i:05}'} for i in range(1,31)]
+    pdf = PdfReader(sdis_letter(rows, {'exam_number':'VAR-2026-042'}, services.app.root_path))
+    assert len(pdf.pages) >= 2
+    content = '\n'.join(page.extract_text() for page in pdf.pages)
+    for i in range(1,31):
+        assert f'EXEMPLE-{i:02}' in content
+        assert f'083-8323-1-2026-{i:05}' in content
+    for page in pdf.pages:
+        if 'EXEMPLE-' in page.extract_text():
+            assert 'Candidat certifié' in page.extract_text()
+    assert 'Clément VAILLANT' in pdf.pages[-1].extract_text()
+
+
+def test_missing_letter_signature_cannot_allocate_numbers(case, monkeypatch):
+    import ssiap_exam_pdf
+    row = view(case)['candidates'][0]
+    row['values']['result'] = 'certified'
+    assert post(case, 'save', [row]).status_code == 200
+    def unavailable(root):
+        raise RuntimeError('Signature introuvable.')
+    monkeypatch.setattr(ssiap_exam_pdf, 'signature_assets', unavailable)
+    assert post(case, 'letter').status_code == 503
+    assert not json.loads(case[1].read_text()).get('ssiap_diploma_sequences')

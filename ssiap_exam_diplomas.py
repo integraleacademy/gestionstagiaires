@@ -116,6 +116,8 @@ def register(app, services, get_training):
     def api_ssiap_diplomas(session_id):
         training = get_training(services.load_data(run_background_tasks=False), session_id)
         response = jsonify(ok=True, candidates=rows(training),
+                           exam_number=exam.settings(training).get("exam_number", ""),
+                           exam_date=exam.settings(training).get("date", ""),
                            csrf=session.setdefault("ssiap_exam_csrf", secrets.token_urlsafe(32)),
                            read_only=session.get("admin_role") == "viewer",
                            department_url=url_for("admin_ssiap_birth_department"))
@@ -126,7 +128,7 @@ def register(app, services, get_training):
     @app.post('/api/admin/sessions/<session_id>/ssiap-exam/diplomas')
     @services.admin_login_required
     def api_ssiap_diplomas_action(session_id):
-        payload = ({"action": "preview", **({"trainee_id": request.args["trainee_id"]} if "trainee_id" in request.args else {})}
+        payload = ({"action": "letter_preview" if request.args.get("document") == "letter" else "preview", **({"trainee_id": request.args["trainee_id"]} if "trainee_id" in request.args else {})}
                    if request.method == "GET" else request.get_json(silent=True))
         if not isinstance(payload, dict):
             abort(400)
@@ -134,9 +136,11 @@ def register(app, services, get_training):
         if request.method != "GET" and (not csrf or not hmac.compare_digest(str(payload.get("csrf", "")), csrf)):
             abort(403)
         action = payload.get("action")
-        if action not in {"save", "preview", "generate"}:
+        if action not in {"save", "preview", "generate", "letter", "letter_preview"}:
             return jsonify(ok=False, error="Action invalide."), 400
-        if action != "preview" and session.get("admin_role") == "viewer":
+        is_preview = action in {"preview", "letter_preview"}
+        is_letter = action in {"letter", "letter_preview"}
+        if not is_preview and session.get("admin_role") == "viewer":
             abort(403)
         training = get_training(services.load_data(run_background_tasks=False), session_id)
         current = {str(t["id"]): t for t in exam.active_candidates(services, training)}
@@ -155,7 +159,7 @@ def register(app, services, get_training):
                 # Resolve outside the data transaction; never hold its lock during network I/O.
                 selected_preview = (str(payload.get("trainee_id")) == key if payload.get("trainee_id") is not None
                                     else info["result"] == "certified" and exam.candidate_settings(training, current[key])["included"])
-                if (action == "save" or action == "preview" and selected_preview) and not info["birth_department"] and info["birth_city"] and french(services, info["birth_country"]):
+                if (action == "save" or is_preview and selected_preview) and not info["birth_department"] and info["birth_city"] and french(services, info["birth_country"]):
                     info["birth_department"] = services._lookup_birth_department_code(info["birth_city"])
                 prepared[key] = (info, change.get("revision"))
 
@@ -176,12 +180,14 @@ def register(app, services, get_training):
             if not services.REPORTLAB_LIBRARY_AVAILABLE or not os.path.exists(services.SSIAP_DIPLOMA_TEMPLATE):
                 return jsonify(ok=False, error="Le modèle ou le moteur PDF est indisponible."), 503
             candidate_id = payload.get("trainee_id")
+            if is_letter and candidate_id is not None:
+                raise ValueError("Le courrier doit reprendre l’ensemble des candidats certifiés de l’examen.")
             if candidate_id is not None and str(candidate_id) not in current:
                 abort(404)
             candidates = []
             for key, original in current.items():
                 trainee = copy.deepcopy(original)
-                if action == "preview" and key in prepared:
+                if is_preview and key in prepared:
                     apply_info(trainee, prepared[key][0])
                 if candidate_id is not None:
                     if key != str(candidate_id):
@@ -191,28 +197,45 @@ def register(app, services, get_training):
                 candidates.append(trainee)
             if not candidates:
                 raise ValueError("Aucun candidat certifié et présenté à cet examen.")
-            if action == "generate":
+            config = exam.settings(training)
+            if is_letter and not is_preview:
+                from ssiap_exam_pdf import signature_assets
+                signature_assets(app.root_path)
+                if not config.get("exam_number") or not config.get("date"):
+                    raise ValueError("Renseignez le numéro et la date de l’examen dans Organisation et jury avant de générer le courrier SDIS.")
+                expected_date = services._diploma_date_fr(config["date"])
+                if any(services._ssiap_diploma_exam_date(training, t) != expected_date for t in candidates):
+                    raise ValueError("La date d’examen de chaque diplôme doit correspondre à celle de cet examen avant de préparer le courrier SDIS.")
+            if not is_preview:
                 for trainee in candidates:
                     services._ssiap_birth_place_label(trainee)
                 incomplete = [f"{t.get('first_name', '')} {t.get('last_name', '')} : {', '.join(missing(services, values(services, training, t)))}"
                               for t in candidates if missing(services, values(services, training, t))]
                 if incomplete:
                     raise ValueError("Complétez les informations avant de générer : " + "; ".join(incomplete))
-                _, diplomas = services._reserve_ssiap_diploma_numbers(session_id, candidate_id)
+                canonical, diplomas = services._reserve_ssiap_diploma_numbers(session_id, candidate_id, require_exam_date_match=is_letter)
+                config = exam.settings(exam.for_family(canonical, "ssiap"))
             else:
                 diplomas = [services._ssiap_diploma_row(training, t, lookup_department=False) for t in candidates]
                 for diploma in diplomas:
                     for field in ("name", "birth_date", "birth_place", "exam_date"):
                         diploma[field] = diploma[field] or "À renseigner"
-                    diploma["number"] = diploma["number"] or "APERÇU"
-            response = send_file(services._build_ssiap_diplomas_pdf(diplomas, preview=action == "preview"),
-                                 mimetype="application/pdf", as_attachment=action == "generate",
-                                 download_name=f"{'apercu' if action == 'preview' else 'diplomes'}-SSIAP-{services.secure_filename(session_id)}.pdf")
+                    diploma["number"] = diploma["number"] or ("À générer" if is_letter else "APERÇU")
+            if is_letter:
+                from ssiap_diploma_documents import sdis_letter
+                content = sdis_letter(diplomas, config, app.root_path, preview=is_preview)
+            else:
+                content = services._build_ssiap_diplomas_pdf(diplomas, preview=is_preview)
+            kind = "courrier-SDIS" if is_letter else "diplomes-SSIAP"
+            response = send_file(content, mimetype="application/pdf", as_attachment=not is_preview,
+                                 download_name=f"{'apercu-' if is_preview else ''}{kind}-{services.secure_filename(session_id)}.pdf")
             response.headers["Cache-Control"] = "private, no-store"
-            if action == "generate":
+            if not is_preview:
                 response.headers["X-SSIAP-Diploma-Numbers"] = json.dumps({row["trainee_id"]: row["number"] for row in diplomas})
             return response
         except ValueError as exc:
             return jsonify(ok=False, error=str(exc)), 400
         except LookupError:
             abort(404)
+        except RuntimeError as exc:
+            return jsonify(ok=False, error=str(exc)), 503

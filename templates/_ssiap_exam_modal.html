@@ -1,5 +1,5 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css', v='20261020-1') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-diplomas.css', v='20261028-1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-diplomas.css', v='20261028-3') }}">
 <dialog id="ssiapExamDialog" class="exam-dialog" aria-labelledby="ssiapExamTitle" data-url="{{ url_for('api_ssiap_exam', session_id=session.id) }}">
   <header class="exam-heading"><div><span class="exam-eyebrow">INTÉGRALE ACADEMY</span><h2 id="ssiapExamTitle">Examen SSIAP</h2><p>{{ session.name }}</p></div><button type="button" data-exam-close aria-label="Fermer la modale Examen" class="exam-close">×</button></header>
   <nav class="exam-tabs" aria-label="Rubriques de l’examen">
@@ -18,17 +18,20 @@
       <div id="ssiapDiplomaCounts" class="diploma-counts"></div>
       <div class="diploma-toolbar"><div class="exam-actions"><button type="button" class="btn btn-primary" data-diploma-save disabled>Enregistrer les modifications</button><button type="button" class="btn btn-outline" data-diploma-preview-all disabled>Prévisualiser les diplômes</button><button type="button" class="btn btn-primary" data-diploma-generate-all disabled>Générer tous les diplômes</button></div><p id="ssiapDiplomaStatus" role="status" aria-live="polite"></p></div>
       <p class="exam-muted">La génération groupée comprend les candidats certifiés et présentés à l’examen. Les corrections ci-dessous s’appliquent aux diplômes uniquement. Les numéros déjà attribués sont conservés.</p>
+      <section class="exam-card diploma-postal" aria-labelledby="ssiapSdisTitle"><div><h4 id="ssiapSdisTitle">Courrier d’accompagnement au SDIS du Var</h4><p class="exam-muted">Adresse postale, liste des certifiés avec dates de naissance et numéros de diplôme, agrément SSIAP, signature de Clément VAILLANT et tampon.</p><p class="diploma-exam-reference" data-diploma-exam-reference></p></div><div class="exam-actions"><button type="button" class="btn btn-outline" data-diploma-organization>Renseigner le numéro d’examen</button><button type="button" class="btn btn-outline" data-diploma-letter-preview disabled>Prévisualiser le courrier</button><button type="button" class="btn btn-primary" data-diploma-letter disabled>Générer le courrier SDIS</button></div><p class="exam-muted">Le courrier est à imprimer pour l’envoi postal. Sa génération attribue les numéros manquants ; les diplômes générés ensuite reprendront ces mêmes numéros.</p></section>
       <div class="diploma-filters"><label class="exam-field">Rechercher un candidat<input type="search" id="ssiapDiplomaSearch" placeholder="Prénom ou nom"></label><label class="exam-field">Afficher<select id="ssiapDiplomaFilter"><option value="all">Tous les candidats</option><option value="certified">Certifiés</option><option value="failed">Ajournés</option><option value="pending_results">En attente de résultat</option><option value="incomplete">Informations à compléter</option></select></label></div>
       <div id="ssiapDiplomaCandidates"><p class="exam-muted">Chargement des diplômes…</p></div>
     </section>
   </div>
 </dialog>
-<dialog id="ssiapDiplomaPreview" class="exam-dialog diploma-preview-dialog" aria-labelledby="ssiapDiplomaPreviewTitle">
-  <header class="exam-heading"><div><h2 id="ssiapDiplomaPreviewTitle">Prévisualisation des diplômes</h2><p>Aperçu de vérification · Aucun numéro n’est attribué.</p></div><button type="button" class="exam-close" data-diploma-preview-close aria-label="Fermer l’aperçu">×</button></header>
-  <div class="diploma-preview-body"><iframe title="Aperçu PDF des diplômes SSIAP"></iframe></div>
-  <div class="exam-mail-actions"><a class="btn btn-outline" data-diploma-open-preview target="_blank" rel="noopener">Ouvrir le PDF</a><button type="button" class="btn btn-primary" data-diploma-preview-close>Revenir aux informations</button></div>
+<dialog id="ssiapDiplomaPreview" class="exam-dialog diploma-preview-dialog" aria-labelledby="ssiapDiplomaPreviewTitle" data-pdfjs-url="{{ url_for('static', filename='vendor/pdfjs/build/pdf.min.mjs') }}" data-pdf-worker-url="{{ url_for('static', filename='vendor/pdfjs/build/pdf.worker.min.mjs') }}" data-pdf-fonts-url="{{ url_for('static', filename='vendor/pdfjs/standard_fonts/') }}">
+  <header class="exam-heading"><div><h2 id="ssiapDiplomaPreviewTitle">Prévisualisation des diplômes</h2><p data-pdf-description>Aperçu de vérification · Aucun numéro n’est attribué.</p></div><button type="button" class="exam-close" data-diploma-preview-close aria-label="Fermer l’aperçu">×</button></header>
+  <div class="diploma-preview-tools" role="toolbar" aria-label="Affichage du PDF"><button type="button" class="btn btn-outline" data-pdf-previous aria-label="Page précédente" disabled>‹</button><span data-pdf-page aria-live="polite"></span><button type="button" class="btn btn-outline" data-pdf-next aria-label="Page suivante" disabled>›</button><span class="diploma-preview-tools-spacer"></span><button type="button" class="btn btn-outline" data-pdf-zoom-out aria-label="Réduire le zoom">−</button><button type="button" class="btn btn-outline" data-pdf-fit>Page entière</button><button type="button" class="btn btn-outline" data-pdf-zoom-in aria-label="Agrandir le zoom">+</button></div>
+  <div class="diploma-preview-body" data-pdf-area><p data-pdf-status role="status">Chargement du document…</p><canvas hidden role="img" aria-label="Aperçu du PDF"></canvas></div>
+  <div class="exam-mail-actions"><a class="btn btn-outline" data-diploma-open-preview target="_blank" rel="noopener">Ouvrir le PDF</a><a class="btn btn-outline" data-pdf-download>Télécharger le PDF</a><button type="button" class="btn btn-primary" data-diploma-preview-close>Revenir aux informations</button></div>
 </dialog>
 {% include '_exam_jury_mail_dialog.html' %}
 <script src="{{ url_for('static', filename='js/ssiap-birth-department.js', v='20261028-diplomas-1') }}" defer></script>
-<script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261028-diplomas-1') }}" defer></script>
-<script src="{{ url_for('static', filename='js/ssiap-diplomas.js', v='20261028-2') }}" defer></script>
+<script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261028-diplomas-3') }}" defer></script>
+<script src="{{ url_for('static', filename='js/ssiap-pdf-preview.js', v='20261028-3') }}" defer></script>
+<script src="{{ url_for('static', filename='js/ssiap-diplomas.js', v='20261028-3') }}" defer></script>

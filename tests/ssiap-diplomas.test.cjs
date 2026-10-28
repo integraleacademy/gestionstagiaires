@@ -14,8 +14,13 @@ async function setup(t, options = {}) {
   w.HTMLDialogElement.prototype.close = function() { this.open = false; this.dispatchEvent(new w.Event('close')); };
   w.URL.createObjectURL = () => 'blob:preview'; w.URL.revokeObjectURL = () => {};
   w.HTMLAnchorElement.prototype.click = function() {};
+  const previews = [];
+  w.SsiapPdfPreview = class {
+    constructor(dialog) { this.dialog = dialog; dialog.querySelectorAll('[data-diploma-preview-close]').forEach(button => button.addEventListener('click', () => dialog.close())); }
+    async open(blob, options) { previews.push({blob,options}); this.dialog.showModal(); }
+  };
   const values = {civility:'Monsieur',first_name:'Clément',last_name:'VAILLANT',birth_date:'1993-09-16',birth_city:'SALLANCHES',birth_department:'74',birth_country:'France',exam_date:'2026-10-28',result:'pending_results'};
-  const data = {csrf:'token',read_only:!!options.readOnly,department_url:'/department',candidates:[
+  const data = {csrf:'token',exam_number:'VAR-2026-042',exam_date:'2026-10-28',read_only:!!options.readOnly,department_url:'/department',candidates:[
     {id:'T1',revision:'r1',values:{...values},included:true,number:'',missing:[],photo_available:true},
     {id:'T2',revision:'r2',values:{...values,first_name:'Camille',last_name:'AUTRE',result:'failed'},included:true,number:'',missing:[],photo_available:false}
   ]};
@@ -28,7 +33,7 @@ async function setup(t, options = {}) {
     if (payload?.action === 'save') {
       payload.candidates.forEach(row => { const saved = data.candidates.find(c => c.id === row.id); saved.values = row.values; saved.revision += 'x'; });
     }
-    const pdf = ['preview','generate'].includes(payload?.action) || url.includes('/preview');
+    const pdf = ['preview','generate','letter_preview','letter'].includes(payload?.action) || url.includes('/preview');
     return {ok:true,headers:new w.Headers({'Content-Type':pdf ? 'application/pdf' : 'application/json'}),
       json:async () => JSON.parse(JSON.stringify(data)),blob:async () => new w.Blob(['%PDF'], {type:'application/pdf'})};
   };
@@ -37,7 +42,7 @@ async function setup(t, options = {}) {
   const click = async selector => { doc.querySelector(selector).click(); await tick(); await tick(); };
   const edit = (name, value) => { const field = doc.querySelector('[data-diploma-id=T1]').elements[name]; field.value = value; field.dispatchEvent(new w.Event('input',{bubbles:true})); };
   await click('[data-exam-tab=diplomas]');
-  return {w,doc,panel,data,calls,click,edit,form:() => doc.querySelector('[data-diploma-id=T1]')};
+  return {w,doc,panel,data,calls,previews,click,edit,form:() => doc.querySelector('[data-diploma-id=T1]')};
 }
 
 test('review renders actual birth sentence, result counts and filters', async t => {
@@ -73,7 +78,8 @@ test('preview uses unsaved edits, retains the draft, and does not generate a num
   assert.deepEqual(ui.calls.slice(1).map(call => call.action),['preview']);
   assert.equal(ui.calls[1].candidates[0].values.first_name,'Marie');
   assert.equal(ui.doc.getElementById('ssiapDiplomaPreview').open,true);
-  assert.match(ui.doc.querySelector('#ssiapDiplomaPreview iframe').src, /#view=Fit&navpanes=0$/);
+  assert.equal(ui.previews.length,1);
+  assert.equal(ui.previews[0].options.filename,'apercu-diplomes-SSIAP.pdf');
   assert.equal(ui.form().dataset.dirty,'true');
   await ui.click('[data-diploma-preview-close]');
   assert.equal(ui.doc.getElementById('ssiapDiplomaPreview').open,false);
@@ -106,4 +112,21 @@ test('read-only staff can preview saved data but cannot edit or generate', async
   await ui.click('[data-diploma-id=T1] [data-diploma-preview]');
   assert.equal(ui.calls.at(-1).url,'/api/diplomas/preview?trainee_id=T1');
   assert.equal(ui.calls.at(-1).action,undefined);
+});
+
+test('SDIS preview uses drafts; final letter saves results and opens the printable PDF', async t => {
+  const ui = await setup(t);
+  assert.match(ui.doc.querySelector('[data-diploma-exam-reference]').textContent,/VAR-2026-042/);
+  assert.equal(ui.doc.querySelector('[data-diploma-letter]').disabled,true);
+  ui.edit('result','certified');
+  await ui.click('[data-diploma-letter-preview]');
+  assert.equal(ui.calls.at(-1).action,'letter_preview');
+  assert.equal(ui.calls.at(-1).candidates[0].values.result,'certified');
+  assert.equal(ui.previews.at(-1).options.title,'Prévisualisation du courrier SDIS');
+  assert.equal(ui.form().dataset.dirty,'true');
+  await ui.click('[data-diploma-preview-close]');
+  await ui.click('[data-diploma-letter]');
+  assert.deepEqual(ui.calls.slice(-3).map(call => call.action || 'load'),['save','letter','load']);
+  assert.equal(ui.previews.at(-1).options.filename,'courrier-SDIS.pdf');
+  assert.match(ui.doc.getElementById('ssiapDiplomaStatus').textContent,/Courrier SDIS généré/);
 });
