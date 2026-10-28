@@ -235,14 +235,17 @@ def browser_check():
                     contract_store.cerfa_complements(npec_id)['revision'], source_version(contract_store.record(npec_id)), 'Test')
                 page.goto(npec_url)
                 page.locator('[name="precontract_training"]').select_option('yes')
-                page.locator('[name="mobility_start"]').fill('2027-11-08')
-                page.locator('[name="mobility_end"]').fill('2027-12-12')
+                assert page.locator('[name="mobility_start"]').count() == 0
+                assert page.locator('[name="mobility_end"]').count() == 0
+                assert page.get_by_role('link', name='l’onglet Londres d’Inscriptions BTS').get_attribute('href').startswith('https://inscriptionsbts.onrender.com/admin')
+                equipment_cost = page.locator('[name="equipment_cost"]').input_value()
+                page.locator('[name="equipment_cost"]').fill('-1')
                 page.get_by_role('button', name='Enregistrer les informations', exact=True).click()
                 page.locator('[data-contract-save-message]').wait_for(state='visible')
-                assert '28 jours' in page.locator('[data-contract-save-message]').inner_text()
+                assert 'invalide' in page.locator('[data-contract-save-message]').inner_text()
                 assert page.locator('[name="precontract_training"]').input_value() == 'yes'
                 assert contract_store.settings(npec_id)['values'].get('precontract_training') != 'yes'
-                page.locator('[name="mobility_end"]').fill('2027-11-12')
+                page.locator('[name="equipment_cost"]').fill(equipment_cost)
                 # The exact button reported by the user must save financing too.
                 assert page.get_by_role('button', name='Enregistrer les informations', exact=True).evaluate('(button) => button.form.id') == 'contract-settings-form'
                 with page.expect_navigation():
