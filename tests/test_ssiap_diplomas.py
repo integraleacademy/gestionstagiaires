@@ -88,7 +88,7 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertIn("30/06/2026", first_page_text)
         self.assertIn("Monsieur Jean DUPONT", first_page_text)
         self.assertIn("03/02/1990", first_page_text)
-        self.assertIn("Paris (75)", first_page_text)
+        self.assertIn("PARIS (75)", first_page_text)
         self.assertIn("083-8323-1-2026-00001", first_page_text)
         self.assertIn("Monsieur Élise MARTIN", second_page_text)
         self.assertIn("083-8323-1-2026-00002", second_page_text)
@@ -582,7 +582,7 @@ class SsiapDiplomaTests(unittest.TestCase):
         page_text = PdfReader(BytesIO(generated.data)).pages[0].extract_text()
         self.assertIn("Madame Clément DURAND", page_text)
         self.assertIn("08/09/1992", page_text)
-        self.assertIn("Toulon (83)", page_text)
+        self.assertIn("TOULON (83)", page_text)
         self.assertIn("20/06/2026", page_text)
 
 

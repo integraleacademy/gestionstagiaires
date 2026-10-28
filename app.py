@@ -24243,12 +24243,12 @@ def admin_ssiap_birth_department():
 
 
 def _ssiap_birth_place_label(trainee: Dict[str, Any]) -> str:
-    birth_city = str(
+    birth_city = normalize_city(
         trainee.get("ssiap_diploma_birth_city")
         or trainee.get("birth_city")
         or trainee.get("birth_place")
         or ""
-    ).strip()
+    )
     if not birth_city or re.search(r"\(([0-9]{2,3}|2A|2B)\)\s*$", birth_city, flags=re.IGNORECASE):
         return birth_city
 
@@ -24729,6 +24729,8 @@ def admin_update_ssiap_diploma_info(session_id: str, trainee_id: str):
         value = str(request.form.get(form_key) or "").strip()
         if storage_key == "ssiap_diploma_first_name":
             value = _ssiap_diploma_first_name(value)
+        elif storage_key == "ssiap_diploma_birth_city":
+            value = normalize_city(value)
         trainee[storage_key] = value
 
     row = _ssiap_diploma_row(session_item, trainee)

@@ -862,7 +862,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
                       data-first-name="{{ t.ssiap_diploma_first_name or t.first_name or '' }}"
                       data-last-name="{{ t.ssiap_diploma_last_name or t.last_name or '' }}"
                       data-birth-date="{{ t.ssiap_diploma_birth_date or t.birth_date or '' }}"
-                      data-birth-city="{{ t.ssiap_diploma_birth_city or t.birth_city or t.birth_place or '' }}"
+                      data-birth-city="{{ (t.ssiap_diploma_birth_city or t.birth_city or t.birth_place or '')|upper }}"
                       data-birth-department="{{ t.ssiap_diploma_birth_department if t.ssiap_diploma_birth_department is defined else t.birth_department or '' }}"
                       data-birth-country="{{ t.ssiap_diploma_birth_country or t.birth_country or '' }}"
                       data-exam-date="{{ t.ssiap_diploma_exam_date or session.ssiap_exam_date or session.exam_date or '' }}">✏️ Modifier infos diplôme</button>
@@ -4362,7 +4362,7 @@ applyRowFilters();
 
 <script src="{{ url_for('static', filename='js/postal_city_lookup.js') }}"></script>
 {% if is_ssiap_session and not is_read_only %}
-<script src="{{ url_for('static', filename='js/ssiap-birth-department.js', v='20261028') }}"></script>
+<script src="{{ url_for('static', filename='js/ssiap-birth-department.js', v='20261028-uppercase') }}"></script>
 {% endif %}
 <style>
 

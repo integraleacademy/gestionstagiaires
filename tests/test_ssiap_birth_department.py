@@ -105,8 +105,9 @@ class SsiapBirthDepartmentTests(unittest.TestCase):
     def test_save_resolves_missing_department_even_before_browser_lookup_finishes(self):
         trainee, find = self.save_diploma()
         self.assertEqual(trainee["ssiap_diploma_birth_department"], "59")
-        find.assert_called_once_with("Maubeuge")
-        self.assertEqual(gestion_app._ssiap_birth_place_label(trainee), "Maubeuge (59)")
+        find.assert_called_once_with("MAUBEUGE")
+        self.assertEqual(trainee["ssiap_diploma_birth_city"], "MAUBEUGE")
+        self.assertEqual(gestion_app._ssiap_birth_place_label(trainee), "MAUBEUGE (59)")
 
     def test_manual_department_is_preserved(self):
         trainee, find = self.save_diploma(department="60", city="Saint-Sauveur")
@@ -116,14 +117,14 @@ class SsiapBirthDepartmentTests(unittest.TestCase):
     def test_foreign_birth_does_not_inherit_original_french_department(self):
         trainee, find = self.save_diploma(city="Bruxelles", country="Belgique")
         self.assertEqual(trainee["ssiap_diploma_birth_department"], "")
-        self.assertEqual(gestion_app._ssiap_birth_place_label(trainee), "Bruxelles")
+        self.assertEqual(gestion_app._ssiap_birth_place_label(trainee), "BRUXELLES")
         find.assert_not_called()
 
     def test_ambiguous_birth_does_not_inherit_previous_city_department(self):
         trainee, _ = self.save_diploma(city="Saint-Sauveur", lookup="")
         self.assertEqual(trainee["ssiap_diploma_birth_department"], "")
         with patch.object(gestion_app, "_lookup_birth_department_code", return_value=""):
-            self.assertEqual(gestion_app._ssiap_birth_place_label(trainee), "Saint-Sauveur")
+            self.assertEqual(gestion_app._ssiap_birth_place_label(trainee), "SAINT-SAUVEUR")
 
 
 if __name__ == "__main__":

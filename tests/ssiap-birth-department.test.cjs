@@ -45,7 +45,7 @@ test('opening the real edit button fills Maubeuge automatically', async t => {
   });
   const button = ui.window.document.createElement('button');
   button.className = 'ssiap-edit-info-btn';
-  button.dataset.birthCity = 'MAUBEUGE';
+  button.dataset.birthCity = 'Maubeuge';
   button.dataset.birthCountry = 'france';
   ui.window.document.body.append(button);
   ui.window.openModal = () => {};
@@ -55,6 +55,7 @@ test('opening the real edit button fills Maubeuge automatically', async t => {
   button.click();
   await tick();
   assert.equal(ui.department, '59');
+  assert.equal(ui.form.elements.birth_city.value, 'MAUBEUGE');
   assert.match(ui.hint, /automatiquement/);
 });
 
@@ -77,6 +78,7 @@ test('city changes clear the old department and debounce the new lookup', async 
   ui.input('birth_city', 'To');
   ui.input('birth_city', 'Tou');
   ui.input('birth_city', 'Toulon');
+  assert.equal(ui.form.elements.birth_city.value, 'TOULON');
   assert.equal(ui.department, '');
   await debounce();
   assert.equal(ui.calls, 1);

@@ -14,6 +14,19 @@
   let timer;
   let controller;
 
+  function uppercaseCity() {
+    const value = city.value;
+    if (value === value.toUpperCase()) return;
+    const start = city.selectionStart;
+    const end = city.selectionEnd;
+    const direction = city.selectionDirection;
+    city.value = value.toUpperCase();
+    if (start !== null && end !== null) {
+      city.setSelectionRange(value.slice(0, start).toUpperCase().length,
+        value.slice(0, end).toUpperCase().length, direction);
+    }
+  }
+
   function cancelLookup() {
     revision += 1;
     clearTimeout(timer);
@@ -61,7 +74,9 @@
     }
   }
 
-  function placeChanged() {
+  function placeChanged(event) {
+    if (event?.isComposing) return;
+    uppercaseCity();
     const currentPlace = placeKey();
     if (currentPlace === previousPlace) return;
     previousPlace = currentPlace;
@@ -75,6 +90,7 @@
 
   city.addEventListener("input", placeChanged);
   city.addEventListener("change", placeChanged);
+  city.addEventListener("compositionend", placeChanged);
   country.addEventListener("input", placeChanged);
   country.addEventListener("change", placeChanged);
   department.addEventListener("input", () => {
@@ -82,7 +98,9 @@
     hint.textContent = "";
   });
   form.addEventListener("ssiap-diploma-info-opened", () => {
+    uppercaseCity();
     previousPlace = placeKey();
     lookup();
   });
+  form.addEventListener("submit", uppercaseCity);
 })();
