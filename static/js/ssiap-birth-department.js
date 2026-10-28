@@ -1,11 +1,11 @@
 (() => {
-  const form = document.getElementById("ssiapDiplomaInfoForm");
-  if (!form) return;
+  window.initSsiapBirthDepartment = function(form, hint) {
+  if (!form || form.dataset.birthDepartmentInitialized) return;
+  form.dataset.birthDepartmentInitialized = "true";
 
   const city = form.elements.birth_city;
   const country = form.elements.birth_country;
   const department = form.elements.birth_department;
-  const hint = document.getElementById("ssiapInfoBirthDepartmentHint");
   const normalize = value => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
   const placeKey = () => `${normalize(city.value)}|${normalize(country.value)}`;
@@ -58,6 +58,7 @@
       if (revision !== currentRevision || placeKey() !== currentPlace || department.value.trim()) return;
       if (/^(?:\d{2,3}|2A|2B)$/.test(data.department || "")) {
         department.value = data.department;
+        form.dispatchEvent(new Event("ssiap-birth-department-found", {bubbles:true}));
         hint.textContent = "Département trouvé automatiquement. Vous pouvez le modifier.";
       } else {
         hint.textContent = "Ville non reconnue ou homonyme : renseignez le département.";
@@ -103,4 +104,8 @@
     lookup();
   });
   form.addEventListener("submit", uppercaseCity);
+  return {lookup, cancel:cancelLookup};
+  };
+  window.initSsiapBirthDepartment(document.getElementById("ssiapDiplomaInfoForm"),
+    document.getElementById("ssiapInfoBirthDepartmentHint"));
 })();

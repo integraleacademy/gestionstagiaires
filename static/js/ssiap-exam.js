@@ -111,6 +111,7 @@
       .map(form => ({id:form.dataset.candidateForm, values:Object.fromEntries(new FormData(form)),
         checks:Object.fromEntries(['included'].map(key => [key,form.elements[key].checked]))})) : [];
     data = await api(base); render();
+    if (!organizationOnly) dialog.dispatchEvent(new Event('ssiap-exam-loaded'));
     for (const draft of drafts) {
       const form = [...dialog.querySelectorAll('[data-candidate-form]')].find(f => f.dataset.candidateForm === draft.id);
       if (!form) continue;

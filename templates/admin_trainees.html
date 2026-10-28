@@ -2391,6 +2391,10 @@ body.vae-analysis-filter-active #traineesTable .mini-btn{
     number.textContent = diplomaNumber;
   }
 
+  window.addEventListener("ssiap-diplomas-generated", event => {
+    Object.entries(event.detail || {}).forEach(([traineeId, number]) => updateSsiapDiplomaDisplay(traineeId, number));
+  });
+
   document.querySelectorAll(".ssiap-diploma-generation-form").forEach(form => {
     form.addEventListener("submit", async event => {
       event.preventDefault();
@@ -4362,7 +4366,7 @@ applyRowFilters();
 
 <script src="{{ url_for('static', filename='js/postal_city_lookup.js') }}"></script>
 {% if is_ssiap_session and not is_read_only %}
-<script src="{{ url_for('static', filename='js/ssiap-birth-department.js', v='20261028-uppercase') }}"></script>
+<script src="{{ url_for('static', filename='js/ssiap-birth-department.js', v='20261028-diplomas-1') }}"></script>
 {% endif %}
 <style>
 

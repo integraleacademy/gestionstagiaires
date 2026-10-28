@@ -314,6 +314,9 @@ def register(app, services):
     def read(session_id):
         return get_training(services.load_data(run_background_tasks=False), session_id)
 
+    from ssiap_exam_diplomas import register as register_diplomas
+    register_diplomas(app, services, get_training)
+
     def active(training):
         return active_candidates(services, training)
 

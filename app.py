@@ -24242,14 +24242,21 @@ def admin_ssiap_birth_department():
     return jsonify({"ok": True, "department": department_code})
 
 
-def _ssiap_birth_place_label(trainee: Dict[str, Any]) -> str:
+def _ssiap_birth_place_label(trainee: Dict[str, Any], *, lookup_department: bool = True) -> str:
     birth_city = normalize_city(
-        trainee.get("ssiap_diploma_birth_city")
-        or trainee.get("birth_city")
-        or trainee.get("birth_place")
-        or ""
+        trainee.get("ssiap_diploma_birth_city", trainee.get("birth_city") or trainee.get("birth_place")) or ""
     )
-    if not birth_city or re.search(r"\(([0-9]{2,3}|2A|2B)\)\s*$", birth_city, flags=re.IGNORECASE):
+    if not birth_city:
+        return birth_city
+
+    birth_country = str(
+        trainee.get("ssiap_diploma_birth_country", trainee.get("birth_country")) or ""
+    ).strip()
+    if birth_country and _normalized_commune_name(birth_country) not in {"FRANCE", "FR", "FRA"}:
+        # A foreign place uses its country, never a stale French department.
+        birth_city = re.sub(r"\s*\([^()]*\)\s*$", "", birth_city).strip()
+        return f"{birth_city} ({birth_country})"
+    if re.search(r"\(([0-9]{2,3}|2A|2B)\)\s*$", birth_city, flags=re.IGNORECASE):
         return birth_city
 
     department_code = ""
@@ -24263,10 +24270,7 @@ def _ssiap_birth_place_label(trainee: Dict[str, Any]) -> str:
         if department_code:
             break
 
-    birth_country = str(
-        trainee.get("ssiap_diploma_birth_country", trainee.get("birth_country")) or ""
-    ).strip()
-    if not department_code and (not birth_country or _normalized_commune_name(birth_country) in {"FRANCE", "FR", "FRA"}):
+    if not department_code and lookup_department:
         department_code = _lookup_birth_department_code(birth_city)
 
     if department_code:
@@ -24307,20 +24311,18 @@ def _ssiap_diploma_first_name(value: Any) -> str:
 def _ssiap_diploma_display_name(trainee: Dict[str, Any]) -> str:
     civility = str(trainee.get("ssiap_diploma_civility") or "Monsieur").strip()
     first_name = _ssiap_diploma_first_name(
-        trainee.get("ssiap_diploma_first_name") or trainee.get("first_name") or ""
+        trainee.get("ssiap_diploma_first_name", trainee.get("first_name")) or ""
     )
     last_name = normalize_last_name(
-        trainee.get("ssiap_diploma_last_name") or trainee.get("last_name") or ""
+        trainee.get("ssiap_diploma_last_name", trainee.get("last_name")) or ""
     )
     return " ".join(part for part in (civility, first_name, last_name) if part).strip()
 
 
 def _ssiap_diploma_exam_date(session_item: Dict[str, Any], trainee: Dict[str, Any]) -> str:
-    raw = (
-        str(trainee.get("ssiap_diploma_exam_date") or "").strip()
-        or str(_session_get(session_item, "ssiap_exam_date", "") or "").strip()
-        or str(_session_get(session_item, "exam_date", "") or "").strip()
-    )
+    if "ssiap_diploma_exam_date" in trainee:
+        return _diploma_date_fr(trainee["ssiap_diploma_exam_date"])
+    raw = str(ssiap_exam.settings(ssiap_exam.for_family(session_item, "ssiap"))["date"] or "").strip()
     return _diploma_date_fr(raw)
 
 
@@ -24335,14 +24337,14 @@ def _ssiap_diploma_photo_path(trainee: Dict[str, Any]) -> str:
     return photo_path if os.path.exists(photo_path) else ""
 
 
-def _ssiap_diploma_row(session_item: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+def _ssiap_diploma_row(session_item: Dict[str, Any], trainee: Dict[str, Any], *, lookup_department: bool = True) -> Dict[str, str]:
     return {
         "trainee_id": str(trainee.get("id") or ""),
         "name": _ssiap_diploma_display_name(trainee),
         "birth_date": _diploma_date_fr(
-            trainee.get("ssiap_diploma_birth_date") or trainee.get("birth_date") or ""
+            trainee.get("ssiap_diploma_birth_date", trainee.get("birth_date")) or ""
         ),
-        "birth_place": _ssiap_birth_place_label(trainee),
+        "birth_place": _ssiap_birth_place_label(trainee, lookup_department=lookup_department),
         "exam_date": _ssiap_diploma_exam_date(session_item, trainee),
         "number": str(trainee.get("ssiap_diploma_number") or "").strip(),
         "photo_path": _ssiap_diploma_photo_path(trainee),
@@ -24430,7 +24432,7 @@ def _reserve_ssiap_diploma_numbers(
                 raise LookupError("session_not_found")
 
             training_label = f"{_session_get(session_item, 'training_type', '')} {_session_get(session_item, 'name', '')}".upper()
-            if "SSIAP" not in training_label:
+            if "SSIAP" not in training_label and not ssiap_exam.supported(session_item):
                 raise ValueError("Cette action est réservée aux sessions SSIAP.")
 
             trainees = _session_trainees_list(session_item)
@@ -24441,6 +24443,7 @@ def _reserve_ssiap_diploma_numbers(
                 trainee for trainee in trainees
                 if not _trainee_registration_is_cancelled(trainee)
                 and _ssiap_exam_status(trainee) == "certified"
+                and ssiap_exam.candidate_settings(ssiap_exam.for_family(session_item, "ssiap"), trainee)["included"]
             ]
             if trainee_id is not None:
                 matching_trainees = [
@@ -24451,6 +24454,8 @@ def _reserve_ssiap_diploma_numbers(
                     raise LookupError("trainee_not_found")
                 if _trainee_registration_is_cancelled(matching_trainees[0]):
                     raise ValueError("Le diplôme ne peut pas être généré pour une inscription annulée.")
+                if not ssiap_exam.candidate_settings(ssiap_exam.for_family(session_item, "ssiap"), matching_trainees[0])["included"]:
+                    raise ValueError("Ce candidat n’est pas présenté à l’examen.")
                 if _ssiap_exam_status(matching_trainees[0]) != "certified":
                     raise ValueError("Le diplôme peut être généré uniquement pour un stagiaire certifié.")
                 selected_trainees = matching_trainees
@@ -24581,7 +24586,7 @@ def _draw_pdf_cover_image(pdf_canvas, image_path: str, x: float, y: float, width
             pdf_canvas.restoreState()
         return False
 
-def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]]) -> BytesIO:
+def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]], *, preview: bool = False) -> BytesIO:
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.units import mm
     from reportlab.lib.utils import ImageReader
@@ -24657,6 +24662,15 @@ def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]]) -> BytesIO:
         draw_text(diploma["name"], 1120, 1108, 620)
         draw_text(diploma["number"], 1170, 1145, 430)
         draw_text(diploma["exam_date"], 420, 1166, 300)
+        if preview:
+            pdf.saveState()
+            pdf.setFillColorRGB(0.55, 0.55, 0.55)
+            pdf.setFillAlpha(0.35)
+            pdf.translate(page_width / 2, page_height / 2)
+            pdf.rotate(25)
+            pdf.setFont("Helvetica-Bold", 38)
+            pdf.drawCentredString(0, 0, "APERÇU - NON VALABLE")
+            pdf.restoreState()
         pdf.showPage()
 
     pdf.save()

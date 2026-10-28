@@ -117,7 +117,7 @@ class SsiapBirthDepartmentTests(unittest.TestCase):
     def test_foreign_birth_does_not_inherit_original_french_department(self):
         trainee, find = self.save_diploma(city="Bruxelles", country="Belgique")
         self.assertEqual(trainee["ssiap_diploma_birth_department"], "")
-        self.assertEqual(gestion_app._ssiap_birth_place_label(trainee), "BRUXELLES")
+        self.assertEqual(gestion_app._ssiap_birth_place_label(trainee), "BRUXELLES (Belgique)")
         find.assert_not_called()
 
     def test_ambiguous_birth_does_not_inherit_previous_city_department(self):

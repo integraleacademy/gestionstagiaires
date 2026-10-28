@@ -293,7 +293,7 @@ class SsiapDiplomaTests(unittest.TestCase):
         with patch.object(gestion_app.requests, "get") as get_mock:
             label = gestion_app._ssiap_birth_place_label(trainee)
 
-        self.assertEqual(label, "BRUXELLES")
+        self.assertEqual(label, "BRUXELLES (Belgique)")
         get_mock.assert_not_called()
 
     def test_deleting_trainee_releases_sole_diploma_number_for_api_route(self):
