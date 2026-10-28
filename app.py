@@ -24553,11 +24553,23 @@ def _draw_pdf_cover_image(pdf_canvas, image_path: str, x: float, y: float, width
     canvas_state_saved = False
     try:
         with Image.open(image_path) as source:
+            # A 35 x 45 mm portrait needs about 413 x 531 pixels at 300 dpi.
+            # Decode large JPEGs at a smaller size, then embed only the printed crop.
+            pixel_width = max(1, round(width * 300 / 72))
+            pixel_height = max(1, round(height * 300 / 72))
+            source.draft("RGB", (pixel_width * 2, pixel_height * 2))
             image = ImageOps.exif_transpose(source).convert("RGB")
+            reduction = min(1, image.width / pixel_width, image.height / pixel_height)
+            image = ImageOps.fit(image, (max(1, round(pixel_width * reduction)),
+                                        max(1, round(pixel_height * reduction))),
+                                 method=Image.Resampling.LANCZOS)
             image_width, image_height = image.size
             if image_width <= 0 or image_height <= 0:
                 return False
-            image_reader = ImageReader(image)
+            encoded = BytesIO()
+            image.save(encoded, format="JPEG", quality=90, optimize=True)
+            encoded.seek(0)
+            image_reader = ImageReader(encoded)
             scale = max(width / image_width, height / image_height)
             draw_width = image_width * scale
             draw_height = image_height * scale

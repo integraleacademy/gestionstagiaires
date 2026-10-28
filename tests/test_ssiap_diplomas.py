@@ -152,6 +152,19 @@ class SsiapDiplomaTests(unittest.TestCase):
 
         self.assertEqual(row["photo_path"], photo_path)
 
+    def test_large_identity_photo_is_embedded_at_print_resolution_without_changing_original(self):
+        photo_path = os.path.join(self.temp_dir.name, "large-photo.jpg")
+        Image.effect_noise((2400, 3200), 80).convert("RGB").save(photo_path, quality=95)
+        original_size = os.path.getsize(photo_path)
+        content = gestion_app._build_ssiap_diplomas_pdf([{
+            "name": "Madame Camille EXEMPLE", "birth_date": "16/09/1993", "birth_place": "SALLANCHES (74)",
+            "exam_date": "28/10/2026", "number": "APERÇU", "photo_path": photo_path,
+        }]).getvalue()
+        self.assertLess(len(content), 1_000_000)
+        pictures = [item.image for item in PdfReader(BytesIO(content)).pages[0].images]
+        self.assertTrue(any(400 <= image.width <= 420 and 520 <= image.height <= 540 for image in pictures))
+        self.assertEqual(os.path.getsize(photo_path), original_size)
+
     def test_pdf_draws_identity_photo_at_official_size_in_top_right_corner(self):
         photo_path = os.path.join(self.temp_dir.name, "identity.jpg")
         Image.new("RGB", (70, 90), "#336699").save(photo_path)

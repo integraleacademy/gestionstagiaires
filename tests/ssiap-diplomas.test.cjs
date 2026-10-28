@@ -73,6 +73,7 @@ test('preview uses unsaved edits, retains the draft, and does not generate a num
   assert.deepEqual(ui.calls.slice(1).map(call => call.action),['preview']);
   assert.equal(ui.calls[1].candidates[0].values.first_name,'Marie');
   assert.equal(ui.doc.getElementById('ssiapDiplomaPreview').open,true);
+  assert.match(ui.doc.querySelector('#ssiapDiplomaPreview iframe').src, /#view=Fit&navpanes=0$/);
   assert.equal(ui.form().dataset.dirty,'true');
   await ui.click('[data-diploma-preview-close]');
   assert.equal(ui.doc.getElementById('ssiapDiplomaPreview').open,false);

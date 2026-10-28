@@ -134,7 +134,7 @@
   function openPreview(blob) {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     previewUrl = URL.createObjectURL(blob);
-    preview.querySelector('iframe').src = previewUrl;
+    preview.querySelector('iframe').src = previewUrl + '#view=Fit&navpanes=0';
     preview.querySelector('[data-diploma-open-preview]').href = previewUrl;
     if (!preview.open) preview.showModal();
   }
