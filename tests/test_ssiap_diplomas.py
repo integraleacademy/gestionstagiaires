@@ -284,7 +284,7 @@ class SsiapDiplomaTests(unittest.TestCase):
                 "fields": "nom,codeDepartement,codesPostaux",
                 "boost": "population",
             },
-            timeout=3,
+            timeout=8,
         )
 
     def test_birth_place_keeps_foreign_city_without_french_lookup(self):

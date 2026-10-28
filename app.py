@@ -24189,10 +24189,15 @@ def _normalized_commune_name(value: Any) -> str:
 
 
 def _lookup_birth_department_code(birth_city: str) -> str:
-    city = re.sub(r"\s*\(([0-9]{2,3}|2A|2B)\)\s*$", "", str(birth_city or "").strip(), flags=re.IGNORECASE)
-    cache_key = _normalized_commune_name(city)
-    if not cache_key:
+    city = str(birth_city or "").strip()
+    suffix = re.search(r"\s*\(([0-9]{2,3}|2A|2B)\)\s*$", city, flags=re.IGNORECASE)
+    department_hint = suffix.group(1).upper() if suffix else ""
+    if suffix:
+        city = city[:suffix.start()].strip()
+    commune_name = _normalized_commune_name(city)
+    if len(commune_name) < 2 or len(city) > 120:
         return ""
+    cache_key = f"{commune_name}|{department_hint}" if department_hint else commune_name
     if cache_key in SSIAP_BIRTH_DEPARTMENT_CACHE:
         return SSIAP_BIRTH_DEPARTMENT_CACHE[cache_key]
 
@@ -24205,7 +24210,7 @@ def _lookup_birth_department_code(birth_city: str) -> str:
                 "fields": "nom,codeDepartement,codesPostaux",
                 "boost": "population",
             },
-            timeout=3,
+            timeout=8,
         )
         response.raise_for_status()
         communes = response.json()
@@ -24213,17 +24218,35 @@ def _lookup_birth_department_code(birth_city: str) -> str:
             exact_matches = [
                 commune for commune in communes
                 if isinstance(commune, dict)
-                and _normalized_commune_name(commune.get("nom")) == cache_key
+                and _normalized_commune_name(commune.get("nom")) == commune_name
             ]
-            candidates = exact_matches or [commune for commune in communes if isinstance(commune, dict)]
-            if candidates:
-                department_code = _normalize_department_code(candidates[0].get("codeDepartement"))
+            departments = {
+                _normalize_department_code(commune.get("codeDepartement"))
+                for commune in exact_matches
+            }
+            if department_hint:
+                departments &= {department_hint}
+            # The API also returns partial/fuzzy matches. Never guess a birth
+            # department from these or choose between homonymous communes.
+            if len(departments) == 1 and "" not in departments:
+                department_code = departments.pop()
     except (requests.RequestException, ValueError, TypeError):
         department_code = ""
 
     if department_code:
         SSIAP_BIRTH_DEPARTMENT_CACHE[cache_key] = department_code
     return department_code
+
+
+@app.get("/admin/ssiap/birth-department")
+@admin_login_required
+def admin_ssiap_birth_department():
+    city = str(request.args.get("city") or "").strip()
+    country = _normalized_commune_name(request.args.get("country"))
+    department_code = ""
+    if country in {"", "FRANCE", "FR", "FRA"}:
+        department_code = _lookup_birth_department_code(city)
+    return jsonify({"ok": True, "department": department_code})
 
 
 def _ssiap_birth_place_label(trainee: Dict[str, Any]) -> str:
@@ -24237,27 +24260,24 @@ def _ssiap_birth_place_label(trainee: Dict[str, Any]) -> str:
         return birth_city
 
     department_code = ""
-    for field in (
-        "birth_department",
-        "department",
-        "birth_postal_code",
-        "birth_zip_code",
-    ):
+    has_diploma_override = "ssiap_diploma_birth_department" in trainee
+    department_fields = ("ssiap_diploma_birth_department",) if has_diploma_override else (
+        "birth_department", "department", "birth_postal_code", "birth_zip_code",
+    )
+    for field in department_fields:
         department_value = trainee.get(field)
-        if field == "birth_department":
-            department_value = trainee.get("ssiap_diploma_birth_department") or department_value
         department_code = _normalize_department_code(department_value)
         if department_code:
             break
 
     birth_country = str(
-        trainee.get("ssiap_diploma_birth_country") or trainee.get("birth_country") or ""
+        trainee.get("ssiap_diploma_birth_country", trainee.get("birth_country")) or ""
     ).strip()
-    if not department_code and (not birth_country or _normalized_commune_name(birth_country) in {"FRANCE", "FR"}):
+    if not department_code and (not birth_country or _normalized_commune_name(birth_country) in {"FRANCE", "FR", "FRA"}):
         department_code = _lookup_birth_department_code(birth_city)
 
     if department_code:
-        trainee["birth_department"] = department_code
+        trainee["ssiap_diploma_birth_department" if has_diploma_override else "birth_department"] = department_code
         return f"{birth_city} ({department_code})"
     return birth_city
 

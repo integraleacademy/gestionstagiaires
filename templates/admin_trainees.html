@@ -863,7 +863,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
                       data-last-name="{{ t.ssiap_diploma_last_name or t.last_name or '' }}"
                       data-birth-date="{{ t.ssiap_diploma_birth_date or t.birth_date or '' }}"
                       data-birth-city="{{ t.ssiap_diploma_birth_city or t.birth_city or t.birth_place or '' }}"
-                      data-birth-department="{{ t.ssiap_diploma_birth_department or t.birth_department or '' }}"
+                      data-birth-department="{{ t.ssiap_diploma_birth_department if t.ssiap_diploma_birth_department is defined else t.birth_department or '' }}"
                       data-birth-country="{{ t.ssiap_diploma_birth_country or t.birth_country or '' }}"
                       data-exam-date="{{ t.ssiap_diploma_exam_date or session.ssiap_exam_date or session.exam_date or '' }}">✏️ Modifier infos diplôme</button>
             {% endif %}
@@ -937,7 +937,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 {% if is_ssiap_session and not is_read_only %}
 <div class="modal-backdrop" id="ssiapDiplomaInfoModal" aria-hidden="true">
   <div class="modal" style="max-width:720px" role="dialog" aria-modal="true" aria-labelledby="ssiapDiplomaInfoTitle">
-    <form id="ssiapDiplomaInfoForm" method="post">
+    <form id="ssiapDiplomaInfoForm" method="post" data-birth-department-url="{{ url_for('admin_ssiap_birth_department') }}">
       <div class="modal-head">
         <div>
           <div class="modal-title" id="ssiapDiplomaInfoTitle">Modifier les informations du diplôme</div>
@@ -951,7 +951,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         <label><span class="label">Nom</span><input name="last_name" id="ssiapInfoLastName" required></label>
         <label><span class="label">Date de naissance</span><input type="date" name="birth_date" id="ssiapInfoBirthDate" required></label>
         <label><span class="label">Ville de naissance</span><input name="birth_city" id="ssiapInfoBirthCity" required></label>
-        <label><span class="label">Département de naissance</span><input name="birth_department" id="ssiapInfoBirthDepartment" placeholder="Ex : 83"></label>
+        <label><span class="label">Département de naissance</span><input name="birth_department" id="ssiapInfoBirthDepartment" placeholder="Ex : 83" aria-describedby="ssiapInfoBirthDepartmentHint"><span class="hint" id="ssiapInfoBirthDepartmentHint" role="status" aria-live="polite"></span></label>
         <label><span class="label">Pays de naissance</span><input name="birth_country" id="ssiapInfoBirthCountry" placeholder="France"></label>
         <label><span class="label">Date d'examen</span><input type="date" name="exam_date" id="ssiapInfoExamDate" required></label>
       </div>
@@ -2441,6 +2441,7 @@ body.vae-analysis-filter-active #traineesTable .mini-btn{
       document.getElementById("ssiapInfoBirthCountry").value = button.dataset.birthCountry || "";
       document.getElementById("ssiapInfoExamDate").value = button.dataset.examDate || "";
       openModal("ssiapDiplomaInfoModal");
+      form.dispatchEvent(new Event("ssiap-diploma-info-opened"));
     });
   });
 
@@ -4360,6 +4361,9 @@ applyRowFilters();
 
 
 <script src="{{ url_for('static', filename='js/postal_city_lookup.js') }}"></script>
+{% if is_ssiap_session and not is_read_only %}
+<script src="{{ url_for('static', filename='js/ssiap-birth-department.js', v='20261028') }}"></script>
+{% endif %}
 <style>
 
 .finance-group-dashboard{
