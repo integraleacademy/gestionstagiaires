@@ -1,4 +1,5 @@
 import hashlib
+from html import unescape
 import os
 import re
 import shutil
@@ -592,9 +593,9 @@ class ApsConvocationEmailTests(unittest.TestCase):
         )
 
         self.assertEqual(subject, "Convocation formation APS - Intégrale Academy")
-        self.assertIn("Convocation formation APS", html_body)
-        self.assertIn("background:#0b2f5b", html_body)
-        self.assertIn("box-shadow:0 8px 24px", html_body)
+        self.assertIn("Votre convocation APS", html_body)
+        self.assertIn('data-academy-email="2026"', html_body)
+        self.assertIn("linear-gradient(135deg,#102c5c 0%,#3269da 100%)", html_body)
         self.assertIn("background:#f7faff;border:1px solid #dbeafe", html_body)
         self.assertIn("Accéder à mon espace stagiaire", html_body)
         self.assertIn("Jean &lt;script&gt;", html_body)
@@ -616,7 +617,7 @@ class ApsConvocationEmailTests(unittest.TestCase):
         expected_label = "Dirigeant d'une entreprise de sécurité privée (DESP)"
         self.assertEqual(subject, f"Convocation formation {expected_label} - Intégrale Academy")
         escaped_label = "Dirigeant d&#x27;une entreprise de sécurité privée (DESP)"
-        self.assertIn(f"Convocation formation {escaped_label}", html_body)
+        self.assertIn(f"Votre convocation {expected_label}", unescape(html_body))
         self.assertIn(f"<strong>Formation :</strong> {escaped_label}", html_body)
         self.assertNotIn("Dirigeant Paris", html_body)
 
@@ -631,7 +632,7 @@ class ApsConvocationEmailTests(unittest.TestCase):
         )
 
         self.assertEqual(subject, "Convocation formation A3P - Intégrale Academy")
-        self.assertIn("Convocation formation A3P", html_body)
+        self.assertIn("Votre convocation A3P", html_body)
         self.assertIn("Agent de Protection Physique des Personnes (A3P)", html_body)
         self.assertNotIn("Convocation formation APS", html_body)
         self.assertNotIn("Agent de Prévention et de Sécurité (APS)", html_body)

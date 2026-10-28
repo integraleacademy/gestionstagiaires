@@ -440,7 +440,7 @@ class RegistrationCancellationTests(unittest.TestCase):
             text_body,
         )
         self.assertIn(
-            "<strong>Clément VAILLANT</strong><br>Directeur général Intégrale Academy - "
+            "Clément VAILLANT</strong><br>Directeur général Intégrale Academy - "
             "Président Intégrale Group",
             html_body,
         )

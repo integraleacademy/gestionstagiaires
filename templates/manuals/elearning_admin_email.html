@@ -14,8 +14,10 @@
 <p style="margin:0 0 16px"><span style="font-size:13px;color:#586c86">Nombre d’accès</span><br><strong>{{ order.learners|length }}</strong></p>
 <p style="margin:0 0 16px"><span style="font-size:13px;color:#586c86">Référence de commande</span><br><strong>{{ order.reference }}</strong></p>
 {% if order.commerce.get('invoice_number') %}<p style="margin:0 0 16px"><span style="font-size:13px;color:#586c86">Facture</span><br><strong>{{ order.commerce.invoice_number }}</strong></p>{% endif %}
-<p style="margin:0"><span style="font-size:13px;color:#586c86">Contact de l’organisme</span><br><a href="mailto:{{ order.centre.email }}" style="color:#2360c4;word-break:break-word">{{ order.centre.email }}</a></p>
-<p style="margin:28px 0"><a href="{{ link }}" style="display:inline-block;padding:15px 22px;background:#2360c4;border-radius:10px;color:#fff;text-decoration:none;font-weight:bold">Voir la commande</a></p>
-<p style="font-size:12px;color:#586c86;word-break:break-all;margin-bottom:0">Si le bouton ne s’ouvre pas, utilisez ce lien :<br><a href="{{ link }}" style="color:#2360c4">{{ link }}</a></p>
+<p style="margin:0"><span style="font-size:13px;color:#586c86">Contact de l’organisme</span><br><a href="mailto:{{ order.centre.email }}" style="color:#285ac8;word-break:break-word">{{ order.centre.email }}</a></p>
+<p style="margin:28px 0"><a href="{{ link }}" style="display:inline-block;padding:15px 22px;background:#285ac8;border-radius:10px;color:#fff;text-decoration:none;font-weight:bold">Voir la commande</a></p>
+<p style="font-size:12px;color:#586c86;word-break:break-all;margin-bottom:0">Si le bouton ne s’ouvre pas, utilisez ce lien :<br><a href="{{ link }}" style="color:#285ac8">{{ link }}</a></p>
 {% endblock %}
-{% block email_footer %}<strong style="color:#172a45">Intégrale Connect</strong><br>Notification de commande e-learning{% endblock %}
+
+
+{% block email_signature %}{% endblock %}

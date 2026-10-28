@@ -1,0 +1,11 @@
+{% set signature = email_signature|default('team') %}
+{% if signature %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-top:30px;border-top:1px solid #e3eaf4"><tr>
+{% if signature in ['clement', 'clement_general'] %}
+  <td class="academy-signature-cell" width="100" valign="middle" style="width:100px;padding-top:26px;padding-right:18px"><img class="academy-signature-image" src="https://gestionstagiaires-r5no.onrender.com/static/images/connect-home/clement-memoji.png" width="72" height="72" alt="Clément VAILLANT" style="display:block;width:72px;height:72px;border-radius:50%;border:2px solid #e7edf8"></td>
+  <td valign="middle" style="padding-top:26px;font-size:13px;line-height:22px;color:#60728e"><strong style="font-size:16px;color:#102c5c">Clément VAILLANT</strong><br>{% if signature == 'clement_general' %}Directeur général Intégrale Academy - Président Intégrale Group{% else %}Directeur · Intégrale Academy{% endif %}<br><a href="mailto:clement@integraleacademy.com" style="color:#285ac8;text-decoration:none">clement@integraleacademy.com</a><br><a href="tel:+33422470768" style="color:#34435c;font-weight:700;text-decoration:none">04 22 47 07 68</a></td>
+{% else %}
+  <td style="padding-top:24px;font-size:13px;line-height:23px;color:#60728e"><strong style="font-size:16px;color:#102c5c">L’équipe Intégrale Academy</strong><br>À vos côtés tout au long de votre formation<br><a href="mailto:ecole@integraleacademy.com" style="color:#285ac8;text-decoration:none">ecole@integraleacademy.com</a><br><a href="tel:+33422470768" style="color:#34435c;font-weight:700;text-decoration:none">04 22 47 07 68</a></td>
+{% endif %}
+</tr></table>
+{% endif %}

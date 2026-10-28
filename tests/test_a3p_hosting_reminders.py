@@ -67,13 +67,14 @@ class A3PHostingReminderTests(unittest.TestCase):
 
         expected_training_name = "Agent de Protection Physique des Personnes (A3P)"
         removed_booking_copy = "Réservation :</strong> disponibilités, tarifs, modalités et paiement"
-        self.assertIn("logo-integrale.png", html_body)
+        self.assertIn("static/parcours-alternance/logo.png", html_body)
         self.assertIn(expected_training_name, html_body)
         self.assertIn(expected_training_name, text_body)
         self.assertNotIn("A3P · Protection rapprochée", html_body)
         self.assertNotIn("A3P · Protection rapprochée", text_body)
         self.assertNotIn(removed_booking_copy, html_body)
-        self.assertIn("@keyframes bookingPulse", html_body)
+        self.assertIn('data-academy-email="2026"', html_body)
+        self.assertNotIn("@keyframes", html_body)
         self.assertIn('class="booking-button"', html_body)
 
 
