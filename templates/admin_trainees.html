@@ -935,7 +935,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
 
 {% if is_ssiap_session and not is_read_only %}
-<div class="modal-backdrop" id="ssiapDiplomaInfoModal" aria-hidden="true">
+<div class="modal-backdrop" id="ssiapDiplomaInfoModal" aria-hidden="true" data-static-backdrop>
   <div class="modal" style="max-width:720px" role="dialog" aria-modal="true" aria-labelledby="ssiapDiplomaInfoTitle">
     <form id="ssiapDiplomaInfoForm" method="post" data-birth-department-url="{{ url_for('admin_ssiap_birth_department') }}">
       <div class="modal-head">
