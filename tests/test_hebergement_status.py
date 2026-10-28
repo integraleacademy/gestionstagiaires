@@ -400,7 +400,7 @@ class PublicTraineePageHostingTests(unittest.TestCase):
         self.assertEqual(data["sessions"][0]["trainees"][0]["hosting_status"], "reserved")
         self.assertEqual(rendered["context"]["trainee"]["hosting_status"], "reserved")
 
-    def test_public_a3p_page_does_not_requery_an_existing_reservation(self):
+    def test_public_a3p_page_rechecks_reservation_and_preserves_it_if_lookup_is_inconclusive(self):
         data = {
             "sessions": [
                 {
@@ -437,7 +437,7 @@ class PublicTraineePageHostingTests(unittest.TestCase):
         response = self.client.get("/espace/PUBLIC-ARTHUR")
 
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(called["value"])
+        self.assertTrue(called["value"])
         self.assertEqual(data["sessions"][0]["trainees"][0]["hosting_status"], "reserved")
 
 
