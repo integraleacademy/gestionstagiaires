@@ -18,6 +18,18 @@ def image_bytes(fmt="PNG", size=(64, 96), **kwargs):
     return output.getvalue()
 
 
+def test_hdr_jpeg_preserves_identity_original_and_does_not_export_gain_map_as_a_page():
+    original = image_bytes('MPO', save_all=True, append_images=[Image.new('RGB',(16,24),'white')])
+    with Image.open(io.BytesIO(original)) as image:
+        assert image.format == 'MPO' and image.n_frames == 2
+    photo, filename = conversion.convert_upload(original, 'portrait-hdr.jpg', photo=True)
+    assert photo == original
+    assert filename == 'portrait-hdr.jpg'
+    document, filename = conversion.convert_upload(original, 'portrait-hdr.jpg')
+    assert filename.endswith('.pdf')
+    assert len(PdfReader(io.BytesIO(document)).pages) == 1
+
+
 def pdf_bytes(pages=1, password=None):
     output = io.BytesIO()
     writer = PdfWriter()

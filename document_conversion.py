@@ -108,7 +108,7 @@ class _LimitedBuffer(io.BytesIO):
 
 
 _IMAGE_FORMATS = {
-    "jpg": {"JPEG"}, "jpeg": {"JPEG"}, "png": {"PNG"}, "webp": {"WEBP"},
+    "jpg": {"JPEG", "MPO"}, "jpeg": {"JPEG", "MPO"}, "png": {"PNG"}, "webp": {"WEBP"},
     "tif": {"TIFF"}, "tiff": {"TIFF"}, "bmp": {"BMP"}, "gif": {"GIF"},
     "heic": {"HEIF"}, "heif": {"HEIF"}, "avif": {"AVIF"},
 }
@@ -134,7 +134,10 @@ def _convert_image(data, ext, photo, max_bytes):
                     raise _invalid()
                 check.verify()
             with Image.open(io.BytesIO(data)) as picture:
-                count = getattr(picture, "n_frames", 1)
+                # HDR JPEGs can carry a second gain-map image. Keep the visible
+                # primary portrait; the gain map is neither an animation nor
+                # an additional document page.
+                count = 1 if picture.format == "MPO" else getattr(picture, "n_frames", 1)
                 if photo and count != 1:
                     raise ConversionError("Pour la photo d’identité, sélectionnez une image fixe contenant une seule photo, sans animation.")
                 if count > MAX_PAGES:

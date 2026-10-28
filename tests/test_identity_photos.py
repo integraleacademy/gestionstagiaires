@@ -186,9 +186,37 @@ def test_partner_cannot_access_another_centres_photo(case):
     assert case[0].get(BASE+'/image?original=1').status_code == 404
 
 
-def test_profile_has_clickable_photo_and_shared_editor(case):
+@pytest.mark.parametrize('training_type', services.FORMATION_TYPES)
+def test_profile_and_crop_are_available_for_every_training(case, training_type):
+    data = json.loads(case[1].read_text())
+    data['sessions'][0]['training_type'] = training_type
+    case[1].write_text(json.dumps(data))
     response = case[0].get('/admin/sessions/S1/stagiaires/T1')
     assert response.status_code == 200
     assert 'data-identity-photo-edit' in response.text
     assert 'id="identityPhotoDialog"' in response.text
     assert 'photoForm' not in response.text
+    assert post(case, crop_data(case)).status_code == 200
+    assert stored(case)['identity_photo_original'].endswith('original.jpg')
+
+
+def test_hdr_jpeg_mpo_displays_and_crops_primary_portrait_without_modifying_source(case):
+    output = io.BytesIO()
+    Image.new('RGB', (1400,1800), 'red').save(output, 'MPO', save_all=True,
+        append_images=[Image.new('RGB', (140,180), 'blue')])
+    original = output.getvalue()
+    case[2].write_bytes(original)
+    with Image.open(case[2]) as check:
+        assert check.format == 'MPO' and check.n_frames == 2
+    for url in (BASE+'/image', BASE+'/image?original=1'):
+        response = case[0].get(url)
+        assert response.status_code == 200
+        with Image.open(io.BytesIO(response.data)) as portrait:
+            assert portrait.format == 'JPEG'
+            r,g,b = portrait.getpixel((portrait.width//2, portrait.height//2))
+            assert r > 240 and g < 10 and b < 10
+    assert post(case, crop_data(case)).status_code == 200
+    assert case[2].read_bytes() == original
+    with Image.open(services._ssiap_diploma_photo_path(stored(case))) as portrait:
+        assert portrait.size == (700,900)
+        assert portrait.getpixel((350,450))[0] > 240

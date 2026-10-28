@@ -33,8 +33,11 @@ def source_token(trainee):
 def decode_photo(content, max_size=None):
     try:
         with Image.open(io.BytesIO(content)) as source:
-            if source.format not in ('JPEG', 'PNG', 'WEBP') or source.width * source.height > 40_000_000:
+            # Smartphone HDR JPEGs are detected as MPO: frame 0 is the portrait,
+            # while subsequent frames may only contain the HDR gain map.
+            if source.format not in ('JPEG', 'MPO', 'PNG', 'WEBP') or source.width * source.height > 40_000_000:
                 raise ValueError
+            source.seek(0)
             if max_size:
                 source.draft('RGB', (max_size * 2, max_size * 2))
             photo = ImageOps.exif_transpose(source).convert('RGB')

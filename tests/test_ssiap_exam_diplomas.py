@@ -46,7 +46,7 @@ def post(case, action, candidates=None, **extra):
 
 def text(response):
     assert response.status_code == 200, response.data[:500]
-    return '\n'.join(page.extract_text() for page in PdfReader(io.BytesIO(response.data)).pages)
+    return ' '.join(' '.join(page.extract_text() for page in PdfReader(io.BytesIO(response.data)).pages).split())
 
 
 def test_review_scope_normalization_and_configured_exam_date(case):
@@ -231,7 +231,7 @@ def test_sdis_final_letter_numbers_match_diplomas_and_repeated_letters(case):
     diploma = post(case, 'generate')
     assert diploma.headers['X-SSIAP-Diploma-Numbers'] == letter.headers['X-SSIAP-Diploma-Numbers']
     assert 'VAR-2026-042' in text(diploma)
-    assert len(PdfReader(io.BytesIO(letter.data)).pages[-1].images) >= 2  # real signature and stamp
+    assert len(PdfReader(io.BytesIO(letter.data)).pages[0].images) >= 2  # signed covering page
 
 
 def test_missing_exam_number_blocks_final_documents_without_allocating(case):
@@ -275,7 +275,40 @@ def test_sdis_multipage_table_repeats_headings_and_preserves_all_names():
     for page in pdf.pages:
         if 'EXEMPLE-' in page.extract_text():
             assert 'Candidat certifié' in page.extract_text()
-    assert 'Clément VAILLANT' in pdf.pages[-1].extract_text()
+    assert 'Clément VAILLANT' in pdf.pages[0].extract_text()
+    assert 'EXEMPLE-' not in pdf.pages[0].extract_text()
+
+
+def test_sdis_window_address_is_fixed_and_first_page_stays_clear_of_candidate_list():
+    import fitz
+    from reportlab.lib.units import mm
+    from ssiap_diploma_documents import sdis_letter
+    rows = [{'name':f'Madame Camille EXEMPLE-{i:02}', 'birth_date':'16/09/1993',
+             'birth_place':"ABIDJAN (Côte d'Ivoire)", 'exam_date':'28/10/2026',
+             'number':f'083-8323-1-2026-{i:05}'} for i in range(1,13)]
+    data = sdis_letter(rows, {'date':'2026-10-28', 'exam_number':'bf94fe1a-b264-4d9b-89db-6c3b397c65b4'}, services.app.root_path).getvalue()
+    pdf = fitz.open(stream=data, filetype='pdf')
+    assert len(pdf) == 2
+    page = pdf[0]
+    window = fitz.Rect(105*mm, 50*mm, 205*mm, 95*mm)
+    lines = ['DDSIS du Var', 'Groupement Prévention - Secrétariat', '24, Allée de Vaugrenier',
+             'ZAC Les Ferrières', '83490 LE MUY']
+    for line in lines:
+        matches = page.search_for(line)
+        assert len(matches) == 1
+        assert window.contains(matches[0])
+    visible_address = ' '.join(page.get_text(clip=window).split())
+    assert visible_address == ' '.join(lines)
+    assert page.search_for('Objet :')[0].y0 >= 105*mm
+    assert 'EXEMPLE-' not in page.get_text()
+    assert 'Clément VAILLANT' in page.get_text()
+    assert len(page.get_images()) >= 2
+    table_page = pdf[1]
+    positions = [table_page.search_for(f'EXEMPLE-{i:02}')[0].y0 for i in range(1,13)]
+    assert min(b-a for a,b in zip(positions,positions[1:])) >= 10*mm
+    for i in range(1,13):
+        assert len(table_page.search_for(f'083-8323-1-2026-{i:05}')) == 1
+    assert PdfReader(io.BytesIO(data)).trailer['/Root']['/ViewerPreferences']['/PrintScaling'] == '/None'
 
 
 def test_missing_letter_signature_cannot_allocate_numbers(case, monkeypatch):
