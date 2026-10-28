@@ -5,6 +5,7 @@ import hashlib
 import json
 import unicodedata
 from html import escape
+from email_design import render_email
 
 
 def _status(value):
@@ -76,29 +77,7 @@ def _email_html(*, first_name, training, date_label, deadline_label, overdue, to
     ) if missing_information else ""
     deadline_title = "ÉCHÉANCE DÉPASSÉE · DÉPÔT IMMÉDIAT" if overdue else "À COMPLÉTER AU PLUS TARD LE"
     headline = "Votre formation commence aujourd’hui." if today_start else "Votre formation approche."
-    return f'''<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Complétez votre dossier · Intégrale Academy</title>
-<style>@media only screen and (max-width:480px) {{
-  .mail-outer {{padding:12px 8px!important;}} .mail-pad {{padding-left:20px!important;padding-right:20px!important;}}
-  .mail-title {{font-size:27px!important;}} .mail-date {{font-size:30px!important;}}
-}}</style></head>
-<body style="margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#172033;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">Votre dossier {escape(training)} reste à compléter. Date limite : {deadline_label}. Assistance : 04 22 47 07 68.</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eef2f7;"><tr><td class="mail-outer" align="center" style="padding:30px 12px;">
-<!--[if mso]><table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;background:#ffffff;border-radius:22px;overflow:hidden;box-shadow:0 16px 48px rgba(15,23,42,.10);">
-  <tr><td class="mail-pad" style="padding:22px 32px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-      <td width="68" valign="middle">{logo}</td><td valign="middle"><p style="margin:0;color:#172033;font-size:19px;font-weight:700;">Intégrale Academy</p><p style="margin:5px 0 0;color:#64748b;font-size:12px;letter-spacing:1px;">VOTRE DOSSIER DE FORMATION</p></td>
-    </tr></table>
-  </td></tr>
-  <tr><td class="mail-pad" style="padding:30px 32px 32px;background:#111d38;background-image:linear-gradient(120deg,#111827,#18386c);color:#ffffff;">
-    <p style="margin:0 0 15px;color:#f8ce78;font-size:11px;letter-spacing:1.6px;font-weight:700;">ACTION REQUISE</p>
-    <h1 class="mail-title" style="margin:0;font-size:32px;line-height:1.2;font-weight:700;letter-spacing:-.5px;">{headline}<br>Finalisez votre dossier.</h1>
-    <p style="margin:18px 0 0;color:#d7e5fa;font-size:14px;line-height:1.6;">{escape(training)}<br>Début de formation : <strong style="color:#ffffff;">{date_label}</strong></p>
-  </td></tr>
-  <tr><td class="mail-pad" style="padding:28px 32px 30px;">
+    return render_email(f"""
     <p style="margin:0 0 14px;font-size:17px;line-height:1.5;">{greeting}</p>
     <p style="margin:0 0 22px;color:#475569;font-size:15px;line-height:1.75;">{escape(intro)}</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fffbf2;border:1px solid #f1d699;border-left:4px solid #db9f2f;border-radius:12px;"><tr><td style="padding:20px;">
@@ -112,16 +91,7 @@ def _email_html(*, first_name, training, date_label, deadline_label, overdue, to
     </td></tr></table>
     <p style="margin:0;color:#64748b;font-size:13px;line-height:1.7;">Merci de transmettre des documents complets et lisibles. Les pièces déjà déposées et en cours de vérification ne sont pas à renvoyer.</p>
     <p style="margin:18px 0 0;color:#94a3b8;font-size:11px;line-height:1.6;">Si le bouton ne fonctionne pas, copiez ce lien :<br><a href="{safe_link}" style="color:#64748b;word-break:break-all;overflow-wrap:anywhere;">{escape(portal_link)}</a></p>
-  </td></tr>
-  <tr><td class="mail-pad" style="padding:24px 32px;background:#f6f8fc;border-top:1px solid #e5ebf3;">
-    <h2 style="margin:0 0 8px;font-size:18px;color:#172033;">Besoin d’assistance ?</h2>
-    <p style="margin:0 0 12px;color:#64748b;font-size:14px;line-height:1.65;">Pour vous aider à compléter votre dossier, contactez-nous au :</p>
-    <a href="tel:+33422470768" style="color:#18386c;font-size:24px;line-height:1.4;font-weight:700;text-decoration:none;">04 22 47 07 68</a>
-    <p style="margin:20px 0 0;color:#172033;font-size:14px;font-weight:700;">L’équipe Intégrale Academy</p>
-  </td></tr>
-</table>
-<!--[if mso]></td></tr></table><![endif]-->
-</td></tr></table></body></html>'''
+  """, title="Finalisez votre dossier de formation", eyebrow="ACTION REQUISE", preheader=f"{headline} Date limite : {deadline_label}.")
 
 
 def build_content(*, first_name, training, start_date, today, portal_link, documents, missing_information, logo_url="", automatic_stage=None):

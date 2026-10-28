@@ -59,7 +59,7 @@ def test_three_dates_same_modern_template_and_exact_history(dossier):
         preview, reason = gestion._manual_docs_preview(training, trainee, today=clock(day).date(), automatic_stage=stage)
         assert not reason and args[2] == preview["html"]
         assert kwargs["text_content"] == preview["text"]
-        assert "linear-gradient(120deg,#111827,#18386c)" in args[2]
+        assert "linear-gradient(135deg,#102c5c 0%,#3269da 100%)" in args[2]
         assert "Accéder à mon espace stagiaire" in args[2]
         assert "Photo d’identité" in args[2] and "Modèle officiel requis" in args[2]
         assert "04 22 47 07 68" in sms.call_args.args[1]

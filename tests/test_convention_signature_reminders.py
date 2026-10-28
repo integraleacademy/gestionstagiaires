@@ -23,7 +23,8 @@ class ConventionSignatureReminderTests(unittest.TestCase):
         self.assertIn("Rappel", subject)
         self.assertIn("Rappel de signature", html_body)
         self.assertIn("Signer ma convention", html_body)
-        self.assertIn("logo-integrale.png", html_body)
+        self.assertIn("static/parcours-alternance/logo.png", html_body)
+        self.assertIn('data-academy-email="2026"', html_body)
         self.assertIn("https://example.test/sign", text_body)
 
     def test_successful_reminder_sends_email_and_sms_then_schedules_next_day(self):

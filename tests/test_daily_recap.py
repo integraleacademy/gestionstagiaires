@@ -37,8 +37,8 @@ class DailyRecapTests(unittest.TestCase):
         subject, body = app.build_daily_recap_email(report)
         self.assertEqual(subject, "DAILY OPERATIONS")
         self.assertIn(">DAILY OPERATIONS</h1>", body)
-        self.assertIn(">28/07/2026</div>", body)
-        self.assertNotIn(">27/07/2026</div>", body)
+        self.assertIn(">28/07/2026</p>", body)
+        self.assertNotIn(">27/07/2026</p>", body)
         self.assertNotIn("Récapitulatif de la veille", body)
         self.assertIn("Chiffre d’affaires de la veille", body)
         self.assertNotIn("Prélèvements rejetés", body)
@@ -52,7 +52,7 @@ class DailyRecapTests(unittest.TestCase):
 
         _subject, body = app.build_daily_recap_email(report)
 
-        badge_style = 'display:inline-block;min-width:22px;padding:7px 9px;background:#4f46e5;color:#fff;border-radius:12px;text-align:center;font-size:12px;font-weight:900'
+        badge_style = 'display:inline-block;min-width:22px;padding:7px 9px;background:#285ac8;color:#fff;border-radius:12px;text-align:center;font-size:12px;font-weight:900'
         visible_section_count = 5  # Dates clés, changements CNAPS, signatures, dossiers incomplets et CNAPS à valider.
         self.assertEqual(body.count(badge_style), visible_section_count)
         self.assertNotIn("background:#eef2ff;color:#4338ca", body)
@@ -219,7 +219,7 @@ class DailyRecapTests(unittest.TestCase):
         self.assertIn("Nouvelles demandes VAE", body)
         self.assertIn("Certifications obtenues", body)
         self.assertIn("Stagiaire", body)
-        badge_style = 'display:inline-block;min-width:22px;padding:7px 9px;background:#4f46e5;color:#fff;border-radius:12px;text-align:center;font-size:12px;font-weight:900'
+        badge_style = 'display:inline-block;min-width:22px;padding:7px 9px;background:#285ac8;color:#fff;border-radius:12px;text-align:center;font-size:12px;font-weight:900'
         self.assertIn(f'{badge_style}">1</span>', body)
         self.assertNotIn("background:#ecfdf5;color:#047857", body)
 
@@ -357,7 +357,7 @@ class DailyRecapTests(unittest.TestCase):
         self.assertEqual([call[0][0] for call in sent], list(app.DAILY_RECAP_RECIPIENTS))
         self.assertTrue(all("cc_emails" not in call[1] for call in sent))
         self.assertIn("Bonjour Elsa", sent[0][0][2])
-        self.assertIn(">28/07/2026</div>", sent[0][0][2])
+        self.assertIn(">28/07/2026</p>", sent[0][0][2])
         self.assertIn("Puget sur Argens", sent[0][0][2])
         self.assertIn("Aurillac", sent[0][0][2])
         self.assertIn("Bonjour Aurélie", sent[1][0][2])

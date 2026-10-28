@@ -189,7 +189,8 @@ def test_email_escapes_name_and_contains_personal_portal_not_admin(case):
     content = activation.message(host, person)
     assert "<script>" not in content["html"]
     assert "&lt;script&gt;" in content["html"]
-    assert "logo-integrale.png" in content["html"]
+    assert "static/parcours-alternance/logo.png" in content["html"]
+    assert 'data-academy-email="2026"' in content["html"]
     assert "/espace/public-token" in content["html"] and "/admin/" not in content["html"]
 
 
