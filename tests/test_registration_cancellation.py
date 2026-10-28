@@ -425,7 +425,9 @@ class RegistrationCancellationTests(unittest.TestCase):
             "(chèque, virement, prélèvement)",
             html_body,
         )
-        self.assertIn("Clément VAILLANT", html_body)
+        self.assertIn("L’équipe Intégrale Academy", html_body)
+        self.assertNotIn("Clément VAILLANT", html_body)
+        self.assertNotIn("Clément VAILLANT", text_body)
         self.assertIn("Pouvez-vous nous confirmer", text_body)
         self.assertIn("Merci de répondre à cet email pour confirmer votre choix", text_body)
         self.assertIn("Les pénalités financières seront donc appliquées.", text_body)
@@ -440,13 +442,11 @@ class RegistrationCancellationTests(unittest.TestCase):
             text_body,
         )
         self.assertIn(
-            "Clément VAILLANT</strong><br>Directeur général Intégrale Academy - "
-            "Président Intégrale Group",
+            "L’équipe Intégrale Academy</strong>",
             html_body,
         )
         self.assertIn(
-            "Clément VAILLANT\nDirecteur général Intégrale Academy - Président "
-            "Intégrale Group",
+            "L’équipe Intégrale Academy",
             text_body,
         )
 

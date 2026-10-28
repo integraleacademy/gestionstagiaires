@@ -245,8 +245,8 @@ def manuals_mail_content(template, base, contact, unsubscribe, test):
     text += ("Un support à annoter pendant les cours et à conserver pour les révisions.\n"
              "Choisissez vos manuels, indiquez les quantités et transmettez votre logo depuis Intégrale Connect.\n"
              f"Découvrir les manuels et commander : {catalogue_url}\n\n"
-             "Clément VAILLANT\nDirecteur général Intégrale Academy – Président Intégrale Group\n"
-             "clement@integraleacademy.com — 04 22 47 07 68\n")
+             "L’équipe Intégrale Academy\n"
+             "ecole@integraleacademy.com — 04 22 47 07 68\n")
     if unsubscribe:
         text += "\nNe plus recevoir ces présentations : " + unsubscribe
     return body, text
@@ -281,8 +281,8 @@ def mail_content(host, template, contact=None, test=False):
             "parcours à adapter au certificateur. A3P : éligibilité au distanciel à valider avec votre certificateur.\n\n"
             f"Découvrez les parcours : {presentation_url}\n"
             f"Demander une démonstration : {demo_url}\n\n"
-            "Clément VAILLANT\nDirecteur général Intégrale Academy – Président Intégrale Group\n"
-            "clement@integraleacademy.com — 04 22 47 07 68\n")
+            "L’équipe Intégrale Academy\n"
+            "ecole@integraleacademy.com — 04 22 47 07 68\n")
     if unsubscribe:
         text += "\nNe plus recevoir ces présentations : " + unsubscribe
     return body, text

@@ -24,7 +24,7 @@ import signal
 import atexit
 import sys
 import ssiap_exam
-from email_design import render_email as render_academy_email
+from email_design import render_email as render_academy_email, normalize_email_text_signature
 import afc_schedule
 import uv_questionnaires
 import aps_kickoff
@@ -8682,8 +8682,7 @@ def build_registration_email(first_name: str, formation_type: str, dstart: str, 
 
               <p style="margin-top:30px">
                 Je reste à votre disposition pour tous renseignements complémentaires,<br>
-                <strong>Clément VAILLANT</strong><br>
-                Directeur Intégrale Academy
+                L’équipe Intégrale Academy
               </p>
             """)
     return subject, body
@@ -8732,8 +8731,7 @@ def build_sst_available_email(first_name: str, formation_type: str, dstart: str,
 
                   <p style="margin-top:22px">
                     Bien cordialement,<br>
-                    <strong>Clément VAILLANT</strong><br>
-                    Directeur Intégrale Academy
+                    L’équipe Intégrale Academy
                   </p>
                 """)
     return subject, body
@@ -8748,7 +8746,7 @@ def build_student_access_email(first_name: str, training_name: str, link: str) -
       <div style="background:#f3f6fc;border:1px solid #e3eaf4;border-radius:12px;padding:18px;margin:22px 0"><strong>Formation :</strong> {html.escape(str(training_name or ''))}</div>
       <p style="text-align:center;margin:26px 0"><a href="{html.escape(link, quote=True)}" style="display:inline-block;background:#285ac8;color:#fff;padding:15px 24px;border-radius:10px;text-decoration:none;font-weight:700">Accéder à mon espace stagiaire</a></p>
       <p style="font-size:13px;color:#60728e">Ce lien est personnel. Conservez ce message pour retrouver votre espace.</p>
-    """, signature="clement")
+    """, signature="team")
     return subject, body
 
 
@@ -8884,10 +8882,6 @@ def build_vtc_onboarding_email(first_name: str, form_link: str) -> Tuple[str, st
 
       <p style="margin-top:18px;">
         Bien cordialement,<br>
-        <strong>Clément VAILLANT</strong><br>
-        Directeur Général – Intégrale Sécurité Formations<br>
-        04 22 47 07 68<br>
-        <a href="https://www.integraleacademy.com" target="_blank" rel="noopener">www.integraleacademy.com</a>
       </p>
     """, title='Votre inscription Chauffeur VTC')
     return subject, html
@@ -8945,8 +8939,7 @@ def build_dirigeant_vae_onboarding_email_sms(first_name: str, link: str) -> Tupl
         <tr>
           <td>
             Je reste à votre disposition pour tous renseignements complémentaires,<br>
-            <strong>Clément VAILLANT</strong><br>
-            Directeur Intégrale Academy
+            L’équipe Intégrale Academy
           </td>
         </tr>
       </table>
@@ -9004,8 +8997,7 @@ def build_vtc_credentials_reminder_email(first_name: str, form_link: str) -> Tup
 
       <p style="margin-top:18px;">
         Bien cordialement,<br>
-        <strong>Clément VAILLANT</strong><br>
-        Directeur Intégrale Academy
+        L’équipe Intégrale Academy
       </p>
     """)
     return subject, html
@@ -9058,8 +9050,7 @@ def build_vtc_credentials_invalid_email(first_name: str, form_link: str) -> Tupl
         Merci pour votre compréhension.
       </p>
       <p style="margin-top:18px;">
-        <strong>Clément VAILLANT</strong><br>
-        Directeur Intégrale Academy
+        L’équipe Intégrale Academy
       </p>
     """)
     return subject, html
@@ -12976,7 +12967,7 @@ Envoyez vos documents en cliquant ici. Les envois par mail ne sont pas acceptés
 Je reste à votre disposition pour tous renseignements complémentaires,
 Je vous souhaite une excellente journée,
 
-Clément VAILLANT - Intégrale Academy"""
+L’équipe Intégrale Academy"""
 AFC_DEFAULT_CONVOCATION_SMS_TEMPLATE = """Bonjour,
 
 Je me permets de revenir vers vous concernant la formation Agent de sécurité privée + Agent de sécurité incendie (SSIAP 1) financée par France Travail.
@@ -13004,7 +12995,7 @@ Si vous avez déjà envoyé vos documents, merci de ne pas tenir compte de ce me
 Je reste à votre disposition pour tous renseignements complémentaires,
 Je vous souhaite une excellente journée,
 
-Clément VAILLANT - Intégrale Academy"""
+L’équipe Intégrale Academy"""
 AFC_DEFAULT_DOCUMENTS_REMINDER_SMS_TEMPLATE = """Bonjour {{prenom}}, Intégrale Academy vous rappelle que votre dossier AFC est incomplet. Merci de nous transmettre les documents manquants dans les meilleurs délais afin de finaliser votre inscription. Si vous les avez déjà envoyés, ne tenez pas compte de ce SMS. 04 22 47 07 68"""
 AFC_DOCUMENTS_REMINDER_INITIAL_DELAY_DAYS = 2
 AFC_DOCUMENTS_REMINDER_INTERVAL_DAYS = 3
@@ -13023,7 +13014,7 @@ N'hésitez pas à nous contacter au 04 22 47 07 68 pour tous renseignements comp
 Je reste à votre disposition pour tous renseignements complémentaires,
 Je vous souhaite une excellente journée,
 
-Clément VAILLANT - Intégrale Academy"""
+L’équipe Intégrale Academy"""
 AFC_DEFAULT_MAIL_TEMPLATE_REJECTED = """Bonjour,
 
 Je me permets de revenir vers vous concernant la formation Agent de sécurité privée (APS) + Agent de sécurité incendie (SSIAP 1) financée par France Travail.
@@ -13041,7 +13032,7 @@ Il n'y aura malheureusement pas de session financée par France Travail avant av
 Je reste à votre disposition pour tous renseignements complémentaires,
 Je vous souhaite une excellente journée,
 
-Clément VAILLANT - Intégrale Academy"""
+L’équipe Intégrale Academy"""
 
 FORMATION_PRICE_DEFAULTS = {
     "A3P": 4200,
@@ -22327,7 +22318,7 @@ def _send_afc_candidate_notification(bucket: dict, candidate: dict) -> tuple[boo
         subject = "Formation APS/SSIAP 1 - Dossier non retenu"
         template = templates.get("rejected") or AFC_DEFAULT_MAIL_TEMPLATE_REJECTED
 
-    raw_content = _afc_render_mail_template(template, candidate)
+    raw_content = normalize_email_text_signature(_afc_render_mail_template(template, candidate))
     html = mail_layout("<p>" + "</p><p>".join([line for line in raw_content.splitlines() if line.strip()]) + "</p>", title='Votre candidature en formation')
     ok = brevo_send_email(to_email, subject, html)
     if not ok:
@@ -22351,6 +22342,7 @@ def _send_afc_convocation_notification(bucket: dict, candidate: dict) -> tuple[b
         (templates.get("convocation_email") or "").strip() or AFC_DEFAULT_CONVOCATION_EMAIL_TEMPLATE,
         candidate,
     )
+    raw_mail = normalize_email_text_signature(raw_mail)
     raw_sms = _afc_render_mail_template(
         (templates.get("convocation_sms") or "").strip() or AFC_DEFAULT_CONVOCATION_SMS_TEMPLATE,
         candidate,
@@ -22398,6 +22390,7 @@ def _send_afc_documents_reminder(
         or AFC_DEFAULT_DOCUMENTS_REMINDER_EMAIL_TEMPLATE,
         candidate,
     )
+    raw_mail = normalize_email_text_signature(raw_mail)
     email_status = "ABSENT"
     email_error = ""
     if email:
@@ -23243,7 +23236,7 @@ def admin_edof_submit():
 
       <p>A très bientôt !</p>
 
-      <p>Clément VAILLANT<br>Directeur Intégrale Academy</p>
+      <p>L’équipe Intégrale Academy</p>
     """, title='Votre demande de financement CPF')
 
     email_ok = brevo_send_email(email, user_subject, user_html)
@@ -28221,8 +28214,7 @@ def api_send_cnaps_pre_relance(session_id: str, trainee_id: str):
         </p>
         <p>Je vous remercie par avance,</p>
         <p>
-          Clément VAILLANT<br>
-          Directeur Intégrale Academy
+          L’équipe Intégrale Academy
         </p>
     """, title='Votre dossier CNAPS')
 
@@ -32259,8 +32251,7 @@ def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
 
       <p style="margin-top:22px">
         Merci par avance,<br>
-        <strong>Clément VAILLANT</strong><br>
-        Directeur Intégrale Academy
+        L’équipe Intégrale Academy
       </p>
     """)
 
@@ -32346,8 +32337,7 @@ def _build_test_fr_payload(t, s, code, deadline, mode):
       <p>Je vous remercie par avance et je vous souhaite une excellente journée,</p>
 
       <p style="margin-top:22px">
-        <strong>Clément VAILLANT</strong><br>
-        Directeur Intégrale Academy
+        L’équipe Intégrale Academy
       </p>
 
       <p style="text-align:center;margin-top:18px">
@@ -32403,8 +32393,7 @@ def _build_test_fr_payload(t, s, code, deadline, mode):
 
       <p style="margin-top:22px">
         Merci par avance,<br>
-        <strong>Clément VAILLANT</strong><br>
-        Directeur Intégrale Academy
+        L’équipe Intégrale Academy
       </p>
 
       <p style="text-align:center;margin-top:18px">
@@ -32459,8 +32448,7 @@ def _build_test_fr_payload(t, s, code, deadline, mode):
 
       <p style="margin-top:22px">
         Merci par avance,<br>
-        <strong>Clément VAILLANT</strong><br>
-        Directeur Intégrale Academy
+        L’équipe Intégrale Academy
       </p>
 
       <p style="text-align:center;margin-top:18px">
@@ -32733,8 +32721,7 @@ def admin_docs_notify(session_id: str, trainee_id: str):
 
       <p style="margin-top:22px">
         Merci par avance,<br>
-        <strong>Clément VAILLANT</strong><br>
-        Directeur Intégrale Academy
+        L’équipe Intégrale Academy
       </p>
 
       <p style="text-align:center;margin-top:18px">
@@ -32824,8 +32811,7 @@ def admin_docs_nonconform_notify(session_id: str, trainee_id: str):
 
       <p style="margin-top:22px">
         Merci par avance,<br>
-        <strong>Clément VAILLANT</strong><br>
-        Directeur Intégrale Academy
+        L’équipe Intégrale Academy
       </p>
 
       <p style="text-align:center;margin-top:18px">
@@ -33973,8 +33959,7 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 
       <p style="margin-top:22px">
         Bien cordialement,<br>
-        <strong>Clément VAILLANT</strong><br>
-        Directeur Intégrale Academy
+        L’équipe Intégrale Academy
       </p>
     """)
 
@@ -36209,7 +36194,7 @@ def build_signature_email_html(
           </td></tr></table>
           <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" class="signature-button" style="border-radius:12px;text-align:center;box-shadow:0 10px 22px rgba(11,94,215,.25);animation:signPulse 1.8s ease-in-out infinite;"><a href="{safe_signature_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">{safe_button_label}</a></td></tr></table>
           <p style="margin:0 0 10px 0;font-size:14px;line-height:1.6;color:#5b677a;">Ce lien est personnel. Merci de ne pas le transférer.</p><p style="margin:0 0 8px 0;font-size:13px;line-height:1.6;color:#6b7280;">Si le bouton ne fonctionne pas, copiez-collez le lien ci-dessous dans votre navigateur :</p><p style="margin:0 0 24px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#4b5563;"><a href="{safe_signature_url}" style="color:#0b5ed7;text-decoration:underline;">{safe_signature_url}</a></p>
-        """, title=document_label, eyebrow="SIGNATURE ÉLECTRONIQUE", signature="clement")
+        """, title=document_label, eyebrow="SIGNATURE ÉLECTRONIQUE", signature="team")
 
 
 def _signature_email_training_label(session_obj: Dict[str, Any]) -> str:
@@ -39150,7 +39135,7 @@ def _build_aps_end_attestation_email(first_name: str, date_end: str = "", sessio
       <p>Veuillez trouver en pièce jointe votre attestation de fin de formation {safe_long_label}.</p>
       {driver_line}
       {period_line}
-      """, title=f"Attestation de fin de formation {short_label}", signature="clement", eyebrow="VOS DOCUMENTS DE FORMATION")
+      """, title=f"Attestation de fin de formation {short_label}", signature="team", eyebrow="VOS DOCUMENTS DE FORMATION")
     return subject, html_body
 
 
@@ -39170,7 +39155,7 @@ def _build_aps_entry_attestation_email(first_name: str, date_start: str = "", se
       <p>Bonjour {safe_first_name},</p>
       <p>Veuillez trouver en pièce jointe votre attestation d’entrée en formation {safe_long_label}.</p>
       {period_line}
-      """, title=f"Attestation d’entrée en formation {short_label}", signature="clement", eyebrow="VOS DOCUMENTS DE FORMATION")
+      """, title=f"Attestation d’entrée en formation {short_label}", signature="team", eyebrow="VOS DOCUMENTS DE FORMATION")
     return subject, html_body
 
 
@@ -39798,7 +39783,7 @@ def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end
           <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" style="border-radius:12px;text-align:center;box-shadow:0 10px 22px rgba(11,94,215,.25);"><a href="{safe_space_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Accéder à mon espace stagiaire</a></td></tr></table>
           <p style="margin:0 0 10px 0;font-size:15px;line-height:1.6;">En cas de question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong> ou par email à <a href="mailto:ecole@integraleacademy.com" style="color:#0b5ed7;text-decoration:underline;">ecole@integraleacademy.com</a>.</p>
           <p style="margin:0 0 24px 0;font-size:15px;line-height:1.6;">À très bientôt,</p>
-        """, title=f"Votre convocation {short_label}", eyebrow="PRÉPAREZ VOTRE FORMATION", signature="clement")
+        """, title=f"Votre convocation {short_label}", eyebrow="PRÉPAREZ VOTRE FORMATION", signature="team")
     return subject, html_body
 
 
@@ -41446,7 +41431,7 @@ def _build_qonto_mandate_email_html(line: Dict[str, Any], sign_url: str) -> str:
 <div style="background:#f7faff;border:1px solid #dbeafe;border-radius:16px;padding:18px 20px;margin:0 0 24px 0;"><p style="margin:0 0 8px 0;font-size:15px;"><strong>Formation :</strong> {formation}</p><p style="margin:0 0 8px 0;font-size:15px;"><strong>Session :</strong> {session_label}</p><p style="margin:0;font-size:15px;"><strong>Référence facture :</strong> {invoice_ref}</p></div>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;margin:0 0 28px 0;"><thead><tr><th align="left" style="background:#0b2f5b;color:#ffffff;padding:13px 14px;font-size:13px;">Échéance</th><th style="background:#0b2f5b;color:#ffffff;padding:13px 14px;font-size:13px;">Date</th><th align="right" style="background:#0b2f5b;color:#ffffff;padding:13px 14px;font-size:13px;">Montant</th></tr></thead><tbody>{rows}</tbody></table>
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 28px auto;"><tr><td bgcolor="#d4a340" class="mandate-button" style="border-radius:14px;text-align:center;box-shadow:0 12px 24px rgba(212,163,64,.30);animation:mandatePulse 1.7s ease-in-out infinite;"><a href="{safe_sign_url}" style="display:inline-block;padding:17px 30px;font-size:17px;font-weight:800;color:#10233f;text-decoration:none;border-radius:14px;">Signer le mandat de prélèvement</a></td></tr></table>
-<p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;color:#5b677a;">Ce lien est personnel et sécurisé. Il permet uniquement d’autoriser les prélèvements liés à l’échéancier présenté.</p><p style="margin:0 0 24px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#64748b;">Si le bouton ne fonctionne pas : <a href="{safe_sign_url}" style="color:#0b5ed7;text-decoration:underline;">{safe_sign_url}</a></p>""", title="Votre mandat de prélèvement", eyebrow="PAIEMENT SÉCURISÉ", signature="clement")
+<p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;color:#5b677a;">Ce lien est personnel et sécurisé. Il permet uniquement d’autoriser les prélèvements liés à l’échéancier présenté.</p><p style="margin:0 0 24px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#64748b;">Si le bouton ne fonctionne pas : <a href="{safe_sign_url}" style="color:#0b5ed7;text-decoration:underline;">{safe_sign_url}</a></p>""", title="Votre mandat de prélèvement", eyebrow="PAIEMENT SÉCURISÉ", signature="team")
 
 
 def _build_qonto_mandate_email_text(line: Dict[str, Any], sign_url: str) -> str:
@@ -44308,7 +44293,7 @@ def build_registration_cancellation_email(
 
           <p style="margin:0;font-size:15px;line-height:1.65;">Je vous remercie par avance pour votre retour et vous souhaite une excellente journée,</p>
 
-        """, title="Annulation de votre inscription", eyebrow="VOTRE DOSSIER DE FORMATION", signature="clement_general")
+        """, title="Annulation de votre inscription", eyebrow="VOTRE DOSSIER DE FORMATION", signature="team")
 
     rule_text = next((f"{label} : {detail}" for key, label, detail in rules if key == rule_key), "")
     financing_text = "\n".join(f"- {label} : {value}" for label, value, _strong in financing_rows)
@@ -44341,8 +44326,7 @@ Pouvez-vous nous confirmer votre volonté d’annuler votre inscription et nous 
 
 Je vous remercie par avance pour votre retour et vous souhaite une excellente journée,
 
-Clément VAILLANT
-Directeur général Intégrale Academy - Président Intégrale Group
+L’équipe Intégrale Academy
 54 chemin du Carreou
 83480 Puget-sur-Argens
 04 22 47 07 68"""
@@ -46167,7 +46151,7 @@ def build_cancellation_payment_reminder_email(
           <p style="margin:0 0 8px;font-size:14px;line-height:1.65;color:#475569;">Le règlement peut être effectué selon le mode de paiement convenu avec Intégrale Academy. Pour obtenir à nouveau nos coordonnées bancaires ou convenir d’une modalité, répondez directement à ce courriel.</p>
           <p style="margin:20px 0 0;font-size:15px;line-height:1.55;">Bien cordialement,</p>
 
-        """, title=heading, eyebrow="SUIVI DE VOTRE RÈGLEMENT", signature="clement_general")
+        """, title=heading, eyebrow="SUIVI DE VOTRE RÈGLEMENT", signature="team")
 
     text_body = f"""Bonjour {first_name_raw},
 
@@ -46191,8 +46175,7 @@ Le règlement peut être effectué selon le mode de paiement convenu avec Intég
 
 Bien cordialement,
 
-Clément VAILLANT
-Directeur général Intégrale Academy - Président Intégrale Group
+L’équipe Intégrale Academy
 54 chemin du Carreou
 83480 Puget-sur-Argens
 04 22 47 07 68"""
@@ -52864,7 +52847,7 @@ def _send_prelevement_pending_validation_messages(trainee: dict, session: dict) 
       vous pouvez nous contacter au 04 22 47 07 68.</p>
 
       <p>Je vous remercie par avance,</p>
-    """, title='Votre mandat reste à valider', signature='clement')
+    """, title='Votre mandat reste à valider', signature='team')
     email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
 
     sms = (
@@ -52987,7 +52970,7 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
 
       <p>Je vous remercie par avance,</p>
 
-      <p>Clément VAILLANT<br>Directeur Intégrale Academy</p>
+      <p>L’équipe Intégrale Academy</p>
     """, title='Prélèvement rejeté : votre réponse attendue')
 
     email_ok = brevo_send_email(email, subject, html, trainee=t) if email else False
@@ -54322,8 +54305,7 @@ def api_diplome_bulk_upload(session_id: str):
 
                   <p style="margin-top:18px">
                     Bien cordialement,<br>
-                    <strong>Clément VAILLANT</strong><br>
-                    Directeur Intégrale Academy
+                    L’équipe Intégrale Academy
                   </p>
                 """)
 

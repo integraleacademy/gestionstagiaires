@@ -347,7 +347,8 @@ def test_learner_email_uses_centre_identity_and_reply_to_without_platform_contac
     assert merchant_messages
     for args, kwargs in merchant_messages:
         assert "Intégrale Connect" in args[1]
-        assert "clement@integraleacademy.com" in args[2]
+        assert "ecole@integraleacademy.com" in args[2]
+        assert "Clément VAILLANT" not in args[2]
         assert not {"sender_name", "sender_email", "reply_to"} & kwargs.keys()
     assert latest(shop)["centre"] == historical_centre
     # Existing delivery idempotency is unchanged by the new presentation.
