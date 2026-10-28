@@ -222,7 +222,7 @@ class DocumentTests(unittest.TestCase):
                 self.assertNotIn('BTSMARK',text);self.assertNotIn('«NOM_',text)
                 self.assertIn('EXEMPLE',text)
             self.assertEqual({f['role'] for f in package['documents']['formation']['fields']},{'employer'})
-            self.assertEqual({f['role'] for f in package['documents']['mobilite']['fields']},{'employer','apprentice','guardian'})
+            self.assertEqual(set(package['documents']), {'cerfa','formation'})
             values['apprentice_birth_date']='1990-01-01'
             remote=generate_documents(store,'l-test',values,settings(values,'distanciel'),assets())
             self.assertEqual(set(remote['documents']),{'cerfa','formation'})
@@ -275,6 +275,21 @@ class ImportAndRouteTests(unittest.TestCase):
         self.assertEqual(self.client.post(path,data={**self.csrf,'q':'Test'}).status_code,403)
         with self.client.session_transaction() as state:state.clear()
         self.assertEqual(self.client.post(path,data={**self.csrf,'q':'Test'}).status_code,302)
+
+    def test_london_generation_is_removed_but_historical_convention_is_readable(self):
+        rid=self.store.create_local({'apprentice_first_name':'Test','apprentice_last_name':'EXEMPLE'})
+        package=fake_package(self.store); self.store.save_package(rid,package)
+        page=self.client.get('/admin/BTS/dossiers/'+rid+'?tab=contrat')
+        self.assertEqual(page.status_code,200)
+        self.assertNotIn('name="mobility_start"',page.text)
+        self.assertNotIn('name="mobility_end"',page.text)
+        self.assertIn('Ancienne convention de mobilité conservée',page.text)
+        path=f'/admin/BTS/dossiers/{rid}/documents/{package["id"]}/mobilite.pdf'
+        response=self.client.get(path)
+        self.assertEqual(response.status_code,200); response.close()
+        with patch('bts_contract_routes.YousignClient') as api:
+            self.client.post('/admin/BTS/dossiers/'+rid+'/signature/envoyer',data={**self.csrf,'package_id':package['id'],'reviewed':'yes'})
+            api.assert_not_called()
 
     def test_stale_package_does_not_call_yousign(self):
         rid=self.store.create_local({'apprentice_first_name':'Test','apprentice_last_name':'EXEMPLE'})

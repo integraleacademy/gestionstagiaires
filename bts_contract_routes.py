@@ -5,6 +5,7 @@ import hashlib
 import io
 import os
 import re
+from urllib.parse import quote
 
 from flask import abort, flash, jsonify, redirect, request, send_file, url_for
 
@@ -56,7 +57,13 @@ def contract_context(legacy, record):
         except WorkspaceError:
             pass
     state = package["signature"] if package else {}
+    if package and "mobilite" in package["documents"] and not state.get("sent_at"):
+        errors.append("La convention de mobilité se gère dans Inscriptions BTS. Générez une nouvelle version du contrat et de la convention de formation avant un nouvel envoi.")
+    mobility_url = "https://inscriptionsbts.onrender.com/admin"
+    if imported and imported.get("source_id"):
+        mobility_url = "https://inscriptionsbts.onrender.com/admin/candidat/" + quote(str(imported["source_id"]), safe="") + "#londres"
     return {"contract_flow": {"settings": settings, "revision": saved["revision"], "settings_fields": SETTINGS_FIELDS, "modes": MODES,
+        "mobility_url": mobility_url,
         "fingerprint": current_hash, "package": package, "stale": stale, "errors": errors,
         "signed": signed, "signature_active": bool(state.get("pending") or state.get("status") in ACTIVE_SIGNATURE_STATUSES),
         "yousign_ready": bool(getattr(legacy, "_yousign_is_configured", lambda: False)()), "doc_labels": DOC_LABELS,
@@ -191,6 +198,8 @@ def register_contract_routes(legacy, protected, actor, get_record, endpoints):
         try:
             with db.lock(record_id):
                 _, package = get_current(db, record_id, check_hash=action == "envoyer")
+                if action == "envoyer" and "mobilite" in package["documents"]:
+                    raise WorkspaceError("La convention de mobilité est désormais gérée dans Inscriptions BTS. Générez une nouvelle version sans mobilité avant l’envoi.")
                 api = YousignClient(legacy)
                 if action == "envoyer":
                     if request.form.get("reviewed") != "yes":

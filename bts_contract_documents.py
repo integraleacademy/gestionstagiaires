@@ -171,8 +171,10 @@ def document_errors(kind, values, settings):
             setting_keys += [f"npec_{year}", f"rac_{year}"]
         if int(settings.get("funding_years") or 2) > 1:
             setting_keys.append("meals_2")
-    if settings.get("teaching_mode") == "presentiel":
+    if kind == "mobilite" and settings.get("teaching_mode") == "presentiel":
         setting_keys += ["mobility_start", "mobility_end", "mobility_cost"]
+    elif kind == "formation" and settings.get("teaching_mode") == "presentiel":
+        setting_keys += ["mobility_cost"]
     if kind == "mobilite" and settings.get("teaching_mode") != "presentiel":
         missing.append("La convention de mobilité concerne uniquement le présentiel")
     names = {k: label for k, label, _ in SETTINGS_FIELDS}
@@ -518,8 +520,9 @@ def prepare_cerfa(values, assets):
 
 
 def generate_documents(store, record_id, values, settings, assets, existing=None):
-    kind_errors = {kind: document_errors(kind, values, settings) for kind in ("formation", "mobilite")
-                   if kind != "mobilite" or settings.get("teaching_mode") == "presentiel"}
+    # London conventions are now issued exclusively from Inscriptions BTS.
+    # Keep the renderer and the old packages readable for historical records.
+    kind_errors = {"formation": document_errors("formation", values, settings)}
     errors = list(dict.fromkeys(item for items in kind_errors.values() for item in items))
     if errors:
         raise WorkspaceError("À compléter pour générer les conventions : " + "; ".join(errors))

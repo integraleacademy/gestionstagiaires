@@ -14,13 +14,11 @@
         ('Représentant légal si l’apprenti est mineur',['guardian_first_name','guardian_last_name','guardian_phone']),
         ('Financement de la formation',['funding_years','npec_1','rac_1','npec_2','rac_2','npec_3','rac_3']),
         ('Frais annexes prévus par la convention',['meal_price','meals_1','meals_2','equipment_cost','mobility_cost']),
-        ('Mobilité à Londres pour le présentiel',['mobility_start','mobility_end']),
         ('Objectifs et programme du BTS',['training_goals','training_content'])] %}
       <fieldset class="ws-contract-fieldset"><legend>{{ heading }}</legend>
         {% if 'Financement' in heading %}{% include 'bts/financing.html' %}{% else %}
         {% if 'Représentant' in heading %}<p class="ws-note">Son e-mail et son adresse sont à renseigner dans l’onglet Étudiant. Pour un apprenti majeur, aucune invitation au représentant légal n’est créée.</p>{% endif %}
         {% if 'Frais annexes' in heading %}<p class="ws-note">Les valeurs initiales viennent de votre modèle. Adaptez-les au dossier et au mode de formation.</p>{% endif %}
-        {% if 'Mobilité' in heading %}<p class="ws-note">Le modèle prévoit Londres du 8 au 12 novembre 2027. Ces dates sont modifiables. La convention et les frais de mobilité sont exclus pour le distanciel et l’hybride.</p>{% endif %}
         {% if 'Objectifs' in heading %}<p class="ws-note">Le modèle fourni contient le programme du BTS MOS. Pour un autre BTS, renseignez ses objectifs et son programme.</p>{% endif %}
         <div class="ws-form-grid">
         {% for key,label,kind in flow.settings_fields %}{% if key in keys %}
@@ -48,7 +46,7 @@
     {% if flow.stale %}<p class="ws-alert ws-alert--error">Le dossier a changé depuis la génération. Les documents ci-dessous restent archivés ; une nouvelle version doit être générée et signée avant transmission.</p>{% endif %}
     <p class="ws-note" data-contract-unsaved hidden>Enregistrez les modifications avant de générer ou envoyer les documents.</p>
     <div class="ws-document-grid">
-    {% for kind,label in flow.doc_labels.items() %}{% if kind != 'mobilite' or opts.get('teaching_mode') == 'presentiel' or (package and 'mobilite' in package.documents) %}
+    {% for kind,label in flow.doc_labels.items() %}{% if kind != 'mobilite' %}
       {% set doc = package.documents.get(kind) if package else none %}
       <article class="ws-document-item"><span class="ws-icon-tile">{{ icon('file',21) }}</span><strong>{{ label }}</strong>
         <p class="ws-note">{{ 'Entreprise uniquement, mandat de gestion inclus' if kind == 'formation' else 'Apprenti, entreprise et représentant légal si mineur' }}</p>
@@ -58,10 +56,11 @@
         {% else %}<span class="ws-pill">À générer</span>{% endif %}
       </article>
     {% endif %}{% endfor %}</div>
-    {% if opts.get('teaching_mode') != 'presentiel' %}<p class="ws-note">La convention de mobilité est disponible uniquement pour les élèves en présentiel.</p>{% endif %}
+    <p class="ws-note">La convention de mobilité à Londres se prépare dans <a href="{{ flow.mobility_url }}" target="_blank" rel="noopener">l’onglet Londres d’Inscriptions BTS</a>.</p>
+    {% if package and 'mobilite' in package.documents %}{% set mobility_archive = package.documents.mobilite %}<details><summary>Ancienne convention de mobilité conservée</summary><p><a href="{{ url_for('bts_contract_document',record_id=record.id,package_id=package.id,kind='mobilite') }}" target="_blank" rel="noopener">Voir le PDF archivé</a>{% if mobility_archive.get('signed_pdf') %} · <a href="{{ url_for('bts_contract_document',record_id=record.id,package_id=package.id,kind='mobilite',signed=1) }}" target="_blank" rel="noopener">Voir la version signée</a>{% endif %}</p></details>{% endif %}
   </section>
   <section class="ws-card ws-pad">
-    <div class="ws-section-head"><div><span class="ws-eyebrow">3. Signature électronique Yousign</span><h3>Une seule démarche par personne</h3><p class="ws-muted">L’entreprise signe tous ses documents en une fois. L’apprenti et son représentant légal signent uniquement le contrat et, en présentiel, la mobilité.</p></div>
+    <div class="ws-section-head"><div><span class="ws-eyebrow">3. Signature électronique Yousign</span><h3>Une seule démarche par personne</h3><p class="ws-muted">L’entreprise signe le contrat et la convention de formation en une fois. L’apprenti et son représentant légal signent le contrat.</p></div>
       {% if sig.get('status') %}<span class="ws-pill {{ 'ws-pill--green' if flow.signed else '' }}">{{ {'draft':'Préparation Yousign','ongoing':'Signatures en cours','done':'Signatures confirmées','uncertain':'Résultat à vérifier','canceled':'Demande annulée','paused':'Demande en pause','approval':'Approbation en cours','rejected':'Demande rejetée','deleted':'Demande supprimée','expired':'Demande expirée','declined':'Signature refusée'}.get(sig.status,'À vérifier') }}</span>{% endif %}
     </div>
     {% if sig.get('error') %}<p class="ws-alert ws-alert--error">{{ sig.error }}</p>{% endif %}
