@@ -848,7 +848,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
         <td class="col-ssiap-diploma" data-ssiap-view-url="{{ url_for('admin_view_ssiap_diploma', session_id=session.id, trainee_id=t.id) }}">
           <div class="ssiap-diploma-actions">
-            {% if t.ssiap_diploma_number %}
+            {% if t.ssiap_diploma_number and ssiap_exam_status == 'certified' %}
               <a class="mini-btn ssiap-view-btn" href="{{ url_for('admin_view_ssiap_diploma', session_id=session.id, trainee_id=t.id) }}" target="_blank" rel="noopener">👁️ Voir le diplôme</a>
             {% elif ssiap_exam_status == 'certified' and not is_read_only %}
               <form class="ssiap-diploma-generation-form" method="post" action="{{ url_for('admin_generate_ssiap_diploma', session_id=session.id, trainee_id=t.id) }}" target="_blank">
@@ -868,7 +868,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
                       data-exam-date="{{ t.ssiap_diploma_exam_date or session.ssiap_exam_date or session.exam_date or '' }}">✏️ Modifier infos diplôme</button>
             {% endif %}
           </div>
-          {% if t.ssiap_diploma_number %}<div class="ssiap-diploma-number">{{ t.ssiap_diploma_number }}</div>{% endif %}
+          {% if t.ssiap_diploma_number and ssiap_exam_status == 'certified' %}<div class="ssiap-diploma-number">{{ t.ssiap_diploma_number }}</div>{% endif %}
         </td>
         {% endif %}
         <td class="col-comment">
@@ -2367,7 +2367,12 @@ body.vae-analysis-filter-active #traineesTable .mini-btn{
     );
     const cell = row?.querySelector(".col-ssiap-diploma");
     const actions = cell?.querySelector(".ssiap-diploma-actions");
-    if(!cell || !actions || !diplomaNumber) return;
+    if(!cell || !actions) return;
+    if(!diplomaNumber){
+      actions.querySelector('.ssiap-view-btn')?.remove();
+      cell.querySelector('.ssiap-diploma-number')?.remove();
+      return;
+    }
 
     const generationForm = actions.querySelector(".ssiap-diploma-generation-form");
     let viewButton = actions.querySelector(".ssiap-view-btn");

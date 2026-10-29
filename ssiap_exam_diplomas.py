@@ -174,7 +174,9 @@ def register(app, services, get_training):
                             return {"ok": False, "error": "Un dossier a changé depuis son ouverture. Actualisez les diplômes avant de réessayer.", "status": 409}
                     for key, (info, _) in prepared.items():
                         apply_info(trainees[key], info)
-                    return {"ok": True, "candidates": rows(canonical)}
+                    numbering_changes = services._reconcile_ssiap_diploma_numbers(data, canonical)
+                    return {"ok": True, "candidates": rows(canonical),
+                            "numbering_changed": bool(numbering_changes)}
                 result = services._atomic_update_data(update)
                 status = result.pop("status", 200)
                 return jsonify(result), status

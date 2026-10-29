@@ -33,7 +33,7 @@
     const v = row.values;
     return `<form class="exam-card diploma-form" data-diploma-id="${esc(row.id)}" data-birth-department-url="${esc(data.department_url)}"><fieldset ${data.read_only ? 'disabled' : ''}>
       <div class="exam-candidate-top"><div class="diploma-person">${portrait(row)}<div><h4 class="exam-candidate-name">${esc(v.first_name)} ${esc(v.last_name)}</h4>${!row.included ? '<span class="exam-chip warn">Non présenté à l’examen</span>' : ''}</div></div>${select('Résultat de l’examen','result',v.result,[['pending_results','En attente de résultat'],['certified','Certifié'],['failed','Ajourné']],'diploma-result')}</div>
-      <p class="diploma-identity" data-diploma-identity></p><div class="diploma-meta"><span class="diploma-number">${row.number ? 'N° ' + esc(row.number) : 'Numéro attribué à la génération'}</span><span class="exam-muted" data-diploma-date></span><span data-diploma-photo-status class="exam-chip ${row.photo_available ? 'ok' : 'warn'}">${row.photo_available ? 'Photo disponible' : 'Photo absente'}</span></div>
+      <p class="diploma-identity" data-diploma-identity></p><div class="diploma-meta"><span class="diploma-number">${v.result === 'failed' || !row.included ? 'Aucun diplôme attribué' : row.number ? 'N° ' + esc(row.number) : 'Numéro attribué à la génération'}</span><span class="exam-muted" data-diploma-date></span><span data-diploma-photo-status class="exam-chip ${row.photo_available ? 'ok' : 'warn'}">${row.photo_available ? 'Photo disponible' : 'Photo absente'}</span></div>
       <p class="diploma-missing" data-diploma-missing hidden></p>
       <details class="exam-details"><summary>Vérifier / modifier les informations du diplôme</summary><div class="exam-grid three">
       ${select('Civilité','civility',v.civility,[['Monsieur','Monsieur'],['Madame','Madame']])}${input('Prénom','first_name',v.first_name)}${input('Nom','last_name',v.last_name)}
@@ -112,6 +112,7 @@
   async function load() {
     data = await (await response()).json();
     render();
+    window.dispatchEvent(new CustomEvent('ssiap-diplomas-generated', {detail:Object.fromEntries(data.candidates.map(row => [row.id, row.number]))}));
     message('');
     // Limit simultaneous requests while automatically checking every missing department.
     const queue = forms();
@@ -129,6 +130,7 @@
     const result = await (await post({action:'save',candidates:changes})).json();
     data.candidates = result.candidates;
     render();
+    window.dispatchEvent(new CustomEvent('ssiap-diplomas-generated', {detail:Object.fromEntries(result.candidates.map(row => [row.id, row.number]))}));
     // Keep the pre-existing trainee table in sync without a reload that loses other drafts.
     for (const row of result.candidates) {
       const button = [...document.querySelectorAll('.ssiap-edit-info-btn')].find(el => (el.dataset.ssiapInfoAction || '').includes('/trainees/' + encodeURIComponent(row.id) + '/'));
@@ -136,6 +138,11 @@
       const select = [...document.querySelectorAll('#traineesTable tr[data-trainee-id]')].find(el => el.dataset.traineeId === row.id)?.querySelector('.ssiap-exam-select');
       if (select) { select.value = row.values.result; select.classList.remove('ssiap-exam-certified','ssiap-exam-failed','ssiap-exam-pending_results'); select.classList.add('ssiap-exam-' + row.values.result); }
     }
+    return result.numbering_changed;
+  }
+  async function saveAndNotify() {
+    const renumbered = await save();
+    message(renumbered ? 'Résultats enregistrés. La numérotation a été recalculée sans trou. Régénérez les diplômes et le courrier SDIS pour remplacer les anciens PDF.' : 'Informations et résultats enregistrés.');
   }
   async function act(work) {
     if (busy) return;
@@ -170,12 +177,12 @@
   panel.addEventListener('change', event => { if (event.target.closest('[data-diploma-id]')) {refresh(); message(dirty ? 'Modifications à enregistrer.' : '');} });
   panel.addEventListener('ssiap-birth-department-found', () => { refresh(); if (dirty) message('Département complété. Modifications à enregistrer.'); });
   panel.addEventListener('toggle', event => { if (event.target.matches('details') && event.target.open && !busy) event.target.closest('form').dispatchEvent(new Event('ssiap-diploma-info-opened')); }, true);
-  panel.addEventListener('submit', event => {event.preventDefault(); act(async () => {await save(); message('Informations et résultats enregistrés.');});});
+  panel.addEventListener('submit', event => {event.preventDefault(); act(saveAndNotify);});
   panel.addEventListener('click', event => {
     const button = event.target.closest('button');
     if (!button) return;
     const id = button.closest('[data-diploma-id]')?.dataset.diplomaId;
-    if (button.hasAttribute('data-diploma-save')) act(async () => {await save(); message('Informations et résultats enregistrés.');});
+    if (button.hasAttribute('data-diploma-save')) act(saveAndNotify);
     if (button.hasAttribute('data-diploma-refresh')) {
       if (dirty && !window.confirm('Actualiser et abandonner les modifications non enregistrées ?')) return;
       act(load);

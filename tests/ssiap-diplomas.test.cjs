@@ -25,6 +25,9 @@ async function setup(t, options = {}) {
     {id:'T2',revision:'r2',values:{...values,first_name:'Camille',last_name:'AUTRE',result:'failed'},included:true,number:'',missing:[],photo_available:false}
   ]};
   const calls = [];
+  if (options.renumberOnSave) data.candidates.forEach((row, i) => {
+    row.values.result = 'certified'; row.number = `083-8323-1-2026-0000${i + 1}`;
+  });
   w.fetch = async (url, config = {}) => {
     const payload = config.body && JSON.parse(config.body);
     calls.push({url, ...payload});
@@ -32,6 +35,11 @@ async function setup(t, options = {}) {
     if (options.failSave && payload?.action === 'save') return {ok:false,json:async () => ({error:'Enregistrement refusé.'})};
     if (payload?.action === 'save') {
       payload.candidates.forEach(row => { const saved = data.candidates.find(c => c.id === row.id); saved.values = row.values; saved.revision += 'x'; });
+      if (options.renumberOnSave) {
+        data.candidates[0].number = '';
+        data.candidates[1].number = '083-8323-1-2026-00001';
+        data.numbering_changed = true;
+      }
     }
     const pdf = ['preview','generate','letter_preview','letter'].includes(payload?.action) || url.includes('/preview');
     return {ok:true,headers:new w.Headers({'Content-Type':pdf ? 'application/pdf' : 'application/json'}),
@@ -55,6 +63,19 @@ test('review renders actual birth sentence, result counts and filters', async t 
   filter.value = 'failed'; filter.dispatchEvent(new ui.w.Event('change'));
   assert.equal(ui.form().hidden,true);
   assert.equal(ui.doc.querySelector('[data-diploma-id=T2]').hidden,false);
+});
+
+test('saving a corrected result refreshes every number and explains which PDFs to replace', async t => {
+  const ui = await setup(t, {renumberOnSave:true});
+  let numbers;
+  ui.w.addEventListener('ssiap-diplomas-generated', event => { numbers = event.detail; });
+  ui.edit('result', 'failed');
+  await ui.click('[data-diploma-save]');
+  assert.equal(numbers.T1, '');
+  assert.equal(numbers.T2, '083-8323-1-2026-00001');
+  assert.match(ui.form().querySelector('.diploma-number').textContent, /Aucun diplôme/);
+  assert.match(ui.doc.querySelector('[data-diploma-id=T2] .diploma-number').textContent, /00001/);
+  assert.match(ui.doc.getElementById('ssiapDiplomaStatus').textContent, /sans trou.*Régénérez les diplômes et le courrier SDIS/);
 });
 
 test('SDIS preview remains usable before results and does not change them', async t => {

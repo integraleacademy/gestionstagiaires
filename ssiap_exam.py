@@ -427,6 +427,8 @@ def register(app, services):
             current["revision"] = current.get("revision", 0) + 1
             current["updated_at"] = services._now_iso()
             training[state_key(training)] = current
+            if payload.get("action") == "candidate" and not security_exam_jury.level(training):
+                services._reconcile_ssiap_diploma_numbers(data, training)
             return {"ok": True, "revision": current["revision"]}
         result = services._atomic_update_data(update)
         return jsonify(result), result.pop("status", 200)

@@ -24,6 +24,7 @@ import signal
 import atexit
 import sys
 import ssiap_exam
+import ssiap_diploma_numbers
 from email_design import render_email as render_academy_email, normalize_email_text_signature
 import afc_schedule
 import uv_questionnaires
@@ -10100,6 +10101,7 @@ def save_data(
             _preserve_aps_elearning_report_state(payload, canonical)
             _preserve_document_reminder_state(payload, canonical)
             ssiap_exam.preserve_state(payload, canonical)
+            ssiap_diploma_numbers.preserve_state(payload, canonical)
             _preserve_cnaps_tracking_state(payload, canonical)
             if not scoped_partner_id and preserve_qonto_oauth and isinstance(canonical.get("qonto_oauth"), dict):
                 payload["qonto_oauth"] = canonical["qonto_oauth"]
@@ -24368,38 +24370,10 @@ def _next_ssiap_diploma_sequence(data: Dict[str, Any], year: int) -> int:
     return highest + 1
 
 
-def _release_deleted_ssiap_diploma_numbers(
-    data: Dict[str, Any], deleted_trainees: List[Dict[str, Any]]
-) -> None:
-    deleted_years = set()
-    for trainee in deleted_trainees:
-        match = SSIAP_DIPLOMA_NUMBER_RE.match(
-            str(trainee.get("ssiap_diploma_number") or "").strip()
-        )
-        if match:
-            deleted_years.add(int(match.group(1)))
-
-    if not deleted_years:
-        return
-
-    highest_by_year = {year: 0 for year in deleted_years}
-    for session_item in data.get("sessions", []):
-        for trainee in _session_trainees_list(session_item):
-            match = SSIAP_DIPLOMA_NUMBER_RE.match(
-                str(trainee.get("ssiap_diploma_number") or "").strip()
-            )
-            if not match:
-                continue
-            year = int(match.group(1))
-            if year in highest_by_year:
-                highest_by_year[year] = max(highest_by_year[year], int(match.group(2)))
-
-    sequences = data.setdefault("ssiap_diploma_sequences", {})
-    for year, highest in highest_by_year.items():
-        if highest:
-            sequences[str(year)] = highest
-        else:
-            sequences.pop(str(year), None)
+def _reconcile_ssiap_diploma_numbers(data, training, *, deleted=(), years=()):
+    return ssiap_diploma_numbers.reconcile(
+        sys.modules[__name__], data, training, deleted=deleted, years=years,
+    )
 
 
 def _delete_trainee_from_session(
@@ -24416,120 +24390,153 @@ def _delete_trainee_from_session(
         trainee for trainee in trainees if str(trainee.get("id") or "") != str(trainee_id)
     ]
     session_item.pop("stagiaires", None)
-    _release_deleted_ssiap_diploma_numbers(data, deleted_trainees)
+    _reconcile_ssiap_diploma_numbers(data, session_item, deleted=deleted_trainees)
     return True
 
 
 def _reserve_ssiap_diploma_numbers(
     session_id: str, trainee_id: Optional[str] = None, *, require_exam_date_match: bool = False
 ) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
-    os.makedirs(os.path.dirname(SSIAP_DIPLOMA_LOCK_FILE) or ".", exist_ok=True)
-    with open(SSIAP_DIPLOMA_LOCK_FILE, "a+", encoding="utf-8") as lock_file:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
-        try:
-            data = load_data()
-            session_item = find_session(data, session_id)
-            if not session_item:
-                raise LookupError("session_not_found")
+    # Resolve towns before taking the shared data lock. Recheck the source fields
+    # inside the transaction so a concurrent birthplace edit cannot be overwritten.
+    preflight = find_session(load_data(run_background_tasks=False), session_id)
+    department_sources = {}
+    source_keys = ("birth_city", "birth_place", "birth_country", "birth_department", "department",
+                   "birth_postal_code", "birth_zip_code", "ssiap_diploma_birth_city",
+                   "ssiap_diploma_birth_country", "ssiap_diploma_birth_department")
+    if preflight:
+        for original in _session_trainees_list(preflight):
+            if trainee_id is not None and str(original.get("id")) != str(trainee_id):
+                continue
+            if not ssiap_diploma_numbers.eligible(sys.modules[__name__], preflight, original):
+                continue
+            resolved = copy.deepcopy(original)
+            _ssiap_birth_place_label(resolved)
+            department_sources[str(original.get("id"))] = (
+                {key: original.get(key) for key in source_keys},
+                {key: resolved[key] for key in ("birth_department", "ssiap_diploma_birth_department")
+                 if key in resolved and resolved.get(key) != original.get(key)},
+            )
 
-            training_label = f"{_session_get(session_item, 'training_type', '')} {_session_get(session_item, 'name', '')}".upper()
-            if "SSIAP" not in training_label and not ssiap_exam.supported(session_item):
-                raise ValueError("Cette action est réservée aux sessions SSIAP.")
+    def allocate(data):
+        session_item = find_session(data, session_id)
+        if not session_item:
+            raise LookupError("session_not_found")
 
-            trainees = _session_trainees_list(session_item)
-            if not trainees:
-                raise ValueError("Aucun stagiaire dans cette session SSIAP.")
+        training_label = f"{_session_get(session_item, 'training_type', '')} {_session_get(session_item, 'name', '')}".upper()
+        if "SSIAP" not in training_label and not ssiap_exam.supported(session_item):
+            raise ValueError("Cette action est réservée aux sessions SSIAP.")
 
-            selected_trainees = [
+        trainees = _session_trainees_list(session_item)
+        if not trainees:
+            raise ValueError("Aucun stagiaire dans cette session SSIAP.")
+
+        selected_trainees = [
+            trainee for trainee in trainees
+            if not _trainee_registration_is_cancelled(trainee)
+            and _ssiap_exam_status(trainee) == "certified"
+            and ssiap_exam.candidate_settings(ssiap_exam.for_family(session_item, "ssiap"), trainee)["included"]
+        ]
+        if trainee_id is not None:
+            matching_trainees = [
                 trainee for trainee in trainees
-                if not _trainee_registration_is_cancelled(trainee)
-                and _ssiap_exam_status(trainee) == "certified"
-                and ssiap_exam.candidate_settings(ssiap_exam.for_family(session_item, "ssiap"), trainee)["included"]
+                if str(trainee.get("id") or "") == str(trainee_id)
             ]
-            if trainee_id is not None:
-                matching_trainees = [
-                    trainee for trainee in trainees
-                    if str(trainee.get("id") or "") == str(trainee_id)
-                ]
-                if not matching_trainees:
-                    raise LookupError("trainee_not_found")
-                if _trainee_registration_is_cancelled(matching_trainees[0]):
-                    raise ValueError("Le diplôme ne peut pas être généré pour une inscription annulée.")
-                if not ssiap_exam.candidate_settings(ssiap_exam.for_family(session_item, "ssiap"), matching_trainees[0])["included"]:
-                    raise ValueError("Ce candidat n’est pas présenté à l’examen.")
-                if _ssiap_exam_status(matching_trainees[0]) != "certified":
-                    raise ValueError("Le diplôme peut être généré uniquement pour un stagiaire certifié.")
-                selected_trainees = matching_trainees
-            if not selected_trainees:
-                raise ValueError("Aucun stagiaire certifié dans cette session SSIAP.")
+            if not matching_trainees:
+                raise LookupError("trainee_not_found")
+            if _trainee_registration_is_cancelled(matching_trainees[0]):
+                raise ValueError("Le diplôme ne peut pas être généré pour une inscription annulée.")
+            if not ssiap_exam.candidate_settings(ssiap_exam.for_family(session_item, "ssiap"), matching_trainees[0])["included"]:
+                raise ValueError("Ce candidat n’est pas présenté à l’examen.")
+            if _ssiap_exam_status(matching_trainees[0]) != "certified":
+                raise ValueError("Le diplôme peut être généré uniquement pour un stagiaire certifié.")
+            selected_trainees = matching_trainees
+        if not selected_trainees:
+            raise ValueError("Aucun stagiaire certifié dans cette session SSIAP.")
 
-            exam_config = ssiap_exam.settings(ssiap_exam.for_family(session_item, "ssiap"))
-            if not str(exam_config.get("exam_number") or "").strip():
-                raise ValueError("Renseignez le numéro d’examen dans Examen → Organisation et jury avant de générer les diplômes.")
+        exam_config = ssiap_exam.settings(ssiap_exam.for_family(session_item, "ssiap"))
+        if not str(exam_config.get("exam_number") or "").strip():
+            raise ValueError("Renseignez le numéro d’examen dans Examen → Organisation et jury avant de générer les diplômes.")
 
-            exam_years = set()
-            missing = []
-            for trainee in selected_trainees:
-                missing_fields = []
-                diploma_row = _ssiap_diploma_row(session_item, trainee)
-                if require_exam_date_match and (not exam_config.get("date") or diploma_row["exam_date"] != _diploma_date_fr(exam_config["date"])):
-                    raise ValueError("La date d’examen de chaque diplôme doit correspondre à celle de cet examen avant de préparer le courrier SDIS.")
-                diploma_first_name = str(
-                    trainee.get("ssiap_diploma_first_name") or trainee.get("first_name") or ""
-                ).strip()
-                diploma_last_name = str(
-                    trainee.get("ssiap_diploma_last_name") or trainee.get("last_name") or ""
-                ).strip()
-                if not diploma_first_name or not diploma_last_name:
-                    missing_fields.append("nom ou prénom")
-                if not diploma_row["birth_date"]:
-                    missing_fields.append("date de naissance")
-                if not diploma_row["birth_place"]:
-                    missing_fields.append("lieu de naissance")
-                if not diploma_row["exam_date"]:
-                    missing_fields.append("date d'examen")
-                else:
-                    exam_years.add(int(diploma_row["exam_date"][-4:]))
-                if missing_fields:
-                    trainee_name = _ssiap_diploma_display_name(trainee) or str(trainee.get("id") or "Stagiaire sans nom")
-                    missing.append(f"{trainee_name} ({', '.join(missing_fields)})")
-            if missing:
-                raise ValueError(f"Informations manquantes pour : {'; '.join(missing)}.")
-            if len(exam_years) != 1:
-                raise ValueError("Tous les diplômes générés en masse doivent avoir la même année d'examen.")
-            year = next(iter(exam_years))
+        exam_years = set()
+        missing = []
+        for trainee in selected_trainees:
+            missing_fields = []
+            source = department_sources.get(str(trainee.get("id")))
+            if source and all(trainee.get(key) == value for key, value in source[0].items()):
+                for key, value in source[1].items():
+                    trainee[key] = value
+            diploma_row = _ssiap_diploma_row(session_item, trainee, lookup_department=False)
+            if require_exam_date_match and (not exam_config.get("date") or diploma_row["exam_date"] != _diploma_date_fr(exam_config["date"])):
+                raise ValueError("La date d’examen de chaque diplôme doit correspondre à celle de cet examen avant de préparer le courrier SDIS.")
+            diploma_first_name = str(
+                trainee.get("ssiap_diploma_first_name") or trainee.get("first_name") or ""
+            ).strip()
+            diploma_last_name = str(
+                trainee.get("ssiap_diploma_last_name") or trainee.get("last_name") or ""
+            ).strip()
+            if not diploma_first_name or not diploma_last_name:
+                missing_fields.append("nom ou prénom")
+            if not diploma_row["birth_date"]:
+                missing_fields.append("date de naissance")
+            if not diploma_row["birth_place"]:
+                missing_fields.append("lieu de naissance")
+            if not diploma_row["exam_date"]:
+                missing_fields.append("date d'examen")
+            else:
+                exam_years.add(int(diploma_row["exam_date"][-4:]))
+            if missing_fields:
+                trainee_name = _ssiap_diploma_display_name(trainee) or str(trainee.get("id") or "Stagiaire sans nom")
+                missing.append(f"{trainee_name} ({', '.join(missing_fields)})")
+        if missing:
+            raise ValueError(f"Informations manquantes pour : {'; '.join(missing)}.")
+        if len(exam_years) != 1:
+            raise ValueError("Tous les diplômes générés en masse doivent avoir la même année d'examen.")
+        year = next(iter(exam_years))
 
-            diploma_number_counts: Dict[str, int] = {}
-            for existing_session in data.get("sessions", []):
-                for existing_trainee in _session_trainees_list(existing_session):
-                    existing_number = str(existing_trainee.get("ssiap_diploma_number") or "").strip()
-                    if existing_number:
-                        diploma_number_counts[existing_number] = diploma_number_counts.get(existing_number, 0) + 1
+        previous_years = []
+        for trainee in selected_trainees:
+            match = SSIAP_DIPLOMA_NUMBER_RE.fullmatch(str(trainee.get("ssiap_diploma_number") or ""))
+            if match and int(match.group(1)) != year:
+                previous_years.append(copy.deepcopy(trainee))
+                ssiap_diploma_numbers.change_number(
+                    sys.modules[__name__], session_item, trainee, "", "exam_year_changed",
+                )
+        _reconcile_ssiap_diploma_numbers(data, session_item, deleted=previous_years, years={year})
+        numbering_sessions, sequences = ssiap_diploma_numbers.scope(sys.modules[__name__], data, session_item)
+        numbering_data = {"sessions": numbering_sessions, "ssiap_diploma_sequences": sequences}
+        diploma_number_counts: Dict[str, int] = {}
+        for existing_session in numbering_sessions:
+            for existing_trainee in _session_trainees_list(existing_session):
+                existing_number = str(existing_trainee.get("ssiap_diploma_number") or "").strip()
+                if existing_number:
+                    diploma_number_counts[existing_number] = diploma_number_counts.get(existing_number, 0) + 1
 
-            next_sequence = _next_ssiap_diploma_sequence(data, year)
-            diploma_rows = []
-            for trainee in selected_trainees:
-                diploma_number = str(trainee.get("ssiap_diploma_number") or "").strip()
-                match = SSIAP_DIPLOMA_NUMBER_RE.match(diploma_number)
-                if (
-                    not match
-                    or int(match.group(1)) != year
-                    or diploma_number_counts.get(diploma_number, 0) > 1
-                ):
-                    diploma_number = f"083-8323-1-{year}-{next_sequence:05d}"
-                    next_sequence += 1
-                    trainee["ssiap_diploma_number"] = diploma_number
-                    trainee["ssiap_diploma_issued_at"] = _now_iso()
+        next_sequence = _next_ssiap_diploma_sequence(numbering_data, year)
+        diploma_rows = []
+        for trainee in selected_trainees:
+            diploma_number = str(trainee.get("ssiap_diploma_number") or "").strip()
+            match = SSIAP_DIPLOMA_NUMBER_RE.match(diploma_number)
+            if (
+                not match
+                or int(match.group(1)) != year
+                or diploma_number_counts.get(diploma_number, 0) > 1
+            ):
+                diploma_number = f"083-8323-1-{year}-{next_sequence:05d}"
+                next_sequence += 1
+                ssiap_diploma_numbers.change_number(
+                    sys.modules[__name__], session_item, trainee, diploma_number, "issued",
+                )
 
-                diploma_rows.append(_ssiap_diploma_row(session_item, trainee))
+            diploma_rows.append(_ssiap_diploma_row(session_item, trainee, lookup_department=False))
 
-            session_item["trainees"] = trainees
-            session_item.pop("stagiaires", None)
-            data.setdefault("ssiap_diploma_sequences", {})[str(year)] = next_sequence - 1
-            save_data(data)
-            return session_item, diploma_rows
-        finally:
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        session_item["trainees"] = trainees
+        session_item.pop("stagiaires", None)
+        sequences[str(year)] = next_sequence - 1
+        return {"session": session_item, "diplomas": diploma_rows}
+
+    result = _atomic_update_data(allocate)
+    return result["session"], result["diplomas"]
 
 
 def _draw_fitted_pdf_text(
@@ -24638,6 +24645,8 @@ def admin_view_ssiap_diploma(session_id: str, trainee_id: str):
         abort(404)
     except ValueError as exc:
         return str(exc), 400
+    if not ssiap_diploma_numbers.eligible(sys.modules[__name__], session_item, trainee):
+        abort(404, description="Ce candidat n’est plus certifié et présenté à l’examen.")
     if not str(trainee.get("ssiap_diploma_number") or "").strip():
         abort(404, description="Ce diplôme n'a pas encore été généré.")
     diploma = _ssiap_diploma_row(session_item, trainee)
@@ -27910,7 +27919,27 @@ def api_update_trainee(session_id: str, trainee_id: str):
             t.update(previous_trainee)
             return jsonify({"ok": False, "error": "Échec de l’envoi de la convocation pratique"}), 502
 
-    save_data(data)
+    if ssiap_exam.supported(s) and ("ssiap_exam_status" in payload or "registration_cancelled" in payload):
+        changed_fields = {key: value for key, value in t.items() if key not in previous_trainee or previous_trainee[key] != value}
+        removed_fields = set(previous_trainee) - set(t)
+
+        def update_exam_result(canonical):
+            current_session = find_session(canonical, session_id)
+            if not current_session:
+                abort(404)
+            current_trainee = next((item for item in _session_trainees_list(current_session)
+                                    if item.get("id") == trainee_id), None)
+            if not current_trainee:
+                abort(404)
+            current_trainee.update(changed_fields)
+            for key in removed_fields:
+                current_trainee.pop(key, None)
+            _reconcile_ssiap_diploma_numbers(canonical, current_session)
+            return {"trainee": current_trainee}
+
+        t = _atomic_update_data(update_exam_result)["trainee"]
+    else:
+        save_data(data)
     return jsonify({
         "ok": True,
         "dossier_status": t.get("dossier_status"),
@@ -28582,15 +28611,13 @@ def api_vtc_check_notify():
 @admin_login_required
 @admin_write_required
 def api_delete_trainee(session_id: str, trainee_id: str):
-    data = load_data()
     _force_backup_snapshot(DATA_FILE)
-    s = find_session(data, session_id)
-    if not s:
-        return jsonify({"ok": False, "error": "session_not_found"}), 404
-
-    deleted = _delete_trainee_from_session(data, s, trainee_id)
-    save_data(data)
-    return jsonify({"ok": True, "deleted": deleted})
+    def remove(data):
+        training = find_session(data, session_id)
+        if not training:
+            abort(404)
+        return {"ok": True, "deleted": _delete_trainee_from_session(data, training, trainee_id)}
+    return jsonify(_atomic_update_data(remove))
 
 
 # =========================
@@ -31474,13 +31501,13 @@ def _transfer_trainee_billing_lines(
 @admin_login_required
 @admin_write_required
 def admin_delete_trainee(session_id: str, trainee_id: str):
-    data = load_data()
     _force_backup_snapshot(DATA_FILE)
-    s = find_session(data, session_id)
-    if not s:
-        abort(404)
-    _delete_trainee_from_session(data, s, trainee_id)
-    save_data(data)
+    def remove(data):
+        training = find_session(data, session_id)
+        if not training:
+            abort(404)
+        return {"deleted": _delete_trainee_from_session(data, training, trainee_id)}
+    _atomic_update_data(remove)
     return redirect(url_for("admin_trainees", session_id=session_id))
 
 
