@@ -361,3 +361,110 @@ def test_legacy_draft_must_be_reviewed_before_signature(host,client):
     updated=store.get(row['id'])
     assert updated['document_version']==2 and updated['failed_exam_date']=='2026-10-12'
     assert send(client,updated).status_code==200
+
+
+def refresh_convention(client, row, **changes):
+    csrf=client.get('/api/sessions/SOURCE/stagiaires/T1/rattrapages').json['csrf']
+    return client.post('/api/sessions/SOURCE/stagiaires/T1/rattrapages',json={
+        'csrf':csrf,'id':row['id'],'revision':row['revision'],'refresh_convention':True,**changes})
+
+
+def test_edit_regenerates_pdf_with_changed_terms_and_fresh_link(host,client):
+    row=saved(host,client)
+    old=client.get('/api/sessions/SOURCE/stagiaires/T1/rattrapages').json['records'][0]
+    response=client.post('/api/sessions/SOURCE/stagiaires/T1/rattrapages',json=payload(client,
+        id=row['id'],revision=row['revision'],exam_date='2026-12-10',exam_price='60',day_price='70',
+        notes='Prévoir une pièce d’identité.',location='Nouveau lieu de préparation',
+        no_days=False,days=[{'date':'2026-12-07','start':'10:00','end':'16:00','topic':'Programme corrigé'}]))
+    assert response.status_code==200,response.json
+    updated=retakes.Store(host).get(row['id'])
+    assert updated['revision']==row['revision']+1 and updated['total_cents']==13000
+    assert response.json['record']['convention_url']!=old['convention_url']
+    pdf=client.get(response.json['record']['convention_url'])
+    assert pdf.status_code==200 and pdf.headers['Cache-Control']=='private, no-store'
+    import io
+    text='\n'.join(p.extract_text() for p in workflow.PdfReader(io.BytesIO(pdf.data)).pages)
+    assert all(value in text for value in ('10/12/2026','Nouveau lieu de préparation','Programme corrigé','130,00 €','pièce d’identité'))
+    assert updated['pdf_sha256']==hashlib.sha256(pdf.data).hexdigest()
+    host.brevo_send_email.assert_not_called()
+    host.get_or_create_qonto_billing_client.assert_not_called()
+
+
+def test_refresh_uses_current_trainee_and_sessions_but_preserves_terms(host,client,monkeypatch):
+    row=saved(host,client,exam_price='60',day_price='70',no_days=False,days=[{'date':'2026-12-07'}])
+    source,target=host.load_data()['sessions'][:2]
+    source['trainees'][0].update(first_name='Alex',address='42 avenue Nouvelle',email='alex@example.test')
+    source.update(name='Session initiale corrigée',date_start='2026-09-07',date_end='2026-10-09')
+    target.update(name='Session d’accueil corrigée',exam_date='2026-12-15')
+    monkeypatch.setattr(retakes,'prices',lambda *a:{'exam_price':'999','day_price':'999','source':'Changed'})
+    response=refresh_convention(client,row,exam_price='1',exam_date='2026-12-20')
+    assert response.status_code==200,response.json
+    store=retakes.Store(host);updated=store.get(row['id'])
+    assert updated['person']['first_name']=='Alex' and updated['person']['address']=='42 avenue Nouvelle'
+    assert updated['source_name']=='Session initiale corrigée' and updated['target_name']=='Session d’accueil corrigée'
+    assert updated['revision']==row['revision']+1 and updated['status']=='draft'
+    for key in ('exam_date','exam_cents','day_cents','price_reference','days','location','total_cents','exam_offered','days_offered'):
+        assert updated[key]==row[key]
+    text='\n'.join(p.extract_text() for p in workflow.PdfReader(store.document(row['id'],'convention')).pages)
+    assert all(value in text for value in ('Alex TEST','42 avenue Nouvelle','alex@example.test','07/09/2026','Session d’accueil corrigée','09/12/2026'))
+    assert send(client,updated).status_code==200
+    host.brevo_send_email.assert_not_called()
+    host.get_or_create_qonto_billing_client.assert_not_called()
+
+
+def test_stale_refresh_cannot_overwrite_newer_draft(host,client):
+    row=saved(host,client)
+    assert refresh_convention(client,row).status_code==200
+    store=retakes.Store(host);current=store.get(row['id']);pdf=store.document(row['id'],'convention').read_bytes()
+    assert refresh_convention(client,row).status_code==400
+    assert store.get(row['id'])==current
+    assert store.document(row['id'],'convention').read_bytes()==pdf
+
+
+@pytest.mark.parametrize('status',['queued','signing','signed','payment','confirmed','cancelled','stopped'])
+def test_refresh_never_replaces_dispatched_or_closed_convention(host,client,status):
+    row=saved(host,client);row['status']=status
+    store=retakes.Store(host);store.save(row);pdf=store.document(row['id'],'convention').read_bytes()
+    assert refresh_convention(client,row).status_code==400
+    assert store.get(row['id'])==row
+    assert store.document(row['id'],'convention').read_bytes()==pdf
+
+
+@pytest.mark.parametrize('blocked',['csrf','viewer','partner'])
+def test_refresh_requires_csrf_write_access_and_correct_organism(host,client,blocked):
+    row=saved(host,client);store=retakes.Store(host);pdf=store.document(row['id'],'convention').read_bytes()
+    csrf=client.get('/api/sessions/SOURCE/stagiaires/T1/rattrapages').json['csrf']
+    if blocked=='viewer':
+        with client.session_transaction() as state:state['admin_role']='viewer'
+    if blocked=='partner':host.load_data()['sessions'][0]['partner_id']='another'
+    response=client.post('/api/sessions/SOURCE/stagiaires/T1/rattrapages',json={
+        'csrf':'' if blocked=='csrf' else csrf,'id':row['id'],'revision':row['revision'],'refresh_convention':True})
+    assert response.status_code==403
+    assert store.get(row['id'])==row and store.document(row['id'],'convention').read_bytes()==pdf
+
+
+def test_failed_regeneration_preserves_previous_pdf_and_record(host,client,monkeypatch):
+    row=saved(host,client);store=retakes.Store(host);pdf=store.document(row['id'],'convention').read_bytes()
+    def fail(row,destination):
+        destination.write_bytes(b'incomplete PDF')
+        raise ValueError('Génération interrompue')
+    monkeypatch.setattr('exam_retakes_documents.build_convention',fail)
+    response=refresh_convention(client,row)
+    assert response.status_code==400
+    assert store.get(row['id'])==row and store.document(row['id'],'convention').read_bytes()==pdf
+    assert list(store.root.glob('*.pdf'))==[store.document(row['id'],'convention')]
+
+
+def test_failed_record_save_restores_previous_pdf(host,client,monkeypatch):
+    row=saved(host,client);store=retakes.Store(host);pdf=store.document(row['id'],'convention').read_bytes()
+    host.load_data()['sessions'][0]['trainees'][0]['first_name']='Alex'
+    def fail(*args):raise RuntimeError('Database unavailable')
+    monkeypatch.setattr(retakes.Store,'save',fail)
+    with pytest.raises(RuntimeError,match='Database unavailable'):refresh_convention(client,row)
+    assert store.get(row['id'])==row and store.document(row['id'],'convention').read_bytes()==pdf
+    assert list(store.root.glob('*.pdf'))==[store.document(row['id'],'convention')]
+
+
+def test_refresh_without_existing_draft_never_creates_a_dossier(host,client):
+    response=client.post('/api/sessions/SOURCE/stagiaires/T1/rattrapages',json=payload(client,refresh_convention=True))
+    assert response.status_code==400 and retakes.Store(host).query()==[]
