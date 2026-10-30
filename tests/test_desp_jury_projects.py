@@ -1,4 +1,5 @@
 import copy
+from datetime import date, timedelta
 from io import BytesIO
 import json
 from pathlib import Path
@@ -20,6 +21,7 @@ def portal(monkeypatch, tmp_path):
               "documents": [], "public_has_logged_in": True}
     training = {"id": "S1", "name": "DESP initial Paris", "training_type": "DIRIGEANT initial",
                 "date_start": "2026-10-01", "date_end": "2026-11-09", "exam_date": "2026-11-10",
+                "dirigeant_in_person_start": "2026-10-05",
                 "trainees": [person, {"id": "T2", "first_name": "Camille", "last_name": "TEST",
                                       "public_token": "PUB-T2", "documents": []}]}
     data_file.write_text(json.dumps({"sessions": [training]}))
@@ -30,6 +32,7 @@ def portal(monkeypatch, tmp_path):
     monkeypatch.setattr(host, "_partner_postgres_active", lambda: False)
     monkeypatch.setattr(host, "fetch_cnapsv3_tracking_requests", lambda: ([], ""))
     monkeypatch.setattr(host, "_remember_admin_trainee_consultation", lambda *a: None)
+    monkeypatch.setattr(projects, "today", lambda: date(2026, 10, 30))
     monkeypatch.setattr(host.app, "testing", True)
     client = host.app.test_client()
     with client.session_transaction() as session:
@@ -199,6 +202,11 @@ def test_real_public_and_admin_pages_and_download(portal):
     assert public.status_code == 200
     page = html.fromstring(public.data)
     section = page.get_element_by_id("projet-cadrage")
+    assert section.tag == "details" and "open" not in section.attrib
+    assert section.xpath("./summary")
+    previous_card = section.xpath("preceding-sibling::*[not(self::link)][1]")[0]
+    assert "diplomas-card" in previous_card.get("class", "")
+    assert "Documents délivrés" in previous_card.text_content()
     assert "15 Mo maximum au total" in section.text_content()
     assert len(section.xpath('.//input[@type="file"]')) == 2
     upload(portal, {1: b"jury"})
@@ -211,3 +219,40 @@ def test_real_public_and_admin_pages_and_download(portal):
     assert not section.xpath('.//input[@type="file"]')
     response = portal[0].get(section.xpath('.//a')[0].get('href'))
     assert response.status_code == 200 and response.data == b"jury"
+
+
+@pytest.mark.parametrize("elapsed,visible", [(-1, False), (0, False), (6, False), (7, True), (8, True)])
+def test_release_seven_days_after_in_person_start(portal, monkeypatch, elapsed, visible):
+    monkeypatch.setattr(projects, "today", lambda: date(2026, 10, 5) + timedelta(days=elapsed))
+    response = portal[0].get("/espace/PUB-T1")
+    assert response.status_code == 200
+    assert bool(html.fromstring(response.data).xpath('//*[@id="projet-cadrage"]')) is visible
+    assert upload(portal, {1: b"jury project"}).status_code == (302 if visible else 404)
+    assert bool(projects.documents(person(portal))) is visible
+
+
+@pytest.mark.parametrize("start", [None, "", "invalid", "2026-02-30"])
+def test_missing_or_invalid_onsite_date_never_uses_remote_start(portal, start):
+    data = json.loads(portal[1].read_text())
+    data["sessions"][0]["dirigeant_in_person_start"] = start
+    portal[1].write_text(json.dumps(data))
+    response = portal[0].get("/espace/PUB-T1")
+    assert response.status_code == 200
+    assert not html.fromstring(response.data).xpath('//*[@id="projet-cadrage"]')
+    assert upload(portal, {1: b"jury project"}).status_code == 404
+    assert not projects.documents(person(portal))
+
+
+def test_postponed_onsite_date_closes_public_access_but_keeps_admin_download(portal):
+    upload(portal, {1: b"saved project"})
+    data = json.loads(portal[1].read_text())
+    data["sessions"][0]["dirigeant_in_person_start"] = "2026-10-29"
+    portal[1].write_text(json.dumps(data))
+    response = portal[0].get("/espace/PUB-T1")
+    assert not html.fromstring(response.data).xpath('//*[@id="projet-cadrage"]')
+    assert portal[0].get("/espace/PUB-T1/projet-cadrage/download").status_code == 404
+    assert upload(portal, {1: b"too early"}).status_code == 404
+    with portal[0].session_transaction() as session:
+        session.update(admin_logged_in=True, admin_role="admin")
+    response = portal[0].get("/admin/sessions/S1/stagiaires/T1/projet-cadrage/download")
+    assert response.status_code == 200 and response.data == b"saved project"

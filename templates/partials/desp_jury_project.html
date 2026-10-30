@@ -1,14 +1,24 @@
 {% if desp_project %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/desp-jury-project.css') }}?v=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/desp-jury-project.css') }}?v=2">
+{% if desp_project_admin %}
 <section class="desp-project" id="projet-cadrage" aria-labelledby="despProjectTitle">
   <div class="desp-project-heading">
+{% else %}
+<details class="desp-project desp-project-accordion" id="projet-cadrage" aria-labelledby="despProjectTitle">
+  <summary class="desp-project-heading">
+{% endif %}
     <div>
       <p class="desp-project-kicker">DESP initial · Examen</p>
       <h2 id="despProjectTitle">Projet de cadrage</h2>
       <p>{{ 'Documents déposés par le stagiaire pour le jury d’examen.' if desp_project_admin else 'Déposez pendant votre formation les documents que vous présenterez au jury d’examen.' }}</p>
     </div>
     <span class="desp-project-badge">{{ desp_project.documents|length }} / 2 documents</span>
+{% if desp_project_admin %}
   </div>
+{% else %}
+  </summary>
+{% endif %}
+  <div class="desp-project-content">
   {% if not desp_project_admin %}
     {% for category, message in get_flashed_messages(with_categories=true, category_filter=['desp_project_success', 'desp_project_error']) %}
     <p class="desp-project-feedback {{ 'is-error' if category == 'desp_project_error' else 'is-success' }}" role="alert">{{ message }}</p>
@@ -51,7 +61,12 @@
     <button class="btn desp-project-submit" type="submit">Enregistrer mes documents</button>
     <p class="desp-project-file-hint">Vous pouvez ajouter le deuxième document plus tard ou remplacer vos fichiers. Les changements sont appliqués après enregistrement.</p>
   </form>
-  <script src="{{ url_for('static', filename='js/desp-jury-project.js') }}?v=1" defer></script>
+  <script src="{{ url_for('static', filename='js/desp-jury-project.js') }}?v=2" defer></script>
   {% endif %}
+  </div>
+{% if desp_project_admin %}
 </section>
+{% else %}
+</details>
+{% endif %}
 {% endif %}

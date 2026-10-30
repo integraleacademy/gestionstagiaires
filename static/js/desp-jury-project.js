@@ -2,6 +2,8 @@
   'use strict';
   const form = document.querySelector('[data-desp-project-form]');
   if (!form) return;
+  const accordion = form.closest('details');
+  if (accordion?.querySelector('.desp-project-feedback')) accordion.open = true;
   const status = form.querySelector('[role="status"]');
   const button = form.querySelector('button[type="submit"]');
   const maxBytes = Number(form.dataset.maxBytes);
