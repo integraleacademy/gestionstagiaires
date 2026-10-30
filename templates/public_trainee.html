@@ -998,6 +998,7 @@
   <div class="vae-welcome-banner">🚀 Bienvenue dans votre Espace VAE Dirigeant d'entreprise de sécurité privée (DESP)</div>
   {% endif %}
 
+  {% with desp_project_admin=false %}{% include 'partials/desp_jury_project.html' %}{% endwith %}
   {% with uv_admin=false %}{% include 'partials/uv_questionnaires.html' %}{% endwith %}
 
   {% if public_qcus %}

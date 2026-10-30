@@ -912,6 +912,9 @@
           📁 Mes documents
         </button>
       {% endif %}
+      {% if desp_project %}
+        <a class="btn btn-outline btn-uniform" href="#projet-cadrage">Projet de cadrage · {{ desp_project.documents|length }}/2</a>
+      {% endif %}
       <button class="btn btn-outline btn-uniform" type="button" data-open-section="miscDocumentsSection">
         🔒 Documents divers
       </button>
@@ -2820,6 +2823,7 @@
   <!-- ===================== -->
   <!-- DOCUMENTS (pleine largeur) -->
   <!-- ===================== -->
+  {% with desp_project_admin=true %}{% include 'partials/desp_jury_project.html' %}{% endwith %}
 {% if not is_vtc %}
   <details class="card" id="documentsSection" style="grid-column:1 / -1;">
     <summary style="cursor:pointer;font-weight:900;">
