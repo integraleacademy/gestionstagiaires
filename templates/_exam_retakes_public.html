@@ -1,0 +1,23 @@
+{% if exam_retakes %}
+<section class="saas-section-card" id="rattrapage" style="background:#fff;border:1px solid #dbe4f3;border-radius:20px;padding:24px;margin-bottom:22px">
+  <p class="card-kicker">Une nouvelle étape</p><h2 class="card-title">Mon rattrapage</h2>
+  {% for r in exam_retakes %}
+  <article style="padding:20px 0;border-top:1px solid #e2e8f0;margin-top:16px">
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><strong>{{ r.kind }} · {{ r.exam_date_label }}{% if r.exam_time %} à {{ r.exam_time }}{% endif %}</strong><span class="pill {{ 'green' if r.status=='confirmed' else 'yellow' }}">{{ r.label }}</span></div>
+    <p>{{ r.target_name }}<br>{{ r.location }}</p>
+    {% if r.days %}<h3>Mes journées de préparation</h3><ul>{% for d in r.days %}<li>{{ d.date|frdate }} · {{ d.start }}–{{ d.end }} — {{ d.topic }}</li>{% endfor %}</ul>
+    {% else %}<p>Aucune journée de cours supplémentaire.</p>{% endif %}
+    {% for item in r['items'] %}<p style="margin:6px 0">{{ item.label }} : <strong>{{ 'Offert' if item.offered else item.price }}</strong></p>{% endfor %}
+    <p><strong>Total TTC : {{ r.total }}</strong></p>
+    {% if r.notes %}<p style="white-space:pre-line">{{ r.notes }}</p>{% endif %}
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      {% if r.signature_url %}<a class="btn" href="{{ r.signature_url }}" target="_blank" rel="noopener">Signer ma convention</a>{% endif %}
+      <a class="btn secondary" href="{{ r.convention_url }}" target="_blank" rel="noopener">Convention{% if r.signed_at %} signée{% endif %}</a>
+      {% if r.invoice_url %}<a class="btn secondary" href="{{ r.invoice_url }}" target="_blank" rel="noopener">Ma facture Qonto</a>{% endif %}
+      {% if r.payment_url %}<a class="btn" href="{{ r.payment_url }}" target="_blank" rel="noopener">Régler par carte bancaire</a>{% endif %}
+    </div>
+    {% if r.status=='confirmed' %}<p style="color:#14704a;font-weight:700">Votre participation au rattrapage est confirmée.</p>{% endif %}
+  </article>
+  {% endfor %}
+</section>
+{% endif %}

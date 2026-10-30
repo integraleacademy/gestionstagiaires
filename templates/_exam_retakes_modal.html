@@ -1,0 +1,32 @@
+<link rel="stylesheet" href="{{ url_for('static',filename='css/exam-retakes.css') }}">
+<dialog id="retakeDialog" class="retake-dialog" aria-labelledby="retakeTitle" data-api="{{ url_for('retake_list',sid=session.id,tid=trainee.id) }}">
+  <header class="retake-header"><div><p>ACCOMPAGNER LA RÉUSSITE</p><h2 id="retakeTitle">Rattrapage</h2><span>{{ trainee.first_name }} {{ trainee.last_name }} · {{ session.training_type }}</span></div><button type="button" data-retake-close aria-label="Fermer">×</button></header>
+  <div class="retake-body">
+    <p id="retakeFeedback" role="status" aria-live="polite"></p>
+    <div id="retakeHistory"></div>
+    <button type="button" class="btn btn-outline" id="retakeNew" hidden>+ Nouveau rattrapage</button>
+    <form id="retakeForm">
+      <section><h3><span>1</span> Nouvelle présentation à l’examen</h3><div class="retake-grid">
+        <label>Examen concerné<select name="kind" required></select></label>
+        <label>Session d’accueil<select name="target_session" required></select></label>
+        <label>Date de l’examen<input name="exam_date" type="date" required></label>
+        <label>Horaire (facultatif)<input name="exam_time" type="time"></label>
+        <label class="retake-wide">Lieu de l’examen et de la préparation<input name="location" maxlength="500" required placeholder="Adresse du centre et précisions utiles"></label>
+      </div><p class="retake-help">La prochaine date disponible est proposée. Vous pouvez modifier la date et la session d’accueil.</p>
+      <div class="retake-price"><label>Frais d’examen TTC<input name="exam_price" type="number" min="0" max="100000" step="0.01" inputmode="decimal"></label><label class="retake-check"><input name="exam_offered" type="checkbox"> Examen offert</label></div>
+      <p class="retake-help" id="retakeExamSource"></p><p class="retake-help" id="retakePriceNote"></p></section>
+      <section><h3><span>2</span> Journées de préparation</h3>
+        <label class="retake-check"><input type="checkbox" name="no_days" checked> Pas de journées de cours supplémentaires</label>
+        <div id="retakeDaysSection" hidden><div id="retakeDays"></div><button type="button" id="retakeAddDay" class="btn btn-outline">+ Ajouter une journée</button>
+          <div class="retake-price"><label>Tarif journalier TTC<input name="day_price" type="number" min="0" max="100000" step="0.01" inputmode="decimal"></label><label class="retake-check"><input name="days_offered" type="checkbox"> Journées offertes</label></div><p class="retake-help" id="retakeDaySource"></p>
+        </div>
+      </section>
+      <section><h3><span>3</span> Convention et montant</h3><label>Précisions à faire figurer dans la convention<textarea name="notes" rows="3" maxlength="2000" placeholder="Modules à réviser, consignes, matériel à prévoir…"></textarea></label>
+        <div class="retake-total"><span>Total TTC à régler</span><strong id="retakeTotal">0,00 €</strong></div>
+        <p class="retake-help" id="retakeFlow"></p>
+      </section>
+      <footer class="retake-actions"><button type="submit" class="btn btn-primary">Enregistrer et préparer la convention</button></footer>
+    </form>
+  </div>
+</dialog>
+<script src="{{ url_for('static',filename='js/exam-retakes.js') }}" defer></script>

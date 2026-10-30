@@ -982,6 +982,7 @@
 {% endmacro %}
 
 <div class="public-wrap">
+  {% include '_exam_retakes_public.html' %}
   {% for category, message in get_flashed_messages(with_categories=true) %}
     <div class="public-document-alert" role="alert">{{ message }}</div>
   {% endfor %}
