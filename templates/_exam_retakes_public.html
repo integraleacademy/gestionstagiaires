@@ -5,9 +5,11 @@
   <article style="padding:20px 0;border-top:1px solid #e2e8f0;margin-top:16px">
     <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><strong>{{ r.kind }} · {{ r.exam_date_label }}{% if r.exam_time %} à {{ r.exam_time }}{% endif %}</strong><span class="pill {{ 'green' if r.status=='confirmed' else 'yellow' }}">{{ r.label }}</span></div>
     <p>{{ r.target_name }}<br>{{ r.location }}</p>
+    {% if r.failed_exam_date %}<p>Examen non réussi le {{ r.failed_exam_date_label }}.{% if r.failed_exam_details %}<br>{{ r.failed_exam_details }}{% endif %}</p>{% endif %}
     {% if r.days %}<h3>Mes journées de préparation</h3><ul>{% for d in r.days %}<li>{{ d.date|frdate }} · {{ d.start }}–{{ d.end }} — {{ d.topic }}</li>{% endfor %}</ul>
     {% else %}<p>Aucune journée de cours supplémentaire.</p>{% endif %}
-    {% for item in r['items'] %}<p style="margin:6px 0">{{ item.label }} : <strong>{{ 'Offert' if item.offered else item.price }}</strong></p>{% endfor %}
+    {% for item in r['items'] %}<p style="margin:6px 0">{{ item.label }} : <strong>{{ 'Offert' if item.offered else item.price }}</strong>{% if item.discount_cents %}<br><small style="color:#176344">Tarif unitaire de référence : {{ item.reference_price }} TTC. {{ item.discount_label }} sur cette prestation, déjà déduite.</small>{% endif %}</p>{% endfor %}
+    {% if r.has_discount %}<p style="color:#176344"><strong>Total des remises commerciales : {{ r.financials.discount_cents }}</strong></p>{% endif %}
     <p><strong>Total TTC : {{ r.total }}</strong></p>
     {% if r.notes %}<p style="white-space:pre-line">{{ r.notes }}</p>{% endif %}
     <div style="display:flex;gap:10px;flex-wrap:wrap">
