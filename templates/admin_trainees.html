@@ -877,6 +877,17 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
       </tr>
       {% endfor %}
+      {% for r in exam_retakes|default([]) %}
+      <tr class="exam-retake-roster" style="background:#fff3cd;color:#6b4500">
+        <td colspan="99" style="padding:16px 20px;border-left:4px solid #e7aa28">
+          <strong style="margin-right:14px">↻ Rattrapage examen</strong>
+          <a href="{{ url_for('admin_trainee_page',session_id=r.source_session,trainee_id=r.trainee_id) }}#rattrapage" style="font-weight:800;color:#6b4500">{{ r.trainee_name }}</a>
+          <span style="margin-left:14px">{{ r.kind }} · {{ r.exam_date_label }}{% if r.exam_time %} à {{ r.exam_time }}{% endif %}</span>
+          <span style="margin-left:14px">{% if r.total_cents %}Règlement confirmé{% else %}Offert · convention signée{% endif %}</span>
+          <small style="display:block;margin-top:5px">Présence à l’examen uniquement · hors effectifs et statistiques de la session</small>
+        </td>
+      </tr>
+      {% endfor %}
     </tbody>
   </table>
 </div>

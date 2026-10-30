@@ -31,6 +31,7 @@ import uv_questionnaires
 import aps_kickoff
 import desp_kickoff
 import a3p_documents
+import exam_retakes
 import training_convocations
 import afc_documents
 import afc_enrolments
@@ -25716,6 +25717,7 @@ def admin_trainees(session_id: str):
 
     return render_template(
         "admin_trainees.html",
+        exam_retakes=exam_retakes.roster(sys.modules[__name__], session_id),
         afc_training_dates={t.get("id"): _trainee_training_session(s, t) for t in trainees} if afc_schedule.enabled(s) else {},
         afc_hours_supported=afc_enrolments.supported(sys.modules[__name__], s),
         session={**session_view, "ssiap_pathways": s.get("ssiap_pathways")},
@@ -34184,6 +34186,7 @@ def public_trainee_space(token):
 
     return render_template(
         "public_trainee.html",
+        exam_retakes=exam_retakes.views(sys.modules[__name__], s['id'], t['id'], public=True, token=token),
         session=_trainee_training_session(display_session, t),
         ssiap_pathway=ssiap_pathways.resolve(s, t),
         trainee=t,
@@ -48904,6 +48907,8 @@ def api_qonto_webhooks():
     if not invoice_id:
         data = load_data(); _record_qonto_webhook(data, event, item, "error", "missing_invoice_id"); save_data(data)
         return jsonify({"ok": False, "error": "missing_invoice_id"}), 400
+    if exam_retakes.notify(sys.modules[__name__], invoice_id=str(invoice_id)):
+        return jsonify({"ok": True, "queued": True, "document_type": "exam_retake"})
     try:
         invoice_payload = _qonto_invoice_payload(get_qonto_invoice(invoice_id))
     except Exception as exc:
@@ -50808,6 +50813,8 @@ def webhooks_yousign():
         )
         return jsonify({"ok": False, "error": "missing_signature_request_id"}), 422
     app.logger.info("[YOUSIGN] webhook received event=%s request_id=%s", event_name, request_id)
+    if exam_retakes.notify(sys.modules[__name__], request_id=request_id):
+        return jsonify({"ok": True, "queued": True, "document_type": "exam_retake"})
     payload_status = _yousign_signature_request_status(payload)
     done_events = {"signature_request.done", "signature_request.completed", "signer.done", "signer.completed"}
     if event_name not in done_events and payload_status not in YOUSIGN_FINAL_STATUSES:
@@ -55860,6 +55867,7 @@ aps_kickoff.register(app, sys.modules[__name__])
 desp_kickoff.register(app, sys.modules[__name__])
 a3p_documents.register(app, sys.modules[__name__])
 afc_documents.register(app, sys.modules[__name__])
+exam_retakes.register(app, sys.modules[__name__])
 
 manuals_shop.register(sys.modules[__name__])
 import parcours_alternance

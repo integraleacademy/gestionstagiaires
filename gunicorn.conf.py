@@ -31,12 +31,16 @@ def post_worker_init(worker):
     start_worker(legacy_app)
     import parcours_alternance
     parcours_alternance.start_worker(legacy_app)
+    import exam_retakes
+    exam_retakes.start_worker(legacy_app)
 
 
 def worker_exit(server, worker):
     import app as legacy_app
-    for name in ("vtc_elearning_worker", "parcours_alternance_worker"):
+    for name in ("vtc_elearning_worker", "parcours_alternance_worker", "exam_retakes_worker"):
         state = legacy_app.app.extensions.get(name)
         if state:
             state["stop"].set()
+            if state.get("wake"):
+                state["wake"].set()
             state["thread"].join(timeout=15)

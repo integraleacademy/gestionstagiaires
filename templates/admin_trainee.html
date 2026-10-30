@@ -1340,6 +1340,9 @@
 
     <!-- BOUTONS ACTIONS À DROITE -->
     <div class="admin-trainee-side-actions trainee-profile-card__actions">
+      {% if not is_partner_space %}
+      <button type="button" class="btn btn-outline btn-uniform btn-admin-trainee-side-action" id="retakeOpen">↻ Rattrapage</button>
+      {% endif %}
 
 <a class="btn btn-outline btn-uniform btn-admin-trainee-side-action {% if trainee.etiquette_word_downloaded_at %}btn-word-downloaded{% endif %}"
    id="btnEtiquetteWord"
@@ -7206,4 +7209,5 @@ document.addEventListener('click', async (event) => {
 
 {% include '_manual_docs_reminder.html' %}
 <script src="{{ url_for('static', filename='trainee-email-history.js', v='20260914-feedback') }}" defer></script>
+{% if not is_partner_space %}{% include '_exam_retakes_modal.html' %}{% endif %}
 {% endblock %}
