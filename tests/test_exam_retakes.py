@@ -48,6 +48,7 @@ def host(tmp_path, monkeypatch):
         admin_login_required=login,admin_write_required=write,
         load_data=lambda **kw:data,find_session=lambda data,sid:next((s for s in data['sessions'] if s['id']==sid),None),
         _session_trainees_list=lambda s:s.get('trainees',[]),_session_get=lambda s,k,d='':s.get(k,d),
+        _is_aps_working_day=lambda day:day.weekday()<5,
         afc_schedule=SimpleNamespace(enabled=lambda s:s.get('afc_enabled',False)),_is_wedof_leads_session=lambda s:False,
         _yousign_state=lambda t:t.get('yousign',{}),_automation_document_config=lambda s:{'convention_template':'conventionaps.docx'},
         _normalize_yousign_sms_phone=lambda p:'+33612345678' if p else '',
@@ -153,6 +154,7 @@ def test_saved_individual_contract_has_priority(host,tmp_path):
 
 @pytest.mark.parametrize('changes',[
     {'exam_price':'-1'},{'exam_price':'NaN'},{'exam_price':'Infinity'},{'exam_date':'2026-10-01'},
+    {'failed_exam_date':'2026-11-15'},{'failed_exam_date':'not-a-date'},
     {'target_session':'WRONG'},{'no_days':False,'days':[]},
     {'no_days':False,'days':[{'date':'2026-12-10'}]},
     {'no_days':False,'days':[{'date':'2026-11-01'},{'date':'2026-11-01'}]},
@@ -310,3 +312,52 @@ def test_missing_signed_pdf_is_recovered_before_email(host,client):
     assert store.document(row['id'],'signed').is_file()
     assert host._yousign_request.call_count==2
     assert len([c for c in host._qonto_request.call_args_list if c.args[:2]==('POST','/v2/client_invoices')])==1
+
+
+def test_discounts_are_itemized_in_agreement_email_and_qonto(host,client):
+    from exam_retakes_documents import email_content
+    row=saved(host,client,exam_price='60',day_price='70',no_days=False,
+              days=[{'date':'2026-12-07'},{'date':'2026-12-08'}],failed_exam_details='Épreuve pratique à retravailler')
+    items=retakes.line_items(row)
+    assert [(i['discount_cents'],i['discount_percent']) for i in items]==[(2000,'25.00'),(4000,'22.22')]
+    assert retakes.financial_totals(row)=={'gross_cents':26000,'discount_cents':6000,'offered_cents':0,'total_cents':20000}
+    store=retakes.Store(host);pdf=workflow.PdfReader(store.document(row['id'],'convention'))
+    content='\n'.join(p.extract_text() for p in pdf.pages)
+    assert '12/10/2026' in content and 'Remises commerciales accordées' in content and '60,00 €' in content
+    assert len(pdf.pages[0].images)>0
+    _,html,text=email_content(host,row,'documents','https://pay.qonto.com/test')
+    assert 'Remise de 20,00 € (25 %)' in html and 'Remise de 40,00 € (22,22 %)' in text
+    providers(host,store,row);workflow.ensure_invoice(host,store,row)
+    call=next(c for c in host._qonto_request.call_args_list if c.args[:2]==('POST','/v2/client_invoices'))
+    assert call.args[2]['items'][0]['unit_price']['value']=='60.000000'
+    assert call.args[2]['items'][1]['unit_price']['value']=='70.000000'
+    assert 'Remise de 40,00 € (22,22 %)' in call.args[2]['items'][1]['description']
+
+
+def test_offered_and_discounted_components_are_not_counted_twice(host,client):
+    row=saved(host,client,exam_price='60',exam_offered=True,day_price='70',no_days=False,days=[{'date':'2026-12-07'},{'date':'2026-12-08'}])
+    assert retakes.financial_totals(row)=={'gross_cents':26000,'discount_cents':4000,'offered_cents':8000,'total_cents':14000}
+    row['price_reference']={};row['exam_offered']=False
+    assert retakes.financial_totals(row)=={'gross_cents':20000,'discount_cents':0,'offered_cents':0,'total_cents':20000}
+
+
+def test_draft_edit_keeps_its_original_price_reference(host,client,monkeypatch):
+    row=saved(host,client)
+    monkeypatch.setattr(retakes,'prices',lambda *a:{'exam_price':'200','day_price':'200','source':'Changed'})
+    response=client.post('/api/sessions/SOURCE/stagiaires/T1/rattrapages',json=payload(client,id=row['id'],revision=row['revision'],exam_price='60'))
+    assert response.status_code==200,response.json
+    stored=retakes.Store(host).get(row['id'])
+    assert stored['price_reference']['exam_price']=='80.00'
+    assert retakes.financial_totals(stored)['discount_cents']==2000
+
+
+def test_legacy_draft_must_be_reviewed_before_signature(host,client):
+    row=saved(host,client);store=retakes.Store(host)
+    row.pop('document_version');row.pop('failed_exam_date');store.save(row)
+    assert send(client,row).status_code==409
+    assert store.get(row['id'])['status']=='draft'
+    response=client.post('/api/sessions/SOURCE/stagiaires/T1/rattrapages',json=payload(client,id=row['id'],revision=row['revision']))
+    assert response.status_code==200,response.json
+    updated=store.get(row['id'])
+    assert updated['document_version']==2 and updated['failed_exam_date']=='2026-10-12'
+    assert send(client,updated).status_code==200

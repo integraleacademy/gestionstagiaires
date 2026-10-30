@@ -48,6 +48,23 @@ def test_button_and_modal_render_in_real_trainee_sheet(real_app):
     assert len(page.xpath('//dialog[@id="retakeDialog"]'))==1
 
 
+def test_preparation_defaults_use_receiving_session(real_app):
+    client,_=real_app
+    values=client.get('/api/sessions/S1/stagiaires/T1/rattrapages').json
+    assert values['location']=='Intégrale Academy 54 chemin du Carreou 83480 PUGET SUR ARGENS'
+    assert values['defaults'][0]['sessions'][0]['preparation_days']==[{'date':'2026-12-07'},{'date':'2026-12-08'}]
+
+
+@pytest.mark.parametrize('end,exam,expected',[
+    ('2026-11-16','2026-11-17',['2026-11-13','2026-11-16']),
+    ('2026-11-12','2026-11-13',['2026-11-10','2026-11-12']),
+    ('2026-12-09','2026-12-09',['2026-12-07','2026-12-08']),
+])
+def test_preparation_days_exclude_weekends_holidays_and_exam(real_app,end,exam,expected):
+    session={'training_type':'APS','date_start':'2026-11-02','date_end':end,'exam_date':exam}
+    assert [d['date'] for d in retakes.preparation_days(host,session,'APS')]==expected
+
+
 def test_roster_is_highlighted_without_a_normal_trainee_row(real_app):
     client,data=real_app
     row=create(real_app);row.update(status='confirmed',signed_at=retakes.now(),confirmed_at=retakes.now())
@@ -64,7 +81,8 @@ def test_roster_is_highlighted_without_a_normal_trainee_row(real_app):
 
 def test_public_page_displays_only_its_retakes(real_app):
     client,_=real_app
-    row=create(real_app);row.update(status='confirmed',signed_at=retakes.now(),payment_status='not_required',confirmed_at=retakes.now())
+    row=create(real_app,exam_price='60',day_price='70',no_days=False,days=[{'date':'2026-12-07'},{'date':'2026-12-08'}])
+    row.update(status='confirmed',signed_at=retakes.now(),payment_status='paid',confirmed_at=retakes.now())
     retakes.Store(host).save(row)
     response=client.get('/espace/PUB-T1')
     assert response.status_code==200
@@ -73,6 +91,10 @@ def test_public_page_displays_only_its_retakes(real_app):
     assert '09/12/2026' in section.text_content()
     assert 'Convention signée' in section.text_content()
     assert 'Votre participation au rattrapage est confirmée.' in section.text_content()
+    assert '12/10/2026' in section.text_content()
+    assert 'Remise de 20,00 € (25 %)' in section.text_content()
+    assert 'Remise de 40,00 € (22,22 %)' in section.text_content()
+    assert 'Total des remises commerciales : 60,00 €' in section.text_content()
 
 
 def test_qonto_and_yousign_webhooks_require_auth_and_do_not_trust_paid_payload(real_app,monkeypatch):

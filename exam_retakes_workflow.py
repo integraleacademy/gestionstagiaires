@@ -8,7 +8,7 @@ from io import BytesIO
 
 from pypdf import PdfReader
 
-from exam_retakes import RetakeError, cents, components, line_items, now, today
+from exam_retakes import RetakeError, cents, components, discount_label, line_items, money, now, today
 from exam_retakes_documents import email_content
 from manuals_commerce import safe_payment_url
 
@@ -150,7 +150,10 @@ def ensure_invoice(host,store,row):
             if item['total_cents'] == 0:
                 continue
             net=(Decimal(item['unit_cents'])/100/(1+rate)).quantize(Decimal('.000001'))
-            items.append({'title':item['label'],'description':item['label'],'quantity':str(item['quantity']),
+            description=item['label']
+            if item['discount_cents']:
+                description+=' · Tarif unitaire de référence TTC : '+money(item['reference_unit_cents'])+' · '+discount_label(item)+' sur cette ligne, déjà déduite du prix facturé.'
+            items.append({'title':item['label'],'description':description,'quantity':str(item['quantity']),
                           'unit_price':{'value':str(net),'currency':'EUR'},'vat_rate':str(rate)})
         payload={'client_id':row['client_id'],'status':'draft','currency':'EUR','issue_date':today(),'due_date':today(),
                  'purchase_order':'RET-'+row['id'],'header':'Rattrapage '+row['kind'],

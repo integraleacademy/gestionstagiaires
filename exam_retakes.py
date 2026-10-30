@@ -109,6 +109,37 @@ def exam_date(host, training, kind):
         return ""
 
 
+def preparation_days(host, training, kind):
+    """Suggest the last two course weekdays of the receiving session, before its exam."""
+    def parse(value):
+        try:
+            return dt.date.fromisoformat(date_value(value, "Formation"))
+        except RetakeError:
+            return None
+    phase = "aps_in_person" if kind == "APS" and not host.afc_schedule.enabled(training) else "dirigeant_in_person" if kind == "DESP" else ""
+    end = parse(training.get(phase + "_end")) if phase else None
+    end = end or parse(host._session_get(training, "date_end", ""))
+    exam = parse(exam_date(host, training, kind))
+    if exam:
+        end = min(end or exam, exam - dt.timedelta(days=1))
+    if not end:
+        return []
+    start = parse(training.get(phase + "_start")) if phase else None
+    start = start or parse(host._session_get(training, "date_start", ""))
+    start = max(start or dt.date.fromisoformat(today()), dt.date.fromisoformat(today()))
+    exams = {parse(exam_date(host, training, item)) for item in components(host, training)}
+    dates = []
+    for offset in range(14):
+        day = end - dt.timedelta(days=offset)
+        if day < start:
+            break
+        if day not in exams and host._is_aps_working_day(day):
+            dates.append({"date": day.isoformat()})
+            if len(dates) == 2:
+                break
+    return list(reversed(dates))
+
+
 def candidates(host, data, source, kind):
     result = []
     cutoff = max(today(), exam_date(host, source, kind))
@@ -124,7 +155,8 @@ def candidates(host, data, source, kind):
         if not value and str(host._session_get(target, "date_end", "") or "") < today():
             continue
         result.append({"id": target["id"], "name": host._session_get(target, "name", "") or kind,
-                       "exam_date": value, "date_label": date_label(value)})
+                       "exam_date": value, "date_label": date_label(value),
+                       "preparation_days": preparation_days(host, target, kind)})
     return sorted(result, key=lambda row: (row["exam_date"] or "9999", row["name"]))
 
 
@@ -236,9 +268,33 @@ def line_items(row):
     if row["days"]:
         result.append({"label": "Journées de préparation · " + row["kind"], "quantity": len(row["days"]),
                        "unit_cents": row["day_cents"], "offered": row["days_offered"]})
-    for item in result:
+    reference = row.get("price_reference") or {}
+    for item, key in zip(result, ("exam_price", "day_price")):
+        try:
+            base = cents(reference.get(key))
+        except RetakeError:
+            base = None
+        unit, quantity = item["unit_cents"], item["quantity"]
+        gross = max(unit, base or 0) * quantity
         item["total_cents"] = 0 if item["offered"] else item["unit_cents"] * item["quantity"]
+        item["reference_unit_cents"] = base
+        item["gross_cents"] = gross
+        item["discount_cents"] = 0 if item["offered"] else max((base or 0) - unit, 0) * quantity
+        item["offered_cents"] = gross if item["offered"] else 0
+        item["discount_percent"] = str((Decimal(item['discount_cents']) * 100 / (base * quantity)).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)) if item["discount_cents"] else "0.00"
     return result
+
+
+def financial_totals(row):
+    items = line_items(row)
+    return {key: sum(item[key] for item in items) for key in ("gross_cents", "discount_cents", "offered_cents", "total_cents")}
+
+
+def discount_label(item):
+    if not item["discount_cents"]:
+        return ""
+    percent = item["discount_percent"].rstrip("0").rstrip(".").replace(".", ",")
+    return "Remise de " + money(item["discount_cents"]) + " (" + percent + " %)"
 
 
 def validate(host, data, source, trainee, payload):
@@ -248,6 +304,9 @@ def validate(host, data, source, trainee, payload):
     exam = date_value(payload.get("exam_date"), "Examen")
     if exam < today():
         raise RetakeError("La nouvelle date d’examen doit être à venir.")
+    failed = date_value(payload.get("failed_exam_date") or exam_date(host, source, kind), "Examen non réussi")
+    if failed > today() or failed >= exam:
+        raise RetakeError("La date de l’examen non réussi doit être passée et antérieure au nouvel examen.")
     target = host.find_session(data, str(payload.get("target_session") or ""))
     if not target or target.get("archived") or kind not in components(host, target):
         raise RetakeError("Choisissez une session d’accueil de la même formation.")
@@ -274,7 +333,10 @@ def validate(host, data, source, trainee, payload):
         seen.add(value)
         cleaned.append({"date": value, "start": start, "end": end, "topic": str(item.get("topic") or "Révision et préparation à l’examen").strip()[:300]})
     exam_offered, days_offered = payload.get("exam_offered") is True, payload.get("days_offered") is True
-    result = {"kind": kind, "exam_date": exam, "target_session": target["id"],
+    result = {"kind": kind, "exam_date": exam, "failed_exam_date": failed,
+              "failed_exam_details": str(payload.get("failed_exam_details") or "").strip()[:1000],
+              "source_date_start": host._session_get(source, "date_start", ""),
+              "source_date_end": host._session_get(source, "date_end", ""), "target_session": target["id"],
               "target_name": host._session_get(target, "name", "") or kind,
               "exam_time": str(payload.get("exam_time") or "").strip(),
               "location": str(payload.get("location") or "").strip()[:500],
@@ -298,12 +360,18 @@ LABELS = {"draft": "Brouillon", "queued": "Préparation de la signature", "signi
 
 
 def view(row, *, public=False, token=""):
+    totals = financial_totals(row)
     result = {k: row.get(k) for k in ("id", "status", "kind", "source_session", "trainee_id", "target_session", "target_name",
               "exam_date", "exam_time", "location", "days", "no_days", "notes", "exam_offered", "days_offered", "revision",
-              "signed_at", "confirmed_at", "invoice_number", "payment_status", "created_at")}
+              "signed_at", "confirmed_at", "invoice_number", "payment_status", "created_at", "failed_exam_date", "failed_exam_details")}
     result.update(label=LABELS.get(row["status"], row["status"]), total=money(row["total_cents"]),
                   total_cents=row["total_cents"], exam_price=f"{row['exam_cents']/100:.2f}", day_price=f"{row['day_cents']/100:.2f}",
-                  exam_date_label=date_label(row["exam_date"]), items=[{**x, "price": money(x["total_cents"])} for x in line_items(row)])
+                  exam_date_label=date_label(row["exam_date"]), failed_exam_date_label=date_label(row.get("failed_exam_date")),
+                  items=[{**x, "price": money(x["total_cents"]), "discount_label": discount_label(x),
+                          "reference_price": money(x["reference_unit_cents"]) if x["reference_unit_cents"] is not None else ""} for x in line_items(row)],
+                  financials={key: money(value) for key, value in totals.items()},
+                  has_discount=totals["discount_cents"] > 0,
+                  has_offered=totals["offered_cents"] > 0)
     result["signature_url"] = row.get("signature_url", "") if row["status"] == "signing" else ""
     result["payment_url"] = row.get("payment_url", "") if row["status"] == "payment" and row.get("payment_status") == "unpaid" else ""
     endpoint = "retake_public_document" if public else "retake_document"
@@ -312,6 +380,7 @@ def view(row, *, public=False, token=""):
     result["invoice_url"] = url_for(endpoint, rid=row["id"], kind="invoice", **extra) if row.get("invoice_pdf") else ""
     if not public:
         result.update(error=row.get("error", ""), price_reference=row.get("price_reference", {}),
+                      needs_review=row["status"] == "draft" and row.get("document_version", 1) < 2,
                       email_sent=bool(row.get("emails", {}).get("documents", {}).get("sent_at")),
                       trainee_name=row["person"]["first_name"] + " " + row["person"]["last_name"])
     return result
@@ -367,10 +436,11 @@ def register(app, host):
         defaults = []
         for kind, label in components(host, source).items():
             defaults.append({"kind": kind, "label": label, "prices": prices(host, source, trainee, kind),
+                             "failed_exam_date": exam_date(host, source, kind) if exam_date(host, source, kind) <= today() else "",
                              "sessions": candidates(host, data, source, kind)})
         return jsonify(ok=True, records=views(host, sid, tid), defaults=defaults,
                        csrf=session.setdefault("retake_csrf", secrets.token_urlsafe(32)),
-                       location=host._session_get(source, "lieu_examen", "") or host._session_get(source, "lieu_formation", "") or host._session_get(source, "location", "") or "",
+                       location="Intégrale Academy 54 chemin du Carreou 83480 PUGET SUR ARGENS",
                        read_only=session.get("admin_role") == "viewer")
 
     @app.post('/api/sessions/<sid>/stagiaires/<tid>/rattrapages')
@@ -393,6 +463,8 @@ def register(app, host):
                     if previous and (previous["status"] != "draft" or payload.get("revision") != previous["revision"]):
                         raise RetakeError("Le dossier a évolué. Actualisez le suivi avant de le modifier.")
                     values = validate(host, data, source, trainee, payload)
+                    if previous and previous["kind"] == values["kind"] and previous.get("price_reference"):
+                        values["price_reference"] = previous["price_reference"]
                     if not rid and any(r["status"] not in {"cancelled", "stopped"} and r["kind"] == values["kind"] and r["exam_date"] >= today()
                                        for r in store.query("source_session=? AND trainee=?", (sid, tid))):
                         raise RetakeError("Un rattrapage est déjà prévu pour cet examen. Ouvrez le dossier existant.")
@@ -401,6 +473,7 @@ def register(app, host):
                            "person": {k: str(trainee.get(k) or "").strip() for k in ("first_name", "last_name", "email", "phone", "address", "zip_code", "city", "birth_date")},
                            "vat_rate": str(trainee.get("qonto_vat_rate") if trainee.get("qonto_vat_rate") not in (None, "") else "0"),
                            "created_at": (previous or {}).get("created_at", now()), "revision": (previous or {}).get("revision", 0) + 1,
+                           "document_version": 2, "document_date": today(),
                            "actor": session.get("admin_username") or "Administration"}
                     from exam_retakes_documents import build_convention
                     row["signature_field"] = build_convention(row, store.document(row["id"], "convention"))
@@ -427,6 +500,8 @@ def register(app, host):
                 if action == "send":
                     if row["status"] != "draft" or payload.get("revision") != row["revision"]:
                         raise RetakeError("Le dossier a évolué ou a déjà été envoyé. Actualisez le suivi.")
+                    if row.get("document_version", 1) < 2:
+                        raise RetakeError("Complétez la date de l’examen non réussi puis enregistrez la nouvelle convention avant l’envoi.")
                     if row["exam_date"] < today() or any(d["date"] < today() for d in row["days"]):
                         raise RetakeError("Actualisez les dates avant l’envoi.")
                     target = host.find_session(data, row['target_session'])
