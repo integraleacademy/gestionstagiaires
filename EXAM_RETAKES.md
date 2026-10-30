@@ -18,6 +18,8 @@ Un tarif inférieur au tarif de référence produit une remise en euros et en po
 
 La convention comporte le logo, l’identité des parties, le parcours initial, la date de l’examen non réussi, les épreuves à retravailler, le nouvel examen, les journées, le récapitulatif financier et les modalités de confirmation. Les anciens brouillons doivent être modifiés puis enregistrés pour compléter la date d’échec et régénérer le PDF avant signature.
 
+Avant l’envoi en signature, « Modifier » permet de changer les prestations puis « Enregistrer et actualiser la convention » régénère le PDF. Le bouton « Actualiser la convention » reprend directement les dernières coordonnées enregistrées dans la fiche stagiaire et les intitulés des sessions, en conservant les dates, tarifs négociés, gratuités et tarifs de référence du rattrapage. Le lien PDF change à chaque nouvelle version du document. Une génération échouée conserve le PDF précédent ; l’actualisation n’envoie aucun document et ne crée aucune facture. Les conventions déjà envoyées en signature restent figées.
+
 ## Exploitation
 
 - Persistance : `PERSIST_DIR/exam_retakes/retakes.sqlite3` et PDF privés dans le même répertoire. Inclure ce répertoire dans les sauvegardes du disque persistant.
@@ -28,6 +30,6 @@ La convention comporte le logo, l’identité des parties, le parcours initial, 
 
 ## Validation
 
-52 tests propres au module couvrent tarifs des formations, dates de préparation et d’échec, remises, gratuités, signature, intégrité PDF, facturation et paiements partiels, reprise, accès aux documents, callbacks et exclusion des effectifs. Les API distantes sont simulées ; aucun test n’envoie de convention ou facture réelle.
+68 tests propres au module couvrent tarifs des formations, dates de préparation et d’échec, remises, gratuités, actualisation du PDF et des coordonnées, préservation de la convention en cas d’échec, signature, facturation et paiements partiels, reprise, accès aux documents, callbacks et exclusion des effectifs. Les API distantes sont simulées ; aucun test n’envoie de convention ou facture réelle.
 
 Vérifications ciblées de régression : 122 tests réussis, 4 ignorés et 12 sous-tests réussis. Deux assertions préexistantes ont été reproduites sur le commit de référence puis exclues de ce contrôle : `test_cases_1_to_6_normalize` (surpaiement) et `test_trainee_dashboard_hides_schedule_until_mandate_is_validated` (ancienne chaîne JavaScript attendue). Rendu PDF vérifié et interactions du formulaire contrôlées sur un DOM de test ; le navigateur local n’est pas disponible dans l’environnement d’exécution.

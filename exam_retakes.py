@@ -15,6 +15,7 @@ import os
 import re
 import secrets
 import sqlite3
+import tempfile
 import threading
 import time
 import unicodedata
@@ -376,7 +377,8 @@ def view(row, *, public=False, token=""):
     result["payment_url"] = row.get("payment_url", "") if row["status"] == "payment" and row.get("payment_status") == "unpaid" else ""
     endpoint = "retake_public_document" if public else "retake_document"
     extra = {"token": token} if public else {}
-    result["convention_url"] = url_for(endpoint, rid=row["id"], kind="signed" if row.get("signed_at") else "convention", **extra)
+    result["convention_url"] = url_for(endpoint, rid=row["id"], kind="signed" if row.get("signed_at") else "convention",
+                                       v=row.get("pdf_sha256") or row.get("revision", 1), **extra)
     result["invoice_url"] = url_for(endpoint, rid=row["id"], kind="invoice", **extra) if row.get("invoice_pdf") else ""
     if not public:
         result.update(error=row.get("error", ""), price_reference=row.get("price_reference", {}),
@@ -462,7 +464,18 @@ def register(app, host):
                         previous = store.get(rid)
                     if previous and (previous["status"] != "draft" or payload.get("revision") != previous["revision"]):
                         raise RetakeError("Le dossier a évolué. Actualisez le suivi avant de le modifier.")
-                    values = validate(host, data, source, trainee, payload)
+                    values_payload = payload
+                    if payload.get("refresh_convention") is True:
+                        if not previous:
+                            raise RetakeError("Enregistrez d’abord le rattrapage avant d’actualiser sa convention.")
+                        # Refresh the trainee/session details without replacing negotiated terms
+                        # with today's defaults or accepting hidden changes in this request.
+                        values_payload = {k: previous.get(k) for k in (
+                            "kind", "target_session", "exam_date", "exam_time", "location", "notes",
+                            "failed_exam_date", "failed_exam_details", "days", "no_days", "exam_offered", "days_offered")}
+                        values_payload.update(exam_price=f"{previous['exam_cents'] / 100:.2f}",
+                                              day_price=f"{previous['day_cents'] / 100:.2f}")
+                    values = validate(host, data, source, trainee, values_payload)
                     if previous and previous["kind"] == values["kind"] and previous.get("price_reference"):
                         values["price_reference"] = previous["price_reference"]
                     if not rid and any(r["status"] not in {"cancelled", "stopped"} and r["kind"] == values["kind"] and r["exam_date"] >= today()
@@ -476,9 +489,26 @@ def register(app, host):
                            "document_version": 2, "document_date": today(),
                            "actor": session.get("admin_username") or "Administration"}
                     from exam_retakes_documents import build_convention
-                    row["signature_field"] = build_convention(row, store.document(row["id"], "convention"))
-                    row["pdf_sha256"] = hashlib.sha256(store.document(row["id"], "convention").read_bytes()).hexdigest()
-                    store.save(row)
+                    destination = store.document(row["id"], "convention")
+                    # Keep the previous PDF intact if generation fails midway through.
+                    with tempfile.NamedTemporaryFile(dir=store.root, suffix=".pdf", delete=False) as handle:
+                        staged = Path(handle.name)
+                    try:
+                        row["signature_field"] = build_convention(row, staged)
+                        row["pdf_sha256"] = hashlib.sha256(staged.read_bytes()).hexdigest()
+                        original = destination.read_bytes() if destination.is_file() else None
+                        os.replace(staged, destination)
+                        try:
+                            store.save(row)
+                        except Exception:
+                            if original is None:
+                                destination.unlink(missing_ok=True)
+                            else:
+                                staged.write_bytes(original)
+                                os.replace(staged, destination)
+                            raise
+                    finally:
+                        staged.unlink(missing_ok=True)
             return jsonify(ok=True, record=view(row))
         except (RetakeError, ValueError) as exc:
             return jsonify(ok=False, error=str(exc)), 400

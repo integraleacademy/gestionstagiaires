@@ -70,7 +70,13 @@
     calc();
   }
   function edit(record = null) {
+    if (busy) return;
     editing = record;form.reset();days.replaceChildren();form.hidden = false;
+    history.hidden = true;
+    document.getElementById('retakeNew').hidden = true;
+    document.getElementById('retakeSave').textContent = record ? 'Enregistrer et actualiser la convention' : 'Enregistrer et préparer la convention';
+    document.getElementById('retakeCancelEdit').hidden = !state.records.length;
+    say(record ? 'Modifiez les informations puis enregistrez pour actualiser le PDF de la convention.' : '');
     field('kind').innerHTML = state.defaults.map(d => `<option value="${esc(d.kind)}">${esc(d.label)}</option>`).join('');
     if (record) field('kind').value = record.kind;
     defaults();field('location').value = state.location || '';
@@ -85,14 +91,19 @@
     }
     calc();
   }
+  function showHistory() {
+    form.hidden = true;editing = null;history.hidden = false;renderHistory();
+  }
   function renderHistory() {
-    history.innerHTML = state.records.map(r => `<article class="retake-record"><h3>${esc(r.kind)} · ${esc(r.exam_date_label)}</h3><span class="retake-status ${esc(r.status)}">${esc(r.label)}</span><p>${esc(r.target_name)}<br>${esc(r.location)}<br><strong>${esc(r.total)} TTC</strong>${r.email_sent ? ' · Documents envoyés par e-mail' : ''}</p>${r.days.length ? '<p>'+r.days.map(d=>`${esc(d.date.split('-').reverse().join('/'))} · ${esc(d.start)}–${esc(d.end)} · ${esc(d.topic)}`).join('<br>')+'</p>' : '<p>Aucune journée de cours supplémentaire.</p>'}${r.failed_exam_date?'<p>Examen non réussi : '+esc(r.failed_exam_date_label)+'</p>':''}${r.has_discount?'<p class="retake-discount">Remises commerciales accordées : '+esc(r.financials.discount_cents)+'</p>':''}${r.needs_review?'<p class="retake-help">Complétez puis enregistrez la nouvelle convention pour ajouter le rappel de l’examen et le détail des remises.</p>':''}${r.error ? `<p class="retake-error" role="alert">${esc(r.error)}</p>` : ''}<div class="retake-links"><a class="btn btn-outline" target="_blank" rel="noopener" href="${esc(r.convention_url)}">Convention${r.signed_at?' signée':''}</a>${r.invoice_url ? `<a class="btn btn-outline" target="_blank" rel="noopener" href="${esc(r.invoice_url)}">Facture Qonto</a>`:''}${r.payment_url ? `<a class="btn btn-outline" target="_blank" rel="noopener" href="${esc(r.payment_url)}">Lien de paiement</a>`:''}${state.read_only?'':r.status==='draft'?`<button type="button" class="btn btn-outline" data-edit="${esc(r.id)}">Modifier</button><button type="button" class="btn btn-primary" data-action="send" data-id="${esc(r.id)}">Envoyer en signature</button><button type="button" class="btn btn-outline" data-action="cancel" data-id="${esc(r.id)}">Annuler le brouillon</button>`:r.status!=='cancelled'?`<button type="button" class="btn btn-outline" data-action="refresh" data-id="${esc(r.id)}">Actualiser le suivi</button>`:''}</div></article>`).join('');
-    document.getElementById('retakeNew').hidden = state.read_only || !state.records.length;
+    history.innerHTML = state.records.map(r => `<article class="retake-record"><h3>${esc(r.kind)} · ${esc(r.exam_date_label)}</h3><span class="retake-status ${esc(r.status)}">${esc(r.label)}</span><p>${esc(r.target_name)}<br>${esc(r.location)}<br><strong>${esc(r.total)} TTC</strong>${r.email_sent ? ' · Documents envoyés par e-mail' : ''}</p>${r.days.length ? '<p>'+r.days.map(d=>`${esc(d.date.split('-').reverse().join('/'))} · ${esc(d.start)}–${esc(d.end)} · ${esc(d.topic)}`).join('<br>')+'</p>' : '<p>Aucune journée de cours supplémentaire.</p>'}${r.failed_exam_date?'<p>Examen non réussi : '+esc(r.failed_exam_date_label)+'</p>':''}${r.has_discount?'<p class="retake-discount">Remises commerciales accordées : '+esc(r.financials.discount_cents)+'</p>':''}${r.needs_review?'<p class="retake-help">Complétez puis enregistrez la nouvelle convention pour ajouter le rappel de l’examen et le détail des remises.</p>':''}${r.error ? `<p class="retake-error" role="alert">${esc(r.error)}</p>` : ''}<div class="retake-links"><a class="btn btn-outline" target="_blank" rel="noopener" href="${esc(r.convention_url)}">Convention${r.signed_at?' signée':''}</a>${r.invoice_url ? `<a class="btn btn-outline" target="_blank" rel="noopener" href="${esc(r.invoice_url)}">Facture Qonto</a>`:''}${r.payment_url ? `<a class="btn btn-outline" target="_blank" rel="noopener" href="${esc(r.payment_url)}">Lien de paiement</a>`:''}${state.read_only?'':r.status==='draft'?`<button type="button" class="btn btn-outline" data-edit="${esc(r.id)}">Modifier</button><button type="button" class="btn btn-outline" data-action="regenerate" data-id="${esc(r.id)}">Actualiser la convention</button><button type="button" class="btn btn-primary" data-action="send" data-id="${esc(r.id)}">Envoyer en signature</button><button type="button" class="btn btn-outline" data-action="cancel" data-id="${esc(r.id)}">Annuler le brouillon</button>`:r.status!=='cancelled'?`<button type="button" class="btn btn-outline" data-action="refresh" data-id="${esc(r.id)}">Actualiser le suivi</button>`:''}</div></article>`).join('');
+    document.getElementById('retakeNew').hidden = state.read_only || !state.records.length || !form.hidden;
   }
   async function load(initial = false) {
     const result = await api(dialog.dataset.api + (!initial && state ? '?status=1' : ''));
-    state = {...state,...result};renderHistory();
-    if (initial) {form.hidden = state.records.length > 0 || state.read_only;if (!form.hidden) edit();}
+    state = {...state,...result};
+    if (initial) {editing = null;history.hidden = false;form.hidden = state.records.length > 0 || state.read_only;}
+    renderHistory();
+    if (initial && !form.hidden) edit();
     clearTimeout(timer);
     if (dialog.open && state.records.some(r=>['queued','signed','signing','payment'].includes(r.status))) timer = setTimeout(()=>load().catch(e=>say(e.message,true)),5000);
   }
@@ -105,20 +116,30 @@
   field('no_days').addEventListener('change',()=>{if(!field('no_days').checked&&!days.children.length)addDay();calc();});
   document.getElementById('retakeAddDay').onclick = () => addDay();
   document.getElementById('retakeNew').onclick = () => edit();
+  document.getElementById('retakeCancelEdit').onclick = () => {if(!busy){showHistory();say('Modifications annulées. La convention précédente est conservée.');}};
   form.onsubmit = async event => {
-    event.preventDefault();if(busy)return;busy=true;say('Préparation de votre convention…');
+    event.preventDefault();if(busy)return;busy=true;
+    const updating = Boolean(editing), saveButton = document.getElementById('retakeSave');
+    saveButton.disabled = true;say(updating ? 'Actualisation de votre convention…' : 'Préparation de votre convention…');
     const payload={id:editing?.id,revision:editing?.revision};
     for(const key of ['kind','target_session','exam_date','exam_time','location','exam_price','day_price','notes','failed_exam_date','failed_exam_details'])payload[key]=field(key).value;
     for(const key of ['exam_offered','days_offered','no_days'])payload[key]=field(key).checked;
     payload.days=[...days.children].map(row=>Object.fromEntries([...row.querySelectorAll('[data-day]')].map(input=>[input.dataset.day,input.value])));
-    try{await api(dialog.dataset.api,payload);form.hidden=true;editing=null;await load();say('Convention préparée. Vous pouvez la consulter puis l’envoyer en signature.');}catch(e){say(e.message,true);}finally{busy=false;}
+    try{await api(dialog.dataset.api,payload);showHistory();await load();say(updating ? 'Convention actualisée. Le bouton « Convention » ouvre la nouvelle version.' : 'Convention préparée. Vous pouvez la consulter puis l’envoyer en signature.');}catch(e){say(e.message,true);}finally{busy=false;saveButton.disabled=false;}
   };
   history.onclick=async event=>{
+    if (busy || !form.hidden) return;
     const editButton=event.target.closest('[data-edit]');if(editButton){edit(state.records.find(r=>r.id===editButton.dataset.edit));return;}
     const button=event.target.closest('[data-action]');if(!button||busy)return;
     const record=state.records.find(r=>r.id===button.dataset.id);busy=true;button.disabled=true;
-    say(button.dataset.action==='send'?'Convention en cours de transmission pour signature…':'Mise à jour du suivi…');
-    try{await api(`/api/rattrapages/${encodeURIComponent(record.id)}/${button.dataset.action}`,{revision:record.revision});form.hidden=true;await load();say(button.dataset.action==='send'?'Transmission lancée. Le suivi se met à jour automatiquement.':'Demande enregistrée. Le suivi se met à jour automatiquement.');}catch(e){say(e.message,true);}finally{busy=false;button.disabled=false;}
+    const regenerating = button.dataset.action === 'regenerate';
+    say(regenerating ? 'Actualisation de la convention avec les informations enregistrées…' : button.dataset.action==='send'?'Convention en cours de transmission pour signature…':'Mise à jour du suivi…');
+    try{
+      if(regenerating) await api(dialog.dataset.api,{id:record.id,revision:record.revision,refresh_convention:true});
+      else await api(`/api/rattrapages/${encodeURIComponent(record.id)}/${button.dataset.action}`,{revision:record.revision});
+      showHistory();await load();
+      say(regenerating ? 'Convention actualisée. Le bouton « Convention » ouvre la nouvelle version.' : button.dataset.action==='send'?'Transmission lancée. Le suivi se met à jour automatiquement.':'Demande enregistrée. Le suivi se met à jour automatiquement.');
+    }catch(e){say(e.message,true);}finally{busy=false;button.disabled=false;}
   };
   if(location.hash==='#rattrapage')open.click();
 })();
