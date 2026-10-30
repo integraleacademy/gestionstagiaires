@@ -30,6 +30,7 @@ import afc_schedule
 import uv_questionnaires
 import aps_kickoff
 import desp_kickoff
+import desp_jury_projects
 import a3p_documents
 import exam_retakes
 import training_convocations
@@ -4380,6 +4381,7 @@ def _merge_partner_scoped_payload(
     partner_id = str(partner_id or "")
 
     _preserve_aps_elearning_report_state(scoped, current)
+    desp_jury_projects.preserve_state(scoped, current, _session_trainees_list, INTEGRALE_PARTNER_ID)
     for key in PARTNER_SCOPED_COLLECTION_KEYS - {"activity_logs"}:
         if not isinstance(scoped.get(key), list):
             continue
@@ -10100,6 +10102,7 @@ def save_data(
         if isinstance(canonical, dict):
             vtc_elearning_activation.preserve_state(payload, canonical, _session_trainees_list)
             _preserve_aps_elearning_report_state(payload, canonical)
+            desp_jury_projects.preserve_state(payload, canonical, _session_trainees_list, INTEGRALE_PARTNER_ID)
             _preserve_document_reminder_state(payload, canonical)
             ssiap_exam.preserve_state(payload, canonical)
             ssiap_diploma_numbers.preserve_state(payload, canonical)
@@ -34186,6 +34189,7 @@ def public_trainee_space(token):
 
     return render_template(
         "public_trainee.html",
+        desp_project=desp_jury_projects.view(sys.modules[__name__], s, t, token=token),
         exam_retakes=exam_retakes.views(sys.modules[__name__], s['id'], t['id'], public=True, token=token),
         session=_trainee_training_session(display_session, t),
         ssiap_pathway=ssiap_pathways.resolve(s, t),
@@ -40225,6 +40229,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
 
     return render_template(
         "admin_trainee.html",
+        desp_project=desp_jury_projects.view(sys.modules[__name__], s, t),
         session={**session_view, "ssiap_pathways": s.get("ssiap_pathways")},
         ssiap_supported=ssiap_pathways.supported(s),
         ssiap_pathway=ssiap_pathways.resolve(s, t),
@@ -55865,6 +55870,7 @@ afc_hours.register(app, sys.modules[__name__])
 uv_questionnaires.register(app, sys.modules[__name__])
 aps_kickoff.register(app, sys.modules[__name__])
 desp_kickoff.register(app, sys.modules[__name__])
+desp_jury_projects.register(app, sys.modules[__name__])
 a3p_documents.register(app, sys.modules[__name__])
 afc_documents.register(app, sys.modules[__name__])
 exam_retakes.register(app, sys.modules[__name__])

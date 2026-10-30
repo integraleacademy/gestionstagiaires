@@ -1,0 +1,57 @@
+{% if desp_project %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/desp-jury-project.css') }}?v=1">
+<section class="desp-project" id="projet-cadrage" aria-labelledby="despProjectTitle">
+  <div class="desp-project-heading">
+    <div>
+      <p class="desp-project-kicker">DESP initial · Examen</p>
+      <h2 id="despProjectTitle">Projet de cadrage</h2>
+      <p>{{ 'Documents déposés par le stagiaire pour le jury d’examen.' if desp_project_admin else 'Déposez pendant votre formation les documents que vous présenterez au jury d’examen.' }}</p>
+    </div>
+    <span class="desp-project-badge">{{ desp_project.documents|length }} / 2 documents</span>
+  </div>
+  {% if not desp_project_admin %}
+    {% for category, message in get_flashed_messages(with_categories=true, category_filter=['desp_project_success', 'desp_project_error']) %}
+    <p class="desp-project-feedback {{ 'is-error' if category == 'desp_project_error' else 'is-success' }}" role="alert">{{ message }}</p>
+    {% endfor %}
+  {% endif %}
+  <div class="desp-project-limit">
+    <strong>1 ou 2 documents · 15 Mo maximum au total</strong>
+    <span>Si vos fichiers dépassent 15 Mo au total, réduisez leur taille ou compressez-les avant de les déposer.</span>
+    <span>Formats acceptés : PDF, Word, PowerPoint et OpenDocument.</span>
+  </div>
+  {% if desp_project.documents %}
+  <ul class="desp-project-files">
+    {% for document in desp_project.documents %}
+    <li>
+      <div><strong>{{ document.download_name }}</strong><small>{{ document.original_name }} · {{ '%.2f'|format(document.size / 1000000) }} Mo · Déposé le {{ document.uploaded_at|frdate }}</small></div>
+      <a class="btn" href="{{ document.download_url }}">Télécharger</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% if desp_project.documents|length == 2 %}<a class="btn" href="{{ desp_project.download_url }}">Télécharger les 2 documents (ZIP)</a>{% endif %}
+  {% elif desp_project_admin %}
+  <p class="desp-project-empty">Aucun document déposé pour le moment.</p>
+  {% endif %}
+  {% if desp_project.can_upload and not desp_project_admin %}
+  <form action="{{ desp_project.upload_url }}" method="post" enctype="multipart/form-data" class="desp-project-form" data-desp-project-form data-max-bytes="{{ desp_project.max_bytes }}">
+    <input type="hidden" name="document_check_token" value="{{ trainee_document_check_token() }}">
+    <input type="hidden" name="revision" value="{{ desp_project.revision }}">
+    <div class="desp-project-slots">
+      {% for slot in [1, 2] %}
+      {% set existing = desp_project.documents|selectattr('slot', 'equalto', slot)|first %}
+      <div class="desp-project-slot" data-project-slot data-existing-bytes="{{ existing.size if existing else 0 }}">
+        <label for="despProjectFile{{ slot }}">Document {{ slot }}{{ ' (facultatif)' if slot == 2 else '' }}</label>
+        <span class="desp-project-file-hint">{{ 'Choisir un fichier pour remplacer le document actuel' if existing else 'Choisir votre document' }}</span>
+        <input id="despProjectFile{{ slot }}" type="file" name="file_{{ slot }}" accept="{{ desp_project.accept }}" aria-describedby="despProjectStatus">
+        {% if existing %}<label class="desp-project-remove"><input type="checkbox" name="remove_{{ slot }}" value="1"> Retirer ce document</label>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <p class="desp-project-status" id="despProjectStatus" role="status" aria-live="polite">Total déposé : {{ '%.2f'|format(desp_project.total_bytes / 1000000) }} Mo / 15 Mo.</p>
+    <button class="btn desp-project-submit" type="submit">Enregistrer mes documents</button>
+    <p class="desp-project-file-hint">Vous pouvez ajouter le deuxième document plus tard ou remplacer vos fichiers. Les changements sont appliqués après enregistrement.</p>
+  </form>
+  <script src="{{ url_for('static', filename='js/desp-jury-project.js') }}?v=1" defer></script>
+  {% endif %}
+</section>
+{% endif %}
