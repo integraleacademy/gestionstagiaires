@@ -1,10 +1,12 @@
 """Authenticated DESP initial jury documents, separate from enrolment evidence."""
 import copy
+from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 import re
 import uuid
 import zipfile
+from zoneinfo import ZoneInfo
 
 from flask import abort, flash, redirect, request, send_file, session, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -19,6 +21,15 @@ def supported(services, training):
     kind = str(services._session_get(training, "training_type", "") or "").strip().upper()
     name = str(services._session_get(training, "name", "") or "")
     return kind in {"DIRIGEANT INITIAL", "DESP INITIAL", "DIRIGEANT", "DESP"} and not re.search(r"\b(VAE|MAC|RECYCLAGE)\b", name, re.I)
+
+
+def today():
+    return datetime.now(ZoneInfo("Europe/Paris")).date()
+
+
+def public_available(services, training):
+    start = services._parse_iso_date(str(services._session_get(training, "dirigeant_in_person_start", "") or "").strip())
+    return bool(start and (today() - start).days >= 7)
 
 
 def state(trainee):
@@ -57,7 +68,7 @@ def download_name(services, trainee, document):
 
 
 def view(services, training, trainee, *, token=None):
-    if not supported(services, training):
+    if not supported(services, training) or (token and not public_available(services, training)):
         return None
     rows = documents(trainee)
     endpoint = "public_desp_project_download" if token else "admin_desp_project_download"
@@ -100,6 +111,8 @@ def register(app, services):
             trainee = next((t for t in services._session_trainees_list(training or {})
                             if str(t.get("id")) == trainee_id), None)
         if not training or not trainee or not supported(services, training):
+            abort(404)
+        if token and not public_available(services, training):
             abort(404)
         return training, trainee
 

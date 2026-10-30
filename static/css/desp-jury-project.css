@@ -1,5 +1,10 @@
 .desp-project{grid-column:1/-1;margin:0 0 20px;padding:24px;border:1px solid #fed7aa;border-top:4px solid #ea580c;border-radius:20px;background:#fff;box-shadow:0 8px 25px #7c2d1209;color:#172033;min-width:0;scroll-margin-top:110px}
 .desp-project-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
+.desp-project-accordion>summary{cursor:pointer;list-style:none;position:relative;padding-right:28px}
+.desp-project-accordion>summary::-webkit-details-marker{display:none}
+.desp-project-accordion>summary::after{content:"";position:absolute;right:3px;top:12px;width:9px;height:9px;border-right:2px solid #c2410c;border-bottom:2px solid #c2410c;transform:rotate(45deg);transition:transform .2s}
+.desp-project-accordion[open]>summary::after{transform:rotate(225deg)}
+.desp-project-accordion>summary:focus-visible{outline:2px solid #ea580c;outline-offset:8px;border-radius:4px}
 .desp-project-kicker{margin:0 0 7px!important;color:#b45309;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.07em}
 .desp-project h2{font-size:23px;margin:0 0 8px}
 .desp-project-heading p:not(.desp-project-kicker){margin:0;color:#64748b;line-height:1.5}
