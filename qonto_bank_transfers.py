@@ -65,6 +65,7 @@ def _record(transaction):
         "paid_at": str(transaction.get("settled_at") or transaction.get("paid_at") or ""),
         "label": str(transaction.get("label") or transaction.get("clean_counterparty_name") or "")[:300],
         "reference": str(transaction.get("reference") or "")[:500],
+        "payer_name": str(transaction.get("payer_name") or transaction.get("clean_counterparty_name") or transaction.get("label") or "")[:300],
     }
 
 
@@ -176,6 +177,9 @@ def match_bank_transfers(lines, transactions, *, today=None):
         for record in records:
             identifier = _transaction_id(record)
             replacement = dict(indexed[identifier][1]) if identifier in indexed else dict(record)
+            for key in ("allocation_method", "allocated_at", "allocated_by"):
+                if key in record:
+                    replacement[key] = record[key]
             # Reversals may clear settled_at. Retain the original settlement
             # date as history, while the reversed status makes the amount zero.
             if replacement.get("status") == "reversed" and not replacement.get("paid_at"):
@@ -213,3 +217,37 @@ def match_bank_transfers(lines, transactions, *, today=None):
         if len(records) == 1:
             changed[line_id] = [dict(records[0])]
     return changed
+
+
+def bank_transfer_candidates(lines, transactions, query, *, today=None):
+    """Search actual incoming transfers; manual allocation never infers a payer."""
+    words = _words(query).split()
+    if not words:
+        return []
+    owners = defaultdict(set)
+    for line in lines:
+        for record in line.get("qontoBankTransfers") or []:
+            if isinstance(record, dict) and _transaction_id(record):
+                owners[_transaction_id(record)].add(str(line.get("id")))
+    grouped = defaultdict(list)
+    for transaction in transactions:
+        if isinstance(transaction, dict) and _transaction_id(transaction):
+            grouped[_transaction_id(transaction)].append(_record(transaction))
+    results = []
+    for identifier, group in grouped.items():
+        record = group[0]
+        if not all(item == record for item in group) or not _is_completed_credit(record, today or date.today()):
+            continue
+        haystack = _words(" ".join(record[key] for key in ("payer_name", "label", "reference")))
+        if not all(word in haystack for word in words):
+            continue
+        results.append(dict(record, assigned=bool(owners.get(identifier))))
+    return sorted(results, key=lambda record: (record["paid_at"], record["id"]), reverse=True)
+
+
+def verified_bank_transfer(transaction, *, today=None):
+    """Allowlisted bank evidence, or an error for an unsettled/non-transfer row."""
+    record = _record(transaction)
+    if not _is_completed_credit(record, today or date.today()):
+        raise ValueError("Ce virement n’est plus un encaissement confirmé en euros.")
+    return record

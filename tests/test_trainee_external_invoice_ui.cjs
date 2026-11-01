@@ -88,7 +88,8 @@ test('bank transfer displays actual payment date and reference exactly once', ()
   assert.equal(rows[0].amount, 1830);
   assert.equal(rows[0].date, transfer.paid_at);
   assert.equal(rows[0].dateLabel, 'Reçu le');
-  assert.equal(rows[0].note, transfer.reference);
+  assert.ok(rows[0].note.includes(transfer.reference));
+  assert.ok(rows[0].note.includes(transfer.label));
   assert.equal(rows[0].mode, 'Virement bancaire');
   assert.equal(ui.linePaid(line), 1830);
   assert.equal(ui.lineRemaining(line), 0);
@@ -116,4 +117,23 @@ test('reversed transfers do not appear as received payments', () => {
   const rows = ui.financePaymentRows([line], {});
   assert.equal(rows.length, 1);
   assert.equal(rows[0].amount, 50);
+});
+
+test('linked invoice shows the third-party payer once and only adds other receipts', () => {
+  const ui = setup();
+  const transfer = {id:'third-party',status:'completed',amount_cents:215000,
+    payer_name:'Aurore VERON',reference:'Formation',paid_at:'2026-09-16'};
+  const line = {qontoInvoiceId:'invoice-1',qontoBankTransfers:[transfer]};
+  const entry = {source:'qonto',invoice_id:'invoice-1',invoice_number:'TEST-1',
+    paid_amount_cents:215000,transactions:[transfer]};
+  let rows=ui.financePaymentRows([line],{qontoPaymentEntries:[entry]});
+  assert.equal(rows.length,1);
+  assert.equal(rows[0].amount,2150);
+  assert.equal(rows[0].mode,'Virement bancaire');
+  assert.match(rows[0].note,/Aurore VERON/);
+  assert.equal(rows[0].invoice,'TEST-1');
+  entry.paid_amount_cents=220000;
+  rows=ui.financePaymentRows([line],{qontoPaymentEntries:[entry]});
+  assert.equal(rows.length,2);
+  assert.equal(rows[1].amount,50);
 });
