@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Accès autonome EDOF · Test V2</title>
+  <link rel="stylesheet" href="/admin/edof-test/assets/page.css">
+  <script src="/admin/edof-test/server/script.js" defer></script>
+</head>
+<body>
+  <header><a href="/admin/edof-test">← Essais EDOF</a><span>INTÉGRALE <b>ACADEMY</b></span><span class="badge">TEST V2</span></header>
+  <main data-csrf="{{ csrf }}">
+    <div class="intro"><p class="eyebrow">EDOF · ACCÈS DEPUIS RENDER</p><h1>Tester sans votre Chrome.</h1><p>Le serveur ouvre son propre navigateur et une session EFP neuve à chaque essai. Votre extension Chrome n’intervient pas.</p></div>
+    <div class="notice"><strong>Lecture seule</strong><span>Cet essai vérifie l’accès, la recherche et la lecture. Il ne déclare aucune entrée, sortie ou prestation et ne rattache aucun dossier.</span></div>
+    <div class="server-grid">
+      <section class="card"><span class="step">01</span><h2>Accéder à EFP depuis Render</h2><p>Vérifie que le navigateur du serveur atteint le formulaire officiel de connexion. Aucun identifiant n’est envoyé pour cet essai.</p><button class="button secondary" id="access-test" type="button">Tester l’accès depuis Render</button></section>
+      <section class="card"><span class="step">02</span><h2>Connexion et lecture autonomes</h2>
+        {% if config.credentials_configured %}<p class="match">Identifiants EFP configurés dans Render.</p>{% else %}<p class="review-note">Identifiants EFP à configurer une seule fois dans Render.</p>
+        <details open><summary>Configurer la connexion</summary><ol><li>Ouvrez le service <strong>gestionstagiaires-test-v2</strong> dans Render, puis <strong>Environment → Edit</strong>.</li><li>Ajoutez <code>EDOF_EFP_USERNAME</code> : l’e-mail de votre compte EFP habilité pour cet établissement.</li><li>Ajoutez <code>EDOF_EFP_PASSWORD</code> : le mot de passe de ce compte.</li><li>Enregistrez avec <strong>Save, rebuild, and deploy</strong>, attendez que le service soit disponible, puis rechargez cette page.</li></ol><p class="hint">Saisissez ces valeurs uniquement dans Render. Aucun mot de passe n’est demandé sur cette page ni dans le chat.</p></details>{% endif %}
+        <form id="server-read-form">
+          <label for="server-folder">Numéro CPF, si vous le connaissez</label><input id="server-folder" inputmode="numeric" pattern="[0-9]{6,20}" maxlength="20" autocomplete="off">
+          <p>Pour tester la recherche, laissez le numéro vide et renseignez le nom et le prénom.</p>
+          <div class="server-grid"><div><label for="server-last">Nom</label><input id="server-last" maxlength="120" autocomplete="off"></div><div><label for="server-first">Prénom</label><input id="server-first" maxlength="120" autocomplete="off"></div></div>
+          <button class="button" type="submit" {% if not config.credentials_configured %}disabled{% endif %}>Lancer la connexion et la lecture</button>
+        </form>
+        <p class="hint">Recherche dans les dossiers en cours. Plusieurs homonymes ou plusieurs pages : aucune sélection automatique. Un nouvel essai de lecture est possible après cinq minutes.</p>
+      </section>
+    </div>
+    <p id="server-message" role="status" aria-live="polite"></p>
+    <section class="card result"><p class="eyebrow">RÉSULTATS DU SERVEUR</p><h2>Ce qui est réellement vérifié</h2>
+      {% for job in jobs %}<article class="candidate" {% if not job.finished %}data-running="true"{% endif %}>
+        <h3>{{ 'Accès au formulaire' if job.mode == 'access' else 'Connexion et lecture' }} · {{ job.created_at[:19]|replace('T',' à ') }} UTC</h3>
+        <p class="{{ 'match' if job.code == 'read_success' else 'review-note' }}">{{ job.message }}</p>
+        {% if job.stage %}<p class="hint">Étape : {{ {'browser':'démarrage du navigateur','login_page':'accès au formulaire','authentication':'connexion EFP','organism':'sélection de l’établissement','search':'recherche par nom','dossier':'lecture du dossier'}.get(job.stage, 'essai') }}.</p>{% endif %}
+        {% if job.fields %}{% set f = job.fields %}<dl><dt>Numéro CPF</dt><dd>{{ f.folder_id }}</dd><dt>Stagiaire</dt><dd>{{ f.first_name or '—' }} {{ f.last_name or '' }}</dd><dt>E-mail</dt><dd>{{ f.email or 'Non renseigné' }}</dd><dt>Formation</dt><dd>{{ f.title or 'Non renseignée' }}</dd><dt>Dates de session</dt><dd>{{ f.session_start_date or '—' }} → {{ f.session_end_date or '—' }}</dd><dt>Statut</dt><dd>{{ state_labels.get(f.state, f.state or 'Non renseigné') }}</dd></dl>{% endif %}
+      </article>{% else %}<p>Aucun essai serveur lancé depuis cette session administrateur.</p>{% endfor %}
+      <p class="hint">Un formulaire accessible ne prouve pas une connexion réussie. Une lecture réussie ne prouve pas encore le fonctionnement continu après expiration, ni les déclarations d’entrée et de sortie.</p>
+    </section>
+    <footer>Chaque essai dure au maximum 2 min 30 et fonctionne sur Render, même si vous fermez cette page. Les sessions EFP du test sont temporaires. Les résultats sont conservés au maximum 24 heures et purgés à l’accès suivant. En cas de code de vérification, de CAPTCHA ou de parcours inconnu, l’essai s’arrête.</footer>
+  </main>
+</body>
+</html>

@@ -22,6 +22,17 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+# The autonomous-access experiment is deliberately absent from other services.
+# Render exposes its service identity as a Docker build argument. Never add
+# EFP credentials as ARGs: credentials are read at runtime only.
+ARG RENDER_SERVICE_ID
+COPY requirements-edof-test.txt .
+RUN if [ "$RENDER_SERVICE_ID" = "srv-d928tc19rddc7388qie0" ]; then \
+      pip install --no-cache-dir -r requirements-edof-test.txt && \
+      python -m playwright install --with-deps --only-shell chromium && \
+      rm -rf /var/lib/apt/lists/*; \
+    fi
+
 COPY . .
 
 # Reject invalid Python sources before Render tries to start this image.

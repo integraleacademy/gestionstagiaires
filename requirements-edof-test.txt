@@ -1,0 +1,2 @@
+# Installed only for the dedicated Test V2 Render service.
+playwright==1.64.1

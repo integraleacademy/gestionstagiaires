@@ -252,7 +252,7 @@ def register_routes(app, store, *, admin_required, can_access, data_file):
 
     @bp.get("/api/edof-test/ping")
     def ping():
-        return jsonify(ok=True, version="1.1", mode="browser_observation", matching_preview=True, autonomous_sync=False)
+        return jsonify(ok=True, version="1.2", mode="browser_observation", matching_preview=True, server_access_test=True, autonomous_sync=False)
 
     @bp.get("/admin/edof-test")
     @admin_required
