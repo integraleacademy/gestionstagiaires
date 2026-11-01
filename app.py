@@ -24,6 +24,7 @@ import signal
 import atexit
 import sys
 import ssiap_exam
+from qonto_bank_transfers import bank_transfer_paid_cents, match_bank_transfers
 import ssiap_diploma_numbers
 from email_design import render_email as render_academy_email, normalize_email_text_signature
 import afc_schedule
@@ -1037,7 +1038,8 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
         if is_webhook_endpoint and isinstance(cleaned_payload, dict) and "secret" in cleaned_payload:
             log_payload = {**cleaned_payload, "secret": "***"}
         safe_payload = _sanitize_qonto_error(json.dumps(log_payload, ensure_ascii=False)) if log_payload is not None else None
-        app.logger.info("[QONTO] api_call method=%s url=%s payload=%s status=%s trace_id=%s body=%s", method.upper(), called_url, safe_payload, response.status_code, trace_id or "", _sanitize_qonto_error(raw_body[:4000]))
+        safe_body = "[banking response omitted]" if endpoint in {"/v2/transactions", "/v2/organization"} else _sanitize_qonto_error(raw_body[:4000])
+        app.logger.info("[QONTO] api_call method=%s url=%s payload=%s status=%s trace_id=%s body=%s", method.upper(), called_url, safe_payload, response.status_code, trace_id or "", safe_body)
         if not response.ok:
             if response.status_code == 404:
                 raise QontoNotFoundError(response.status_code, raw_body, trace_id)
@@ -1963,6 +1965,7 @@ def _reconciled_qonto_paid_cents(invoice: Dict[str, Any], fallback_cents: int) -
     least one collection has reached a terminal state so pending legacy plans
     do not erase a valid non-SEPA payment.
     """
+    fallback_cents = max(fallback_cents, bank_transfer_paid_cents(invoice))
     all_installments = _sepa_installments(invoice)
     # Historical mandate-only lines did not always persist ``paymentMode``.
     # The presence of a real SEPA schedule is sufficient proof that these are
@@ -26056,7 +26059,8 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
     default_price = default_training_price(_session_get(session_item, "training_type", "") or "")
     rows = []
     totals = {"revenue": 0, "cpf": 0, "personal": 0, "other": 0, "funding": 0, "gap": 0, "paid": 0,
-              "remaining": 0, "cpf_remaining": 0, "other_remaining": 0}
+              "remaining": 0, "cpf_remaining": 0, "other_remaining": 0,
+              "personal_paid": 0, "other_paid": 0, "cpf_paid": 0}
     known_paid_total = 0
     unknown_payment_count = 0
 
@@ -26087,18 +26091,20 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
         summary_paid_cents = int(financial_summary.get("paid_total_cents") or 0)
         invoices = []
         row_paid_cents = 0
+        invoice_paid_by_financer = {"CPF": 0, "PERSONNEL": 0, "AUTRE": 0}
         row_has_unknown_payment = False
         for line in trainee_lines:
             invoice_status = _normalize_billing_invoice_status(line.get("invoiceStatus") or "not_invoiced")
             external = invoice_status == "external_generated"
+            financer_type = "CPF" if is_cpf_billing_context(line) else ("AUTRE" if "AUTRE" in str(line.get("financingType") or "").upper() else "PERSONNEL")
             invoice_id = line.get("qontoInvoiceId") or line.get("qontoDraftId")
             has_invoice = bool(invoice_id) or external
             external_paid_sources = (
                 line.get("qonto_amount_paid_cents"), line.get("paid_amount_cents"),
                 line.get("qontoAmountPaidCents"),
             )
-            external_paid_is_known = any(value is not None for value in external_paid_sources)
-            external_paid_value = _cents_first_non_null(*external_paid_sources)
+            external_paid_is_known = bool(line.get("qontoBankTransfers")) or any(value is not None for value in external_paid_sources)
+            external_paid_value = bank_transfer_paid_cents(line) if line.get("qontoBankTransfers") else _cents_first_non_null(*external_paid_sources)
             payment_known = (bool(invoice_id) and not external) or (external and external_paid_is_known)
             paid_cents = 0
             total_cents = money_value_to_cents(line.get("amount") or 0)
@@ -26124,7 +26130,9 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
                 row_paid_cents += paid_cents
             elif external:
                 row_has_unknown_payment = True
+            invoice_paid_by_financer[financer_type] += paid_cents
             invoices.append({
+                "financer_type": financer_type,
                 "number": str(line.get("qontoInvoiceNumber") or ("Facture externe" if external else "—")),
                 "status": invoice_status if has_invoice else "not_invoiced",
                 "payment_status": payment_status,
@@ -26144,8 +26152,10 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
         # to a Qonto invoice (cash/manual/direct debit) to external invoices.
         # This removes false unknowns without inventing more than the amount
         # actually recorded as collected.
-        unallocated_paid_cents = max(summary_paid_cents - row_paid_cents, 0)
+        unallocated_by_financer = {key: max(int((paid_by_financer.get(key) or {}).get("paid_amount_cents") or 0) - invoice_paid_by_financer[key], 0) for key in invoice_paid_by_financer}
         for invoice in invoices:
+            financer_type = invoice["financer_type"]
+            unallocated_paid_cents = unallocated_by_financer[financer_type]
             if not invoice["external"] or invoice["payment_known"] or unallocated_paid_cents <= 0:
                 continue
             invoice_total_cents = int(round(invoice["total"] * 100))
@@ -26156,15 +26166,15 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
             invoice["payment_status"] = "paid" if allocated_cents >= invoice_total_cents else "partially_paid"
             invoice["payment_percentage"] = round(min(max(allocated_cents / invoice_total_cents * 100, 0), 100), 1) if invoice_total_cents else 0
             row_paid_cents += allocated_cents
-            unallocated_paid_cents -= allocated_cents
+            unallocated_by_financer[financer_type] -= allocated_cents
 
         row_has_unknown_payment = any(
             invoice["external"] and not invoice["payment_known"] for invoice in invoices
         )
         if not invoices:
             payment_known = summary_paid_cents > 0
-            funding_cents = int(round(funding * 100))
-            invoices.append({"number": "—", "status": "not_invoiced", "payment_status": financial_summary.get("payment_status") if payment_known else "not_applicable", "paid": summary_paid_cents / 100, "total": funding, "remaining": max(funding_cents - summary_paid_cents, 0) / 100, "payment_percentage": round(min(max(summary_paid_cents / funding_cents * 100, 0), 100), 1) if funding_cents else 0, "payment_known": payment_known, "external": False, "next_direct_debit_date": None})
+            funding_cents = int(round((personal + other) * 100))
+            invoices.append({"number": "—", "status": "not_invoiced", "payment_status": financial_summary.get("payment_status") if payment_known else "not_applicable", "paid": summary_paid_cents / 100, "total": personal + other, "financer_type": "AUTRE" if other and not personal else "PERSONNEL", "remaining": max(funding_cents - summary_paid_cents, 0) / 100, "payment_percentage": round(min(max(summary_paid_cents / funding_cents * 100, 0), 100), 1) if funding_cents else 0, "payment_known": payment_known, "external": False, "next_direct_debit_date": None})
 
         # Keep the KPI consistent with the trainee sheet, including payments
         # which cannot sensibly be assigned to one invoice row.
@@ -26179,6 +26189,7 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
             "price": round(price, 2), "cpf": round(cpf, 2), "personal": round(personal, 2),
             "other": round(other, 2), "funding": round(funding, 2), "gap": round(gap, 2),
             "paid": round(paid, 2), "payment_unknown": row_has_unknown_payment, "invoices": invoices,
+            "personal_paid": round(personal_paid, 2), "other_paid": round(other_paid, 2), "cpf_paid": round(cpf_paid, 2),
             "personal_remaining": round(personal_remaining, 2),
             "cpf_remaining": round(cpf_remaining, 2),
             "other_remaining": round(other_remaining, 2),
@@ -26188,7 +26199,7 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
         }
         rows.append(row)
         totals["revenue"] += row["price"]
-        for key in ("cpf", "personal", "other", "funding", "gap"):
+        for key in ("cpf", "personal", "other", "funding", "gap", "personal_paid", "other_paid", "cpf_paid"):
             totals[key] += row[key]
         totals["remaining"] += row["personal_remaining"]
         totals["cpf_remaining"] += row["cpf_remaining"]
@@ -43270,6 +43281,15 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'creditNoteStatus': persisted.get('creditNoteStatus'), 'qontoCreditNoteId': persisted.get('qontoCreditNoteId'),
                     'paymentPlan': persisted.get('paymentPlan') if isinstance(persisted.get('paymentPlan'), dict) else {},
                     'paymentMode': persisted.get('paymentMode') or 'cash',
+                    'qontoBankTransfers': copy.deepcopy(persisted.get('qontoBankTransfers') or []),
+                    'qontoBankTransferPaidCents': bank_transfer_paid_cents(persisted),
+                    'qonto_amount_paid_cents': persisted.get('qonto_amount_paid_cents'),
+                    'qontoBankTransferSyncedAt': persisted.get('qontoBankTransferSyncedAt') or '',
+                    'qontoBankTransferSyncWarning': persisted.get('qontoBankTransferSyncWarning') or '',
+                    'amountPaid': persisted.get('amountPaid'),
+                    'amount_paid': persisted.get('amount_paid'),
+                    'manualPaymentInvoiceId': persisted.get('manualPaymentInvoiceId'),
+                    'cashPaymentEnabled': bool(trainee.get('cash_payment_enabled')),
                     'directDebitInstallments': persisted.get('directDebitInstallments') if isinstance(persisted.get('directDebitInstallments'), list) else [],
                     'qontoPaymentGlobalStatus': persisted.get('qontoPaymentGlobalStatus') or '',
                     'qontoAutoSyncAttemptedAt': persisted.get('qontoAutoSyncAttemptedAt') or '',
@@ -43662,7 +43682,7 @@ def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
     if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
         normalize_qonto_invoice_storage_fields(line)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','companyName','clientEmail','clientAddress','clientZipCode','clientCity','siret','invoiceNotes','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qontoDirectDebitSyncWarning','qontoDirectDebitLastSyncedAt','qontoAutoSyncAttemptedAt','qonto_rejected_collection_ids','sepa_payment_plan','financial_tracking_override','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','companyName','clientEmail','clientAddress','clientZipCode','clientCity','siret','invoiceNotes','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qontoDirectDebitSyncWarning','qontoDirectDebitLastSyncedAt','qontoAutoSyncAttemptedAt','qonto_rejected_collection_ids','sepa_payment_plan','financial_tracking_override','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError','qontoBankTransfers','qontoBankTransferSyncedAt','qontoBankTransferSyncWarning','amountPaid','amount_paid','manualPaymentInvoiceId')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -43827,6 +43847,28 @@ def calculate_trainee_financial_summary(
             # invoice identifier.
             invoiced_total_cents += line_total_cents
             by_financer[financer]['invoiced_amount_cents'] += line_total_cents
+
+        # Bank transfers are recorded separately from external invoice status.
+        # Only matched completed credits count; a reversed transfer stays in
+        # history but contributes zero. Never add this again to a linked invoice.
+        if line.get('qontoBankTransfers'):
+            bank_paid_cents = bank_transfer_paid_cents(line)
+            qonto_paid_total_cents += bank_paid_cents
+            by_financer[financer]['paid_amount_cents'] += bank_paid_cents
+            if bank_paid_cents:
+                transfers = [item for item in line['qontoBankTransfers'] if item.get('status') == 'completed']
+                qonto_payment_entries.append({
+                    'invoice_id': '', 'invoice_number': line.get('qontoInvoiceNumber') or '',
+                    'source': 'qonto_bank_transfer', 'total_amount_cents': line_total_cents,
+                    'paid_amount_cents': bank_paid_cents,
+                    'remaining_amount_cents': max(line_total_cents - bank_paid_cents, 0),
+                    'payment_status': 'paid' if bank_paid_cents >= line_total_cents else 'partially_paid',
+                    'last_synced_at': line.get('qontoBankTransferSyncedAt') or '',
+                    'paid_at': transfers[0].get('paid_at') if transfers else '',
+                    'reference': transfers[0].get('reference') if transfers else '',
+                    'transactions': transfers,
+                })
+            continue
 
         # Direct-debit collections can be reported before (or independently
         # from) a client-invoice payment amount.  The schedule is then the only
@@ -44823,6 +44865,190 @@ def _qonto_background_snapshot(data: Dict[str, Any], line: Dict[str, Any]) -> Di
     }
 
 
+def _qonto_bank_transfer_eligible(line: Dict[str, Any]) -> bool:
+    if line.get('qontoBankTransfers'):
+        return True
+    return bool(
+        _normalize_billing_invoice_status(line.get('invoiceStatus')) == 'external_generated'
+        and str(line.get('financingType') or '').upper() == 'PERSONNEL'
+        and not (line.get('qontoInvoiceId') or line.get('qontoDraftId'))
+        and not line.get('cashPaymentEnabled')
+        and line.get('paymentMode') != 'sepa_direct_debit'
+        and not _sepa_installments(line)
+        and not (line.get('amountPaid') or line.get('amount_paid') or line.get('qonto_amount_paid_cents'))
+        and not line.get('registrationCancelled')
+    )
+
+
+def _qonto_bank_matching_lines(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """Include historical/unbilled registrations as ambiguity blockers."""
+    lines = _qonto_background_lines(data)
+    contexts = {}
+    for session_item in data.get('sessions') or []:
+        for trainee in _session_trainees_list(session_item):
+            contexts[(str(session_item.get('id')), str(trainee.get('id')))] = (session_item, trainee)
+    personal_keys = set()
+    for line_id, source in list(lines.items()):
+        line = dict(source)
+        key = (str(line.get('sessionId')), str(line.get('traineeId')))
+        if key in contexts:
+            session_item, trainee = contexts[key]
+            line.update({
+                'traineeFirstName': trainee.get('first_name') or '',
+                'traineeLastName': trainee.get('last_name') or '',
+                'dateStart': _session_get(session_item, 'date_start', ''),
+                'dateEnd': _session_get(session_item, 'date_end', ''),
+                'cashPaymentEnabled': bool(trainee.get('cash_payment_enabled')),
+            })
+        if str(line.get('financingType') or '').upper() == 'PERSONNEL':
+            personal_keys.add(key)
+        lines[line_id] = line
+    for key, (session_item, trainee) in contexts.items():
+        # Even a homonym with no current financing is an identity ambiguity.
+        blocker_id = '__bank_identity__:' + ':'.join(key)
+        lines[blocker_id] = {
+            'id': blocker_id, 'sessionId': key[0], 'traineeId': key[1],
+            'traineeFirstName': trainee.get('first_name') or '',
+            'traineeLastName': trainee.get('last_name') or '',
+            'dateStart': _session_get(session_item, 'date_start', ''),
+            'dateEnd': _session_get(session_item, 'date_end', ''),
+            'amount': 0 if key in personal_keys else trainee.get('personal_amount') or 0,
+            'financingType': 'PERSONNEL', 'invoiceStatus': 'identity_only',
+        }
+    return lines
+
+
+def _qonto_bank_transfer_context(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Snapshot every possible identity/amount, not just the requested trainee."""
+    keys = ('id', 'traineeId', 'sessionId', 'traineeFirstName', 'traineeLastName',
+            'amount', 'amountTTC', 'financingType', 'invoiceStatus', 'paymentStatus',
+            'qontoInvoiceId', 'qontoDraftId', 'paymentMode', 'directDebitInstallments',
+            'qontoBankTransfers', 'amountPaid', 'amount_paid', 'manualPaymentInvoiceId', 'cashPaymentEnabled',
+            'sepa_payment_plan',
+            'registrationCancelled', 'dateStart', 'dateEnd', 'qonto_amount_paid_cents')
+    return {key: {field: copy.deepcopy(line.get(field)) for field in keys}
+            for key, line in _qonto_bank_matching_lines(data).items()}
+
+
+def _fetch_qonto_bank_transactions(lines: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Read the complete relevant interval from every organization bank account.
+
+    Qonto Business API /v2/transactions uses organization.read/API-key auth.
+    Include reversed credits so a previously reconciled transfer can be undone.
+    Stop conservatively without reconciling anything if pagination is incomplete.
+    """
+    dates = [_parse_date_safe(line.get('dateStart') or '') for line in lines]
+    dates = [value for value in dates if value]
+    if not dates:
+        raise ValueError('La période du virement ne peut pas être déterminée.')
+    since = min(dates) - datetime.timedelta(days=180)
+    for line in lines:
+        for item in line.get('qontoBankTransfers') or []:
+            day = _parse_date_safe(str(item.get('paid_at') or '')[:10])
+            if day:
+                since = min(since, day)
+    started = time.monotonic()
+    accounts = get_qonto_organization_bank_accounts().get('bank_accounts') or []
+    account_ids = list(dict.fromkeys(str(account.get('id') or '') for account in accounts if account.get('id')))
+    if not account_ids:
+        raise ValueError('Aucun compte bancaire Qonto accessible pour vérifier les virements.')
+    transactions = []
+    for account_id in account_ids:
+        for page in range(1, 21):
+            if time.monotonic() - started >= 25:
+                raise ValueError('Vérification bancaire trop longue : aucun nouveau rapprochement effectué.')
+            response = _qonto_request('GET', '/v2/transactions', params={
+                'bank_account_id': account_id, 'side': 'credit',
+                'status[]': ['completed', 'reversed'], 'settled_at_from': since.isoformat() + 'T00:00:00Z',
+                'sort_by': 'settled_at:desc', 'page': page, 'per_page': 100,
+            })
+            batch = response.get('transactions')
+            if not isinstance(batch, list) or any(not isinstance(item, dict) for item in batch):
+                raise ValueError('Réponse des virements Qonto incomplète.')
+            transactions.extend(batch)
+            meta = response.get('meta') if isinstance(response.get('meta'), dict) else {}
+            if 'next_page' in meta:
+                more = bool(meta['next_page'])
+                if more and int(meta['next_page']) != page + 1:
+                    raise ValueError('Pagination des virements Qonto incohérente.')
+            elif meta.get('total_pages') is not None:
+                more = page < int(meta['total_pages'])
+            else:
+                more = len(batch) == 100
+            if not more:
+                break
+        else:
+            raise ValueError('Historique Qonto trop volumineux : rapprochement non effectué.')
+    return transactions
+
+
+def _sync_qonto_bank_transfers(
+    data: Dict[str, Any], scope_lines: Optional[List[Dict[str, Any]]] = None, *, force: bool = False,
+) -> Dict[str, Any]:
+    all_lines = _qonto_bank_matching_lines(data)
+    scope_ids = {str(line.get('id')) for line in scope_lines} if scope_lines is not None else set(all_lines)
+    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    candidates = []
+    for line in all_lines.values():
+        if str(line.get('id')) not in scope_ids or not _qonto_bank_transfer_eligible(line):
+            continue
+        previous = _parse_iso_datetime(line.get('qontoBankTransferSyncedAt') or '')
+        interval = 86400 if bank_transfer_paid_cents(line) else 900
+        if force or previous is None or (now - previous).total_seconds() >= interval:
+            candidates.append(line)
+    if not candidates:
+        return {'attempted_count': 0, 'matched_count': 0, 'conflict_count': 0, 'errors': []}
+    before = _qonto_bank_transfer_context(data)
+    error = ''
+    transactions = []
+    try:
+        transactions = _fetch_qonto_bank_transactions(candidates)
+    except Exception as exc:
+        error = _sanitize_qonto_error(str(exc))
+    candidate_ids = {str(line['id']) for line in candidates}
+
+    def persist(current: Dict[str, Any]) -> Dict[str, Any]:
+        if _qonto_bank_transfer_context(current) != before:
+            latest = copy.deepcopy(current)
+            if current is not data:
+                data.clear()
+                data.update(latest)
+            return {'attempted_count': len(candidates), 'matched_count': 0,
+                    'conflict_count': len(candidates), 'errors': []}
+        current_lines = _qonto_bank_matching_lines(current)
+        matches = match_bank_transfers(list(current_lines.values()), transactions) if not error else {}
+        matched = 0
+        for line_id in candidate_ids:
+            line = current_lines[line_id]
+            previous_records = copy.deepcopy(line.get('qontoBankTransfers') or [])
+            if not error and line_id in matches:
+                line['qontoBankTransfers'] = matches[line_id]
+            records = line.get('qontoBankTransfers') or []
+            if records:
+                paid_cents = bank_transfer_paid_cents(line)
+                total_cents = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+                line['paymentStatus'] = 'paid' if paid_cents >= total_cents and total_cents else ('partially_paid' if paid_cents else 'unpaid')
+                if records != previous_records:
+                    matched += int(paid_cents > 0)
+                    _billing_log(line, 'Virement bancaire rapproché' if paid_cents else 'Virement bancaire annulé',
+                                 'success', f'{cents_to_money(paid_cents):.2f} EUR', str(records[0].get('id') or ''))
+            line['qontoBankTransferSyncedAt'] = _now_iso()
+            line['qontoBankTransferSyncWarning'] = (
+                'Vérification des virements indisponible : ' + error if error else ''
+            )
+            _save_billing_line(current, line)
+        # Callers may continue their existing scoped invoice refresh. Bring
+        # their working snapshot up to date without replacing concurrent edits.
+        latest = copy.deepcopy(current)
+        if current is not data:
+            data.clear()
+            data.update(latest)
+        return {'attempted_count': len(candidates), 'matched_count': matched,
+                'conflict_count': 0, 'errors': ([{'kind': 'bank_transfer', 'message': error}] if error else [])}
+
+    return _atomic_update_data(persist)
+
+
 def run_qonto_background_sync() -> Dict[str, Any]:
     """Reconcile existing Qonto records independently of any open browser."""
     if not _qonto_background_sync_lock.acquire(blocking=False):
@@ -44833,6 +45059,7 @@ def run_qonto_background_sync() -> Dict[str, Any]:
         started_at = _now_iso()
         started = time.monotonic()
         data = copy.deepcopy(load_data(run_background_tasks=False))
+        bank_result = _sync_qonto_bank_transfers(data)
         candidates = []
         for line in _qonto_background_lines(data).values():
             has_invoice = bool(line.get('qontoInvoiceId') or line.get('qontoDraftId'))
@@ -44915,7 +45142,9 @@ def run_qonto_background_sync() -> Dict[str, Any]:
                 synced += int(not failed)
             summary = {
                 'ok': not failed_count or bool(synced),
-                'status': 'partial' if failed_count else 'completed',
+                'status': 'partial' if failed_count or bank_result['errors'] else 'completed',
+                'bank_transfer_matched_count': bank_result['matched_count'],
+                'bank_transfer_errors': bank_result['errors'],
                 'started_at': started_at, 'finished_at': _now_iso(),
                 'attempted_count': len(updates), 'synced_count': synced,
                 'failed_count': failed_count, 'conflict_count': conflicts,
@@ -44988,6 +45217,11 @@ def api_billing_trainee_session(trainee_id: str, session_id: str):
     sync_attempted = False
     data_changed = False
     if not local_only and _qonto_is_configured():
+        bank_result = _sync_qonto_bank_transfers(data, lines)
+        if bank_result['attempted_count']:
+            session_obj = next((item for item in data.get('sessions', []) if str(item.get('id')) == str(session_id)), None)
+            trainee = next((item for item in _session_trainees_list(session_obj or {}) if str(item.get('id')) == str(trainee_id)), None)
+            lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
         has_cpf_invoice = any(
             is_cpf_billing_context(line)
             and bool(line.get('qontoInvoiceId') or line.get('qontoDraftId'))
@@ -48385,7 +48619,12 @@ def api_billing_sync_qonto():
             if line: lines = [line]
     if not lines:
         lines = _billing_lines(data)
-    reset_count = synced_count = recovered_installments = updated_collections = 0; errors = []; last_line = None
+    bank_result = _sync_qonto_bank_transfers(data, lines, force=True) if _qonto_is_configured() else {'matched_count': 0, 'errors': []}
+    selected_ids = {str(line.get('id')) for line in lines}
+    lines = [line for line in _billing_lines(data) if str(line.get('id')) in selected_ids]
+    reset_count = synced_count = recovered_installments = updated_collections = 0
+    errors = list(bank_result['errors'])
+    last_line = next((line for line in lines if line.get('qontoBankTransfers')), None)
     for line in lines:
         has_invoice = bool(line.get('qontoInvoiceId') or line.get('qontoDraftId'))
         has_sepa_mandate = line.get('paymentMode') == 'sepa_direct_debit' and bool(line.get('qonto_direct_debit_mandate_id'))
@@ -48435,11 +48674,13 @@ def api_billing_sync_qonto():
         'ok': True, 'success': True, 'synced_count': synced_count,
         'recovered_installments': recovered_installments,
         'updated_collections': updated_collections,
+        'bank_transfer_matched_count': bank_result['matched_count'],
         'failed_count': len(errors),
         'message': (
             f'Synchronisation terminée : {synced_count} facture(s) vérifiée(s), '
             f'{recovered_installments} échéance(s) Qonto retrouvée(s), '
-            f'{updated_collections} statut(s) de prélèvement mis à jour.'
+            f'{updated_collections} statut(s) de prélèvement mis à jour, '
+            f"{bank_result['matched_count']} virement(s) rapproché(s)."
         ),
         'lines': all_lines, 'errors': errors, 'invoice': invoice,
         'financial_summary': summary,

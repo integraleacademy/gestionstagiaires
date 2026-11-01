@@ -1,7 +1,10 @@
 import datetime
+import re
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+
+from jinja2 import ChoiceLoader, DictLoader
 
 import app as gestion_app
 
@@ -129,15 +132,82 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
         self.assertIn("admin_trainee_page", template)
         self.assertIn("À payer en espèces", template)
 
-    def test_report_displays_payment_progress_and_separate_remaining_kpis(self):
+    def test_report_displays_payment_details_and_keeps_cpf_separate(self):
         template = Path("templates/admin_session_financial_report.html").read_text(encoding="utf-8")
 
         self.assertIn('role="progressbar"', template)
         self.assertIn("invoice.payment_percentage", template)
-        self.assertIn("Reste à encaisser CPF", template)
+        self.assertIn("Encaissements hors CPF", template)
         self.assertIn('class="financial-card__cpf-logo" src="/templates/cpf.jpg" alt="Logo CPF"', template)
-        self.assertIn("Reste à encaisser autres", template)
-        self.assertIn("Financement personnel uniquement", template)
+        self.assertIn("personnel et autres financeurs", template)
+        self.assertIn("Le CPF est suivi séparément", template)
+        self.assertNotIn("Reste à encaisser CPF", template)
+
+    def _render_report(self, report):
+        # Exercise the real page independently of the shared navigation shell.
+        environment = gestion_app.app.jinja_env.overlay(loader=ChoiceLoader([
+            DictLoader({"base.html": "{% block content %}{% endblock %}"}),
+            gestion_app.app.jinja_env.loader,
+        ]))
+        with gestion_app.app.test_request_context():
+            return environment.get_template("admin_session_financial_report.html").render(
+                session={**self.session, "date_end": "2026-10-01"}, report=report,
+            )
+
+    @staticmethod
+    def _card_text(html, modifier):
+        return re.search(
+            rf'<article class="financial-card [^"]*{modifier}[^"]*">(.*?)</article>',
+            html, re.DOTALL,
+        ).group(1)
+
+    def test_render_external_unknown_is_not_reported_as_an_unpaid_balance(self):
+        lines = [{"traineeId": "trainee-1", "invoiceStatus": "external_generated", "amount": 600}]
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=lines):
+            report = gestion_app._session_financial_report({}, self.session)
+        html = self._render_report(report)
+
+        # The personal 600 remains unverified, while the other-financier 200 is
+        # still a known balance. The CPF 1000 must not enter either KPI.
+        self.assertIn("200,00 €", self._card_text(html, "financial-card--balance"))
+        self.assertIn("600,00 € de solde restent à vérifier", html)
+        self.assertIn("Paiement à vérifier", html)
+        self.assertIn("Facture existante · ne pas recréer", html)
+        self.assertNotIn("Non payé", html)
+        self.assertNotIn("Générer facture", html)
+
+    def test_render_paid_external_invoice_shows_a_settled_personal_balance(self):
+        self.session["trainees"][0]["other_amount"] = 0
+        self.session["trainees"][0]["training_price"] = 1600
+        lines = [{
+            "traineeId": "trainee-1", "invoiceStatus": "external_generated", "amount": 600,
+            "amountPaid": 600,
+        }]
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=lines):
+            report = gestion_app._session_financial_report({}, self.session)
+        html = self._render_report(report)
+
+        self.assertIn("600,00 €", self._card_text(html, "financial-card--paid"))
+        self.assertIn("0,00 €", self._card_text(html, "financial-card--balance"))
+        summary = re.search(r'<tr class="financial-summary-row".*?</tr>', html, re.DOTALL).group(0)
+        self.assertIn("Soldé hors CPF", summary)
+        self.assertIn("Créée ailleurs", summary)
+        self.assertNotIn("Paiement à vérifier", summary)
+        self.assertIn('class="financial-details-row" id="financial-detail-1" hidden', html)
+
+    def test_render_cpf_only_dossier_does_not_claim_a_local_invoice_is_due(self):
+        self.session["trainees"][0].update({
+            "cpf_amount": 1800, "personal_amount": 0, "other_amount": 0,
+        })
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=[]):
+            report = gestion_app._session_financial_report({}, self.session)
+        html = self._render_report(report)
+
+        self.assertIn("0,00 €", self._card_text(html, "financial-card--balance"))
+        summary = re.search(r'<tr class="financial-summary-row".*?</tr>', html, re.DOTALL).group(0)
+        self.assertIn("Suivi CPF séparé", summary)
+        self.assertIn("Aucun montant attendu ici", summary)
+        self.assertNotIn("À facturer", summary)
 
     def test_next_direct_debit_date_is_the_first_future_actionable_installment(self):
         line = {

@@ -1,55 +1,223 @@
 {% extends "base.html" %}
 {% block content %}
-{% macro money(value) -%}{{ "{:,.2f}".format(value).replace(',', ' ').replace('.', ',') }} €{%- endmacro %}
-{% set status_labels = {'paid':'Payée','sent':'Envoyée','finalized':'Envoyée','draft':'Brouillon créé','cancelled':'Annulée','control':'À contrôler','external_generated':'Générée ailleurs','not_invoiced':'Non générée'} %}
-{% set payment_labels = {'paid':'Payé','partially_paid':'Partiel','unpaid':'Non payé','not_applicable':'Non applicable'} %}
+{% macro money(value) -%}{{ "{:,.2f}".format(value|default(0, true)).replace(',', ' ').replace('.', ',') }} €{%- endmacro %}
+{% set status_labels = {'paid':'Facture émise','sent':'Facture émise','finalized':'Facture émise','draft':'Brouillon','cancelled':'Annulée','control':'À vérifier','external_generated':'Créée ailleurs','not_invoiced':'À facturer'} %}
+{% set financer_labels = {'PERSONNEL':'Personnel','CPF':'CPF','AUTRE':'Autre financeur'} %}
+{% set overview = namespace(remaining=0, paid=0, checks=0, unverified=0) %}
+{% for row in report.rows %}
+  {% set state = namespace(unknown=false, control=false, personal_unknown=false, other_unknown=false) %}
+  {% for invoice in row.invoices %}
+    {% if invoice.financer_type|default('PERSONNEL') != 'CPF' and invoice.status != 'cancelled' %}
+      {% if invoice.external and not invoice.payment_known %}{% set state.unknown = true %}{% if invoice.financer_type|default('PERSONNEL') == 'AUTRE' %}{% set state.other_unknown = true %}{% else %}{% set state.personal_unknown = true %}{% endif %}{% endif %}
+      {% if invoice.status == 'control' %}{% set state.control = true %}{% endif %}
+    {% endif %}
+  {% endfor %}
+  {% set balance = row.personal_remaining + row.other_remaining %}
+  {% set overview.paid = overview.paid + row.personal_paid|default(row.personal - row.personal_remaining) + row.other_paid|default(row.other - row.other_remaining) %}
+  {% set unknown_balance = (row.personal_remaining if state.personal_unknown else 0) + (row.other_remaining if state.other_unknown else 0) %}
+  {% set overview.unverified = overview.unverified + unknown_balance %}
+  {% set overview.remaining = overview.remaining + balance - unknown_balance %}
+  {% if state.unknown or state.control or row.gap|abs >= 0.01 %}{% set overview.checks = overview.checks + 1 %}{% endif %}
+{% endfor %}
 <style>
 body.endpoint-admin-session-financial-report > .container,
 body.endpoint-admin-session-financial-report .app-shell{width:100%;max-width:none;box-sizing:border-box}
-.financial-page{--ink:#172033;--muted:#64748b;--line:#e6eaf0;--brand:#4f46e5;color:var(--ink)}
-.financial-top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin:8px 0 24px}.financial-eyebrow{color:var(--brand);font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}.financial-top h1{font-size:30px;margin:6px 0}.financial-subtitle{color:var(--muted)}.financial-actions{display:flex;gap:10px}.financial-actions .btn{min-height:42px}
-.financial-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px}.financial-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(30,41,59,.06)}.financial-card--hero{background:linear-gradient(135deg,#312e81,#6366f1);color:#fff;border:0}.financial-card__label{font-size:12px;font-weight:800;color:var(--muted)}.financial-card__label--with-logo{display:flex;align-items:center;justify-content:space-between;gap:12px}.financial-card__cpf-logo{width:32px;height:32px;object-fit:contain;border-radius:12px;padding:3px;box-sizing:border-box;background:#fff;box-shadow:0 8px 18px rgba(15,23,42,.12)}.financial-card--hero .financial-card__label{color:#c7d2fe}.financial-card__value{display:block;font-size:25px;margin:8px 0 3px}.financial-card__hint{font-size:12px;color:var(--muted)}.financial-card--hero .financial-card__hint{color:#e0e7ff}.financial-card--good .financial-card__value{color:#15803d}.financial-card--warn .financial-card__value{color:#c2410c}
-.financial-progress{height:9px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin-top:10px}.financial-progress span{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:inherit}
-.funding-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}.funding-item{border-radius:14px;padding:13px 16px;background:#f8fafc;border:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}.funding-item span{color:var(--muted);font-size:12px;font-weight:800}
-.financial-table-wrap{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:auto;box-shadow:0 12px 34px rgba(30,41,59,.07)}.financial-table{width:100%;min-width:1320px;border-collapse:collapse}.financial-table th{background:#f8fafc;color:#64748b;text-transform:uppercase;letter-spacing:.04em;font-size:10px;text-align:left;padding:13px 12px;white-space:nowrap}.financial-table td{padding:14px 12px;border-top:1px solid var(--line);font-size:12px;vertical-align:top}.financial-table tbody tr:hover{background:#fafbff}.trainee-link{color:var(--brand);font-weight:900;font-size:13px;text-decoration:none}.trainee-link:hover,.trainee-link:focus{text-decoration:underline}.amount{font-variant-numeric:tabular-nums;white-space:nowrap}.amount-total{font-weight:900}.gap{display:inline-flex;padding:5px 8px;border-radius:999px;font-weight:900}.gap--ok{color:#166534;background:#dcfce7}.gap--bad{color:#b91c1c;background:#fee2e2}.stack{display:grid;gap:5px}.badge{display:inline-flex;width:max-content;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:900}.badge--paid{background:#dcfce7;color:#166534}.badge--sent,.badge--finalized{background:#dbeafe;color:#1d4ed8}.badge--draft{background:#ffedd5;color:#9a3412}.badge--cancelled,.badge--not_invoiced{background:#e5e7eb;color:#475569}.badge--external_generated{background:#ede9fe;color:#6d28d9}.badge--control{background:#fee2e2;color:#b91c1c}.cash-payment{display:grid;gap:2px;padding:8px 10px;border-radius:10px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412}.cash-payment strong{font-size:11px}.cash-payment--settled{background:#f0fdf4;border-color:#86efac;color:#166534}.payment-progress{display:grid;gap:5px;min-width:190px}.payment-progress__top{display:flex;justify-content:space-between;gap:10px;font-size:11px;font-weight:900}.payment-progress__paid{color:#15803d}.payment-progress__track{height:7px;border-radius:999px;background:#e5e7eb;overflow:hidden}.payment-progress__fill{display:block;height:100%;border-radius:inherit;background:#ef4444}.payment-progress--partial .payment-progress__fill{background:#f97316}.payment-progress--paid .payment-progress__fill{background:#22c55e}.payment-progress__bottom{color:var(--muted);font-size:10px}.unknown{font-weight:900;color:#a16207}.financial-note{margin-top:12px;color:var(--muted);font-size:12px}.financial-empty{text-align:center!important;padding:50px!important;color:var(--muted)}
-.payment-progress__next{color:#4338ca;font-size:10px;font-weight:800}
-@media(max-width:1050px){.financial-kpis{grid-template-columns:repeat(2,1fr)}.funding-strip{grid-template-columns:1fr}.financial-top{flex-direction:column}}
-@media print{@page{size:landscape;margin:9mm}body{background:#fff!important}.sidebar,.admin-sidebar,.no-print,.breadcrumbs{display:none!important}.main,.content{margin:0!important;padding:0!important;max-width:none!important}.financial-page{font-size:9px}.financial-top{margin:0 0 10px}.financial-top h1{font-size:21px}.financial-kpis{grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:7px}.financial-card{padding:9px;box-shadow:none;border-radius:8px}.financial-card__value{font-size:17px;margin:3px 0}.funding-strip{grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.funding-item{padding:6px 8px}.financial-table-wrap{overflow:visible;box-shadow:none;border-radius:0}.financial-table{min-width:0}.financial-table th,.financial-table td{padding:5px 4px;font-size:8px}.badge,.gap{padding:2px 4px;font-size:7px}.financial-note{font-size:8px}}
+.financial-page{--ink:#172033;--muted:#637087;--line:#e3e8ef;--brand:#3455d1;color:var(--ink);max-width:1560px;margin:0 auto 40px}
+.financial-page .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.financial-page *{box-sizing:border-box}.financial-top{display:flex;justify-content:space-between;align-items:center;gap:20px;margin:22px 0}.financial-top h1{font-size:30px;letter-spacing:-.03em;margin:0 0 5px}.financial-subtitle{color:var(--muted);font-size:14px;line-height:1.6}.financial-actions{display:flex;gap:8px;flex-shrink:0}.financial-actions .btn{min-height:40px}.financial-context{margin:0 0 18px;font-size:14px;color:var(--muted)}
+.financial-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:18px}.financial-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 22px}.financial-card__label{font-size:13px;font-weight:700;display:block;color:var(--muted)}.financial-card__value{display:block;font-size:30px;letter-spacing:-.025em;margin:8px 0 5px;font-variant-numeric:tabular-nums}.financial-card__hint{font-size:12px;line-height:1.5;color:var(--muted)}.financial-card--balance{border-color:#ccd8fb;background:#f2f6ff}.financial-card--balance .financial-card__value{color:#2545b6}.financial-card--paid .financial-card__value{color:#137a47}.financial-card--check{background:#fffaf1;border-color:#efdfbe}.financial-card--check .financial-card__value{color:#9c6012}
+.financial-funding{border:1px solid var(--line);background:#fff;border-radius:14px;margin-bottom:26px}.financial-funding summary{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:15px 19px;cursor:pointer;font-size:13px;list-style:none}.financial-funding summary::-webkit-details-marker{display:none}.financial-funding summary:after{content:'+';font-size:20px;color:var(--muted)}.financial-funding[open] summary:after{content:'−'}.financial-funding__heading{display:flex;gap:11px;align-items:center}.financial-card__cpf-logo{height:30px;width:30px;object-fit:contain}.financial-funding__summary{font-size:12px;color:var(--muted);margin-top:3px}.financial-funding__body{padding:0 19px 18px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.financial-funding__item{background:#f8fafc;border-radius:10px;padding:13px;display:grid;gap:5px;font-size:12px;color:var(--muted)}.financial-funding__item strong{font-size:17px;color:var(--ink)}.financial-funding__note{grid-column:1/-1;margin:0;font-size:12px;line-height:1.6;color:var(--muted)}
+.financial-list-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}.financial-list-heading h2{font-size:19px;margin:0}.financial-list-heading p{font-size:12px;color:var(--muted);margin:5px 0 0}.financial-search{border:1px solid #d5dce6;border-radius:10px;padding:10px 13px;min-width:250px;background:#fff;font:inherit;font-size:13px}.financial-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.financial-filters{display:flex;flex-wrap:wrap;gap:7px}.financial-filter{background:#fff;border:1px solid #dbe2ed;color:#536176;border-radius:8px;padding:8px 13px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}.financial-filter[aria-pressed=true]{background:#eaf0ff;border-color:#b7c8f5;color:#2646b5}.financial-results{font-size:12px;color:var(--muted);white-space:nowrap}
+.financial-table-wrap{background:#fff;border:1px solid var(--line);border-radius:15px;overflow:hidden}.financial-table{width:100%;border-collapse:collapse}.financial-table th{text-align:left;padding:13px 18px;font-size:11px;color:var(--muted);font-weight:700;background:#f8fafc}.financial-table td{padding:17px 18px;border-top:1px solid var(--line);vertical-align:middle;font-size:13px}.financial-table .financial-numeric{text-align:right}.financial-table .financial-action-cell{text-align:right;width:110px}.financial-person{width:29%}.trainee-link{color:var(--ink);font-size:14px;font-weight:750;text-decoration:none}.trainee-link:hover{text-decoration:underline;color:var(--brand)}.financial-person__hint{display:block;font-size:11px;color:var(--muted);margin-top:5px}.financial-amount{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:750;font-size:15px}.financial-amount--paid{color:#137a47}.financial-amount--remaining{color:#2545b6}.financial-badge{display:inline-flex;align-items:center;gap:5px;width:max-content;max-width:100%;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;line-height:1.35;background:#eff3f8;color:#536176}.financial-badge--paid{background:#e9f7ef;color:#137a47}.financial-badge--warn{background:#fff2dd;color:#935b0e}.financial-badge--external{background:#f0edfc;color:#6b50ad}.financial-badge--due{background:#edf2ff;color:#3455b1}.financial-cell-note{display:block;color:var(--muted);font-size:11px;font-weight:400;line-height:1.5;margin-top:5px}.financial-details-button{border:1px solid #dce3ed;background:#fff;border-radius:8px;padding:8px 11px;color:var(--brand);font:inherit;font-size:12px;cursor:pointer;white-space:nowrap}.financial-details-button:hover,.financial-details-button[aria-expanded=true]{background:#edf2ff;border-color:#c8d5f7}.financial-page button:focus-visible,.financial-page a:focus-visible,.financial-page summary:focus-visible,.financial-page input:focus-visible{outline:3px solid #8ea8ff;outline-offset:3px}
+.financial-details-row>td{padding:0;background:#f8faff}.financial-details{padding:22px 24px;display:grid;grid-template-columns:minmax(260px,1fr) minmax(300px,1.2fr);gap:24px}.financial-details h3{font-size:13px;margin:0 0 12px}.financial-breakdown{width:100%;font-size:12px;border-collapse:collapse}.financial-breakdown th,.financial-breakdown td{padding:9px 7px;border:0;border-bottom:1px solid #e4e9f2;background:transparent;font-size:12px;text-align:right}.financial-breakdown th:first-child,.financial-breakdown td:first-child{text-align:left}.financial-breakdown th{font-size:10px}.financial-breakdown tr:last-child td{border-bottom:0}.financial-breakdown td:not(:first-child){white-space:nowrap}.financial-detail-note{font-size:11px;color:var(--muted);line-height:1.6;margin:10px 0 0}.financial-detail-alert{border-radius:9px;background:#fff3dd;color:#88530b;padding:10px 12px;font-size:12px;line-height:1.6;margin:12px 0 0}.financial-invoice{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:8px}.financial-invoice__header{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px}.financial-invoice__number{font-size:11px;color:var(--muted);margin-top:5px}.payment-progress{margin-top:10px}.payment-progress__top{font-size:11px;display:flex;justify-content:space-between;gap:10px;color:var(--muted)}.payment-progress__track{height:5px;background:#e6ebf2;border-radius:20px;overflow:hidden;margin-top:7px}.payment-progress__fill{height:100%;display:block;background:#24a16b;border-radius:20px}.payment-progress__next{font-size:11px;color:#3455b1;margin-top:8px}.financial-details__footer{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:15px;border-top:1px solid #dfe6f1;padding-top:14px;font-size:12px;color:var(--muted)}.financial-details__footer a{color:var(--brand);font-weight:700;text-decoration:none}.financial-empty{text-align:center!important;padding:45px!important;color:var(--muted)}.financial-note{font-size:12px;color:var(--muted);line-height:1.6;margin-top:14px}.financial-page [hidden]{display:none!important}
+@media(max-width:900px){.financial-table>thead>tr>th,.financial-table>tbody>tr>td{padding:14px 12px}.financial-person{width:auto}.financial-details{gap:18px;padding:18px}.financial-card{padding:17px}.financial-card__value{font-size:26px}.financial-funding__body{grid-template-columns:1fr}}
+@media(max-width:680px){.financial-top{align-items:flex-start}.financial-top h1{font-size:25px}.financial-actions .financial-back{display:none}.financial-kpis{grid-template-columns:1fr;gap:9px}.financial-card{display:grid;grid-template-columns:1fr auto;column-gap:10px;padding:14px 16px;align-items:center}.financial-card__value{grid-column:2;grid-row:1/3;margin:0;font-size:23px}.financial-card__hint{grid-column:1;font-size:11px}.financial-list-heading,.financial-toolbar{align-items:stretch;flex-direction:column}.financial-search{width:100%;min-width:0}.financial-results{display:none}.financial-table>thead{display:none}.financial-table,.financial-table>tbody{display:block}.financial-summary-row{display:grid;grid-template-columns:1fr 1fr;padding:16px;border-top:1px solid var(--line);gap:15px 12px}.financial-summary-row:first-child{border-top:0}.financial-table .financial-summary-row td{display:block;border:0;padding:0;text-align:left}.financial-person{grid-column:1}.financial-summary-row .financial-invoice-cell{grid-column:2;text-align:right!important}.financial-numeric:before{display:block;content:attr(data-label);font-size:10px;font-weight:400;color:var(--muted);margin-bottom:6px}.financial-summary-row .financial-action-cell{width:auto;grid-column:1/-1;text-align:right!important}.financial-details-row,.financial-details-row>td{display:block}.financial-details{display:block;padding:18px 16px}.financial-details>section+section{margin-top:20px}.financial-details__footer{margin-top:18px;align-items:flex-start}.financial-funding summary{padding:13px}.financial-funding__summary{line-height:1.5}}
+@media print{@page{size:landscape;margin:9mm}body{background:#fff!important}.sidebar,.admin-sidebar,.no-print,.breadcrumbs{display:none!important}.main,.content{margin:0!important;padding:0!important;max-width:none!important}.financial-page{max-width:none;margin:0;font-size:10px}.financial-top{margin:0 0 12px}.financial-top h1{font-size:21px}.financial-context{font-size:10px;margin-bottom:12px}.financial-kpis{gap:8px;margin-bottom:12px}.financial-card{padding:10px}.financial-card__value{font-size:20px}.financial-card__hint,.financial-card__label{font-size:10px}.financial-funding{margin-bottom:14px}.financial-funding summary{padding:9px}.financial-funding__body{grid-template-columns:repeat(3,1fr)}.financial-list-heading h2{font-size:15px}.financial-table-wrap{overflow:visible;border-radius:0}.financial-table th,.financial-table td{padding:8px;font-size:10px}.financial-amount,.trainee-link{font-size:11px}.financial-badge{font-size:9px;padding:3px 5px}.financial-details-row{display:none!important}.financial-action-cell{display:none}.financial-summary-row{break-inside:avoid}.financial-note{font-size:9px}}
 </style>
 <div class="financial-page">
   <div class="breadcrumbs no-print"><a href="{{ url_for('admin_trainees', session_id=session.id) }}">← Retour aux stagiaires</a></div>
   <header class="financial-top">
-    <div><div class="financial-eyebrow">Pilotage financier</div><h1>{{ session.name }}</h1><div class="financial-subtitle">{{ session.training_type }} · {{ session.date_start|frdate }} → {{ session.date_end|frdate }} · {{ report.rows|length }} stagiaire{{ 's' if report.rows|length != 1 }}</div></div>
-    <div class="financial-actions no-print"><a class="btn btn-outline" href="{{ url_for('admin_trainees', session_id=session.id) }}">Retour</a><button class="btn btn-primary" type="button" onclick="window.print()">🖨️ Imprimer</button></div>
+    <div>
+      <h1>Suivi financier</h1>
+      <div class="financial-subtitle"><strong>{{ session.name }}</strong> · {{ session.date_start|frdate }} → {{ session.date_end|frdate }}</div>
+    </div>
+    <div class="financial-actions no-print">
+      <a class="btn btn-outline financial-back" href="{{ url_for('admin_trainees', session_id=session.id) }}">Retour</a>
+      <button class="btn btn-outline" type="button" onclick="window.print()">Imprimer</button>
+    </div>
   </header>
-  <section class="financial-kpis" aria-label="Indicateurs financiers">
-    <article class="financial-card financial-card--hero"><span class="financial-card__label">CA total de la session</span><strong class="financial-card__value">{{ money(report.totals.revenue) }}</strong><span class="financial-card__hint">Prix des formations cumulés</span></article>
-    <article class="financial-card financial-card--good"><span class="financial-card__label">Déjà encaissé</span><strong class="financial-card__value">{{ money(report.totals.paid) }}</strong><span class="financial-card__hint">{{ report.totals.collection_pct }} % du CA connu</span><div class="financial-progress"><span style="width:{{ [report.totals.collection_pct, 100]|min }}%"></span></div></article>
-    <article class="financial-card"><span class="financial-card__label">Reste à encaisser</span><strong class="financial-card__value">{{ money(report.totals.remaining) }}</strong><span class="financial-card__hint">Financement personnel uniquement</span></article>
-    <article class="financial-card"><span class="financial-card__label financial-card__label--with-logo"><span>Reste à encaisser CPF</span><img class="financial-card__cpf-logo" src="/templates/cpf.jpg" alt="Logo CPF"></span><strong class="financial-card__value">{{ money(report.totals.cpf_remaining) }}</strong><span class="financial-card__hint">Suivi séparé du financement CPF</span></article>
-    <article class="financial-card"><span class="financial-card__label">Reste à encaisser autres</span><strong class="financial-card__value">{{ money(report.totals.other_remaining) }}</strong><span class="financial-card__hint">Autres financements déclarés</span></article>
-    <article class="financial-card {{ 'financial-card--good' if report.totals.gap|abs < 0.01 else 'financial-card--warn' }}"><span class="financial-card__label">Écart de financement</span><strong class="financial-card__value">{{ money(report.totals.gap) }}</strong><span class="financial-card__hint">Prix moins financements déclarés</span></article>
+  <p class="financial-context">Retrouvez les factures, les paiements reçus et les sommes restant à encaisser. Le CPF est suivi séparément.</p>
+  <section class="financial-kpis" aria-label="Encaissements hors CPF">
+    <article class="financial-card financial-card--balance">
+      <span class="financial-card__label">Reste à encaisser</span>
+      <strong class="financial-card__value">{{ money(overview.remaining) }}</strong>
+      <span class="financial-card__hint">Soldes connus · personnel et autres financeurs</span>
+    </article>
+    <article class="financial-card financial-card--paid">
+      <span class="financial-card__label">Déjà encaissé</span>
+      <strong class="financial-card__value">{{ money(overview.paid) }}</strong>
+      <span class="financial-card__hint">Paiements enregistrés · hors CPF</span>
+    </article>
+    <article class="financial-card {{ 'financial-card--check' if overview.checks }}">
+      <span class="financial-card__label">Dossiers à vérifier</span>
+      <strong class="financial-card__value">{{ overview.checks }}</strong>
+      <span class="financial-card__hint">{% if overview.checks %}Paiement à rapprocher ou financement à contrôler{% else %}Aucune anomalie détectée dans les données enregistrées{% endif %}</span>
+    </article>
   </section>
-  <section class="funding-strip"><div class="funding-item"><span>Financement CPF</span><strong>{{ money(report.totals.cpf) }}</strong></div><div class="funding-item"><span>Financement personnel</span><strong>{{ money(report.totals.personal) }}</strong></div><div class="funding-item"><span>Autres financements</span><strong>{{ money(report.totals.other) }}</strong></div></section>
-  <div class="financial-table-wrap"><table class="financial-table"><thead><tr><th>Nom</th><th>Prénom</th><th>Prix formation</th><th>CPF</th><th>Personnel</th><th>Autre</th><th>Total</th><th>Écart</th><th>Statut facture</th><th>N° facture</th><th>Paiement</th></tr></thead><tbody>
-  {% for row in report.rows %}<tr><td><a class="trainee-link" href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=row.trainee_id) }}" title="Ouvrir la fiche admin de {{ row.first_name }} {{ row.last_name }}">{{ row.last_name }}</a></td><td><a class="trainee-link" href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=row.trainee_id) }}">{{ row.first_name }}</a></td><td class="amount">{{ money(row.price) }}</td><td class="amount">{{ money(row.cpf) }}</td><td class="amount">{{ money(row.personal) }}</td><td class="amount">{{ money(row.other) }}</td><td class="amount amount-total">{{ money(row.funding) }}</td><td><span class="gap {{ 'gap--ok' if row.gap|abs < 0.01 else 'gap--bad' }}">{{ money(row.gap) }}</span></td><td><div class="stack">{% for invoice in row.invoices %}<span class="badge badge--{{ invoice.status }}">{{ status_labels.get(invoice.status, 'À contrôler') }}</span>{% endfor %}</div></td><td><div class="stack">{% for invoice in row.invoices %}<strong>{{ invoice.number }}</strong>{% endfor %}</div></td><td><div class="stack">{% if row.cash_payment_enabled %}<span class="cash-payment {{ 'cash-payment--settled' if row.cash_payment_settled }}"><strong>{{ '✓ Paiement en espèces encaissé' if row.cash_payment_settled else '⚠ À payer en espèces' }}</strong>{% if row.cash_payment_amount %}<small>{{ money(row.cash_payment_amount) }}</small>{% endif %}</span>{% endif %}{% for invoice in row.invoices %}{% if invoice.payment_known %}<div class="payment-progress payment-progress--{{ 'paid' if invoice.payment_percentage >= 100 else 'partial' if invoice.paid > 0 else 'unpaid' }}"><div class="payment-progress__top"><span class="payment-progress__paid">{{ money(invoice.paid) }} encaissé</span><span>{{ invoice.payment_percentage|round|int }} %</span></div><div class="payment-progress__track" role="progressbar" aria-label="Progression du paiement" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ invoice.payment_percentage }}"><span class="payment-progress__fill" style="width:{{ invoice.payment_percentage }}%"></span></div><div class="payment-progress__bottom">{{ 'Soldé' if invoice.payment_percentage >= 100 else 'Reste ' ~ money(invoice.remaining) }}</div></div>{% elif invoice.external %}<span class="unknown">Montant inconnu</span>{% else %}<span class="badge badge--not_invoiced">Non applicable</span>{% endif %}{% endfor %}</div></td></tr>{% else %}<tr><td colspan="11" class="financial-empty">Aucun stagiaire dans cette session.</td></tr>{% endfor %}
-  </tbody></table></div>
-  <script>
-    (() => {
-      const nextDebitDates = [
-        {% for row in report.rows %}{% for invoice in row.invoices if invoice.payment_known %}{{ (invoice.next_direct_debit_date or '')|tojson }},{% endfor %}{% endfor %}
-      ];
-      document.querySelectorAll('.payment-progress').forEach((progress, index) => {
-        const value = nextDebitDates[index];
-        if (!value) return;
-        const [year, month, day] = value.split('-');
-        const note = document.createElement('div');
-        note.className = 'payment-progress__next';
-        note.textContent = `Prochain prélèvement prévu le ${day}/${month}/${year}`;
-        progress.appendChild(note);
-      });
-    })();
-  </script>
-  {% if report.unknown_payment_count %}<p class="financial-note">* {{ report.unknown_payment_count }} stagiaire{{ 's' if report.unknown_payment_count > 1 }} avec une facture générée ailleurs : le paiement est affiché comme inconnu lorsqu’aucun montant vérifiable n’est disponible.</p>{% endif %}
+  {% if overview.unverified > 0 %}<p class="financial-note">{{ money(overview.unverified) }} de solde restent à vérifier et ne sont pas inclus dans le « Reste à encaisser » ci-dessus.</p>{% endif %}
+  <details class="financial-funding">
+    <summary>
+      <div class="financial-funding__heading">
+        <img class="financial-card__cpf-logo" src="/templates/cpf.jpg" alt="Logo CPF">
+        <div><strong>CPF : {{ money(report.totals.cpf) }}</strong><div class="financial-funding__summary">Financement suivi séparément · Voir la répartition de la session</div></div>
+      </div>
+    </summary>
+    <div class="financial-funding__body">
+      <div class="financial-funding__item"><span>Prix des formations</span><strong>{{ money(report.totals.revenue) }}</strong></div>
+      <div class="financial-funding__item"><span>Financement personnel prévu</span><strong>{{ money(report.totals.personal) }}</strong></div>
+      <div class="financial-funding__item"><span>Autres financeurs prévus</span><strong>{{ money(report.totals.other) }}</strong></div>
+      <p class="financial-funding__note">Les montants CPF ne font pas partie des sommes à encaisser auprès des stagiaires ou des autres financeurs affichées sur cette page. Leur règlement se vérifie dans le suivi CPF.</p>
+      {% if report.totals.gap|abs >= 0.01 %}<p class="financial-funding__note">Écart entre le prix des formations et les financements renseignés : <strong>{{ money(report.totals.gap) }}</strong>. Les dossiers concernés sont signalés « À vérifier ».</p>{% endif %}
+    </div>
+  </details>
+  <div class="financial-list-heading">
+    <div><h2>Les {{ report.rows|length }} stagiaire{{ 's' if report.rows|length != 1 }}</h2><p>Une ligne par personne. Les détails restent accessibles en un clic.</p></div>
+    <label class="no-print"><span class="sr-only">Rechercher un stagiaire</span><input class="financial-search" id="financial-search" type="search" placeholder="Rechercher un stagiaire…" autocomplete="off" aria-label="Rechercher un stagiaire"></label>
+  </div>
+  <div class="financial-toolbar no-print">
+    <div class="financial-filters" aria-label="Filtrer les dossiers">
+      <button type="button" class="financial-filter" data-filter="all" aria-pressed="true">Tous</button>
+      <button type="button" class="financial-filter" data-filter="due" aria-pressed="false">Reste à encaisser</button>
+      <button type="button" class="financial-filter" data-filter="check" aria-pressed="false">À vérifier</button>
+      <button type="button" class="financial-filter" data-filter="paid" aria-pressed="false">Soldés hors CPF</button>
+    </div>
+    <span class="financial-results" id="financial-results" role="status" aria-live="polite">{{ report.rows|length }} dossier{{ 's' if report.rows|length != 1 }}</span>
+  </div>
+  <div class="financial-table-wrap">
+    <table class="financial-table">
+      <thead><tr><th scope="col">Stagiaire</th><th scope="col">Facturation hors CPF</th><th scope="col" class="financial-numeric">Encaissé hors CPF</th><th scope="col" class="financial-numeric">Reste à encaisser</th><th scope="col" class="financial-action-cell"><span class="sr-only">Détails</span></th></tr></thead>
+      <tbody>
+      {% for row in report.rows %}
+        {% set state = namespace(unknown=false, control=false, missing=0, drafts=0, issued=0, external=0, personal_unknown=false, other_unknown=false) %}
+        {% for invoice in row.invoices %}
+          {% if invoice.financer_type|default('PERSONNEL') != 'CPF' and invoice.status != 'cancelled' %}
+            {% if invoice.external and not invoice.payment_known %}
+              {% set state.unknown = true %}
+              {% if invoice.financer_type|default('PERSONNEL') == 'AUTRE' %}{% set state.other_unknown = true %}{% else %}{% set state.personal_unknown = true %}{% endif %}
+            {% endif %}
+            {% if invoice.status == 'control' %}{% set state.control = true %}
+            {% elif invoice.status == 'not_invoiced' %}{% set state.missing = state.missing + 1 %}
+            {% elif invoice.status == 'draft' %}{% set state.drafts = state.drafts + 1 %}
+            {% else %}{% set state.issued = state.issued + 1 %}{% endif %}
+            {% if invoice.external %}{% set state.external = state.external + 1 %}{% endif %}
+          {% endif %}
+        {% endfor %}
+        {% set expected = row.personal + row.other %}
+        {% set received = row.personal_paid|default(row.personal - row.personal_remaining) + row.other_paid|default(row.other - row.other_remaining) %}
+        {% set balance = row.personal_remaining + row.other_remaining %}
+        {% set unknown_balance = (row.personal_remaining if state.personal_unknown else 0) + (row.other_remaining if state.other_unknown else 0) %}
+        {% set confirmed_balance = balance - unknown_balance %}
+        {% set needs_check = state.unknown or state.control or row.gap|abs >= 0.01 %}
+        {% set row_state = 'check' if needs_check else 'due' if balance > 0.01 else 'paid' if expected > 0 else 'cpf' %}
+        <tr class="financial-summary-row" data-financial-row data-name="{{ row.first_name }} {{ row.last_name }}" data-state="{{ row_state }}" data-due="{{ 'true' if confirmed_balance > 0.01 else 'false' }}" data-detail-id="financial-detail-{{ loop.index }}">
+          <td class="financial-person">
+            <a class="trainee-link" href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=row.trainee_id) }}">{{ row.first_name }} {{ row.last_name }}</a>
+            <span class="financial-person__hint">{% if row.cpf > 0 and expected > 0 %}CPF + {{ 'personnel' if row.personal > 0 else 'autre financeur' }}{% elif row.cpf > 0 %}CPF uniquement{% elif row.personal > 0 and row.other > 0 %}Personnel + autre financeur{% elif row.other > 0 %}Autre financeur{% elif row.personal > 0 %}Financement personnel{% else %}Financement à renseigner{% endif %}</span>
+          </td>
+          <td class="financial-invoice-cell">
+            {% if state.control %}<span class="financial-badge financial-badge--warn">Facture à vérifier</span>
+            {% elif expected <= 0 %}<span class="financial-badge">Suivi CPF séparé</span>
+            {% elif state.missing > 0 %}<span class="financial-badge financial-badge--warn">{{ 'À facturer' if not state.issued else 'Facturation incomplète' }}</span>
+            {% elif state.drafts > 0 %}<span class="financial-badge financial-badge--warn">Brouillon à finaliser</span>
+            {% elif state.external == state.issued and state.external > 0 %}<span class="financial-badge financial-badge--external">Créée ailleurs</span>
+            {% elif state.issued > 0 %}<span class="financial-badge financial-badge--paid">Facturé</span>
+            {% else %}<span class="financial-badge financial-badge--warn">À facturer</span>{% endif %}
+            {% if state.external > 0 %}<span class="financial-cell-note">Facture existante · ne pas recréer</span>{% endif %}
+          </td>
+          <td class="financial-numeric" data-label="Encaissé hors CPF"><span class="financial-amount {{ 'financial-amount--paid' if received > 0 }}">{{ money(received) }}</span>{% if state.unknown %}<span class="financial-cell-note">Montant enregistré à ce jour</span>{% endif %}</td>
+          <td class="financial-numeric" data-label="Reste à encaisser">
+            {% if state.unknown %}<span class="financial-badge financial-badge--warn">Paiement à vérifier</span><span class="financial-cell-note">{{ money(unknown_balance) }} de solde non confirmé</span>{% if confirmed_balance > 0.01 %}<span class="financial-cell-note">{{ money(confirmed_balance) }} à encaisser confirmés</span>{% endif %}
+            {% elif expected <= 0 %}<span class="financial-cell-note">Aucun montant attendu ici</span>
+            {% elif balance <= 0.01 %}<span class="financial-badge financial-badge--paid">Soldé hors CPF</span><span class="financial-cell-note">{{ money(0) }}</span>
+            {% else %}<span class="financial-amount financial-amount--remaining">{{ money(balance) }}</span>{% endif %}
+            {% if row.gap|abs >= 0.01 %}<span class="financial-cell-note">Financement à vérifier</span>{% endif %}
+          </td>
+          <td class="financial-action-cell no-print"><button type="button" class="financial-details-button" aria-expanded="false" aria-controls="financial-detail-{{ loop.index }}" aria-label="Voir les détails de {{ row.first_name }} {{ row.last_name }}">Détails <span aria-hidden="true">⌄</span></button></td>
+        </tr>
+        <tr class="financial-details-row" id="financial-detail-{{ loop.index }}" hidden>
+          <td colspan="5">
+            <div class="financial-details">
+              <section aria-label="Répartition du financement">
+                <h3>Qui finance quoi ?</h3>
+                <table class="financial-breakdown"><thead><tr><th scope="col">Financeur</th><th scope="col">Prévu</th><th scope="col">Encaissé</th><th scope="col">Solde</th></tr></thead><tbody>
+                  {% if row.personal > 0 %}<tr><td>Personnel</td><td>{{ money(row.personal) }}</td><td>{{ money(row.personal_paid|default(row.personal - row.personal_remaining)) }}</td><td>{{ 'À vérifier' if state.personal_unknown else money(row.personal_remaining) }}</td></tr>{% endif %}
+                  {% if row.other > 0 %}<tr><td>Autre financeur</td><td>{{ money(row.other) }}</td><td>{{ money(row.other_paid|default(row.other - row.other_remaining)) }}</td><td>{{ 'À vérifier' if state.other_unknown else money(row.other_remaining) }}</td></tr>{% endif %}
+                  {% if row.cpf > 0 %}<tr><td>CPF</td><td>{{ money(row.cpf) }}</td><td colspan="2">Suivi séparé</td></tr>{% endif %}
+                </tbody></table>
+                <p class="financial-detail-note">Prix de la formation : <strong>{{ money(row.price) }}</strong>. Financements renseignés : <strong>{{ money(row.funding) }}</strong>.</p>
+                {% if row.gap|abs >= 0.01 %}<p class="financial-detail-alert">Il y a un écart de {{ money(row.gap) }} entre le prix et les financements renseignés. Vérifiez les montants dans la fiche.</p>{% endif %}
+                {% if state.unknown %}<p class="financial-detail-alert">Une facture existe déjà, mais son paiement n’est pas renseigné. Vérifiez ou rapprochez le règlement dans la fiche avant de considérer cette somme comme impayée.</p>{% endif %}
+                {% if row.cash_payment_enabled %}<p class="financial-detail-note"><strong>{{ 'Paiement en espèces encaissé' if row.cash_payment_settled else 'À payer en espèces' }}</strong>{% if row.cash_payment_amount %} : {{ money(row.cash_payment_amount) }}{% endif %}</p>{% endif %}
+              </section>
+              <section aria-label="Factures et paiements">
+                <h3>Factures et paiements</h3>
+                {% for invoice in row.invoices if invoice.total > 0 or invoice.status != 'not_invoiced' %}
+                <article class="financial-invoice">
+                  <div class="financial-invoice__header"><strong>{{ financer_labels.get(invoice.financer_type|default('PERSONNEL'), 'Facture') }} · {{ money(invoice.total) }}</strong><span class="financial-badge {{ 'financial-badge--external' if invoice.external else 'financial-badge--warn' if invoice.status in ['not_invoiced', 'draft', 'control'] else '' }}">{{ status_labels.get(invoice.status, 'À vérifier') }}</span></div>
+                  {% if invoice.number and invoice.number not in ['—', 'Facture externe'] %}<div class="financial-invoice__number">{{ invoice.number }}</div>{% endif %}
+                  {% if invoice.financer_type|default('PERSONNEL') == 'CPF' %}<p class="financial-detail-note">Règlement à vérifier dans le suivi CPF.</p>
+                  {% elif invoice.payment_known %}
+                    <div class="payment-progress"><div class="payment-progress__top"><span>{{ money(invoice.paid) }} encaissé</span><span>{{ 'Soldé' if invoice.remaining <= 0.01 else money(invoice.remaining) ~ ' restant' }}</span></div><div class="payment-progress__track" role="progressbar" aria-label="Paiement de cette facture" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ invoice.payment_percentage }}"><span class="payment-progress__fill" style="width:{{ invoice.payment_percentage }}%"></span></div></div>
+                    {% if invoice.next_direct_debit_date %}<div class="payment-progress__next">Prochain prélèvement prévu le {{ invoice.next_direct_debit_date|frdate }}</div>{% endif %}
+                  {% elif invoice.external %}<p class="financial-detail-note">Paiement non renseigné · facture déjà créée, inutile de la générer à nouveau.</p>
+                  {% else %}<p class="financial-detail-note">{% if invoice.status == 'cancelled' %}Cette facture est annulée.{% else %}Aucun paiement rattaché à cette ligne.{% endif %}</p>{% endif %}
+                </article>
+                {% else %}<p class="financial-detail-note">Aucune facture à établir ici.</p>{% endfor %}
+              </section>
+              <div class="financial-details__footer"><span>Les règlements et factures se gèrent dans la fiche du stagiaire.</span><a href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=row.trainee_id) }}">Ouvrir la fiche →</a></div>
+            </div>
+          </td>
+        </tr>
+      {% else %}<tr><td colspan="5" class="financial-empty">Aucun stagiaire dans cette session.</td></tr>{% endfor %}
+      <tr id="financial-no-results" hidden><td colspan="5" class="financial-empty">Aucun stagiaire ne correspond à votre recherche.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="financial-note">Les montants encaissés correspondent aux règlements enregistrés dans les dossiers. « Créée ailleurs » indique qu’une facture existe déjà, sans confirmer à elle seule son paiement.</p>
 </div>
+<script>
+(() => {
+  const page = document.querySelector('.financial-page');
+  if (!page) return;
+  const rows = [...page.querySelectorAll('[data-financial-row]')];
+  const search = page.querySelector('#financial-search');
+  const filters = [...page.querySelectorAll('[data-filter]')];
+  let selected = 'all';
+  const normalize = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr').trim();
+  const applyFilters = () => {
+    const terms = normalize(search.value).split(/\s+/).filter(Boolean);
+    let visible = 0;
+    rows.forEach(row => {
+      const shown = (selected === 'all' || (selected === 'due' ? row.dataset.due === 'true' : row.dataset.state === selected)) && terms.every(term => normalize(row.dataset.name).includes(term));
+      row.hidden = !shown;
+      const button = row.querySelector('.financial-details-button');
+      document.getElementById(row.dataset.detailId).hidden = !shown || button.getAttribute('aria-expanded') !== 'true';
+      if (shown) visible += 1;
+    });
+    page.querySelector('#financial-no-results').hidden = visible > 0 || rows.length === 0;
+    page.querySelector('#financial-results').textContent = `${visible} dossier${visible !== 1 ? 's' : ''} sur ${rows.length}`;
+  };
+  search.addEventListener('input', applyFilters);
+  filters.forEach(button => button.addEventListener('click', () => {
+    selected = button.dataset.filter;
+    filters.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    applyFilters();
+  }));
+  page.querySelectorAll('.financial-details-button').forEach(button => button.addEventListener('click', () => {
+    const open = button.getAttribute('aria-expanded') !== 'true';
+    button.setAttribute('aria-expanded', String(open));
+    button.querySelector('span').textContent = open ? '⌃' : '⌄';
+    document.getElementById(button.getAttribute('aria-controls')).hidden = !open;
+  }));
+})();
+</script>
 {% endblock %}
