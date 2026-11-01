@@ -53,8 +53,9 @@ def test_ineligible_or_unverified_transaction_is_not_assigned(changes):
     assert match_bank_transfers([line()], [transfer(**changes)], today=TODAY) == {}
 
 
-def test_income_identified_as_transfer_is_accepted():
-    result = match_bank_transfers([line()], [transfer(operation_type="income", subject_type="Transfer")], today=TODAY)
+@pytest.mark.parametrize("operation,subject", [("income", "Income"), ("income", ""), ("income", None), ("swift_income", "SwiftIncome"), ("swift_income", "")])
+def test_documented_incoming_transfer_types_are_accepted(operation, subject):
+    result = match_bank_transfers([line()], [transfer(operation_type=operation, subject_type=subject)], today=TODAY)
     assert bank_transfer_paid_cents({"qontoBankTransfers": result["L1"]}, today=TODAY) == 125000
 
 
@@ -115,3 +116,8 @@ def test_same_transaction_stored_on_two_lines_is_flagged_ambiguous():
     updates = match_bank_transfers([line(qontoBankTransfers=proof), line(id="L2", qontoBankTransfers=proof)], [], today=TODAY)
     assert set(updates) == {"L1", "L2"}
     assert all(bank_transfer_paid_cents({"qontoBankTransfers": records}, today=TODAY) == 0 for records in updates.values())
+
+
+@pytest.mark.parametrize("subject", ["Transfer", "DirectDebitCollection", "Refund", "Check", "Card"])
+def test_income_with_contradictory_subject_is_not_a_bank_transfer(subject):
+    assert match_bank_transfers([line()], [transfer(operation_type='income', subject_type=subject)], today=TODAY) == {}
