@@ -59,11 +59,45 @@ def classify_text(text):
     text = identity(text)
     if any(term in text for term in ("verify you are human", "verifiez que vous etes humain", "je ne suis pas un robot", "captcha", "checking your browser", "automated traffic")):
         return "human_verification"
-    if any(term in text for term in ("code de verification", "code a usage unique", "authentification a deux facteurs", "one time code")):
+    if any(term in text for term in ("code de verification", "code a usage unique", "code d authentification", "code de securite", "authentification a deux facteurs", "one time code")):
         return "verification_code"
-    if any(term in text for term in ("identifiant ou mot de passe invalide", "identifiant ou mot de passe incorrect", "invalid username or password", "identifiants incorrects")):
+    if any(term in text for term in ("identifiant ou mot de passe invalide", "identifiant ou mot de passe incorrect", "invalid username or password", "identifiants incorrects", "nom d utilisateur ou mot de passe invalide", "nom d utilisateur ou mot de passe incorrect", "invalid credentials")):
         return "credentials_rejected"
+    if any(term in text for term in ("compte temporairement bloque", "compte est verrouille", "compte est desactive", "account is disabled", "account temporarily disabled")):
+        return "account_unavailable"
     return None
+
+
+def location_category(url):
+    """Return a fixed label, never an auth URL, query, fragment or identifier."""
+    parsed = urlsplit(url)
+    if parsed.hostname == EFP_HOST:
+        if parsed.path.startswith("/auth/realms/efp/login-actions/required-action"):
+            return "efp_required_action"
+        if parsed.path.startswith("/auth/"):
+            return "efp_login"
+        return "efp_account"
+    if parsed.hostname == EDOF_HOST:
+        if parsed.path == "/idp/edof/api/v2/callback":
+            return "edof_callback"
+        if parsed.path.startswith("/espace-prive/"):
+            return "edof_select_siret" if "select-siret" in parsed.fragment else "edof_private"
+        if parsed.path.startswith("/espace-public/"):
+            return "edof_public"
+        if parsed.path.startswith("/edof-api/"):
+            return "edof_api"
+        return "edof_other"
+    return "other_origin"
+
+
+def diagnostic_summary(location, password_visible, error_visible, signals):
+    """Allowlist scalar signals; deliberately no page/error/input text."""
+    result = {"location": location_category(location), "password_form_visible": bool(password_visible), "error_banner_visible": bool(error_visible)}
+    for key in ("login_post_status", "callback_status", "blocked_efp_posts", "blocked_edof_posts", "blocked_other_posts", "invalid_form_fields"):
+        value = signals.get(key)
+        if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 9999:
+            result[key] = value
+    return result
 
 
 class StopRun(Exception):
@@ -81,6 +115,7 @@ def run_browser(spec):
     lists = []
     details = {}
     invalid_response = False
+    signals = {"blocked_efp_posts": 0, "blocked_edof_posts": 0, "blocked_other_posts": 0}
 
     def route_request(route):
         nonlocal blocked
@@ -88,11 +123,18 @@ def run_browser(spec):
             route.continue_()
         else:
             blocked += 1
+            host = urlsplit(route.request.url).hostname
+            key = "blocked_efp_posts" if host == EFP_HOST else "blocked_edof_posts" if host == EDOF_HOST else "blocked_other_posts"
+            signals[key] += 1
             route.abort()
 
     def observe(response):
         nonlocal invalid_response
         parsed = urlsplit(response.url)
+        if response.request.method == "POST" and parsed.hostname == EFP_HOST and parsed.path == "/auth/realms/efp/login-actions/authenticate":
+            signals["login_post_status"] = response.status
+        if parsed.hostname == EDOF_HOST and parsed.path == "/idp/edof/api/v2/callback":
+            signals["callback_status"] = response.status
         if response.request.method != "GET" or response.status != 200 or parsed.hostname != EDOF_HOST or not parsed.path.startswith(API_PREFIX):
             return
         tail = parsed.path[len(API_PREFIX):]
@@ -130,6 +172,16 @@ def run_browser(spec):
             page.set_default_timeout(12000)
             page.on("response", observe)
 
+            def diagnostics():
+                try:
+                    signals["invalid_form_fields"] = page.locator('input:invalid:visible').count()
+                    return diagnostic_summary(page.url,
+                        page.locator('input[type="password"]:visible').count() > 0,
+                        page.locator('#input-error:visible, .alert-error:visible, .pf-m-danger:visible, .fr-alert--error:visible').count() > 0,
+                        signals)
+                except Exception:
+                    return diagnostic_summary(page.url, False, False, signals)
+
             def checkpoint():
                 # Only derive categorical signals; never return the page body,
                 # which could contain identity information or an auth code.
@@ -137,10 +189,14 @@ def run_browser(spec):
                 code = classify_text(text)
                 if code:
                     raise StopRun(code)
-                if page.locator('input[autocomplete="one-time-code"]:visible').count():
+                if page.locator('input[autocomplete="one-time-code"]:visible, input[name="otp"]:visible, input[name="totp"]:visible, input[name="code"]:visible').count():
                     raise StopRun("verification_code")
                 if page.locator('iframe[title*="captcha" i]:visible, iframe[title*="challenge" i]:visible').count():
                     raise StopRun("human_verification")
+                if location_category(page.url) == "efp_required_action":
+                    raise StopRun("account_action_required")
+                if stage == "authentication" and page.locator('#input-error:visible, .alert-error:visible, .pf-m-danger:visible, .fr-alert--error:visible').count():
+                    raise StopRun("sign_in_error")
 
             stage = "login_page"
             page.goto(LOGIN_URL, wait_until="domcontentloaded", timeout=45000)
@@ -158,6 +214,10 @@ def run_browser(spec):
             if urlsplit(page.url).hostname != EFP_HOST:
                 raise StopRun("unexpected_page")
             stage = "authentication"
+            target = page.locator('input[name="username"]').evaluate("el => el.form ? {action: el.form.action, method: el.form.method.toUpperCase()} : null")
+            if not target or not permitted_request(target["action"], target["method"]) or target["method"] != "POST":
+                raise StopRun("login_form_not_allowed")
+            target = None
             page.locator('input[name="username"]').fill(username)
             page.locator('input[name="password"]').fill(password)
             page.locator("#kc-login").click()
@@ -224,19 +284,19 @@ def run_browser(spec):
                 raise StopRun("identity_mismatch")
             return {"code": "read_success", "stage": stage, "fields": fields, "fresh_session": True, "blocked_writes": blocked}
         except StopRun as exc:
-            return {"code": exc.code, "stage": stage, "fresh_session": True, "blocked_writes": blocked}
+            return {"code": exc.code, "stage": stage, "fresh_session": True, "blocked_writes": blocked, "diagnostics": diagnostics()}
         except BrowserTimeout:
             try:
                 checkpoint()
             except StopRun as exc:
-                return {"code": exc.code, "stage": stage, "fresh_session": True}
+                return {"code": exc.code, "stage": stage, "fresh_session": True, "diagnostics": diagnostics()}
             except Exception:
                 pass
-            return {"code": "timeout", "stage": stage, "fresh_session": True}
+            return {"code": "timeout", "stage": stage, "fresh_session": True, "diagnostics": diagnostics()}
         except Exception:
             # Playwright exception text may include filled values or URLs with
             # authentication parameters; never print or log it.
-            return {"code": "browser_error", "stage": stage, "fresh_session": True}
+            return {"code": "browser_error", "stage": stage, "fresh_session": True, "diagnostics": diagnostics()}
         finally:
             browser.close()
 

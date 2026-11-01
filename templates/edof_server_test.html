@@ -31,6 +31,15 @@
         <h3>{{ 'Accès au formulaire' if job.mode == 'access' else 'Connexion et lecture' }} · {{ job.created_at[:19]|replace('T',' à ') }} UTC</h3>
         <p class="{{ 'match' if job.code == 'read_success' else 'review-note' }}">{{ job.message }}</p>
         {% if job.stage %}<p class="hint">Étape : {{ {'browser':'démarrage du navigateur','login_page':'accès au formulaire','authentication':'connexion EFP','organism':'sélection de l’établissement','search':'recherche par nom','dossier':'lecture du dossier'}.get(job.stage, 'essai') }}.</p>{% endif %}
+        {% if job.diagnostics %}<details><summary>Diagnostic technique sans identifiants</summary><dl>
+          <dt>Page atteinte</dt><dd>{{ job.diagnostics.location }}</dd>
+          <dt>Formulaire encore visible</dt><dd>{{ 'Oui' if job.diagnostics.password_form_visible else 'Non' }}</dd>
+          <dt>Erreur affichée par EFP</dt><dd>{{ 'Oui' if job.diagnostics.error_banner_visible else 'Non' }}</dd>
+          <dt>Champs refusés par le formulaire</dt><dd>{{ job.diagnostics.invalid_form_fields|default(0) }}</dd>
+          <dt>Réponse à la connexion</dt><dd>{{ job.diagnostics.login_post_status|default('Non observée') }}</dd>
+          <dt>Retour vers EDOF</dt><dd>{{ job.diagnostics.callback_status|default('Non observé') }}</dd>
+          <dt>Envois bloqués par l’essai</dt><dd>EFP : {{ job.diagnostics.blocked_efp_posts|default(0) }} · EDOF : {{ job.diagnostics.blocked_edof_posts|default(0) }} · autres : {{ job.diagnostics.blocked_other_posts|default(0) }}</dd>
+        </dl></details>{% endif %}
         {% if job.fields %}{% set f = job.fields %}<dl><dt>Numéro CPF</dt><dd>{{ f.folder_id }}</dd><dt>Stagiaire</dt><dd>{{ f.first_name or '—' }} {{ f.last_name or '' }}</dd><dt>E-mail</dt><dd>{{ f.email or 'Non renseigné' }}</dd><dt>Formation</dt><dd>{{ f.title or 'Non renseignée' }}</dd><dt>Dates de session</dt><dd>{{ f.session_start_date or '—' }} → {{ f.session_end_date or '—' }}</dd><dt>Statut</dt><dd>{{ state_labels.get(f.state, f.state or 'Non renseigné') }}</dd></dl>{% endif %}
       </article>{% else %}<p>Aucun essai serveur lancé depuis cette session administrateur.</p>{% endfor %}
       <p class="hint">Un formulaire accessible ne prouve pas une connexion réussie. Une lecture réussie ne prouve pas encore le fonctionnement continu après expiration, ni les déclarations d’entrée et de sortie.</p>

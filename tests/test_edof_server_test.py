@@ -52,6 +52,23 @@ def test_search_spec_and_identity():
     assert browser.identity(" Jean-François ") == browser.identity("JEAN FRANCOIS")
 
 
+def test_diagnostics_only_expose_categories_not_auth_parameters():
+    url = f"https://{browser.EFP_HOST}/auth/realms/efp/login-actions/authenticate?session_code=synthetic-secret&username=synthetic@example.invalid"
+    signals = {"login_post_status": 200, "callback_status": None, "blocked_efp_posts": 0, "raw_error": "synthetic-secret", "cookie": "synthetic-secret"}
+    result = browser.diagnostic_summary(url, True, False, signals)
+    assert result["location"] == "efp_login"
+    assert result["login_post_status"] == 200
+    assert "synthetic" not in json.dumps(result)
+    assert "cookie" not in result and "raw_error" not in result
+    assert browser.location_category(f"https://{browser.EDOF_HOST}/idp/edof/api/v2/callback?code=synthetic-secret") == "edof_callback"
+    assert browser.location_category(f"https://{browser.EFP_HOST}/auth/realms/efp/login-actions/required-action?execution=synthetic-secret") == "efp_required_action"
+
+
+@pytest.mark.parametrize("text,code", [("Nom d’utilisateur ou mot de passe invalide.", "credentials_rejected"), ("Votre compte est désactivé.", "account_unavailable"), ("Saisissez votre code d’authentification.", "verification_code")])
+def test_additional_authentication_outcomes(text, code):
+    assert browser.classify_text(text) == code
+
+
 def test_store_owner_isolation_expiry_cooldown_and_interruption(tmp_path, monkeypatch):
     now = 1000000.0
     monkeypatch.setattr(server.time, "time", lambda: now)

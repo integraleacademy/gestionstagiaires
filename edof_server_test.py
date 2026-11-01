@@ -32,6 +32,10 @@ MESSAGES = {
     "human_verification": "Le site demande une vérification humaine. L’essai s’est arrêté : l’accès entièrement autonome n’est pas validé.",
     "verification_code": "EFP demande un code de vérification. L’essai s’est arrêté : l’accès entièrement autonome n’est pas validé.",
     "credentials_rejected": "EFP refuse les identifiants configurés. Aucun nouvel essai automatique n’a été lancé.",
+    "account_unavailable": "EFP indique que le compte est bloqué ou désactivé. Aucun nouvel essai automatique n’a été lancé.",
+    "account_action_required": "EFP demande une étape supplémentaire sur le compte. L’essai s’est arrêté sans valider cette étape.",
+    "sign_in_error": "EFP affiche une erreur de connexion. Aucun dossier n’a été lu et aucun nouvel essai automatique n’a été lancé.",
+    "login_form_not_allowed": "La destination du formulaire EFP diffère du parcours prévu. L’essai doit être adapté ; aucun identifiant n’a été saisi.",
     "authentication_unconfirmed": "La connexion n’a pas pu être confirmée. Aucun dossier n’a été lu.",
     "organism_selection_required": "La sélection automatique de l’établissement n’a pas abouti. Le parcours doit être adapté.",
     "search_unconfirmed": "La recherche par nom n’a pas produit de réponse exploitable. Le parcours doit être adapté.",
@@ -164,7 +168,7 @@ def execute_job(store, job_id, spec, lock_fd):
             parsed = json.loads(output)
             if isinstance(parsed, dict) and parsed.get("code") in MESSAGES:
                 # The runner emits only the explicitly normalized dossier schema.
-                result = {key: parsed[key] for key in ("code", "stage", "fields", "fresh_session", "candidate_count", "blocked_writes") if key in parsed}
+                result = {key: parsed[key] for key in ("code", "stage", "fields", "fresh_session", "candidate_count", "blocked_writes", "diagnostics") if key in parsed}
     except subprocess.TimeoutExpired:
         result = {"code": "timeout"}
     except Exception:
