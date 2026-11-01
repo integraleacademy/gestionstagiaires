@@ -1990,7 +1990,9 @@ def _reconciled_qonto_paid_cents(invoice: Dict[str, Any], fallback_cents: int) -
         for item in installments
         if str(item.get("status") or "").lower() in {"completed", "paid", "succeeded", "success"}
     )
-    return max(paid, 0)
+    # A rejected historic debit can coexist with a later verified transfer.
+    # Keep the net SEPA receipts and the separately identified transfer facts.
+    return max(paid, 0) + bank_transfer_paid_cents(invoice)
 
 
 def normalize_qonto_invoice_storage_fields(invoice: Dict[str, Any]) -> None:

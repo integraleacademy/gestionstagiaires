@@ -486,3 +486,24 @@ def test_canceled_subscription_missing_collection_list_fails_closed(third_party,
     monkeypatch.setattr(gestion_app, 'list_qonto_direct_debit_collections', lambda *args, **kwargs: {'meta':{'next_page':0}})
     assert search_third_party(third_party).status_code == 400
     third_party[3].assert_not_called()
+
+
+@pytest.mark.parametrize('old_status', ['failed', 'rejected', 'returned', 'refunded'])
+def test_historical_rejected_debit_does_not_hide_verified_transfer(third_party, monkeypatch, old_status):
+    link_unpaid_invoice(third_party, monkeypatch)
+    removed_installment(third_party)['status'] = old_status
+    client, data, trainee, fetch, detail = third_party
+    data['billing_lines'][0]['financial_tracking_override'] = {'enabled':True, 'source':'inline_schedule'}
+    response = assign_third_party(third_party)
+    assert response.status_code == 200, response.json
+    line = gestion_app._billing_lines(data)[0]
+    assert line['qonto_invoice']['paid_amount_cents'] == 125000
+    summary = gestion_app.calculate_trainee_financial_summary(trainee, [line])
+    assert summary['paid_total_cents'] == 125000
+    assert summary['remaining_total_cents'] == 0
+    assert summary['qonto_payment_entries'][0]['transactions'][0]['payer_name'] == 'Aurore VERON'
+    fetch.return_value[0]['status'] = 'reversed'
+    gestion_app._sync_qonto_bank_transfers(data, force=True)
+    line = gestion_app._billing_lines(data)[0]
+    assert line['qonto_invoice']['paid_amount_cents'] == 0
+    assert gestion_app.calculate_trainee_financial_summary(trainee, [line])['remaining_total_cents'] == 125000
