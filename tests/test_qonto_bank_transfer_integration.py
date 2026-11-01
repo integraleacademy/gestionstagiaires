@@ -193,3 +193,203 @@ def test_transaction_detail_with_wrong_id_fails_closed(monkeypatch):
     monkeypatch.setattr(gestion_app, '_qonto_request', remote)
     with pytest.raises(ValueError, match='incomplète'):
         gestion_app._fetch_qonto_bank_transactions([{'dateStart': '2026-09-01', 'qontoBankTransfers': [{'id': 'existing-credit'}]}])
+
+
+@pytest.fixture
+def third_party(finance, monkeypatch):
+    client, data, trainee, fetch = finance
+    fetch.return_value[0].update(label='MME AURORE VERON', clean_counterparty_name='Aurore VERON',
+                                 reference='Participation formation', transfer={'iban': 'PRIVATE-IBAN'})
+    detail = Mock(side_effect=lambda *args, **kwargs: {'transaction': deepcopy(fetch.return_value[0])})
+    monkeypatch.setattr(gestion_app, '_qonto_request', detail)
+    with client.session_transaction() as session:
+        session['admin_username'] = 'admin-test'
+    return client, data, trainee, fetch, detail
+
+
+def search_third_party(fixture):
+    client, data, *_ = fixture
+    return client.post('/api/billing/bank-transfers/search', json={
+        'lineId': gestion_app._billing_lines(data)[0]['id'], 'query': 'veron aurore',
+        'dateFrom': '2025-01-01'})
+
+
+def assign_third_party(fixture, search=None):
+    search = search if search is not None else search_third_party(fixture)
+    assert search.status_code == 200, search.json
+    return fixture[0].post('/api/billing/bank-transfers/assign', json={
+        'selectionToken': search.json['transactions'][0]['selection_token']})
+
+
+def test_third_party_search_and_assignment_soldes_personal_only(third_party):
+    client, data, trainee, fetch, detail = third_party
+    search = search_third_party(third_party)
+    assert search.status_code == 200, search.json
+    assert 'PRIVATE-IBAN' not in repr(search.json)
+    assert search.json['transactions'][0]['payer_name'] == 'Aurore VERON'
+    assert not data['billing_lines'][0].get('qontoBankTransfers')
+    response = assign_third_party(third_party, search)
+    assert response.status_code == 200, response.json
+    assert response.json['remaining_cents'] == 0
+    summary = client.get('/api/billing/trainee/T-BANK/session/S-BANK?local=1').json['financial_summary']
+    assert summary['paid_total_cents'] == 125000
+    assert summary['remaining_total_cents'] == 0
+    proof = data['billing_lines'][0]['qontoBankTransfers'][0]
+    assert proof['payer_name'] == 'Aurore VERON'
+    assert proof['allocation_method'] == 'manual'
+    assert proof['allocated_by'] == 'admin-test'
+    assert data['billing_lines'][0]['invoiceStatus'] == 'external_generated'
+    assert trainee['cpf_amount'] == 1750
+    assert all(call.args[0] == 'GET' for call in detail.call_args_list)
+    assert assign_third_party(third_party, search).status_code == 409
+    assert len(data['billing_lines'][0]['qontoBankTransfers']) == 1
+
+
+def test_manual_assignment_survives_sync_and_reversal_preserves_audit(third_party):
+    client, data, trainee, fetch, detail = third_party
+    assert assign_third_party(third_party).status_code == 200
+    gestion_app._sync_qonto_bank_transfers(data, force=True)
+    proof = data['billing_lines'][0]['qontoBankTransfers'][0]
+    assert proof['allocated_by'] == 'admin-test'
+    fetch.return_value[0]['status'] = 'reversed'
+    gestion_app._sync_qonto_bank_transfers(data, force=True)
+    line = gestion_app._billing_lines(data)[0]
+    assert line['qontoBankTransfers'][0]['allocation_method'] == 'manual'
+    assert gestion_app.calculate_trainee_financial_summary(trainee, [line])['paid_total_cents'] == 0
+
+
+@pytest.mark.parametrize('change', [{'status':'pending'}, {'status':'reversed'}, {'side':'debit'},
+                                 {'currency':'USD'}, {'operation_type':'card'}, {'settled_at':'2099-01-01'}])
+def test_manual_search_excludes_unsettled_or_wrong_type(third_party, change):
+    third_party[3].return_value[0].update(change)
+    assert search_third_party(third_party).json['transactions'] == []
+
+
+def test_manual_search_blocks_overpayment_and_existing_allocation(third_party):
+    client, data, trainee, fetch, detail = third_party
+    fetch.return_value[0]['amount_cents'] = 125001
+    row = search_third_party(third_party).json['transactions'][0]
+    assert row['blocked_reason'] and 'selection_token' not in row
+    fetch.return_value[0]['amount_cents'] = 125000
+    data['billing_lines'].append({'id':'historic-line', 'qontoBankTransfers':[dict(fetch.return_value[0])]})
+    row = search_third_party(third_party).json['transactions'][0]
+    assert row['assigned'] and 'selection_token' not in row
+
+
+def test_manual_double_allocation_is_checked_under_atomic_lock(third_party, monkeypatch):
+    client, data, trainee, fetch, detail = third_party
+    search = search_third_party(third_party)
+    def concurrent_allocation(mutator):
+        data['billing_lines'].append({'id':'concurrent-line','qontoBankTransfers':[dict(fetch.return_value[0])]})
+        return mutator(data)
+    monkeypatch.setattr(gestion_app, '_atomic_update_data', concurrent_allocation)
+    assert assign_third_party(third_party, search).status_code == 409
+    assert not data['billing_lines'][0].get('qontoBankTransfers')
+
+
+def test_manual_rechecks_bank_before_saving(third_party):
+    search = search_third_party(third_party)
+    third_party[3].return_value[0]['status'] = 'reversed'
+    assert assign_third_party(third_party, search).status_code == 409
+    assert not third_party[1]['billing_lines'][0].get('qontoBankTransfers')
+
+
+def test_manual_rejects_edited_dossier_and_forged_selection(third_party):
+    client, data, trainee, fetch, detail = third_party
+    search = search_third_party(third_party)
+    trainee['personal_amount'] = 1500
+    assert assign_third_party(third_party, search).status_code == 409
+    assert client.post('/api/billing/bank-transfers/assign', json={'selectionToken':'forged'}).status_code == 409
+    detail.assert_not_called()
+
+
+def test_manual_rejects_concurrent_target_edit(third_party, monkeypatch):
+    search = search_third_party(third_party)
+    def concurrent_edit(mutator):
+        third_party[2]['personal_amount'] = 1500
+        return mutator(third_party[1])
+    monkeypatch.setattr(gestion_app, '_atomic_update_data', concurrent_edit)
+    assert assign_third_party(third_party, search).status_code == 409
+    assert not third_party[1]['billing_lines'][0].get('qontoBankTransfers')
+
+
+def test_two_partial_third_party_transfers_settle_once(third_party):
+    client, data, trainee, fetch, detail = third_party
+    fetch.return_value[0]['amount_cents'] = 50000
+    assert assign_third_party(third_party).json['remaining_cents'] == 75000
+    fetch.return_value[0].update(id='second-transfer', amount_cents=75000)
+    assert assign_third_party(third_party).json['remaining_cents'] == 0
+    assert gestion_app.bank_transfer_paid_cents(data['billing_lines'][0]) == 125000
+
+
+def link_unpaid_invoice(fixture, monkeypatch):
+    line = fixture[1]['billing_lines'][0]
+    line.update(qontoInvoiceId='invoice-linked', invoiceStatus='finalized', qonto_total_amount_cents=125000,
+                qonto_amount_paid_cents=0, paymentMode='sepa_direct_debit')
+    remote = {'id':'invoice-linked', 'status':'unpaid', 'number':'TEST-1',
+              'total_amount':{'value':'1250.00'}, 'amount_paid':{'value':'0.00'}}
+    monkeypatch.setattr(gestion_app, 'get_qonto_invoice', Mock(return_value={'client_invoice':remote}))
+    return remote
+
+
+def test_existing_qonto_invoice_gets_third_party_payment_and_reversal(third_party, monkeypatch):
+    remote = link_unpaid_invoice(third_party, monkeypatch)
+    client, data, trainee, fetch, detail = third_party
+    response = assign_third_party(third_party)
+    assert response.status_code == 200, response.json
+    line = gestion_app._billing_lines(data)[0]
+    assert line['qonto_invoice']['paid_amount_cents'] == 125000
+    assert line['qontoRemoteAmountPaidCents'] == 0
+    summary = gestion_app.calculate_trainee_financial_summary(trainee, [line])
+    assert summary['qonto_payment_entries'][0]['transactions'][0]['payer_name'] == 'Aurore VERON'
+    # Persist an invoice refresh, then reverse only the bank transfer: the
+    # reconciled paid amount must never become a sticky remote invoice amount.
+    gestion_app._apply_qonto_invoice_payment_to_billing_line(line, remote)
+    remote.pop('amount_paid')
+    gestion_app._apply_qonto_invoice_payment_to_billing_line(line, remote)
+    assert line['qontoRemoteAmountPaidCents'] == 0
+    gestion_app._save_billing_line(data, line)
+    fetch.return_value[0]['status'] = 'reversed'
+    gestion_app._sync_qonto_bank_transfers(data, force=True)
+    line = gestion_app._billing_lines(data)[0]
+    assert line['qonto_invoice']['paid_amount_cents'] == 0
+    assert gestion_app.calculate_trainee_financial_summary(trainee, [line])['remaining_total_cents'] == 125000
+
+
+def test_existing_remote_payment_blocks_double_count(third_party, monkeypatch):
+    remote = link_unpaid_invoice(third_party, monkeypatch)
+    remote['amount_paid'] = {'value':'1250.00'}
+    assert search_third_party(third_party).status_code == 400
+    third_party[3].assert_not_called()
+
+
+def test_remote_invoice_paid_between_search_and_assign_blocks(third_party, monkeypatch):
+    remote = link_unpaid_invoice(third_party, monkeypatch)
+    search = search_third_party(third_party)
+    remote['amount_paid'] = {'value':'1250.00'}
+    assert assign_third_party(third_party, search).status_code == 409
+    assert not third_party[1]['billing_lines'][0].get('qontoBankTransfers')
+
+
+def test_manual_allocation_denies_viewer_and_external_partner(third_party, monkeypatch):
+    client = third_party[0]
+    with client.session_transaction() as session:
+        session['admin_role'] = 'viewer'
+    assert search_third_party(third_party).status_code == 403
+    assert client.post('/api/billing/bank-transfers/assign',json={}).status_code == 403
+    with client.session_transaction() as session:
+        session['admin_role'] = 'admin'
+    monkeypatch.setattr(gestion_app, '_is_partner_data_scope_session', lambda: True)
+    assert search_third_party(third_party).status_code == 403
+    assert client.post('/api/billing/bank-transfers/assign',json={}).status_code == 403
+    third_party[3].assert_not_called()
+
+
+@pytest.mark.parametrize('change', [
+    {'directDebitInstallments':[{'amount':1250,'status':'scheduled'}]},
+    {'manualPaymentInvoiceId':'some-invoice'}, {'amountPaid':100}, {'invoiceStatus':'draft'},
+])
+def test_manual_allocation_blocks_other_payment_modes(third_party, change):
+    third_party[1]['billing_lines'][0].update(change)
+    assert search_third_party(third_party).status_code == 409
+    third_party[3].assert_not_called()
