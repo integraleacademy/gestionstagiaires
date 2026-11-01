@@ -137,6 +137,7 @@ def test_timeout_kills_process_tree_and_hides_diagnostics(tmp_path, monkeypatch)
     store = server.ServerTestStore(tmp_path)
     job = store.reserve("owner", "read")
     calls = []
+    temporary_paths = []
     monkeypatch.setenv("DATABASE_URL", "synthetic-database-secret")
     monkeypatch.setenv("EDOF_EFP_PASSWORD", "synthetic-efp-secret")
     class Child:
@@ -150,11 +151,14 @@ def test_timeout_kills_process_tree_and_hides_diagnostics(tmp_path, monkeypatch)
         assert kwargs["env"]["EDOF_EFP_PASSWORD"] == "synthetic-efp-secret"
         assert kwargs["stderr"] == subprocess.DEVNULL
         assert kwargs["start_new_session"] is True
+        temporary_paths.append(Path(kwargs["env"]["TMPDIR"]))
+        (temporary_paths[-1] / "synthetic-profile").write_text("synthetic-temporary-secret")
         return Child()
     monkeypatch.setattr(server.subprocess, "Popen", popen)
     monkeypatch.setattr(server.os, "killpg", lambda pid, sig: calls.append(pid))
     fd = os.open(tmp_path / "lock", os.O_CREAT | os.O_RDWR, 0o600)
     server.execute_job(store, job, {"mode": "read", "folder_id": "123456789012"}, fd)
     assert calls == [12345]
+    assert not temporary_paths[0].exists()
     assert store.latest("owner")[0]["code"] == "timeout"
     assert "synthetic-private" not in json.dumps(store.latest("owner"))

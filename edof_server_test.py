@@ -14,6 +14,7 @@ import signal
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 
@@ -144,12 +145,17 @@ class ServerTestStore:
 
 def execute_job(store, job_id, spec, lock_fd):
     process = None
+    temporary = tempfile.TemporaryDirectory(prefix="edof-server-test-")
     result = {"code": "browser_error"}
     try:
         # Do not pass unrelated app/CRM/database credentials to the child browser.
         permitted_env = {"PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "PLAYWRIGHT_BROWSERS_PATH", "RENDER_SERVICE_ID", "EDOF_EFP_USERNAME", "EDOF_EFP_PASSWORD"}
         child_env = {key: value for key, value in os.environ.items() if key in permitted_env}
         child_env["PYTHONUNBUFFERED"] = "1"
+        # Chromium uses temporary profile files while running. Remove its whole
+        # private working directory even after timeout/SIGKILL, not only when
+        # Playwright manages to close the browser cleanly.
+        child_env["TMPDIR"] = temporary.name
         process = subprocess.Popen([sys.executable, str(Path(__file__).with_name("edof_server_browser.py"))],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             text=True, env=child_env, start_new_session=True, pass_fds=(lock_fd,))
@@ -172,6 +178,7 @@ def execute_job(store, job_id, spec, lock_fd):
                 pass
             process.communicate()
         try:
+            temporary.cleanup()
             store.finish(job_id, result)
         finally:
             os.close(lock_fd)
