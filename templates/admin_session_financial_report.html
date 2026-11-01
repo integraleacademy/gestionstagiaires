@@ -34,6 +34,7 @@ body.endpoint-admin-session-financial-report .app-shell{width:100%;max-width:non
 @media print{@page{size:landscape;margin:9mm}body{background:#fff!important}.sidebar,.admin-sidebar,.no-print,.breadcrumbs{display:none!important}.main,.content{margin:0!important;padding:0!important;max-width:none!important}.financial-page{max-width:none;margin:0;font-size:10px}.financial-top{margin:0 0 12px}.financial-top h1{font-size:21px}.financial-context{font-size:10px;margin-bottom:12px}.financial-kpis{gap:8px;margin-bottom:12px}.financial-card{padding:10px}.financial-card__value{font-size:20px}.financial-card__hint,.financial-card__label{font-size:10px}.financial-funding{margin-bottom:14px}.financial-funding summary{padding:9px}.financial-funding__body{grid-template-columns:repeat(3,1fr)}.financial-list-heading h2{font-size:15px}.financial-table-wrap{overflow:visible;border-radius:0}.financial-table th,.financial-table td{padding:8px;font-size:10px}.financial-amount,.trainee-link{font-size:11px}.financial-badge{font-size:9px;padding:3px 5px}.financial-details-row{display:none!important}.financial-action-cell{display:none}.financial-summary-row{break-inside:avoid}.financial-note{font-size:9px}}
 </style>
 <style>
+.financial-funding__heading{flex:1;min-width:0}.financial-funding__copy{flex:1;min-width:0}.financial-cpf-progress{max-width:600px;margin-top:10px}.financial-cpf-progress .payment-progress__track{display:flex;height:8px}.financial-cpf-progress .payment-progress__fill{border-radius:0;flex-shrink:0}.financial-cpf-progress__unknown{height:100%;flex-shrink:0;background:repeating-linear-gradient(135deg,#f2d6a1,#f2d6a1 4px,#fff0d5 4px,#fff0d5 8px)}.financial-cpf-payments .financial-cpf-stage,.financial-cpf-payments .financial-cpf-invoice{text-align:left;white-space:normal}.financial-cpf-payments .financial-badge{white-space:normal;text-align:left}.financial-cpf-payments td{vertical-align:middle}
 @media(max-width:680px){.financial-cpf-payments thead{display:none}.financial-cpf-payments,.financial-cpf-payments tbody{display:block}.financial-cpf-payments tr{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 0;border-top:1px solid #e3e8ef}.financial-cpf-payments td{display:block;text-align:left!important;padding:0;border:0;white-space:normal!important}.financial-cpf-payments td:first-child,.financial-cpf-payments td:last-child{grid-column:1/-1}.financial-cpf-payments td[data-label]:before{content:attr(data-label);display:block;font-size:10px;color:#637087;margin-bottom:3px}}
 </style>
 <div class="financial-page">
@@ -71,7 +72,19 @@ body.endpoint-admin-session-financial-report .app-shell{width:100%;max-width:non
     <summary>
       <div class="financial-funding__heading">
         <img class="financial-card__cpf-logo" src="/templates/cpf.jpg" alt="Logo CPF">
-        <div><strong>CPF : {{ money(report.totals.cpf) }}</strong><div class="financial-funding__summary">{{ money(report.cpf_payments.totals.paid) }} reçus · {{ money(report.cpf_payments.totals.remaining) }} restant à recevoir{% if report.cpf_payments.totals.unverified %} · {{ money(report.cpf_payments.totals.unverified) }} à vérifier{% endif %}</div></div>
+        <div class="financial-funding__copy">
+          <strong>CPF : {{ money(report.totals.cpf) }}</strong>
+          <div class="financial-funding__summary">{{ money(report.cpf_payments.totals.paid) }} reçus · {{ money(report.cpf_payments.totals.remaining) }} restant à recevoir{% if report.cpf_payments.totals.unverified %} · {{ money(report.cpf_payments.totals.unverified) }} à vérifier{% endif %}</div>
+          {% if report.cpf_payments.rows %}
+          <div class="financial-cpf-progress">
+            <div class="payment-progress__top"><span>Paiements confirmés</span><strong>{{ ('%g'|format(report.cpf_payments.payment_percentage)).replace('.', ',') }} %</strong></div>
+            <div class="payment-progress__track" role="progressbar" aria-label="Paiements CPF confirmés" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ report.cpf_payments.payment_percentage }}" aria-valuetext="{{ money(report.cpf_payments.totals.paid) }} reçus confirmés sur {{ money(report.totals.cpf) }}{% if report.cpf_payments.totals.unverified %}, {{ money(report.cpf_payments.totals.unverified) }} à vérifier{% endif %}">
+              <span class="payment-progress__fill" style="width:{{ report.cpf_payments.payment_percentage }}%"></span>
+              {% if report.cpf_payments.totals.unverified %}<span class="financial-cpf-progress__unknown" style="width:{{ report.cpf_payments.unverified_percentage }}%"></span>{% endif %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
       </div>
     </summary>
     <div class="financial-funding__body">
@@ -81,19 +94,21 @@ body.endpoint-admin-session-financial-report .app-shell{width:100%;max-width:non
       {% if report.cpf_payments.rows %}
       <div class="financial-funding__note">
         <table class="financial-breakdown financial-cpf-payments" aria-label="Paiements CPF par stagiaire">
-          <thead><tr><th scope="col">Stagiaire</th><th scope="col">Reçu</th><th scope="col">Reste à recevoir</th><th scope="col">Paiement</th></tr></thead>
+          <thead><tr><th scope="col">Stagiaire</th><th scope="col" class="financial-cpf-stage">Avancement CPF</th><th scope="col" class="financial-cpf-invoice">Facture CPF</th><th scope="col">Reçu</th><th scope="col">Reste à recevoir</th><th scope="col">Paiement</th></tr></thead>
           <tbody>{% for payment in report.cpf_payments.rows %}
             <tr>
               <td>{{ payment.first_name }} {{ payment.last_name }}</td>
+              <td class="financial-cpf-stage" data-label="Avancement CPF"><span class="financial-badge financial-badge--{{ payment.stage_tone }}">{{ payment.stage_label }}</span></td>
+              <td class="financial-cpf-invoice" data-label="Facture CPF"><span class="financial-badge financial-badge--{{ payment.invoice_tone }}">{{ payment.invoice_label }}</span>{% if payment.invoice_number %}<span class="financial-cell-note">{{ payment.invoice_number }}</span>{% endif %}</td>
               <td data-label="Reçu">{{ money(payment.paid) if payment.known else '—' }}</td>
               <td data-label="Reste à recevoir">{{ money(payment.remaining) if payment.known else '—' }}</td>
-              <td><span class="financial-badge {{ 'financial-badge--paid' if payment.status == 'paid' else 'financial-badge--warn' if payment.status == 'unknown' else 'financial-badge--due' }}">{{ payment.label }}</span></td>
+              <td data-label="Paiement"><span class="financial-badge {{ 'financial-badge--paid' if payment.status == 'paid' else 'financial-badge--warn' if payment.status == 'unknown' else 'financial-badge--due' }}">{{ payment.label }}</span></td>
             </tr>
           {% endfor %}</tbody>
         </table>
       </div>
       {% else %}<p class="financial-funding__note">Aucun financement CPF dans cette session.</p>{% endif %}
-      {% if report.cpf_payments.totals.unverified %}<p class="financial-funding__note">Les paiements à vérifier ne sont pas inclus dans les montants reçus ou restant à recevoir.</p>{% endif %}
+      {% if report.cpf_payments.totals.unverified %}<p class="financial-funding__note">La partie hachurée correspond aux paiements à vérifier, exclus des montants reçus ou restant à recevoir.</p>{% endif %}
     </div>
   </details>
   <div class="financial-list-heading">

@@ -128,7 +128,7 @@ from wedof_automation import (automation_dashboard_state, build_automation_dashb
                               record_maintenance_skip, run_dry_run, run_live_automation,
                               sync_folder_automation_status)
 from wedof_discovery import merge_verified_folders, parse_timestamp as parse_wedof_timestamp
-from cpf_tracking import build_cpf_view, has_cpf_financing, has_generated_cpf_invoice
+from cpf_tracking import build_cpf_view, build_cpf_financial_status, has_cpf_financing, has_generated_cpf_invoice
 from vtc_cpf_guidance import build_confirmation_content
 import vtc_elearning_activation
 import trainee_elearning_reporting
@@ -26071,6 +26071,11 @@ def _session_cpf_payment_report(
         for line in _cpf_wedof_invoice_lines(scoped_data, billing_lines)
         if str(line.get("sessionId") or "") == session_id
     }
+    links = {
+        str(link.get("trainee_id") or ""): link
+        for link in scoped_data["wedof_links"] if link.get("active") is True
+    }
+    trainees = {str(trainee.get("id") or ""): trainee for trainee in _session_trainees_list(session_item)}
     invoice_owners: Dict[str, set] = {}
     for trainee_id, line in invoices.items():
         for key in ("qontoInvoiceId", "qontoInvoiceNumber"):
@@ -26122,13 +26127,31 @@ def _session_cpf_payment_report(
             )
             totals["paid"] += paid_cents
             totals["remaining"] += remaining_cents
+        link = links.get(financial_row["trainee_id"], {})
+        snapshot = dict(link.get("cpf_snapshot") or {})
+        for key, fallback in (("state", "wedof_state"), ("billing_state", "billing_state")):
+            snapshot[key] = snapshot.get(key) or link.get(fallback)
+        invoice_id, invoice_number = _cpf_wedof_invoice_reference(link)
+        snapshot["qonto_invoice_id"] = invoice_id
+        snapshot["qonto_invoice_number"] = invoice_number
+        source_invoice = line if not line.get("cpfWedofReferenceOnly") else {}
+        if not source_invoice:
+            legacy = trainees.get(financial_row["trainee_id"], {}).get("qonto_invoice")
+            if isinstance(legacy, dict) and _legacy_qonto_invoice_is_cpf(legacy):
+                source_invoice = legacy
         rows.append({
             "trainee_id": financial_row["trainee_id"],
             "first_name": financial_row["first_name"], "last_name": financial_row["last_name"],
             "paid": paid_cents / 100, "remaining": remaining_cents / 100,
             "known": known, "status": status, "label": label,
+            **build_cpf_financial_status(snapshot, source_invoice, linked=bool(link)),
         })
-    return {"rows": rows, "totals": {key: value / 100 for key, value in totals.items()}}
+    total_cents = sum(totals.values())
+    return {
+        "rows": rows, "totals": {key: value / 100 for key, value in totals.items()},
+        "payment_percentage": round(totals["paid"] * 100 / total_cents, 1) if total_cents else 0,
+        "unverified_percentage": round(totals["unverified"] * 100 / total_cents, 1) if total_cents else 0,
+    }
 
 
 def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]) -> Dict[str, Any]:
