@@ -48,9 +48,12 @@ def _record(transaction):
     if transaction.get("amount_cents") is None:
         amount = _cents(transaction.get("amount"))
     operation = str(transaction.get("operation_type") or "").lower()
-    # Incoming transfers may be represented as income. Persist a canonical
-    # transfer type only when the remote payload explicitly identifies it.
-    if operation == "income" and str(transaction.get("subject_type") or "").lower() == "transfer":
+    # Qonto documents income/Income as an incoming transfer (Transfer is
+    # outgoing). operation_type is sufficient when subject_type is omitted;
+    # reject an explicitly contradictory subject such as a collection/refund.
+    # https://docs.qonto.com/api-reference/business-api/transactions-statements/transactions/list-transactions
+    subject = str(transaction.get("subject_type") or "").strip().lower()
+    if operation in {"income", "swift_income"} and subject in {"", "income", "swiftincome"}:
         operation = "transfer"
     return {
         "id": _transaction_id(transaction),
@@ -173,6 +176,10 @@ def match_bank_transfers(lines, transactions, *, today=None):
         for record in records:
             identifier = _transaction_id(record)
             replacement = dict(indexed[identifier][1]) if identifier in indexed else dict(record)
+            # Reversals may clear settled_at. Retain the original settlement
+            # date as history, while the reversed status makes the amount zero.
+            if replacement.get("status") == "reversed" and not replacement.get("paid_at"):
+                replacement["paid_at"] = record.get("paid_at") or ""
             if len(owners.get(identifier, ())) > 1:
                 replacement["status"] = "ambiguous"
             refreshed.append(replacement)

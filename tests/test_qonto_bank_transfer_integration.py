@@ -21,7 +21,7 @@ def finance(monkeypatch):
     for name in ('create_qonto_invoice', 'create_qonto_direct_debit_subscription', 'send_qonto_invoice'):
         monkeypatch.setattr(gestion_app, name, Mock(side_effect=AssertionError('Unexpected write: '+name)))
     transfer = {'id': 'transfer-bank', 'amount_cents': 125000, 'currency': 'EUR', 'status': 'completed',
-                'side': 'credit', 'operation_type': 'transfer', 'settled_at': '2026-09-03T12:32:00Z',
+                'side': 'credit', 'operation_type': 'income', 'subject_type': 'Income', 'settled_at': '2026-09-03T12:32:00Z',
                 'label': 'M ALEX MARTIN', 'reference': 'Virement de M Alex Martin'}
     fetch = Mock(return_value=[transfer])
     monkeypatch.setattr(gestion_app, '_fetch_qonto_bank_transactions', fetch)
@@ -170,3 +170,26 @@ def test_auto_refresh_uses_updated_trainee_after_conflict(finance, monkeypatch):
     response = client.get('/api/billing/trainee/T-BANK/session/S-BANK')
     assert response.json['financial_summary']['planned_total_cents'] == 200000
     assert response.json['financial_summary']['paid_total_cents'] == 0
+
+
+def test_already_linked_reversal_missing_from_dated_listing_is_read_by_id(monkeypatch):
+    monkeypatch.setattr(gestion_app, 'get_qonto_organization_bank_accounts', lambda: {'bank_accounts': [{'id': 'a'}]})
+    proof = {'id': 'existing-credit', 'amount_cents': 125000, 'currency': 'EUR', 'status': 'completed',
+             'side': 'credit', 'operation_type': 'transfer', 'paid_at': '2026-09-03T12:32:00Z'}
+    remote = Mock(side_effect=[{'transactions': [], 'meta': {'next_page': None}},
+                              {'transaction': dict(proof, operation_type='income', subject_type='Income', status='reversed', settled_at=None, paid_at=None)}])
+    monkeypatch.setattr(gestion_app, '_qonto_request', remote)
+    line = {'id': 'L1', 'dateStart': '2026-09-01', 'qontoBankTransfers': [proof]}
+    transactions = gestion_app._fetch_qonto_bank_transactions([line])
+    assert remote.call_args_list[-1].args == ('GET', '/v2/transactions/existing-credit')
+    matches = gestion_app.match_bank_transfers([line], transactions)
+    assert gestion_app.bank_transfer_paid_cents({'qontoBankTransfers': matches['L1']}) == 0
+    assert matches['L1'][0]['paid_at'] == proof['paid_at']
+
+
+def test_transaction_detail_with_wrong_id_fails_closed(monkeypatch):
+    monkeypatch.setattr(gestion_app, 'get_qonto_organization_bank_accounts', lambda: {'bank_accounts': [{'id': 'a'}]})
+    remote = Mock(side_effect=[{'transactions': [], 'meta': {'next_page': None}}, {'transaction': {'id': 'wrong'}}])
+    monkeypatch.setattr(gestion_app, '_qonto_request', remote)
+    with pytest.raises(ValueError, match='incomplète'):
+        gestion_app._fetch_qonto_bank_transactions([{'dateStart': '2026-09-01', 'qontoBankTransfers': [{'id': 'existing-credit'}]}])

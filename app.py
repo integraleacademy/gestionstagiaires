@@ -1038,7 +1038,7 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
         if is_webhook_endpoint and isinstance(cleaned_payload, dict) and "secret" in cleaned_payload:
             log_payload = {**cleaned_payload, "secret": "***"}
         safe_payload = _sanitize_qonto_error(json.dumps(log_payload, ensure_ascii=False)) if log_payload is not None else None
-        safe_body = "[banking response omitted]" if endpoint in {"/v2/transactions", "/v2/organization"} else _sanitize_qonto_error(raw_body[:4000])
+        safe_body = "[banking response omitted]" if endpoint.startswith("/v2/transactions") or endpoint == "/v2/organization" else _sanitize_qonto_error(raw_body[:4000])
         app.logger.info("[QONTO] api_call method=%s url=%s payload=%s status=%s trace_id=%s body=%s", method.upper(), called_url, safe_payload, response.status_code, trace_id or "", safe_body)
         if not response.ok:
             if response.status_code == 404:
@@ -44979,6 +44979,18 @@ def _fetch_qonto_bank_transactions(lines: List[Dict[str, Any]]) -> List[Dict[str
                 break
         else:
             raise ValueError('Historique Qonto trop volumineux : rapprochement non effectué.')
+    # A reversed transaction can lose settled_at and disappear from the dated
+    # listing. Recheck already linked IDs directly before retaining their cash.
+    returned_ids = {str(item.get('id') or item.get('transaction_id') or '') for item in transactions}
+    known_ids = {str(item.get('id') or '') for line in lines for item in line.get('qontoBankTransfers') or [] if isinstance(item, dict) and item.get('id')}
+    for transaction_id in sorted(known_ids - returned_ids):
+        if time.monotonic() - started >= 25:
+            raise ValueError('Vérification bancaire trop longue : aucun nouveau rapprochement effectué.')
+        response = _qonto_request('GET', '/v2/transactions/' + quote(transaction_id, safe=''))
+        transaction = response.get('transaction')
+        if not isinstance(transaction, dict) or str(transaction.get('id') or transaction.get('transaction_id') or '') != transaction_id:
+            raise ValueError('La vérification du virement bancaire est incomplète.')
+        transactions.append(transaction)
     return transactions
 
 
