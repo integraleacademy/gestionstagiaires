@@ -21,6 +21,8 @@ from decimal import Decimal, InvalidOperation
 
 from flask import Blueprint, abort, jsonify, request, send_file, session
 
+from edof_matching import build_comparison
+
 
 TEST_SERVICE_ID = "srv-d928tc19rddc7388qie0"
 TEST_ORIGIN = "https://gestionstagiaires-test-v2.onrender.com"
@@ -208,28 +210,6 @@ class ObservationStore:
             db.close()
 
 
-def local_comparison(data, folder_id):
-    """Only exact existing CPF links; never create a match from a person's name."""
-    links = [item for item in data.get("wedof_links", []) if isinstance(item, dict)
-             and item.get("active") is True and str(item.get("external_id") or "") == folder_id]
-    if len(links) != 1:
-        return {"status": "ambiguous" if links else "absent"}
-    link = links[0]
-    matches = []
-    for group in data.get("sessions", []):
-        if not isinstance(group, dict) or str(group.get("id")) != str(link.get("session_id")):
-            continue
-        for trainee in group.get("trainees", group.get("stagiaires", [])) or []:
-            if isinstance(trainee, dict) and str(trainee.get("id")) == str(link.get("trainee_id")):
-                matches.append({"status": "found", "session_name": group.get("name"),
-                                "first_name": trainee.get("first_name") or trainee.get("prenom"),
-                                "last_name": trainee.get("last_name") or trainee.get("nom"),
-                                "email": trainee.get("email") or trainee.get("mail"),
-                                "start_date": group.get("date_start") or group.get("date_debut"),
-                                "end_date": group.get("date_end") or group.get("date_fin")})
-    return matches[0] if len(matches) == 1 else {"status": "ambiguous" if matches else "stale"}
-
-
 def register_edof_readonly_test(legacy):
     app = legacy.app
     # Server-side identity, never the caller-controlled Host header. No env
@@ -272,7 +252,7 @@ def register_routes(app, store, *, admin_required, can_access, data_file):
 
     @bp.get("/api/edof-test/ping")
     def ping():
-        return jsonify(ok=True, version="1.0", mode="browser_observation", autonomous_sync=False)
+        return jsonify(ok=True, version="1.1", mode="browser_observation", matching_preview=True, autonomous_sync=False)
 
     @bp.get("/admin/edof-test")
     @admin_required
@@ -285,7 +265,7 @@ def register_routes(app, store, *, admin_required, can_access, data_file):
             try:
                 # Direct read avoids legacy load_data migrations/background jobs.
                 with open(data_file, "r", encoding="utf-8") as source:
-                    comparison = local_comparison(json.load(source), latest["fields"]["folder_id"])
+                    comparison = build_comparison(json.load(source), latest["fields"])
             except (OSError, ValueError, TypeError, AttributeError):
                 comparison = {"status": "unavailable"}
         # Do not run legacy context processors (notifications, CRM, etc.).

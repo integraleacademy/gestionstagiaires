@@ -14,8 +14,9 @@ des variables de production ou du Blueprint. Intégration par `crm_app.py`.
 4. Se connecter normalement à EDOF, ouvrir le dossier et l’onglet DevTools
    « Intégrale EDOF ». Coller le code, préparer la lecture, recharger la fiche.
 5. Contrôler le dossier détecté, puis déclencher le transfert volontaire.
-6. Actualiser le résultat dans Test V2 et comparer la fiche locale si un lien
-   CPF exact existe déjà. Effacer ensuite l’essai.
+6. Actualiser le résultat dans Test V2. La page cherche d’abord un lien CPF
+   existant, puis propose les inscriptions dont l’identité complète ou l’e-mail
+   concorde. Les critères et les écarts restent visibles ; aucun lien n’est créé.
 7. Refaire avec un nouveau code après déconnexion/reconnexion EFP Connect.
    Cela vérifie la nouvelle session du navigateur, pas une reconnexion serveur.
 
@@ -32,21 +33,42 @@ des variables de production ou du Blueprint. Intégration par `crm_app.py`.
 - Stockage propre à Test V2 : `/var/data/edof_readonly_test.sqlite3`, permissions
   0600. Un résultat par session. Résultat inaccessible après 24 h ; suppression
   des lignes expirées au prochain accès au stockage. Effacement explicite disponible.
-- Lecture directe de `DATA_FILE` pour comparer les seuls liens CPF existants,
+- Lecture directe de `DATA_FILE` pour comparer les liens CPF existants et les inscriptions,
   sans appeler `load_data`, `save_data`, un webhook ni les context processors
   historiques. Aucun ajout à `wedof_folder_cache` ou aux tables d’automatisation.
 - Les valeurs nulles financières restent inconnues. Le montant TTC ne signifie
   pas paiement. Les données reçues restent une observation du navigateur,
   sans garantie cryptographique de provenance ; aucune décision métier automatique.
 
+## Recherche locale (version 1.1)
+
+`edof_matching.py` est une fonction pure : aucune dépendance client WEDOF,
+aucune requête externe, aucune écriture ni ouverture de fiche métier.
+
+- Priorité au numéro CPF déjà lié. Les liens multiples ou périmés sont signalés
+  et ne sont jamais remplacés par une suggestion basée sur l’identité.
+- Sans lien existant, recherche par nom ET prénom normalisés, ou par e-mail exact
+  après suppression des espaces périphériques et mise en minuscules.
+- Une proposition concordante nécessite une inscription unique, nom et prénom,
+  e-mail et deux dates identiques, session non archivée et absence d’autre lien CPF.
+  La formation reste à vérifier : l’intitulé n’est pas une clé fiable entre systèmes.
+- Un nom seul, un e-mail partagé, une différence de dates ou un doublon appelle
+  une vérification explicite ; aucune association automatique n’est effectuée.
+- Dates de session prioritaires ; repli sur les deux dates du dossier uniquement
+  lorsque les dates de session sont incomplètes, sans mélanger leurs bornes.
+- Affichage limité à six fiches et six sessions, avec comptes complets. Données
+  de test absentes ou indisponibles distinguées d’un transfert EDOF en échec.
+- La mise à jour conserve le résultat reçu pendant sa durée de validité et ne
+  nécessite aucune nouvelle version du module Chrome.
+
 ## Validation
 
-`python -m pytest -q tests/test_edof_readonly_test.py`
+`python -m pytest -q tests/test_edof_readonly_test.py tests/test_edof_matching.py`
 
 `node --test tests/test_edof_extension.cjs`
 
 Après déploiement, `/healthz` doit répondre et `/api/edof-test/ping` doit annoncer
-`version: 1.0`, `mode: browser_observation`, `autonomous_sync: false`.
+`version: 1.1`, `matching_preview: true`, `mode: browser_observation`, `autonomous_sync: false`.
 La page et le ZIP exigent une session administrateur. Aucun secret dans les URL.
 
 Cette version ne réalise ni synchronisation autonome, ni parcours paginé de tous
