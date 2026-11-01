@@ -209,6 +209,54 @@ def _billing_line_is_cpf(line: Dict[str, Any]) -> bool:
     )
 
 
+def build_cpf_financial_status(snapshot: Dict[str, Any], invoice: Dict[str, Any],
+                               *, linked: bool) -> Dict[str, str]:
+    """Separate the cached dossier stage from invoice issuance and payment."""
+    state = str(snapshot.get("state") or "").strip()
+    position = map_wedof_status(state)
+    exceptions = {
+        "cancelled": "Dossier annulé", "canceled": "Dossier annulé",
+        "refused": "Dossier refusé", "rejected": "Dossier refusé",
+        "abandoned": "Formation abandonnée",
+    }
+    stage_label = (CPF_STEPS[position] if position is not None else exceptions.get(state)
+                   or ("État à vérifier" if linked else "Dossier CPF à rattacher"))
+    result = {
+        "stage_label": stage_label,
+        "stage_tone": "paid" if position is not None and position >= 4
+                      else "due" if position is not None else "warn",
+        "invoice_status": "unknown", "invoice_label": "Émission à vérifier",
+        "invoice_tone": "warn", "invoice_number": "",
+    }
+    # A real local invoice takes precedence over an older remote snapshot.
+    # A reference alone identifies a document, but an ID can also be a draft.
+    for record in (invoice, snapshot):
+        number = str(record.get("qontoInvoiceNumber") or record.get("qonto_invoice_number")
+                     or record.get("invoice_number") or record.get("invoiceNumber") or "").strip()
+        status = _normalized_invoice_status(
+            record.get("invoiceStatus") or record.get("invoice_status")
+            or record.get("qonto_invoice_status") or record.get("qonto_status")
+        )
+        billing = _normalized_invoice_status(record.get("billing_state") or record.get("billingState"))
+        if status in {"cancelled", "canceled", "deleted"}:
+            code, label, tone = "cancelled", "Facture annulée", "warn"
+        elif status == "draft" or (record.get("qontoDraftId") and not status):
+            code, label, tone = "draft", "Brouillon", "due"
+        elif status in {"control", "missing", "syncerror", "error", "failed"}:
+            code, label, tone = "unknown", "Émission à vérifier", "warn"
+        elif status in GENERATED_INVOICE_STATUSES or billing in GENERATED_INVOICE_STATUSES:
+            code, label, tone = "issued", "Facture émise", "paid"
+        elif status in {"notgenerated", "notinvoiced", "notbilled", "billingpending", "readytobill"} or billing in {"notbilled", "billingpending", "readytobill"}:
+            code, label, tone = "not_issued", "Non émise", "due"
+        elif number or record.get("state") in {"invoiced", "invoiceSent", "paid"}:
+            code, label, tone = "issued", "Facture émise", "paid"
+        else:
+            continue
+        result.update(invoice_status=code, invoice_label=label, invoice_tone=tone, invoice_number=number)
+        break
+    return result
+
+
 def has_generated_cpf_invoice(snapshot: Dict[str, Any], trainee: Dict[str, Any],
                               session_obj: Dict[str, Any], data: Dict[str, Any]) -> bool:
     if _invoice_record_is_generated(snapshot):

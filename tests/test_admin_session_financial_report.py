@@ -228,12 +228,19 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
 
         cpf = report["cpf_payments"]
         self.assertEqual(cpf["totals"], {"paid": 1000, "remaining": 700, "unverified": 400})
+        self.assertEqual(cpf["payment_percentage"], 47.6)
+        self.assertEqual(cpf["unverified_percentage"], 19.0)
         self.assertEqual([row["status"] for row in cpf["rows"]], ["paid", "pending", "unknown"])
         html = self._render_report(report)
         block = re.search(r'<details class="financial-funding">.*?</details>', html, re.DOTALL).group(0)
         self.assertIn("1 000,00 € reçus", block)
         self.assertIn("700,00 € restant à recevoir", block)
         self.assertIn("Paiement à vérifier", block)
+        self.assertIn('aria-label="Paiements CPF confirmés"', block)
+        self.assertIn('aria-valuenow="47.6"', block)
+        self.assertIn("47,6 %", block)
+        self.assertIn("Facture émise", block)
+        self.assertIn("F-3", block)
         for previous_label in ("Prix des formations", "Financement personnel prévu", "Autres financeurs prévus"):
             self.assertNotIn(previous_label, block)
 
@@ -256,6 +263,7 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
             report = gestion_app._session_financial_report(data, self.session)
         self.assertEqual(report["cpf_payments"]["totals"], {"paid": 250, "remaining": 750, "unverified": 0})
         self.assertEqual(report["cpf_payments"]["rows"][0]["status"], "partial")
+        self.assertEqual(report["cpf_payments"]["payment_percentage"], 25.0)
         self.assertEqual(report["totals"]["personal_paid"], 600)
         self.assertEqual(report["totals"]["remaining"], 0)
         self.assertIn("600,00 €", self._card_text(self._render_report(report), "financial-card--paid"))
@@ -271,6 +279,41 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
                     report = gestion_app._session_financial_report({}, self.session)
                 self.assertEqual(report["cpf_payments"]["totals"], {"paid": 0, "remaining": 0, "unverified": 1000})
                 self.assertFalse(report["cpf_payments"]["rows"][0]["known"])
+
+    def test_cpf_dossier_stage_is_visible_without_an_invoice_or_known_payment(self):
+        data = {"wedof_links": [
+            {"active": True, "session_id": "session-1", "trainee_id": "trainee-1",
+             "cpf_snapshot": {"state": "serviceDoneValidated", "billing_state": "notBilled"}},
+            {"active": False, "session_id": "session-1", "trainee_id": "trainee-1",
+             "cpf_snapshot": {"state": "inTraining", "invoice_number": "OLD"}},
+            {"active": True, "session_id": "other-session", "trainee_id": "trainee-1",
+             "cpf_snapshot": {"state": "accepted", "invoice_number": "OTHER"}},
+        ]}
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=[]):
+            report = gestion_app._session_financial_report(data, self.session)
+        cpf = report["cpf_payments"]
+        self.assertEqual(cpf["rows"][0]["stage_label"], "Service fait validé")
+        self.assertEqual(cpf["rows"][0]["invoice_status"], "not_issued")
+        self.assertFalse(cpf["rows"][0]["known"])
+        self.assertEqual(cpf["payment_percentage"], 0)
+        self.assertEqual(cpf["unverified_percentage"], 100)
+        html = self._render_report(report)
+        self.assertIn("Service fait validé", html)
+        self.assertIn("Non émise", html)
+        self.assertNotIn("OLD", html)
+        self.assertNotIn("OTHER", html)
+
+    def test_cpf_legacy_invoice_is_visible_and_complete_payment_reaches_100_percent(self):
+        self.session["trainees"][0]["qonto_invoice"] = {
+            "financing_type": "CPF", "qonto_invoice_id": "legacy-id",
+            "qonto_invoice_number": "CPF-LEGACY", "qonto_invoice_status": "paid",
+        }
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=[]):
+            cpf = gestion_app._session_financial_report({}, self.session)["cpf_payments"]
+        self.assertEqual(cpf["rows"][0]["invoice_label"], "Facture émise")
+        self.assertEqual(cpf["rows"][0]["invoice_number"], "CPF-LEGACY")
+        self.assertEqual(cpf["payment_percentage"], 100)
+        self.assertEqual(cpf["unverified_percentage"], 0)
 
     def test_cpf_summary_ignores_inactive_links_and_cancelled_registrations(self):
         self.session["trainees"].append({
@@ -294,6 +337,7 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
              patch.object(gestion_app, "find_qonto_invoice_by_number", side_effect=AssertionError("No Qonto request")):
             report = gestion_app._session_financial_report(data, self.session)
         self.assertEqual(report["cpf_payments"]["rows"], [])
+        self.assertEqual(report["cpf_payments"]["payment_percentage"], 0)
         self.assertIn("Aucun financement CPF dans cette session.", self._render_report(report))
 
     def test_same_cpf_invoice_cannot_be_counted_for_two_trainees(self):
