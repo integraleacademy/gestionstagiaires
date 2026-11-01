@@ -45224,13 +45224,19 @@ def _manual_bank_check_remote_installments(line):
             raise ValueError('Un ancien prélèvement reste actif ou non annulé dans Qonto. Vérifiez son annulation bancaire avant d’affecter le virement.')
         for page in range(1, 21):
             response = list_qonto_direct_debit_collections(sid, page=page, per_page=100)
-            for collection in _qonto_collection_items(response):
+            if not any(isinstance(response.get(key), list) for key in ('direct_debit_collections', 'collections', 'items')):
+                raise ValueError('La réponse des anciens prélèvements Qonto est incomplète.')
+            collections = _qonto_collection_items(response)
+            for collection in collections:
                 if str(collection.get('status') or '').lower() not in inactive:
                     raise ValueError('Qonto signale un prélèvement encaissé ou encore en cours sur cet ancien échéancier. Vérifiez-le avant d’affecter le virement.')
-            next_page = (response.get('meta') or {}).get('next_page')
-            if next_page in (None, ''):
+            meta = response.get('meta') if isinstance(response.get('meta'), dict) else {}
+            next_page = meta.get('next_page', meta.get('nextPage'))
+            more = _qonto_invoice_list_has_next_page(response, page, len(collections), 100)
+            if not more:
                 break
-            if page == 20 or str(next_page) != str(page + 1):
+            if (page == 20 or (next_page not in (None, '', 0, False, True, '0')
+                              and str(next_page) != str(page + 1))):
                 raise ValueError('La vérification de l’ancien échéancier Qonto est incomplète. Réessayez après synchronisation.')
 
 
