@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Test EDOF direct · Intégrale Academy</title>
+  <link rel="stylesheet" href="/admin/edof-test/assets/page.css">
+  <script src="/admin/edof-test/assets/page.js" defer></script>
+</head>
+<body>
+  <header><a href="/admin/sessions">← Gestion Stagiaires</a><span>INTÉGRALE <b>ACADEMY</b></span><span class="badge">TEST V2</span></header>
+  <main data-csrf="{{ csrf }}">
+    <div class="intro"><p class="eyebrow">CONNEXION CPF · PREMIER ESSAI</p><h1>Votre dossier EDOF,<br>dans votre outil.</h1><p>Transmettez un dossier ouvert dans votre navigateur et vérifiez les informations reçues.</p></div>
+    <div class="notice"><strong>Essai en lecture seule</strong><span>Le résultat reste dans cet aperçu. Il ne modifie aucun dossier EDOF, aucune fiche stagiaire et ne déclenche aucun envoi.</span></div>
+    <div class="setup">
+      <section class="card"><span class="step">01</span><h2>Installer le module Chrome</h2><p>Une seule installation sur votre ordinateur.</p><a class="button secondary" href="/admin/edof-test/extension.zip">Télécharger le module</a><details><summary>Comment l’installer</summary><ol><li>Décompressez le fichier téléchargé.</li><li>Ouvrez <code>chrome://extensions</code> dans Chrome.</li><li>Activez « Mode développeur », puis « Charger l’extension non empaquetée ».</li><li>Sélectionnez le dossier <strong>integrale-edof-test</strong>, qui contient <code>manifest.json</code>.</li><li>Fermez puis rouvrez les outils de développement de votre onglet EDOF.</li></ol></details></section>
+      <section class="card"><span class="step">02</span><h2>Préparer un dossier</h2><p>Saisissez le numéro CPF du dossier que vous souhaitez lire.</p><form id="prepare-form"><label for="folder-id">Numéro du dossier CPF</label><input id="folder-id" name="folder_id" inputmode="numeric" pattern="[0-9]{6,20}" maxlength="20" placeholder="Numéro du dossier" required autocomplete="off"><button class="button" type="submit">Créer le code d’essai</button></form><div id="pairing" hidden><label for="pair-code">Code à coller dans le module Chrome</label><textarea id="pair-code" readonly rows="3" autocomplete="off"></textarea><button id="copy-code" class="button secondary" type="button">Copier le code</button><small id="expiry"></small></div><p id="prepare-message" role="status" aria-live="polite"></p></section>
+      <section class="card"><span class="step">03</span><h2>Transmettre depuis EDOF</h2><ol><li>Connectez-vous normalement à EDOF et ouvrez le dossier choisi.</li><li>Ouvrez les outils de développement : <strong>⌥ ⌘ I</strong> sur Mac.</li><li>Choisissez l’onglet <strong>Intégrale EDOF</strong> (éventuellement dans le menu <strong>»</strong>).</li><li>Collez le code, cliquez sur <strong>Préparer la lecture</strong>, puis rechargez le dossier EDOF.</li><li>Vérifiez le dossier détecté et cliquez sur <strong>Transmettre à Test V2</strong>.</li></ol><a href="/admin/edof-test" class="button secondary">Afficher le résultat</a></section>
+    </div>
+    <section class="result card">
+      <div class="section-head"><div><p class="eyebrow">RÉSULTAT DE L’ESSAI</p><h2>{{ 'Dossier reçu' if latest else 'En attente de votre dossier' }}</h2></div>{% if latest %}<button id="clear-result" class="button secondary" type="button">Effacer cet essai</button>{% endif %}</div>
+      {% if latest %}
+        {% set f = latest.fields %}
+        <p class="received">Dossier {{ f.folder_id }} · reçu le {{ latest.received_at[:19]|replace('T',' à ') }} UTC</p>
+        <div class="result-grid"><div><h3>Informations EDOF</h3><dl>
+          <dt>Stagiaire</dt><dd>{{ f.first_name or '—' }} {{ f.last_name or '' }}</dd>
+          <dt>E-mail</dt><dd>{{ f.email or 'Non renseigné' }}</dd>
+          <dt>Formation</dt><dd>{{ f.title or 'Non renseignée' }}</dd>
+          <dt>Session EDOF</dt><dd>{{ f.edof_session_id or 'Non renseignée' }}</dd>
+          <dt>Dates du dossier</dt><dd>{{ f.start_date or '—' }} → {{ f.end_date or '—' }}</dd>
+          <dt>Dates de la session</dt><dd>{{ f.session_start_date or '—' }} → {{ f.session_end_date or '—' }}</dd>
+          <dt>Statut pédagogique</dt><dd>{{ state_labels.get(f.state, f.state or 'Non renseigné') }}</dd>
+          <dt>Montant TTC du dossier</dt><dd>{{ (f.total_incl ~ ' €') if f.total_incl is not none else 'Non renseigné' }}</dd>
+          <dt>Facturation</dt><dd>{{ f.billing_state or 'Non renseignée dans cette réponse' }}</dd>
+          <dt>Paiement</dt><dd>{{ f.payment_state or 'Non renseigné dans cette réponse' }}</dd>
+        </dl><p class="hint">Le montant du dossier n’atteste pas son règlement. Les champs vides restent inconnus.</p></div>
+        <div><h3>Correspondance dans Test V2</h3>
+        {% if comparison.status == 'found' %}<p class="match">Lien CPF existant retrouvé par le numéro du dossier.</p><dl><dt>Stagiaire local</dt><dd>{{ comparison.first_name or '—' }} {{ comparison.last_name or '' }}</dd><dt>E-mail local</dt><dd>{{ comparison.email or 'Non renseigné' }}</dd><dt>Session locale</dt><dd>{{ comparison.session_name or '—' }}</dd><dt>Dates locales</dt><dd>{{ comparison.start_date or '—' }} → {{ comparison.end_date or '—' }}</dd></dl><p class="hint">Comparez ces valeurs avec celles d’EDOF. Aucune donnée locale n’a été remplacée.</p>
+        {% elif comparison.status == 'ambiguous' %}<p>Plusieurs correspondances existent pour ce numéro. Un contrôle sera nécessaire avant tout rattachement.</p>
+        {% elif comparison.status == 'stale' %}<p>Le lien CPF existe, mais sa fiche locale n’a pas été retrouvée dans Test V2.</p>
+        {% elif comparison.status == 'unavailable' %}<p>Le dossier EDOF a été reçu. Les données locales sont indisponibles pour la comparaison.</p>
+        {% else %}<p>Aucun lien CPF existant ne correspond à ce numéro dans les données de test. Le transfert EDOF peut être vérifié ici ; le rattachement restera à préparer.</p>{% endif %}
+        <div class="next"><strong>Ce que cet essai valide</strong><p>La transmission d’un dossier depuis votre session EDOF et la lecture de ses champs.</p><strong>Étape suivante</strong><p>Vérifier une nouvelle lecture après reconnexion à EFP Connect. La synchronisation autonome depuis Render reste à développer et à valider.</p></div></div></div>
+      {% else %}<p class="empty">Le dossier apparaîtra ici après sa transmission depuis le module Chrome. Aucun résultat réel n’a encore été reçu dans cette session.</p>{% endif %}
+    </section>
+    <footer>Le module transmet uniquement les champs affichés dans l’aperçu de lecture. Vos cookies et jetons EDOF restent dans Chrome. Le résultat est consultable pendant 24 heures et peut être effacé à tout moment.</footer>
+  </main>
+</body>
+</html>
