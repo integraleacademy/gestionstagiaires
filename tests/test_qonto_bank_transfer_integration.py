@@ -394,3 +394,70 @@ def test_manual_allocation_blocks_other_payment_modes(third_party, change):
     third_party[1]['billing_lines'][0].update(change)
     assert search_third_party(third_party).status_code == 409
     third_party[3].assert_not_called()
+
+
+def removed_installment(third_party, subscription_id=''):
+    row = {'amount':1250, 'status':'scheduled', 'date':'2026-11-04',
+           'tracking_removed_at':'2026-10-30T12:00:00Z', 'excluded_from_schedule_totals':True}
+    if subscription_id:
+        row['qonto_direct_debit_subscription_id'] = subscription_id
+    third_party[1]['billing_lines'][0]['directDebitInstallments'] = [row]
+    return row
+
+
+def test_removed_local_schedule_does_not_block_received_transfer(third_party):
+    removed_installment(third_party)
+    response = assign_third_party(third_party)
+    assert response.status_code == 200, response.json
+    assert response.json['remaining_cents'] == 0
+    assert third_party[1]['billing_lines'][0]['directDebitInstallments'][0]['tracking_removed_at']
+
+
+def test_removed_bank_schedule_requires_verified_cancellation(third_party, monkeypatch):
+    removed_installment(third_party, 'old-subscription')
+    subscription = Mock(return_value={'direct_debit_subscription':{'id':'old-subscription','status':'canceled'}})
+    collections = Mock(return_value={'direct_debit_collections':[], 'meta':{'next_page':None}})
+    monkeypatch.setattr(gestion_app, 'get_qonto_direct_debit_subscription', subscription)
+    monkeypatch.setattr(gestion_app, 'list_qonto_direct_debit_collections', collections)
+    response = assign_third_party(third_party)
+    assert response.status_code == 200, response.json
+    assert subscription.call_count == collections.call_count == 2
+
+
+def test_removed_bank_schedule_still_active_blocks(third_party, monkeypatch):
+    removed_installment(third_party, 'old-subscription')
+    monkeypatch.setattr(gestion_app, 'get_qonto_direct_debit_subscription', lambda sid: {
+        'direct_debit_subscription':{'id':sid,'status':'active'}})
+    response = search_third_party(third_party)
+    assert response.status_code == 400
+    assert 'reste actif' in response.json['error']
+    third_party[3].assert_not_called()
+
+
+@pytest.mark.parametrize('status', ['completed', 'pending', 'unknown'])
+def test_canceled_subscription_with_paid_or_pending_collection_blocks(third_party, monkeypatch, status):
+    removed_installment(third_party, 'old-subscription')
+    monkeypatch.setattr(gestion_app, 'get_qonto_direct_debit_subscription', lambda sid: {
+        'direct_debit_subscription':{'id':sid,'status':'canceled'}})
+    monkeypatch.setattr(gestion_app, 'list_qonto_direct_debit_collections', lambda *args, **kwargs: {
+        'direct_debit_collections':[{'id':'collection','status':status}], 'meta':{'next_page':None}})
+    assert search_third_party(third_party).status_code == 400
+    third_party[3].assert_not_called()
+
+
+def test_removed_bank_schedule_is_rechecked_at_assignment(third_party, monkeypatch):
+    removed_installment(third_party, 'old-subscription')
+    remote = {'direct_debit_subscription':{'id':'old-subscription','status':'canceled'}}
+    monkeypatch.setattr(gestion_app, 'get_qonto_direct_debit_subscription', lambda sid: remote)
+    monkeypatch.setattr(gestion_app, 'list_qonto_direct_debit_collections', lambda *args, **kwargs: {
+        'direct_debit_collections':[], 'meta':{'next_page':None}})
+    search = search_third_party(third_party)
+    remote['direct_debit_subscription']['status'] = 'active'
+    assert assign_third_party(third_party, search).status_code == 409
+    assert not third_party[1]['billing_lines'][0].get('qontoBankTransfers')
+
+
+def test_removed_paid_collection_cannot_be_ignored(third_party):
+    removed_installment(third_party)['status'] = 'completed'
+    assert search_third_party(third_party).status_code == 409
+    third_party[3].assert_not_called()
