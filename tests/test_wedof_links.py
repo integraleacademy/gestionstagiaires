@@ -101,21 +101,20 @@ class WedofLinksRouteTests(unittest.TestCase):
             self.assertEqual(response.status_code, 302); self.assertEqual(saved["wedof_links"][0]["external_id"], "W1")
         self.assertEqual([call.args[0] for call in remote.list_registration_folders.call_args_list], ["accepted", "inTraining"])
 
-    def test_preview_does_not_write(self):
+    def test_preview_persists_locally_without_remote_declarations(self):
         with self.client.session_transaction() as session: session["admin_logged_in"] = True
-        remote = Mock(); remote.list_registration_folders.side_effect = [[], []]
-        with patch.object(gestion_app, "WedofClient", return_value=remote), patch.object(gestion_app, "load_data", return_value=data()), patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), patch.object(gestion_app, "_write_json_with_backups") as write:
+        remote = Mock(); remote.list_registration_folders.return_value = []
+        with patch.object(gestion_app, "WedofClient", return_value=remote), patch.object(gestion_app, "load_data", return_value=data()), patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), patch.object(gestion_app, "_atomic_update_data") as write:
             response = self.client.post("/admin/wedof/matching/preview")
-        write.assert_not_called()
+        self.assertEqual(response.status_code, 200)
+        write.assert_called_once()
+        remote.declare_registration_folder_in_training.assert_not_called()
+        remote.declare_registration_folder_service_done.assert_not_called()
         html = response.get_data(as_text=True)
         self.assertIn('class="app-shell"', html)
         self.assertIn('class="partner-sidebar admin-sidebar"', html)
         self.assertIn("wedof-preview-table-wrap", html)
-        self.assertIn('aria-label="Prévisualisation des correspondances WEDOF"', html)
-        self.assertIn("Faites défiler le tableau horizontalement", html)
-        self.assertIn("max-height:calc(100vh - 340px)", html)
-        self.assertIn("position:sticky;top:0", html)
-        self.assertIn("Association locale", html)
+        self.assertIn('aria-label="Dossiers WEDOF filtrés"', html)
 
 
 if __name__ == "__main__": unittest.main()

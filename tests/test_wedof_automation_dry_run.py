@@ -2,10 +2,12 @@ import datetime as dt
 import os
 import unittest
 import runpy
+import sys
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 import app as gestion_app
+from scripts import scheduled_job_client
 from wedof_automation import (automation_dashboard_state, build_folder_automation_status,
                               evaluate_action, is_wedof_maintenance_window,
                               record_maintenance_skip, run_dry_run,
@@ -288,7 +290,7 @@ class WedofDryRunTests(unittest.TestCase):
                "WEDOF_RECONCILIATION_ENABLED": "true"}
         with patch.dict(os.environ, env, clear=False), patch.object(gestion_app, "run_wedof_automation_dry_run", return_value=skipped):
             admin = client.post("/admin/wedof/automation/analyze")
-            self.assertEqual((admin.status_code, admin.headers["Location"].endswith("/admin/wedof")), (302, True))
+            self.assertEqual((admin.status_code, admin.headers["Location"]), (302, "/admin/wedof?section=state"))
             with client.session_transaction() as flask_session:
                 flashes = flask_session.get("_flashes", [])
             self.assertTrue(any(category == "info" and "Analyse WEDOF suspendue entre 05:00 et 07:00" in message
@@ -299,10 +301,12 @@ class WedofDryRunTests(unittest.TestCase):
                                                "mode": "dry_run", "next_action": "automatic_retry_on_next_reconciliation"})
         class Response:
             ok = True
+            status_code = 200
             text = '{"ok":true,"status":"skipped_maintenance_window"}'
         with patch.dict(os.environ, {"WEDOF_RECONCILIATION_URL": "https://example.invalid/cron",
                                      "CRON_SECRET": "not-a-real-secret"}, clear=False), \
-             patch("requests.post", return_value=Response()) as post:
+             patch("requests.post", return_value=Response()) as post, \
+             patch.dict(sys.modules, {"scheduled_job_client": scheduled_job_client}):
             runpy.run_path("scripts/run_wedof_reconciliation.py", run_name="__main__")
             post.assert_called_once()
 

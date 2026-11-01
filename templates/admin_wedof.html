@@ -281,6 +281,14 @@
     </div>
   {% endif %}
 
+  {% set discovery = (wedof_sync or {}).get('accepted_discovery', {}) %}
+  {% if wedof_reconciliation_enabled and discovery.status == 'error' %}
+    <div class="wedof-notice is-warning" role="alert">
+      <strong>La recherche de nouveaux dossiers WEDOF a échoué</strong>
+      <span>Les dossiers déjà suivis restent programmés. Nouvelle tentative prévue le {{ discovery.next_due_at|frdatetime }}.</span>
+    </div>
+  {% endif %}
+
   {% if wedof_last_run and wedof_last_run.status == 'retry_scheduled' %}
     <div class="wedof-notice is-warning" role="alert">
       <strong>WEDOF ne répond pas correctement : nouvelle tentative automatique programmée</strong>
@@ -401,9 +409,9 @@
                       {% if item.retry_at %} · nouvel essai le {{ item.retry_at|frdatetime }}{% endif %}
                     </small>
                   {% elif item.automation_status == 'dry_run_due' %}
-                    <span class="wedof-badge is-warning">Prête en mode test</span>
+                    <span class="wedof-badge is-warning">À déclarer au prochain passage</span>
                   {% elif item.automation_status == 'dry_run_due_late' %}
-                    <span class="wedof-badge is-danger">En retard · prête en mode test</span>
+                    <span class="wedof-badge is-danger">En retard · rattrapage prévu</span>
                   {% elif item.automation_status == 'already_done' %}
                     <span class="wedof-badge is-info">Déjà réalisé dans WEDOF</span>
                   {% elif item.automation_status == 'completed_in_wedof' %}
@@ -550,7 +558,7 @@
           <div><span>Clé API configurée</span><strong>{{ 'Oui' if wedof_api_key_configured else 'Non' }}</strong></div>
           <div><span>Déclarations automatiques actives</span><strong>{{ 'Oui' if wedof_automation_enabled else 'Non' }}</strong></div>
           <div><span>Cron de déclarations autorisé</span><strong>{{ 'Oui' if wedof_cron_enabled else 'Non' }}</strong></div>
-          <div><span>Réconciliation en lecture seule</span><strong>{{ 'Oui' if wedof_reconciliation_enabled else 'Non' }}</strong></div>
+          <div><span>Détection des nouveaux dossiers acceptés · chaque heure</span><strong>{{ 'Oui' if wedof_reconciliation_enabled else 'Non' }}</strong></div>
           <div><span>Mode test sans envoi</span><strong>{{ 'Oui' if wedof_dry_run else 'Non' }}</strong></div>
         </div>
         <form method="post" action="{{ url_for('admin_test_wedof_api') }}">

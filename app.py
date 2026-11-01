@@ -124,6 +124,7 @@ from wedof_automation import (automation_dashboard_state, build_automation_dashb
                               next_automatic_attempt,
                               record_maintenance_skip, run_dry_run, run_live_automation,
                               sync_folder_automation_status)
+from wedof_discovery import merge_verified_folders, parse_timestamp as parse_wedof_timestamp
 from cpf_tracking import build_cpf_view, has_cpf_financing, has_generated_cpf_invoice
 from vtc_cpf_guidance import build_confirmation_content
 import vtc_elearning_activation
@@ -19391,6 +19392,59 @@ def _wedof_live_mode_enabled() -> bool:
     return not _wedof_automation_kill_switch_active()
 
 
+def _refresh_wedof_accepted_folders(client, *, now=None) -> Dict[str, Any]:
+    """Hourly GET-only discovery, reserved durably before any remote call.
+
+    Called under WEDOF_AUTOMATION_LOCK_FILE. A failed discovery leaves existing
+    declarations runnable and cannot start another scan at every five-minute tick.
+    """
+    if not read_env_bool("WEDOF_RECONCILIATION_ENABLED", default=False):
+        return {"status": "disabled"}
+    current = now or datetime.datetime.now(ZoneInfo("Europe/Paris"))
+    if is_wedof_maintenance_window(current)["active"]:
+        return {"status": "skipped_maintenance_window"}
+    reserved = False
+    result = {"status": "not_due"}
+
+    def reserve(canonical):
+        nonlocal reserved, result
+        sync = canonical.setdefault("wedof_automation_sync", {})
+        discovery = sync.setdefault("accepted_discovery", {})
+        due = parse_wedof_timestamp(discovery.get("next_due_at"))
+        if due and current < due:
+            result["next_due_at"] = discovery["next_due_at"]
+            return canonical
+        reserved = True
+        discovery.update(status="running", last_attempt_at=current.isoformat(),
+                         next_due_at=(current + datetime.timedelta(hours=1)).isoformat())
+        return canonical
+
+    _atomic_update_data(reserve)
+    if not reserved:
+        return result
+    try:
+        folders = client.list_registration_folders("accepted")
+
+        def persist(canonical):
+            nonlocal result
+            counts = merge_verified_folders(canonical, folders, observed_at=current)
+            result = {"status": "success", "folders": len(folders), **counts}
+            canonical["wedof_automation_sync"]["accepted_discovery"].update(
+                **result, last_success_at=current.isoformat(), last_error_code=None)
+            return canonical
+
+        _atomic_update_data(persist)
+    except Exception as exc:
+        result = {"status": "error", "error": str(getattr(exc, "code", "wedof_discovery_error"))}
+        def persist_error(canonical):
+            canonical["wedof_automation_sync"]["accepted_discovery"].update(
+                status="error", last_error_code=result["error"])
+            return canonical
+        _atomic_update_data(persist_error)
+        app.logger.warning("Découverte WEDOF impossible erreur=%s", result["error"])
+    return result
+
+
 def run_wedof_automation_live() -> Dict[str, Any]:
     """Exécute et persiste le live sous un verrou interprocessus exclusif."""
     if not _wedof_live_mode_enabled():
@@ -19410,14 +19464,17 @@ def run_wedof_automation_live() -> Dict[str, Any]:
         )
         if not lease.get("acquired", False):
             return {"ok": False, "status": "already_running", "mode": "live"}
-        working = load_data()
+        client = WedofClient()
+        discovery = _refresh_wedof_accepted_folders(client)
+        working = load_data(run_background_tasks=False)
         def persist(snapshot):
             def update(canonical):
                 canonical["wedof_automation_actions"] = snapshot.get("wedof_automation_actions", [])
                 canonical["wedof_automation_status"] = snapshot.get("wedof_automation_status", [])
                 return canonical
             _atomic_update_data(update)
-        summary = run_live_automation(WedofClient(), working, persist_reservation=persist)
+        summary = run_live_automation(client, working, persist_reservation=persist)
+        summary["discovery"] = discovery
         def persist_final(canonical):
             for key in ("wedof_automation_actions", "wedof_automation_status", "wedof_automation_runs"):
                 canonical[key] = working.get(key, [])
@@ -19586,10 +19643,31 @@ def _decorate_wedof_preview(preview: Dict[str, Any], data: Dict[str, Any]) -> No
             result["date_consistency"] = evaluate_wedof_link_date_consistency({}, matched_session, result)
 
 
+def _serialize_wedof_listing_refresh(view):
+    """Keep a manual listing and its merge separate from live declarations."""
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        os.makedirs(PERSIST_DIR, exist_ok=True)
+        with open(WEDOF_AUTOMATION_LOCK_FILE, "a+", encoding="utf-8") as lock_file:
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                flash("Une actualisation WEDOF est déjà en cours. Réessayez dans quelques instants.", "info")
+                return redirect(url_for("admin_wedof_requests", section="state"))
+            try:
+                return view(*args, **kwargs)
+            finally:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+    return wrapped
+
+
 @app.post("/admin/wedof/matching/preview")
 @admin_login_required
+@admin_write_required
+@_serialize_wedof_listing_refresh
 def admin_wedof_matching_preview():
     started_at = time.monotonic()
+    observed_at = datetime.datetime.now(ZoneInfo("Europe/Paris"))
     try:
         client = WedofClient()
         accepted = client.list_registration_folders("accepted")
@@ -19600,12 +19678,17 @@ def admin_wedof_matching_preview():
                 service_done.extend(client.list_registration_folders(remote_state))
             except StopIteration:  # Compatibilité avec les doubles de tests historiques.
                 break
+        def persist_discovered(canonical):
+            merge_verified_folders(canonical, accepted + in_training + service_done,
+                                   observed_at=observed_at)
+            return canonical
+        _atomic_update_data(persist_discovered)
         data = load_data(run_background_tasks=False)
         preview = build_matching_preview(accepted + in_training, data)
         _decorate_wedof_preview(preview, data)
         dashboard = build_automation_dashboard(
             accepted + in_training + service_done, links=data.get("wedof_links", []),
-            statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_exceptions", []),
+            statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_blocks", []),
             local_associations=_wedof_links_for_display(data), actions=data.get("wedof_automation_actions", []),
             manual_anomalies=data.get("wedof_manual_anomalies", []),
             invoiced_external_ids=_wedof_invoiced_external_ids(data),
