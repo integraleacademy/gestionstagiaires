@@ -49,7 +49,9 @@ class WedofReadOnlyClientTests(unittest.TestCase):
         self.assertEqual(len(client.list_registration_folders("inTraining")), 1)
         self.assertEqual([call.kwargs["params"]["state"] for call in http.get.call_args_list], ["accepted", "inTraining"])
         for call in http.get.call_args_list:
-            self.assertEqual(call.kwargs["headers"], {"Accept": "application/json", "X-Api-Key": "secret-test-key"})
+            self.assertEqual(call.kwargs["headers"]["Accept"], "application/json")
+            self.assertEqual(call.kwargs["headers"]["X-Api-Key"], "secret-test-key")
+            self.assertNotIn("Authorization", call.kwargs["headers"])
         for method in ("post", "put", "patch", "delete"):
             getattr(http, method).assert_not_called()
 
@@ -161,14 +163,17 @@ class PreviewRouteTests(unittest.TestCase):
         self.assertIn(response.status_code, (302, 303))
         client.assert_not_called()
 
-    def test_route_is_read_only_and_does_not_pass_raw_folder(self):
+    def test_route_persists_verified_schedules_without_remote_writes_or_raw_data(self):
         with self.client.session_transaction() as flask_session:
             flask_session["admin_logged_in"] = True
         client = Mock()
         client.list_registration_folders.side_effect = [[folder(privateFinancial="NEVER_RENDER")], []]
         fake_data = {"sessions": [session([trainee()])]}
+        def atomic_update(mutator):
+            return mutator(fake_data)
         with patch.object(gestion_app, "WedofClient", return_value=client), \
              patch.object(gestion_app, "load_data", return_value=fake_data), \
+             patch.object(gestion_app, "_atomic_update_data", side_effect=atomic_update), \
              patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), \
              patch.object(gestion_app, "save_data") as save_data, \
              patch.object(gestion_app, "_save_wedof_webhooks") as save_webhooks:
@@ -178,8 +183,13 @@ class PreviewRouteTests(unittest.TestCase):
         self.assertEqual(client.list_registration_folders.call_args_list[0].args, ("accepted",))
         self.assertEqual(client.list_registration_folders.call_args_list[1].args, ("inTraining",))
         save_data.assert_not_called(); save_webhooks.assert_not_called()
+        self.assertEqual(fake_data["wedof_automation_status"][0]["external_id"], "W-123")
+        self.assertNotIn("NEVER_RENDER", str(fake_data))
+        client.declare_registration_folder_in_training.assert_not_called()
+        client.declare_registration_folder_service_done.assert_not_called()
         self.assertNotIn("NEVER_RENDER", html)
-        self.assertIn("Correspondance fiable", html)
+        self.assertIn("W-123", html)
+        self.assertIn("Dossiers WEDOF", html)
 
     def test_api_key_is_absent_from_logs_and_messages(self):
         http = Mock(); http.get.return_value = api_response([])

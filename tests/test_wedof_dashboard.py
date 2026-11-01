@@ -424,7 +424,7 @@ class WedofDashboardViewTests(unittest.TestCase):
         self.assertIn("Automatisation active", html)
         self.assertIn("Déclarations automatiques actives</span><strong>Oui", html)
         self.assertIn("Cron de déclarations autorisé</span><strong>Oui", html)
-        self.assertIn("Réconciliation en lecture seule</span><strong>Oui", html)
+        self.assertIn("Détection des nouveaux dossiers acceptés · chaque heure</span><strong>Oui", html)
 
     def test_admin_explains_a_quota_block_without_hiding_the_due_action(self):
         data = {

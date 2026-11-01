@@ -150,7 +150,9 @@ class ManualLinkTests(unittest.TestCase):
         self.assertEqual(WedofClient(api_key="test-key", session=http).get_registration_folder("W1")["externalId"], "W1")
         call = http.get.call_args
         self.assertEqual(call.args[0], "https://www.wedof.fr/api/registrationFolders/W1")
-        self.assertEqual(call.kwargs["headers"], {"Accept": "application/json", "X-Api-Key": "test-key"})
+        self.assertEqual(call.kwargs["headers"]["Accept"], "application/json")
+        self.assertEqual(call.kwargs["headers"]["X-Api-Key"], "test-key")
+        self.assertNotIn("Authorization", call.kwargs["headers"])
         for method in ("post", "put", "patch", "delete"):
             getattr(http, method).assert_not_called()
 
