@@ -45158,7 +45158,12 @@ def _manual_bank_line_error(line):
         return 'Choisissez la ligne de financement personnel du stagiaire.'
     if line.get('registrationCancelled') or line.get('invoiceStatus') in {'draft', 'cancelled', 'canceled', 'deleted', 'control'}:
         return 'Cette ligne de facturation ne permet pas l’affectation d’un virement.'
-    if _sepa_installments(line):
+    installments = _sepa_installments(line)
+    if any(str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES for item in installments):
+        return 'Un prélèvement est déjà encaissé : synchronisez le suivi financier avant l’affectation.'
+    if any(_installment_counts_toward_schedule(item)
+           and str(item.get('status') or '').lower() not in {'cancelled', 'canceled'}
+           for item in installments):
         return 'Un échéancier de prélèvements existe : vérifiez-le dans Qonto avant d’affecter un virement.'
     if line.get('cashPaymentEnabled') or line.get('manualPaymentInvoiceId') or line.get('amountPaid') or line.get('amount_paid'):
         return 'Un autre règlement est déjà renseigné : vérifiez le suivi financier avant l’affectation.'
@@ -45174,13 +45179,41 @@ def _manual_bank_snapshot(line):
             'qontoInvoiceId', 'qontoDraftId', 'qontoBankTransfers', 'directDebitInstallments',
             'sepa_payment_plan', 'cashPaymentEnabled', 'manualPaymentInvoiceId',
             'amountPaid', 'amount_paid', 'registrationCancelled', 'qonto_amount_paid_cents',
-            'qontoRemoteAmountPaidCents')
+            'qontoRemoteAmountPaidCents', 'qonto_direct_debit_subscription_id')
     return hashlib.sha256(json.dumps({key: line.get(key) for key in keys},
                                     sort_keys=True, default=str).encode()).hexdigest()
 
 
+def _manual_bank_check_remote_installments(line):
+    """A removed tracking row is not evidence that its bank debit was canceled."""
+    subscription_ids = {str(line.get('qonto_direct_debit_subscription_id') or '').strip()}
+    for item in _sepa_installments(line):
+        sid = str(item.get('qonto_direct_debit_subscription_id') or '').strip()
+        if item.get('qonto_direct_debit_collection_id') and not sid:
+            raise ValueError('Un ancien prélèvement doit être vérifié dans Qonto avant l’affectation du virement.')
+        subscription_ids.add(sid)
+    inactive = {'canceled', 'cancelled', 'failed', 'rejected', 'declined', 'returned', 'refunded'}
+    for sid in sorted(subscription_ids - {''}):
+        subscription = _qonto_direct_debit_subscription_payload(get_qonto_direct_debit_subscription(sid))
+        if str(subscription.get('id') or '') != sid:
+            raise ValueError('L’annulation de l’ancien prélèvement n’a pas pu être vérifiée dans Qonto.')
+        if str(subscription.get('status') or '').lower() not in {'cancelled', 'canceled'}:
+            raise ValueError('Un ancien prélèvement reste actif ou non annulé dans Qonto. Vérifiez son annulation bancaire avant d’affecter le virement.')
+        for page in range(1, 21):
+            response = list_qonto_direct_debit_collections(sid, page=page, per_page=100)
+            for collection in _qonto_collection_items(response):
+                if str(collection.get('status') or '').lower() not in inactive:
+                    raise ValueError('Qonto signale un prélèvement encaissé ou encore en cours sur cet ancien échéancier. Vérifiez-le avant d’affecter le virement.')
+            next_page = (response.get('meta') or {}).get('next_page')
+            if next_page in (None, ''):
+                break
+            if page == 20 or str(next_page) != str(page + 1):
+                raise ValueError('La vérification de l’ancien échéancier Qonto est incomplète. Réessayez après synchronisation.')
+
+
 def _manual_bank_check_remote_invoice(line):
     """Read only: refuse mixed/ambiguous payments and changed invoice amounts."""
+    _manual_bank_check_remote_installments(line)
     invoice_id = line.get('qontoInvoiceId') or line.get('qontoDraftId')
     if not invoice_id:
         if line.get('qonto_amount_paid_cents'):
