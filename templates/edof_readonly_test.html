@@ -34,12 +34,29 @@
           <dt>Paiement</dt><dd>{{ f.payment_state or 'Non renseigné dans cette réponse' }}</dd>
         </dl><p class="hint">Le montant du dossier n’atteste pas son règlement. Les champs vides restent inconnus.</p></div>
         <div><h3>Correspondance dans Test V2</h3>
-        {% if comparison.status == 'found' %}<p class="match">Lien CPF existant retrouvé par le numéro du dossier.</p><dl><dt>Stagiaire local</dt><dd>{{ comparison.first_name or '—' }} {{ comparison.last_name or '' }}</dd><dt>E-mail local</dt><dd>{{ comparison.email or 'Non renseigné' }}</dd><dt>Session locale</dt><dd>{{ comparison.session_name or '—' }}</dd><dt>Dates locales</dt><dd>{{ comparison.start_date or '—' }} → {{ comparison.end_date or '—' }}</dd></dl><p class="hint">Comparez ces valeurs avec celles d’EDOF. Aucune donnée locale n’a été remplacée.</p>
-        {% elif comparison.status == 'ambiguous' %}<p>Plusieurs correspondances existent pour ce numéro. Un contrôle sera nécessaire avant tout rattachement.</p>
-        {% elif comparison.status == 'stale' %}<p>Le lien CPF existe, mais sa fiche locale n’a pas été retrouvée dans Test V2.</p>
+        {% if comparison.status != 'unavailable' %}<p class="search-count">{{ comparison.session_count }} session(s) et {{ comparison.registration_count }} inscription(s) examinées dans les données de test.</p>{% endif %}
+        {% if comparison.status == 'found' %}<p class="match">Lien CPF existant retrouvé par le numéro du dossier.</p>
+        {% elif comparison.status == 'suggested' %}<p class="match">Une correspondance proposée : nom, prénom, e-mail et dates concordent.</p>
+        {% elif comparison.status == 'review' %}<p class="review-note">Une fiche à vérifier : certains critères diffèrent ou manquent.</p>
+        {% elif comparison.status == 'ambiguous' %}<p class="review-note">{{ comparison.candidate_count }} fiches possibles. Une vérification est nécessaire pour choisir la bonne inscription.</p>
+        {% elif comparison.status == 'ambiguous_link' %}<p class="review-note">Plusieurs liens ou fiches locales existent pour ce numéro CPF. Le conflit doit être résolu avant tout rattachement.</p>
+        {% elif comparison.status == 'stale' %}<p class="review-note">Le lien CPF existe, mais sa fiche locale n’a pas été retrouvée dans Test V2.</p>
         {% elif comparison.status == 'unavailable' %}<p>Le dossier EDOF a été reçu. Les données locales sont indisponibles pour la comparaison.</p>
-        {% else %}<p>Aucun lien CPF existant ne correspond à ce numéro dans les données de test. Le transfert EDOF peut être vérifié ici ; le rattachement restera à préparer.</p>{% endif %}
-        <div class="next"><strong>Ce que cet essai valide</strong><p>La transmission d’un dossier depuis votre session EDOF et la lecture de ses champs.</p><strong>Étape suivante</strong><p>Vérifier une nouvelle lecture après reconnexion à EFP Connect. La synchronisation autonome depuis Render reste à développer et à valider.</p></div></div></div>
+        {% elif comparison.registration_count == 0 %}<p>Aucune inscription n’est présente dans les données de Test V2. Le dossier EDOF a bien été reçu ; il n’y a pas encore de fiche locale à comparer.</p>
+        {% else %}<p>Aucune fiche ne correspond au nom et prénom ou à l’e-mail reçus. La recherche porte uniquement sur les données présentes dans Test V2.</p>{% endif %}
+        {% for candidate in comparison.candidates or [] %}
+          <article class="candidate"><h4>{{ candidate.first_name or 'Prénom non renseigné' }} {{ candidate.last_name or '' }}</h4>
+            <dl><dt>E-mail local</dt><dd>{{ candidate.email or 'Non renseigné' }}</dd><dt>Session locale</dt><dd>{{ candidate.session_name or 'Sans intitulé' }}</dd><dt>Formation locale</dt><dd>{{ candidate.training_type or 'Non renseignée' }}</dd><dt>Dates locales</dt><dd>{{ candidate.start_date or '—' }} → {{ candidate.end_date or '—' }}</dd></dl>
+            <ul class="criteria" aria-label="Critères de comparaison">{% for check in candidate.checks %}<li class="{{ 'agrees' if check.matches is sameas true else 'differs' }}">{{ check.label }}</li>{% endfor %}</ul>
+            {% for issue in candidate.issues %}<p class="candidate-issue">{{ issue }}</p>{% endfor %}
+          </article>
+        {% endfor %}
+        {% if comparison.candidate_count|default(0) > (comparison.candidates|default([])|length) %}<p class="hint">Les {{ comparison.candidates|length }} premières fiches sont affichées sur {{ comparison.candidate_count }} correspondances possibles.</p>{% endif %}
+        {% if comparison.candidates %}<p class="hint">Vérifiez aussi la formation affichée. Ces propositions ne créent aucun rattachement et ne remplacent aucune donnée.</p>{% endif %}
+        {% if comparison.matching_sessions and comparison.status in ['absent', 'review', 'ambiguous'] %}
+          <details class="session-suggestions"><summary>{{ comparison.matching_session_count }} session(s) aux mêmes dates</summary><ul>{% for group in comparison.matching_sessions %}<li><strong>{{ group.session_name or 'Sans intitulé' }}</strong> · {{ group.training_type or 'Formation non renseignée' }}{% if group.archived %} · archivée{% endif %}<br>{{ group.start_date }} → {{ group.end_date }}</li>{% endfor %}</ul><p class="hint">Les dates seules ne suffisent pas à identifier la formation. {{ comparison.matching_sessions|length }} session(s) affichée(s).</p></details>
+        {% endif %}
+        <div class="next"><strong>Transfert reçu</strong><p>Les informations du dossier ont été transmises depuis votre navigateur. La comparaison utilise les inscriptions présentes dans Test V2.</p><strong>Suite du raccordement</strong><p>Le rattachement des fiches et la synchronisation automatique restent à développer et à valider. Cette page prépare leur vérification.</p></div></div></div>
       {% else %}<p class="empty">Le dossier apparaîtra ici après sa transmission depuis le module Chrome. Aucun résultat réel n’a encore été reçu dans cette session.</p>{% endif %}
     </section>
     <footer>Le module transmet uniquement les champs affichés dans l’aperçu de lecture. Vos cookies et jetons EDOF restent dans Chrome. Le résultat est consultable pendant 24 heures et peut être effacé à tout moment.</footer>

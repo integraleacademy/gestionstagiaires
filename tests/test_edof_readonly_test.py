@@ -113,7 +113,7 @@ def test_receive_is_single_use_and_cannot_write_business_data(web, observation):
     assert "Dossier reçu" in page.text
     assert "Camille" in page.text
     assert "Non renseigné dans cette réponse" in page.text
-    assert "Aucun lien CPF existant" in page.text
+    assert "Aucune inscription n’est présente" in page.text
     assert key not in page.text
     assert key.encode() not in web.store.path.read_bytes()
     assert web.store.path.stat().st_mode & 0o777 == 0o600
@@ -203,14 +203,43 @@ def test_production_is_disabled_even_with_test_host(monkeypatch):
         assert app.test_client().get("/api/edof-test/ping", base_url=pilot.TEST_ORIGIN).status_code == 404
 
 
-def test_exact_matching_only_and_ambiguity():
+def test_exact_matching_precedence_and_ambiguity():
     trainee = {"id": "T1", "first_name": "Camille", "last_name": "EXEMPLE"}
     data = {"sessions": [{"id": "S1", "trainees": [trainee]}], "wedof_links": []}
     before = copy.deepcopy(data)
-    assert pilot.local_comparison(data, FOLDER_ID)["status"] == "absent"
+    assert pilot.build_comparison(data, {"folder_id": FOLDER_ID})["status"] == "absent"
     assert data == before
     link = {"active": True, "external_id": FOLDER_ID, "session_id": "S1", "trainee_id": "T1"}
     data["wedof_links"] = [link]
-    assert pilot.local_comparison(data, FOLDER_ID)["status"] == "found"
+    assert pilot.build_comparison(data, {"folder_id": FOLDER_ID})["status"] == "found"
     data["wedof_links"].append(copy.deepcopy(link))
-    assert pilot.local_comparison(data, FOLDER_ID)["status"] == "ambiguous"
+    assert pilot.build_comparison(data, {"folder_id": FOLDER_ID})["status"] == "ambiguous_link"
+
+
+def test_matching_render_is_escaped_read_only_and_uses_existing_observation(web, observation):
+    local = {"sessions": [{"id": "S1", "name": "<script>private()</script>", "training_type": "APS",
+             "date_start": "2024-11-14", "date_end": "2024-12-14", "trainees": [{"id": "T1",
+             "first_name": "Camille", "last_name": "EXEMPLE", "email": "exemple@example.invalid",
+             "address": "NEVER_RENDER_PRIVATE_ADDRESS"}]}]}
+    web.data_path.write_text(json.dumps(local))
+    original_data = web.data_path.read_bytes()
+    assert deliver(web, prepare(web), observation).status_code == 201
+    with web.client.session_transaction() as sess:
+        owner = pilot.hashlib.sha256(sess["edof_test_owner"].encode()).hexdigest()
+    received_at = web.store.latest(owner)["received_at"]
+    html = web.client.get("/admin/edof-test").text
+    assert "Une correspondance proposée" in html
+    assert "Nom et prénom concordants" in html
+    assert "&lt;script&gt;private()" in html and "<script>private()" not in html
+    assert "NEVER_RENDER_PRIVATE_ADDRESS" not in html
+    assert "ne créent aucun rattachement" in html
+    assert web.data_path.read_bytes() == original_data
+    assert web.store.latest(owner)["received_at"] == received_at
+
+
+def test_matching_unavailable_data_does_not_hide_received_folder(web, observation):
+    assert deliver(web, prepare(web), observation).status_code == 201
+    web.data_path.write_text("not valid JSON")
+    html = web.client.get("/admin/edof-test").text
+    assert "Dossier reçu" in html and "Camille" in html
+    assert "données locales sont indisponibles" in html
