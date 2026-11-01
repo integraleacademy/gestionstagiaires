@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Intégrale EDOF — Test V2",
+  "version": "1.0.0",
+  "description": "Essai volontaire de lecture d’un dossier EDOF vers Gestion Stagiaires Test V2.",
+  "devtools_page": "devtools.html",
+  "host_permissions": ["https://gestionstagiaires-test-v2.onrender.com/*"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src https://gestionstagiaires-test-v2.onrender.com"
+  }
+}
