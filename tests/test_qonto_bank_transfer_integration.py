@@ -356,9 +356,10 @@ def test_existing_qonto_invoice_gets_third_party_payment_and_reversal(third_part
     assert gestion_app.calculate_trainee_financial_summary(trainee, [line])['remaining_total_cents'] == 125000
 
 
-def test_existing_remote_payment_blocks_double_count(third_party, monkeypatch):
+@pytest.mark.parametrize('amount', ['1250.00', '1300.00', '-5.00'])
+def test_existing_remote_payment_blocks_double_count(third_party, monkeypatch, amount):
     remote = link_unpaid_invoice(third_party, monkeypatch)
-    remote['amount_paid'] = {'value':'1250.00'}
+    remote['amount_paid'] = {'value':amount}
     assert search_third_party(third_party).status_code == 400
     third_party[3].assert_not_called()
 

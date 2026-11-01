@@ -45195,9 +45195,20 @@ def _manual_bank_check_remote_invoice(line):
     normalized = normalize_qonto_invoice_payment_data(remote, remote_context)
     if normalized['qonto_status'] in {'draft', 'canceled', 'cancelled'}:
         raise ValueError('La facture Qonto n’est pas une facture définitive active.')
+    raw_paid = [remote[key] for key in ('amount_paid', 'paid_amount', 'amount_paid_cents', 'paid_amount_cents')
+                if remote.get(key) not in (None, '')]
+    raw_remaining = [remote[key] for key in ('remaining_amount', 'amount_due', 'remaining_amount_cents')
+                     if remote.get(key) not in (None, '')]
+    if not raw_paid and not raw_remaining:
+        raise ValueError('Le montant encaissé n’est pas confirmé par Qonto. Synchronisez la facture puis réessayez.')
+    # The shared display normalizer deliberately ignores inconsistent paid
+    # amounts. They are still a conflict here, never permission to add money.
+    if any(Decimal(str(_qonto_money_value(value))) != 0 for value in raw_paid):
+        raise ValueError('Qonto indique déjà un paiement sur cette facture. Synchronisez-la pour éviter de compter le règlement deux fois.')
     if normalized['qonto_total_amount_cents'] != money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0):
         raise ValueError('Le montant de la facture a changé. Synchronisez Qonto puis recommencez.')
-    if normalized['qonto_amount_paid_cents']:
+    if (normalized['qonto_amount_paid_cents'] or normalized['qonto_status'] == 'paid'
+            or normalized['qonto_remaining_amount_cents'] != normalized['qonto_total_amount_cents']):
         raise ValueError('Qonto indique déjà un paiement sur cette facture. Synchronisez-la pour éviter de compter le règlement deux fois.')
     return normalized['qonto_amount_paid_cents']
 
@@ -45230,6 +45241,8 @@ def api_billing_bank_transfer_search():
     except Exception as exc:
         return jsonify(ok=False, error=format_qonto_error_for_front(exc)), 400
     candidates = bank_transfer_candidates(list(_qonto_bank_matching_lines(data).values()), transactions, query)
+    if since:
+        candidates = [item for item in candidates if str(item['paid_at'])[:10] >= since.isoformat()]
     remaining = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0) - bank_transfer_paid_cents(line)
     nonce = session.setdefault('bank_transfer_allocation_nonce', secrets.token_urlsafe(24))
     signer = URLSafeTimedSerializer(app.secret_key, salt='bank-transfer-allocation')
