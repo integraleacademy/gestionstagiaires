@@ -26049,11 +26049,88 @@ def _next_direct_debit_date(
     return min(candidates).isoformat() if candidates else None
 
 
+def _session_cpf_payment_report(
+    data: Dict[str, Any], session_item: Dict[str, Any],
+    financial_rows: List[Dict[str, Any]], billing_lines: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Present cached CPF payments without changing the non-CPF rollup."""
+    session_id = str(session_item.get("id") or "")
+    scoped_data = {
+        "sessions": [session_item],
+        "wedof_links": [link for link in data.get("wedof_links", [])
+                        if isinstance(link, dict) and str(link.get("session_id") or "") == session_id],
+    }
+    invoices = {
+        str(line.get("traineeId") or ""): line
+        for line in _cpf_wedof_invoice_lines(scoped_data, billing_lines)
+        if str(line.get("sessionId") or "") == session_id
+    }
+    invoice_owners: Dict[str, set] = {}
+    for trainee_id, line in invoices.items():
+        for key in ("qontoInvoiceId", "qontoInvoiceNumber"):
+            if line.get(key):
+                invoice_owners.setdefault(f"{key}:{line[key]}", set()).add(trainee_id)
+    rows = []
+    totals = {"paid": 0, "remaining": 0, "unverified": 0}
+    for financial_row in financial_rows:
+        expected_cents = money_value_to_cents(financial_row["cpf"])
+        if expected_cents <= 0:
+            continue
+        line = invoices.get(financial_row["trainee_id"], {})
+        invoice_status = _normalize_billing_invoice_status(line.get("invoiceStatus"))
+        payment_status = str(line.get("qonto_payment_status") or line.get("paymentStatus") or "").lower()
+        known = bool(line) and not line.get("cpfPaymentUnknown")
+        known = known and invoice_status not in {"draft", "cancelled", "control", "not_invoiced"}
+        known = known and payment_status not in {"", "unknown", "control", "draft", "cancelled", "canceled"}
+        known = known and not any(
+            len(invoice_owners.get(f"{key}:{line.get(key)}", set())) > 1
+            for key in ("qontoInvoiceId", "qontoInvoiceNumber") if line.get(key)
+        )
+        paid_cents = 0
+        if known:
+            invoice = serialize_qonto_invoice_for_frontend(line)
+            paid_cents = int(invoice["paid_amount_cents"])
+            # A paid status alone must not turn an absent amount into zero due.
+            has_amount = any(line.get(key) is not None for key in (
+                "qonto_amount_paid_cents", "paid_amount_cents", "qontoAmountPaidCents", "paidAmountCents",
+            ))
+            raw_paid_cents = _cents_first_non_null(
+                line.get("qonto_amount_paid_cents"), line.get("paid_amount_cents"),
+                line.get("qontoAmountPaidCents"), line.get("paidAmountCents"),
+            )
+            known = has_amount and 0 <= raw_paid_cents <= int(invoice["total_amount_cents"])
+            known = known and paid_cents <= expected_cents
+            if payment_status == "paid" and paid_cents == 0:
+                known = False
+        if not known:
+            paid_cents = 0
+            remaining_cents = 0
+            status, label = "unknown", "Paiement à vérifier"
+            totals["unverified"] += expected_cents
+        else:
+            remaining_cents = max(expected_cents - paid_cents, 0)
+            status, label = (
+                ("paid", "Payé") if remaining_cents == 0
+                else ("partial", "Partiellement payé") if paid_cents > 0
+                else ("pending", "En attente de paiement")
+            )
+            totals["paid"] += paid_cents
+            totals["remaining"] += remaining_cents
+        rows.append({
+            "trainee_id": financial_row["trainee_id"],
+            "first_name": financial_row["first_name"], "last_name": financial_row["last_name"],
+            "paid": paid_cents / 100, "remaining": remaining_cents / 100,
+            "known": known, "status": status, "label": label,
+        })
+    return {"rows": rows, "totals": {key: value / 100 for key, value in totals.items()}}
+
+
 def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]) -> Dict[str, Any]:
     """Build the printable, per-trainee financial view for one session."""
     session_id = str(session_item.get("id") or "")
     lines_by_trainee: Dict[str, List[Dict[str, Any]]] = {}
-    for line in _billing_lines_for_session(data, session_id):
+    session_lines = _billing_lines_for_session(data, session_id)
+    for line in session_lines:
         lines_by_trainee.setdefault(str(line.get("traineeId") or ""), []).append(line)
 
     default_price = default_training_price(_session_get(session_item, "training_type", "") or "")
@@ -26210,7 +26287,10 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
     for key in totals:
         totals[key] = round(totals[key], 2)
     totals["collection_pct"] = round((totals["paid"] / totals["revenue"] * 100), 1) if totals["revenue"] else 0
-    return {"rows": rows, "totals": totals, "unknown_payment_count": unknown_payment_count}
+    return {
+        "rows": rows, "totals": totals, "unknown_payment_count": unknown_payment_count,
+        "cpf_payments": _session_cpf_payment_report(data, session_item, rows, session_lines),
+    }
 
 
 @app.get("/admin/sessions/<session_id>/trainees/financial")

@@ -33,6 +33,9 @@ body.endpoint-admin-session-financial-report .app-shell{width:100%;max-width:non
 @media(max-width:680px){.financial-top{align-items:flex-start}.financial-top h1{font-size:25px}.financial-actions .financial-back{display:none}.financial-kpis{grid-template-columns:1fr;gap:9px}.financial-card{display:grid;grid-template-columns:1fr auto;column-gap:10px;padding:14px 16px;align-items:center}.financial-card__value{grid-column:2;grid-row:1/3;margin:0;font-size:23px}.financial-card__hint{grid-column:1;font-size:11px}.financial-list-heading,.financial-toolbar{align-items:stretch;flex-direction:column}.financial-search{width:100%;min-width:0}.financial-results{display:none}.financial-table>thead{display:none}.financial-table,.financial-table>tbody{display:block}.financial-summary-row{display:grid;grid-template-columns:1fr 1fr;padding:16px;border-top:1px solid var(--line);gap:15px 12px}.financial-summary-row:first-child{border-top:0}.financial-table .financial-summary-row td{display:block;border:0;padding:0;text-align:left}.financial-person{grid-column:1}.financial-summary-row .financial-invoice-cell{grid-column:2;text-align:right!important}.financial-numeric:before{display:block;content:attr(data-label);font-size:10px;font-weight:400;color:var(--muted);margin-bottom:6px}.financial-summary-row .financial-action-cell{width:auto;grid-column:1/-1;text-align:right!important}.financial-details-row,.financial-details-row>td{display:block}.financial-details{display:block;padding:18px 16px}.financial-details>section+section{margin-top:20px}.financial-details__footer{margin-top:18px;align-items:flex-start}.financial-funding summary{padding:13px}.financial-funding__summary{line-height:1.5}}
 @media print{@page{size:landscape;margin:9mm}body{background:#fff!important}.sidebar,.admin-sidebar,.no-print,.breadcrumbs{display:none!important}.main,.content{margin:0!important;padding:0!important;max-width:none!important}.financial-page{max-width:none;margin:0;font-size:10px}.financial-top{margin:0 0 12px}.financial-top h1{font-size:21px}.financial-context{font-size:10px;margin-bottom:12px}.financial-kpis{gap:8px;margin-bottom:12px}.financial-card{padding:10px}.financial-card__value{font-size:20px}.financial-card__hint,.financial-card__label{font-size:10px}.financial-funding{margin-bottom:14px}.financial-funding summary{padding:9px}.financial-funding__body{grid-template-columns:repeat(3,1fr)}.financial-list-heading h2{font-size:15px}.financial-table-wrap{overflow:visible;border-radius:0}.financial-table th,.financial-table td{padding:8px;font-size:10px}.financial-amount,.trainee-link{font-size:11px}.financial-badge{font-size:9px;padding:3px 5px}.financial-details-row{display:none!important}.financial-action-cell{display:none}.financial-summary-row{break-inside:avoid}.financial-note{font-size:9px}}
 </style>
+<style>
+@media(max-width:680px){.financial-cpf-payments thead{display:none}.financial-cpf-payments,.financial-cpf-payments tbody{display:block}.financial-cpf-payments tr{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 0;border-top:1px solid #e3e8ef}.financial-cpf-payments td{display:block;text-align:left!important;padding:0;border:0;white-space:normal!important}.financial-cpf-payments td:first-child,.financial-cpf-payments td:last-child{grid-column:1/-1}.financial-cpf-payments td[data-label]:before{content:attr(data-label);display:block;font-size:10px;color:#637087;margin-bottom:3px}}
+</style>
 <div class="financial-page">
   <div class="breadcrumbs no-print"><a href="{{ url_for('admin_trainees', session_id=session.id) }}">← Retour aux stagiaires</a></div>
   <header class="financial-top">
@@ -68,15 +71,29 @@ body.endpoint-admin-session-financial-report .app-shell{width:100%;max-width:non
     <summary>
       <div class="financial-funding__heading">
         <img class="financial-card__cpf-logo" src="/templates/cpf.jpg" alt="Logo CPF">
-        <div><strong>CPF : {{ money(report.totals.cpf) }}</strong><div class="financial-funding__summary">Financement suivi séparément · Voir la répartition de la session</div></div>
+        <div><strong>CPF : {{ money(report.totals.cpf) }}</strong><div class="financial-funding__summary">{{ money(report.cpf_payments.totals.paid) }} reçus · {{ money(report.cpf_payments.totals.remaining) }} restant à recevoir{% if report.cpf_payments.totals.unverified %} · {{ money(report.cpf_payments.totals.unverified) }} à vérifier{% endif %}</div></div>
       </div>
     </summary>
     <div class="financial-funding__body">
-      <div class="financial-funding__item"><span>Prix des formations</span><strong>{{ money(report.totals.revenue) }}</strong></div>
-      <div class="financial-funding__item"><span>Financement personnel prévu</span><strong>{{ money(report.totals.personal) }}</strong></div>
-      <div class="financial-funding__item"><span>Autres financeurs prévus</span><strong>{{ money(report.totals.other) }}</strong></div>
-      <p class="financial-funding__note">Les montants CPF ne font pas partie des sommes à encaisser auprès des stagiaires ou des autres financeurs affichées sur cette page. Leur règlement se vérifie dans le suivi CPF.</p>
-      {% if report.totals.gap|abs >= 0.01 %}<p class="financial-funding__note">Écart entre le prix des formations et les financements renseignés : <strong>{{ money(report.totals.gap) }}</strong>. Les dossiers concernés sont signalés « À vérifier ».</p>{% endif %}
+      <div class="financial-funding__item"><span>Déjà reçu</span><strong>{{ money(report.cpf_payments.totals.paid) }}</strong></div>
+      <div class="financial-funding__item"><span>Reste à recevoir</span><strong>{{ money(report.cpf_payments.totals.remaining) }}</strong></div>
+      <div class="financial-funding__item"><span>Paiements à vérifier</span><strong>{{ money(report.cpf_payments.totals.unverified) }}</strong></div>
+      {% if report.cpf_payments.rows %}
+      <div class="financial-funding__note">
+        <table class="financial-breakdown financial-cpf-payments" aria-label="Paiements CPF par stagiaire">
+          <thead><tr><th scope="col">Stagiaire</th><th scope="col">Reçu</th><th scope="col">Reste à recevoir</th><th scope="col">Paiement</th></tr></thead>
+          <tbody>{% for payment in report.cpf_payments.rows %}
+            <tr>
+              <td>{{ payment.first_name }} {{ payment.last_name }}</td>
+              <td data-label="Reçu">{{ money(payment.paid) if payment.known else '—' }}</td>
+              <td data-label="Reste à recevoir">{{ money(payment.remaining) if payment.known else '—' }}</td>
+              <td><span class="financial-badge {{ 'financial-badge--paid' if payment.status == 'paid' else 'financial-badge--warn' if payment.status == 'unknown' else 'financial-badge--due' }}">{{ payment.label }}</span></td>
+            </tr>
+          {% endfor %}</tbody>
+        </table>
+      </div>
+      {% else %}<p class="financial-funding__note">Aucun financement CPF dans cette session.</p>{% endif %}
+      {% if report.cpf_payments.totals.unverified %}<p class="financial-funding__note">Les paiements à vérifier ne sont pas inclus dans les montants reçus ou restant à recevoir.</p>{% endif %}
     </div>
   </details>
   <div class="financial-list-heading">

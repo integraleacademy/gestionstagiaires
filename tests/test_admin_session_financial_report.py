@@ -209,6 +209,106 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
         self.assertIn("Aucun montant attendu ici", summary)
         self.assertNotIn("À facturer", summary)
 
+    def test_cpf_summary_uses_wedof_payments_and_keeps_unknown_amounts_separate(self):
+        self.session["trainees"] = [
+            {"id": "paid", "first_name": "Alice", "last_name": "Martin", "cpf_amount": 1000},
+            {"id": "pending", "first_name": "Benoit", "last_name": "Petit", "cpf_amount": 700},
+            {"id": "unknown", "first_name": "Camille", "last_name": "Robert", "cpf_amount": 400},
+        ]
+        data = {"sessions": [self.session], "wedof_links": [
+            {"active": True, "session_id": "session-1", "trainee_id": "paid", "external_id": "CPF-1",
+             "cpf_snapshot": {"invoice_number": "F-1", "invoice_status": "paid"}},
+            {"active": True, "session_id": "session-1", "trainee_id": "pending", "external_id": "CPF-2",
+             "cpf_snapshot": {"invoice_number": "F-2", "invoice_status": "unpaid"}},
+            {"active": True, "session_id": "session-1", "trainee_id": "unknown", "external_id": "CPF-3",
+             "cpf_snapshot": {"invoice_number": "F-3", "billing_state": "billed"}},
+        ]}
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=[]):
+            report = gestion_app._session_financial_report(data, self.session)
+
+        cpf = report["cpf_payments"]
+        self.assertEqual(cpf["totals"], {"paid": 1000, "remaining": 700, "unverified": 400})
+        self.assertEqual([row["status"] for row in cpf["rows"]], ["paid", "pending", "unknown"])
+        html = self._render_report(report)
+        block = re.search(r'<details class="financial-funding">.*?</details>', html, re.DOTALL).group(0)
+        self.assertIn("1 000,00 € reçus", block)
+        self.assertIn("700,00 € restant à recevoir", block)
+        self.assertIn("Paiement à vérifier", block)
+        for previous_label in ("Prix des formations", "Financement personnel prévu", "Autres financeurs prévus"):
+            self.assertNotIn(previous_label, block)
+
+    def test_cpf_partial_payment_is_counted_once_and_does_not_change_personal_totals(self):
+        lines = [
+            {"traineeId": "trainee-1", "sessionId": "session-1", "financingType": "CPF",
+             "qontoInvoiceId": "cpf-invoice", "qontoInvoiceNumber": "CPF-F-1", "invoiceStatus": "sent",
+             "paymentStatus": "partially_paid", "amount": 1000,
+             "qonto_total_amount_cents": 100000, "qonto_amount_paid_cents": 25000},
+            {"traineeId": "trainee-1", "sessionId": "session-1", "financingType": "PERSONNEL",
+             "invoiceStatus": "external_generated", "amount": 600, "amountPaid": 600},
+        ]
+        data = {"sessions": [self.session], "wedof_links": [
+            {"active": True, "session_id": "session-1", "trainee_id": "trainee-1", "external_id": "CPF-1",
+             "cpf_snapshot": {"invoice_number": "CPF-F-1", "invoice_status": "sent"}},
+            {"active": True, "session_id": "other-session", "trainee_id": "trainee-1", "external_id": "CPF-OTHER",
+             "cpf_snapshot": {"invoice_number": "F-OTHER", "invoice_status": "paid"}},
+        ]}
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=lines):
+            report = gestion_app._session_financial_report(data, self.session)
+        self.assertEqual(report["cpf_payments"]["totals"], {"paid": 250, "remaining": 750, "unverified": 0})
+        self.assertEqual(report["cpf_payments"]["rows"][0]["status"], "partial")
+        self.assertEqual(report["totals"]["personal_paid"], 600)
+        self.assertEqual(report["totals"]["remaining"], 0)
+        self.assertIn("600,00 €", self._card_text(self._render_report(report), "financial-card--paid"))
+
+    def test_cpf_missing_cancelled_or_unverified_payments_do_not_become_unpaid(self):
+        for extra in ({}, {"invoiceStatus": "cancelled"}, {"paymentStatus": "control"},
+                      {"paymentStatus": "paid", "qonto_amount_paid_cents": None}):
+            with self.subTest(extra=extra):
+                line = {"traineeId": "trainee-1", "sessionId": "session-1", "financingType": "CPF",
+                        "qontoInvoiceId": "cpf-1", "invoiceStatus": "sent", "paymentStatus": "unknown",
+                        "amount": 1000, **extra}
+                with patch.object(gestion_app, "_billing_lines_for_session", return_value=[line]):
+                    report = gestion_app._session_financial_report({}, self.session)
+                self.assertEqual(report["cpf_payments"]["totals"], {"paid": 0, "remaining": 0, "unverified": 1000})
+                self.assertFalse(report["cpf_payments"]["rows"][0]["known"])
+
+    def test_cpf_summary_ignores_inactive_links_and_cancelled_registrations(self):
+        self.session["trainees"].append({
+            "id": "cancelled", "first_name": "Annule", "last_name": "Test", "cpf_amount": 900,
+            "registration_cancelled": True,
+        })
+        data = {"sessions": [self.session], "wedof_links": [
+            {"active": False, "session_id": "session-1", "trainee_id": "trainee-1",
+             "cpf_snapshot": {"invoice_number": "F-INACTIVE", "invoice_status": "paid"}},
+        ]}
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=[]):
+            cpf = gestion_app._session_financial_report(data, self.session)["cpf_payments"]
+        self.assertEqual(len(cpf["rows"]), 1)
+        self.assertEqual(cpf["totals"], {"paid": 0, "remaining": 0, "unverified": 1000})
+
+    def test_cpf_summary_is_read_only_and_empty_without_cpf(self):
+        self.session["trainees"][0]["cpf_amount"] = 0
+        data = {"sessions": [self.session]}
+        with patch.object(gestion_app, "save_data", side_effect=AssertionError("No writes")), \
+             patch.object(gestion_app.WedofClient, "get_registration_folder_interactive", side_effect=AssertionError("No remote refresh")), \
+             patch.object(gestion_app, "find_qonto_invoice_by_number", side_effect=AssertionError("No Qonto request")):
+            report = gestion_app._session_financial_report(data, self.session)
+        self.assertEqual(report["cpf_payments"]["rows"], [])
+        self.assertIn("Aucun financement CPF dans cette session.", self._render_report(report))
+
+    def test_same_cpf_invoice_cannot_be_counted_for_two_trainees(self):
+        self.session["trainees"].append({
+            "id": "trainee-2", "first_name": "Paul", "last_name": "Martin", "cpf_amount": 1000,
+        })
+        lines = [{
+            "traineeId": trainee_id, "sessionId": "session-1", "financingType": "CPF",
+            "qontoInvoiceId": "duplicate", "invoiceStatus": "paid", "paymentStatus": "paid",
+            "amount": 1000, "qonto_amount_paid_cents": 100000,
+        } for trainee_id in ("trainee-1", "trainee-2")]
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=lines):
+            cpf = gestion_app._session_financial_report({}, self.session)["cpf_payments"]
+        self.assertEqual(cpf["totals"], {"paid": 0, "remaining": 0, "unverified": 2000})
+
     def test_next_direct_debit_date_is_the_first_future_actionable_installment(self):
         line = {
             "directDebitInstallments": [
