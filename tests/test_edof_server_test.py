@@ -77,7 +77,7 @@ def test_store_owner_isolation_expiry_cooldown_and_interruption(tmp_path, monkey
     assert store.latest("owner-b") == []
     with pytest.raises(ValueError):
         store.reserve("owner-b", "access")
-    now += 181
+    now += server.JOB_TIMEOUT + 31
     assert store.latest("owner-a")[0]["code"] == "interrupted"
     with pytest.raises(ValueError):
         store.reserve("owner-a", "read")

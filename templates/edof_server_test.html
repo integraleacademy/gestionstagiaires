@@ -9,8 +9,33 @@
 <body>
   <header><a href="/admin/edof-test">← Essais EDOF</a><span>INTÉGRALE <b>ACADEMY</b></span><span class="badge">TEST V2</span></header>
   <main data-csrf="{{ csrf }}">
-    <div class="intro"><p class="eyebrow">EDOF · ACCÈS DEPUIS RENDER</p><h1>Tester sans votre Chrome.</h1><p>Le serveur ouvre son propre navigateur et une session EFP neuve à chaque essai. Votre extension Chrome n’intervient pas.</p></div>
+    <div class="intro"><p class="eyebrow">EDOF · ACCÈS DEPUIS RENDER</p><h1>Tester sans votre Chrome.</h1><p>Le serveur utilise sa propre connexion EFP. Gmail peut lui permettre de recevoir un nouveau code lors d’une reconnexion. Votre extension Chrome n’intervient pas.</p></div>
     <div class="notice"><strong>Lecture seule</strong><span>Cet essai vérifie l’accès, la recherche et la lecture. Il ne déclare aucune entrée, sortie ou prestation et ne rattache aucun dossier.</span></div>
+    <section class="card result"><p class="eyebrow">CONNEXION GMAIL</p><h2>Recevoir les codes EFP automatiquement</h2>
+      {% if gmail_notice %}<p class="review-note" role="status">{{ gmail_notice }}</p>{% endif %}
+      {% if gmail.connected %}
+        <p class="match">Gmail est connecté au compte EFP configuré. L’accès réel à EDOF reste à vérifier par un essai serveur.</p>
+        <p>{{ 'Une connexion EFP a été enregistrée après une lecture réussie.' if gmail.saved_session else 'Aucune connexion EFP réutilisable n’a encore été validée.' }}</p>
+        <form method="post" action="/admin/edof-test/server/gmail/disconnect"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="button secondary" type="submit">Déconnecter Gmail et effacer la connexion EFP</button></form>
+      {% else %}
+        <p>Une autorisation initiale auprès de Google permettra au serveur de rechercher les nouveaux codes EFP. Le mot de passe Gmail n’est pas demandé.</p>
+        {% if not gmail.configured %}
+        <details open><summary>Configuration Google à terminer une seule fois</summary>
+          <ol><li>Dans un projet Google Cloud de votre organisme, activez <strong>Gmail API</strong> et configurez l’écran d’autorisation Google.</li>
+          <li>Créez un client OAuth de type <strong>Application Web</strong>, avec cette URL de redirection :<br><code>https://gestionstagiaires-test-v2.onrender.com/admin/edof-test/server/gmail/callback</code></li>
+          <li>Dans <strong>Render → gestionstagiaires-test-v2 → Environment</strong>, ajoutez <code>EDOF_GOOGLE_CLIENT_ID</code> et <code>EDOF_GOOGLE_CLIENT_SECRET</code> avec les deux valeurs fournies par Google. Enregistrez et redéployez.</li>
+          <li>Revenez ici et utilisez le bouton de connexion Google. Si l’application Google est en mode test, ajoutez d’abord votre adresse Gmail aux utilisateurs de test.</li></ol>
+          <p class="hint">Pour un compte Gmail externe, le mode test Google limite normalement cette autorisation à sept jours. Le fonctionnement durable nécessite une configuration Google adaptée et les validations éventuellement requises.</p>
+        </details>{% endif %}
+        {% if not gmail.protected %}<p class="review-note">La variable SECRET_KEY de Test V2 doit contenir une clé stable d’au moins 32 caractères pour protéger la connexion enregistrée.</p>{% endif %}
+        <form method="post" action="/admin/edof-test/server/gmail/connect">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <label class="gmail-consent"><input type="checkbox" name="consent" value="yes" required> J’autorise ce module sur Render à lire les messages de vérification EFP du compte Gmail associé et à utiliser leur code uniquement pour se connecter à EFP Connect.</label>
+          <p class="hint">Google accorde une lecture de toute la boîte Gmail. Le programme filtre les messages EFP récents ; cette limite est appliquée par le programme. Il ne peut ni envoyer, ni modifier, ni supprimer de mails. L’autorisation Google est chiffrée sur Render jusqu’à sa déconnexion ; les cookies EFP sont conservés au maximum 24 heures après une lecture réussie. Aucun mail ou code n’est enregistré dans les résultats.</p>
+          <button class="button" type="submit" {% if not gmail.configured or not gmail.protected or not config.credentials_configured %}disabled{% endif %}>Connecter le compte Gmail avec Google</button>
+        </form>
+      {% endif %}
+    </section>
     <div class="server-grid">
       <section class="card"><span class="step">01</span><h2>Accéder à EFP depuis Render</h2><p>Vérifie que le navigateur du serveur atteint le formulaire officiel de connexion. Aucun identifiant n’est envoyé pour cet essai.</p><button class="button secondary" id="access-test" type="button">Tester l’accès depuis Render</button></section>
       <section class="card"><span class="step">02</span><h2>Connexion et lecture autonomes</h2>
@@ -31,6 +56,7 @@
         <h3>{{ 'Accès au formulaire' if job.mode == 'access' else 'Connexion et lecture' }} · {{ job.created_at[:19]|replace('T',' à ') }} UTC</h3>
         <p class="{{ 'match' if job.code == 'read_success' else 'review-note' }}">{{ job.message }}</p>
         {% if job.stage %}<p class="hint">Étape : {{ {'browser':'démarrage du navigateur','login_page':'accès au formulaire','authentication':'connexion EFP','organism':'sélection de l’établissement','search':'recherche par nom','dossier':'lecture du dossier'}.get(job.stage, 'essai') }}.</p>{% endif %}
+        {% if job.code == 'read_success' %}<p class="hint">Connexion : {{ 'nouvelle authentification' if job.fresh_session else 'session serveur réutilisée' }}. Code Gmail utilisé : {{ 'oui' if job.gmail_code_used else 'non' }}. Connexion conservée : {{ 'oui' if job.session_saved else 'non' }}.</p>{% endif %}
         {% if job.diagnostics %}<details><summary>Diagnostic technique sans identifiants</summary><dl>
           <dt>Page atteinte</dt><dd>{{ job.diagnostics.location }}</dd>
           <dt>Formulaire encore visible</dt><dd>{{ 'Oui' if job.diagnostics.password_form_visible else 'Non' }}</dd>
@@ -44,7 +70,7 @@
       </article>{% else %}<p>Aucun essai serveur lancé depuis cette session administrateur.</p>{% endfor %}
       <p class="hint">Un formulaire accessible ne prouve pas une connexion réussie. Une lecture réussie ne prouve pas encore le fonctionnement continu après expiration, ni les déclarations d’entrée et de sortie.</p>
     </section>
-    <footer>Chaque essai dure au maximum 2 min 30 et fonctionne sur Render, même si vous fermez cette page. Les sessions EFP du test sont temporaires. Les résultats sont conservés au maximum 24 heures et purgés à l’accès suivant. En cas de code de vérification, de CAPTCHA ou de parcours inconnu, l’essai s’arrête.</footer>
+    <footer>Chaque essai dure au maximum 3 min 30 et fonctionne sur Render, même si vous fermez cette page. Les résultats sont conservés au maximum 24 heures et purgés à l’accès suivant. Un seul code Gmail peut être soumis par essai. Un CAPTCHA, une erreur ou un parcours inconnu arrête l’essai. Aucune synchronisation régulière ni déclaration EDOF n’est activée.</footer>
   </main>
 </body>
 </html>

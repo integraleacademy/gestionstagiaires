@@ -13,6 +13,10 @@ keepalive = int(os.environ.get("GUNICORN_KEEPALIVE") or "2")
 accesslog = "-"
 # Expose actual application request time for subsequent performance checks.
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" duration_us=%(D)s'
+if os.environ.get("RENDER_SERVICE_ID") == "srv-d928tc19rddc7388qie0":
+    # OAuth callbacks carry short-lived authorization codes in their query.
+    # Log only the path on Test V2; omit referrers as well.
+    access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(m)s %(U)s %(H)s" %(s)s %(b)s "-" "%(a)s" duration_us=%(D)s'
 errorlog = "-"
 loglevel = os.environ.get("GUNICORN_LOG_LEVEL", "info")
 capture_output = True

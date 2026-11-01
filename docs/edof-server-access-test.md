@@ -1,60 +1,95 @@
-# Test V2: fresh server-side EFP connection
+# Test V2: EFP authentication with Gmail codes
 
-This experiment is available only on Render service `srv-d928tc19rddc7388qie0`,
-branch `test-v2`, at `/admin/edof-test/server`. It is separate from the manual
-Chrome observation pilot and from all business data and WEDOF automations.
+Available only on Render service `srv-d928tc19rddc7388qie0`, branch `test-v2`,
+at `/admin/edof-test/server`. Isolated from production, WEDOF and business data.
+No entry, exit or service-fait write is implemented or enabled.
 
-## What it actually tests
+## One-time Google setup
 
-1. **Access**: launch a browser on Render and reach the official EFP login form
-   via EDOF's normal login redirect. No credentials are submitted.
-2. **Read**: with `EDOF_EFP_USERNAME` and `EDOF_EFP_PASSWORD` set in this service's
-   Render Environment settings, create a fresh browser, submit the normal EFP
-   form once, and try to read one dossier. Secrets are not requested by the app,
-   returned to the administrator, added to URLs, or written to the repository.
-3. Optionally find a dossier from exact normalized first/last name through the
-   EDOF “Par Nom de stagiaire” UI. Search is limited to the “en cours” screen.
-   A paginated/incomplete result or multiple matches stops selection. A unique
-   name result is a read candidate, never an automatic business association.
+1. Keep `EDOF_EFP_USERNAME` and `EDOF_EFP_PASSWORD` in the Test V2 Render
+   environment. The username must equal the primary Gmail address authorized
+   below; aliases are deliberately not inferred.
+2. Enable Gmail API in an organization-controlled Google Cloud project.
+   Configure its OAuth audience/consent screen and create a Web application
+   OAuth client with this exact authorized redirect URI:
+   `https://gestionstagiaires-test-v2.onrender.com/admin/edof-test/server/gmail/callback`.
+3. Set `EDOF_GOOGLE_CLIENT_ID` and `EDOF_GOOGLE_CLIENT_SECRET` in Test V2 Render
+   Environment, then deploy. Never send these secrets in chat or commit them.
+   A stable `SECRET_KEY` of at least 32 characters is also required; the unsafe
+   application default is rejected for connector encryption.
+4. On the module page, read the permission disclosure, consent to this specific
+   use and authorize Google. Only `gmail.readonly` with offline access is
+   requested. **It can read the whole mailbox.** Restricting use to EFP is an
+   application filter, not a provider-enforced single-sender permission.
+   No Gmail send/modify/delete operation or scope exists.
+5. Launch a dossier-read test. Nothing starts automatically after authorization.
 
-Each run uses a new ephemeral browser context. No auth state, cookies, traces,
-screenshots, HARs, or full API responses are saved. It does not depend on the
-user's Chrome, extension or cookies. A successful read proves that particular
-fresh login/read, not continuous reliability. Repeat after a service restart
-and on a later day before claiming an unattended connector is viable.
+Google external apps in Testing normally receive seven-day refresh tokens for
+Gmail. Durable use needs an appropriate publishing/audience configuration and
+any applicable verification. Revocation/password changes can require consent
+again; permanent zero-intervention is not guaranteed.
+References:
+- https://developers.google.com/workspace/gmail/api/auth/scopes
+- https://developers.google.com/identity/protocols/oauth2#expiration
+- https://developers.google.com/identity/protocols/oauth2/web-server
 
-The login form selectors were observed on the current official EFP/EDOF form.
-Authenticated search, SIRET selection and read paths remain an experiment until
-tested with valid credentials. Authentication errors, OTPs, CAPTCHAs, changed UI,
-or absent dossier response stop the run; no challenge bypass or credential retry.
-No endpoint for EDOF mutations has been reverse engineered or implemented.
+## Authentication and message selection
 
-## Isolation and lifecycle
+The public Access test always starts without saved cookies or credentials.
+Read tests first try server-generated cookies. Otherwise they refresh Google,
+record pre-existing EFP mail IDs, and submit the EFP password form once.
 
-- Super-admin only, no partner/assisted session, per-session CSRF token.
-- At most one browser per service, file lock inherited by its process. One
-  authenticated attempt per five minutes, including failures; no scheduler.
-- 150-second subprocess timeout; process group killed on completion or timeout.
-  Browser credentials and unrelated CRM/database secrets are never logged.
-- All non-read HTTP methods are blocked, except the official EFP password-form
-  POST and OIDC token POST. Every EDOF business mutation is blocked. If normal
-  login needs another POST, the flow must be reviewed, not broadly allowed.
-- A response from the wrong SIRET or dossier is never retained. Only the
-  existing observation schema is projected; billing/payment unknowns stay null.
-- Results only in `/var/data/edof_server_test.sqlite3`, permissions 0600, scoped
-  to the initiating admin browser session. Expire after 24h, purged on access.
-- Gunicorn serves the job asynchronously. Closing the client does not cancel
-  it; a restart may interrupt it, which is never reported as success.
-- Playwright and Chromium headless shell are installed only when Docker's
-  `RENDER_SERVICE_ID` build argument equals Test V2. No plan or service change.
+Mail queries use the exact EFP recipient, sender `no-reply@emploi.gouv.fr` and
+login timestamp. At most ten hits and one page are accepted. Stale messages,
+wrong recipients, unauthenticated senders and reset/create-account messages
+are rejected. The first Google ingress Authentication-Results must authenticate
+an emploi.gouv.fr domain using DKIM or DMARC. Only text MIME bodies are read;
+attachments and HTML scripts are ignored. The current parser accepts one
+explicitly labelled 6–8-digit code. Unrecognized templates fail closed and
+need validation against an actual login message.
 
-## Acceptance evidence to collect
+OTP input must be unique, on the official EFP host and in the already allowlisted
+authentication POST form. The target is rechecked after the mail wait.
+At most one OTP submission, no resend/retry, no CAPTCHA bypass.
 
-- Actual access result from the Render deployment, not from a developer browser.
-- First fresh authenticated read and an independent repeat after restart.
-- Name search with one match, homonyms, and paginated results.
-- Authentication expiry and site challenges reported honestly.
-- No EDOF mutation or business `data.json` write during any of these tests.
+OAuth state is per-admin, encrypted, single-use and ten-minute-lived, with PKCE.
+The Google profile must exactly match EFP. Mail bodies, codes and tokens are
+never returned by the status endpoint or intentionally logged by application
+code. Infrastructure access logs must protect OAuth callback query parameters.
 
-Real entry/exit/service-fait declarations are a separate future step, requiring
-the actual effective dates/completion evidence and a verified write workflow.
+## Storage and isolation
+
+- Google refresh tokens and server-created EFP/EDOF cookies are Fernet-encrypted
+  in `/var/data/edof_connector_private.sqlite3` (0600). A module-specific HMAC
+  derives the key from the existing application secret. Rotating that secret
+  invalidates the stored connection.
+- Cookies are saved only after a successful actual dossier read, for up to 24h.
+  No localStorage, user-Chrome material, screenshots, HARs or full API responses.
+- Disconnect clears the local grant and cookies, refusing while a job runs.
+  Provider revocation remains available in the user's Google permissions page.
+- Super-admin only, no assisted/partner sessions; CSRF on initiating POSTs.
+- One browser per service using an inherited file lock, at least five minutes
+  between read attempts; no scheduler or periodic synchronization.
+- 210-second subprocess deadline; terminate the process group and clean its
+  temporary profile even after timeout/crash. Only required runtime, EFP,
+  Google client and derived encryption-key variables reach the child process.
+- Browser methods are restricted to reads plus EFP authentication/OIDC POSTs.
+  Every EDOF business mutation remains blocked.
+- Name search is exact-normalized in en-cours; homonyms, missing totals and
+  paginated results are not automatically selected or associated to business data.
+- Only the requested dossier/SIRET and the normalized observation schema are
+  retained. Unknown billing/payment fields remain unknown.
+- Results are separate, per-admin-owner SQLite records (0600), expiring after
+  24h and purged on access. Closing Chrome does not stop the server job.
+
+## Acceptance evidence still required
+
+The earlier real test reached the EFP verification-code step; no server-side
+authentication or dossier read succeeded. Unit tests of OAuth, encryption,
+message filtering and errors do not prove external integration.
+
+Before claiming autonomy, verify initial Google authorization, fresh EFP login
+with automatic code, actual dossier read, session reuse after process restart,
+and fresh login after expiration. Test name lookup and ambiguous cases separately.
+Real entry/exit/service-fait declarations are a separate future workflow needing
+effective dates/completion evidence and verified mutation semantics.

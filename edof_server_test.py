@@ -18,17 +18,18 @@ import tempfile
 import threading
 import time
 
-from flask import Blueprint, abort, jsonify, request, send_file, session
+from flask import Blueprint, abort, jsonify, redirect, request, send_file, session
 
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
+from edof_gmail import Vault, GmailError, connector_key, oauth_configured, authorization_url, finish_authorization
 
-JOB_TIMEOUT = 150
+JOB_TIMEOUT = 210
 RETENTION = 86400
 MESSAGES = {
     "running": "Essai en cours sur Render. Vous pouvez fermer votre Chrome : l’essai continue sur le serveur.",
     "login_reachable": "Render atteint le formulaire EFP Connect. La connexion à votre compte et la lecture d’un dossier restent à tester.",
     "credentials_missing": "Le formulaire EFP est accessible. Configurez EDOF_EFP_USERNAME et EDOF_EFP_PASSWORD dans les variables du service Render Test V2.",
-    "read_success": "Dossier lu depuis Render après une connexion EFP neuve, sans utiliser votre Chrome.",
+    "read_success": "Dossier lu depuis Render, sans utiliser votre Chrome. Le détail de cet essai indique si une connexion a été réutilisée.",
     "human_verification": "Le site demande une vérification humaine. L’essai s’est arrêté : l’accès entièrement autonome n’est pas validé.",
     "verification_code": "EFP demande un code de vérification. L’essai s’est arrêté : l’accès entièrement autonome n’est pas validé.",
     "credentials_rejected": "EFP refuse les identifiants configurés. Aucun nouvel essai automatique n’a été lancé.",
@@ -51,6 +52,18 @@ MESSAGES = {
     "browser_missing": "Le navigateur serveur n’est pas installé dans cette version du déploiement.",
     "browser_error": "Le navigateur serveur n’a pas terminé l’essai. Aucun succès n’est supposé.",
     "wrong_environment": "Cet essai est réservé au service Test V2.",
+    "gmail_not_configured": "La connexion Google du module doit être configurée avant de recevoir les codes automatiquement.",
+    "gmail_not_connected": "Connectez le compte Gmail associé à EFP pour permettre la réception automatique des codes.",
+    "gmail_reconnect_required": "Google a refusé ou révoqué l’autorisation. Reconnectez Gmail ; aucun nouvel essai EFP n’a été lancé.",
+    "gmail_account_mismatch": "Le compte Google doit avoir exactement la même adresse que le compte EFP configuré dans Render.",
+    "gmail_permission_missing": "L’autorisation Google de lecture hors connexion est incomplète. Reconnectez Gmail.",
+    "gmail_unavailable": "Gmail n’a pas répondu correctement. L’essai s’est arrêté sans relancer la connexion EFP.",
+    "gmail_response_invalid": "La réponse Gmail n’a pas pu être vérifiée. Aucun code n’a été utilisé.",
+    "gmail_messages_ambiguous": "Plusieurs messages peuvent correspondre à la connexion EFP. Aucun code n’a été choisi.",
+    "gmail_code_missing": "Aucun nouveau code EFP suffisamment vérifié n’a été trouvé dans Gmail pendant cet essai.",
+    "otp_form_unrecognized": "Le formulaire du code EFP n’est pas reconnu. Aucun code n’a été transmis.",
+    "otp_rejected": "La validation du code EFP n’a pas abouti. Aucun autre code n’a été essayé.",
+    "private_storage_unavailable": "La protection de la connexion serveur n’est pas configurée. Aucun accès Gmail n’a été utilisé.",
 }
 
 
@@ -87,6 +100,7 @@ class ServerTestStore:
     def __init__(self, directory):
         self.directory = Path(directory)
         self.path = self.directory / "edof_server_test.sqlite3"
+        self.connector_key = None
 
     def connect(self):
         self.directory.mkdir(parents=True, exist_ok=True)
@@ -160,6 +174,12 @@ def execute_job(store, job_id, spec, lock_fd):
         # private working directory even after timeout/SIGKILL, not only when
         # Playwright manages to close the browser cleanly.
         child_env["TMPDIR"] = temporary.name
+        if store.connector_key and spec["mode"] == "read":
+            child_env["EDOF_CONNECTOR_KEY"] = store.connector_key
+            child_env["EDOF_CONNECTOR_DIRECTORY"] = str(store.directory)
+            for key in ("EDOF_GOOGLE_CLIENT_ID", "EDOF_GOOGLE_CLIENT_SECRET"):
+                if key in os.environ:
+                    child_env[key] = os.environ[key]
         process = subprocess.Popen([sys.executable, str(Path(__file__).with_name("edof_server_browser.py"))],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             text=True, env=child_env, start_new_session=True, pass_fds=(lock_fd,))
@@ -168,7 +188,7 @@ def execute_job(store, job_id, spec, lock_fd):
             parsed = json.loads(output)
             if isinstance(parsed, dict) and parsed.get("code") in MESSAGES:
                 # The runner emits only the explicitly normalized dossier schema.
-                result = {key: parsed[key] for key in ("code", "stage", "fields", "fresh_session", "candidate_count", "blocked_writes", "diagnostics") if key in parsed}
+                result = {key: parsed[key] for key in ("code", "stage", "fields", "fresh_session", "gmail_code_used", "session_saved", "candidate_count", "blocked_writes", "diagnostics") if key in parsed}
     except subprocess.TimeoutExpired:
         result = {"code": "timeout"}
     except Exception:
@@ -215,6 +235,38 @@ def register_edof_server_test(legacy):
 
 def register_routes(app, store, *, admin_required, can_access):
     bp = Blueprint("edof_server_test", __name__)
+    store.connector_key = connector_key(app.secret_key)
+
+    def vault():
+        if not store.connector_key:
+            raise GmailError("private_storage_unavailable")
+        return Vault(store.directory, store.connector_key)
+
+    def gmail_status():
+        result = {"configured": oauth_configured(), "protected": bool(store.connector_key), "connected": False, "saved_session": False}
+        if store.connector_key:
+            result["connected"] = bool(vault().get("gmail"))
+            result["saved_session"] = bool(vault().get("browser"))
+        return result
+
+    def check_csrf():
+        expected = session.get("edof_server_csrf", "")
+        supplied = request.headers.get("X-CSRF-Token", "") or request.form.get("csrf", "")
+        if not expected or not hmac.compare_digest(expected, supplied):
+            abort(403)
+
+    def edit_connection(action):
+        # Do not disconnect/replace credentials while a browser uses them.
+        fd = os.open(store.directory / "edof_server_test.lock", os.O_CREAT | os.O_RDWR, 0o600)
+        try:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                return redirect("/admin/edof-test/server?gmail=busy", code=303)
+            action()
+        finally:
+            os.close(fd)
+        return redirect("/admin/edof-test/server?gmail=connected", code=303)
 
     def owner():
         if not can_access():
@@ -236,13 +288,64 @@ def register_routes(app, store, *, admin_required, can_access):
         user = owner()
         csrf = session.setdefault("edof_server_csrf", secrets.token_urlsafe(32))
         return app.jinja_env.get_template("edof_server_test.html").render(
-            csrf=csrf, config=configuration(), jobs=store.latest(user), state_labels=STATE_LABELS)
+            csrf=csrf, config=configuration(), gmail=gmail_status(), gmail_notice={
+                "connected": "Gmail est connecté. Vous pouvez lancer un essai serveur.",
+                "disconnected": "La connexion Gmail et la session EFP enregistrées sur Render ont été effacées. Vous pouvez aussi retirer l’autorisation dans votre compte Google.",
+                "canceled": "La connexion Google n’a pas été autorisée.",
+                "invalid": "Cette demande de connexion a expiré. Recommencez depuis cette page.",
+                "busy": "Un essai serveur est en cours. Attendez sa fin avant de modifier la connexion.",
+                **MESSAGES}.get(request.args.get("gmail"), ""),
+            jobs=store.latest(user), state_labels=STATE_LABELS)
 
     @bp.get("/admin/edof-test/server/status")
     @admin_required
     def status():
         user = owner()
-        return jsonify(ok=True, config=configuration(), jobs=store.latest(user))
+        return jsonify(ok=True, config=configuration(), gmail=gmail_status(), jobs=store.latest(user))
+
+    @bp.post("/admin/edof-test/server/gmail/connect")
+    @admin_required
+    def gmail_connect():
+        user = owner()
+        check_csrf()
+        if not oauth_configured() or not configuration()["credentials_configured"] or not store.connector_key:
+            return redirect("/admin/edof-test/server?gmail=gmail_not_configured", code=303)
+        if request.form.get("consent") != "yes":
+            abort(400)
+        state = secrets.token_urlsafe(32)
+        verifier = secrets.token_urlsafe(64)
+        vault().put("oauth:" + user, {"state": state, "verifier": verifier}, ttl=600)
+        session["edof_gmail_state"] = state
+        return redirect(authorization_url(state, verifier), code=303)
+
+    @bp.get("/admin/edof-test/server/gmail/callback")
+    @admin_required
+    def gmail_callback():
+        user = owner()
+        state = request.args.get("state", "")
+        expected = session.pop("edof_gmail_state", "")
+        if not state or not expected or not hmac.compare_digest(state, expected) or not store.connector_key:
+            return redirect("/admin/edof-test/server?gmail=invalid", code=303)
+        pending = vault().get("oauth:" + user, consume=True)
+        if not pending or not hmac.compare_digest(state, pending["state"]):
+            return redirect("/admin/edof-test/server?gmail=invalid", code=303)
+        code = request.args.get("code", "")
+        if request.args.get("error") or not code or len(code) > 4096:
+            return redirect("/admin/edof-test/server?gmail=canceled", code=303)
+        try:
+            return edit_connection(lambda: finish_authorization(vault(), code, pending["verifier"]))
+        except GmailError as exc:
+            return redirect("/admin/edof-test/server?gmail=" + exc.code, code=303)
+
+    @bp.post("/admin/edof-test/server/gmail/disconnect")
+    @admin_required
+    def gmail_disconnect():
+        owner()
+        check_csrf()
+        response = edit_connection(lambda: vault().clear())
+        if response.location.endswith("gmail=connected"):
+            response.location = "/admin/edof-test/server?gmail=disconnected"
+        return response
 
     @bp.get("/admin/edof-test/server/script.js")
     @admin_required
@@ -254,9 +357,7 @@ def register_routes(app, store, *, admin_required, can_access):
     @admin_required
     def run():
         user = owner()
-        expected = session.get("edof_server_csrf", "")
-        if not expected or not hmac.compare_digest(expected, request.headers.get("X-CSRF-Token", "")):
-            abort(403)
+        check_csrf()
         if request.content_length is None or request.content_length > 2048:
             return jsonify(ok=False, error="Paramètres trop volumineux."), 413
         try:

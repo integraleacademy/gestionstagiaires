@@ -1,8 +1,9 @@
 """Short-lived, read-only EDOF browser used by the Test V2 access experiment.
 
 Input is a small search specification on stdin. Output is one allowlisted JSON
-result. No screenshots, traces, browser storage, raw responses or credentials
-are persisted. A fresh browser is created on EVERY run, including repeat runs.
+result. No screenshots, traces, raw responses or mail bodies are persisted.
+Only server-created authentication cookies may be saved in the encrypted vault;
+no cookie or token is taken from the user's Chrome.
 """
 
 import json
@@ -17,6 +18,7 @@ from edof_readonly_test import (
     ATTENDEE_FIELDS, INFO_FIELDS, SIRET, TEST_SERVICE_ID, TOP_FIELDS,
     normalize_observation,
 )
+from edof_gmail import Vault, GmailCodes, GmailError
 
 EDOF_HOST = "of.moncompteformation.gouv.fr"
 EFP_HOST = "efpconnect.emploi.gouv.fr"
@@ -25,6 +27,17 @@ LIST_URL = f"https://{EDOF_HOST}/espace-prive/html/#/dossiers/en-cours"
 DETAIL_PREFIX = f"https://{EDOF_HOST}/espace-prive/html/#/dossiers/detail/"
 API_PREFIX = f"/edof-api/v1/api/private/siret/{SIRET}/organisms/current/registration-folders/"
 READ_METHODS = {"GET", "HEAD", "OPTIONS"}
+OTP_SELECTOR = 'input[autocomplete="one-time-code"]:visible, input[name="otp"]:visible, input[name="totp"]:visible, input[name="code"]:visible'
+
+
+def session_cookies(state):
+    allowed = {EFP_HOST, "emploi.gouv.fr", EDOF_HOST, "moncompteformation.gouv.fr"}
+    return {"cookies": [cookie for cookie in state.get("cookies", []) if cookie.get("domain", "").lstrip(".") in allowed and cookie.get("secure")], "origins": []}
+
+
+def private_page(url):
+    parsed = urlsplit(url)
+    return parsed.hostname == EDOF_HOST and parsed.path.startswith("/espace-prive/") and parsed.fragment not in {"", "#", "/", "/redirect-to-mire-connexion"}
 
 
 def permitted_request(url, method):
@@ -116,6 +129,20 @@ def run_browser(spec):
     details = {}
     invalid_response = False
     signals = {"blocked_efp_posts": 0, "blocked_edof_posts": 0, "blocked_other_posts": 0}
+    vault = None
+    saved = None
+    reused = False
+    otp_attempted = False
+    gmail_code_used = False
+    session_saved = False
+    mailbox = None
+    requested_at = None
+    if spec["mode"] == "read" and os.environ.get("EDOF_CONNECTOR_KEY"):
+        try:
+            vault = Vault(os.environ["EDOF_CONNECTOR_DIRECTORY"], os.environ["EDOF_CONNECTOR_KEY"])
+            saved = vault.get("browser")
+        except Exception:
+            return {"code": "private_storage_unavailable"}
 
     def route_request(route):
         nonlocal blocked
@@ -166,7 +193,7 @@ def run_browser(spec):
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
         try:
-            context = browser.new_context(locale="fr-FR", accept_downloads=False, service_workers="block")
+            context = browser.new_context(locale="fr-FR", accept_downloads=False, service_workers="block", storage_state=saved)
             context.route("**/*", route_request)
             page = context.new_page()
             page.set_default_timeout(12000)
@@ -182,17 +209,45 @@ def run_browser(spec):
                 except Exception:
                     return diagnostic_summary(page.url, False, False, signals)
 
-            def checkpoint():
+            def checkpoint(allow_otp=True):
+                nonlocal otp_attempted, gmail_code_used
                 # Only derive categorical signals; never return the page body,
                 # which could contain identity information or an auth code.
                 text = page.locator("body").inner_text(timeout=3000)
                 code = classify_text(text)
-                if code:
+                if code and code != "verification_code":
                     raise StopRun(code)
-                if page.locator('input[autocomplete="one-time-code"]:visible, input[name="otp"]:visible, input[name="totp"]:visible, input[name="code"]:visible').count():
-                    raise StopRun("verification_code")
                 if page.locator('iframe[title*="captcha" i]:visible, iframe[title*="challenge" i]:visible').count():
                     raise StopRun("human_verification")
+                otp_fields = page.locator(OTP_SELECTOR)
+                if code == "verification_code" or otp_fields.count():
+                    if not allow_otp:
+                        return
+                    if otp_attempted:
+                        raise StopRun("otp_rejected")
+                    if stage != "authentication" or requested_at is None:
+                        raise StopRun("verification_code")
+                    if not mailbox:
+                        raise StopRun("gmail_not_connected")
+                    if urlsplit(page.url).hostname != EFP_HOST or otp_fields.count() != 1:
+                        raise StopRun("otp_form_unrecognized")
+                    target = otp_fields.evaluate("el => el.form ? {action: el.form.action, method: el.form.method.toUpperCase()} : null")
+                    if not target or target["method"] != "POST" or not permitted_request(target["action"], target["method"]):
+                        raise StopRun("otp_form_unrecognized")
+                    otp_attempted = True
+                    code_value = mailbox.wait_for_code(requested_at, tick=lambda: checkpoint(False))
+                    # Recheck destination after the mail wait, before filling.
+                    current = otp_fields.evaluate("el => el.form ? {action: el.form.action, method: el.form.method.toUpperCase()} : null")
+                    if urlsplit(page.url).hostname != EFP_HOST or current != target:
+                        raise StopRun("otp_form_unrecognized")
+                    otp_fields.fill(code_value)
+                    code_value = None
+                    otp_fields.press("Enter")
+                    gmail_code_used = True
+                    # Give the normal form navigation a chance to finish; no
+                    # repeat submission, resend or new code on any failure.
+                    page.wait_for_timeout(1200)
+                    return
                 if location_category(page.url) == "efp_required_action":
                     raise StopRun("account_action_required")
                 if stage == "authentication" and page.locator('#input-error:visible, .alert-error:visible, .pf-m-danger:visible, .fr-alert--error:visible').count():
@@ -200,36 +255,52 @@ def run_browser(spec):
 
             stage = "login_page"
             page.goto(LOGIN_URL, wait_until="domcontentloaded", timeout=45000)
-            page.wait_for_url(f"https://{EFP_HOST}/auth/**", timeout=30000)
-            page.locator('input[name="username"]').wait_for(state="visible")
-            checkpoint()
+            deadline = time.monotonic() + 30
+            while time.monotonic() < deadline:
+                if saved and private_page(page.url):
+                    reused = True
+                    break
+                if urlsplit(page.url).hostname == EFP_HOST and page.locator('input[name="username"]:visible').count():
+                    break
+                checkpoint()
+                page.wait_for_timeout(500)
+            else:
+                raise StopRun("authentication_unconfirmed")
             if spec["mode"] == "access":
+                checkpoint()
                 return {"code": "login_reachable", "stage": stage, "fresh_session": True}
 
             username = os.environ.get("EDOF_EFP_USERNAME", "").strip()
             password = os.environ.get("EDOF_EFP_PASSWORD", "")
             if not username or not password:
                 return {"code": "credentials_missing", "stage": stage, "fresh_session": True}
-            # Fail closed before sending credentials if navigation changed host.
-            if urlsplit(page.url).hostname != EFP_HOST:
-                raise StopRun("unexpected_page")
-            stage = "authentication"
-            target = page.locator('input[name="username"]').evaluate("el => el.form ? {action: el.form.action, method: el.form.method.toUpperCase()} : null")
-            if not target or not permitted_request(target["action"], target["method"]) or target["method"] != "POST":
-                raise StopRun("login_form_not_allowed")
-            target = None
-            page.locator('input[name="username"]').fill(username)
-            page.locator('input[name="password"]').fill(password)
-            page.locator("#kc-login").click()
-            username = password = None
-            deadline = time.monotonic() + 25
-            while time.monotonic() < deadline:
+            if not reused:
                 checkpoint()
-                if urlsplit(page.url).hostname == EDOF_HOST and "/espace-prive/" in page.url:
-                    break
-                page.wait_for_timeout(500)
-            else:
-                raise StopRun("authentication_unconfirmed")
+                if urlsplit(page.url).hostname != EFP_HOST:
+                    raise StopRun("unexpected_page")
+                stage = "authentication"
+                target = page.locator('input[name="username"]').evaluate("el => el.form ? {action: el.form.action, method: el.form.method.toUpperCase()} : null")
+                if not target or not permitted_request(target["action"], target["method"]) or target["method"] != "POST":
+                    raise StopRun("login_form_not_allowed")
+                if not vault:
+                    raise StopRun("private_storage_unavailable")
+                # Refresh Google and record pre-existing mail BEFORE requesting
+                # an EFP code. This cannot reuse a code from an earlier run.
+                mailbox = GmailCodes(vault, username)
+                target = None
+                page.locator('input[name="username"]').fill(username)
+                page.locator('input[name="password"]').fill(password)
+                requested_at = time.time()
+                page.locator("#kc-login").click()
+                username = password = None
+                deadline = time.monotonic() + 70
+                while time.monotonic() < deadline:
+                    checkpoint()
+                    if private_page(page.url):
+                        break
+                    page.wait_for_timeout(500)
+                else:
+                    raise StopRun("authentication_unconfirmed")
 
             stage = "organism"
             # EDOF can ask which establishment to open. Only select our SIRET.
@@ -265,7 +336,7 @@ def run_browser(spec):
                 if not candidates:
                     raise StopRun("no_match")
                 if len(candidates) != 1:
-                    return {"code": "ambiguous", "stage": stage, "candidate_count": len(candidates), "fresh_session": True}
+                    return {"code": "ambiguous", "stage": stage, "candidate_count": len(candidates), "fresh_session": not reused, "gmail_code_used": gmail_code_used}
                 spec["selected_id"] = candidates[0]["id"]
             else:
                 spec["selected_id"] = spec["folder_id"]
@@ -282,12 +353,21 @@ def run_browser(spec):
             fields = details[folder_id]
             if spec.get("first_name") and (identity(fields["first_name"]) != identity(spec["first_name"]) or identity(fields["last_name"]) != identity(spec["last_name"])):
                 raise StopRun("identity_mismatch")
-            return {"code": "read_success", "stage": stage, "fields": fields, "fresh_session": True, "blocked_writes": blocked}
+            if vault:
+                # Save only after a real authorised dossier response; never
+                # save an incomplete/OTP/challenge session or local storage.
+                vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
+                session_saved = True
+            return {"code": "read_success", "stage": stage, "fields": fields, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "session_saved": session_saved, "blocked_writes": blocked}
+        except GmailError as exc:
+            return {"code": exc.code, "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used}
         except StopRun as exc:
-            return {"code": exc.code, "stage": stage, "fresh_session": True, "blocked_writes": blocked, "diagnostics": diagnostics()}
+            if vault and exc.code in {"credentials_rejected", "account_unavailable", "otp_rejected", "verification_code", "sign_in_error"}:
+                vault.delete("browser")
+            return {"code": exc.code, "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "blocked_writes": blocked, "diagnostics": diagnostics()}
         except BrowserTimeout:
             try:
-                checkpoint()
+                checkpoint(False)
             except StopRun as exc:
                 return {"code": exc.code, "stage": stage, "fresh_session": True, "diagnostics": diagnostics()}
             except Exception:

@@ -6,7 +6,7 @@ let polling = false;
 async function watchServerTest() {
   if (polling) return;
   polling = true;
-  const stopAt = Date.now() + 185000;
+  const stopAt = Date.now() + 245000;
   while (Date.now() < stopAt) {
     await new Promise(resolve => setTimeout(resolve, 2500));
     try {
