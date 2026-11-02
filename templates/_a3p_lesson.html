@@ -58,7 +58,7 @@
   {% endfor %}
   <p class="a3p-decision-done" role="status" hidden>Les trois décisions sont terminées. Comparez votre raisonnement avec les critères ci-dessous.</p>
   </div>
-  <details class="aps-transcript"><summary>Comparer avec les critères et la proposition de réponse</summary><h3>Critères de relecture</h3><ul>{% for criterion in case.criteria %}<li>{{ criterion }}</li>{% endfor %}</ul><h3>Une réponse possible</h3><p>{{ case.example }}</p><p class="aps-small">{{ case.debrief }}</p></details>
+  <details class="aps-transcript a3p-case-feedback"><summary>Comparer avec les critères et la proposition de réponse</summary><h3>Critères de relecture</h3><ul>{% for criterion in case.criteria %}<li>{{ criterion }}</li>{% endfor %}</ul><h3>Une réponse possible</h3><p>{{ case.example }}</p><p class="aps-small">{{ case.debrief }}</p></details>
 {% endif %}
 </div>
 

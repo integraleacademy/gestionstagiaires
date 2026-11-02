@@ -47,7 +47,7 @@ from . import vtc, a3p, mac_aps
 from .mac_aps_timing import completion_blocker as macaps_completion_blocker
 from .exams import ExamStore, load_exam, public_exam, grade_exam, module_exam_activity_id
 from .aps_final_time import FINAL_COURSE_ID, FINAL_ACTIVITY_ID, final_time, tracking_course
-from .practice import public_practice, grade_practice
+from .practice import public_practice, grade_practice, verified_saved_result
 from .production import public_production, production_feedback, normalize_production, normalize_self_review
 from .production_ai import ProductionAIService, ProductionAIError, build_course_references, read_analyses
 from .assessment import describe_history
@@ -2227,7 +2227,8 @@ def create_native_elearning_blueprint(
         raw_activity = next(activity for _, activity in pairs if str(activity.get("id")) == requested_id)
         raw_activity = question_for_history(raw_activity, course, progress)
         section = next(section for section, activity in pairs if str(activity.get("id")) == requested_id)
-        activity = prepare_activity(select_vtc_activity(course, raw_activity, progress), asset_token, course_id,
+        selected_activity = select_vtc_activity(course, raw_activity, progress)
+        activity = prepare_activity(selected_activity, asset_token, course_id,
             production_revealed=bool(progress.get('answers', {}).get(requested_id, {}).get('production_feedback_seen')))
         introduction = [
             prepare_block(block, asset_token, course_id)
@@ -2262,6 +2263,8 @@ def create_native_elearning_blueprint(
             section_title=str(section.get("title") or ""),
             learner_brand=session_obj.get('learner_brand') or {},
             activity=activity,
+            saved_practice_result=verified_saved_result(selected_activity.get('practice'), progress['answers'].get(requested_id, {}))
+                if requested_id not in completed else None,
             vtc_production_history=VtcWrittenWork(store()).history(access, requested_id) if is_vtc_production(course, raw_activity) else [],
             a3p_resources_url=url_for('native_elearning.a3p_resources', token=token, course_id=course_id) if course.get('training_label') == 'A3P' else '',
             training_url=url_for('native_elearning.training_learner_catalog', token=token, course_id=course_id) if course_id.startswith('academy-vtc-') else '',

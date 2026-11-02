@@ -129,12 +129,17 @@
         index = fields.findIndex(field => field.dataset.exerciseId === result.feedback.find(item => !item.correct).id);
         stepVerified = false; feedback(result.feedback.find(item => !item.correct)); show(true); return;
       }
-      verified = JSON.stringify(all);
-      summary.dataset.correct = 'true';
-      summary.textContent = preview ? '✓ Exercice réussi. Vous pouvez le recommencer.' : '✓ Exercice réussi. Cliquez sur « Terminer l’activité » pour continuer.';
-      show(); showReview();
+      showSuccess(all);
     });
   });
+  function showSuccess(all) {
+    verified = JSON.stringify(all);
+    summary.dataset.correct = 'true';
+    const label = document.getElementById('nativeActionButton')?.textContent.trim() || 'Terminer et continuer';
+    summary.textContent = preview ? '✓ Exercice réussi. Vous pouvez le recommencer.' : `✓ Exercice réussi. Cliquez sur « ${label} » sous l’activité pour continuer.`;
+    show();
+    showReview();
+  }
   function showReview() {
     const review = root.querySelector('[data-remediation]');
     if (!review || !drills.size) return;
@@ -186,9 +191,15 @@
     summary.textContent = ''; updateJournal(); show(true);
   });
   restore(config.savedAnswers);
+  const savedChoices = JSON.stringify(answers());
   if (!preview && !config.completed) { try { restore(JSON.parse(sessionStorage.getItem(cacheKey) || 'null')); } catch (_) {} }
   if (config.completed) clearDraft();
   updateJournal(); show();
+  if (!preview && !config.completed && config.savedResult?.correct && JSON.stringify(answers()) === savedChoices) {
+    index = fields.length - 1;
+    feedback(config.savedResult.feedback[index]);
+    showSuccess(answers());
+  }
   window.aps62Practice = {clearDraft, collectForCompletion() {
     const all = answers();
     if (busy || !verified || verified !== JSON.stringify(all)) throw new Error('Terminez les questions, puis cliquez sur « Valider l’exercice ».');

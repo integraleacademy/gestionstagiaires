@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../static/js/aps62-practice.js'), 'utf8');
 
-function fixture(preview = false, stored = null) {
+function fixture(preview = false, stored = null, savedSuccess = false) {
   const kinds = ['single', 'sort', 'matching', 'order'];
   const config = {activityId:'atelier', courseVersion:'v2', completed:false, savedAnswers:{},
     practice:{revision:'click-only', exercises:kinds.map((kind,i)=>({id:'ex'+i,kind}))}};
@@ -29,9 +29,14 @@ function fixture(preview = false, stored = null) {
     return {ok:true,json:async()=>({ok:true,correct,passed:correct?4:3,total:4,
       feedback:kinds.map((kind,i)=>({id:'ex'+i,correct:correct||i>0,explanation:'Explication sûre <script>test</script>',correction:['Réponse attendue']}))})};
   };
+  const answers={ex0:'a',ex1:{r0:'a',r1:'b'},ex2:{r0:'a',r1:'b'},ex3:{r0:'a',r1:'b'}};
+  if (savedSuccess) {
+    const feedback = kinds.map((_, i) => ({id:'ex'+i, correct:true, explanation:'Réponse vérifiée.'}));
+    document.getElementById('apsPracticeConfig').textContent = JSON.stringify({...config, savedAnswers:answers,
+      savedResult:{correct:true, passed:4, total:4, feedback}});
+  }
   window.eval(source);
   const settle=async()=>{for(let i=0;i<15;i++)await Promise.resolve();};
-  const answers={ex0:'a',ex1:{r0:'a',r1:'b'},ex2:{r0:'a',r1:'b'},ex3:{r0:'a',r1:'b'}};
   function fill(){
     document.querySelector('input[value=a]').checked=true;
     document.querySelectorAll('fieldset').forEach(fieldset=>fieldset.querySelectorAll('select').forEach((el,i)=>{el.value=i?'b':'a';}));
@@ -40,6 +45,17 @@ function fixture(preview = false, stored = null) {
   return {window,document,calls,key,answers,fill,settle,correct:()=>{correct=true;},fail:()=>{failure=true;},
     submit:()=>document.querySelector('.aps-practice-check').click(),close:()=>window.close()};
 }
+
+test('a saved classic workshop can continue on reload, while a changed local draft must be checked', () => {
+  for (const stored of [null, {ex0:'b'}]) {
+    const f = fixture(false, stored, true);
+    try {
+      if (stored) assert.throws(() => f.window.aps62Practice.collectForCompletion());
+      else assert.deepEqual(JSON.parse(JSON.stringify(f.window.aps62Practice.collectForCompletion())), f.answers);
+      assert.equal(f.calls.length, 0);
+    } finally { f.close(); }
+  }
+});
 
 test('preview supports all four interaction kinds, correction, retries and reset without student writes',async()=>{
   const f=fixture(true);
