@@ -65,6 +65,16 @@ def test_diagnostics_only_expose_categories_not_auth_parameters():
     assert browser.location_category(f"https://{browser.EFP_HOST}/auth/realms/efp/login-actions/required-action?execution=synthetic-secret") == "efp_required_action"
 
 
+def test_private_page_waits_for_callback_and_folder_diagnostics_hide_identifiers():
+    base = f"https://{browser.EDOF_HOST}/espace-prive/html/#"
+    assert not browser.private_page(base + "/redirect-to-mire-connexion?state=synthetic-secret")
+    assert browser.private_page(base + "/dossiers/en-cours")
+    result = browser.diagnostic_summary(base + "/dossiers/detail/123456789012?state=synthetic", False, False,
+        {"workspace_status": 200, "folder_detail_status": 403, "folder_list_status": "untrusted"})
+    assert result == {"location": "edof_folder_detail", "error_banner_visible": False,
+                      "password_form_visible": False, "workspace_status": 200, "folder_detail_status": 403}
+
+
 @pytest.mark.parametrize("text,code", [("Nom d’utilisateur ou mot de passe invalide.", "credentials_rejected"), ("Votre compte est désactivé.", "account_unavailable"), ("Saisissez votre code d’authentification.", "verification_code")])
 def test_additional_authentication_outcomes(text, code):
     assert browser.classify_text(text) == code
@@ -164,6 +174,19 @@ def test_admin_sees_absent_mail_or_precise_verification_failure(web, reasons, su
         {"gmail_messages_checked": sum(reasons.values()), "gmail_rejections": reasons}})
     page = client.get("/admin/edof-test/server")
     assert page.status_code == 200 and summary in page.get_data(as_text=True)
+
+
+@pytest.mark.parametrize("stage,used,confirmed", [
+    ("search", True, True), ("search", False, False), ("authentication", True, False),
+])
+def test_only_confirm_completed_gmail_login_after_leaving_efp(web, stage, used, confirmed):
+    _, client, store, _ = web
+    with client.session_transaction() as sess:
+        owner = hashlib.sha256(sess["edof_server_owner"].encode()).hexdigest()
+    job = store.reserve(owner, "read")
+    store.finish(job, {"code": "timeout", "stage": stage, "gmail_code_used": used})
+    page = client.get("/admin/edof-test/server").get_data(as_text=True)
+    assert ("Connexion EFP réussie avec le code reçu dans Gmail." in page) is confirmed
 
 
 def test_timeout_kills_process_tree_and_hides_diagnostics(tmp_path, monkeypatch):

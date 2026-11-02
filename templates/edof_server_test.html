@@ -56,7 +56,8 @@
         <h3>{{ 'Accès au formulaire' if job.mode == 'access' else 'Connexion et lecture' }} · {{ job.created_at[:19]|replace('T',' à ') }} UTC</h3>
         <p class="{{ 'match' if job.code == 'read_success' else 'review-note' }}">{% if job.code == 'gmail_code_missing' and job.diagnostics and job.diagnostics.gmail_messages_checked is defined %}{% if job.diagnostics.gmail_messages_checked == 0 %}Gmail n’a trouvé aucun nouveau message de l’expéditeur EFP attendu pendant cet essai.{% else %}Gmail a trouvé un message, mais les vérifications du code EFP ont échoué. Le motif figure dans le diagnostic ci-dessous.{% endif %}{% else %}{{ job.message }}{% endif %}</p>
         {% if job.stage %}<p class="hint">Étape : {{ {'browser':'démarrage du navigateur','login_page':'accès au formulaire','authentication':'connexion EFP','organism':'sélection de l’établissement','search':'recherche par nom','dossier':'lecture du dossier'}.get(job.stage, 'essai') }}.</p>{% endif %}
-        {% if job.code == 'read_success' %}<p class="hint">Connexion : {{ 'nouvelle authentification' if job.fresh_session else 'session serveur réutilisée' }}. Code Gmail utilisé : {{ 'oui' if job.gmail_code_used else 'non' }}. Connexion conservée : {{ 'oui' if job.session_saved else 'non' }}.</p>{% endif %}
+        {% if job.code == 'read_success' %}<p class="hint">Connexion : {{ 'nouvelle authentification' if job.fresh_session else 'session serveur réutilisée' }}. Code Gmail utilisé : {{ 'oui' if job.gmail_code_used else 'non' }}. Connexion conservée : {{ 'oui' if job.session_saved else 'non' }}.</p>
+        {% elif job.gmail_code_used and job.stage in ['organism','search','dossier'] %}<p class="hint">Connexion EFP réussie avec le code reçu dans Gmail.</p>{% endif %}
         {% if job.diagnostics %}<details><summary>Diagnostic technique sans identifiants</summary><dl>
           {% if job.diagnostics.gmail_messages_checked is defined %}
           <dt>Nouveaux messages Gmail examinés</dt><dd>{{ job.diagnostics.gmail_messages_checked }}</dd>
@@ -83,6 +84,11 @@
           <dt>Champs refusés par le formulaire</dt><dd>{{ job.diagnostics.invalid_form_fields|default(0) }}</dd>
           <dt>Réponse à la connexion</dt><dd>{{ job.diagnostics.login_post_status|default('Non observée') }}</dd>
           <dt>Retour vers EDOF</dt><dd>{{ job.diagnostics.callback_status|default('Non observé') }}</dd>
+          {% if job.stage in ['organism','search','dossier'] %}
+          <dt>Réponse de l’établissement</dt><dd>{{ job.diagnostics.workspace_status|default('Non observée') }}</dd>
+          <dt>Réponse de la liste des dossiers</dt><dd>{{ job.diagnostics.folder_list_status|default('Non observée') }}</dd>
+          <dt>Réponse de la fiche demandée</dt><dd>{{ job.diagnostics.folder_detail_status|default('Non observée') }}</dd>
+          {% endif %}
           <dt>Envois bloqués par l’essai</dt><dd>EFP : {{ job.diagnostics.blocked_efp_posts|default(0) }} · EDOF : {{ job.diagnostics.blocked_edof_posts|default(0) }} · autres : {{ job.diagnostics.blocked_other_posts|default(0) }}</dd>
           {% endif %}
         </dl></details>{% endif %}
