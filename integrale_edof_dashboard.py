@@ -1,0 +1,432 @@
+"""CPF operations sourced from Intégrale Academy's authenticated EDOF directory."""
+import datetime as dt
+from collections import Counter
+from contextlib import closing
+from functools import lru_cache, wraps
+import json
+import math
+from pathlib import Path
+import secrets
+from zoneinfo import ZoneInfo
+
+from flask import Blueprint, abort, flash, get_flashed_messages, redirect, request, session, url_for
+
+import edof_directory as directory
+from cpf_provider import PROVIDERS, ProviderStore, ProviderUnavailable, provider_operation
+from edof_matching import build_comparison, manual_options
+from edof_readonly_test import ID_RE
+from edof_server_browser import DETAIL_PREFIX
+from integrale_edof_sync import event_tables
+from wedof_links import save_manual_wedof_link, sync_exact_wedof_links
+from wedof_matching import match_folder
+
+PARIS = ZoneInfo("Europe/Paris")
+SECTIONS = {"consumption": "Consommation Intégrale EDOF", "state": "État des dossiers",
+            "technical": "Connexion et paramètres techniques", "requests": "Demandes entrantes", "cancellations": "Annulations"}
+TABS = {"all": "Tous", "due": "Automatisations prévues", "accepted": "Acceptés", "training": "En formation",
+        "service": "Services faits", "invoiced": "Facturés", "unlinked": "À associer", "anomaly": "Anomalies"}
+LABELS = {"accepted": "Accepté", "training": "En formation", "service": "Service fait",
+          "invoiced": "Facturé", "request": "À traiter", "waiting": "En attente", "canceled": "Annulé",
+          "out": "Sortie déclarée", "refused": "Refusé", "unknown": "État à vérifier"}
+STATE_KEYS = {
+    "accepted": {"accepted", "accepte", "dossier accepte", "accepte par le titulaire"},
+    "training": {"intraining", "en formation", "entree declaree", "entree en formation declaree"},
+    "service": {"servicedonedeclared", "servicedonevalidated", "service fait declare", "service fait valide"},
+    "invoiced": {"billed", "invoiced", "paid", "facture", "facturee", "paye"},
+    "request": {"notprocessed", "tobeprocessed", "received", "a traiter", "demande recue", "demande d inscription"},
+    "waiting": {"validated", "waiting", "waitingacceptation", "en attente", "proposition de commande envoyee"},
+    "canceled": {"canceled", "cancelled", "cancelledbyattendee", "canceledbyattendee", "canceledbyorganism",
+                 "annule", "annulee", "annulation", "canceledbyattendeenotrealized", "non realisee annulation titulaire", "annule par le titulaire", "annule par l organisme"},
+    "out": {"outtraining", "outoftraining", "sortie declaree"},
+    "refused": {"refused", "refusedbyattendee", "refusedbyorganism", "rejected", "refuse", "refusee"},
+}
+STATES = {raw: key for key, aliases in STATE_KEYS.items() for raw in aliases}
+SIMULATION = {"planned": "Échéance à venir", "ready": "Justificatif disponible",
+              "unconfirmed": "Justificatif à renseigner", "blocked": "Blocage administrateur", "missing": "Date à vérifier"}
+ACTIONS = {"accepted": "entry_training", "training": "service_done"}
+ACTION_LABELS = {"entry_training": "Entrée en formation", "service_done": "Sortie et service fait", "both": "Entrée et sortie"}
+BLOCK_REASONS = {"no_show": "Absence", "postponed": "Report", "abandonment": "Abandon",
+                 "partial_completion": "Parcours partiel", "administrative_issue": "Vérification administrative", "other": "Autre motif"}
+
+
+def category(row):
+    if directory.normalized(row.get("billing_state") or "") in STATE_KEYS["invoiced"]:
+        return "invoiced"
+    raw = directory.normalized(row.get("state") or "")
+    if raw.startswith(("annule par ", "annulee par ", "annulation par ")):
+        return "canceled"
+    return STATES.get(raw, "unknown")
+
+
+def folder_for_matching(row):
+    return {"external_id": row["folder_id"], "type": "cpf", "first_name": row.get("first_name"),
+            "last_name": row.get("last_name"), "email": row.get("email"), "training_title": row.get("title"),
+            "state": {"accepted": "accepted", "training": "inTraining"}.get(category(row), row.get("state")),
+            "start_date": row.get("session_start_date"), "end_date": row.get("session_end_date")}
+
+
+def active_blocks(data):
+    return {(str(x.get("external_id")), x.get("action")): x for x in data.get("wedof_automation_blocks", [])
+            if isinstance(x, dict) and x.get("active")}
+
+
+def simulate(kind, date, block, draft, now):
+    if kind not in ACTIONS:
+        return None
+    if block:
+        return "blocked"
+    try:
+        scheduled = dt.datetime.combine(dt.date.fromisoformat(date), dt.time(18 if kind == "accepted" else 23), PARIS)
+    except (TypeError, ValueError):
+        return "missing"
+    if scheduled > now:
+        return "planned"
+    if draft and draft.get("action") == ACTIONS[kind] and draft.get("actual_date") and draft.get("evidence"):
+        return "ready"
+    return "unconfirmed"
+
+
+def dashboard_rows(snapshot, data, operations, now):
+    links = {str(x.get("external_id")): x for x in data.get("wedof_links", []) if isinstance(x, dict) and x.get("active")}
+    blocked = active_blocks(data)
+    rows, counts = [], Counter()
+    for record in (snapshot or {}).get("rows", {}).values():
+        folder = record["folder_id"]
+        kind = category(record)
+        action = ACTIONS.get(kind)
+        date = (record.get("session_start_date") if kind == "accepted" else record.get("session_end_date")) or ""
+        block = blocked.get((folder, action)) or blocked.get((folder, "both"))
+        flags = operations.get(folder, {})
+        evaluation = simulate(kind, date, block, flags.get("draft"), now)
+        due = evaluation in {"unconfirmed","ready"}
+        tags = {kind, "all"}
+        if evaluation in {"planned", "unconfirmed", "ready"}:
+            tags.add("due")
+        if folder not in links and action:
+            tags.add("unlinked")
+        if block or kind == "unknown" or (action and not date):
+            tags.add("anomaly")
+        counts.update(tags)
+        rows.append({**record, "kind": kind, "label": LABELS[kind] if kind != "unknown" else record.get("state") or LABELS[kind],
+                     "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": links.get(folder),
+                     "handled": bool(flags.get("handled")), "archived": bool(flags.get("archived")),
+                     "draft": flags.get("draft"), "official_url": DETAIL_PREFIX + folder})
+    return rows, counts
+
+
+def operations_db(store):
+    db = store.connect()
+    db.execute("""CREATE TABLE IF NOT EXISTS dossier_work (folder TEXT PRIMARY KEY, handled INTEGER DEFAULT 0,
+                  archived INTEGER DEFAULT 0, draft TEXT, updated TEXT, actor TEXT)""")
+    return db
+
+
+def local_operations(store):
+    with closing(operations_db(store)) as db:
+        return {x["folder"]: {**dict(x), "draft": json.loads(x["draft"]) if x["draft"] else None}
+                for x in db.execute("SELECT * FROM dossier_work")}
+
+
+def record_work(store, folder, actor, **changes):
+    if not changes or not set(changes) <= {"handled", "archived", "draft"}:
+        raise ValueError("Action CPF inconnue.")
+    with closing(operations_db(store)) as db, db:
+        db.execute("INSERT OR IGNORE INTO dossier_work(folder) VALUES (?)", (folder,))
+        updates = {**changes, "updated": dt.datetime.now(PARIS).isoformat(), "actor": actor}
+        db.execute("UPDATE dossier_work SET " + ", ".join(k + "=?" for k in updates) + " WHERE folder=?",
+                   (*updates.values(), folder))
+
+
+def declaration_draft(row, fields):
+    action = ACTIONS.get(category(row))
+    if not action or fields.get("action") != action or fields.get("attested") != "yes":
+        raise ValueError("Vérifiez le statut du dossier et confirmez le justificatif.")
+    try:
+        date = dt.date.fromisoformat(fields.get("actual_date", ""))
+    except (TypeError, ValueError):
+        raise ValueError("Renseignez la date effective.") from None
+    if date > dt.datetime.now(PARIS).date():
+        raise ValueError("La date effective ne peut pas être future.")
+    if row.get("session_start_date") and date.isoformat() < row["session_start_date"]:
+        raise ValueError("La date effective précède le début de la session.")
+    if row.get("session_end_date") and date.isoformat() > row["session_end_date"]:
+        raise ValueError("La date effective dépasse la fin de la session EDOF.")
+    evidence = fields.get("evidence", "").strip()
+    if not 3 <= len(evidence) <= 250:
+        raise ValueError("Indiquez la référence du justificatif (3 à 250 caractères).")
+    result = {"action": action, "actual_date": date.isoformat(), "evidence": evidence}
+    if action == "service_done":
+        try:
+            rate = int(fields.get("rate", ""))
+        except (TypeError, ValueError):
+            rate = -1
+        reason = fields.get("reason", "").strip()
+        if not 0 <= rate <= 100 or (rate < 100 and not 3 <= len(reason) <= 250):
+            raise ValueError("Vérifiez le taux réalisé et le motif en cas de parcours partiel.")
+        result.update(rate=rate, reason=reason[:250] if rate < 100 else "")
+    return result
+
+
+def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status, admin_required, check_csrf):
+    bp = Blueprint("integrale_edof", __name__, url_prefix="/admin/edof-test")
+    selection = ProviderStore(store.directory)
+
+    def native_action(view):
+        @wraps(view)
+        def guarded(*args, **kwargs):
+            owner = results_owner()
+            if session.get("admin_role") == "viewer":
+                abort(403)
+            check_csrf()
+            try:
+                with provider_operation("integrale"):
+                    return view(owner, *args, **kwargs)
+            except (ProviderUnavailable, ValueError) as exc:
+                flash(str(exc), "error")
+                return back(request.form.get("section") or "state")
+        return admin_required(guarded)
+
+    def back(section="state", **kwargs):
+        return redirect(url_for("integrale_edof.index", section=section if section in SECTIONS else "state", **kwargs), code=303)
+
+    def snapshot(owner):
+        return vault().get(directory.record_key(owner)) if store.connector_key else None
+
+    def folder_record(owner, folder):
+        if not ID_RE.fullmatch(folder):
+            abort(404)
+        raw = (snapshot(owner) or {}).get("rows", {}).get(folder)
+        if not raw:
+            raise ValueError("Dossier absent de la liste EDOF synchronisée. Actualisez la liste.")
+        return raw
+
+    @lru_cache(maxsize=1)
+    def local_projection(version):
+        with open(legacy.DATA_FILE, encoding="utf-8") as source:
+            data = json.load(source)
+        sessions = []
+        for group in data.get("sessions", []):
+            if not isinstance(group,dict):
+                continue
+            summary = {key:group[key] for key in ("id", "name", "training_type", "date_start", "date_end",
+                  "date_debut", "date_fin", "archived", "is_archived", "status") if key in group}
+            summary["trainees"] = [{key:t[key] for key in ("id","first_name","last_name","prenom","nom","email","mail")
+                                    if key in t} for t in (group.get("trainees") or group.get("stagiaires") or []) if isinstance(t,dict)]
+            sessions.append(summary)
+        return {"sessions": sessions, "wedof_links": data.get("wedof_links", []),
+                "wedof_automation_blocks": data.get("wedof_automation_blocks", [])}
+
+    def local_data():
+        try:
+            st = Path(legacy.DATA_FILE).stat()
+        except FileNotFoundError:
+            return {}
+        return local_projection((st.st_ino, st.st_mtime_ns, st.st_size))
+
+    def enrich(owner, row):
+        previous = store.successful_read(owner, spec={"folder_id": row["folder_id"], "first_name": "", "last_name": ""})
+        fields = previous["fields"] if previous else {}
+        if fields and all(directory.normalized(fields.get(k) or "") == directory.normalized(row.get(k) or "")
+                          for k in ("first_name", "last_name")):
+            return {**row, "email": fields.get("email", "")}
+        return row
+
+    @bp.after_request
+    def private(response):
+        response.headers.update({"Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
+                                 "X-Content-Type-Options": "nosniff",
+                                 "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"})
+        return response
+
+    @bp.get("")
+    @admin_required
+    def index():
+        owner = results_owner()
+        csrf = session.setdefault("edof_server_csrf", secrets.token_urlsafe(32))
+        section = request.args.get("section", "state")
+        if section not in SECTIONS:
+            abort(404)
+        tab = request.args.get("tab", "all")
+        if tab not in TABS:
+            tab = "all"
+        snap = snapshot(owner)
+        if snap:
+            store.use_directory(owner)
+        now = dt.datetime.now(PARIS)
+        today = now.date().isoformat()
+        data = local_data() if snap and section in {"state", "requests", "cancellations"} else {}
+        rows, counts = dashboard_rows(snap, data, local_operations(selection), now)
+        testing = section == "state" and request.args.get("simulation") == "1"
+        simulation = Counter(r["evaluation"] for r in rows if r["evaluation"])
+        if testing:
+            rows = [r for r in rows if r["evaluation"]]
+        q = directory.normalized(request.args.get("q", "")[:140])
+        if section in {"requests", "cancellations"}:
+            kind = "request" if section == "requests" else "canceled"
+            rows = [row for row in rows if row["kind"] == kind and not row["archived"]]
+        else:
+            rows = [row for row in rows if tab in row["tags"]]
+        if q:
+            rows = [r for r in rows if q in directory.normalized(" ".join(str(r.get(k) or "") for k in
+                    ("folder_id", "first_name", "last_name", "last_name", "first_name", "title", "label")))]
+        rows.sort(key=lambda r: (r.get("session_start_date") or "", r["folder_id"]), reverse=True)
+        pages = max(1, math.ceil(len(rows) / 25))
+        page = max(1, min(request.args.get("page", 1, type=int) or 1, pages))
+        detail = None
+        folder = request.args.get("folder", "")
+        if folder:
+            if not ID_RE.fullmatch(folder) or folder not in (snap or {}).get("rows", {}):
+                abort(404)
+            record = folder_record(owner, folder)
+            if not data:
+                data = local_data()
+            detail = {"record": record, "comparison": build_comparison(data, enrich(owner, record))}
+            detail["query"] = request.args.get("inscription","")[:120].strip()
+            if detail["query"]:
+                detail["comparison"] = {**detail["comparison"], "status":"manual_search",
+                                        "candidates":manual_options(data, enrich(owner, record), query=detail["query"])}
+            detail["key"] = directory.link_key(owner, folder)
+            detail["draft"] = local_operations(selection).get(folder, {}).get("draft")
+            detail["action"] = ACTIONS.get(category(record))
+            detail["official"] = DETAIL_PREFIX + folder
+        with closing(store.connect()) as db:
+            metrics = dict(db.execute("SELECT mode, COUNT(*) FROM jobs WHERE owner=? GROUP BY mode", (owner,)))
+        with closing(selection.connect()) as db:
+            event_tables(db)
+            cursor = db.execute("SELECT checked FROM directory_cursor WHERE id=1").fetchone()
+            events = [dict(x) for x in db.execute("SELECT * FROM directory_events ORDER BY id DESC LIMIT 12")
+                      if x["folder"] in (snap or {}).get("rows", {})]
+        gmail = gmail_status()
+        selected = selection.state()
+        return app.jinja_env.get_template("integrale_edof.html").render(
+            selection=selected, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=TABS, tab=tab,
+            csrf=csrf, flashes=get_flashed_messages(with_categories=True), total=len(rows), counts=counts,
+            rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
+            detail=detail, events=events, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=directory.stamp(snap) if snap else None, today=today, metrics=metrics,
+            jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
+            scope=(snap or {}).get("scope", "open"), directory_enabled=store.directory_enabled(owner), snapshot_count=len((snap or {}).get("rows", {})),
+            block_reasons=BLOCK_REASONS, action_labels=ACTION_LABELS,
+            changed=dt.datetime.fromtimestamp(selected["changed"], PARIS).strftime("%d/%m/%Y à %H h %M") if selected["changed"] else None)
+
+    @bp.post("/provider")
+    @admin_required
+    def switch():
+        owner = results_owner()
+        if session.get("admin_role") == "viewer":
+            abort(403)
+        check_csrf()
+        target = request.form.get("provider")
+        if target not in PROVIDERS:
+            abort(400)
+        try:
+            revision = int(request.form.get("revision", ""))
+        except ValueError:
+            abort(400)
+        try:
+            result = selection.switch(target, revision, session.get("admin_username") or owner)
+        except ProviderUnavailable as exc:
+            flash(str(exc), "warning")
+            return back()
+        # Exactly one initial refresh per deliberate activation, including
+        # after several weeks away. A failed sign-in cannot reschedule itself.
+        if target == "integrale" and result["revision"] != revision:
+            store.request_directory(owner)
+        flash(f"{PROVIDERS[target]} est le système actif sur Test V2.", "success")
+        return back()
+
+    @bp.post("/associate-reliable")
+    @native_action
+    def associate_reliable(owner):
+        snap = snapshot(owner)
+        if snap is None:
+            raise ValueError("Synchronisez d’abord la liste EDOF.")
+        # Only detail reads include a verified contact. Hundreds of broad
+        # directory rows must never cause hundreds of interactive logins.
+        with closing(store.connect()) as db:
+            ids = {r[0] for r in db.execute("""SELECT DISTINCT json_extract(result,'$.fields.folder_id') FROM jobs
+                WHERE owner=? AND json_extract(result,'$.code')='read_success'""", (owner,))}
+        folders = [folder_for_matching(enrich(owner, row)) for fid, row in snap["rows"].items()
+                   if fid in ids and category(row) in ACTIONS]
+        summary = {}
+        def apply(data):
+            preview = [match_folder(f, data.get("sessions", [])) for f in folders]
+            summary.update(sync_exact_wedof_links(data, preview))
+            return data
+        legacy._atomic_update_data(apply)
+        flash(f"{summary['created']} association(s) créée(s), {summary['already_linked']} déjà présente(s), "
+              f"{summary['conflicts']} conflit(s). Le rapprochement automatique exige aussi un contact vérifié.", "success")
+        return back()
+
+    @bp.post("/dossiers/<folder>/associate")
+    @native_action
+    def associate(owner, folder):
+        row = enrich(owner, folder_record(owner, folder))
+        sid, tid = request.form.get("session_id"), request.form.get("trainee_id")
+        outcome = []
+        def apply(data):
+            choices = manual_options(data, row, pair=(sid, tid))
+            if len(choices) != 1 or choices[0]["issues"] or request.form.get("verified") != "yes":
+                raise ValueError("Vérifiez l’identité, la session et les éventuels conflits avant d’associer.")
+            result = save_manual_wedof_link(data, external_id=folder, session_id=sid, trainee_id=tid,
+                       state=folder_for_matching(row)["state"], date_start=row.get("session_start_date"), date_end=row.get("session_end_date"))
+            if result == "conflict":
+                raise ValueError("Ce dossier ou cette inscription possède déjà une autre association.")
+            outcome.append(result)
+            return data
+        legacy._atomic_update_data(apply)
+        flash("Association locale enregistrée." if outcome == ["created"] else "Association déjà enregistrée.", "success")
+        return back(folder=folder)
+
+    @bp.post("/dossiers/<folder>/block")
+    @native_action
+    def block(owner, folder):
+        row = folder_record(owner, folder)
+        action = request.form.get("action")
+        reason = request.form.get("reason", "")
+        clear = request.form.get("release") == "yes"
+        if action not in ACTION_LABELS or (not clear and (action != ACTIONS.get(category(row)) or reason not in BLOCK_REASONS)):
+            abort(400)
+        now = dt.datetime.now(PARIS).isoformat()
+        def apply(data):
+            blocks = data.setdefault("wedof_automation_blocks", [])
+            block = next((x for x in blocks if x.get("external_id") == folder and x.get("action") == action), None)
+            if block:
+                block.update(active=not clear, updated_at=now)
+                if not clear:
+                    block["reason_code"] = reason
+            elif not clear:
+                blocks.append({"id": "CPF-" + secrets.token_hex(8), "external_id": folder, "action": action,
+                    "active": True, "reason_code": reason, "comment": "", "created_at": now, "updated_at": now})
+            return data
+        legacy._atomic_update_data(apply)
+        flash("Blocage levé." if clear else "Automatisation bloquée pour ce dossier.", "success")
+        return back()
+
+    @bp.post("/dossiers/<folder>/follow-up")
+    @native_action
+    def follow_up(owner, folder):
+        row = folder_record(owner, folder)
+        if category(row) != "request":
+            raise ValueError("Cette demande n’est plus à traiter dans la liste synchronisée.")
+        change = request.form.get("change")
+        if change not in {"handled", "archived", "reopen"}:
+            abort(400)
+        record_work(selection, folder, session.get("admin_username") or owner, **(
+            {"handled": 0, "archived": 0} if change == "reopen" else {change: 1}))
+        flash("Suivi local de la demande mis à jour.", "success")
+        return back("requests")
+
+    @bp.post("/dossiers/<folder>/prepare")
+    @native_action
+    def prepare(owner, folder):
+        row = folder_record(owner, folder)
+        action = ACTIONS.get(category(row))
+        blocks = active_blocks(local_data())
+        if (folder, action) in blocks or (folder, "both") in blocks:
+            raise ValueError("Le dossier est bloqué. Vérifiez le motif avant de préparer sa déclaration.")
+        draft = declaration_draft(row, request.form)
+        record_work(selection, folder, session.get("admin_username") or owner, draft=json.dumps(draft, ensure_ascii=False))
+        flash("Déclaration préparée. Sa transmission doit être confirmée dans le portail EDOF.", "success")
+        return back(folder=folder)
+
+    app.register_blueprint(bp)

@@ -22,6 +22,9 @@ _TRUE_VALUES = {"true", "1", "yes", "on"}
 logger = logging.getLogger(__name__)
 
 
+from cpf_provider import wedof_transport
+
+
 class WedofConfigurationError(RuntimeError):
     """Configuration WEDOF absente ou inutilisable."""
 
@@ -125,6 +128,7 @@ class WedofClient:
                 "wedof_governor_unavailable", True, 503,
             ) from exc
 
+    @wedof_transport
     def _get_json_response(self, path: str, *, params: Optional[Mapping[str, Any]] = None,
                            timeout: Optional[Tuple[float, float]] = None,
                            max_attempts: Optional[int] = None, backoff: Optional[float] = None,
@@ -219,6 +223,7 @@ class WedofClient:
     def _get_json(self, path: str, *, params: Optional[Mapping[str, Any]] = None) -> Any:
         return self._get_json_response(path, params=params)[0]
 
+    @wedof_transport
     def _post_json_response(
         self, path: str, payload: Mapping[str, Any], *,
         operation: Optional[str] = None, allow_over_limit: bool = False,

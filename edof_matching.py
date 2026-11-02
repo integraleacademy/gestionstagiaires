@@ -164,3 +164,35 @@ def build_comparison(data, observation):
         result["status"] = "ambiguous"
     result.update(candidates=candidates[:MAX_CANDIDATES], candidate_count=len(candidates))
     return result
+
+
+def manual_options(data, observation, *, query="", pair=None):
+    """Recheck a selected local enrolment, including homonyms and existing CPF links."""
+    search = _name(query)
+    if pair is None and len(search) < 3:
+        return []
+    links = {}
+    for item in data.get("wedof_links", []):
+        if isinstance(item, dict) and item.get("active"):
+            ids = (_id(item.get("session_id")), _id(item.get("trainee_id")))
+            links.setdefault(ids, set()).add(_id(item.get("external_id")))
+    results = []
+    for group in data.get("sessions", []):
+        if not isinstance(group,dict):
+            continue
+        for trainee in group.get("trainees") or group.get("stagiaires") or []:
+            if not isinstance(trainee,dict):
+                continue
+            reg = _registration(group, trainee)
+            ids = reg["session_id"], reg["trainee_id"]
+            if pair is not None:
+                if ids != pair:
+                    continue
+            else:
+                label = _name(" ".join(reg[k] for k in ("first_name","last_name","session_name","email")))
+                if not all(word in label for word in search.split()):
+                    continue
+            results.append(_checks(reg, observation, links))
+            if pair is None and len(results) >= 20:
+                return results
+    return results
