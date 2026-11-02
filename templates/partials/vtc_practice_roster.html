@@ -1,0 +1,43 @@
+{% set practice_slots = session.vtc_practice_slots %}
+<link rel="stylesheet" href="{{ url_for('static', filename='vtc-practice-roster.css') }}">
+<section class="vtc-roster" aria-labelledby="vtc-roster-title">
+  <h2 id="vtc-roster-title">Groupes de formation pratique</h2>
+  {% if not practice_slots %}
+  <p class="vtc-roster-note"><strong>Répartition proposée.</strong> Elle s’appliquera aux convocations une fois les deux créneaux enregistrés.</p>
+  {% endif %}
+  <div class="vtc-roster-grid">
+    {% for number, members in vtc_roster_groups.items() %}
+    <article class="vtc-roster-group" data-group="{{ number }}" aria-labelledby="vtc-group-{{ number }}">
+      <header>
+        <h3 id="vtc-group-{{ number }}">Groupe {{ number }}</h3>
+        <span class="vtc-roster-count">{{ members|length }} stagiaire{{ 's' if members|length > 1 }}</span>
+      </header>
+      {% if practice_slots %}
+      {% set slot = practice_slots[loop.index0] %}
+      <p class="vtc-roster-time">{{ (slot.date or practice_slots[0].date)|frdate }} · {{ slot.start|replace(':', 'h') }} – {{ slot.end|replace(':', 'h') }}</p>
+      {% endif %}
+      {% if members %}
+      <ul>
+        {% for t in members %}
+        <li><a href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=t.id) }}">{{ t.first_name }} {{ t.last_name }}</a></li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p>Aucun stagiaire inscrit dans ce groupe.</p>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  {% if not is_read_only %}
+  <details class="vtc-roster-editor">
+    <summary>{{ 'Modifier les créneaux' if practice_slots else 'Configurer les deux créneaux' }}</summary>
+    <form id="vtcRosterForm" action="{{ url_for('api_update_session', session_id=session.id) }}" method="post">
+      <label>Date de la pratique du groupe 1<input name="practice_training_date" type="date" value="{{ session.practice_training_date }}" required></label>
+      {% include 'partials/vtc_practice_slots.html' %}
+      <button type="submit" class="btn btn-primary">{{ 'Enregistrer les horaires' if practice_slots else 'Confirmer les deux groupes' }}</button>
+      <span role="alert"></span>
+    </form>
+  </details>
+  <script defer src="{{ url_for('static', filename='vtc-practice-groups.js', v='20261102-roster') }}"></script>
+  {% endif %}
+</section>

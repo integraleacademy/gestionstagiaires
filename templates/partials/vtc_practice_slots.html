@@ -1,0 +1,15 @@
+<div class="aps-organisation__cards vtc-slot-fields">
+  {% for group, start, end in [(1, '08:30', '12:00'), (2, '13:30', '17:00')] %}
+  {% set slot = practice_slots[loop.index0] if practice_slots else {} %}
+  <fieldset class="aps-period-card" data-slot="{{ group }}">
+    <legend class="aps-period-card__label">Groupe {{ group }}</legend>
+    {% if group == 2 %}
+    <label>Date si différente du groupe 1<input name="date" type="date" value="{{ slot.date or '' }}"></label>
+    {% endif %}
+    <div class="aps-period-card__dates">
+      <label>Début<input name="start" type="time" value="{{ slot.start or start }}" required></label>
+      <label>Fin<input name="end" type="time" value="{{ slot.end or end }}" required></label>
+    </div>
+  </fieldset>
+  {% endfor %}
+</div>
