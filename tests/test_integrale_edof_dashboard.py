@@ -247,3 +247,20 @@ def test_bulk_preview_and_sync_use_verified_remote_contacts(site):
     result=site.client.get("/admin/edof-test?section=state&matching=1")
     assert result.status_code==200 and "Prévisualisation des correspondances" in result.text
     assert site.gate.state()["provider"]=="wedof"
+
+
+def test_legacy_french_dates_work_in_live_simulation_and_declarations_without_remote_refresh(site):
+    key=edof_directory.record_key(site.owner)
+    snapshot=site.vault.get(key)
+    snapshot["rows"]["100000"].update(session_start_date="02/02/2026",session_end_date="06/02/2026")
+    site.vault.put(key,snapshot)
+    response=site.client.get("/admin/edof-test?simulation=1")
+    assert response.status_code == 200
+    row = next(part.split("</tr>", 1)[0] for part in response.text.split("<tr>") if ">100000</a>" in part)
+    assert "02/02/2026" in row and "Justificatif à renseigner" in row
+    assert "Date à vérifier" not in row
+    site.gate.switch("integrale",0,"admin")
+    result=site.client.post("/admin/edof-test/dossiers/100000/prepare", data={
+        "action":"entry_training","actual_date":"2026-02-03","attested":"yes","evidence":"Présence signée","csrf":site.csrf}, follow_redirects=True)
+    assert "Déclaration préparée" in result.text
+    assert edof_directory.session_date("31/02/2026") == ""
