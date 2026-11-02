@@ -25,7 +25,8 @@ EFP_HOST = "efpconnect.emploi.gouv.fr"
 LOGIN_URL = f"https://{EDOF_HOST}/espace-prive/html/#/redirect-to-mire-connexion"
 LIST_URL = f"https://{EDOF_HOST}/espace-prive/html/#/dossiers/en-cours"
 DETAIL_PREFIX = f"https://{EDOF_HOST}/espace-prive/html/#/dossiers/detail/"
-API_PREFIX = f"/edof-api/v1/api/private/siret/{SIRET}/organisms/current/registration-folders/"
+WORKSPACE_API_PREFIX = f"/edof-api/v1/api/private/siret/{SIRET}/"
+API_PREFIX = WORKSPACE_API_PREFIX + "organisms/current/registration-folders/"
 READ_METHODS = {"GET", "HEAD", "OPTIONS"}
 OTP_SELECTOR = 'input[autocomplete="one-time-code"]:visible, input[name="otp"]:visible, input[name="totp"]:visible, input[name="code"]:visible'
 
@@ -37,7 +38,9 @@ def session_cookies(state):
 
 def private_page(url):
     parsed = urlsplit(url)
-    return parsed.hostname == EDOF_HOST and parsed.path.startswith("/espace-prive/") and parsed.fragment not in {"", "#", "/", "/redirect-to-mire-connexion"}
+    route = parsed.fragment.partition("?")[0].rstrip("/")
+    return (parsed.hostname == EDOF_HOST and parsed.path.startswith("/espace-prive/")
+            and route.startswith("/") and route != "/redirect-to-mire-connexion")
 
 
 def permitted_request(url, method):
@@ -94,7 +97,12 @@ def location_category(url):
         if parsed.path == "/idp/edof/api/v2/callback":
             return "edof_callback"
         if parsed.path.startswith("/espace-prive/"):
-            return "edof_select_siret" if "select-siret" in parsed.fragment else "edof_private"
+            route = parsed.fragment.partition("?")[0].rstrip("/")
+            if route == "/dossiers/en-cours":
+                return "edof_folder_list"
+            if re.fullmatch(r"/dossiers/detail/[0-9]{6,20}", route):
+                return "edof_folder_detail"
+            return "edof_select_siret" if "select-siret" in route.split("/") else "edof_private"
         if parsed.path.startswith("/espace-public/"):
             return "edof_public"
         if parsed.path.startswith("/edof-api/"):
@@ -106,7 +114,7 @@ def location_category(url):
 def diagnostic_summary(location, password_visible, error_visible, signals):
     """Allowlist scalar signals; deliberately no page/error/input text."""
     result = {"location": location_category(location), "password_form_visible": bool(password_visible), "error_banner_visible": bool(error_visible)}
-    for key in ("login_post_status", "callback_status", "blocked_efp_posts", "blocked_edof_posts", "blocked_other_posts", "invalid_form_fields"):
+    for key in ("login_post_status", "callback_status", "workspace_status", "folder_list_status", "folder_detail_status", "blocked_efp_posts", "blocked_edof_posts", "blocked_other_posts", "invalid_form_fields"):
         value = signals.get(key)
         if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 9999:
             result[key] = value
@@ -162,10 +170,20 @@ def run_browser(spec):
             signals["login_post_status"] = response.status
         if parsed.hostname == EDOF_HOST and parsed.path == "/idp/edof/api/v2/callback":
             signals["callback_status"] = response.status
-        if response.request.method != "GET" or response.status != 200 or parsed.hostname != EDOF_HOST or not parsed.path.startswith(API_PREFIX):
+        if response.request.method != "GET" or parsed.hostname != EDOF_HOST or not parsed.path.startswith(WORKSPACE_API_PREFIX):
+            return
+        if 200 <= response.status < 300:
+            signals["workspace_status"] = response.status
+        if not parsed.path.startswith(API_PREFIX):
             return
         tail = parsed.path[len(API_PREFIX):]
-        if tail != "pad" and not re.fullmatch(r"[0-9]{6,20}", tail):
+        if tail == "pad":
+            signals["folder_list_status"] = response.status
+        elif tail and tail in (spec.get("folder_id"), spec.get("selected_id")):
+            signals["folder_detail_status"] = response.status
+        else:
+            return
+        if response.status != 200:
             return
         try:
             # Bound the body we parse; no complete response ever reaches stdout.
@@ -303,22 +321,32 @@ def run_browser(spec):
                     raise StopRun("authentication_unconfirmed")
 
             stage = "organism"
-            # EDOF can ask which establishment to open. Only select our SIRET.
-            if "select-siret" in page.url:
-                choice = page.get_by_text(SIRET, exact=False)
-                if choice.count() != 1:
-                    raise StopRun("organism_selection_required")
-                choice.click()
-                page.wait_for_timeout(1000)
+            # The OAuth callback may open the SPA before its organisation
+            # session is ready. Let EDOF complete that flow before navigating.
+            choice_clicked = False
+            dossier_menu = page.locator('a[href$="/dossiers/en-cours"]')
+            deadline = time.monotonic() + 35
+            while time.monotonic() < deadline:
                 checkpoint()
+                if location_category(page.url) == "edof_select_siret":
+                    choice = page.get_by_text(SIRET, exact=False).filter(visible=True)
+                    if not choice_clicked and choice.count() == 1:
+                        choice.click()
+                        choice_clicked = True
+                elif private_page(page.url) and (signals.get("workspace_status") or dossier_menu.count()):
+                    break
+                page.wait_for_timeout(300)
+            else:
+                raise StopRun("organism_selection_required")
 
             if not spec.get("folder_id"):
                 stage = "search"
                 page.goto(LIST_URL, wait_until="domcontentloaded")
-                page.get_by_text("Par Nom de stagiaire", exact=True).click()
-                search = page.get_by_placeholder(re.compile("Rechercher un dossier de formation", re.I))
-                if search.count() != 1:
-                    raise StopRun("search_unconfirmed")
+                page.get_by_text(re.compile(r"^Par nom d(?:u|e) stagiaire$", re.I)).click()
+                search = page.get_by_placeholder(
+                    re.compile(r"rechercher un dossier de formation|nom (?:du |de )?stagiaire", re.I)
+                ).and_(page.locator("input:visible"))
+                search.wait_for(state="visible")
                 search.fill(spec["last_name"])
                 lists.clear()
                 search.press("Enter")
@@ -369,14 +397,14 @@ def run_browser(spec):
             try:
                 checkpoint(False)
             except StopRun as exc:
-                return {"code": exc.code, "stage": stage, "fresh_session": True, "diagnostics": diagnostics()}
+                return {"code": exc.code, "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "diagnostics": diagnostics()}
             except Exception:
                 pass
-            return {"code": "timeout", "stage": stage, "fresh_session": True, "diagnostics": diagnostics()}
+            return {"code": "timeout", "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "diagnostics": diagnostics()}
         except Exception:
             # Playwright exception text may include filled values or URLs with
             # authentication parameters; never print or log it.
-            return {"code": "browser_error", "stage": stage, "fresh_session": True, "diagnostics": diagnostics()}
+            return {"code": "browser_error", "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "diagnostics": diagnostics()}
         finally:
             browser.close()
 
