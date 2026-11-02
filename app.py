@@ -24358,6 +24358,12 @@ def admin_ssiap_birth_department():
     return jsonify({"ok": True, "department": department_code})
 
 
+def _ssiap_diploma_birth_country(trainee: Dict[str, Any]) -> str:
+    value = str(trainee.get("ssiap_diploma_birth_country", trainee.get("birth_country") or "France") or "").strip()
+    # Older imports can contain an identifier in place of a geographical name.
+    return value if any(c.isalpha() for c in value) and not any(c.isdigit() for c in value) else ""
+
+
 def _ssiap_birth_place_label(trainee: Dict[str, Any], *, lookup_department: bool = True) -> str:
     birth_city = normalize_city(
         trainee.get("ssiap_diploma_birth_city", trainee.get("birth_city") or trainee.get("birth_place")) or ""
@@ -24365,9 +24371,9 @@ def _ssiap_birth_place_label(trainee: Dict[str, Any], *, lookup_department: bool
     if not birth_city:
         return birth_city
 
-    birth_country = str(
-        trainee.get("ssiap_diploma_birth_country", trainee.get("birth_country")) or ""
-    ).strip()
+    birth_country = _ssiap_diploma_birth_country(trainee)
+    if not birth_country:
+        return birth_city
     if birth_country and _normalized_commune_name(birth_country) not in {"FRANCE", "FR", "FRA"}:
         # A foreign place uses its country, never a stale French department.
         birth_city = re.sub(r"\s*\([^()]*\)\s*$", "", birth_city).strip()
@@ -24599,6 +24605,8 @@ def _reserve_ssiap_diploma_numbers(
                 missing_fields.append("date de naissance")
             if not diploma_row["birth_place"]:
                 missing_fields.append("lieu de naissance")
+            if not _ssiap_diploma_birth_country(trainee):
+                missing_fields.append("pays de naissance")
             if not diploma_row["exam_date"]:
                 missing_fields.append("date d'examen")
             else:

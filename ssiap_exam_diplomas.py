@@ -33,7 +33,7 @@ def values(services, training, trainee):
     result = {key: str(trainee.get("ssiap_diploma_" + key, trainee.get(key)) or "").strip()
               for key in FIELDS}
     result["civility"] = result["civility"] or "Monsieur"
-    result["birth_country"] = result["birth_country"] or "France"
+    result["birth_country"] = services._ssiap_diploma_birth_country(trainee)
     result["birth_city"] = services.normalize_city(
         result["birth_city"] if "ssiap_diploma_birth_city" in trainee else result["birth_city"] or trainee.get("birth_place") or "")
     result["first_name"] = services._ssiap_diploma_first_name(result["first_name"])
@@ -91,8 +91,11 @@ def clean(services, raw):
     info["first_name"] = services._ssiap_diploma_first_name(info["first_name"])
     info["last_name"] = services.normalize_last_name(info["last_name"])
     info["birth_city"] = services.normalize_city(info["birth_city"])
+    if info["birth_country"] and not services._ssiap_diploma_birth_country({"ssiap_diploma_birth_country": info["birth_country"]}):
+        raise ValueError("Renseignez le nom du pays de naissance.")
     if french(services, info["birth_country"]):
-        info["birth_country"] = "France"
+        if info["birth_country"]:
+            info["birth_country"] = "France"
         department = info["birth_department"]
         if department and not services._normalize_department_code(department):
             raise ValueError("Département invalide : utilisez un code comme 74, 2A ou 972.")

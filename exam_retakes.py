@@ -490,6 +490,10 @@ def participants(host, training, *, data=None, kind=None, exam_day=None, writabl
         details = {k: trainee[k] for k in ("civility", "birth_city", "birth_place", "birth_country", "birth_department",
                    "department", "birth_postal_code", "birth_zip_code", "identity_photo", "identity_photo_original",
                    "identity_photo_crop", "documents", "deliverables") if k in trainee}
+        for field in ("civility", "first_name", "last_name", "birth_date", "birth_city", "birth_country", "birth_department"):
+            key = "ssiap_diploma_" + field
+            if key in trainee:
+                details[key] = trainee[key]
         cid = "retake-" + row["id"]
         details.update(row["person"], id=cid, _retake=row)
         result = training.get("ssiap_exam", {}).get("retake_results", {}).get(cid, {})
