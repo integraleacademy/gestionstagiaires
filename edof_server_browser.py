@@ -329,6 +329,38 @@ def matches_name_query(query, surname, first_name, paired):
     return given == [first_name.strip().casefold()] or (not paired and given in ([], [""]))
 
 
+def activate_name_tab(page, tab, signals):
+    tab.wait_for(state="visible", timeout=25000)
+    backdrop = page.locator(".cdk-overlay-container .cdk-overlay-backdrop:visible")
+    if backdrop.count():
+        layer = page.locator(".cdk-overlay-container:visible")
+        if signals.get("cookie_dialog_closed") and decline_cookies_control(layer).count() == 1:
+            signals.pop("cookies_dismissed", None)
+        if handle_chooser_dialog(page, signals):
+            backdrop.wait_for(state="hidden", timeout=8000)
+    if page.locator('dialog[open]:visible,[role=dialog]:visible,[aria-modal=true]:visible').count():
+        raise StopRun("workspace_dialog_required")
+    signals["search_step"] = "activate_tab"
+    # Activate the labelled control itself. A Material tab may put keyboard
+    # focus on its parent or on the input associated with a visible label.
+    for _ in range(55):
+        key = tab.evaluate_all("""els => {
+            if (els.length !== 1) return '';
+            const text = els[0], active = text.ownerDocument.activeElement;
+            const control = text.closest('button,a,label,[role=tab],[role=button],[role=radio],[tabindex]') || text;
+            if (!active || active === document.body || active.matches(':disabled,[aria-disabled=true]')) return '';
+            if (!control.contains(active) && !(control.matches('label') && control.control === active)) return '';
+            return active.matches('input[type=radio],input[type=checkbox],[role=radio]') ? 'Space' : 'Enter';
+        }""")
+        if key in {"Enter", "Space"}:
+            signals["name_activation"] = "keyboard"
+            page.keyboard.press(key)
+            return
+        page.keyboard.press("Tab")
+    signals["name_activation"] = "pointer"
+    tab.click(no_wait_after=True, timeout=12000)
+
+
 def submit_name_search(page, surname, first_name, lists, signals, timeout_error):
     inputs = page.locator("input:visible")
     named_surname = page.locator(TRAINEE_SURNAME)
@@ -339,14 +371,21 @@ def submit_name_search(page, surname, first_name, lists, signals, timeout_error)
         signals["search_step"] = "name_mode"
         tab = page.get_by_text(NAME_TAB).filter(visible=True)
         try:
-            tab.click(no_wait_after=True, timeout=8000)
+            activate_name_tab(page, tab, signals)
         except timeout_error:
             if name_field.count() != 1:
                 raise
+        signals["search_step"] = "waiting_inputs"
         try:
-            name_field.wait_for(state="visible", timeout=3000)
+            name_field.wait_for(state="visible", timeout=8000)
         except timeout_error:
+            if signals.get("name_activation") == "keyboard" and tab.count() == 1:
+                # A visible custom tab may be tabbable without handling Enter.
+                # Use its normal click only while its name fields are still absent.
+                tab.click(no_wait_after=True, timeout=8000)
             search = page.get_by_placeholder(re.compile(r"rechercher un dossier de formation", re.I)).and_(inputs)
+            if name_field.count() == 1:
+                search = name_field
     signals["search_step"] = "input"
     search.wait_for(state="visible", timeout=8000)
     paired = named_surname.count() == 1 or given.count() == 1
@@ -519,8 +558,10 @@ def diagnostic_summary(location, password_visible, error_visible, signals):
         result["private_route"] = safe_edof_route(f"https://{EDOF_HOST}" + fragment)
         if signals.get("workspace_denied") is True:
             result["workspace_denied"] = True
-        if signals.get("search_step") in {"opening_list", "name_mode", "input", "submit", "results"}:
+        if signals.get("search_step") in {"opening_list", "name_mode", "activate_tab", "waiting_inputs", "input", "submit", "results"}:
             result["search_step"] = signals["search_step"]
+        if signals.get("name_activation") in {"keyboard", "pointer"}:
+            result["name_activation"] = signals["name_activation"]
         for key in ("name_tab_visible", "name_field_visible", "folder_field_visible"):
             if isinstance(signals.get(key), bool):
                 result[key] = signals[key]
@@ -982,6 +1023,10 @@ def run_browser(spec):
             else:
                 raise StopRun("workspace_dialog_required" if signals.get("dialog_kind") in {"empty", "loading"} else "organism_selection_required")
 
+            if spec.get("fresh_login") and vault and signals.get("workspace_status") == 200:
+                # The normal sign-in worked. Retire the unusable cached browser
+                # even if the separate name search later fails.
+                vault.delete("browser")
             if not spec.get("folder_id"):
                 stage = "search"
                 signals["search_step"] = "opening_list"
