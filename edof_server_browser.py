@@ -261,6 +261,41 @@ def confirmed_dashboard(url, signals):
             and signals.get("chooser_action") == "confirm" and signals.get("workspace_status") == 200)
 
 
+def restored_workspace(page, signals):
+    if not private_page(page.url):
+        return False
+    if signals.get("workspace_status") == 200:
+        return True
+    return (location_category(page.url) == "edof_select_siret"
+            and page.locator('mat-select[role="combobox"]:visible').count() == 1)
+
+
+def open_workspace_or_login(page, context, saved, signals, checkpoint):
+    # A restored browser enters the actual workspace. The explicit login route
+    # is for signing in and may leave an already authenticated browser on a blank shell.
+    entries = (LIST_URL, LOGIN_URL) if saved else (LOGIN_URL,)
+    for entry in entries:
+        if saved and entry == LOGIN_URL:
+            # Only an inert first-party shell can take this recovery path. Keep
+            # EFP's existing sign-in and device cookies for its normal SSO flow.
+            if location_category(page.url) not in {"edof_initialisation", "edof_folder_list", "edof_login_redirect"}:
+                raise StopRun("authentication_unconfirmed")
+            body = " ".join(page.locator("body").all_inner_texts())
+            if workspace_screen(body) not in {"empty", "loading", "session_expired"}:
+                raise StopRun("authentication_unconfirmed")
+            context.clear_cookies(domain=re.compile(r"^\.?(?:of\.)?moncompteformation\.gouv\.fr$"))
+        page.goto(entry, wait_until="domcontentloaded", timeout=45000)
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
+            checkpoint()
+            if urlsplit(page.url).hostname == EFP_HOST and page.locator('input[name="username"]:visible').count():
+                return False
+            if saved and restored_workspace(page, signals):
+                return True
+            page.wait_for_timeout(500)
+    raise StopRun("authentication_unconfirmed")
+
+
 def open_folder_view(page, url, arrived, timeout_error):
     """A hash navigation may already have delivered the requested view when it times out."""
     if page.url == url and arrived():
@@ -820,18 +855,7 @@ def run_browser(spec):
                     return workspace_screen(text)
 
             stage = "login_page"
-            page.goto(LOGIN_URL, wait_until="domcontentloaded", timeout=45000)
-            deadline = time.monotonic() + 30
-            while time.monotonic() < deadline:
-                if saved and private_page(page.url):
-                    reused = True
-                    break
-                if urlsplit(page.url).hostname == EFP_HOST and page.locator('input[name="username"]:visible').count():
-                    break
-                checkpoint()
-                page.wait_for_timeout(500)
-            else:
-                raise StopRun("authentication_unconfirmed")
+            reused = open_workspace_or_login(page, context, saved, signals, checkpoint)
             if spec["mode"] == "access":
                 checkpoint()
                 return {"code": "login_reachable", "stage": stage, "fresh_session": True}
