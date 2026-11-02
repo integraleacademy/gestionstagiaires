@@ -823,8 +823,8 @@
         actionButton.textContent = config.isLastActivity ? `${config.endLabel || 'Retour au parcours'} →` : "Continuer →";
         questionForm?.querySelectorAll("input,select").forEach((field) => { field.disabled = true; });
       } else {
-        const practice = document.querySelector('[data-aps-practice], [data-vtc-journey]');
-        const production = document.querySelector('[data-aps-production]');
+        const practice = config.hasPractice ?? Boolean(document.querySelector('[data-aps-practice], [data-vtc-journey]'));
+        const production = config.hasProduction ?? Boolean(document.querySelector('[data-aps-production]'));
         if (production && !window.aps62Production) throw new Error('Le dossier est en cours de chargement. Réessayez.');
         const reflection = document.getElementById('apsReflection');
         if (reflection && reflection.value.trim().length < Number(reflection.dataset.minChars)) {

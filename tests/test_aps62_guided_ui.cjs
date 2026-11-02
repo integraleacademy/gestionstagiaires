@@ -7,12 +7,24 @@ const source = fs.readFileSync(path.join(__dirname,'../static/js/aps62-guided.js
 const currentVersion = JSON.parse(fs.readFileSync(path.join(__dirname,'../elearning_native/aps62/manifest.json'),'utf8')).version;
 const course = JSON.parse(fs.readFileSync(path.join(__dirname,`../elearning_native/aps62/courses/academy-aps62-01/${currentVersion}.json`),'utf8'));
 
-function fixture(selectedActivity) {
+function fixture(selectedActivity, resume) {
   const activity = selectedActivity || course.sections[0].activities[2], practice = activity.practice;
   const publicPractice = {...practice, exercises:practice.exercises.map(({answer, explanation, remediation, ...rest})=>rest)};
   const fields = practice.exercises.map(ex=>`<fieldset data-exercise-id="${ex.id}" data-kind="single"><legend tabindex="-1">${ex.prompt}</legend>${ex.options.map(o=>`<label><input type="radio" name="${ex.id}" value="${o.id}"><span>${o.text}</span></label>`).join('')}<div data-exercise-feedback hidden></div></fieldset>`).join('');
   const dom = new JSDOM(`<section data-aps-practice><p data-stage-status></p><form>${fields}<button type="submit" class="aps-practice-check">Vérifier</button><button type="button" class="aps-guided-next" hidden>Suite</button><button type="button" class="aps-practice-restart">Recommencer</button></form><section data-remediation hidden><h3>Réviser</h3><p>Révision</p><div data-remediation-items></div><button type="button" class="aps-practice-review">Réviser</button></section><p data-practice-result></p><p data-practice-draft></p><script id="apsPracticeConfig" type="application/json">${JSON.stringify({activityId:activity.id,courseVersion:course.version,practice:publicPractice,completed:false,savedAnswers:{}})}</script></section><script id="nativePreviewConfig" type="application/json">{"answerUrl":"/preview","csrfToken":"csrf"}</script>`,{url:'https://test.invalid/preview',runScripts:'outside-only'});
   const {window}=dom, {document}=window, calls=[];
+  if (resume) {
+    document.getElementById('nativePreviewConfig').id = 'nativeElearningConfig';
+    const node = document.getElementById('apsPracticeConfig'), config = JSON.parse(node.textContent);
+    const answers = Object.fromEntries(practice.exercises.map(ex => [ex.id, ex.answer]));
+    const feedback = practice.exercises.map(ex => ({id:ex.id, correct:true, explanation:ex.explanation}));
+    node.textContent = JSON.stringify({...config, savedAnswers:answers, savedResult:{correct:true, feedback}});
+    if (resume === 'modified') {
+      const first = practice.exercises[0];
+      const draft = {...answers, [first.id]:first.options.find(option => option.id !== first.answer).id};
+      window.sessionStorage.setItem(`aps62-guided:/preview:${course.version}:${activity.id}:${practice.revision}`, JSON.stringify(draft));
+    }
+  }
   if (practice.journal) {
     const journal = document.createElement('dl'); journal.setAttribute('data-journal-preview','');
     document.querySelector('[data-aps-practice]').append(journal);
@@ -71,6 +83,21 @@ test('a failed request preserves the answer and permits a retry',async()=>{
     assert.match(f.document.querySelector('[data-practice-result]').textContent,/Connexion interrompue/);
     assert.equal(f.document.querySelector('.aps-guided-next').hidden,true);
   } finally {f.close();}
+});
+
+test('reload restores a verified guided exercise unless the local choices have changed', () => {
+  for (const mode of ['verified', 'modified']) {
+    const f = fixture(undefined, mode);
+    try {
+      if (mode === 'verified') {
+        assert.match(f.document.querySelector('[data-practice-result]').textContent, /Exercice réussi/);
+        assert.equal(Object.keys(f.window.aps62Practice.collectForCompletion()).length, f.practice.exercises.length);
+      } else {
+        assert.throws(() => f.window.aps62Practice.collectForCompletion());
+      }
+      assert.equal(f.calls.length, 0);
+    } finally { f.close(); }
+  }
 });
 
 test('the four guided journals still assemble their entry without typing',()=>{

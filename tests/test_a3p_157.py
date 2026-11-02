@@ -125,6 +125,17 @@ def test_every_new_workshop_renders_and_server_grades_without_tracking(curriculu
     assert not (case.persist_dir/'native_elearning/tracking.sqlite3').exists()
 
 
+def test_supplementary_cases_render_the_review_opened_by_the_last_decision(curriculum, case):
+    case._admin_login()
+    for course in curriculum:
+        activity = next(a for s in course['sections'] for a in s['activities'] if a['a3p']['kind'] == 'case')
+        response = case.client.get('/admin/elearning/courses/' + course['id'] + '/preview',
+                                   query_string={'version': course['version'], 'activity': activity['id']})
+        assert response.status_code == 200
+        assert 'data-a3p-decision' in response.text
+        assert re.search(r'<details class="[^"]*\ba3p-case-feedback\b[^"]*"><summary>', response.text)
+
+
 def test_course_first_learner_cannot_skip_or_receive_planned_time(curriculum,case):
     c=curriculum[0];lesson,film,workshop,quiz,recap=c['sections'][0]['activities']
     case.data['sessions'][0].update(training_type='A3P',aps_native_modules=[{

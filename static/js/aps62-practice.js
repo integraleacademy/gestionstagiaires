@@ -203,8 +203,13 @@
   }
 
   restore(config.savedAnswers);
+  const savedChoices = JSON.stringify(collect(false));
   if (!preview && !config.completed) {
     try { restore(JSON.parse(sessionStorage.getItem(key) || 'null')); } catch (_) { /* ignore invalid local drafts */ }
+    if (config.savedResult?.correct && JSON.stringify(collect(false)) === savedChoices) {
+      verified = savedChoices;
+      render(config.savedResult);
+    }
   }
   if (config.completed) clearDraft();
   updateStages();

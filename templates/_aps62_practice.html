@@ -43,6 +43,7 @@
     'activityId': activity.id,
     'courseVersion': course.version,
     'completed': activity_completed,
+    'savedResult': saved_practice_result|default(none),
     'savedAnswers': progress.answers.get(activity.id, {}).get('practice_answers', {})
   }|tojson }}</script>
 </section>

@@ -96,12 +96,17 @@ class PracticeWebTests(unittest.TestCase):
             config = self._player_config(response)
             self.assertEqual(self._api_post(config['completeUrl'], config, reflection='A' * 500).status_code, 400)
             self.assertEqual(self._api_post(config['practiceUrl'], config).status_code, 400)
-            decision = next(ex for ex in activity['practice']['exercises'] if ex['id'] == 'decision')
-            wrong = {**answers, 'decision': next(o['id'] for o in decision['options'] if o['id'] != answers['decision'])}
+            decision = next(ex for ex in activity['practice']['exercises'] if ex['kind'] == 'single')
+            wrong = {**answers, decision['id']: next(o['id'] for o in decision['options'] if o['id'] != decision['answer'])}
             self.assertFalse(self._api_post(config['practiceUrl'], config, practice_answers=wrong).json['correct'])
             self.assertEqual(self._api_post(config['completeUrl'], config, practice_answers=wrong).status_code, 400)
+            def reload_workshop():
+                page = self.client.get(f"/espace/public-token/elearning/{course['id']}")
+                return json.loads(re.search(r'id="apsPracticeConfig" type="application/json">(.*?)</script>', page.text, re.S)[1])
+            self.assertIsNone(reload_workshop()['savedResult'])
             marked = self._api_post(config['practiceUrl'], config, practice_answers=answers)
             self.assertTrue(marked.json['correct'])
+            self.assertEqual(reload_workshop()['savedResult']['answers'], answers)
             self.assertIn('no-store', marked.headers['Cache-Control'])
             check = self._player_config(self.client.get(f"/espace/public-token/elearning/{course['id']}"))
             self.assertFalse(check['activityCompleted'])

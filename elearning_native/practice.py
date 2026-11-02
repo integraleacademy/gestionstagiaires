@@ -169,3 +169,15 @@ def grade_practice(practice, answers, review_answers=None, *, step=None):
             'review': review,
             'feedback': feedback, 'answers': normalized, 'revision': practice['revision']}
 
+
+def verified_saved_result(practice, saved):
+    """Restore a successful check only for the exercises in the current revision."""
+    if (not practice or practice.get('mode') == 'journey' or not isinstance(saved, dict)
+            or saved.get('practice_revision') != practice['revision']):
+        return None
+    try:
+        result = grade_practice(practice, saved.get('practice_answers'))
+    except ValueError:
+        return None
+    return result if result['correct'] else None
+
