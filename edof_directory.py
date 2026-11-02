@@ -1,7 +1,6 @@
 """Minimal, account-scoped directory from the official EDOF dossier list."""
 from datetime import datetime
 import hmac
-import re
 import time
 import unicodedata
 from zoneinfo import ZoneInfo
@@ -10,6 +9,7 @@ from edof_readonly_test import ID_RE, SIRET
 
 TTL = 86400
 REFRESH_INTERVAL = 15 * 60
+IDLE_REFRESH_INTERVAL = 6 * 3600
 MAX_ROWS = 30000
 
 
@@ -70,6 +70,8 @@ def from_pages(pages, progress=None):
             rows[key] = fields
             progress["seen"] = len(rows)
         if len(rows) == total:
+            if total and not any(row["first_name"] and row["last_name"] for row in rows.values()):
+                raise IncompleteDirectory()
             return {"checked": time.time(), "rows": rows}
         if len(rows) > total:
             break
@@ -101,3 +103,95 @@ def matches(snapshot, spec):
 
 def link_key(owner, folder_id):
     return hmac.digest(owner.encode(), ("edof-directory/" + folder_id).encode(), "sha256").hex()[:32]
+
+
+def csv_snapshot(content, first, progress):
+    """Accept only an official export matching the witnessed list size and first page."""
+    import csv
+    import io
+
+    if not 0 < len(content) <= 24_000_000:
+        raise IncompleteDirectory()
+    if content.startswith((b"\xff\xfe", b"\xfe\xff")):
+        data = content.decode("utf-16")
+    else:
+        try:
+            data = content.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            data = content.decode("cp1252")
+    lines = data.splitlines()
+    if not lines:
+        raise IncompleteDirectory()
+    delimiter = max((";", "\t", ","), key=lambda sep: max((line.count(sep) for line in lines[:4]), default=0))
+    reader = csv.reader(io.StringIO(data), delimiter=delimiter)
+
+    def indexes(cells):
+        columns = {}
+        for i, cell in enumerate(cells):
+            label = normalized(cell)
+            words = set(label.split())
+            identity_column = not words & {"financeur", "organisme", "commercial", "structure", "formateur", "certificateur",
+                                          "formation", "session", "certification", "ville", "lieu"}
+            if (("dossier" in words and words & {"id", "identifiant", "numero", "num", "n", "no", "ref", "reference"})
+                    or label in {"numero cpf", "identifiant cpf", "n cpf", "dossier", "registrationfolderid", "externalid"}):
+                columns.setdefault("folder_id", i)
+            elif identity_column and ("prenom" in words or label == "firstname"):
+                columns.setdefault("first_name", i)
+            elif identity_column and ("nom" in words or label == "lastname"):
+                columns.setdefault("last_name", i)
+            elif (words & {"intitule", "titre", "libelle"} and "formation" in words) or label in {"formation", "trainingtitle"}:
+                columns.setdefault("title", i)
+            elif ((words & {"statut", "etat"} and "dossier" in words and not "facturation" in words)
+                  or label in {"statut", "etat", "currentstate"}):
+                columns.setdefault("state", i)
+            elif "debut" in words and words & {"formation", "session"}:
+                columns.setdefault("session_start_date", i)
+            elif "fin" in words and words & {"formation", "session"}:
+                columns.setdefault("session_end_date", i)
+        return columns
+
+    for _ in range(5):
+        columns = indexes(next(reader, []))
+        progress["export_fields"] = sorted(set(progress.get("export_fields", ())) | columns.keys())
+        if {"folder_id", "first_name", "last_name"} <= columns.keys():
+            break
+    else:
+        raise IncompleteDirectory()
+    total = first.get("numberOfItems")
+    if type(total) is not int or not 0 <= total <= MAX_ROWS:
+        raise IncompleteDirectory()
+    rows = {}
+    for cells in reader:
+        if not any(cell.strip() for cell in cells):
+            continue
+        if max(columns.values()) >= len(cells):
+            raise IncompleteDirectory()
+        item = {k: text_field(cells[i], 500 if k == "title" else 120) for k, i in columns.items()}
+        key = item["folder_id"]
+        if key.startswith('="') and key.endswith('"'):
+            key = key[2:-1]
+        if not ID_RE.fullmatch(key) or key in rows or len(rows) >= total:
+            raise IncompleteDirectory()
+        item["folder_id"] = key
+        for field in ("state", "title", "session_start_date", "session_end_date"):
+            item.setdefault(field, "")
+        for field in ("session_start_date", "session_end_date"):
+            value = item[field]
+            item[field] = ""
+            for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+                try:
+                    item[field] = datetime.strptime(value[:10], fmt).date().isoformat()
+                    break
+                except ValueError:
+                    continue
+        rows[key] = item
+        progress["export_rows"] = len(rows)
+    if len(rows) != total or (total and not any(row["first_name"] and row["last_name"] for row in rows.values())):
+        raise IncompleteDirectory()
+    for witness in first.get("items", []):
+        sample = project(witness)
+        row = rows.get(sample["folder_id"])
+        if not row or any(sample[k] and normalized(row[k]) != normalized(sample[k]) for k in ("first_name", "last_name")):
+            raise IncompleteDirectory()
+    progress.update(method="csv", expected=total, seen=total)
+    return {"checked": time.time(), "rows": rows}

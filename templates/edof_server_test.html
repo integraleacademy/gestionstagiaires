@@ -61,10 +61,12 @@
           <button class="button" type="submit">Consulter le dossier</button>
           {% if config.credentials_configured %}<button class="button secondary" type="submit" value="refresh">Relire sur EDOF</button>{% endif %}
         </form>
+        {% if directory_examples %}<details><summary>Quelques dossiers de la liste synchronisée</summary><ul>{% for entry in directory_examples %}<li><a href="{{ url_for('edof_server_test.index', fiche=entry.key, _anchor='dossier-lu') }}">{{ entry.fields.first_name }} {{ entry.fields.last_name }}</a></li>{% endfor %}</ul></details>{% endif %}
         <div id="directory-matches" aria-live="polite"></div>
         <p class="hint">« Consulter le dossier » recherche dans la liste EDOF synchronisée ou les lectures conservées 24 heures. « Relire sur EDOF » ouvre directement la fiche sur le portail et peut prendre plusieurs minutes.</p>
         {% if gmail.connected and config.credentials_configured %}<button class="button secondary" id="sync-directory" type="button">Synchroniser la liste EDOF</button>
-        <p class="hint">La synchronisation lit la liste « Dossiers en cours » d’EDOF. Après la première réussite, le serveur la réactualise toutes les 15 minutes pendant l’utilisation et jusqu’à une heure après. Une erreur suspend les actualisations automatiques.</p>{% endif %}
+        <p class="hint">La synchronisation lit la liste « Dossiers en cours » d’EDOF. Après la première réussite, le serveur la réactualise toutes les 15 minutes pendant l’utilisation, puis toutes les 6 heures sans activité. Une erreur suspend les actualisations automatiques.</p>{% endif %}
+        {% if directory_enabled %}<form method="post" action="{{ url_for('edof_server_test.pause_directory') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="button secondary" type="submit">Suspendre les actualisations automatiques</button></form>{% endif %}
       </section>
     </div>
     <p id="server-message" role="status" aria-live="polite"></p>
@@ -97,7 +99,7 @@
           }.get(reason, 'Message refusé') }}</dt><dd>{{ count }}</dd>
           {% endfor %}
           {% else %}
-          {% if job.diagnostics.directory %}<dt>Pages de la liste reçues</dt><dd>{{ job.diagnostics.directory.pages }}</dd><dt>Dossiers distincts reçus / attendus</dt><dd>{{ job.diagnostics.directory.seen }} / {{ job.diagnostics.directory.expected|default('inconnu') }}</dd>{% endif %}
+          {% if job.diagnostics.directory %}<dt>Source</dt><dd>{{ {'csv':'Export CSV EDOF','pages':'Liste EDOF paginée','ui':'Pagination du portail'}.get(job.diagnostics.directory.method, 'Liste EDOF') }}</dd>{% if job.diagnostics.directory.export %}<dt>Export du portail</dt><dd>{{ job.diagnostics.directory.export }}{% if job.diagnostics.directory.export_rows %} ({{ job.diagnostics.directory.export_rows }} lignes){% endif %}{% if job.diagnostics.directory.export_fields %} · {{ job.diagnostics.directory.export_fields|join(', ') }}{% endif %}</dd>{% endif %}{% if job.diagnostics.directory.http %}<dt>Réponse de la liste</dt><dd>{{ job.diagnostics.directory.http }}</dd>{% endif %}<dt>Pages de la liste reçues</dt><dd>{{ job.diagnostics.directory.pages }}</dd><dt>Dossiers distincts reçus / attendus</dt><dd>{{ job.diagnostics.directory.seen }} / {{ job.diagnostics.directory.expected|default('inconnu') }}</dd>{% endif %}
           <dt>Page atteinte</dt><dd>{{ job.diagnostics.location }}</dd>
           {% if job.diagnostics.private_route %}<dt>Page de l’espace privé</dt><dd>{{ job.diagnostics.private_route }}</dd>{% endif %}
           {% if job.diagnostics.dialog_kind %}<dt>Fenêtre devant le choix du SIRET</dt><dd>{{ {'terms':'Conditions à valider','cookies':'Préférences de cookies','error':'Erreur signalée','account':'Vérification du compte','notice':'Information','other':'Fenêtre à identifier','loading':'Chargement','empty':'Aucun contenu visible'}.get(job.diagnostics.dialog_kind) }}</dd>
@@ -124,7 +126,7 @@
       </article>{% else %}<p>Aucun essai récent pour ce compte administrateur.</p>{% endfor %}
       <p class="hint">Un formulaire accessible ne prouve pas une connexion réussie. Une lecture réussie ne prouve pas encore le fonctionnement continu après expiration, ni les déclarations d’entrée et de sortie.</p>
     </section>
-    <footer>Chaque essai dure au maximum 3 min 30 et fonctionne sur Render, même si vous fermez cette page. Les résultats sont conservés au maximum 24 heures et purgés à l’accès suivant. Un seul code Gmail peut être soumis par essai. Un CAPTCHA, une erreur ou un parcours inconnu arrête l’essai. La liste synchronisée est consultable pendant 24 heures. La lecture ne modifie aucun dossier.</footer>
+    <footer>La lecture en direct peut durer jusqu’à 3 min 30 et la synchronisation de la liste jusqu’à 7 minutes. Les recherches dans la liste restent disponibles pendant son actualisation. Les résultats sont conservés au maximum 24 heures et purgés à l’accès suivant. Un seul code Gmail peut être soumis par essai. Un CAPTCHA, une erreur ou un parcours inconnu arrête l’essai. La liste synchronisée est consultable pendant 24 heures. La lecture ne modifie aucun dossier.</footer>
   </main>
 </body>
 </html>
