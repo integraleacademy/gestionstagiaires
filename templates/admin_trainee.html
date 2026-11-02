@@ -876,13 +876,13 @@
       <span>Formation : <strong>{{ training_dates.date_start|frdate }}</strong> → <strong>{{ training_dates.date_end|frdate }}</strong></span>
       {% if "VTC" in (session.training_type or "")|upper %}
   {% set vtc_theory_date = session.exam_theory_date or session.exam_date %}
-  {% set vtc_practice_training_date = session.practice_training_date or session.exam_practice_date or session.exam_date %}
+  {% set vtc_practice_training_date = (session.vtc_appointment or {}).get("date") or session.practice_training_date or session.exam_practice_date or session.exam_date %}
         {% set theory_date = session.exam_theory_date or session.exam_date %}
         {% set practice_date = session.exam_practice_date or session.exam_date %}
-        {% set practice_training_date = session.practice_training_date %}
+        {% set practice_training_date = (session.vtc_appointment or {}).get("date") or session.practice_training_date %}
         <span>Examen théorique : <strong>{{ theory_date|frdate }}</strong></span>
         <span>Examen pratique : <strong>{{ practice_date|frdate }}</strong></span>
-        <span>Formation pratique : <strong>{{ practice_training_date|frdate }}</strong></span>
+        <span>Formation pratique : <strong>{{ practice_training_date|frdate }}{% if session.vtc_appointment and session.vtc_appointment.group %} · Groupe {{ session.vtc_appointment.group }} · {{ session.vtc_appointment.start }} – {{ session.vtc_appointment.end }}{% endif %}</strong></span>
       {% elif session.afc_enabled %}
         <span>Examen APS : <strong>{{ session.exam_date|frdate or 'À renseigner' }}</strong></span>
         <span>Examen SSIAP 1 : <strong>{{ session.ssiap_exam_date|frdate or 'À renseigner' }}</strong></span>
@@ -2110,7 +2110,7 @@
 
 {% if "VTC" in (session.training_type or "")|upper %}
   {% set vtc_theory_date = session.exam_theory_date or session.exam_date %}
-  {% set vtc_practice_training_date = session.practice_training_date or session.exam_practice_date or session.exam_date %}
+  {% set vtc_practice_training_date = (session.vtc_appointment or {}).get("date") or session.practice_training_date or session.exam_practice_date or session.exam_date %}
   <!-- ===================== -->
   <!-- VISIBILITÉ ESPACE STAGIAIRE -->
   <!-- ===================== -->
@@ -2197,7 +2197,7 @@
               type="button"
               id="btnVtcPracticeConvocation"
               {% if trainee.vtc_practice_convocation_sent_at or is_read_only %}disabled{% endif %}>
-        Convocation Formation pratique le {{ vtc_practice_training_date|frdate }}
+        Convocation Formation pratique le {{ vtc_practice_training_date|frdate }}{% if session.vtc_appointment and session.vtc_appointment.group %} à {{ session.vtc_appointment.start }}{% endif %}
       </button>
 
       {% if not is_read_only %}
