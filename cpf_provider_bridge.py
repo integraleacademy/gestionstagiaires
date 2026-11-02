@@ -28,7 +28,7 @@ def production_request(body=None, *, path=""):
     try:
         response = requests.request("GET" if body is None else "POST", CONTROL_URL + path,
                                     json=body, headers={"X-Cpf-Control": secret}, allow_redirects=False,
-                                    timeout=(2, 5))
+                                    timeout=(2, 25 if path == "/entry-pilot" else 5))
         if response.status_code == 409:
             raise ProviderUnavailable("Un traitement est en cours ou le choix a changé. Actualisez puis réessayez.")
         if response.status_code != 200:
@@ -177,6 +177,8 @@ def register_production_control(legacy):
         finally:
             os.close(fd)
 
+    from cpf_entry_pilot import register_pilot
+    register_pilot(legacy, bp, store, public_state, FOLDER)
     legacy.app.register_blueprint(bp)
     legacy._send_wedof_entry_to_crm = respect_native_receipt("crm")(legacy._send_wedof_entry_to_crm)
     legacy._send_wedof_entry_to_salesforce = respect_native_receipt("salesforce")(legacy._send_wedof_entry_to_salesforce)

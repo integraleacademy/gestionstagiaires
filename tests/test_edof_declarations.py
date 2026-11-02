@@ -115,3 +115,64 @@ def test_discovery_requires_production_evidence_link_and_no_block(tmp_path, monk
     proof.update(last_name=ROW["last_name"])
     ledger.discover(store, "account", {"rows": {FOLDER: row}})
     assert ledger.records(tmp_path)[0]["actor"] == "Gestion Stagiaires"
+
+
+def test_individual_entry_uses_persisted_production_hold_and_official_status_payload(tmp_path, monkeypatch):
+    import cpf_provider
+    monkeypatch.setattr(cpf_provider, "on_test_service", lambda: True)
+    ticket = "a" * 32
+    store = NS(directory=tmp_path, data_file=None)
+    row = {**ROW, "state": "accepted"}
+    good = {**ENTRY, "source": "production"}
+    proof = {**ROW, "entry_training": good}
+    states = {FOLDER: {"available": True, "start": ROW["session_start_date"], "end": ROW["session_end_date"],
+                       "reserved": True, "ticket": ticket, "proof": proof}}
+    def remote(folder, mode="inspect", **args):
+        state = states[folder]
+        return {**state, "operation": args.get("operation") if mode == "claim" and state["reserved"] else ""}
+    monkeypatch.setattr(ledger, "pilot_state", remote)
+    ledger.enqueue(tmp_path, "admin", 0, row, {**good, "pilot_ticket": ticket}, "admin")
+    ledger.enqueue(tmp_path, "admin", 0, {**row, "folder_id": "111111111"}, ENTRY, "admin")
+    spec = ledger.next_job(store, 0, provider="wedof")
+    assert spec["folder_id"] == FOLDER and ledger.check_before_job(store, spec)
+    gate = form.SingleWrite(spec, EDOF_HOST, API_PREFIX, tmp_path)
+    gate.armed = True
+    payload = {"state":"IN_TRAINING", "date":"03/01/2026"}
+    for url, invalid in [(PREFIX+"/status", {**payload,"state":"CANCELED"}),
+                         (PREFIX+"/status", {**payload,"date":"01/01/2026"}),
+                         (PREFIX+"/status", {**payload,"anotherAction": True}),
+                         (PREFIX+"/in-training", payload), (PREFIX+"1/status",payload)]:
+        assert not gate.allows(request(url, invalid))
+    assert gate.allows(request(PREFIX+"/status",payload))
+    assert not gate.allows(request(PREFIX+"/status",payload))
+    ledger.complete(tmp_path,spec,"declaration_unverified")
+    assert ledger.enqueue(tmp_path,"admin",0,row,{**good,"pilot_ticket":ticket},"admin") == "uncertain"
+    assert ledger.next_job(store,0,provider="wedof") is None
+    states[FOLDER]["reserved"] = False
+    assert not ledger.check_before_job(store,{**spec, "intent":{**spec["intent"], "pilot_ticket":"b"*32}})
+
+
+def test_reservation_ui_cannot_submit_an_exit_or_another_folder_while_wedof_is_active(site, monkeypatch):
+    import integrale_edof_dashboard as dashboard
+    monkeypatch.setattr(dashboard, "on_test_service", lambda: True)
+    monkeypatch.setattr(dashboard, "production_request", lambda: {"provider":"wedof"})
+    state = {"available":True, "reserved":False, "ticket":"", "start":"2026-02-02", "end":"2026-02-06"}
+    def remote(folder, mode="inspect", **kwargs):
+        assert folder == "100000"
+        if mode == "reserve":
+            state.update(reserved=True,ticket="f"*32)
+        return state
+    monkeypatch.setattr(ledger,"pilot_state",remote)
+    url = "/admin/edof-test/dossiers/100000/entry-pilot"
+    client = site.client
+    def post(**kwargs):
+        return client.post(url, data={"csrf":site.csrf,**kwargs}, follow_redirects=True)
+    assert client.post(url,data={"mode":"reserve"}).status_code == 403
+    assert "Réserver uniquement" in client.get("/admin/edof-test?folder=100000").text
+    assert "Entrée exclue de WeDoF en production" in post(mode="reserve").text
+    params = {"mode":"submit","actual_date":"2026-02-02","evidence":"Émargement du stagiaire","attested":"yes"}
+    post(**params,action="service_done")
+    assert not ledger.records(site.store.directory)
+    post(**params,action="entry_training")
+    assert ledger.records(site.store.directory)[0]["intent"]["pilot_ticket"] == "f"*32
+    assert site.gate.state()["provider"] == "wedof"

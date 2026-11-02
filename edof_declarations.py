@@ -79,14 +79,17 @@ def enqueue(directory, owner, revision, row, draft, actor, *, automatic=False):
     return "queued"
 
 
-def next_job(store, revision):
+def next_job(store, revision, *, provider="integrale"):
     with closing(database(store.directory)) as db, db:
         db.execute("UPDATE cpf_declarations SET status='paused',changed=? WHERE status='queued' AND revision!=?",
                    (time.time(), revision))
         row = db.execute("""SELECT * FROM cpf_declarations WHERE
-            (status='queued' AND revision=?) OR
-            (status IN ('sending','uncertain') AND checks < 3 AND changed < ?)
-            ORDER BY CASE WHEN status='queued' THEN 1 ELSE 0 END,changed LIMIT 1""", (revision, time.time()-120)).fetchone()
+            (status='queued' AND revision=? AND
+             (json_extract(intent,'$.pilot_ticket') IS NOT NULL) = ?) OR
+            (status IN ('sending','uncertain') AND checks < 3 AND changed < ?
+             AND (? = 'integrale' OR json_extract(intent,'$.pilot_ticket') IS NOT NULL))
+            ORDER BY CASE WHEN status='queued' THEN 1 ELSE 0 END,changed LIMIT 1""",
+                         (revision, provider == "wedof", time.time()-120, provider)).fetchone()
         if not row:
             return None
         intent = json.loads(row["intent"])
@@ -101,11 +104,15 @@ def begin_send(directory, spec):
     with closing(database(directory)) as db, db:
         db.execute("BEGIN IMMEDIATE")
         selected = ProviderStore(directory).state(db)
-        if selected["provider"] != "integrale" or selected["pending"] or selected["revision"] != spec["revision"]:
+        ticket = spec["intent"].get("pilot_ticket") or ""
+        if ticket and spec["intent"]["action"] != "entry_training":
+            return False
+        if selected["provider"] != ("wedof" if ticket else "integrale") or selected["pending"] or selected["revision"] != spec["revision"]:
             return False
         row = db.execute("""UPDATE cpf_declarations SET status='sending', changed=?
-            WHERE token=? AND folder=? AND revision=? AND status='queued'""",
-                         (time.time(), spec["operation"], spec["folder_id"], spec["revision"]))
+            WHERE token=? AND folder=? AND revision=? AND status='queued' AND action=?
+            AND COALESCE(json_extract(intent,'$.pilot_ticket'),'')=?""",
+                         (time.time(), spec["operation"], spec["folder_id"], spec["revision"], spec["intent"]["action"], ticket))
         return row.rowcount == 1
 
 
@@ -157,6 +164,22 @@ def authoritative_proofs(folders):
     return reply["evidence"]
 
 
+def pilot_state(folder, mode="inspect", **values):
+    from cpf_provider_bridge import production_request
+    reply = production_request({"folder": folder, "mode": mode, **values}, path="/entry-pilot")
+    pilot = reply.get("pilot") or {}
+    if pilot.get("error"):
+        raise ValueError(pilot["error"])
+    if reply.get("provider") != "wedof" or pilot.get("folder") != folder:
+        raise ValueError("L’exclusion de cette entrée n’est pas confirmée par la production.")
+    return pilot
+
+
+def matches_pilot(row, pilot):
+    return (pilot.get("available") and pilot.get("start") == row.get("session_start_date")
+            and pilot.get("end") == row.get("session_end_date"))
+
+
 def same_enrolment(row, proof):
     return all(row.get(k) and normalized(row[k]) == normalized(proof.get(k) or "") for k in
                ("first_name", "last_name", "session_start_date", "session_end_date"))
@@ -202,6 +225,24 @@ def check_before_job(store, spec):
             complete(store.directory, spec, "declaration_blocked")
             return False
     if on_test_service():
+        ticket = spec["intent"].get("pilot_ticket")
+        if ticket:
+            pilot = pilot_state(folder)
+            intent = spec["intent"]
+            if (action != "entry_training" or not matches_pilot(intent, pilot) or not pilot.get("reserved")
+                    or pilot.get("ticket") != ticket):
+                complete(store.directory, spec, "declaration_blocked")
+                return False
+            proof = pilot.get("proof") or {}
+            if intent.get("source") == "production" and (not same_enrolment(intent, proof)
+                    or not proof.get(action) or any(intent.get(k) != v for k, v in proof[action].items())):
+                complete(store.directory, spec, "declaration_evidence_changed")
+                return False
+            claimed = pilot_state(folder, "claim", operation=ticket)
+            if claimed.get("operation") != ticket or not claimed.get("reserved") or not matches_pilot(intent, claimed):
+                complete(store.directory, spec, "declaration_blocked")
+                return False
+            return True
         proof = authoritative_proofs([folder])[folder]
         if {action, "both"}.intersection(proof.get("blocks", [])):
             complete(store.directory, spec, "declaration_blocked")

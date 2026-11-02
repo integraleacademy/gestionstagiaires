@@ -403,7 +403,13 @@ def start_job(store, owner, spec):
     try:
         # A form inspection is a read-only job; it cannot construct a business-write gate.
         if spec["mode"] != "inspect_forms":
-            provider_fd = acquire_provider("integrale")
+            ticket = (spec.get("intent") or {}).get("pilot_ticket")
+            if ticket and spec["mode"] in {"declare", "reconcile"}:
+                from cpf_provider import ProviderStore
+                active = ProviderStore(store.directory).state()["provider"] if spec["mode"] == "reconcile" else "wedof"
+                provider_fd = acquire_provider(active)
+            else:
+                provider_fd = acquire_provider("integrale")
         try:
             fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
@@ -444,8 +450,8 @@ def register_edof_server_test(legacy):
             try:
                 from cpf_provider import ProviderStore
                 active = ProviderStore(store.directory).state()
-                if active["provider"] == "integrale" and not active["pending"]:
-                    pending = declarations.next_job(store, active["revision"])
+                if not active["pending"]:
+                    pending = declarations.next_job(store, active["revision"], provider=active["provider"])
                     if pending:
                         start_job(store, pending["owner"], pending)
                         continue
