@@ -163,7 +163,10 @@ def test_hash_navigation_timeout_needs_the_requested_url_and_its_successful_resp
 
 def test_name_search_submits_only_the_control_attached_to_the_named_field():
     page = Mock()
-    field = page.get_by_placeholder.return_value.or_.return_value.and_.return_value
+    surname, given = Mock(), Mock()
+    surname.count.return_value = given.count.return_value = 0
+    page.locator.side_effect = {browser.TRAINEE_SURNAME: surname, browser.TRAINEE_FIRST_NAME: given, "input:visible": Mock()}.__getitem__
+    field = surname.or_.return_value.or_.return_value.and_.return_value
     field.count.return_value = 1
     group = field.locator.return_value
     group.locator.return_value.count.return_value = 1
@@ -171,7 +174,7 @@ def test_name_search_submits_only_the_control_attached_to_the_named_field():
     button.count.return_value = 1
     button.evaluate.return_value = "arrow_forward"
     signals, lists = {}, ["previous"]
-    browser.submit_name_search(page, "Exemple", lists, signals, TimeoutError)
+    browser.submit_name_search(page, "Exemple", "Camille", lists, signals, TimeoutError)
     assert signals["search_step"] == "results" and not lists
     page.get_by_text.assert_not_called()
     button.click.assert_called_once()
@@ -179,9 +182,39 @@ def test_name_search_submits_only_the_control_attached_to_the_named_field():
     field.press.assert_not_called()
     button.reset_mock()
     button.evaluate.return_value = "Exporter"
-    browser.submit_name_search(page, "Exemple", lists, signals, TimeoutError)
+    browser.submit_name_search(page, "Exemple", "Camille", lists, signals, TimeoutError)
     button.click.assert_not_called()
     field.press.assert_called_once()
+
+
+def test_paired_form_fills_both_names_and_submits_their_search_button():
+    page, surname, given = Mock(), Mock(), Mock()
+    page.locator.side_effect = {browser.TRAINEE_SURNAME: surname, browser.TRAINEE_FIRST_NAME: given, "input:visible": Mock()}.__getitem__
+    field = surname.or_.return_value.or_.return_value.and_.return_value
+    field.count.return_value = surname.count.return_value = given.count.return_value = 1
+    group = given.locator.return_value
+    group.locator.side_effect = {"input:visible": Mock(), browser.TRAINEE_SURNAME: surname}.__getitem__
+    group.locator("input:visible").count.return_value = 2
+    button = group.get_by_role.return_value.filter.return_value
+    button.count.return_value = 1
+    button.evaluate.return_value = "Rechercher"
+    signals = {}
+    browser.submit_name_search(page, "Le Test", "André", [], signals, TimeoutError)
+    field.fill.assert_called_once_with("Le Test", timeout=8000)
+    given.fill.assert_called_once_with("André", timeout=8000)
+    button.click.assert_called_once()
+    assert signals["paired_name_search"] is True
+
+
+@pytest.mark.parametrize("query,paired,found", [
+    ("page=0&attendeeName=LE+TEST&attendeeFirstName=Andr%C3%A9", True, True),
+    ("page=0", True, False), ("tag=Le+Test&attendeeFirstName=Andr%C3%A9", True, False),
+    ("attendeeName=Le+Test", True, False), ("attendeeName=Le+Test", False, True),
+    ("attendeeName=Le+Test&attendeeFirstName=autre", False, False),
+    ("attendeeName=Le+Test&attendeeName=autre&attendeeFirstName=Andr%C3%A9", True, False),
+])
+def test_only_the_requested_edof_name_filter_can_supply_candidates(query, paired, found):
+    assert browser.matches_name_query(query, "Le Test", "André", paired) == found
 
 
 def test_establishment_dropdown_uses_standard_keyboard_action_and_respects_an_overlay():

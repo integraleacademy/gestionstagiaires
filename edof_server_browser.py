@@ -12,7 +12,7 @@ import re
 import sys
 import time
 import unicodedata
-from urllib.parse import parse_qsl, urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from edof_readonly_test import (
     ATTENDEE_FIELDS, INFO_FIELDS, SIRET, TEST_SERVICE_ID, TOP_FIELDS,
@@ -81,6 +81,8 @@ DIALOG_ACK = re.compile(r"^(?:J[’']ai compris|Compris|Plus tard|Non merci|Pass
 COOKIE_DECLINE = re.compile(r"^(?!.*\b(?:accepter|autoriser|ne pas)\b.*\brefuser\b)(?:.*\s)?(?:tout refuser(?: et (?:fermer|continuer))?|refuser tout|refuser tous les cookies|continuer sans accepter)[.!]?\s*$", re.I | re.S)
 NAME_TAB = re.compile(r"\bpar\s+nom\s+du\s+stagiaire\b", re.I)
 NAME_FIELD = re.compile(r"\bnom\s+(?:du\s+|de\s+)?stagiaire\b|\bpar\s+nom\b", re.I)
+TRAINEE_SURNAME = 'input[name="searchByRegistrationFolderTraineeName"]:visible'
+TRAINEE_FIRST_NAME = 'input[name="searchByRegistrationFolderTraineeFirstName"]:visible'
 
 
 def decline_cookies_control(root):
@@ -270,9 +272,20 @@ def open_folder_view(page, url, arrived, timeout_error):
             raise
 
 
-def submit_name_search(page, surname, lists, signals, timeout_error):
+def matches_name_query(query, surname, first_name, paired):
+    filters = parse_qs(query, keep_blank_values=True)
+    names = [value.strip().casefold() for value in filters.get("attendeeName", [])]
+    given = [value.strip().casefold() for value in filters.get("attendeeFirstName", [])]
+    if not surname or not first_name or names != [surname.strip().casefold()]:
+        return False
+    return given == [first_name.strip().casefold()] or (not paired and given in ([], [""]))
+
+
+def submit_name_search(page, surname, first_name, lists, signals, timeout_error):
     inputs = page.locator("input:visible")
-    name_field = page.get_by_placeholder(NAME_FIELD).or_(page.get_by_label(NAME_FIELD)).and_(inputs)
+    named_surname = page.locator(TRAINEE_SURNAME)
+    given = page.locator(TRAINEE_FIRST_NAME)
+    name_field = named_surname.or_(page.get_by_placeholder(NAME_FIELD)).or_(page.get_by_label(NAME_FIELD)).and_(inputs)
     search = name_field
     if name_field.count() != 1:
         signals["search_step"] = "name_mode"
@@ -282,18 +295,28 @@ def submit_name_search(page, surname, lists, signals, timeout_error):
         except timeout_error:
             if name_field.count() != 1:
                 raise
-        if name_field.count() != 1:
+        try:
+            name_field.wait_for(state="visible", timeout=3000)
+        except timeout_error:
             search = page.get_by_placeholder(re.compile(r"rechercher un dossier de formation", re.I)).and_(inputs)
     signals["search_step"] = "input"
+    search.wait_for(state="visible", timeout=8000)
+    paired = named_surname.count() == 1 or given.count() == 1
+    signals["paired_name_search"] = paired
     lists.clear()
     search.fill(surname, timeout=8000)
+    if paired:
+        given.fill(first_name, timeout=8000)
+        search = given
     signals["search_step"] = "submit"
     # The visible blue search arrow shares a small container with the field.
     # If it is not a unique, identifiable search control, use the field's Enter action.
     for depth in (1, 2, 3):
         group = search.locator("xpath=" + "/".join([".."] * depth))
         buttons = group.get_by_role("button").filter(visible=True)
-        if group.locator("input:visible").count() != 1 or buttons.count() != 1:
+        count = group.locator("input:visible").count()
+        both_fields = paired and count == 2 and group.locator(TRAINEE_SURNAME).count() == 1
+        if buttons.count() != 1 or (count != 1 and not both_fields):
             continue
         label = buttons.evaluate("e => [e.getAttribute('aria-label'),e.title,e.innerText].filter(Boolean).join(' ')")
         if (re.fullmatch(r"(?:rechercher|lancer la recherche|valider la recherche|search|arrow[_ ](?:forward|right(?:_alt)?))", label.strip(), re.I)
@@ -678,6 +701,9 @@ def run_browser(spec):
         tail = parsed.path[len(API_PREFIX):]
         if tail == "pad":
             signals["folder_list_status"] = response.status
+            if (stage != "search" or "paired_name_search" not in signals
+                    or not matches_name_query(parsed.query, spec["last_name"], spec["first_name"], signals["paired_name_search"])):
+                return
         elif tail and tail in (spec.get("folder_id"), spec.get("selected_id")):
             signals["folder_detail_status"] = response.status
         else:
@@ -697,9 +723,7 @@ def run_browser(spec):
                     folder_id = item.get("id", "")
                     if isinstance(folder_id, str) and re.fullmatch(r"[0-9]{6,20}", folder_id):
                         items.append({"id": folder_id, "first_name": attendee.get("firstName"), "last_name": attendee.get("lastName")})
-                name = identity(spec.get("last_name"))
-                filtered = bool(name) and any(name == identity(value) for _, value in parse_qsl(parsed.query))
-                lists.append({"items": items, "total": raw.get("numberOfItems"), "filtered": filtered})
+                lists.append({"items": items, "total": raw.get("numberOfItems")})
                 del lists[:-2]
             elif isinstance(raw, dict) and raw.get("id") == tail:
                 # Keep only the specifically requested dossier, or a shortlisted
@@ -728,7 +752,7 @@ def run_browser(spec):
                         if location_category(page.url) == "edof_folder_list":
                             inputs = page.locator("input:visible")
                             signals["name_tab_visible"] = page.get_by_text(NAME_TAB).filter(visible=True).count() == 1
-                            signals["name_field_visible"] = page.get_by_placeholder(NAME_FIELD).or_(page.get_by_label(NAME_FIELD)).and_(inputs).count() == 1
+                            signals["name_field_visible"] = page.locator(TRAINEE_SURNAME).or_(page.get_by_placeholder(NAME_FIELD)).or_(page.get_by_label(NAME_FIELD)).and_(inputs).count() == 1
                             signals["folder_field_visible"] = page.get_by_placeholder(re.compile(r"rechercher un dossier de formation", re.I)).and_(inputs).count() == 1
                         if location_category(page.url) == "edof_select_siret":
                             signals["chooser_controls"] = [kind for kind, selector in CHOOSER_CONTROLS.items()
@@ -908,22 +932,18 @@ def run_browser(spec):
                 signals["search_step"] = "opening_list"
                 open_folder_view(page, LIST_URL, lambda: signals.get("folder_list_status") == 200, BrowserTimeout)
                 try:
-                    submit_name_search(page, spec["last_name"], lists, signals, BrowserTimeout)
+                    submit_name_search(page, spec["last_name"], spec["first_name"], lists, signals, BrowserTimeout)
                 except BrowserTimeout:
-                    if signals.get("search_step") != "submit" or not any(row["filtered"] for row in lists):
+                    if signals.get("search_step") != "submit" or not lists:
                         raise
                     signals["search_step"] = "results"
                 deadline = time.monotonic() + 15
-                result = None
-                while time.monotonic() < deadline:
-                    result = next((row for row in reversed(lists) if row["filtered"]), None)
-                    if result:
-                        break
+                while not lists and time.monotonic() < deadline:
                     checkpoint()
                     page.wait_for_timeout(250)
                 if not lists:
                     raise StopRun("search_unconfirmed")
-                result = result or lists[-1]
+                result = lists[-1]
                 candidates = [item for item in result["items"] if identity(item["first_name"]) == identity(spec["first_name"]) and identity(item["last_name"]) == identity(spec["last_name"])]
                 # Never infer uniqueness from a truncated/paginated result.
                 if not isinstance(result["total"], int) or result["total"] > len(result["items"]):
