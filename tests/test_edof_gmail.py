@@ -123,6 +123,57 @@ def test_gmail_reads_skip_preexisting_messages_and_never_modify_mail(vault, monk
     assert EMAIL in calls[0][1]["params"]["q"]
 
 
+@pytest.mark.parametrize("result,accepted", [
+    ("dkim=pass header.i=@emploi.gouv.fr header.s=synthetic header.b=abc", True),
+    ("dkim=pass (verified) header.i=sender@mail.emploi.gouv.fr", True),
+    ("dkim=fail header.i=@emploi.gouv.fr; dkim=pass header.i=@example.invalid", False),
+    ("dkim=pass header.d=example.invalid header.i=@emploi.gouv.fr", False),
+    ("dkim=pass header.i=@emploi.gouv.fr.example.invalid", False),
+    ("dkim=pass header.i=@notemploi.gouv.fr", False),
+    ("spf=pass smtp.mailfrom=emploi.gouv.fr", False),
+    ('dkim=fail reason="; dkim=pass header.i=@emploi.gouv.fr;"', False),
+    ("spf=pass (nested (result); dkim=pass header.i=@emploi.gouv.fr;)", False),
+    ("dkim=pass header.i=@emploi.gouv.fr header.i=@example.invalid", False),
+])
+def test_google_verified_sender_identity_is_bound_to_the_passing_clause(result, accepted):
+    item = message()
+    item["payload"]["headers"][-1]["value"] = "mx.google.com; " + result
+    # Earlier (less trusted) hops cannot override Google's first verdict.
+    item["payload"]["headers"].append({"name": "Authentication-Results", "value":
+        "mx.google.com; dmarc=pass header.from=emploi.gouv.fr"})
+    reasons = {}
+    assert gmail.extract_code(item, EMAIL, time.time() - 1, rejections=reasons) == ("123456" if accepted else None)
+    assert reasons == ({} if accepted else {"sender_authentication_failed": 1})
+
+
+@pytest.mark.parametrize("case,expected", [
+    ("absent", {}), ("refused", {"code_unrecognized": 1}),
+    ("other_mx", {"authentication_header_missing": 1}),
+])
+def test_missing_code_only_reports_counts_and_never_rechecks_old_mail(monkeypatch, case, expected):
+    box = object.__new__(gmail.GmailCodes)
+    box.recipient, box.headers, box.baseline = EMAIL, {}, {"existing"}
+    ids = ["existing"] if case == "absent" else ["existing", "synthetic-message"]
+    monkeypatch.setattr(box, "list_ids", lambda since: ids)
+    item = message("EDOF. Numéro de dossier : 123456")
+    if case == "other_mx":
+        item["payload"]["headers"][-1]["value"] = "example.invalid; dkim=pass header.d=emploi.gouv.fr"
+    reads = []
+    def read(method, url, **kwargs):
+        assert method == "GET" and url.endswith("/synthetic-message")
+        reads.append(url)
+        return item
+    monkeypatch.setattr(gmail, "google_json", read)
+    clock = iter([0, 0, 1, 3])
+    monkeypatch.setattr(gmail.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(gmail.time, "sleep", lambda seconds: None)
+    with pytest.raises(gmail.GmailError) as exc:
+        box.wait_for_code(time.time() - 1, timeout=2)
+    assert exc.value.code == "gmail_code_missing"
+    assert exc.value.diagnostics == {"gmail_messages_checked": sum(expected.values()), "gmail_rejections": expected}
+    assert len(reads) == sum(expected.values())
+
+
 def test_revoked_google_grant_discards_session(vault, monkeypatch):
     vault.put("gmail", {"refresh_token": "synthetic-refresh"})
     vault.put("browser", {"cookies": []})

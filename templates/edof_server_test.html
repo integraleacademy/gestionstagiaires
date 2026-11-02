@@ -54,10 +54,29 @@
     <section class="card result"><p class="eyebrow">RÉSULTATS DU SERVEUR</p><h2>Ce qui est réellement vérifié</h2>
       {% for job in jobs %}<article class="candidate" {% if not job.finished %}data-running="true"{% endif %}>
         <h3>{{ 'Accès au formulaire' if job.mode == 'access' else 'Connexion et lecture' }} · {{ job.created_at[:19]|replace('T',' à ') }} UTC</h3>
-        <p class="{{ 'match' if job.code == 'read_success' else 'review-note' }}">{{ job.message }}</p>
+        <p class="{{ 'match' if job.code == 'read_success' else 'review-note' }}">{% if job.code == 'gmail_code_missing' and job.diagnostics and job.diagnostics.gmail_messages_checked is defined %}{% if job.diagnostics.gmail_messages_checked == 0 %}Gmail n’a trouvé aucun nouveau message de l’expéditeur EFP attendu pendant cet essai.{% else %}Gmail a trouvé un message, mais les vérifications du code EFP ont échoué. Le motif figure dans le diagnostic ci-dessous.{% endif %}{% else %}{{ job.message }}{% endif %}</p>
         {% if job.stage %}<p class="hint">Étape : {{ {'browser':'démarrage du navigateur','login_page':'accès au formulaire','authentication':'connexion EFP','organism':'sélection de l’établissement','search':'recherche par nom','dossier':'lecture du dossier'}.get(job.stage, 'essai') }}.</p>{% endif %}
         {% if job.code == 'read_success' %}<p class="hint">Connexion : {{ 'nouvelle authentification' if job.fresh_session else 'session serveur réutilisée' }}. Code Gmail utilisé : {{ 'oui' if job.gmail_code_used else 'non' }}. Connexion conservée : {{ 'oui' if job.session_saved else 'non' }}.</p>{% endif %}
         {% if job.diagnostics %}<details><summary>Diagnostic technique sans identifiants</summary><dl>
+          {% if job.diagnostics.gmail_messages_checked is defined %}
+          <dt>Nouveaux messages Gmail examinés</dt><dd>{{ job.diagnostics.gmail_messages_checked }}</dd>
+          {% for reason, count in job.diagnostics.gmail_rejections.items() %}
+          <dt>{{ {
+            'before_attempt': 'Message antérieur à cet essai',
+            'future_date': 'Date du message incohérente',
+            'expired': 'Message trop ancien',
+            'sender_mismatch': 'Expéditeur différent de celui attendu',
+            'recipient_mismatch': 'Destinataire différent du compte EFP',
+            'sender_authentication_failed': 'Authenticité de l’expéditeur non confirmée',
+            'authentication_header_missing': 'Contrôle d’authenticité Google absent',
+            'not_efp': 'Message sans référence à EFP ou EDOF',
+            'account_management': 'Message de gestion de compte, pas de connexion',
+            'code_unrecognized': 'Format du code non reconnu',
+            'code_ambiguous': 'Plusieurs codes différents dans le message',
+            'message_invalid': 'Message incomplet ou illisible'
+          }.get(reason, 'Message refusé') }}</dt><dd>{{ count }}</dd>
+          {% endfor %}
+          {% else %}
           <dt>Page atteinte</dt><dd>{{ job.diagnostics.location }}</dd>
           <dt>Formulaire encore visible</dt><dd>{{ 'Oui' if job.diagnostics.password_form_visible else 'Non' }}</dd>
           <dt>Erreur affichée par EFP</dt><dd>{{ 'Oui' if job.diagnostics.error_banner_visible else 'Non' }}</dd>
@@ -65,6 +84,7 @@
           <dt>Réponse à la connexion</dt><dd>{{ job.diagnostics.login_post_status|default('Non observée') }}</dd>
           <dt>Retour vers EDOF</dt><dd>{{ job.diagnostics.callback_status|default('Non observé') }}</dd>
           <dt>Envois bloqués par l’essai</dt><dd>EFP : {{ job.diagnostics.blocked_efp_posts|default(0) }} · EDOF : {{ job.diagnostics.blocked_edof_posts|default(0) }} · autres : {{ job.diagnostics.blocked_other_posts|default(0) }}</dd>
+          {% endif %}
         </dl></details>{% endif %}
         {% if job.fields %}{% set f = job.fields %}<dl><dt>Numéro CPF</dt><dd>{{ f.folder_id }}</dd><dt>Stagiaire</dt><dd>{{ f.first_name or '—' }} {{ f.last_name or '' }}</dd><dt>E-mail</dt><dd>{{ f.email or 'Non renseigné' }}</dd><dt>Formation</dt><dd>{{ f.title or 'Non renseignée' }}</dd><dt>Dates de session</dt><dd>{{ f.session_start_date or '—' }} → {{ f.session_end_date or '—' }}</dd><dt>Statut</dt><dd>{{ state_labels.get(f.state, f.state or 'Non renseigné') }}</dd></dl>{% endif %}
       </article>{% else %}<p>Aucun essai serveur lancé depuis cette session administrateur.</p>{% endfor %}
