@@ -21,6 +21,7 @@ import time
 from flask import Blueprint, abort, jsonify, redirect, request, send_file, session
 
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
+from edof_server_browser import stalled_before_login
 from edof_gmail import Vault, GmailError, connector_key, oauth_configured, authorization_url, finish_authorization
 
 JOB_TIMEOUT = 210
@@ -216,15 +217,10 @@ def last_read_stalled_at_login(jobs):
         job.get("code") in {"timeout", "search_unconfirmed"} and job.get("stage") in {"search", "dossier"}
         and job.get("fresh_session") is True and job.get("gmail_code_used") is True and not job.get("session_saved")
     )), {})
-    diag = last.get("diagnostics") or {}
     return (last.get("finished") is True and last.get("mode") == "read"
             and last.get("stage") == "login_page" and last.get("code") == "authentication_unconfirmed"
             and last.get("gmail_code_used") is False
-            and diag.get("location") in {"edof_initialisation", "edof_folder_list", "edof_login_redirect"}
-            and diag.get("edof_screen") in {"empty", "loading", "other", "session_expired"}
-            and diag.get("error_banner_visible") is False and diag.get("password_form_visible") is False
-            and not any(diag.get(key) for key in ("workspace_status", "workspace_denied", "login_post_status",
-                                                  "blocked_edof_posts", "blocked_efp_posts", "blocked_other_posts")))
+            and stalled_before_login(last.get("diagnostics") or {}))
 
 
 def start_job(store, owner, spec):

@@ -162,6 +162,26 @@ def test_new_read_uses_normal_signin_only_after_an_unconfirmed_workspace():
         server.validate_spec({"mode": "read", "folder_id": "123456789", "fresh_login": True})
 
 
+def test_same_read_can_restart_a_stalled_restore_but_preserves_verification_walls():
+    page, checkpoint = Mock(), Mock()
+    dialogs = page.locator.return_value
+    dialogs.all_inner_texts.return_value = []
+    diag = {"location": "edof_folder_list", "edof_screen": "other", "error_banner_visible": False,
+            "password_form_visible": False, "blocked_edof_posts": 0, "blocked_efp_posts": 0}
+    def restart(**changed):
+        return browser.can_restart_saved_login("authentication_unconfirmed", page, lambda: {**diag, **changed}, checkpoint)
+    assert restart()
+    for seen in ("login_post_status", "workspace_denied", "edof_token_status", "folder_list_status", "blocked_edof_posts"):
+        assert not restart(**{seen: 1})
+    dialogs.all_inner_texts.return_value = ["Accepter les conditions générales d’utilisation"]
+    assert not restart()
+    dialogs.all_inner_texts.return_value = ["Préférences de cookies"]
+    assert restart()
+    checkpoint.side_effect = browser.StopRun("human_verification")
+    with pytest.raises(browser.StopRun, match="human_verification"):
+        restart()
+
+
 def test_restore_requires_the_private_workspace_and_goes_there_first():
     page, context, checkpoint = Mock(), Mock(), Mock()
     page.url = browser.LIST_URL
