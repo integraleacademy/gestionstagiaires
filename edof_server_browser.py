@@ -12,13 +12,14 @@ import re
 import sys
 import time
 import unicodedata
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, parse_qsl, urlencode, urlsplit
 
 from edof_readonly_test import (
     ATTENDEE_FIELDS, INFO_FIELDS, SIRET, TEST_SERVICE_ID, TOP_FIELDS,
     normalize_observation,
 )
 from edof_gmail import Vault, GmailCodes, GmailError
+import edof_directory as directory
 
 EDOF_HOST = "of.moncompteformation.gouv.fr"
 EFP_HOST = "efpconnect.emploi.gouv.fr"
@@ -338,6 +339,86 @@ def open_folder_view(page, url, arrived, timeout_error):
     except timeout_error:
         if page.url != url or not arrived():
             raise
+
+
+def directory_list_url(url):
+    parsed = urlsplit(url)
+    if (parsed.scheme, parsed.netloc, parsed.path) != ("https", EDOF_HOST, API_PREFIX + "pad"):
+        return False
+    return not any(value and key.casefold() in {"attendeename", "attendeefirstname", "folderid",
+                   "registrationfolderid", "externalid", "search"} for key, value in parse_qsl(parsed.query))
+
+
+def directory_pages(page, response, checkpoint):
+    """Only paginate the exact GET that the authenticated EDOF list just used."""
+    def read(reply):
+        if reply.status != 200 or not directory_list_url(reply.url):
+            raise directory.IncompleteDirectory()
+        body = reply.body()
+        if len(body) > 8_000_000:
+            raise directory.IncompleteDirectory()
+        return json.loads(body)
+
+    result = read(response)
+    parsed = urlsplit(response.url)
+    pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    page_keys = {"page", "pagenumber", "pageindex", "numpage", "indexpage"}
+    offset_keys = {"offset", "first", "start", "startindex", "firstresult", "skip"}
+    size_keys = {"size", "pagesize", "limit", "maxresults", "resultsperpage", "perpage", "itemsperpage", "numberofitemsperpage"}
+    cursors = [(key, value) for key, value in pairs if key.lower() in page_keys | offset_keys]
+    sizes = [key for key, value in pairs if key.lower() in size_keys and value.isdigit()]
+    if len(cursors) == 1 and cursors[0][1] in {"0", "1"}:
+        key, value = cursors[0]
+        if key.lower() in offset_keys and value != "0":
+            raise directory.IncompleteDirectory()
+        position = int(value)
+        # Reuse only the same-origin header names required for this read.
+        headers = {k: v for k, v in response.request.all_headers().items()
+                   if k.lower() in {"accept", "authorization", "x-xsrf-token", "x-csrf-token", "x-requested-with"}}
+        def get_batch(index, page_size=None):
+            values = {key: str(index)}
+            if page_size:
+                values[sizes[0]] = str(page_size)
+            query = [(k, values.get(k, v)) for k, v in pairs]
+            url = parsed._replace(query=urlencode(query), fragment="").geturl()
+            reply = page.context.request.get(url, headers=headers, max_redirects=0, timeout=12000)
+            try:
+                if page_size and reply.status in {400, 422}:
+                    return None
+                return read(reply)
+            finally:
+                reply.dispose()
+
+        batch_size = None
+        if (len(sizes) == 1 and len(result["items"]) < 100
+                and result["numberOfItems"] > len(result["items"])):
+            larger = get_batch(position, 100)
+            if larger is not None:
+                original_ids = [item.get("id") for item in result["items"]]
+                if (larger.get("numberOfItems") != result["numberOfItems"]
+                        or [item.get("id") for item in larger["items"][:len(original_ids)]] != original_ids):
+                    raise directory.IncompleteDirectory()
+                result, batch_size = larger, 100
+        while True:
+            yield result
+            position += len(result["items"]) if key.lower() in offset_keys else 1
+            result = get_batch(position, batch_size)
+            if result is None:
+                raise directory.IncompleteDirectory()
+    else:
+        yield result
+        while True:
+            checkpoint()
+            next_page = page.locator(
+                'button[aria-label*="suivant" i]:visible, a[aria-label*="suivant" i]:visible, '
+                'button[title*="suivant" i]:visible, a[title*="suivant" i]:visible, '
+                'button.mat-mdc-paginator-navigation-next:visible, button.mat-paginator-navigation-next:visible, '
+                '.fr-pagination__link--next:visible, button[aria-label="Next page" i]:visible').first
+            if not next_page.count() or not next_page.is_enabled():
+                raise directory.IncompleteDirectory()
+            with page.expect_response(lambda r: r.request.method == "GET" and directory_list_url(r.url), timeout=12000) as pending:
+                next_page.click(timeout=4500)
+            yield read(pending.value)
 
 
 def matches_name_query(query, surname, first_name, paired):
@@ -771,6 +852,7 @@ def run_browser(spec):
     stage = "browser"
     blocked = 0
     lists = []
+    directory_responses = []
     details = {}
     invalid_response = False
     signals = {"blocked_efp_posts": 0, "blocked_edof_posts": 0, "blocked_other_posts": 0}
@@ -782,7 +864,7 @@ def run_browser(spec):
     session_saved = False
     mailbox = None
     requested_at = None
-    if spec["mode"] == "read" and os.environ.get("EDOF_CONNECTOR_KEY"):
+    if spec["mode"] in {"read", "directory"} and os.environ.get("EDOF_CONNECTOR_KEY"):
         try:
             vault = Vault(os.environ["EDOF_CONNECTOR_DIRECTORY"], os.environ["EDOF_CONNECTOR_KEY"])
             if not spec.get("fresh_login"):
@@ -794,7 +876,7 @@ def run_browser(spec):
         nonlocal blocked
         request = route.request
         returned = 200 <= signals.get("callback_status", 0) < 400
-        allow_identity = spec["mode"] == "read" and (returned or bool(saved))
+        allow_identity = spec["mode"] in {"read", "directory"} and (returned or bool(saved))
         frame_url = ""
         if allow_identity and request.method == "POST" and urlsplit(request.url).netloc == EDOF_HOST:
             try:
@@ -835,6 +917,10 @@ def run_browser(spec):
         tail = parsed.path[len(API_PREFIX):]
         if tail == "pad":
             signals["folder_list_status"] = response.status
+            if spec["mode"] == "directory":
+                if response.status == 200 and directory_list_url(response.url):
+                    directory_responses[:] = [response]
+                return
             if (stage != "search" or "paired_name_search" not in signals
                     or not matches_name_query(parsed.query, spec["last_name"], spec["first_name"], signals["paired_name_search"])):
                 return
@@ -898,10 +984,10 @@ def run_browser(spec):
                             buttons = page.locator(CHOOSER_CONTROLS["button"] + ", a[href]:visible, [role=combobox]:visible")
                             labels = buttons.evaluate_all("""els => els.map(e => e.getAttribute('aria-label') || e.innerText || e.title || '')""")
                             signals["chooser_actions"] = standard_choice_labels(labels)
-                    return diagnostic_summary(page.url,
+                    return {**({"directory": signals["directory"]} if "directory" in signals else {}), **diagnostic_summary(page.url,
                         page.locator('input[type="password"]:visible').count() > 0,
                         page.locator('#input-error:visible, .alert-error:visible, .pf-m-danger:visible, .fr-alert--error:visible').count() > 0,
-                        signals)
+                        signals)}
                 except Exception:
                     return diagnostic_summary(page.url, False, False, signals)
 
@@ -909,7 +995,7 @@ def run_browser(spec):
                 nonlocal otp_attempted, gmail_code_used
                 # Only derive categorical signals; never return the page body,
                 # which could contain identity information or an auth code.
-                if stage in {"organism", "search", "dossier"}:
+                if stage in {"organism", "search", "dossier", "directory"}:
                     bodies = page.locator("body").all_inner_texts()
                     if not bodies:
                         return "loading"
@@ -1068,6 +1154,25 @@ def run_browser(spec):
                 # The normal sign-in worked. Retire the unusable cached browser
                 # even if the separate name search later fails.
                 vault.delete("browser")
+            if spec["mode"] == "directory":
+                stage = "directory"
+                open_folder_view(page, LIST_URL, lambda: bool(directory_responses), BrowserTimeout)
+                deadline = time.monotonic() + 18
+                while not directory_responses and time.monotonic() < deadline:
+                    checkpoint()
+                    page.wait_for_timeout(200)
+                if not directory_responses or not vault:
+                    raise StopRun("directory_unavailable")
+                checkpoint()
+                try:
+                    signals["directory"] = {"seen": 0, "pages": 0}
+                    snapshot = directory.from_pages(directory_pages(page, directory_responses[-1], checkpoint), signals["directory"])
+                except (ValueError, KeyError, TypeError):
+                    raise StopRun("directory_incomplete") from None
+                vault.put(directory.record_key(spec["owner"]), snapshot, ttl=directory.TTL)
+                vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
+                return {"code": "directory_ready", "stage": stage, "candidate_count": len(snapshot["rows"]),
+                        "fresh_session": not reused, "gmail_code_used": gmail_code_used, "session_saved": True}
             if not spec.get("folder_id"):
                 stage = "search"
                 signals["search_step"] = "opening_list"

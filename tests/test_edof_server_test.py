@@ -665,3 +665,92 @@ def test_timeout_kills_process_tree_and_hides_diagnostics(tmp_path, monkeypatch)
     assert not temporary_paths[0].exists()
     assert store.latest("owner")[0]["code"] == "timeout"
     assert "synthetic-private" not in json.dumps(store.latest("owner"))
+
+
+def test_directory_requires_all_pages_and_only_keeps_list_fields():
+    import edof_directory as directory
+    first = {"id": "123456", "attendee": {"firstName": "André", "lastName": "LE TEST", "email": "private@invalid"}}
+    second = {**first, "id": "654321"}
+    before = {"numberOfItems": 2, "items": [first]}
+    after = {"numberOfItems": 2, "items": [second]}
+    snapshot = directory.from_pages([before, after])
+    assert len(snapshot["rows"]) == 2 and "private@invalid" not in str(snapshot)
+    query = {"first_name": "ANDRE", "last_name": "le-test", "folder_id": ""}
+    assert len(directory.matches(snapshot, query)) == 2
+    assert directory.matches(snapshot, {**query, "folder_id": "654321"}) == [snapshot["rows"]["654321"]]
+    for pages in ([before], [before, before], [before, {**after, "numberOfItems": 3}],
+                  [{"numberOfItems": 1, "items": [{"id": "../other"}]}]):
+        with pytest.raises(directory.IncompleteDirectory):
+            directory.from_pages(pages)
+    assert directory.from_pages([{"numberOfItems": 0, "items": []}])["rows"] == {}
+
+
+def test_directory_paginates_only_the_witnessed_official_list():
+    from urllib.parse import parse_qs, urlsplit
+    import edof_directory as directory
+    official = "https://" + browser.EDOF_HOST + browser.API_PREFIX + "pad"
+    def response(url, ids, total=3):
+        r = Mock(url=url, status=200)
+        r.body.return_value = json.dumps({"numberOfItems": total, "items": [
+            {"id": str(100000 + i), "attendee": {}} for i in ids]}).encode()
+        return r
+    first = response(official + "?page=0&size=1&state=accepted", [0])
+    first.request.all_headers.return_value = {"authorization": "synthetic", "other": "excluded"}
+    tab = Mock()
+    def get_batch(url, **kwargs):
+        assert url.startswith(official + "?") and kwargs["max_redirects"] == 0
+        assert kwargs["headers"] == {"authorization": "synthetic"}
+        q = parse_qs(urlsplit(url).query)
+        assert q["state"] == ["accepted"] and q["size"] == ["100"]
+        return response(url, [0, 1] if q["page"] == ["0"] else [2])
+    tab.context.request.get.side_effect = get_batch
+    assert len(directory.from_pages(browser.directory_pages(tab, first, Mock()))["rows"]) == 3
+    assert not browser.directory_list_url(official + "?attendeeName=Example")
+    assert not browser.directory_list_url(official.replace(browser.EDOF_HOST, "elsewhere.invalid"))
+    assert not browser.directory_list_url(official.replace("/siret/" + browser.SIRET, "/siret/other"))
+
+
+def test_unseen_name_local_lookup_is_isolated_and_never_starts_a_browser(web, monkeypatch):
+    import edof_directory as directory
+    app, client, store, csrf = web
+    store.connector_key = server.connector_key("s" * 48)
+    with client.session_transaction() as sess:
+        user = hashlib.sha256(sess["edof_server_owner"].encode()).hexdigest()
+    vault = server.Vault(store.directory, store.connector_key)
+    monkeypatch.setattr(server, "start_job", lambda *args: pytest.fail("Local lookup must not start EFP"))
+    path = "/admin/edof-test/server/directory/lookup"
+    payload = {"mode": "read", "first_name": "Andre", "last_name": "LE TEST"}
+    headers = {"X-CSRF-Token": csrf}
+    assert client.post(path, json=payload).status_code == 403
+    assert "première synchronisation" in client.post(path, json=payload, headers=headers).json["message"]
+    item = {"id": "123456", "attendee": {"firstName": "André", "lastName": "Le-Test"}, "currentState": "accepted"}
+    def seed(items):
+        snapshot = directory.from_pages([{"numberOfItems": len(items), "items": items}])
+        vault.put(directory.record_key(user), snapshot, ttl=86400)
+    seed([item])
+    hit = client.post(path, json=payload, headers=headers).json["matches"][0]
+    assert store.latest(user) == []
+    assert "LISTE EDOF SYNCHRONISÉE" in client.get(hit["url"]).get_data(as_text=True)
+    assert "Aucun dossier" in client.post(path, json={**payload, "folder_id": "999999"}, headers=headers).json["message"]
+    other = app.test_client()
+    with other.session_transaction() as sess:
+        sess["admin"] = True
+    assert "André Le-Test" not in other.get(hit["url"]).get_data(as_text=True)
+    seed([item, {**item, "id": "234567"}])
+    assert len(client.post(path, json=payload, headers=headers).json["matches"]) == 2
+
+
+def test_directory_scheduler_pauses_after_failure_and_shares_login_cooldown(tmp_path, monkeypatch):
+    import edof_directory as directory
+    now = 1000000.0
+    monkeypatch.setattr(server.time, "time", lambda: now)
+    store = server.ServerTestStore(tmp_path)
+    store.use_directory("user")
+    store.finish(store.reserve("user", "directory"), {"code": "directory_ready"})
+    with pytest.raises(server.JobCooldown):
+        store.reserve("user", "read")
+    now += directory.REFRESH_INTERVAL + 1
+    assert store.due_directories() == ["user"]
+    store.finish(store.reserve("user", "directory"), {"code": "human_verification"})
+    now += directory.REFRESH_INTERVAL + 1
+    assert not store.due_directories()

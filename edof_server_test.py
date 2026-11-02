@@ -24,11 +24,16 @@ from flask import Blueprint, abort, jsonify, redirect, request, send_file, sessi
 
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
 from edof_server_browser import stalled_before_login
+import edof_directory as directory
 from edof_gmail import Vault, GmailError, connector_key, oauth_configured, authorization_url, finish_authorization
 
 JOB_TIMEOUT = 210
+DIRECTORY_TIMEOUT = 420
 RETENTION = 86400
 MESSAGES = {
+    "directory_ready": "La liste EDOF de l’établissement est disponible pour la recherche.",
+    "directory_unavailable": "EDOF n’a pas renvoyé la liste de l’établissement. Vous pouvez reprendre la synchronisation.",
+    "directory_incomplete": "La liste renvoyée par EDOF est incomplète. La dernière liste vérifiée reste consultable.",
     "running": "Essai en cours sur Render. Vous pouvez fermer votre Chrome : l’essai continue sur le serveur.",
     "login_reachable": "Render atteint le formulaire EFP Connect. La connexion à votre compte et la lecture d’un dossier restent à tester.",
     "credentials_missing": "Le formulaire EFP est accessible. Configurez EDOF_EFP_USERNAME et EDOF_EFP_PASSWORD dans les variables du service Render Test V2.",
@@ -121,9 +126,12 @@ class ServerTestStore:
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA secure_delete = ON")
         db.execute("CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY, owner TEXT NOT NULL, created REAL NOT NULL, finished REAL, mode TEXT NOT NULL, result TEXT NOT NULL)")
+        db.execute("CREATE TABLE IF NOT EXISTS directory_activity (owner TEXT PRIMARY KEY, seen REAL NOT NULL)")
+        db.execute("DELETE FROM directory_activity WHERE seen < ?", (time.time() - RETENTION,))
         db.execute("DELETE FROM jobs WHERE created < ?", (time.time() - RETENTION,))
-        db.execute("UPDATE jobs SET finished = ?, result = ? WHERE finished IS NULL AND created < ?",
-                   (time.time(), json.dumps({"code": "interrupted"}), time.time() - JOB_TIMEOUT - 30))
+        db.execute("UPDATE jobs SET finished = ?, result = ? WHERE finished IS NULL "
+                   "AND created < ? - CASE WHEN mode = 'directory' THEN ? ELSE ? END",
+                   (time.time(), json.dumps({"code": "interrupted"}), time.time() - 30, DIRECTORY_TIMEOUT, JOB_TIMEOUT))
         db.commit()
         return db
 
@@ -135,9 +143,11 @@ class ServerTestStore:
                 if db.execute("SELECT 1 FROM jobs WHERE finished IS NULL").fetchone():
                     raise ValueError("Un essai est déjà en cours sur ce serveur.")
                 # Prevent repeated password attempts; no automatic retry loop.
-                recent = db.execute("SELECT created FROM jobs WHERE mode = ? ORDER BY created DESC LIMIT 1", (mode,)).fetchone()
-                delay = 300 if mode == "read" else 30
-                remaining = math.ceil(recent["created"] + delay - time.time()) if recent else 0
+                auth = mode in {"read", "directory"}
+                recent = db.execute("SELECT MAX(created) AS created FROM jobs WHERE mode IN (?, ?)",
+                                    ("read", "directory") if auth else (mode, mode)).fetchone()
+                delay = 300 if auth else 30
+                remaining = math.ceil(recent["created"] + delay - time.time()) if recent["created"] is not None else 0
                 if remaining > 0:
                     raise JobCooldown(remaining)
                 job_id = secrets.token_hex(16)
@@ -168,6 +178,26 @@ class ServerTestStore:
                     "created_at": dt.datetime.fromtimestamp(row["created"], dt.timezone.utc).isoformat(),
                     "finished": row["finished"] is not None, "message": MESSAGES.get(code, MESSAGES["browser_error"]), **detail})
             return result
+        finally:
+            db.close()
+
+    def use_directory(self, owner):
+        db = self.connect()
+        try:
+            with db:
+                db.execute("INSERT OR REPLACE INTO directory_activity VALUES (?, ?)", (owner, time.time()))
+        finally:
+            db.close()
+
+    def due_directories(self):
+        # Refresh active accounts in the background. A failed run pauses automatic sign-in.
+        db = self.connect()
+        try:
+            return [row["owner"] for row in db.execute(
+                "SELECT a.owner FROM directory_activity a JOIN jobs j ON j.id = "
+                "(SELECT id FROM jobs WHERE owner = a.owner AND mode = 'directory' ORDER BY created DESC LIMIT 1) "
+                "WHERE a.seen > ? AND j.finished < ? AND json_extract(j.result, '$.code') = 'directory_ready' "
+                "ORDER BY j.finished", (time.time() - 3600, time.time() - directory.REFRESH_INTERVAL))]
         finally:
             db.close()
 
@@ -227,7 +257,7 @@ def execute_job(store, job_id, spec, lock_fd):
         # private working directory even after timeout/SIGKILL, not only when
         # Playwright manages to close the browser cleanly.
         child_env["TMPDIR"] = temporary.name
-        if store.connector_key and spec["mode"] == "read":
+        if store.connector_key and spec["mode"] in {"read", "directory"}:
             child_env["EDOF_CONNECTOR_KEY"] = store.connector_key
             child_env["EDOF_CONNECTOR_DIRECTORY"] = str(store.directory)
             for key in ("EDOF_GOOGLE_CLIENT_ID", "EDOF_GOOGLE_CLIENT_SECRET"):
@@ -236,7 +266,7 @@ def execute_job(store, job_id, spec, lock_fd):
         process = subprocess.Popen([sys.executable, str(Path(__file__).with_name("edof_server_browser.py"))],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             text=True, env=child_env, start_new_session=True, pass_fds=(lock_fd,))
-        output, _ = process.communicate(json.dumps(spec), timeout=JOB_TIMEOUT)
+        output, _ = process.communicate(json.dumps(spec), timeout=DIRECTORY_TIMEOUT if spec["mode"] == "directory" else JOB_TIMEOUT)
         if process.returncode == 0 and len(output) < 32768:
             parsed = json.loads(output)
             if isinstance(parsed, dict) and parsed.get("code") in MESSAGES:
@@ -284,7 +314,7 @@ def start_job(store, owner, spec):
             raise ValueError("Un navigateur d’essai fonctionne déjà sur ce serveur.") from None
         # A new, explicitly started read can use standard sign-in if the last
         # run never reached an EFP form or the private workspace.
-        if spec["mode"] == "read" and last_read_stalled_at_login(store.latest(owner)):
+        if spec["mode"] in {"read", "directory"} and last_read_stalled_at_login(store.latest(owner)):
             spec = {**spec, "fresh_login": True}
         job_id = store.reserve(owner, spec["mode"])
         thread = threading.Thread(target=execute_job, args=(store, job_id, spec, lock_fd), daemon=True)
@@ -298,9 +328,22 @@ def start_job(store, owner, spec):
 def register_edof_server_test(legacy):
     if os.environ.get("RENDER_SERVICE_ID") != TEST_SERVICE_ID:
         return
-    register_routes(legacy.app, ServerTestStore("/var/data"),
+    store = ServerTestStore("/var/data")
+    register_routes(legacy.app, store,
         admin_required=legacy.admin_login_required,
         can_access=lambda: legacy._is_super_admin_session() and not session.get("assist_partner_id"))
+
+    def refresh_active_directories():
+        while True:
+            time.sleep(60)
+            try:
+                for user in store.due_directories():
+                    start_job(store, user, {"mode": "directory", "owner": user})
+                    break
+            except (OSError, sqlite3.Error, ValueError):
+                continue  # A live read or deployment can own the shared lock.
+
+    threading.Thread(target=refresh_active_directories, name="edof-directory", daemon=True).start()
 
 
 def register_routes(app, store, *, admin_required, can_access):
@@ -371,10 +414,21 @@ def register_routes(app, store, *, admin_required, can_access):
     def index():
         user = results_owner()
         csrf = session.setdefault("edof_server_csrf", secrets.token_urlsafe(32))
+        snapshot = vault().get(directory.record_key(user)) if store.connector_key else None
+        if snapshot:
+            store.use_directory(user)
+        selected_folder = request.args.get("fiche")
+        if selected_folder is not None and not re.fullmatch(r"[0-9a-f]{32}", selected_folder):
+            abort(404)
         selected_id = request.args.get("result")
         if selected_id is not None and not re.fullmatch(r"[0-9a-f]{32}", selected_id):
             abort(404)
-        last_read = store.successful_read(user, job_id=selected_id)
+        if selected_folder is not None:
+            fields = next((row for key, row in snapshot["rows"].items()
+                           if hmac.compare_digest(directory.link_key(user, key), selected_folder)), None) if snapshot else None
+            last_read = {"id": selected_folder, "fields": fields, "checked_at": directory.stamp(snapshot), "listed": True} if fields else None
+        else:
+            last_read = store.successful_read(user, job_id=selected_id)
         return app.jinja_env.get_template("edof_server_test.html").render(
             csrf=csrf, config=configuration(), gmail=gmail_status(), gmail_notice={
                 "connected": "Gmail est connecté. Vous pouvez lancer un essai serveur.",
@@ -383,7 +437,9 @@ def register_routes(app, store, *, admin_required, can_access):
                 "invalid": "Cette demande de connexion a expiré. Recommencez depuis cette page.",
                 "busy": "Un essai serveur est en cours. Attendez sa fin avant de modifier la connexion.",
                 **MESSAGES}.get(request.args.get("gmail"), ""),
-            jobs=store.latest(user), last_read=last_read, selected_result=selected_id is not None, state_labels=STATE_LABELS)
+            jobs=store.latest(user), last_read=last_read, selected_result=selected_folder is not None or selected_id is not None,
+            directory_checked=directory.stamp(snapshot) if snapshot else None,
+            directory_count=len(snapshot["rows"]) if snapshot else 0, state_labels=STATE_LABELS)
 
     @bp.get("/admin/edof-test/server/status")
     @admin_required
@@ -440,6 +496,57 @@ def register_routes(app, store, *, admin_required, can_access):
     def script():
         owner()
         return send_file(Path(__file__).parent / "edof_test_assets" / "server.js")
+
+    @bp.post("/admin/edof-test/server/directory/refresh")
+    @admin_required
+    def refresh_directory():
+        user = results_owner()
+        check_csrf()
+        if not configuration()["credentials_configured"] or not gmail_status()["connected"]:
+            return jsonify(ok=False, error="Connectez le compte EFP et Gmail pour synchroniser la liste."), 409
+        try:
+            active = next((job for job in store.latest(user) if job["mode"] == "directory" and not job["finished"]), None)
+            job = active["id"] if active else start_job(store, user, {"mode": "directory", "owner": user})
+            store.use_directory(user)
+            return jsonify(ok=True, job_id=job), 202
+        except JobCooldown as exc:
+            return jsonify(ok=False, error=str(exc), retry_after=exc.remaining), 429
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 409
+
+    @bp.post("/admin/edof-test/server/directory/lookup")
+    @admin_required
+    def lookup():
+        user = results_owner()
+        check_csrf()
+        if not request.content_length or request.content_length > 2048:
+            return jsonify(ok=False, error="Critères de recherche invalides."), 400
+        try:
+            spec = validate_spec(request.get_json(silent=True))
+            if spec["mode"] != "read":
+                raise ValueError("Renseignez un numéro CPF ou le nom et le prénom.")
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 400
+        snapshot = vault().get(directory.record_key(user)) if store.connector_key else None
+        hits = []
+        if snapshot:
+            store.use_directory(user)
+            for row in directory.matches(snapshot, spec):
+                if len(hits) >= 20:
+                    return jsonify(ok=True, message="Plus de vingt dossiers correspondent. Précisez le numéro CPF.")
+                hits.append({"fields": row, "url": url_for("edof_server_test.index",
+                            fiche=directory.link_key(user, row["folder_id"]), _anchor="dossier-lu")})
+        saved = store.successful_read(user, spec=spec)
+        if saved and all(hit["fields"]["folder_id"] != saved["fields"]["folder_id"] for hit in hits):
+            hits.append({"fields": {k: saved["fields"].get(k) for k in ("folder_id", "first_name", "last_name", "title", "state")},
+                         "url": url_for("edof_server_test.index", result=saved["id"], _anchor="dossier-lu")})
+        if hits:
+            return jsonify(ok=True, matches=hits)
+        if snapshot:
+            return jsonify(ok=True, message=f"Aucun dossier correspondant dans la liste EDOF du {directory.stamp(snapshot)}. "
+                           "Utilisez « Relire sur EDOF » pour vérifier en direct.")
+        return jsonify(ok=True, message="La première synchronisation de la liste EDOF reste à terminer. "
+                       "Cliquez sur « Synchroniser la liste EDOF » pour la préparer.")
 
     @bp.post("/admin/edof-test/server/run")
     @admin_required
