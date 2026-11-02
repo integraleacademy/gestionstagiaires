@@ -10,6 +10,18 @@
   <header><a href="/admin/edof-test">← Essais EDOF</a><span>INTÉGRALE <b>ACADEMY</b></span><span class="badge">TEST V2</span></header>
   <main data-csrf="{{ csrf }}">
     <div class="intro"><p class="eyebrow">EDOF · ACCÈS DEPUIS RENDER</p><h1>Tester sans votre Chrome.</h1><p>Le serveur utilise sa propre connexion EFP. Gmail peut lui permettre de recevoir un nouveau code lors d’une reconnexion. Votre extension Chrome n’intervient pas.</p></div>
+    <section class="card result" id="dossier-lu">
+      {% if last_read %}{% set f = last_read.fields %}
+        <p class="eyebrow">DOSSIER EDOF · LECTURE DU {{ last_read.checked_at }} (PARIS)</p>
+        <h2>{{ f.first_name }} {{ f.last_name }}</h2>
+        <p class="match"><strong>{{ state_labels.get(f.state, f.state or 'Statut non renseigné') }}</strong></p>
+        <p>{{ f.title or 'Formation non renseignée' }}</p>
+        {% if f.session_start_date and f.session_end_date %}<p>Session du {{ f.session_start_date.split('-')|reverse|join('/') }} au {{ f.session_end_date.split('-')|reverse|join('/') }}.</p>{% endif %}
+        <p class="hint">Ce résultat est consultable pendant 24 heures depuis les navigateurs connectés à votre compte administrateur.</p>
+        <a href="{{ url_for('edof_server_test.index', result=last_read.id, _anchor='dossier-lu') }}">Lien vers cette lecture</a>
+      {% elif selected_result %}<h2>Cette lecture n’est pas disponible</h2><p>Ouvrez ce lien avec le compte administrateur qui a lancé la lecture. Les résultats sont conservés 24 heures.</p>
+      {% else %}<h2>Dernier dossier lu</h2><p>Aucune lecture réussie sur ce compte au cours des dernières 24 heures. Renseignez le nom et le prénom dans le formulaire ci-dessous pour consulter un dossier.</p>{% endif %}
+    </section>
     <div class="notice"><strong>Lecture seule</strong><span>Cet essai vérifie l’accès, la recherche et la lecture. Il ne déclare aucune entrée, sortie ou prestation et ne rattache aucun dossier.</span></div>
     <section class="card result"><p class="eyebrow">CONNEXION GMAIL</p><h2>Recevoir les codes EFP automatiquement</h2>
       {% if gmail_notice %}<p class="review-note" role="status">{{ gmail_notice }}</p>{% endif %}
@@ -45,13 +57,14 @@
           <label for="server-folder">Numéro CPF, si vous le connaissez</label><input id="server-folder" inputmode="numeric" pattern="[0-9]{6,20}" maxlength="20" autocomplete="off">
           <p>Pour tester la recherche, laissez le numéro vide et renseignez le nom et le prénom.</p>
           <div class="server-grid"><div><label for="server-last">Nom</label><input id="server-last" maxlength="120" autocomplete="off"></div><div><label for="server-first">Prénom</label><input id="server-first" maxlength="120" autocomplete="off"></div></div>
-          <button class="button" type="submit" {% if not config.credentials_configured %}disabled{% endif %}>Lancer la connexion et la lecture</button>
+          <button class="button" type="submit">Consulter le dossier</button>
+          {% if last_read and config.credentials_configured %}<button class="button secondary" type="submit" value="refresh">Relire sur EDOF</button>{% endif %}
         </form>
-        <p class="hint">Recherche dans les dossiers en cours. Plusieurs homonymes ou plusieurs pages : aucune sélection automatique. Un nouvel essai de lecture est possible après cinq minutes.</p>
+        <p class="hint">La consultation affiche immédiatement une fiche déjà lue dans les dernières 24 heures. Si aucune fiche enregistrée ne correspond, le serveur lance une recherche sur EDOF. Le délai de cinq minutes s’applique uniquement entre deux nouvelles lectures sur EDOF.</p>
       </section>
     </div>
     <p id="server-message" role="status" aria-live="polite"></p>
-    <section class="card result"><p class="eyebrow">RÉSULTATS DU SERVEUR</p><h2>Ce qui est réellement vérifié</h2>
+    <section class="card result" id="historique"><p class="eyebrow">RÉSULTATS DU SERVEUR</p><h2>Historique des essais</h2>
       {% for job in jobs %}<article class="candidate" {% if not job.finished %}data-running="true"{% endif %}>
         <h3>{{ 'Accès au formulaire' if job.mode == 'access' else 'Connexion et lecture' }} · {{ job.created_at[:19]|replace('T',' à ') }} UTC</h3>
         <p class="{{ 'match' if job.code == 'read_success' else 'review-note' }}">{% if job.code == 'gmail_code_missing' and job.diagnostics and job.diagnostics.gmail_messages_checked is defined %}{% if job.diagnostics.gmail_messages_checked == 0 %}Gmail n’a trouvé aucun nouveau message de l’expéditeur EFP attendu pendant cet essai.{% else %}Gmail a trouvé un message, mais les vérifications du code EFP ont échoué. Le motif figure dans le diagnostic ci-dessous.{% endif %}{% else %}{{ job.message }}{% endif %}</p>
@@ -102,7 +115,7 @@
           {% endif %}
         </dl></details>{% endif %}
         {% if job.fields %}{% set f = job.fields %}<dl><dt>Numéro CPF</dt><dd>{{ f.folder_id }}</dd><dt>Stagiaire</dt><dd>{{ f.first_name or '—' }} {{ f.last_name or '' }}</dd><dt>E-mail</dt><dd>{{ f.email or 'Non renseigné' }}</dd><dt>Formation</dt><dd>{{ f.title or 'Non renseignée' }}</dd><dt>Dates de session</dt><dd>{{ f.session_start_date or '—' }} → {{ f.session_end_date or '—' }}</dd><dt>Statut</dt><dd>{{ state_labels.get(f.state, f.state or 'Non renseigné') }}</dd></dl>{% endif %}
-      </article>{% else %}<p>Aucun essai serveur lancé depuis cette session administrateur.</p>{% endfor %}
+      </article>{% else %}<p>Aucun essai récent pour ce compte administrateur.</p>{% endfor %}
       <p class="hint">Un formulaire accessible ne prouve pas une connexion réussie. Une lecture réussie ne prouve pas encore le fonctionnement continu après expiration, ni les déclarations d’entrée et de sortie.</p>
     </section>
     <footer>Chaque essai dure au maximum 3 min 30 et fonctionne sur Render, même si vous fermez cette page. Les résultats sont conservés au maximum 24 heures et purgés à l’accès suivant. Un seul code Gmail peut être soumis par essai. Un CAPTCHA, une erreur ou un parcours inconnu arrête l’essai. Aucune synchronisation régulière ni déclaration EDOF n’est activée.</footer>
