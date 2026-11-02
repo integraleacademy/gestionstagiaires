@@ -80,6 +80,8 @@
           {% endfor %}
           {% else %}
           <dt>Page atteinte</dt><dd>{{ job.diagnostics.location }}</dd>
+          {% if job.diagnostics.private_route %}<dt>Page de l’espace privé</dt><dd>{{ job.diagnostics.private_route }}</dd>{% endif %}
+          {% if job.diagnostics.expected_establishment_visible is defined %}<dt>SIRET attendu affiché</dt><dd>{{ 'Oui' if job.diagnostics.expected_establishment_visible else 'Non' }}</dd>{% endif %}
           {% if job.diagnostics.edof_screen %}<dt>Écran EDOF</dt><dd>{{ {'access_denied':'Accès refusé','session_expired':'Session expirée','terms':'Conditions à accepter','select_organisation':'Choix de l’établissement','dashboard':'Tableau de bord','folders':'Dossiers','error':'Erreur signalée','loading':'Chargement','empty':'Page vide','other':'Autre écran'}.get(job.diagnostics.edof_screen, 'Autre écran') }}</dd>{% endif %}
           <dt>Formulaire encore visible</dt><dd>{{ 'Oui' if job.diagnostics.password_form_visible else 'Non' }}</dd>
           <dt>Erreur affichée par EFP</dt><dd>{{ 'Oui' if job.diagnostics.error_banner_visible else 'Non' }}</dd>

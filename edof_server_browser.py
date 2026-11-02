@@ -31,6 +31,9 @@ WORKSPACE_API_PREFIX = f"/edof-api/v1/api/private/siret/{SIRET}/"
 API_PREFIX = WORKSPACE_API_PREFIX + "organisms/current/registration-folders/"
 READ_METHODS = {"GET", "HEAD", "OPTIONS"}
 OTP_SELECTOR = 'input[autocomplete="one-time-code"]:visible, input[name="otp"]:visible, input[name="totp"]:visible, input[name="code"]:visible'
+SIRET_TEXT = re.compile(r"(?<!\d)" + r"[\s.]*".join(SIRET) + r"(?!\d)")
+CHOOSER_ROUTE = re.compile(r"(?:choix|choisir|select|selection|selectionner)[-/]?(?:du[-/]|de[-/]l[-/])?(?:sirets?|organismes?|etablissements?)\b")
+CHOOSER_TEXT = re.compile(r"\b(?:choisir|choisissez|choix|selection|selectionner|selectionnez)\b.{0,55}\b(?:siret|organisme|etablissement)s?\b")
 
 
 def session_cookies(state):
@@ -114,7 +117,7 @@ def location_category(url):
                 return "edof_folder_list"
             if re.fullmatch(r"/dossiers/detail/[0-9]{6,20}", route):
                 return "edof_folder_detail"
-            return "edof_select_siret" if "select-siret" in route.split("/") else "edof_private"
+            return "edof_select_siret" if CHOOSER_ROUTE.search(route.lower()) else "edof_private"
         if parsed.path.startswith("/espace-public/"):
             return "edof_public"
         if parsed.path.startswith("/edof-api/"):
@@ -142,6 +145,11 @@ ROUTE_WORDS = frozenset("""
     terms conditions preferences profile profiles trace traces analytics telemetry
     collect events event monitoring log logs tracking stats statistics matomo js environments
     saml sso federation state status context contexts connection proxy authenticationgateway
+    accueil home choix choisir selectionner etablissement etablissements organisme organismes
+    siret sirets habilitation habilitations mes mon espace espaces tableau bord dashboard
+    dossiers liste detail en cours erreur error acces droits profil profils bienvenue
+    choix de du d l un une votre mon mes landing page selection structure structures
+    maintenance unavailable indisponible forbidden unauthorized droits cgu charte legal
 """.split())
 
 
@@ -156,9 +164,33 @@ def safe_edof_route(url):
     return "/" + "/".join(shape)
 
 
+def workspace_screen(text):
+    visible = identity(text)
+    groups = (
+        ("access_denied", ("acces refuse", "vous n etes pas habilite", "vous n avez pas acces", "acces interdit",
+                           "demander un acces", "demander l acces", "demande d habilitation")),
+        ("session_expired", ("session a expire", "session est expiree", "veuillez vous reconnecter")),
+        ("terms", ("j accepte les conditions", "accepter les conditions", "accepter la charte")),
+        ("folders", ("dossiers en cours",)), ("dashboard", ("tableau de bord",)),
+        ("error", ("une erreur", "erreur technique", "probleme technique", "service indisponible", "en maintenance")),
+        ("loading", ("chargement", "redirection en cours", "veuillez patienter")),
+    )
+    for key, phrases in groups:
+        if any(phrase in visible for phrase in phrases):
+            return key
+    if CHOOSER_TEXT.search(visible):
+        return "select_organisation"
+    return "other" if visible else "empty"
+
+
 def diagnostic_summary(location, password_visible, error_visible, signals):
     """Allowlist scalar signals; deliberately no page/error/input text."""
     result = {"location": location_category(location), "password_form_visible": bool(password_visible), "error_banner_visible": bool(error_visible)}
+    if private_page(location):
+        fragment = urlsplit(location).fragment.partition("?")[0]
+        result["private_route"] = safe_edof_route(f"https://{EDOF_HOST}" + fragment)
+        if isinstance(signals.get("expected_establishment_visible"), bool):
+            result["expected_establishment_visible"] = signals["expected_establishment_visible"]
     for key in ("login_post_status", "callback_status", "edof_token_status", "workspace_status", "folder_list_status", "folder_detail_status", "blocked_efp_posts", "blocked_edof_posts", "blocked_other_posts", "invalid_form_fields"):
         value = signals.get(key)
         if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 9999:
@@ -179,6 +211,25 @@ def diagnostic_summary(location, password_visible, error_visible, signals):
 class StopRun(Exception):
     def __init__(self, code):
         self.code = code
+
+
+def select_establishment(page):
+    """Select only this SIRET in an existing EDOF workspace choice."""
+    # Some versions display the registration number in groups or as a
+    # native select option. Do not submit forms for a new habilitation.
+    for select in page.locator("select:visible").all():
+        matched = []
+        for index, option in enumerate(select.locator("option").all()):
+            if option.get_attribute("value") == SIRET or SIRET_TEXT.search(option.text_content() or ""):
+                matched.append(index)
+        if len(matched) == 1:
+            select.select_option(index=matched[0])
+            return True
+    choice = page.get_by_text(SIRET_TEXT).filter(visible=True)
+    if choice.count() == 1:
+        choice.click()
+        return True
+    return False
 
 
 def run_browser(spec):
@@ -292,17 +343,9 @@ def run_browser(spec):
                 try:
                     signals["invalid_form_fields"] = page.locator('input:invalid:visible').count()
                     if urlsplit(page.url).hostname == EDOF_HOST:
-                        visible = identity(page.locator("body").inner_text(timeout=2000))
-                        groups = (
-                            ("access_denied", ("acces refuse", "vous n etes pas habilite", "vous n avez pas acces", "acces interdit")),
-                            ("session_expired", ("session a expire", "session est expiree", "veuillez vous reconnecter")),
-                            ("terms", ("j accepte les conditions", "accepter les conditions", "accepter la charte")),
-                            ("select_organisation", ("selectionnez votre etablissement", "choisissez votre etablissement", "selectionnez un etablissement")),
-                            ("folders", ("dossiers en cours",)), ("dashboard", ("tableau de bord",)),
-                            ("error", ("une erreur", "erreur technique", "probleme technique")),
-                            ("loading", ("chargement", "redirection en cours", "veuillez patienter")),
-                        )
-                        signals["edof_screen"] = next((key for key, phrases in groups if any(s in visible for s in phrases)), "other" if visible else "empty")
+                        body = page.locator("body").inner_text(timeout=2000)
+                        signals["expected_establishment_visible"] = bool(SIRET_TEXT.search(body))
+                        signals["edof_screen"] = workspace_screen(body)
                     return diagnostic_summary(page.url,
                         page.locator('input[type="password"]:visible').count() > 0,
                         page.locator('#input-error:visible, .alert-error:visible, .pf-m-danger:visible, .fr-alert--error:visible').count() > 0,
@@ -353,6 +396,8 @@ def run_browser(spec):
                     raise StopRun("account_action_required")
                 if stage == "authentication" and page.locator('#input-error:visible, .alert-error:visible, .pf-m-danger:visible, .fr-alert--error:visible').count():
                     raise StopRun("sign_in_error")
+                if stage == "organism" and private_page(page.url):
+                    return workspace_screen(text)
 
             stage = "login_page"
             page.goto(LOGIN_URL, wait_until="domcontentloaded", timeout=45000)
@@ -410,14 +455,15 @@ def run_browser(spec):
             dossier_menu = page.locator('a[href$="/dossiers/en-cours"]')
             deadline = time.monotonic() + 35
             while time.monotonic() < deadline:
-                checkpoint()
-                if location_category(page.url) == "edof_select_siret":
-                    choice = page.get_by_text(SIRET, exact=False).filter(visible=True)
-                    if not choice_clicked and choice.count() == 1:
-                        choice.click()
-                        choice_clicked = True
-                elif private_page(page.url) and (signals.get("workspace_status") or dossier_menu.count()):
-                    break
+                screen = checkpoint()
+                if private_page(page.url):
+                    if screen in {"access_denied", "session_expired", "terms", "error"}:
+                        raise StopRun("organism_selection_required")
+                    if signals.get("workspace_status") or dossier_menu.count():
+                        break
+                    chooser = location_category(page.url) == "edof_select_siret" or screen == "select_organisation"
+                    if chooser and not choice_clicked:
+                        choice_clicked = select_establishment(page)
                 page.wait_for_timeout(300)
             else:
                 raise StopRun("organism_selection_required")
