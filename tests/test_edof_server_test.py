@@ -553,6 +553,14 @@ def test_old_success_follows_only_the_same_account_and_stays_visible_after_faile
     path = "/admin/edof-test/server?result=" + job
     assert "Service fait validé" in second.get(path).get_data(as_text=True)
     assert all(j["code"] == "timeout" for j in second.get("/admin/edof-test/server/status").json["jobs"])
+    with first.session_transaction() as sess:
+        account = sess["edof_history_account"]
+    now += 301
+    active = store.reserve(account, "read")
+    assert 'data-running="true"' in second.get("/admin/edof-test/server").get_data(as_text=True)
+    pinned = second.get(path).get_data(as_text=True)
+    assert 'data-running="true"' not in pinned and "Camille Exemple" in pinned
+    store.finish(active, {"code": "timeout"})
     with second.session_transaction() as sess:
         sess["admin_username"] = "other@example.invalid"
     text = second.get(path).get_data(as_text=True)

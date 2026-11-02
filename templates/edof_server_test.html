@@ -65,7 +65,7 @@
     </div>
     <p id="server-message" role="status" aria-live="polite"></p>
     <section class="card result" id="historique"><p class="eyebrow">RÉSULTATS DU SERVEUR</p><h2>Historique des essais</h2>
-      {% for job in jobs %}<article class="candidate" {% if not job.finished %}data-running="true"{% endif %}>
+      {% for job in jobs %}<article class="candidate" {% if not job.finished and not selected_result %}data-running="true"{% endif %}>
         <h3>{{ 'Accès au formulaire' if job.mode == 'access' else 'Connexion et lecture' }} · {{ job.created_at[:19]|replace('T',' à ') }} UTC</h3>
         <p class="{{ 'match' if job.code == 'read_success' else 'review-note' }}">{% if job.code == 'gmail_code_missing' and job.diagnostics and job.diagnostics.gmail_messages_checked is defined %}{% if job.diagnostics.gmail_messages_checked == 0 %}Gmail n’a trouvé aucun nouveau message de l’expéditeur EFP attendu pendant cet essai.{% else %}Gmail a trouvé un message, mais les vérifications du code EFP ont échoué. Le motif figure dans le diagnostic ci-dessous.{% endif %}{% else %}{{ job.message }}{% endif %}</p>
         {% if job.stage %}<p class="hint">Étape : {{ {'browser':'démarrage du navigateur','login_page':'accès au formulaire','authentication':'connexion EFP','organism':'sélection de l’établissement','search':'recherche par nom','dossier':'lecture du dossier'}.get(job.stage, 'essai') }}.</p>{% endif %}
