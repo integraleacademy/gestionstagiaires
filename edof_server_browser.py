@@ -38,7 +38,9 @@ CONFIRM_ESTABLISHMENT = re.compile(
     r"^(?:(?:Valider|Confirmer)(?: (?:mon choix|ma sélection|le SIRET))?|Continuer|"
     r"Acc[ée]der(?: à (?:mon|votre|cet|l[’'])\s*espace(?: (?:professionnel|EDOF))?| à EDOF)?|"
     r"(?:Me |Se )?connecter(?: à (?:mon espace|EDOF))?)$", re.I)
-ESTABLISHMENT_STEPS = {"waiting", "opened", "filtered", "searched", "selected", "confirmed"}
+ESTABLISHMENT_STEPS = {"waiting", "keyboard", "opened", "filtered", "searched", "selected", "confirmed"}
+CHOOSER_ACTIONS = {"open_keyboard", "open_click", "select_native", "select_radio", "select_text",
+                   "filter", "search", "confirm", "dismiss_cookies"}
 SIRET_FIELD = re.compile(r"siret|[ée]tablissement|organisme", re.I)
 CHOOSER_CONTROLS = {
     "list": 'select:visible, [role="listbox"]:visible',
@@ -53,6 +55,7 @@ CHOOSER_WORDS = frozenset("""
     espace formation inscription l la le les liste ma me mon organisme organismes professionnel
     professionnels rechercher recherche saisir se selection selectionnez selectionner siret sirets
     sous suivant suivante un une valider validation votre vous de des du en mes sur
+    accepter cookies consentement continuer fermer ma sans refuser tout tous les parametres
 """.split())
 
 
@@ -229,6 +232,10 @@ def diagnostic_summary(location, password_visible, error_visible, signals):
             result["chooser_controls"] = [kind for kind in CHOOSER_CONTROLS if kind in signals["chooser_controls"]]
         if isinstance(signals.get("chooser_actions"), list):
             result["chooser_actions"] = standard_choice_labels(signals["chooser_actions"])
+        if signals.get("chooser_action") in CHOOSER_ACTIONS:
+            result["chooser_action"] = signals["chooser_action"]
+        if signals.get("chooser_surface") in {"control", "label", "parent", "dialog", "covered", "offscreen"}:
+            result["chooser_surface"] = signals["chooser_surface"]
     for key in ("login_post_status", "callback_status", "edof_token_status", "workspace_status", "folder_list_status", "folder_detail_status", "blocked_efp_posts", "blocked_edof_posts", "blocked_other_posts", "invalid_form_fields"):
         value = signals.get(key)
         if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 9999:
@@ -251,7 +258,7 @@ class StopRun(Exception):
         self.code = code
 
 
-def select_establishment(page, step):
+def select_establishment(page, step, signals):
     """Advance one visible control at a time in the existing workspace chooser."""
     if step == "confirmed":
         return step
@@ -259,6 +266,7 @@ def select_establishment(page, step):
     confirm = page.get_by_role("button", name=CONFIRM_ESTABLISHMENT).filter(visible=True)
     if step == "selected":
         if verified_chooser and confirm.count() == 1 and confirm.is_enabled():
+            signals["chooser_action"] = "confirm"
             confirm.click()
             return "confirmed"
         return step
@@ -268,14 +276,17 @@ def select_establishment(page, step):
             if option.get_attribute("value") == SIRET or SIRET_TEXT.search(option.text_content() or ""):
                 matched.append(index)
         if len(matched) == 1:
+            signals["chooser_action"] = "select_native"
             select.select_option(index=matched[0])
             return "selected"
     radio = page.get_by_role("radio", name=SIRET_TEXT).or_(page.locator(f'input[type="radio"][value="{SIRET}"]')).filter(visible=True)
     if radio.count() == 1:
+        signals["chooser_action"] = "select_radio"
         radio.check()
         return "selected"
     choice = page.get_by_text(SIRET_TEXT).filter(visible=True)
-    if choice.count() == 1:
+    if choice.count() == 1 and SIRET_TEXT.search(page.locator("body").inner_text()):
+        signals["chooser_action"] = "select_text"
         choice.click()
         return "selected"
     if not verified_chooser:
@@ -287,21 +298,42 @@ def select_establishment(page, step):
     labelled = fields.and_(page.get_by_label(SIRET_FIELD).or_(page.get_by_placeholder(SIRET_FIELD)))
     if labelled.count() == 1:
         fields = labelled
-    if step in {"waiting", "opened"} and fields.count() == 1 and fields.is_editable():
+    if step in {"waiting", "keyboard", "opened"} and fields.count() == 1 and fields.is_editable():
+        signals["chooser_action"] = "filter"
         fields.fill(SIRET)
         return "filtered"
-    if step == "waiting":
+    if step in {"waiting", "keyboard"}:
         dropdown = page.locator('[role="combobox"]:not(select):visible, [aria-haspopup="listbox"]:visible, button.dropdown-toggle:visible').or_(
             page.get_by_role("button", name=re.compile(r"^(?:Choisir|S[ée]lectionner|Choisissez|S[ée]lectionnez)\b.*(?:SIRET|[ée]tablissement|organisme)", re.I)))
         if dropdown.count() == 1 and dropdown.is_enabled() and dropdown.get_attribute("aria-expanded") != "true":
-            dropdown.click()
+            dropdown.scroll_into_view_if_needed(timeout=3000)
+            surface = dropdown.evaluate("""e => {
+                const r = e.getBoundingClientRect();
+                const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+                if (!hit) return 'offscreen';
+                if (e.contains(hit)) return 'control';
+                if (hit.closest('label')?.control === e) return 'label';
+                if (hit.closest('dialog,[role="dialog"],[aria-modal="true"]')) return 'dialog';
+                return e.parentElement && e.parentElement !== document.body && e.parentElement.contains(hit) ? 'parent' : 'covered';
+            }""")
+            signals["chooser_surface"] = surface
+            if surface not in {"control", "label", "parent"}:
+                return step
+            if step == "waiting":
+                signals["chooser_action"] = "open_keyboard"
+                dropdown.press("ArrowDown", timeout=3000)
+                return "keyboard"
+            signals["chooser_action"] = "open_click"
+            dropdown.click(timeout=3000)
             return "opened"
     if step == "filtered" and fields.count() == 1 and fields.input_value() == SIRET:
         search = page.get_by_role("button", name=re.compile(r"^Rechercher$", re.I)).filter(visible=True)
         if search.count() == 1 and search.is_enabled():
+            signals["chooser_action"] = "search"
             search.click()
             return "searched"
         if labelled.count() == 1 and confirm.count() == 1 and confirm.is_enabled():
+            signals["chooser_action"] = "confirm"
             confirm.click()
             return "confirmed"
     return step
@@ -478,6 +510,13 @@ def run_browser(spec):
                 if stage == "authentication" and page.locator('#input-error:visible, .alert-error:visible, .pf-m-danger:visible, .fr-alert--error:visible').count():
                     raise StopRun("sign_in_error")
                 if stage == "organism" and private_page(page.url):
+                    if location_category(page.url) == "edof_select_siret" and "cookie" in text.lower() and not signals.get("cookies_dismissed"):
+                        decline = re.compile(r"^(?:Continuer sans accepter|Tout refuser(?: et continuer)?|Refuser (?:tout|tous les cookies))$", re.I)
+                        button = page.get_by_role("button", name=decline).or_(page.get_by_role("link", name=decline)).filter(visible=True)
+                        if button.count() == 1:
+                            signals["chooser_action"] = "dismiss_cookies"
+                            button.click(timeout=3000)
+                            signals["cookies_dismissed"] = True
                     return workspace_screen(text)
 
             stage = "login_page"
@@ -544,8 +583,8 @@ def run_browser(spec):
                         break
                     chooser = location_category(page.url) == "edof_select_siret" or screen == "select_organisation"
                     if chooser:
-                        establishment_step = select_establishment(page, establishment_step)
                         signals["establishment_step"] = establishment_step
+                        establishment_step = select_establishment(page, establishment_step, signals)
                 page.wait_for_timeout(300)
             else:
                 raise StopRun("organism_selection_required")
