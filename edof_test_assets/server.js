@@ -51,7 +51,7 @@ async function runServerTest(spec, preferSaved = false) {
   const buttons = [...document.querySelectorAll("button")];
   const previous = buttons.map(button => button.disabled);
   buttons.forEach(button => { button.disabled = true; });
-  serverMessage.textContent = "Lancement de l’essai sur Render…";
+  serverMessage.textContent = preferSaved ? "Recherche dans les dossiers déjà lus…" : "Lancement de l’essai sur Render…";
   try {
     const response = await fetch("/admin/edof-test/server/run" + (preferSaved ? "?prefer_saved=1" : ""), {
       method: "POST", credentials: "same-origin", redirect: "error",
