@@ -29,6 +29,29 @@ def text_field(value, limit):
     return ""
 
 
+def session_date(value):
+    value = text_field(value, 10)
+    if not value:
+        return ""
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y"):
+        try:
+            return datetime.strptime(value, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return ""
+
+
+def canonical_dates(row):
+    return {**row, "session_start_date": session_date(row.get("session_start_date")),
+            "session_end_date": session_date(row.get("session_end_date"))}
+
+
+def dated_snapshot(snapshot):
+    if not snapshot:
+        return snapshot
+    return {**snapshot, "rows": {folder: canonical_dates(row) for folder, row in snapshot["rows"].items()}}
+
+
 def project(row):
     if not isinstance(row, dict) or not ID_RE.fullmatch(str(row.get("id", ""))):
         raise IncompleteDirectory()
@@ -44,8 +67,8 @@ def project(row):
             "last_name": text_field(attendee.get("lastName"), 120),
             "state": text_field(row.get("currentState"), 80),
             "title": text_field(info.get("title") or row.get("title") or row.get("trainingTitle"), 500),
-            "session_start_date": text_field(info.get("sessionStartDate") or row.get("beginDate"), 10),
-            "session_end_date": text_field(info.get("sessionEndDate") or row.get("endDate"), 10)}
+            "session_start_date": session_date(info.get("sessionStartDate") or row.get("beginDate")),
+            "session_end_date": session_date(info.get("sessionEndDate") or row.get("endDate"))}
 
 
 def from_pages(pages, progress=None):
@@ -178,16 +201,7 @@ def csv_snapshot(content, first, progress):
         item["folder_id"] = key
         for field in ("state", "title", "session_start_date", "session_end_date"):
             item.setdefault(field, "")
-        for field in ("session_start_date", "session_end_date"):
-            value = item[field]
-            item[field] = ""
-            for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
-                try:
-                    item[field] = datetime.strptime(value[:10], fmt).date().isoformat()
-                    break
-                except ValueError:
-                    continue
-        rows[key] = item
+        rows[key] = canonical_dates(item)
         progress["export_rows"] = len(rows)
     if len(rows) != total or (total and not any(row["first_name"] and row["last_name"] for row in rows.values())):
         raise IncompleteDirectory()

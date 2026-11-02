@@ -7,6 +7,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from cpf_provider import ProviderStore
+from edof_directory import canonical_dates
 
 
 def event_tables(db):
@@ -73,7 +74,7 @@ def process_directory(store, snapshot, data_file):
                 db.execute("INSERT INTO directory_states VALUES(?,?,?) ON CONFLICT(folder) DO UPDATE SET state=excluded.state, checked=excluded.checked",
                            (folder,kind,checked))
                 if kind == "accepted" and folder in links and not any((folder, action) in blocks for action in (ACTIONS[kind],"both")):
-                    draft = first_activity(tracking, links[folder], row)
+                    draft = first_activity(tracking, links[folder], canonical_dates(row))
                     if draft:
                         db.execute("""INSERT INTO dossier_work(folder,draft,updated,actor) VALUES(?,?,?,'LMS')
                             ON CONFLICT(folder) DO UPDATE SET draft=excluded.draft, updated=excluded.updated, actor=excluded.actor

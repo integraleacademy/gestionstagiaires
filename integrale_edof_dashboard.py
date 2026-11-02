@@ -191,7 +191,9 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         return redirect(url_for("integrale_edof.index", section=section if section in SECTIONS else "state", **kwargs), code=303)
 
     def snapshot(owner):
-        return vault().get(directory.record_key(owner)) if store.connector_key else None
+        saved = vault().get(directory.record_key(owner)) if store.connector_key else None
+        # Previously synchronized dossiers also contain French display dates.
+        return directory.dated_snapshot(saved)
 
     def folder_record(owner, folder):
         if not ID_RE.fullmatch(folder):
