@@ -85,6 +85,27 @@ def decline_cookies_control(root):
     return root.get_by_role("button", name=COOKIE_DECLINE).or_(root.get_by_role("link", name=COOKIE_DECLINE)).filter(visible=True)
 
 
+def activate_cookie_refusal(page, target):
+    # Follow the modal's natural tab order. Enter is sent only when the exact
+    # visible refusal action, or a child of it, has keyboard focus.
+    for _ in range(24):
+        focused = target.evaluate_all("""els => {
+            if (els.length !== 1) return false;
+            const e = els[0], root = e.getRootNode();
+            return !!root.activeElement && e.contains(root.activeElement);
+        }""")
+        if focused:
+            page.keyboard.press("Enter")
+            return "keyboard"
+        if target.count() != 1:
+            return "disappeared"
+        page.keyboard.press("Tab")
+    # Some legitimate cookie banners do not include their links in tab order.
+    # A normal click still requires the target to receive pointer events.
+    target.click(no_wait_after=True, timeout=6000)
+    return "pointer"
+
+
 def dialog_labels(values):
     """Mask any word outside the fixed UI vocabulary, including names and IDs."""
     labels = []
@@ -114,15 +135,20 @@ def dialog_kind(text):
 def handle_chooser_dialog(page, signals):
     """Handle a visible EDOF notice; return whether the chooser is still covered."""
     layer = page.locator(".cdk-overlay-container:visible").filter(has=page.locator(".cdk-overlay-backdrop:visible"))
-    if layer.count() != 1 or layer.get_by_role("listbox").count():
+    texts = layer.all_inner_texts()
+    if len(texts) != 1 or layer.get_by_role("listbox").count():
+        if signals.get("cookies_dismissed"):
+            signals["cookie_dialog_closed"] = True
         return False
-    text = layer.inner_text(timeout=2000)
+    text = texts[0]
     # Material sometimes attaches the backdrop before rendering the panel.
     if not text.strip() and not layer.locator("iframe:visible").count():
         signals["dialog_kind"] = "loading" if layer.locator('[role=progressbar],mat-spinner,mat-progress-spinner,.spinner').count() else "empty"
         return True
     buttons = layer.get_by_role("button").or_(layer.get_by_role("link")).filter(visible=True)
     kind = dialog_kind(text)
+    if kind == "cookies" and signals.get("cookies_dismissed"):
+        return True
     signals["dialog_kind"] = kind
     signals["dialog_headings"] = dialog_labels(layer.locator('h1,h2,h3,[role=heading],[mat-dialog-title],.mat-mdc-dialog-title').all_inner_texts())
     signals["dialog_buttons"] = dialog_labels(buttons.evaluate_all("""nodes => nodes.map(n =>
@@ -144,8 +170,11 @@ def handle_chooser_dialog(page, signals):
     if target.count() != 1 or not target.is_visible() or not target.is_enabled():
         raise StopRun("workspace_dialog_required")
     signals["chooser_action"] = "dismiss_cookies" if kind == "cookies" else "close_notice"
-    target.click(timeout=3000)
     signals[dismissed] = True
+    if kind == "cookies":
+        signals["cookie_activation"] = activate_cookie_refusal(page, target)
+    else:
+        target.click(timeout=3000)
     return True
 
 # A custom select can expose a clipped ARIA control next to the visible trigger.
@@ -384,6 +413,10 @@ def diagnostic_summary(location, password_visible, error_visible, signals):
                 if isinstance(labels, list):
                     result[key] = [label for label in labels[:12] if isinstance(label, str) and
                                    0 < len(label.split()) <= 18 and all(w in DIALOG_WORDS or w == "…" for w in label.split())]
+        if signals.get("cookie_activation") in {"keyboard", "pointer", "disappeared"}:
+            result["cookie_activation"] = signals["cookie_activation"]
+        if signals.get("cookie_dialog_closed") is True:
+            result["cookie_dialog_closed"] = True
     for key in ("login_post_status", "callback_status", "edof_token_status", "workspace_status", "folder_list_status", "folder_detail_status", "blocked_efp_posts", "blocked_edof_posts", "blocked_other_posts", "invalid_form_fields"):
         value = signals.get(key)
         if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 9999:
@@ -685,12 +718,6 @@ def run_browser(spec):
                 if stage == "authentication" and page.locator('#input-error:visible, .alert-error:visible, .pf-m-danger:visible, .fr-alert--error:visible').count():
                     raise StopRun("sign_in_error")
                 if stage == "organism" and private_page(page.url):
-                    if location_category(page.url) == "edof_select_siret" and "cookie" in text.lower() and not signals.get("cookies_dismissed"):
-                        button = decline_cookies_control(page)
-                        if button.count() == 1:
-                            signals["chooser_action"] = "dismiss_cookies"
-                            button.click(timeout=3000)
-                            signals["cookies_dismissed"] = True
                     return workspace_screen(text)
 
             stage = "login_page"
@@ -751,9 +778,18 @@ def run_browser(spec):
             while time.monotonic() < deadline:
                 screen = checkpoint()
                 if private_page(page.url):
-                    if location_category(page.url) == "edof_select_siret" and handle_chooser_dialog(page, signals):
-                        page.wait_for_timeout(300)
-                        continue
+                    if location_category(page.url) == "edof_select_siret":
+                        try:
+                            covered = handle_chooser_dialog(page, signals)
+                        except BrowserTimeout:
+                            # The portal can remove its panel between observing
+                            # the buttons and acting on the refusal.
+                            if page.locator(".cdk-overlay-container .cdk-overlay-backdrop:visible").count():
+                                raise StopRun("workspace_dialog_required")
+                            covered = False
+                        if covered:
+                            page.wait_for_timeout(300)
+                            continue
                     if screen in {"access_denied", "session_expired", "terms", "error"}:
                         raise StopRun("organism_selection_required")
                     if signals.get("workspace_status") or dossier_menu.count():
