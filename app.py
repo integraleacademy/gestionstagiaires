@@ -131,6 +131,7 @@ from wedof_discovery import merge_verified_folders, parse_timestamp as parse_wed
 from cpf_tracking import build_cpf_view, build_cpf_financial_status, has_cpf_financing, has_generated_cpf_invoice
 from vtc_cpf_guidance import build_confirmation_content
 import vtc_elearning_activation
+import vtc_practice
 import trainee_elearning_reporting
 from elearning_native import aps_enrolments
 from partner_postgres import (
@@ -7843,9 +7844,17 @@ def notify_elearning_access_available(trainee: Dict[str, Any], session_obj: Dict
 
 
 
-def build_vtc_practice_convocation_email(first_name: str, practice_training_date: str) -> Tuple[str, str]:
+def _vtc_practice_appointment(session_obj, trainee, *, for_convocation=False):
+    slot = vtc_practice.appointment(session_obj, trainee, _registered_trainees)
+    if for_convocation and not slot["date"]:
+        slot["date"] = _session_get(session_obj, "exam_practice_date", "") or _session_get(session_obj, "exam_date", "")
+    return slot
+
+
+def build_vtc_practice_convocation_email(first_name: str, practice_training_date: str, start="08h30", end="12h00", group=None) -> Tuple[str, str]:
     trainee_first_name = (first_name or "").strip() or "Prénom"
     practice_date_fr = fr_date(practice_training_date) or "DATE FORMATION PRATIQUE"
+    group_label = f" (groupe {group})" if group else ""
 
     subject = "Formation pratique Chauffeur VTC 🚘"
     html = mail_layout(f"""
@@ -7859,13 +7868,13 @@ def build_vtc_practice_convocation_email(first_name: str, practice_training_date
         <p style="margin:0 0 10px 0;">Vous avez normalement reçu un message de la Chambre de Métiers et de l'Artisanat vous demandant de préciser le centre de formation ainsi que l’établissement mettant à disposition le véhicule à doubles commandes pour l’épreuve pratique. Merci d’indiquer : Intégrale Sécurité Formations.</p>
 
         <div style="background:#ffffff;border:1px solid #bbf7d0;border-radius:12px;padding:12px 14px;margin:12px 0;">
-          <p style="margin:0;">Votre formation pratique est prévue le {practice_date_fr}, de 08h30 à 12h00, dans nos locaux :<br>
+          <p style="margin:0;">Votre formation pratique est prévue le {practice_date_fr}, de {start} à {end}{group_label}, dans nos locaux :<br>
           Intégrale Academy<br>
           54 chemin du Carreou<br>
           83480 PUGET-SUR-ARGENS</p>
         </div>
 
-        <p style="margin:0 0 8px 0;">Au cours de cette matinée, nous vous préparerons concrètement à l’examen pratique :</p>
+        <p style="margin:0 0 8px 0;">Au cours de cette séance, nous vous préparerons concrètement à l’examen pratique :</p>
         <ul style="margin:0 0 12px 18px;padding:0;">
           <li>déroulement détaillé de l’épreuve,</li>
           <li>mise en situation professionnelle,</li>
@@ -7883,14 +7892,15 @@ def build_vtc_practice_convocation_email(first_name: str, practice_training_date
     return subject, html
 
 
-def build_vtc_practice_convocation_sms(first_name: str, practice_training_date: str) -> str:
+def build_vtc_practice_convocation_sms(first_name: str, practice_training_date: str, start="08h30", end="12h00", group=None) -> str:
     trainee_first_name = (first_name or "").strip()
     practice_date_fr = fr_date(practice_training_date) or "DATE FORMATION PRATIQUE"
+    group_label = f" (groupe {group})" if group else ""
     greeting = f"Bonjour {trainee_first_name}, " if trainee_first_name else "Bonjour, "
     return (
         "Intégrale Academy 🚗 "
         f"{greeting}Félicitations pour votre réussite à l'examen théorique Chauffeur VTC. "
-        f"Votre formation pratique VTC est prévue le {practice_date_fr} de 08h30 à 12h00 "
+        f"Votre formation pratique VTC est prévue le {practice_date_fr} de {start} à {end}{group_label} "
         "dans nos locaux Intégrale Academy, 54 chemin du Carreou 83480 Puget-sur-Argens. Pour plus d'informations, consultez vos mails."
     )
 
@@ -8140,16 +8150,6 @@ def _build_pdf_search_haystacks(file_bytes: bytes) -> Tuple[str, str]:
     alnum_only = " " + " ".join(t for t in re.split(r"[^A-Z0-9]+", merged) if t) + " "
     digits_only = " " + " ".join(t for t in re.split(r"[^0-9]+", merged) if t) + " "
     return alnum_only, digits_only
-
-
-def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_notifications: bool = True) -> Dict[str, Any]:
-    if _trainee_registration_is_cancelled(trainee):
-        raise RuntimeError(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE)
-    practice_training_date = (
-        _session_get(session_obj, "practice_training_date", "")
-        or _session_get(session_obj, "exam_practice_date", "")
-        or _session_get(session_obj, "exam_date", "")
-    )
 
 
 def _normalize_cmar_identifier(value: str) -> str:
@@ -8580,18 +8580,14 @@ def _extract_vtc_exam_results(file_name: str, file_bytes: bytes) -> Dict[str, An
 def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_notifications: bool = True) -> Dict[str, Any]:
     if _trainee_registration_is_cancelled(trainee):
         raise RuntimeError(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE)
-    practice_training_date = (
-        _session_get(session_obj, "practice_training_date", "")
-        or _session_get(session_obj, "exam_practice_date", "")
-        or _session_get(session_obj, "exam_date", "")
-    )
+    slot = _vtc_practice_appointment(session_obj, trainee, for_convocation=True)
 
     first_name = (trainee.get("first_name") or "").strip()
     email = (trainee.get("email") or "").strip()
     phone = (trainee.get("phone") or "").strip()
 
-    subject, html = build_vtc_practice_convocation_email(first_name, practice_training_date)
-    sms = build_vtc_practice_convocation_sms(first_name, practice_training_date)
+    subject, html = build_vtc_practice_convocation_email(first_name, slot["date"], slot["start"], slot["end"], slot["group"])
+    sms = build_vtc_practice_convocation_sms(first_name, slot["date"], slot["start"], slot["end"], slot["group"])
 
     docx_path, pdf_path = _generate_aps_convocation_files(
         session_obj, trainee, str(session_obj.get("id") or ""), str(trainee.get("id") or "")
@@ -10078,6 +10074,7 @@ def save_data(
                 expected_version = int(versions[scoped_partner_id])
 
         def merge_scoped(current: Dict[str, Any]) -> Dict[str, Any]:
+            vtc_practice.reconcile(data, _registered_trainees, current)
             return _merge_partner_scoped_payload(
                 data,
                 scoped_partner_id,
@@ -10112,6 +10109,7 @@ def save_data(
                 canonical if isinstance(canonical, dict) else _empty_data_payload(),
             )
         if isinstance(canonical, dict):
+            vtc_practice.reconcile(payload, _registered_trainees, canonical)
             vtc_elearning_activation.preserve_state(payload, canonical, _session_trainees_list)
             _preserve_aps_elearning_report_state(payload, canonical)
             desp_jury_projects.preserve_state(payload, canonical, _session_trainees_list, INTEGRALE_PARTNER_ID)
@@ -10171,6 +10169,7 @@ def update_data(
             if run_background_tasks:
                 run_deferred_background_tasks(scoped)
             mutation_result = mutator(scoped)
+            vtc_practice.reconcile(scoped, _registered_trainees)
             return _merge_partner_scoped_payload(
                 scoped, partner_id, current, global_payload=False,
             )
@@ -10200,6 +10199,11 @@ def _atomic_update_data(
     """Apply a business mutation while holding the JSON store's process/file locks."""
     result: Dict[str, Any] = {}
 
+    def apply_mutation(current):
+        value = mutator(current)
+        vtc_practice.reconcile(current, _registered_trainees)
+        return value
+
     target_partner_id = str(partner_id or "").strip()
     use_scoped_session = _is_partner_data_scope_session()
     if not target_partner_id and use_scoped_session:
@@ -10214,10 +10218,10 @@ def _atomic_update_data(
         def mutate_postgres(current: Dict[str, Any]) -> Dict[str, Any]:
             nonlocal result
             if explicit_full_bundle:
-                result = mutator(current)
+                result = apply_mutation(current)
                 return current
             scoped = _filter_data_for_partner(current, target_partner_id)
-            result = mutator(scoped)
+            result = apply_mutation(scoped)
             return _merge_partner_scoped_payload(
                 scoped,
                 target_partner_id,
@@ -10249,9 +10253,9 @@ def _atomic_update_data(
         if _is_partner_data_scope_session():
             scoped_id = _current_partner_id()
             scoped = _filter_data_for_partner(canonical, scoped_id)
-            result = mutator(scoped)
+            result = apply_mutation(scoped)
             return _merge_partner_scoped_payload(scoped, scoped_id, canonical)
-        result = mutator(canonical)
+        result = apply_mutation(canonical)
         _persist_changed_partner_postgres_from_platform(canonical)
         return canonical
 
@@ -11800,6 +11804,7 @@ def _convert_old_stagiaire_to_trainee(st: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "id": st.get("id") or ("TRN-" + uuid.uuid4().hex[:8].upper()),
         "personal_id": st.get("id") or "",
+        "registration_cancelled": _trainee_registration_is_cancelled(st),
         "last_name": st.get("nom") or "",
         "first_name": st.get("prenom") or "",
         "email": st.get("email") or "",
@@ -17885,6 +17890,8 @@ def admin_sessions():
             "exam_theory_date": _session_get(s, "exam_theory_date", ""),
             "exam_practice_date": _session_get(s, "exam_practice_date", ""),
             "practice_training_date": _session_get(s, "practice_training_date", ""),
+            "vtc_practice_slots": (s.get(vtc_practice.KEY) or {}).get("slots", []),
+            "can_split_vtc": vtc_practice.supported(s) and len(trainees) >= vtc_practice.MIN_SPLIT_SIZE,
             "aps_remote_start": _session_get(s, "aps_remote_start", ""),
             "aps_remote_end": _session_get(s, "aps_remote_end", ""),
             "aps_in_person_start": _session_get(s, "aps_in_person_start", ""),
@@ -25829,7 +25836,9 @@ def admin_trainees(session_id: str):
         exam_retakes=exam_retakes.roster(sys.modules[__name__], session_id),
         afc_training_dates={t.get("id"): _trainee_training_session(s, t) for t in trainees} if afc_schedule.enabled(s) else {},
         afc_hours_supported=afc_enrolments.supported(sys.modules[__name__], s),
-        session={**session_view, "ssiap_pathways": s.get("ssiap_pathways")},
+        vtc_appointments={t.get("id"): _vtc_practice_appointment(s, t) for t in trainees} if is_vtc else {},
+        session={**session_view, "ssiap_pathways": s.get("ssiap_pathways"),
+                 "vtc_practice_slots": (s.get(vtc_practice.KEY) or {}).get("slots", [])},
         ssiap_supported=ssiap_pathways.supported(s),
         ssiap_exam_supported=ssiap_exam.supported(s) and s.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID),
         security_jury_supported=bool(ssiap_exam.security_exam_jury.level(ssiap_exam.for_family(s, "security"))) and s.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID),
@@ -25883,6 +25892,7 @@ def admin_vtc_trainees_all():
             trainee_view["source_session_name"] = session_name
             trainee_view["source_session_date_start"] = _session_get(s, "date_start", "")
             trainee_view["source_session_date_end"] = _session_get(s, "date_end", "")
+            trainee_view["vtc_appointment"] = _vtc_practice_appointment(s, t)
             all_trainees.append(trainee_view)
 
     for t in all_trainees:
@@ -27155,13 +27165,27 @@ def api_create_session():
 @admin_login_required
 @admin_write_required
 def api_update_session(session_id: str):
+    payload = request.get_json(silent=True) or {}
     data = load_data()
+    session_obj = find_session(data, session_id) or {}
+    if "vtc_practice_slots" in payload or (session_obj.get(vtc_practice.KEY) and "practice_training_date" in payload):
+        return _atomic_update_data(lambda current: _apply_session_update(current, session_id, payload))
+    return _apply_session_update(data, session_id, payload, persist=save_data)
+
+
+def _apply_session_update(data, session_id, payload, *, persist=None):
     s = find_session(data, session_id)
     if not s:
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
-    payload = request.get_json(silent=True) or {}
     try:
+        if "vtc_practice_slots" not in payload and s.get(vtc_practice.KEY) and "practice_training_date" in payload:
+            # A caller that edits only the shared date keeps the existing times and groups.
+            payload["vtc_practice_slots"] = s[vtc_practice.KEY]["slots"]
+        if "vtc_practice_slots" in payload:
+            practice_roster = _session_trainees_list(s)
+            practice_groups = vtc_practice.configure(s, _registered_trainees(practice_roster), payload["vtc_practice_slots"],
+                                                     payload.get("practice_training_date", s.get("practice_training_date")))
         payload.update(afc_schedule.session_update(s, payload))
         if afc_schedule.enabled({**s, **payload}):
             for trainee in _session_trainees_list(s):
@@ -27239,9 +27263,21 @@ def api_update_session(session_id: str):
             if isinstance(exam.get("config"), dict) and exam["config"].get("date") != s.get("ssiap_exam_date"):
                 exam["config"]["date"] = s.get("ssiap_exam_date", "")
                 exam["revision"] = int(exam.get("revision") or 0) + 1
+    if "vtc_practice_slots" in payload:
+        if practice_groups:
+            # Older French-format records may acquire an ID on first conversion.
+            # Save that same ID with the original row so its group stays stable.
+            if not isinstance(s.get("trainees"), list):
+                for old, converted in zip(s.get("stagiaires") or [], practice_roster):
+                    if not old.get("id"):
+                        old["id"] = converted["id"]
+            s[vtc_practice.KEY] = practice_groups
+        else:
+            s.pop(vtc_practice.KEY, None)
     _sync_aps_period_dates(s)
     s["updated_at"] = _now_iso()
-    save_data(data)
+    if persist is not None:
+        persist(data)
     differences = sum(evaluate_wedof_link_date_consistency(link, s)["dates_differ"] is not False
                       for link in active_links)
     message = (f"Dates de la session modifiées. {differences} dossier(s) ont désormais des dates locales "
@@ -34389,9 +34425,10 @@ def public_trainee_space(token):
     show_vae = ("VAE" in (training_type or "").upper())
     show_professional_experience_sheet = _professional_experience_sheet_is_required(training_type, _session_get(s, "date_start", ""))
     show_vtc = ("VTC" in (training_type or "").upper())
+    vtc_appointment = _vtc_practice_appointment(s, t) if show_vtc else {}
     vtc_dates = {
         "theory_exam": _session_get(s, "exam_theory_date", "") or _session_get(s, "exam_date", ""),
-        "practice_training": _session_get(s, "practice_training_date", ""),
+        "practice_training": vtc_appointment["date"],
         "practice_exam": _session_get(s, "exam_practice_date", ""),
     } if show_vtc else {}
     is_aps_training = (training_type or "").strip().upper().startswith("APS")
@@ -34449,7 +34486,7 @@ def public_trainee_space(token):
         show_vae=show_vae,
         show_professional_experience_sheet=show_professional_experience_sheet,
         show_vtc=show_vtc,
-        vtc_dates=vtc_dates,
+        vtc_dates=vtc_dates, vtc_appointment=vtc_appointment,
         is_aps_training=is_aps_training,
         aps_elearning_enabled=aps_elearning_enabled,
         aps_elearning_available=aps_elearning_available,
@@ -39501,6 +39538,12 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         "heure_formation_pratique": str(_session_get(session_obj, "practice_training_time", "") or "08h30").strip(),
         "h_elearning": "62", "h_presentiel": "113", "h_total": "175", "duree_exam": "07h00",
     }
+    if config.get("slug") == "vtc":
+        slot = _vtc_practice_appointment(session_obj, trainee, for_convocation=True)
+        context.update(date_formation_pratique=fr_date(slot["date"]), date_formation_pratique_vtc=fr_date(slot["date"]),
+                       heure_formation_pratique=slot["start"], heure_fin_formation_pratique=slot["end"],
+                       duree_formation_pratique=slot["duration"],
+                       mention_groupe_pratique=f" · Groupe {slot['group']}" if slot["group"] else "")
     context.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
     context.update(afc_schedule.document_context(session_obj, trainee, fr_date, strict=True))
     return context
@@ -39969,6 +40012,9 @@ def _convocation_email_training_labels(session_obj: Optional[Dict[str, Any]] = N
 
 
 def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end: str = "", session_obj: Optional[Dict[str, Any]] = None, trainee: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    if vtc_practice.supported(session_obj or {}):
+        slot = _vtc_practice_appointment(session_obj, trainee or {}, for_convocation=True)
+        return build_vtc_practice_convocation_email(first_name, slot["date"], slot["start"], slot["end"], slot["group"])
     pathway = ssiap_pathways.resolve(session_obj or {}, trainee or {}) if trainee is not None else None
     afc = afc_schedule.document_context(session_obj or {}, trainee or {}, fr_date)
     if afc:
@@ -40348,6 +40394,9 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
+
+    if vtc_practice.supported(s):
+        session_view["vtc_appointment"] = _vtc_practice_appointment(s, t)
 
     t["registration_cancelled"] = _trainee_registration_is_cancelled(t)
     if not t["registration_cancelled"]:
@@ -49951,10 +50000,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
             raise Exception("Le PDF de convocation APS n’a pas été généré.")
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
-        if is_vtc:
-            subject, html_content = build_vtc_practice_convocation_email(str(t.get("first_name") or ""), _session_get(s, "practice_training_date", "") or _session_get(s, "exam_practice_date", ""))
-        else:
-            subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""), s, t)
+        subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""), s, t)
         email_ok = brevo_send_email(
             str(t.get("email") or "").strip(),
             subject,

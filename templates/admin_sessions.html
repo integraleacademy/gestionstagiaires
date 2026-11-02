@@ -977,7 +977,11 @@
         {% set practice_training_date = s.practice_training_date %}
       <div class="session-date-row"><span class="session-date-row__icon" aria-hidden="true">📝</span><span class="session-date-row__label">Examen théorique</span><strong>{{ theory_date|frdate }}</strong></div>
       <div class="session-date-row"><span class="session-date-row__icon" aria-hidden="true">🚘</span><span class="session-date-row__label">Examen pratique</span><strong>{{ practice_date|frdate }}</strong></div>
+      {% for slot in s.vtc_practice_slots %}
+      <div class="session-date-row"><span class="session-date-row__icon" aria-hidden="true">🧭</span><span class="session-date-row__label">Pratique · Groupe {{ loop.index }}</span><strong>{{ (slot.date or practice_training_date)|frdate }} · {{ slot.start|replace(':', 'h') }} – {{ slot.end|replace(':', 'h') }}</strong></div>
+      {% else %}
       <div class="session-date-row"><span class="session-date-row__icon" aria-hidden="true">🧭</span><span class="session-date-row__label">Formation pratique</span><strong>{{ practice_training_date|frdate }}</strong></div>
+      {% endfor %}
       {% else %}
       <div class="session-date-row">
         <span class="session-date-row__icon session-date-row__icon--text" aria-hidden="true">EX</span>
@@ -1076,7 +1080,7 @@
       {% endif %}
       {% if not is_read_only %}
         {% if (s.training_type or '').upper().startswith('SSIAP') %}<a class="btn btn-outline session-action" href="{{ url_for('admin_ssiap_pathways',session_id=s.id) }}">Parcours SSIAP / SST</a>{% endif %}
-        <button class="btn btn-outline session-action" data-afc-enabled="{{ '1' if s.afc_enabled else '0' }}" data-ssiap-exam-date="{{ s.ssiap_exam_date }}" data-edit-session="{{ s.id }}" data-training-type="{{ s.training_type }}" data-date-start="{{ s.date_start }}" data-date-end="{{ s.date_end }}" data-exam-date="{{ s.exam_date }}" data-exam-theory-date="{{ s.exam_theory_date }}" data-exam-practice-date="{{ s.exam_practice_date }}" data-practice-training-date="{{ s.practice_training_date }}" data-aps-remote-start="{{ s.aps_remote_start }}" data-aps-remote-end="{{ s.aps_remote_end }}" data-aps-in-person-start="{{ s.aps_in_person_start }}" data-aps-in-person-end="{{ s.aps_in_person_end }}" data-dirigeant-remote-start="{{ s.dirigeant_remote_start }}" data-dirigeant-remote-end="{{ s.dirigeant_remote_end }}" data-dirigeant-in-person-start="{{ s.dirigeant_in_person_start }}" data-dirigeant-in-person-end="{{ s.dirigeant_in_person_end }}" data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">✏️ Modifier</button>
+        <button class="btn btn-outline session-action" data-afc-enabled="{{ '1' if s.afc_enabled else '0' }}" data-ssiap-exam-date="{{ s.ssiap_exam_date }}" {% if s.can_split_vtc or s.vtc_practice_slots %}data-vtc-slots='{{ s.vtc_practice_slots|tojson }}'{% endif %} data-edit-session="{{ s.id }}" data-training-type="{{ s.training_type }}" data-date-start="{{ s.date_start }}" data-date-end="{{ s.date_end }}" data-exam-date="{{ s.exam_date }}" data-exam-theory-date="{{ s.exam_theory_date }}" data-exam-practice-date="{{ s.exam_practice_date }}" data-practice-training-date="{{ s.practice_training_date }}" data-aps-remote-start="{{ s.aps_remote_start }}" data-aps-remote-end="{{ s.aps_remote_end }}" data-aps-in-person-start="{{ s.aps_in_person_start }}" data-aps-in-person-end="{{ s.aps_in_person_end }}" data-dirigeant-remote-start="{{ s.dirigeant_remote_start }}" data-dirigeant-remote-end="{{ s.dirigeant_remote_end }}" data-dirigeant-in-person-start="{{ s.dirigeant_in_person_start }}" data-dirigeant-in-person-end="{{ s.dirigeant_in_person_end }}" data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">✏️ Modifier</button>
         <button class="btn btn-outline session-action" data-archive-session="{{ s.id }}">📦 Archiver</button>
         <button class="btn btn-danger session-action session-action--danger" data-delete-session="{{ s.id }}">🗑️ Supprimer</button>
       {% endif %}
@@ -1464,6 +1468,27 @@
           <div class="label">Date formation pratique</div>
           <input id="editPracticeTrainingDate" type="date">
         </label>
+        <section id="vtcPracticeGroups" style="grid-column:1 / -1" hidden>
+          <label><input id="vtcPracticeSplit" type="checkbox"> Répartir la pratique en deux groupes</label>
+          <p class="hint" id="vtcPracticeHint"></p>
+          <div id="vtcPracticeSlots" hidden>
+            <div class="aps-organisation__cards">
+              {% for group, start, end in [(1, '08:30', '12:00'), (2, '13:30', '17:00')] %}
+              <fieldset class="aps-period-card" data-slot="{{ group }}">
+                <legend class="aps-period-card__label">Groupe {{ group }}</legend>
+                {% if group == 2 %}
+                <label>Date si différente du groupe 1<input name="date" type="date"></label>
+                {% endif %}
+                <div class="aps-period-card__dates">
+                  <label>Début<input name="start" type="time" value="{{ start }}"></label>
+                  <label>Fin<input name="end" type="time" value="{{ end }}"></label>
+                </div>
+              </fieldset>
+              {% endfor %}
+            </div>
+            <p class="hint">Chaque stagiaire reçoit uniquement son créneau sur sa convocation.</p>
+          </div>
+        </section>
         <div id="editApsComputedPeriodsField" class="aps-organisation" style="display:none;">
           <div class="aps-organisation__title">Organisation APS</div>
           <div class="aps-organisation__cards">
@@ -1607,6 +1632,7 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='vtc-practice-groups.js') }}"></script>
 <script>
   const availableSessionsForCreate = {{ sessions|tojson }};
   const crmPrefillTransfer = {{ crm_prefill|tojson }};
@@ -2450,6 +2476,7 @@
   document.querySelectorAll("[data-edit-session]").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       currentEditSessionId = btn.getAttribute("data-edit-session");
+      vtcPracticeEditor.open(btn);
       const trainingType = btn.getAttribute("data-training-type") || "";
 
       document.getElementById("editSessionTrainingType").value = trainingType;
@@ -2508,6 +2535,7 @@
           dirigeant_remote_end: (document.getElementById("editDirigeantRemoteEnd").value || "").trim(),
           dirigeant_in_person_start: (document.getElementById("editDirigeantInPersonStart").value || "").trim(),
           dirigeant_in_person_end: (document.getElementById("editDirigeantInPersonEnd").value || "").trim(),
+          ...vtcPracticeEditor.payload(),
           ...afcFormPayload("edit")
       };
       let r = await fetch(`/api/sessions/${currentEditSessionId}/update`, {
@@ -2524,7 +2552,7 @@
         res = await r.json();
       }
       if(!r.ok || !res.ok){
-        alert("Erreur mise à jour session");
+        alert(res.error || "Erreur mise à jour session");
         return;
       }
       window.location.reload();
