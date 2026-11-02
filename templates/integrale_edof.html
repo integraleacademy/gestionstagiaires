@@ -6,7 +6,7 @@
 <body><main class="wedof-page native-cpf">
 {% macro token() %}<input type="hidden" name="csrf" value="{{ csrf }}">{% endmacro %}
 {% macro btn(label) %}<button class="btn btn-outline" type="submit">{{ label }}</button>{% endmacro %}
-{% macro link(section, tab='all', page=1) %}{{ url_for('integrale_edof.index', section=section, tab=tab, page=page, q=query, simulation=(1 if testing else none)) }}{% endmacro %}
+{% macro link(section, tab='all', page=1) %}{{ url_for('integrale_edof.index', section=section, tab=tab, page=page, q=query, simulation=(1 if testing else none), matching=(1 if previewing else none)) }}{% endmacro %}
 {% set active = selection.provider == 'integrale' %}
 <nav class="return-nav" aria-label="Navigation"><a href="/admin">← Administration</a><a href="/admin/wedof">Tableau de bord WeDoF</a></nav>
 {% for type, msg in flashes %}<p role="status" class="wedof-flash is-{{ type }}">{{ msg }}</p>{% endfor %}
@@ -23,7 +23,7 @@
 <p>Dossiers lus dans l’espace EDOF de l’établissement. Dernière synchronisation {{ checked or 'à réaliser' }}.</p>
 <div class="wedof-hero-meta"><span class="wedof-status-pill">{{ snapshot_count }} dossiers synchronisés</span><span class="wedof-status-pill">{{ efp.label }}</span>
 <span class="wedof-status-pill">{{ 'Synchronisation activée' if active and directory_enabled else 'Synchronisation suspendue' }}</span></div></div>
-<div class="wedof-hero-actions"><a class="btn" href="{{ link('state') }}">Réanalyser les dossiers</a>
+<div class="wedof-hero-actions"><a class="btn" href="{{ url_for('integrale_edof.index', section='state', matching=1, _anchor='matching') }}">Réanalyser les dossiers</a>
 {% if active %}<form method="post" action="{{ url_for('integrale_edof.associate_reliable') }}">{{ token() }}{{ btn('Enregistrer les associations fiables') }}</form>{% endif %}
 <a class="btn" href="{{ url_for('integrale_edof.index',section='state',simulation=1, _anchor='simulation') }}">Tester les automatisations</a></div></section>
 <nav class="wedof-page-tabs" aria-label="Rubriques Intégrale EDOF">{% for key,label in sections.items() %}<a class="wedof-page-tab {{ 'is-active' if section == key else '' }}" {{ 'aria-current=page' if section == key }} href="{{ url_for('integrale_edof.index',section=key) }}">{{ label }}</a>{% endfor %}</nav>
@@ -31,7 +31,9 @@
 {% if section == 'technical' %}<section class="wedof-panel"><span class="wedof-eyebrow">CONNEXION</span><h2>Connexion et paramètres techniques</h2>
 <dl><dt>Connexion EFP Connect</dt><dd><strong>{{ efp.label }}</strong>{% if efp.checked_at %} · Vérifiée le {{ efp.checked_at }}{% endif %}</dd>
 <dt>Compte Gmail pour les codes EFP</dt><dd>{{ 'Connecté' if gmail.connected else 'À connecter' }}</dd>
-<dt>Liste des dossiers EDOF</dt><dd>{{ checked or 'Première synchronisation à réaliser' }}</dd></dl>
+<dt>Liste des dossiers EDOF</dt><dd>{{ checked or 'Première synchronisation à réaliser' }}</dd>
+<dt>Entrées, sorties et services faits</dt><dd>Préparation dans Intégrale EDOF, validation finale sur le portail officiel.</dd>
+<dt>Transfert des demandes</dt><dd>Envoi sur validation depuis la fiche vers le CRM ou Salesforce.</dd></dl>
 <div class="actions"><a class="btn" href="{{ url_for('edof_server_test.index', _anchor='connexion-efp') }}">Gérer la connexion EFP Connect</a>
 <a class="btn btn-outline" href="{{ url_for('edof_server_test.index', _anchor='directory-status') }}">Synchroniser la liste EDOF</a>
 <a class="btn btn-outline" href="{{ url_for('edof_test.index') }}">Lecture manuelle avec le module Chrome</a></div></section>
@@ -43,6 +45,7 @@
 <h3>Dernières opérations</h3>{% for job in jobs %}<p>{{ job.created_at[:16]|replace('T',' ') }} UTC · {{ job.message }}</p>{% else %}<p>Aucune opération enregistrée dans les dernières 24 heures.</p>{% endfor %}
 <a class="btn btn-outline" href="{{ url_for('integrale_edof.index', section='consumption') }}">Actualiser les compteurs</a></section>
 {% else %}
+{% if previewing %}<section class="wedof-panel" id="matching"><span class="wedof-eyebrow">ASSOCIATIONS LOCALES</span><h2>Prévisualisation des correspondances</h2><p>{{ matches|length }} dossier(s) en cours d’entrée ou de sortie · {{ match_counts['exact_match'] or 0 }} correspondance(s) fiable(s). Une association fiable requiert des dates concordantes et un contact vérifié.</p></section>{% endif %}
 {% if testing %}<section class="wedof-panel" id="simulation"><span class="wedof-eyebrow">SIMULATION SUR LA LISTE SYNCHRONISÉE</span><h2>Résultat du test des automatisations</h2><p>Échéances en heure de Paris · entrée à 18 h et service fait à 23 h. Le test vérifie le statut, la date, les blocages et le justificatif de chaque dossier. Il ne transmet aucune déclaration.</p><div class="metrics">
 {% for key,label in simulation_labels.items() %}<div><strong>{{ simulation[key] or 0 }}</strong>{{ label }}</div>{% endfor %}</div></section>{% endif %}
 {% if section == 'state' %}<section class="wedof-panel"><span class="wedof-eyebrow">SUIVI CPF</span><h2>État des dossiers</h2>
@@ -57,7 +60,7 @@
 {% if rows %}<div class="table-wrap"><table><thead><tr><th>Dossier CPF</th><th>Stagiaire et formation</th><th>Session</th><th>État EDOF</th><th>Suivi et actions</th></tr></thead>
 <tbody>{% for r in rows %}<tr><td><a href="{{ url_for('integrale_edof.index', section=section, tab=tab, folder=r.folder_id, page=page, q=query, _anchor='dossier') }}">{{ r.folder_id }}</a></td>
 <td><strong>{{ r.first_name }} {{ r.last_name }}</strong><br>{{ r.title or 'Formation non renseignée' }}</td><td>{{ r.session_start_date or '—' }}<br>{{ r.session_end_date or '—' }}</td>
-<td>{{ r.label }}{% if testing and r.evaluation %}<br><strong>{{ simulation_labels[r.evaluation] }}</strong>{% endif %}{% if r.block %}<br><span class="warning">Bloqué · {{ block_reasons.get(r.block.reason_code, 'À vérifier') }}</span>{% endif %}</td>
+<td>{{ r.label }}{% if previewing %}<br><strong>{{ 'Correspondance fiable' if matches[r.folder_id].status == 'exact_match' else 'À vérifier' }}</strong>{% if matches[r.folder_id].status == 'exact_match' %}<br>{{ matches[r.folder_id].session }} · {{ matches[r.folder_id].trainee }}{% endif %}{% endif %}{% if testing and r.evaluation %}<br><strong>{{ simulation_labels[r.evaluation] }}</strong>{% endif %}{% if r.block %}<br><span class="warning">Bloqué · {{ block_reasons.get(r.block.reason_code, 'À vérifier') }}</span>{% endif %}</td>
 <td><a href="{{ url_for('integrale_edof.index', section=section, tab=tab, folder=r.folder_id, page=page, q=query, _anchor='dossier') }}">{{ 'Voir l’association' if r.link else 'Consulter / associer' }}</a>
 {% if r.action and active %}<details><summary>Automatisation</summary><form method="post" action="{{ url_for('integrale_edof.block', folder=r.folder_id) }}">{{ token() }}
 <input type="hidden" name="action" value="{{ r.block.action if r.block else r.action }}">{% if r.block %}<input type="hidden" name="release" value="yes">{{ btn('Lever le blocage') }}
@@ -70,7 +73,14 @@
 {% if detail %}{% set f=detail.record %}<section class="wedof-panel" id="dossier"><span class="wedof-eyebrow">FICHE CPF</span><h2>Dossier {{ f.folder_id }} · {{ f.first_name }} {{ f.last_name }}</h2>
 <p>{{ f.title }} · {{ f.session_start_date or '—' }} au {{ f.session_end_date or '—' }}</p>
 <div class="actions"><a class="btn" href="{{ url_for('edof_server_test.index', fiche=detail.key, _anchor='dossier-lu') }}">Détail synchronisé</a>
+{% if active %}<form method="post" action="{{ url_for('integrale_edof.read_folder', folder=f.folder_id) }}">{{ token() }}{{ btn('Relire la fiche sur EDOF') }}</form>{% endif %}
 <a class="btn btn-outline" href="{{ detail.official }}" target="_blank" rel="noreferrer">Ouvrir le dossier dans EDOF</a></div>
+{% if detail.request %}<h3>Transmettre la demande</h3>
+<p>Le transfert utilise les coordonnées de la fiche détaillée EDOF, la formation et le numéro du dossier.</p>
+{% for key,label in [('crm','CRM'),('salesforce','Salesforce')] %}{% set delivered=detail.transfers.get(key) %}
+{% if delivered=='sent' %}<p>{{ label }} · Réception confirmée.</p>{% elif delivered in ['uncertain','processing'] %}<p>{{ label }} · Vérifier la réception avant tout nouvel envoi.</p>
+{% elif active %}<form class="actions" method="post" action="{{ url_for('integrale_edof.send_request',folder=f.folder_id,target=key) }}">{{ token() }}
+<label><input type="checkbox" name="verified" value="yes" required> J’ai vérifié que {{ label }} n’a pas déjà reçu cette demande.</label>{{ btn('Transmettre à ' ~ label) }}</form>{% endif %}{% endfor %}{% endif %}
 <h3>Association à Gestion Stagiaires</h3>
 <form class="filter" method="get" action="{{ url_for('integrale_edof.index', _anchor='dossier') }}"><input type="hidden" name="section" value="{{ section }}"><input type="hidden" name="folder" value="{{ f.folder_id }}"><label>Rechercher une inscription locale<input name="inscription" type="search" value="{{ detail.query }}" minlength="3" maxlength="120" placeholder="Stagiaire, e-mail ou session"></label>{{ btn('Rechercher une inscription') }}</form>
 {% for c in detail.comparison.candidates %}<div class="association"><strong>{{ c.first_name }} {{ c.last_name }} · {{ c.session_name }}</strong><p>{{ c.checks|map(attribute='label')|join(' · ') }}</p>

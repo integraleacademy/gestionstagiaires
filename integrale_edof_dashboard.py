@@ -17,6 +17,7 @@ from edof_matching import build_comparison, manual_options
 from edof_readonly_test import ID_RE
 from edof_server_browser import DETAIL_PREFIX
 from integrale_edof_sync import event_tables
+from integrale_edof_transfers import TARGETS, receipt, transfer
 from wedof_links import save_manual_wedof_link, sync_exact_wedof_links
 from wedof_matching import match_folder
 
@@ -231,6 +232,25 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             return {**row, "email": fields.get("email", "")}
         return row
 
+    def matching_rows(owner, snapshot, data):
+        with closing(store.connect()) as db:
+            reads = db.execute("""SELECT result FROM jobs WHERE owner=? AND mode='read'
+                       AND json_extract(result,'$.code')='read_success' ORDER BY finished DESC""", (owner,)).fetchall()
+        contacts = {}
+        for item in reads:
+            fields = json.loads(item[0]).get("fields", {})
+            contacts.setdefault(fields.get("folder_id"), fields)
+        results = {}
+        for row in (snapshot or {}).get("rows", {}).values():
+            if category(row) not in ACTIONS:
+                continue
+            detail = contacts.get(row["folder_id"], {})
+            if detail and all(directory.normalized(detail.get(k) or "") == directory.normalized(row.get(k) or "")
+                              for k in ("first_name","last_name")):
+                row = {**row, "email":detail.get("email", "")}
+            results[row["folder_id"]] = match_folder(folder_for_matching(row), data.get("sessions", []))
+        return results
+
     @bp.after_request
     def private(response):
         response.headers.update({"Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
@@ -256,6 +276,10 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         today = now.date().isoformat()
         data = local_data() if snap and section in {"state", "requests", "cancellations"} else {}
         rows, counts = dashboard_rows(snap, data, local_operations(selection), now)
+        previewing = section == "state" and request.args.get("matching") == "1"
+        matches = matching_rows(owner, snap, data) if previewing else {}
+        if previewing:
+            rows = [r for r in rows if r["folder_id"] in matches]
         testing = section == "state" and request.args.get("simulation") == "1"
         simulation = Counter(r["evaluation"] for r in rows if r["evaluation"])
         if testing:
@@ -288,6 +312,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             detail["key"] = directory.link_key(owner, folder)
             detail["draft"] = local_operations(selection).get(folder, {}).get("draft")
             detail["action"] = ACTIONS.get(category(record))
+            detail["request"] = category(record) == "request"
+            detail["transfers"] = {target:receipt(selection, folder, target) for target in TARGETS} if detail["request"] else {}
             detail["official"] = DETAIL_PREFIX + folder
         with closing(store.connect()) as db:
             metrics = dict(db.execute("SELECT mode, COUNT(*) FROM jobs WHERE owner=? GROUP BY mode", (owner,)))
@@ -300,7 +326,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         selected = selection.state()
         return app.jinja_env.get_template("integrale_edof.html").render(
             selection=selected, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=TABS, tab=tab,
-            csrf=csrf, flashes=get_flashed_messages(with_categories=True), total=len(rows), counts=counts,
+            csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
+            match_counts=Counter(m["status"] for m in matches.values()), total=len(rows), counts=counts,
             rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
             detail=detail, events=events, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=directory.stamp(snap) if snap else None, today=today, metrics=metrics,
             jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
@@ -340,17 +367,10 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         snap = snapshot(owner)
         if snap is None:
             raise ValueError("Synchronisez d’abord la liste EDOF.")
-        # Only detail reads include a verified contact. Hundreds of broad
-        # directory rows must never cause hundreds of interactive logins.
-        with closing(store.connect()) as db:
-            ids = {r[0] for r in db.execute("""SELECT DISTINCT json_extract(result,'$.fields.folder_id') FROM jobs
-                WHERE owner=? AND json_extract(result,'$.code')='read_success'""", (owner,))}
-        folders = [folder_for_matching(enrich(owner, row)) for fid, row in snap["rows"].items()
-                   if fid in ids and category(row) in ACTIONS]
         summary = {}
         def apply(data):
-            preview = [match_folder(f, data.get("sessions", [])) for f in folders]
-            summary.update(sync_exact_wedof_links(data, preview))
+            results = matching_rows(owner, snap, data)
+            summary.update(sync_exact_wedof_links(data, results.values()))
             return data
         legacy._atomic_update_data(apply)
         flash(f"{summary['created']} association(s) créée(s), {summary['already_linked']} déjà présente(s), "
@@ -415,6 +435,29 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             {"handled": 0, "archived": 0} if change == "reopen" else {change: 1}))
         flash("Suivi local de la demande mis à jour.", "success")
         return back("requests")
+
+    @bp.post("/dossiers/<folder>/refresh")
+    @native_action
+    def read_folder(owner, folder):
+        from edof_server_test import configuration, start_job
+        row = folder_record(owner, folder)
+        if not configuration()["credentials_configured"]:
+            raise ValueError("Configurez le compte EFP avant de relire la fiche.")
+        start_job(store, owner, {"mode":"read", "folder_id":folder, "first_name":row.get("first_name") or "",
+                                 "last_name":row.get("last_name") or ""})
+        return redirect(url_for("edof_server_test.index"), code=303)
+
+    @bp.post("/dossiers/<folder>/transfer/<target>")
+    @native_action
+    def send_request(owner, folder, target):
+        if target not in TARGETS:
+            abort(404)
+        row = enrich(owner, folder_record(owner, folder))
+        if category(row) != "request" or request.form.get("verified") != "yes":
+            raise ValueError("Vérifiez la demande et ses destinataires avant de la transmettre.")
+        note = transfer(selection, legacy, row, target, DETAIL_PREFIX + folder)
+        flash(note, "success")
+        return back("requests",folder=folder)
 
     @bp.post("/dossiers/<folder>/prepare")
     @native_action

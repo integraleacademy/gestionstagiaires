@@ -88,6 +88,7 @@ from akto_bts import (
     new_sync_run_id,
     sync_akto_bts,
 )
+from integrale_edof_transfers import respect_native_receipt
 from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, read_env_bool
 from wedof_governor import (
     WedofGovernorError,
@@ -19945,6 +19946,7 @@ def admin_delete_wedof_entry(entry_id: str):
         _save_wedof_webhooks(entries)
     return redirect(url_for("admin_wedof_requests", section="requests"))
 
+@respect_native_receipt("salesforce")
 def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
     from wedof_bts import is_apprenticeship_event
     if is_apprenticeship_event(entry):
@@ -20005,7 +20007,8 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
         summary.append(f"Lieu: {location}")
     case_id = str(entry.get("folder_id") or payload.get("externalId") or "").strip()
     if case_id:
-        summary.append(f"Dossier WeDoF: {case_id}")
+        source = "Intégrale EDOF" if entry.get("provider") == "integrale_edof" else "WeDoF"
+        summary.append(f"Dossier {source}: {case_id}")
     if entry.get("event"):
         summary.append(f"Événement: {entry.get('event')}")
 
@@ -20156,6 +20159,7 @@ def _wedof_crm_relay_body(entry: Dict[str, Any], *, use_original: bool) -> str:
     return raw_payload
 
 
+@respect_native_receipt("crm")
 def _send_wedof_entry_to_crm(
         entry: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
     """Relay one authenticated WEDOF folder to the CRM without another list scan."""

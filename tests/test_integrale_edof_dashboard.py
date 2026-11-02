@@ -202,3 +202,48 @@ def test_simulate_at_actual_paris_cutoff_without_sending(site):
     reply = site.client.get("/admin/edof-test?section=state&simulation=1")
     assert reply.status_code == 200 and "Résultat du test des automatisations" in reply.text
     assert site.gate.state()["provider"] == "wedof"
+
+
+@pytest.mark.parametrize("target", ["crm","salesforce"])
+def test_native_transfer_is_complete_and_idempotent_across_switches(site, target, monkeypatch):
+    from integrale_edof_transfers import transfer, respect_native_receipt
+    monkeypatch.setenv("CRM_WEDOF_WEBHOOK_SECRET","fixture-only")
+    sent = []
+    def external(entry):
+        envelope = entry["payload"]
+        assert envelope["externalId"] == "100002" and envelope["attendee"]["email"].endswith(".invalid")
+        sent.append(entry["delivery_id"])
+        entry.update({target+"_sent":True, "crm_processed":True})
+        return {"success":True}, 200
+    legacy=SimpleNamespace(_send_wedof_entry_to_crm=external, _send_wedof_entry_to_salesforce=external, _load_wedof_webhooks=lambda:[])
+    source={"folder_id":"100002","first_name":"Anne","last_name":"Exemple","email":"anne@example.invalid"}
+    site.gate.switch("integrale",0,"admin")
+    assert "accusé réception" in transfer(site.gate,legacy,source,target,"https://official.invalid/folder")
+    assert "déjà" in transfer(site.gate,legacy,source,target,"https://official.invalid/folder")
+    site.gate.switch("wedof",1,"admin")
+    wrapped = respect_native_receipt(target)(lambda entry: pytest.fail("duplicate sent on reactivation"))
+    assert wrapped({"folder_id":"100002","payload":{}})[0]["skipped"]
+    assert len(sent)==1
+
+
+def test_uncertain_or_historical_native_delivery_is_not_replayed(site):
+    from integrale_edof_transfers import transfer
+    row={"folder_id":"100002","first_name":"Anne","last_name":"Exemple","email":"anne@example.invalid"}
+    fn=Mock(side_effect=TimeoutError())
+    legacy=SimpleNamespace(_send_wedof_entry_to_salesforce=fn, _load_wedof_webhooks=lambda:[])
+    with pytest.raises(ValueError,match="à vérifier"):
+        transfer(site.gate,legacy,row,"salesforce","")
+    with pytest.raises(ValueError,match="à vérifier"):
+        transfer(site.gate,legacy,row,"salesforce","")
+    assert fn.call_count==1
+    legacy._load_wedof_webhooks=lambda:[{"folder_id":"100003","salesforce_sent":True}]
+    assert "déjà" in transfer(site.gate,legacy,{**row,"folder_id":"100003"},"salesforce","")
+
+
+def test_bulk_preview_and_sync_use_verified_remote_contacts(site):
+    folder={"folder_id":"100000","first_name":"Anne","last_name":"Exemple","email":"anne@example.invalid","state":"accepted"}
+    job=site.store.reserve(site.owner,"read")
+    site.store.finish(job,{"code":"read_success","fields":folder})
+    result=site.client.get("/admin/edof-test?section=state&matching=1")
+    assert result.status_code==200 and "Prévisualisation des correspondances" in result.text
+    assert site.gate.state()["provider"]=="wedof"
