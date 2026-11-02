@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -17,8 +18,9 @@ import sys
 import tempfile
 import threading
 import time
+from zoneinfo import ZoneInfo
 
-from flask import Blueprint, abort, jsonify, redirect, request, send_file, session
+from flask import Blueprint, abort, jsonify, redirect, request, send_file, session, url_for
 
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
 from edof_server_browser import stalled_before_login
@@ -98,6 +100,12 @@ def configuration():
     }
 
 
+class JobCooldown(ValueError):
+    def __init__(self, remaining):
+        self.remaining = remaining
+        super().__init__(f"Le délai entre deux essais est commun au serveur. Nouvel essai possible dans {remaining} s.")
+
+
 class ServerTestStore:
     def __init__(self, directory):
         self.directory = Path(directory)
@@ -129,8 +137,9 @@ class ServerTestStore:
                 # Prevent repeated password attempts; no automatic retry loop.
                 recent = db.execute("SELECT created FROM jobs WHERE mode = ? ORDER BY created DESC LIMIT 1", (mode,)).fetchone()
                 delay = 300 if mode == "read" else 30
-                if recent and time.time() - recent["created"] < delay:
-                    raise ValueError(f"Attendez {delay} secondes entre deux essais de ce type.")
+                remaining = math.ceil(recent["created"] + delay - time.time()) if recent else 0
+                if remaining > 0:
+                    raise JobCooldown(remaining)
                 job_id = secrets.token_hex(16)
                 db.execute("INSERT INTO jobs (id, owner, created, mode, result) VALUES (?, ?, ?, ?, ?)",
                            (job_id, owner, time.time(), mode, json.dumps({"code": "running"})))
@@ -159,6 +168,48 @@ class ServerTestStore:
                     "created_at": dt.datetime.fromtimestamp(row["created"], dt.timezone.utc).isoformat(),
                     "finished": row["finished"] is not None, "message": MESSAGES.get(code, MESSAGES["browser_error"]), **detail})
             return result
+        finally:
+            db.close()
+
+    def migrate_history(self, previous_owner, account_owner):
+        db = self.connect()
+        try:
+            with db:
+                db.execute("UPDATE jobs SET owner = ? WHERE owner = ?", (account_owner, previous_owner))
+        finally:
+            db.close()
+
+    def successful_read(self, owner, *, spec=None, job_id=None):
+        """Return a prior verified read, never an inferred match between homonyms."""
+        db = self.connect()
+        try:
+            rows = db.execute(
+                "SELECT id, finished, result FROM jobs WHERE owner = ? AND mode = 'read' "
+                "AND finished IS NOT NULL AND json_extract(result, '$.code') = 'read_success' "
+                "AND (? IS NULL OR id = ?) ORDER BY finished DESC, id DESC", (owner, job_id, job_id))
+            found = None
+            for row in rows:
+                fields = json.loads(row["result"]).get("fields") or {}
+                folder = fields.get("folder_id")
+                if not folder:
+                    continue
+                if spec:
+                    if spec["folder_id"] and str(folder) != spec["folder_id"]:
+                        continue
+                    if spec["first_name"] and any(
+                        (fields.get(key) or "").strip().casefold() != spec[key].casefold()
+                        for key in ("first_name", "last_name")
+                    ):
+                        continue
+                    if found:
+                        if str(found["fields"]["folder_id"]) != str(folder):
+                            return None
+                        continue
+                checked = dt.datetime.fromtimestamp(row["finished"], ZoneInfo("Europe/Paris"))
+                found = {"id": row["id"], "checked_at": checked.strftime("%d/%m/%Y à %H h %M"), "fields": fields}
+                if not spec or spec["folder_id"]:
+                    break
+            return found
         finally:
             db.close()
 
@@ -293,6 +344,20 @@ def register_routes(app, store, *, admin_required, can_access):
         token = session.setdefault("edof_server_owner", secrets.token_urlsafe(32))
         return hashlib.sha256(token.encode()).hexdigest()
 
+    def results_owner():
+        # OAuth state and CSRF stay tied to this browser. Verified reads follow
+        # the authenticated admin account across its own browser sessions.
+        previous = owner()
+        username = session.get("admin_username")
+        if not isinstance(username, str) or not username.strip():
+            return previous
+        key = app.secret_key.encode() if isinstance(app.secret_key, str) else app.secret_key
+        account = hmac.digest(key, b"edof-test-results-v1\0" + username.strip().lower().encode(), "sha256").hex()
+        if session.get("edof_history_account") != account:
+            store.migrate_history(previous, account)
+            session["edof_history_account"] = account
+        return account
+
     @bp.after_request
     def private(response):
         response.headers["Cache-Control"] = "no-store"
@@ -304,8 +369,12 @@ def register_routes(app, store, *, admin_required, can_access):
     @bp.get("/admin/edof-test/server")
     @admin_required
     def index():
-        user = owner()
+        user = results_owner()
         csrf = session.setdefault("edof_server_csrf", secrets.token_urlsafe(32))
+        selected_id = request.args.get("result")
+        if selected_id is not None and not re.fullmatch(r"[0-9a-f]{32}", selected_id):
+            abort(404)
+        last_read = store.successful_read(user, job_id=selected_id)
         return app.jinja_env.get_template("edof_server_test.html").render(
             csrf=csrf, config=configuration(), gmail=gmail_status(), gmail_notice={
                 "connected": "Gmail est connecté. Vous pouvez lancer un essai serveur.",
@@ -314,12 +383,12 @@ def register_routes(app, store, *, admin_required, can_access):
                 "invalid": "Cette demande de connexion a expiré. Recommencez depuis cette page.",
                 "busy": "Un essai serveur est en cours. Attendez sa fin avant de modifier la connexion.",
                 **MESSAGES}.get(request.args.get("gmail"), ""),
-            jobs=store.latest(user), state_labels=STATE_LABELS)
+            jobs=store.latest(user), last_read=last_read, selected_result=selected_id is not None, state_labels=STATE_LABELS)
 
     @bp.get("/admin/edof-test/server/status")
     @admin_required
     def status():
-        user = owner()
+        user = results_owner()
         return jsonify(ok=True, config=configuration(), gmail=gmail_status(), jobs=store.latest(user))
 
     @bp.post("/admin/edof-test/server/gmail/connect")
@@ -375,15 +444,22 @@ def register_routes(app, store, *, admin_required, can_access):
     @bp.post("/admin/edof-test/server/run")
     @admin_required
     def run():
-        user = owner()
+        user = results_owner()
         check_csrf()
         if request.content_length is None or request.content_length > 2048:
             return jsonify(ok=False, error="Paramètres trop volumineux."), 413
         try:
             spec = validate_spec(request.get_json(silent=True))
+            if spec["mode"] == "read" and request.args.get("prefer_saved") == "1":
+                saved = store.successful_read(user, spec=spec)
+                if saved:
+                    return jsonify(ok=True, saved=True, job_id=saved["id"],
+                                   result_url=url_for("edof_server_test.index", result=saved["id"], _anchor="dossier-lu"))
             if spec["mode"] == "read" and not configuration()["credentials_configured"]:
                 return jsonify(ok=False, error=MESSAGES["credentials_missing"]), 409
             job_id = start_job(store, user, spec)
+        except JobCooldown as exc:
+            return jsonify(ok=False, error=str(exc), retry_after=exc.remaining), 429, {"Retry-After": str(exc.remaining)}
         except ValueError as exc:
             return jsonify(ok=False, error=str(exc)), 400
         return jsonify(ok=True, job_id=job_id), 202

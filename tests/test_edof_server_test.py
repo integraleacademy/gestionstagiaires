@@ -532,6 +532,67 @@ def test_readonly_routes_do_not_leak_env_or_other_owner_results(web, monkeypatch
     assert "synthetic-private-password" not in text and "synthetic@example.invalid" not in text and "other@example.invalid" not in text
 
 
+def test_old_success_follows_only_the_same_account_and_stays_visible_after_failed_attempts(web, monkeypatch):
+    app, first, store, _ = web
+    now = server.time.time()
+    monkeypatch.setattr(server.time, "time", lambda: now)
+    with first.session_transaction() as sess:
+        old = hashlib.sha256(sess["edof_server_owner"].encode()).hexdigest()
+        sess["admin_username"] = "Owner@example.invalid"
+    job = store.reserve(old, "read")
+    fields = {"first_name": "Camille", "last_name": "Exemple", "folder_id": "123456789", "state": "serviceDoneValidated"}
+    store.finish(job, {"code": "read_success", "fields": fields})
+    for _ in range(3):
+        now += 301
+        store.finish(store.reserve(old, "read"), {"code": "timeout"})
+    assert first.get("/admin/edof-test/server").get_data(as_text=True).count("Camille Exemple") == 1
+    assert not store.latest(old)
+    second = app.test_client()
+    with second.session_transaction() as sess:
+        sess.update(admin=True, admin_username="owner@example.invalid")
+    path = "/admin/edof-test/server?result=" + job
+    assert "Service fait validé" in second.get(path).get_data(as_text=True)
+    assert all(j["code"] == "timeout" for j in second.get("/admin/edof-test/server/status").json["jobs"])
+    with second.session_transaction() as sess:
+        sess["admin_username"] = "other@example.invalid"
+    text = second.get(path).get_data(as_text=True)
+    assert "Camille" not in text and "Cette lecture n’est pas disponible" in text
+    assert "Camille" not in second.get("/admin/edof-test/server").get_data(as_text=True)
+    with second.session_transaction() as sess:
+        sess.update(admin_username="owner@example.invalid", partner=True)
+    assert second.get(path).status_code == 403
+    assert app.test_client().get(path).status_code == 401
+    now += 86401
+    assert "Camille" not in first.get(path).get_data(as_text=True)
+
+
+def test_cached_read_during_shared_cooldown_and_accurate_retry_time(web, monkeypatch):
+    app, client, store, csrf = web
+    now = server.time.time()
+    monkeypatch.setattr(server.time, "time", lambda: now)
+    monkeypatch.setenv("EDOF_EFP_USERNAME", "synthetic@example.invalid")
+    monkeypatch.setenv("EDOF_EFP_PASSWORD", "synthetic-private")
+    with client.session_transaction() as sess:
+        owner = hashlib.sha256(sess["edof_server_owner"].encode()).hexdigest()
+    fields = {"first_name": "Camille", "last_name": "Exemple", "folder_id": "123456789"}
+    job = store.reserve(owner, "read")
+    store.finish(job, {"code": "read_success", "fields": fields})
+    now += 280.2
+    spec = {"mode": "read", "first_name": "camille", "last_name": "EXEMPLE"}
+    endpoint, headers = "/admin/edof-test/server/run", {"X-CSRF-Token": csrf}
+    response = client.post(endpoint + "?prefer_saved=1", json=spec, headers=headers)
+    assert response.status_code == 200 and response.json["saved"] and response.json["job_id"] == job
+    assert "Camille Exemple" in client.get(response.json["result_url"]).get_data(as_text=True)
+    for url, query in ((endpoint, spec), (endpoint + "?prefer_saved=1", {**spec, "folder_id": "987654321"})):
+        wait = client.post(url, json=query, headers=headers)
+        assert wait.status_code == 429 and wait.json["retry_after"] == 20 and wait.headers["Retry-After"] == "20"
+    assert len(store.latest(owner)) == 1
+    now += 40
+    store.finish(store.reserve(owner, "read"), {"code": "read_success", "fields": {**fields, "folder_id": "987654321"}})
+    assert store.successful_read(owner, spec=server.validate_spec(spec)) is None
+    assert store.successful_read(owner, spec=server.validate_spec({**spec, "folder_id": "123456789"}))["id"] == job
+
+
 def test_service_gate_blocks_production(monkeypatch):
     monkeypatch.setenv("RENDER_SERVICE_ID", "production")
     monkeypatch.setattr(server, "register_routes", lambda *a, **k: pytest.fail("Production route registered"))
