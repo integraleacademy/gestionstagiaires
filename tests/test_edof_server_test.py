@@ -189,13 +189,13 @@ def test_edof_dialog_only_closes_a_dismissible_notice():
     layer.locator.return_value.all_inner_texts.return_value = ["Informations du compte Personne Exemple"]
     actions = layer.get_by_role.return_value.or_.return_value.filter.return_value
     actions.evaluate_all.return_value = ["Fermer cette fenêtre", "Personne Exemple 12345"]
-    layer.inner_text.return_value = "J’accepte les conditions générales. Personne Exemple."
+    layer.all_inner_texts.return_value = ["J’accepte les conditions générales. Personne Exemple."]
     signals = {}
     with pytest.raises(browser.StopRun, match="workspace_dialog_required"):
         browser.handle_chooser_dialog(page, signals)
     assert signals["dialog_kind"] == "terms" and signals["dialog_buttons"] == ["fermer cette fenetre"]
     layer.get_by_role.return_value.click.assert_not_called()
-    layer.inner_text.return_value = "Bienvenue. Une nouvelle fonctionnalité est disponible."
+    layer.all_inner_texts.return_value = ["Bienvenue. Une nouvelle fonctionnalité est disponible."]
     target = Mock()
     target.count.return_value = 1
     target.is_visible.return_value = target.is_enabled.return_value = True
@@ -214,6 +214,29 @@ def test_edof_dialog_only_closes_a_dismissible_notice():
 ])
 def test_cookie_refusal_uses_the_action_seen_in_edof(label, refuse):
     assert bool(browser.COOKIE_DECLINE.search(label)) is refuse
+
+
+def test_cookie_keyboard_only_activates_the_observed_refusal_when_focused():
+    page, target = Mock(), Mock()
+    target.count.return_value = 1
+    target.evaluate_all.side_effect = [False, False, True]
+    assert browser.activate_cookie_refusal(page, target) == "keyboard"
+    assert [c.args[0] for c in page.keyboard.press.call_args_list] == ["Tab", "Tab", "Enter"]
+    target.click.assert_not_called()
+    target.evaluate_all.side_effect = [False]
+    target.count.return_value = 0
+    page.keyboard.press.reset_mock()
+    assert browser.activate_cookie_refusal(page, target) == "disappeared"
+    page.keyboard.press.assert_not_called()
+
+
+def test_disappearing_cookie_panel_does_not_wait_for_a_stale_locator():
+    page = Mock()
+    layer = page.locator.return_value.filter.return_value
+    layer.all_inner_texts.return_value = []
+    signals = {"cookies_dismissed": True}
+    assert browser.handle_chooser_dialog(page, signals) is False and signals["cookie_dialog_closed"] is True
+    layer.inner_text.assert_not_called()
 
 
 def test_real_material_select_opens_then_requires_the_unique_matching_option():
