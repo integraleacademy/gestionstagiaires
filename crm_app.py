@@ -8,6 +8,7 @@ from cnaps_notification_recovery import register_cnaps_notification_recovery
 from crm_cnaps_tracking_api import register_crm_cnaps_tracking_api
 from elearning_native.integration import register_native_elearning
 from wedof_invoice_reconciliation import register_wedof_invoice_reconciliation
+from cpf_provider import register_wedof_guards
 from maintenance_jobs import register_maintenance_jobs
 from edof_readonly_test import register_edof_readonly_test
 from edof_server_test import register_edof_server_test
@@ -24,6 +25,7 @@ register_crm_cnaps_tracking_api(
     fetch_tracking_requests=legacy_app.fetch_cnapsv3_tracking_requests,
     fetch_public_annuaire=getattr(legacy_app, "fetch_cnaps_public_annuaire", None),
 )
+register_wedof_guards(app)
 register_maintenance_jobs(legacy_app)
 register_edof_readonly_test(legacy_app)
 register_edof_server_test(legacy_app)

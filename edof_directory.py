@@ -39,7 +39,8 @@ def project(row):
     for ref in (row.get("trainingId"), row.get("trainingActionId"), info.get("sessionId")):
         if ref and (not isinstance(ref, str) or not ref.startswith(SIRET + "_")):
             raise IncompleteDirectory()
-    return {"folder_id": str(row["id"]), "first_name": text_field(attendee.get("firstName"), 120),
+    return {**({"billing_state": text_field(row["currentBillingState"], 80)} if row.get("currentBillingState") else {}),
+            "folder_id": str(row["id"]), "first_name": text_field(attendee.get("firstName"), 120),
             "last_name": text_field(attendee.get("lastName"), 120),
             "state": text_field(row.get("currentState"), 80),
             "title": text_field(info.get("title") or row.get("title") or row.get("trainingTitle"), 500),
@@ -144,6 +145,8 @@ def csv_snapshot(content, first, progress):
             elif ((words & {"statut", "etat"} and "dossier" in words and not "facturation" in words)
                   or label in {"statut", "etat", "currentstate"}):
                 columns.setdefault("state", i)
+            elif ("facturation" in words and words & {"etat", "statut"}) or label == "currentbillingstate":
+                columns.setdefault("billing_state", i)
             elif "debut" in words and words & {"formation", "session"}:
                 columns.setdefault("session_start_date", i)
             elif "fin" in words and words & {"formation", "session"}:

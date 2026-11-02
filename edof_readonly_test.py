@@ -221,10 +221,10 @@ def register_edof_readonly_test(legacy):
     register_routes(app, ObservationStore("/var/data"),
                     admin_required=legacy.admin_login_required,
                     can_access=lambda: legacy._is_super_admin_session() and not session.get("assist_partner_id"),
-                    data_file=legacy.DATA_FILE)
+                    data_file=legacy.DATA_FILE, dashboard=True)
 
 
-def register_routes(app, store, *, admin_required, can_access, data_file):
+def register_routes(app, store, *, admin_required, can_access, data_file, dashboard=False):
     bp = Blueprint("edof_test", __name__)
 
     def admin_guard():
@@ -254,7 +254,7 @@ def register_routes(app, store, *, admin_required, can_access, data_file):
     def ping():
         return jsonify(ok=True, version="1.2", mode="browser_observation", matching_preview=True, server_access_test=True, autonomous_sync=False)
 
-    @bp.get("/admin/edof-test")
+    @bp.get("/admin/edof-test/lecture-chrome" if dashboard else "/admin/edof-test")
     @admin_required
     def index():
         admin_guard()

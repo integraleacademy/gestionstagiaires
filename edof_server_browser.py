@@ -356,14 +356,31 @@ def directory_list_url(url):
                    "registrationfolderid", "externalid", "search"} for key, value in parse_qsl(parsed.query))
 
 
-def is_directory_view(url):
+def is_directory_view(url, target_url=LIST_URL):
     parsed = urlsplit(url)
-    target = urlsplit(LIST_URL)
+    target = urlsplit(target_url)
     return ((parsed.scheme, parsed.netloc, parsed.path) == (target.scheme, target.netloc, target.path)
             and parsed.fragment.split("?", 1)[0].rstrip("/") == target.fragment)
 
 
-def exported_directory(page, source, checkpoint, progress, timeout_error):
+def all_dossiers_link(page):
+    # Follow the official menu link itself so route changes cannot direct the
+    # browser to another host, a filtered search or an individual dossier.
+    from urllib.parse import urljoin
+    link = page.get_by_role("link", name=re.compile(r"^Tous les dossiers$", re.I))
+    if link.count() != 1 or not link.is_visible():
+        return None
+    target = urljoin(page.url, link.get_attribute("href") or "")
+    parsed = urlsplit(target)
+    home = urlsplit(LIST_URL)
+    if ((parsed.scheme, parsed.netloc, parsed.path) != (home.scheme, home.netloc, home.path)
+            or parsed.query or "?" in parsed.fragment or not re.fullmatch(r"/dossiers(?:/[a-z-]+)?", parsed.fragment)
+            or parsed.fragment == home.fragment):
+        return None
+    return target
+
+
+def exported_directory(page, source, checkpoint, progress, timeout_error, target_url=LIST_URL):
     from pathlib import Path
 
     first = source.json()
@@ -380,7 +397,7 @@ def exported_directory(page, source, checkpoint, progress, timeout_error):
     page.on("download", listener)
     try:
         checkpoint()
-        if not is_directory_view(page.url):
+        if not is_directory_view(page.url, target_url):
             raise StopRun("directory_unavailable")
         control.click(timeout=4000)
         confirmed = False
@@ -941,6 +958,7 @@ def run_browser(spec):
     blocked = 0
     lists = []
     directory_responses = []
+    target_directory = LIST_URL
     details = {}
     invalid_response = False
     signals = {"blocked_efp_posts": 0, "blocked_edof_posts": 0, "blocked_other_posts": 0}
@@ -1006,7 +1024,7 @@ def run_browser(spec):
         if tail == "pad":
             signals["folder_list_status"] = response.status
             if spec["mode"] == "directory":
-                if response.status == 200 and directory_list_url(response.url) and is_directory_view(response.frame.url):
+                if response.status == 200 and directory_list_url(response.url) and is_directory_view(response.frame.url, target_directory):
                     directory_responses[:] = [response]
                 return
             if (stage != "search" or "paired_name_search" not in signals
@@ -1268,6 +1286,11 @@ def run_browser(spec):
                 if not is_directory_view(page.url):
                     directory_responses.clear()
                 open_folder_view(page, LIST_URL, lambda: bool(directory_responses), BrowserTimeout)
+                full_list = all_dossiers_link(page)
+                if full_list:
+                    target_directory = full_list
+                    directory_responses.clear()
+                    open_folder_view(page, target_directory, lambda: bool(directory_responses), BrowserTimeout)
                 deadline = time.monotonic() + 18
                 while not directory_responses and time.monotonic() < deadline:
                     checkpoint()
@@ -1283,11 +1306,12 @@ def run_browser(spec):
                         # A verified private list already proves an authenticated
                         # session, independent of the later export/pagination.
                         vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
-                    snapshot = exported_directory(page, source, checkpoint, signals["directory"], BrowserTimeout)
+                    snapshot = exported_directory(page, source, checkpoint, signals["directory"], BrowserTimeout, target_directory)
                     if snapshot is None:
                         snapshot = directory.from_pages(directory_pages(page, source, checkpoint, signals["directory"]), signals["directory"])
                 except (ValueError, KeyError, TypeError):
                     raise StopRun("directory_incomplete") from None
+                snapshot["scope"] = "all" if target_directory != LIST_URL else "open"
                 vault.put(directory.record_key(spec["owner"]), snapshot, ttl=directory.TTL)
                 vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                 return {"code": "directory_ready", "stage": stage, "candidate_count": len(snapshot["rows"]),

@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo
 
 from flask import Blueprint, abort, jsonify, redirect, request, send_file, session, url_for
 
+from cpf_provider import acquire_provider
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
 from edof_server_browser import stalled_before_login
 import edof_directory as directory
@@ -117,6 +118,7 @@ class ServerTestStore:
         self.directory = Path(directory)
         self.path = self.directory / "edof_server_test.sqlite3"
         self.connector_key = None
+        self.data_file = None
 
     def connect(self):
         self.directory.mkdir(parents=True, exist_ok=True)
@@ -128,6 +130,7 @@ class ServerTestStore:
         db.execute("PRAGMA secure_delete = ON")
         db.execute("CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY, owner TEXT NOT NULL, created REAL NOT NULL, finished REAL, mode TEXT NOT NULL, result TEXT NOT NULL)")
         db.execute("CREATE TABLE IF NOT EXISTS directory_activity (owner TEXT PRIMARY KEY, seen REAL NOT NULL)")
+        db.execute("CREATE TABLE IF NOT EXISTS directory_requested (owner TEXT PRIMARY KEY)")
         db.execute("DELETE FROM jobs WHERE created < ?", (time.time() - RETENTION,))
         db.execute("UPDATE jobs SET finished = ?, result = ? WHERE finished IS NULL "
                    "AND created < ? - CASE WHEN mode = 'directory' THEN ? ELSE ? END",
@@ -150,6 +153,8 @@ class ServerTestStore:
                 remaining = math.ceil(recent["created"] + delay - time.time()) if recent["created"] is not None else 0
                 if remaining > 0:
                     raise JobCooldown(remaining)
+                if mode == "directory":
+                    db.execute("DELETE FROM directory_requested WHERE owner=?", (owner,))
                 job_id = secrets.token_hex(16)
                 db.execute("INSERT INTO jobs (id, owner, created, mode, result) VALUES (?, ?, ?, ?, ?)",
                            (job_id, owner, time.time(), mode, json.dumps({"code": "running"})))
@@ -222,6 +227,15 @@ class ServerTestStore:
         finally:
             db.close()
 
+    def request_directory(self, owner):
+        db = self.connect()
+        try:
+            with db:
+                db.execute("INSERT OR REPLACE INTO directory_activity VALUES (?, ?)", (owner, time.time()))
+                db.execute("INSERT OR IGNORE INTO directory_requested VALUES (?)", (owner,))
+        finally:
+            db.close()
+
     def directory_enabled(self, owner):
         db = self.connect()
         try:
@@ -234,8 +248,10 @@ class ServerTestStore:
         try:
             with db:
                 if owner is None:
+                    db.execute("DELETE FROM directory_requested")
                     db.execute("DELETE FROM directory_activity")
                 else:
+                    db.execute("DELETE FROM directory_requested WHERE owner = ?", (owner,))
                     db.execute("DELETE FROM directory_activity WHERE owner = ?", (owner,))
         finally:
             db.close()
@@ -245,10 +261,10 @@ class ServerTestStore:
         db = self.connect()
         try:
             return [row["owner"] for row in db.execute(
-                "SELECT a.owner FROM directory_activity a JOIN jobs j ON j.id = "
+                "SELECT r.owner FROM directory_requested r UNION ALL SELECT a.owner FROM directory_activity a JOIN jobs j ON j.id = "
                 "(SELECT id FROM jobs WHERE owner = a.owner AND mode = 'directory' ORDER BY created DESC LIMIT 1) "
                 "WHERE j.finished < ? - CASE WHEN a.seen > ? THEN ? ELSE ? END "
-                "AND json_extract(j.result, '$.code') = 'directory_ready' ORDER BY j.finished",
+                "AND json_extract(j.result, '$.code') = 'directory_ready'",
                 (time.time(), time.time() - 3600, directory.REFRESH_INTERVAL, directory.IDLE_REFRESH_INTERVAL))]
         finally:
             db.close()
@@ -296,7 +312,7 @@ class ServerTestStore:
             db.close()
 
 
-def execute_job(store, job_id, spec, lock_fd):
+def execute_job(store, job_id, spec, lock_fd, provider_fd=None):
     process = None
     temporary = tempfile.TemporaryDirectory(prefix="edof-server-test-")
     result = {"code": "browser_error"}
@@ -317,7 +333,7 @@ def execute_job(store, job_id, spec, lock_fd):
                     child_env[key] = os.environ[key]
         process = subprocess.Popen([sys.executable, str(Path(__file__).with_name("edof_server_browser.py"))],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            text=True, env=child_env, start_new_session=True, pass_fds=(lock_fd,))
+            text=True, env=child_env, start_new_session=True, pass_fds=(lock_fd,) if provider_fd is None else (lock_fd, provider_fd))
         output, _ = process.communicate(json.dumps(spec), timeout=DIRECTORY_TIMEOUT if spec["mode"] == "directory" else JOB_TIMEOUT)
         if process.returncode == 0 and len(output) < 32768:
             parsed = json.loads(output)
@@ -338,9 +354,21 @@ def execute_job(store, job_id, spec, lock_fd):
             process.communicate()
         try:
             temporary.cleanup()
+            if result.get("code") == "directory_ready" and store.data_file and spec.get("owner"):
+                try:
+                    from integrale_edof_sync import process_directory
+                    snapshot = Vault(store.directory, store.connector_key).get(directory.record_key(spec["owner"]))
+                    if snapshot:
+                        process_directory(store, snapshot, store.data_file)
+                except (OSError, ValueError, sqlite3.Error):
+                    # Keep the verified source snapshot. The next full sync
+                    # can retry local analysis without replaying external work.
+                    result.setdefault("diagnostics", {})["local_analysis_pending"] = True
             store.finish(job_id, result)
         finally:
             os.close(lock_fd)
+            if provider_fd is not None:
+                os.close(provider_fd)
 
 
 def last_read_stalled_at_login(jobs):
@@ -359,7 +387,9 @@ def last_read_stalled_at_login(jobs):
 def start_job(store, owner, spec):
     store.directory.mkdir(parents=True, exist_ok=True)
     lock_fd = os.open(store.directory / "edof_server_test.lock", os.O_CREAT | os.O_RDWR, 0o600)
+    provider_fd = None
     try:
+        provider_fd = acquire_provider("integrale")
         try:
             fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
@@ -369,11 +399,13 @@ def start_job(store, owner, spec):
         if spec["mode"] in {"read", "directory"} and last_read_stalled_at_login(store.latest(owner)):
             spec = {**spec, "fresh_login": True}
         job_id = store.reserve(owner, spec["mode"])
-        thread = threading.Thread(target=execute_job, args=(store, job_id, spec, lock_fd), daemon=True)
+        thread = threading.Thread(target=execute_job, args=(store, job_id, spec, lock_fd, provider_fd), daemon=True)
         thread.start()
         return job_id
     except Exception:
         os.close(lock_fd)
+        if provider_fd is not None:
+            os.close(provider_fd)
         raise
 
 
@@ -381,7 +413,8 @@ def register_edof_server_test(legacy):
     if os.environ.get("RENDER_SERVICE_ID") != TEST_SERVICE_ID:
         return
     store = ServerTestStore("/var/data")
-    register_routes(legacy.app, store,
+    store.data_file = legacy.DATA_FILE
+    register_routes(legacy.app, store, legacy=legacy,
         admin_required=legacy.admin_login_required,
         can_access=lambda: legacy._is_super_admin_session() and not session.get("assist_partner_id"))
 
@@ -398,7 +431,7 @@ def register_edof_server_test(legacy):
     threading.Thread(target=refresh_active_directories, name="edof-directory", daemon=True).start()
 
 
-def register_routes(app, store, *, admin_required, can_access):
+def register_routes(app, store, *, admin_required, can_access, legacy=None):
     bp = Blueprint("edof_server_test", __name__)
     store.connector_key = connector_key(app.secret_key)
 
@@ -647,3 +680,7 @@ def register_routes(app, store, *, admin_required, can_access):
         return jsonify(ok=True, job_id=job_id), 202
 
     app.register_blueprint(bp)
+    if legacy is not None:
+        from integrale_edof_dashboard import register_dashboard
+        register_dashboard(app, legacy, store, results_owner=results_owner, vault=vault,
+                           gmail_status=gmail_status, admin_required=admin_required, check_csrf=check_csrf)
