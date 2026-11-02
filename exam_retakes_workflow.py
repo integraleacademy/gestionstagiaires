@@ -10,7 +10,7 @@ from pypdf import PdfReader
 
 from exam_retakes import RetakeError, cents, components, discount_label, line_items, money, now, today
 from exam_retakes_documents import email_content
-from manuals_commerce import safe_payment_url
+from manuals_commerce import read_invoice_link_payments, safe_payment_url
 
 
 def checkpoint(store, row, **values):
@@ -107,7 +107,8 @@ def store_pdf(path, content):
 
 def invoice_assert(row, invoice):
     client_id = invoice.get('client_id') or (invoice.get('client') or {}).get('id')
-    if not invoice.get('id') or invoice.get('purchase_order') != 'RET-'+row['id'] or client_id != row.get('client_id'):
+    if (not invoice.get('id') or (row.get('invoice_id') and invoice['id'] != row['invoice_id'])
+            or invoice.get('purchase_order') != 'RET-'+row['id'] or client_id != row.get('client_id')):
         raise RetakeError('La référence de facture Qonto ne correspond pas au rattrapage.')
     amount = invoice.get('total_amount') or {}
     if (not isinstance(amount,dict) or (amount.get('currency') or invoice.get('currency')) != 'EUR'
@@ -167,30 +168,38 @@ def ensure_invoice(host,store,row):
             if getattr(exc,'status_code',None) in {400,401,403,422,429}:
                 checkpoint(store,row,invoice_started='')
             raise
-    if invoice.get('id'):
-        checkpoint(store,row,invoice_id=invoice['id'])
     invoice_assert(row,invoice)
+    if not row.get('invoice_id'):
+        checkpoint(store,row,invoice_id=invoice['id'])
     if invoice.get('status') == 'draft':
         host.finalize_qonto_invoice(invoice['id'])
         invoice=host._qonto_invoice_payload(host.get_qonto_invoice(invoice['id']))
         invoice_assert(row,invoice)
     if invoice.get('status') in {'canceled','cancelled'}:
-        checkpoint(store,row,status='payment',payment_status='canceled',payment_url='')
+        record_payment(store, row, 'canceled', 0)
         raise RetakeError('La facture a été annulée dans Qonto. Le rattrapage ne peut pas être confirmé.')
     if invoice.get('status') not in {'unpaid','paid','overdue','finalized'}:
         raise RetakeError('La facture Qonto n’est pas encore émise.')
-    payment=host.normalize_qonto_invoice_payment_data(invoice,{'amount_ttc':row['total_cents']/100})
     checkpoint(store,row,invoice_number=invoice.get('number') or invoice.get('invoice_number') or '',
-               payment_status=payment['qonto_payment_status'],paid_cents=payment['qonto_amount_paid_cents'],
-               status='confirmed' if payment['qonto_payment_status']=='paid' else 'payment')
+               status='confirmed' if row['status']=='confirmed' else 'payment')
     return invoice
 
 
+def record_payment(store, row, status, paid_cents, url=''):
+    confirmed = status == 'paid'
+    checkpoint(store, row, status='confirmed' if confirmed else 'payment',
+               payment_status=status, paid_cents=paid_cents, payment_url=url,
+               confirmed_at=(row.get('confirmed_at') or now()) if confirmed else '')
+
+
 def ensure_payment(host,store,row,invoice):
-    if row['payment_status'] == 'paid':
+    payment = host.normalize_qonto_invoice_payment_data(invoice, {'amount_ttc': row['total_cents'] / 100})
+    invoice_paid = payment['qonto_amount_paid_cents']
+    if payment['qonto_payment_status'] == 'paid':
+        record_payment(store, row, 'paid', invoice_paid)
         return
-    if row['payment_status'] == 'partially_paid':
-        checkpoint(store,row,payment_url='')
+    if invoice_paid and not (row.get('payment_id') or row.get('payment_started')):
+        record_payment(store, row, 'partially_paid', invoice_paid)
         raise RetakeError('Un paiement partiel a été enregistré. Vérifiez le solde dans Qonto avant de transmettre un nouveau lien.')
     authorized=host._qonto_invoice_payload(host._qonto_request('GET','/v2/client_invoices/'+invoice['id'],use_oauth=True))
     invoice_assert(row,authorized)
@@ -230,12 +239,35 @@ def ensure_payment(host,store,row,invoice):
         link=response.get('payment_link') or {}
     amount=link.get('amount') or {}
     url=safe_payment_url(link.get('url'))
-    if not link.get('id') or link.get('invoice_id') != invoice['id'] or amount.get('currency') != 'EUR' or cents(amount.get('value')) != row['total_cents'] or not url:
+    if (not link.get('id') or (row.get('payment_id') and link['id'] != row['payment_id'])
+            or link.get('invoice_id') != invoice['id'] or link.get('resource_type', 'Invoice') != 'Invoice'
+            or link.get('reusable', False) is not False
+            or amount.get('currency') != 'EUR' or cents(amount.get('value')) != row['total_cents']):
         raise RetakeError('Le lien de paiement Qonto ne correspond pas à la facture et à son montant.')
+    if not row.get('payment_id'):
+        checkpoint(store, row, payment_id=link['id'])
+    # The invoice balance can lag behind a card capture until the bank payout.
+    # These are two views of the same money, so never add them together.
+    captures, pending = read_invoice_link_payments(host, link['id'])
+    captured = sum(captures.values())
+    if captured == row['total_cents']:
+        record_payment(store, row, 'paid', captured)
+        return
+    if captured > row['total_cents']:
+        record_payment(store, row, 'review', invoice_paid)
+        raise RetakeError('Les paiements du lien dépassent le montant de la convention. Vérifiez la facture dans Qonto.')
+    if captured or invoice_paid:
+        record_payment(store, row, 'partially_paid', max(captured, invoice_paid))
+        raise RetakeError('Un paiement partiel a été enregistré. Vérifiez le solde dans Qonto avant de transmettre un nouveau lien.')
     if link.get('status') in {'canceled','cancelled','expired'}:
-        checkpoint(store,row,payment_url='')
+        record_payment(store, row, 'canceled', 0)
         raise RetakeError('Le lien de paiement Qonto a expiré ou a été annulé. Vérifiez la facture dans Qonto.')
-    checkpoint(store,row,payment_id=link['id'],payment_url=url)
+    if pending or link.get('status') in {'paid', 'processing'}:
+        record_payment(store, row, 'processing', 0)
+        return
+    if link.get('status') != 'open' or not url:
+        raise RetakeError('Le lien de paiement Qonto n’est pas disponible.')
+    record_payment(store, row, 'unpaid', 0, url)
 
 
 def send_email(host,store,row,kind,link,paths):
@@ -303,8 +335,6 @@ def process(host,store,row):
         send_email(host,store,row,'documents',portal,attachments)
         return
     invoice=ensure_invoice(host,store,row)
-    if row['status']=='confirmed':
-        checkpoint(store,row,confirmed_at=row.get('confirmed_at') or now(),payment_url='')
     ensure_payment(host,store,row,invoice)
     if not row.get('invoice_pdf') or not store.document(row['id'],'invoice').is_file():
         content,_=host.fetch_qonto_client_invoice_pdf(row['invoice_id'])
@@ -319,5 +349,5 @@ def process(host,store,row):
             store.save(row)
         else:
             send_email(host,store,row,'confirmed',portal,attachments)
-    else:
+    elif row.get('payment_url'):
         send_email(host,store,row,'documents',row['payment_url'],attachments)

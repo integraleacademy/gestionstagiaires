@@ -353,32 +353,7 @@ def sync_invoice_payment(host, order):
     state = order["commerce"]
     if not state.get("payment_id") or state.get("invoice_status") == "canceled":
         return
-    paid, processing = {}, False
-    for page in range(1, 51):
-        payload = host._qonto_request("GET", f"/v2/payment_links/{state['payment_id']}/payments",
-                                      params={"page": page, "per_page": 100})
-        payments = payload.get("payments", [])
-        if not isinstance(payments, list):
-            raise commerce.ReviewRequired("La réponse de paiement Qonto doit être vérifiée.")
-        for payment in payments:
-            if payment.get("status") == "paid":
-                if not payment.get("id"):
-                    raise commerce.ReviewRequired("L’identifiant du règlement Qonto est absent.")
-                amount = commerce._money_cents(payment.get("amount"))
-                try:
-                    paid_at = dt.datetime.fromisoformat(payment["paid_at"].replace("Z", "+00:00"))
-                    if paid_at.tzinfo is None or paid_at > dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=5) or amount <= 0:
-                        raise ValueError
-                except (KeyError, TypeError, ValueError, AttributeError):
-                    raise commerce.ReviewRequired("La date ou le montant du règlement Qonto doit être vérifié.")
-                if payment["id"] in paid and paid[payment["id"]] != amount:
-                    raise commerce.ReviewRequired("Le règlement Qonto contient des montants contradictoires.")
-                paid[payment["id"]] = amount
-            processing = processing or payment.get("status") in {"pending", "authorized"}
-        if not host._qonto_invoice_list_has_next_page(payload, page, len(payments), 100):
-            break
-    else:
-        raise commerce.ReviewRequired("La liste des règlements Qonto doit être vérifiée.")
+    paid, processing = commerce.read_invoice_link_payments(host, state["payment_id"])
     total = sum(paid.values())
     if total == order["total_cents"]:
         commerce._save(host, order, payment_status="paid", paid_cents=total, remaining_cents=0,

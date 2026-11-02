@@ -284,6 +284,39 @@ def _money_cents(amount):
         raise ReviewRequired("Le montant ou la devise du paiement Qonto est invalide.")
 
 
+def read_invoice_link_payments(host, link_id):
+    """Read captured EUR payments once per ID, separately from pending authorizations."""
+    paid, processing = {}, False
+    for page in range(1, 51):
+        payload = host._qonto_request("GET", f"/v2/payment_links/{link_id}/payments",
+                                      params={"page": page, "per_page": 100})
+        payments = payload.get("payments")
+        if not isinstance(payments, list):
+            raise ReviewRequired("La réponse de paiement Qonto doit être vérifiée.")
+        for payment in payments:
+            if not isinstance(payment, dict):
+                raise ReviewRequired("La réponse de paiement Qonto doit être vérifiée.")
+            if payment.get("status") == "paid":
+                if not payment.get("id"):
+                    raise ReviewRequired("L’identifiant du règlement Qonto est absent.")
+                amount = _money_cents(payment.get("amount"))
+                try:
+                    paid_at = dt.datetime.fromisoformat(payment["paid_at"].replace("Z", "+00:00"))
+                    if paid_at.tzinfo is None or paid_at > dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=5) or amount <= 0:
+                        raise ValueError
+                except (KeyError, TypeError, ValueError, AttributeError):
+                    raise ReviewRequired("La date ou le montant du règlement Qonto doit être vérifié.")
+                if payment["id"] in paid and paid[payment["id"]] != amount:
+                    raise ReviewRequired("Le règlement Qonto contient des montants contradictoires.")
+                paid[payment["id"]] = amount
+            processing = processing or payment.get("status") in {"pending", "authorized"}
+        if not host._qonto_invoice_list_has_next_page(payload, page, len(payments), 100):
+            break
+    else:
+        raise ReviewRequired("La liste des règlements Qonto doit être vérifiée.")
+    return paid, processing
+
+
 def _basket_items(order):
     items = []
     for line in order["items"]:

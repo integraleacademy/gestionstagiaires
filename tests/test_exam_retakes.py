@@ -114,12 +114,16 @@ def providers(host,store,row):
         return copy.deepcopy(signature)
     host._yousign_json=Mock(side_effect=yousign)
     host._yousign_request=Mock(side_effect=lambda *a,**kw:SimpleNamespace(content=store.document(row['id'],'convention').read_bytes()))
+    host.card_payments = []
+    host.payment_link = {'id':'payment-1','invoice_id':'invoice-1','resource_type':'Invoice','reusable':False,
+                         'amount':invoice['total_amount'],'url':'https://pay.qonto.com/retake-1','status':'open'}
     def qonto(method,path,payload=None,**kwargs):
         if path=='/v2/client_invoices':return {'client_invoice':copy.deepcopy(invoice)}
         if path.startswith('/v2/client_invoices/'):return {'client_invoice':copy.deepcopy(invoice)}
         if path=='/v2/payment_links/payment_methods':return {'payment_link_payment_methods':[{'enabled':True,'name':'credit_card'}]}
+        if path=='/v2/payment_links/payment-1/payments':return {'payments':copy.deepcopy(host.card_payments)}
         if path.startswith('/v2/payment_links'):
-            return {'payment_link':{'id':'payment-1','invoice_id':'invoice-1','amount':invoice['total_amount'],'url':'https://pay.qonto.com/retake-1','status':'open'}}
+            return {'payment_link':copy.deepcopy(host.payment_link)}
         raise AssertionError((method,path,payload))
     host._qonto_request=Mock(side_effect=qonto)
     host.get_qonto_invoice=Mock(side_effect=lambda _: {'client_invoice':copy.deepcopy(invoice)})
@@ -214,6 +218,72 @@ def test_paid_status_with_partial_amount_does_not_confirm(host,client):
     with pytest.raises(retakes.RetakeError,match='partiel'):workflow.process(host,store,row)
     assert row['status']=='payment' and not row['payment_url']
     with host.app.test_request_context():assert retakes.roster(host,'TARGET')==[]
+
+
+def test_existing_invoice_recognizes_captured_card_before_bank_settlement(host, client):
+    row = saved(host, client, exam_price='50')
+    store = retakes.Store(host)
+    signature, invoice = providers(host, store, row)
+    send(client, row)
+    row = store.get(row['id'])
+    workflow.process(host, store, row)
+    signature['status'] = 'done'
+    workflow.process(host, store, row)
+    assert invoice['status'] == 'unpaid' and row['payment_status'] == 'unpaid'
+    host.card_payments.append({'id':'capture-1', 'status':'paid', 'paid_at':retakes.now(),
+                               'amount':{'value':'50.00','currency':'EUR'}})
+    host.payment_link['status'] = 'processing'
+    host._qonto_request.reset_mock()
+    host.brevo_send_email.reset_mock()
+    workflow.process(host, store, store.get(row['id']))
+    confirmed = store.get(row['id'])
+    assert confirmed['paid_cents'] == 5000 and confirmed['payment_url'] == ''
+    workflow.process(host, store, confirmed)
+    assert confirmed['confirmed_at'] == store.get(row['id'])['confirmed_at']
+    with host.app.test_request_context():
+        roster = retakes.roster(host, 'TARGET')
+        assert [r['label'] for r in roster] == ['Rattrapage confirmé · Paiement reçu']
+    host.brevo_send_email.assert_called_once()
+    assert all(call.args[0] == 'GET' for call in host._qonto_request.call_args_list)
+    # A temporary provider failure must not publish an unpaid intermediate row.
+    host._qonto_request.side_effect = TimeoutError()
+    with pytest.raises(TimeoutError):
+        workflow.process(host, store, confirmed)
+    assert store.get(row['id'])['status'] == 'confirmed'
+
+
+@pytest.mark.parametrize('capture,amount,expected', [
+    ('authorized','50.00','processing'), ('pending','50.00','processing'),
+    ('failed','50.00','unpaid'), ('paid','20.00','partially_paid'), ('paid','55.00','review'),
+])
+def test_only_exact_captured_card_confirms_the_retake(host, client, capture, amount, expected):
+    row = saved(host, client, exam_price='50')
+    store = retakes.Store(host)
+    _, invoice = providers(host, store, row)
+    row.update(client_id='client-1', invoice_id=invoice['id'], payment_id='payment-1', status='payment')
+    invoice['status'] = 'unpaid'
+    host.card_payments.append({'id':'capture-1', 'status':capture, 'paid_at':retakes.now(),
+                               'amount':{'value':amount,'currency':'EUR'}})
+    if expected in {'partially_paid', 'review'}:
+        with pytest.raises(retakes.RetakeError):
+            workflow.ensure_payment(host, store, row, invoice)
+    else:
+        workflow.ensure_payment(host, store, row, invoice)
+    assert row['payment_status'] == expected and row['status'] == 'payment'
+    assert bool(row['payment_url']) == (expected == 'unpaid')
+
+
+def test_foreign_invoice_link_never_confirms_a_retake(host, client):
+    row = saved(host, client)
+    store = retakes.Store(host)
+    _, invoice = providers(host, store, row)
+    row.update(client_id='client-1', invoice_id=invoice['id'], payment_id='payment-1', status='payment')
+    invoice['status'] = 'unpaid'
+    host.payment_link.update(invoice_id='foreign', status='paid')
+    with pytest.raises(retakes.RetakeError, match='ne correspond pas'):
+        workflow.ensure_payment(host, store, row, invoice)
+    assert row['status'] == 'payment'
+    assert not any(call.args[1].endswith('/payments') for call in host._qonto_request.call_args_list)
 
 
 def test_uncertain_invoice_is_recovered_without_new_creation(host,client):

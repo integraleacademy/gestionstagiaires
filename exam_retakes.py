@@ -374,6 +374,10 @@ def view(row, *, public=False, token=""):
                   has_discount=totals["discount_cents"] > 0,
                   has_offered=totals["offered_cents"] > 0)
     result["signature_url"] = row.get("signature_url", "") if row["status"] == "signing" else ""
+    if row["status"] == "confirmed" and row.get("payment_status") == "paid":
+        result["label"] = "Rattrapage confirmé · Paiement reçu"
+    elif row["status"] == "payment" and row.get("payment_status") == "processing":
+        result["label"] = "Paiement en cours de traitement"
     result["payment_url"] = row.get("payment_url", "") if row["status"] == "payment" and row.get("payment_status") == "unpaid" else ""
     endpoint = "retake_public_document" if public else "retake_document"
     extra = {"token": token} if public else {}
