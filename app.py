@@ -17679,6 +17679,7 @@ def admin_sessions():
             save_data(data)
     _log_memory_stage("ADMIN_SESSIONS_AFTER_LOAD_DATA", admin_sessions_started_at, "/admin/sessions")
     out_sessions = []
+    financial_billing_map = None
     current_year = datetime.date.today().year
     dashboard_start = datetime.date(current_year, 1, 1)
     dashboard_end = datetime.date(current_year, 12, 31)
@@ -17848,6 +17849,16 @@ def admin_sessions():
             "ended": "Terminée",
         }[status_key]
 
+        financial_overview = None
+        if status_key == "ended":
+            if financial_billing_map is None:
+                financial_billing_map = _billing_existing_map(data)
+            financial_overview = _session_financial_report(
+                data, s,
+                session_lines=buildBillingLinesFromSessions([s], financial_billing_map),
+                include_cpf=False,
+            )["overview"]
+
         training_type_raw = (_session_get(s, "training_type", "") or "").strip().upper()
         if training_type_raw.startswith("APS"):
             _sync_aps_period_dates(s)
@@ -17900,6 +17911,7 @@ def admin_sessions():
             "cash_payment_alert_key": cash_payment_alert_key,
             "status_label": status_label,
             "status_key": status_key,
+            "financial_overview": financial_overview,
             "training_type_class": training_type_class,
             "ssiap_pathways": s.get("ssiap_pathways"),
             "jury_notified": jury_notified,
@@ -26156,11 +26168,43 @@ def _session_cpf_payment_report(
     }
 
 
-def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]) -> Dict[str, Any]:
+def _session_collection_overview(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Share the report's non-CPF collection balance with ended session cards."""
+    remaining_cents = paid_cents = unverified_cents = checks = 0
+    for row in rows:
+        unknown_financers = set()
+        control = False
+        for invoice in row["invoices"]:
+            financer = invoice.get("financer_type", "PERSONNEL")
+            if financer == "CPF" or invoice["status"] == "cancelled":
+                continue
+            if invoice["external"] and not invoice["payment_known"]:
+                unknown_financers.add(financer)
+            control = control or invoice["status"] == "control"
+        for key, financer in (("personal", "PERSONNEL"), ("other", "AUTRE")):
+            balance = money_value_to_cents(row[f"{key}_remaining"])
+            paid_cents += money_value_to_cents(row[f"{key}_paid"])
+            if financer in unknown_financers:
+                unverified_cents += balance
+            else:
+                remaining_cents += balance
+        checks += int(bool(unknown_financers) or control or abs(row["gap"]) >= 0.01)
+    return {
+        "remaining": remaining_cents / 100, "paid": paid_cents / 100,
+        "unverified": unverified_cents / 100, "checks": checks,
+        "closed": remaining_cents <= 500 and unverified_cents == 0,
+    }
+
+
+def _session_financial_report(
+    data: Dict[str, Any], session_item: Dict[str, Any], *,
+    session_lines: Optional[List[Dict[str, Any]]] = None, include_cpf: bool = True,
+) -> Dict[str, Any]:
     """Build the printable, per-trainee financial view for one session."""
     session_id = str(session_item.get("id") or "")
     lines_by_trainee: Dict[str, List[Dict[str, Any]]] = {}
-    session_lines = _billing_lines_for_session(data, session_id)
+    if session_lines is None:
+        session_lines = _billing_lines_for_session(data, session_id)
     for line in session_lines:
         lines_by_trainee.setdefault(str(line.get("traineeId") or ""), []).append(line)
 
@@ -26320,7 +26364,8 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
     totals["collection_pct"] = round((totals["paid"] / totals["revenue"] * 100), 1) if totals["revenue"] else 0
     return {
         "rows": rows, "totals": totals, "unknown_payment_count": unknown_payment_count,
-        "cpf_payments": _session_cpf_payment_report(data, session_item, rows, session_lines),
+        "overview": _session_collection_overview(rows),
+        "cpf_payments": _session_cpf_payment_report(data, session_item, rows, session_lines) if include_cpf else None,
     }
 
 
@@ -45179,8 +45224,9 @@ def _sync_qonto_bank_transfers(
 
 
 def _manual_bank_line_error(line):
-    if not line or str(line.get('financingType') or '').upper() != 'PERSONNEL':
-        return 'Choisissez la ligne de financement personnel du stagiaire.'
+    if (not line or str(line.get('financingType') or '').upper() not in {'PERSONNEL', 'AUTRE'}
+            or is_cpf_billing_context(line)):
+        return 'Choisissez un financement personnel ou un autre financement hors CPF du stagiaire.'
     if line.get('registrationCancelled') or line.get('invoiceStatus') in {'draft', 'cancelled', 'canceled', 'deleted', 'control'}:
         return 'Cette ligne de facturation ne permet pas l’affectation d’un virement.'
     installments = _sepa_installments(line)
@@ -45194,7 +45240,7 @@ def _manual_bank_line_error(line):
         return 'Un autre règlement est déjà renseigné : vérifiez le suivi financier avant l’affectation.'
     total = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
     if total <= bank_transfer_paid_cents(line):
-        return 'Ce financement personnel est déjà soldé.'
+        return 'Ce financement est déjà soldé.'
     return ''
 
 

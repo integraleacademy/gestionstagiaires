@@ -214,6 +214,41 @@ def search_third_party(fixture):
         'dateFrom': '2025-01-01'})
 
 
+def test_company_transfer_credits_other_financing_and_reopens_session_if_reversed(third_party):
+    client, data, trainee, fetch, detail = third_party
+    trainee.update(personal_amount=0, other_amount=1250)
+    data['billing_lines'] = []
+    line = gestion_app._billing_lines(data)[0]
+    assert line['financingType'] == 'AUTRE'
+    line.update(invoiceStatus='external_generated', paymentStatus='not_applicable')
+    gestion_app._save_billing_line(data, line)
+
+    response = assign_third_party(third_party)
+    assert response.status_code == 200, response.json
+    assert response.json['remaining_cents'] == 0
+    summary = client.get('/api/billing/trainee/T-BANK/session/S-BANK?local=1').json['financial_summary']
+    assert summary['by_financer']['AUTRE']['paid_amount_cents'] == 125000
+    assert summary['by_financer']['PERSONNEL']['paid_amount_cents'] == 0
+    assert trainee['cpf_amount'] == 1750
+    report = gestion_app._session_financial_report(data, data['sessions'][0])
+    assert report['overview']['remaining'] == 0
+    assert report['overview']['closed'] is True
+
+    fetch.return_value[0]['status'] = 'reversed'
+    gestion_app._sync_qonto_bank_transfers(data, force=True)
+    report = gestion_app._session_financial_report(data, data['sessions'][0])
+    assert report['overview']['remaining'] == 1250
+    assert report['overview']['closed'] is False
+
+
+@pytest.mark.parametrize('line', [
+    {'financingType': 'CPF', 'amount': 1000},
+    {'financingType': 'AUTRE', 'financeurName': 'CAISSE DES DEPOTS', 'amount': 1000},
+])
+def test_manual_bank_assignment_still_excludes_cpf(line):
+    assert gestion_app._manual_bank_line_error(line)
+
+
 def assign_third_party(fixture, search=None):
     search = search if search is not None else search_third_party(fixture)
     assert search.status_code == 200, search.json
