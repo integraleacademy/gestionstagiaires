@@ -108,6 +108,10 @@
   </div>
 </div>
 
+{% if vtc_roster_groups %}
+  {% include 'partials/vtc_practice_roster.html' %}
+{% endif %}
+
 {% if finance_summary.show %}
 <div class="finance-group-dashboard" aria-label="Chiffre d’affaires du groupe">
   <span class="finance-group-dashboard__label">CA du groupe</span>
@@ -477,6 +481,7 @@
 
     <tbody>
       {% for t in trainees %}
+{% set slot = (t.vtc_appointment if is_all_vtc else (vtc_appointments|default({})).get(t.id)) if is_vtc and not t.registration_cancelled else none %}
 {% set vtc_book_address_complete = (t.address or "")|trim and (t.zip_code or "")|trim and (t.city or "")|trim %}
 {% set vtc_book_pending_ready = is_vtc and (not (t.vtc_book_sent_at or "")|trim) and vtc_book_address_complete %}
 {% set vtc_exam_center = (t.vtc_exam_center or "")|trim|lower %}
@@ -523,6 +528,9 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
      style="text-decoration:none;">
     {% if not is_vtc and (t.identity_photo or "")|trim %}📷 {% endif %}{% if t.public_has_logged_in %}🛜 {% endif %}{% if t.test_fr_file_token %}✏️ {% endif %}{{ t.last_name or "" }}
   </a>
+  {% if vtc_roster_groups and slot and slot.group %}
+  <div><span class="vtc-roster-badge" data-group="{{ slot.group }}">Groupe {{ slot.group }}</span></div>
+  {% endif %}
   {% if session.afc_enabled and afc_training_dates %}
   {% set dates = afc_training_dates.get(t.id, {}) %}
   <div class="muted" style="font-size:12px;margin-top:7px;">{{ dates.date_start|frdate }} → {{ dates.date_end|frdate }}</div>
@@ -793,8 +801,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             <option value="validated" {% if t.vtc_practice_convocation_sent_at %}selected{% endif %}>🟢</option>
           </select>
         </td>
-        {% set slot = t.vtc_appointment if is_all_vtc else (vtc_appointments|default({})).get(t.id) %}
-        <td>{{ (slot.date if slot else session.practice_training_date)|frdate }}{% if slot and slot.group %}<br><strong>Groupe {{ slot.group }}</strong> · {{ slot.start }} – {{ slot.end }}{% endif %}</td>
+        <td>{% if t.registration_cancelled %}—{% else %}{{ (slot.date if slot else session.practice_training_date)|frdate }}{% if slot and slot.group %}<br><strong>Groupe {{ slot.group }}</strong> · {{ slot.start }} – {{ slot.end }}{% endif %}{% endif %}</td>
         <td class="vtc-status-cell" title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">
           {% set vtc_theory_ok = (t.vtc_theory_status_manual == "success") or ((not t.vtc_theory_status_manual) and t.vtc_theory_exam_sent_at and t.vtc_theory_result not in ["failed", "non_admissible"]) %}
           {% set vtc_practice_manual = t.vtc_practice_status_manual or '' %}

@@ -26,6 +26,16 @@ def assignments(config, registered):
     return members
 
 
+def roster_groups(session, registered):
+    """Group the active roster in display order, using the same allocation as the convocations."""
+    config = session.get(KEY) or {}
+    if not config and len(registered) < MIN_SPLIT_SIZE:
+        return {}
+    members = assignments(config, registered)
+    return {number: [t for t in registered if members.get(str(t.get("id"))) == number]
+            for number in (1, 2)}
+
+
 def configure(session, registered, slots, common_date):
     if not supported(session):
         raise ValueError("Les groupes de pratique sont réservés aux sessions VTC.")

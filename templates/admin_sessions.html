@@ -1472,20 +1472,7 @@
           <label><input id="vtcPracticeSplit" type="checkbox"> Répartir la pratique en deux groupes</label>
           <p class="hint" id="vtcPracticeHint"></p>
           <div id="vtcPracticeSlots" hidden>
-            <div class="aps-organisation__cards">
-              {% for group, start, end in [(1, '08:30', '12:00'), (2, '13:30', '17:00')] %}
-              <fieldset class="aps-period-card" data-slot="{{ group }}">
-                <legend class="aps-period-card__label">Groupe {{ group }}</legend>
-                {% if group == 2 %}
-                <label>Date si différente du groupe 1<input name="date" type="date"></label>
-                {% endif %}
-                <div class="aps-period-card__dates">
-                  <label>Début<input name="start" type="time" value="{{ start }}"></label>
-                  <label>Fin<input name="end" type="time" value="{{ end }}"></label>
-                </div>
-              </fieldset>
-              {% endfor %}
-            </div>
+            {% include 'partials/vtc_practice_slots.html' %}
             <p class="hint">Chaque stagiaire reçoit uniquement son créneau sur sa convocation.</p>
           </div>
         </section>
@@ -1632,7 +1619,7 @@
   </div>
 </div>
 
-<script src="{{ url_for('static', filename='vtc-practice-groups.js') }}"></script>
+<script src="{{ url_for('static', filename='vtc-practice-groups.js', v='20261102-roster') }}"></script>
 <script>
   const availableSessionsForCreate = {{ sessions|tojson }};
   const crmPrefillTransfer = {{ crm_prefill|tojson }};

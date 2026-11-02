@@ -148,3 +148,57 @@ def test_legacy_roster_has_stable_ids_and_excludes_cancelled_registrations(case)
     assert len(active) == 9
     assert set(session[vtc_practice.KEY]["members"]) == {t["id"] for t in active}
     assert active == app._registered_trainees(session)
+
+
+def test_roster_lists_preview_then_confirmed_slots_and_name_badges(case):
+    session, client = case
+    session["trainees"].reverse()
+
+    def roster():
+        return html.fromstring(client.get("/admin/sessions/S1/trainees").data)
+
+    def group_lists(page):
+        return {int(card.get("data-group")): card.xpath(".//li/a/text()")
+                for card in page.xpath('//article[@class="vtc-roster-group"]')}
+
+    preview = roster()
+    expected = {1: [f"Camille{i} EXEMPLE" for i in (0, 2, 4, 6, 8)],
+                2: [f"Camille{i} EXEMPLE" for i in (1, 3, 5, 7)]}
+    assert group_lists(preview) == expected
+    assert "Répartition proposée" in preview.text_content()
+    assert not preview.xpath('//*[@class="vtc-roster-time" or @class="vtc-roster-badge"]')
+    assert vtc_practice.KEY not in session
+    assert post(client, [SLOTS[0], {**SLOTS[1], "date": "2026-10-22"}]).status_code == 200
+
+    confirmed = roster()
+    assert group_lists(confirmed) == expected
+    assert "Répartition proposée" not in confirmed.text_content()
+    assert confirmed.xpath('//*[@class="vtc-roster-time"]/text()') == [
+        "21/10/2026 · 08h30 – 12h00", "22/10/2026 · 13h30 – 17h00"]
+    for row in confirmed.xpath('//tr[@data-trainee-id]'):
+        trainee_id = row.get("data-trainee-id")
+        group = session[vtc_practice.KEY]["members"][trainee_id]
+        badge = row.xpath('.//td[@class="col-last-name"]//*[@class="vtc-roster-badge"]')[0]
+        assert badge.text == f"Groupe {group}"
+        assert row.xpath(f'.//td/strong[text()="Groupe {group}"]')
+        assert confirmed.xpath(f'//article[@data-group="{group}"]//a[@href="/admin/sessions/S1/stagiaires/{trainee_id}"]')
+
+    session["trainees"][0]["registration_cancelled"] = True
+    with client.session_transaction() as auth:
+        auth["admin_role"] = "viewer"
+    page = roster()
+    expected[1].remove("Camille8 EXEMPLE")
+    assert group_lists(page) == expected
+    assert not page.xpath('//*[@id="vtcRosterForm"]')
+    assert not page.xpath('//tr[@data-trainee-id="T08"]//*[contains(text(),"Groupe")]')
+
+
+@pytest.mark.parametrize("kind,size,cancelled", [("VTC", 8, False), ("VTC", 9, True), ("APS", 9, False)])
+def test_roster_only_proposes_groups_for_eligible_vtc_sessions(case, kind, size, cancelled):
+    session, client = case
+    session.update(training(size), training_type=kind)
+    session["trainees"][-1]["registration_cancelled"] = cancelled
+    page = html.fromstring(client.get("/admin/sessions/S1/trainees").data)
+    assert not page.xpath('//*[@id="vtc-roster-title" or @id="vtcRosterForm"]')
+    all_vtc = html.fromstring(client.get("/admin/trainees/vtc").data)
+    assert not all_vtc.xpath('//*[@id="vtc-roster-title" or @id="vtcRosterForm"]')

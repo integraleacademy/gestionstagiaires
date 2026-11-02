@@ -25831,12 +25831,14 @@ def admin_trainees(session_id: str):
     else:
         trainees.sort(key=_trainee_alpha_sort_key)
 
+    registered = _registered_trainees(trainees)
     return render_template(
         "admin_trainees.html",
         exam_retakes=exam_retakes.roster(sys.modules[__name__], session_id),
         afc_training_dates={t.get("id"): _trainee_training_session(s, t) for t in trainees} if afc_schedule.enabled(s) else {},
         afc_hours_supported=afc_enrolments.supported(sys.modules[__name__], s),
-        vtc_appointments={t.get("id"): _vtc_practice_appointment(s, t) for t in trainees} if is_vtc else {},
+        vtc_appointments={t.get("id"): _vtc_practice_appointment(s, t) for t in registered} if is_vtc else {},
+        vtc_roster_groups=vtc_practice.roster_groups(s, registered) if is_vtc else {},
         session={**session_view, "ssiap_pathways": s.get("ssiap_pathways"),
                  "vtc_practice_slots": (s.get(vtc_practice.KEY) or {}).get("slots", [])},
         ssiap_supported=ssiap_pathways.supported(s),
@@ -25854,7 +25856,7 @@ def admin_trainees(session_id: str):
         is_desp_initial=_is_desp_initial_session(s),
         desp_kickoff_attendance=_desp_kickoff_attendance_view(s),
         finance_summary=_admin_trainees_finance_summary(session_view, trainees),
-        registered_trainees=_registered_trainees(trainees),
+        registered_trainees=registered,
         vae_dashboard_counts=vae_dashboard_counts,
         enums=ENUMS,
         is_adef=_is_adef_training(session_view["training_type"]),
