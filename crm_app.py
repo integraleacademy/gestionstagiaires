@@ -9,6 +9,8 @@ from crm_cnaps_tracking_api import register_crm_cnaps_tracking_api
 from elearning_native.integration import register_native_elearning
 from wedof_invoice_reconciliation import register_wedof_invoice_reconciliation
 from maintenance_jobs import register_maintenance_jobs
+from cpf_provider import register_wedof_guards
+from cpf_provider_bridge import register_production_control
 
 
 app = legacy_app.app
@@ -22,4 +24,6 @@ register_crm_cnaps_tracking_api(
     fetch_tracking_requests=legacy_app.fetch_cnapsv3_tracking_requests,
     fetch_public_annuaire=getattr(legacy_app, "fetch_cnaps_public_annuaire", None),
 )
+register_production_control(legacy_app)
+register_wedof_guards(app)
 register_maintenance_jobs(legacy_app)

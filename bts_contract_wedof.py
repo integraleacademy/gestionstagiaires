@@ -10,6 +10,7 @@ from urllib.parse import quote
 
 import requests
 
+from cpf_provider import wedof_transport
 from bts_cerfa import readiness
 from bts_contract_documents import needs_guardian, tuition
 from bts_contract_yousign import ensure_files
@@ -119,6 +120,7 @@ def build_cerfa(values, settings):
 
 
 class SubmissionClient(WedofClient):
+    @wedof_transport
     def call(self, method, path, payload=None, params=None):
         self._reserve(method, path, operation="bts_contract_submission" if method != "GET" else "bts_contract_check")
         try:
