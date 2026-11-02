@@ -1,4 +1,5 @@
 from functools import wraps
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -148,6 +149,21 @@ def test_service_gate_blocks_production(monkeypatch):
     monkeypatch.setattr(server, "register_routes", lambda *a, **k: pytest.fail("Production route registered"))
     server.register_edof_server_test(None)
     assert browser.run_browser({"mode": "access"})["code"] == "wrong_environment"
+
+
+@pytest.mark.parametrize("reasons,summary", [
+    ({}, "aucun nouveau message de l’expéditeur EFP attendu"),
+    ({"code_unrecognized": 1}, "Format du code non reconnu"),
+])
+def test_admin_sees_absent_mail_or_precise_verification_failure(web, reasons, summary):
+    app, client, store, csrf = web
+    with client.session_transaction() as sess:
+        owner = hashlib.sha256(sess["edof_server_owner"].encode()).hexdigest()
+    job = store.reserve(owner, "read")
+    store.finish(job, {"code": "gmail_code_missing", "stage": "authentication", "diagnostics":
+        {"gmail_messages_checked": sum(reasons.values()), "gmail_rejections": reasons}})
+    page = client.get("/admin/edof-test/server")
+    assert page.status_code == 200 and summary in page.get_data(as_text=True)
 
 
 def test_timeout_kills_process_tree_and_hides_diagnostics(tmp_path, monkeypatch):

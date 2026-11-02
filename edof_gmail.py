@@ -32,8 +32,9 @@ SENDER = "no-reply@emploi.gouv.fr"
 
 
 class GmailError(Exception):
-    def __init__(self, code):
+    def __init__(self, code, *, diagnostics=None):
         self.code = code
+        self.diagnostics = diagnostics or {}
         super().__init__(code)
 
 
@@ -183,24 +184,90 @@ def normal_text(text):
     return " ".join("".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c)).lower().split())
 
 
-def extract_code(message, recipient, started):
+def sender_authentication(headers):
+    """Check only the first Google ingress verdict. Never mix result clauses."""
+    for value in headers.get("authentication-results", []):
+        authority, separator, results = value.lower().partition(";")
+        if separator and authority.strip() == "mx.google.com":
+            break
+    else:
+        return "authentication_header_missing"
+    # Ignore quoted reasons and nested comments: neither is an auth result.
+    clean = []
+    depth = 0
+    quoted = escaped = False
+    if len(results) > 16000:
+        return "sender_authentication_failed"
+    for char in results:
+        if escaped:
+            escaped = False
+        elif (quoted or depth) and char == "\\":
+            escaped = True
+        elif not depth and char == '"':
+            quoted = not quoted
+            clean.append('"')
+        elif not quoted and char == "(":
+            depth += 1
+            clean.append(" ")
+        elif depth and char == ")":
+            depth -= 1
+        elif not quoted and not depth:
+            clean.append(char)
+    if depth or quoted or escaped:
+        return "sender_authentication_failed"
+    trusted_domain = r"(?:[a-z0-9-]+\.)*emploi\.gouv\.fr"
+    for clause in "".join(clean).split(";"):
+        words = clause.split()
+        if not words or words[0] not in {"dkim=pass", "dmarc=pass"}:
+            continue
+        props = {}
+        for word in words[1:]:
+            key, equals, val = word.partition("=")
+            if equals:
+                props.setdefault(key, []).append(val)
+        def aligned(key, pattern):
+            values = props.get(key, [])
+            return len(values) == 1 and re.fullmatch(pattern, values[0]) is not None
+        if words[0] == "dmarc=pass":
+            if aligned("header.from", trusted_domain):
+                return None
+        elif "header.d" in props:
+            if aligned("header.d", trusted_domain):
+                return None
+        # RFC 8601 also allows the verified DKIM identity (header.i). Do not
+        # use it to override a different signing domain in the same clause.
+        elif aligned("header.i", r"[^@;\s]*@" + trusted_domain):
+            return None
+    return "sender_authentication_failed"
+
+
+def extract_code(message, recipient, started, *, rejections=None):
     """Accept one recent authenticated EFP message addressed to this account."""
+    def reject(reason):
+        # Only fixed categories and counts leave the mail reader.
+        if rejections is not None:
+            rejections[reason] = rejections.get(reason, 0) + 1
+        return None
+
     try:
         received = int(message["internalDate"]) / 1000
-        if received < started or received > time.time() + 30 or time.time() - received > 180:
-            return None
+        if received < started:
+            return reject("before_attempt")
+        if received > time.time() + 30:
+            return reject("future_date")
+        if time.time() - received > 180:
+            return reject("expired")
         payload = message["payload"]
         headers = {}
         for header in payload.get("headers", []):
             headers.setdefault(header["name"].lower(), []).append(header["value"])
         if [address.lower() for _, address in getaddresses(headers.get("from", []))] != [SENDER]:
-            return None
+            return reject("sender_mismatch")
         if recipient.lower() not in [address.lower() for _, address in getaddresses(headers.get("to", []) + headers.get("delivered-to", []))]:
-            return None
-        # Trust the first Google ingress result, not an arbitrary pasted header.
-        auth = next((value for value in headers.get("authentication-results", []) if value.lstrip().lower().startswith("mx.google.com;")), "").lower()
-        if not re.search(r"(?:dkim=pass\b[^;]*header\.d=|dmarc=pass\b[^;]*header\.from=)(?:[a-z0-9-]+\.)*emploi\.gouv\.fr(?:[;\s]|$)", auth):
-            return None
+            return reject("recipient_mismatch")
+        auth_error = sender_authentication(headers)
+        if auth_error:
+            return reject(auth_error)
         texts = []
         def visit(part, depth=0):
             if depth > 8 or part.get("filename"):
@@ -220,9 +287,9 @@ def extract_code(message, recipient, started):
         sources = [normal_text(value) for value in headers.get("subject", []) + texts]
         text = " ".join(sources)
         if "efp" not in text and "edof" not in text:
-            return None
+            return reject("not_efp")
         if any(term in text for term in ("reinitialiser", "reinitialisation", "reset password", "creer votre compte", "creation de compte", "responsable des acces")):
-            return None
+            return reject("account_management")
         patterns = (
             r"\bcode(?:\s+d['’ ]authentification|\s+de\s+(?:verification|securite|connexion)|\s+a\s+usage\s+unique)?(?:\s+(?:est|suivant|personnel|unique))?\s*[:：\-]?\s*(\d{6,8})\b",
             # Current EFP login subject and body. Match explicit labels, never
@@ -234,9 +301,13 @@ def extract_code(message, recipient, started):
         # must not become attached to a number in a different part. Repeated
         # copies of the same code are fine; conflicting values fail closed.
         codes = {code for source in sources for pattern in patterns for code in re.findall(pattern, source)}
-        return next(iter(codes)) if len(codes) == 1 else None
+        if not codes:
+            return reject("code_unrecognized")
+        if len(codes) > 1:
+            return reject("code_ambiguous")
+        return next(iter(codes))
     except (KeyError, TypeError, ValueError):
-        return None
+        return reject("message_invalid")
 
 
 class GmailCodes:
@@ -273,6 +344,7 @@ class GmailCodes:
     def wait_for_code(self, started, *, timeout=35, tick=None):
         deadline = time.monotonic() + timeout
         seen = set(self.baseline)
+        diagnostics = {"gmail_messages_checked": 0, "gmail_rejections": {}}
         while time.monotonic() < deadline:
             matches = []
             for message_id in self.list_ids(started):
@@ -280,15 +352,16 @@ class GmailCodes:
                     continue
                 message = google_json("GET", GMAIL_URL + "/messages/" + message_id,
                     headers=self.headers, params={"format": "full"})
-                code = extract_code(message, self.recipient, started)
+                diagnostics["gmail_messages_checked"] += 1
+                code = extract_code(message, self.recipient, started, rejections=diagnostics["gmail_rejections"])
                 seen.add(message_id)
                 if code:
                     matches.append(code)
             if len(matches) > 1:
-                raise GmailError("gmail_messages_ambiguous")
+                raise GmailError("gmail_messages_ambiguous", diagnostics=diagnostics)
             if matches:
                 return matches[0]
             if tick:
                 tick()
             time.sleep(2)
-        raise GmailError("gmail_code_missing")
+        raise GmailError("gmail_code_missing", diagnostics=diagnostics)
