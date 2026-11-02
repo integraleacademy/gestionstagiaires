@@ -2,3 +2,14 @@
 .search-count{font-size:12px;color:#747b8c}.review-note{background:#fff7e8;border:1px solid #e8d9b8;color:#80662f;padding:13px;border-radius:10px;font-size:13px}.candidate{border:1px solid #e2e5ed;border-radius:12px;padding:16px;margin:16px 0}.candidate h4{font-size:15px;margin:0 0 12px;overflow-wrap:anywhere}.candidate dl{grid-template-columns:100px minmax(0,1fr);gap:9px;font-size:12px}.criteria{list-style:none;padding:0;margin:14px 0 0;display:flex;flex-wrap:wrap;gap:6px}.criteria li{font-size:11px;line-height:1.5;margin:0;padding:5px 8px;border-radius:6px}.agrees{background:#edf7f1;color:#32644b}.differs{background:#fff4df;color:#805e22}.candidate-issue{font-size:12px;color:#8c4634;margin:10px 0 0}.session-suggestions{border-top:1px solid #ececf1;margin-top:20px}.session-suggestions ul{padding-left:18px;color:#5c6275;font-size:12px}.session-suggestions strong{overflow-wrap:anywhere}
 .server-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.server-grid .server-grid{gap:12px}#server-message{font-weight:600;min-height:25px}@media(max-width:800px){.server-grid{grid-template-columns:1fr}}
 .gmail-consent{display:flex;align-items:flex-start;gap:10px;line-height:1.6}.gmail-consent input{width:18px;height:18px;flex:0 0 18px;margin-top:2px}.result+.server-grid{margin-top:24px}
+.efp-status #efp-state {
+  padding: 6px 12px;
+  border-radius: 20px;
+  color: #674b16;
+  background: #fff2d4;
+  font-size: 14px;
+}
+.efp-status #efp-state[data-state="confirmed"] { color: #20573d; background: #e0f3e8; }
+.efp-status #efp-state[data-state="expired"],
+.efp-status #efp-state[data-state="reconnect"] { color: #872c34; background: #fbe7e8; }
+.efp-status .button { margin-top: 0; }

@@ -532,6 +532,43 @@ def test_readonly_routes_do_not_leak_env_or_other_owner_results(web, monkeypatch
     assert "synthetic-private-password" not in text and "synthetic@example.invalid" not in text and "other@example.invalid" not in text
 
 
+def test_connection_indicator_only_reports_private_checks_and_never_signs_in(web, monkeypatch):
+    _, client, store, _ = web
+    store.connector_key = server.connector_key("synthetic-secret-long-enough-for-a-test")
+    vault = server.Vault(store.directory, store.connector_key)
+    monkeypatch.setattr(server, "start_job", lambda *a: pytest.fail("A status check must stay local"))
+    now = server.time.time()
+    monkeypatch.setattr(server.time, "time", lambda: now)
+    with client.session_transaction() as sess:
+        owner = hashlib.sha256(sess["edof_server_owner"].encode()).hexdigest()
+    path = "/admin/edof-test/server/connection-status"
+    assert client.get(path).json["state"] == "missing"
+    vault.put("browser", {"cookies": [{"value": "synthetic-cookie"}]}, ttl=86400)
+    store.finish(store.reserve(owner, "access"), {"code": "login_reachable"})
+    assert client.get(path).json == {"state": "unknown", "label": "État à confirmer", "checked_at": None}
+    store.finish(store.reserve(owner, "directory"), {"code": "directory_ready"})
+    expected_time = server.dt.datetime.fromtimestamp(now, server.ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y à %H h %M")
+    assert client.get(path).json == {"state": "confirmed", "label": "Active au dernier contrôle", "checked_at": expected_time}
+    now += 301
+    store.finish(store.reserve("another-admin", "read"), {"code": "sign_in_error"})
+    html = client.get("/admin/edof-test/server").get_data(as_text=True)
+    assert "Active au dernier contrôle" in html and html.index('id="connexion-efp"') < html.index('id="dossier-lu"')
+    assert "synthetic-cookie" not in html + client.get(path).get_data(as_text=True)
+    for result, expected in [
+        ({"code": "timeout"}, "unknown"),
+        ({"code": "organism_selection_required", "diagnostics": {"edof_screen": "session_expired"}}, "expired"),
+        ({"code": "credentials_rejected"}, "reconnect"),
+    ]:
+        now += 301
+        store.finish(store.reserve(owner, "read"), result)
+        assert client.get(path).json["state"] == expected
+    now += 86401
+    assert client.get(path).json["state"] == "missing"
+    with client.session_transaction() as sess:
+        sess["partner"] = True
+    assert client.get(path).status_code == 403
+
+
 def test_old_success_follows_only_the_same_account_and_stays_visible_after_failed_attempts(web, monkeypatch):
     app, first, store, _ = web
     now = server.time.time()

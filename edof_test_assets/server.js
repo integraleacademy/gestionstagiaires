@@ -4,6 +4,30 @@ const serverCsrf = document.querySelector("main").dataset.csrf;
 let polling = false;
 let retryTimer;
 
+const efpRefresh = document.getElementById("refresh-efp-state");
+async function refreshEfpState() {
+  if (!efpRefresh || efpRefresh.disabled) return;
+  efpRefresh.disabled = true;
+  const label = document.getElementById("efp-state");
+  const checked = document.getElementById("efp-checked");
+  try {
+    const response = await fetch(efpRefresh.dataset.url, {credentials: "same-origin", redirect: "error", cache: "no-store"});
+    if (!response.ok) throw new Error();
+    const status = await response.json();
+    label.dataset.state = status.state;
+    label.textContent = status.label;
+    checked.textContent = status.checked_at ? "Dernier contrôle sur EDOF le " + status.checked_at + " (Paris)."
+      : "Aucun contrôle de session enregistré au cours des dernières 24 heures.";
+  } catch {
+    label.dataset.state = "unknown";
+    label.textContent = "État indisponible";
+    checked.textContent = "Le serveur de test n’a pas pu transmettre le dernier contrôle.";
+  } finally {
+    efpRefresh.disabled = false;
+  }
+}
+efpRefresh?.addEventListener("click", refreshEfpState);
+
 function showRetryTime(seconds) {
   const availableAt = Date.now() + seconds * 1000;
   const update = () => {
@@ -124,6 +148,7 @@ async function watchDirectory(id) {
       const data = await response.json();
       const job = data.jobs.find(item => item.id === id);
       if (!job || !job.finished) continue;
+      void refreshEfpState();
       directoryStatus.textContent = job.code === "directory_ready" ?
         job.candidate_count + " dossiers synchronisés. Vous pouvez rechercher un nom." : job.message;
       if (job.code === "directory_ready" && pendingDirectoryLookup) await lookupDirectory(pendingDirectoryLookup);

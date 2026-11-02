@@ -181,6 +181,36 @@ class ServerTestStore:
         finally:
             db.close()
 
+    def connection_status(self, owner, saved_session):
+        # Only a completed read of the private portal can confirm access.
+        # Cached lookups and the public EFP form do not check a session.
+        db = self.connect()
+        try:
+            row = db.execute(
+                "SELECT finished, json_extract(result, '$.code') AS code, "
+                "json_extract(result, '$.diagnostics.edof_screen') AS screen "
+                "FROM jobs WHERE owner = ? AND mode IN ('read', 'directory') AND finished IS NOT NULL "
+                "ORDER BY finished DESC, id DESC LIMIT 1", (owner,),
+            ).fetchone()
+        finally:
+            db.close()
+
+        checked_at = None
+        if row:
+            checked_at = dt.datetime.fromtimestamp(row["finished"], ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y à %H h %M")
+        if row and row["screen"] == "session_expired":
+            state, label = "expired", "Session expirée au dernier contrôle"
+        elif row and row["code"] in {"credentials_rejected", "account_unavailable", "verification_code",
+                                    "otp_rejected", "account_action_required", "sign_in_error"}:
+            state, label = "reconnect", "Reconnexion nécessaire"
+        elif not saved_session:
+            state, label = "missing", "Aucune session réutilisable"
+        elif row and row["code"] in {"directory_ready", "read_success"}:
+            state, label = "confirmed", "Active au dernier contrôle"
+        else:
+            state, label = "unknown", "État à confirmer"
+        return {"state": state, "label": label, "checked_at": checked_at}
+
     def use_directory(self, owner, *, enable=False):
         db = self.connect()
         try:
@@ -381,7 +411,7 @@ def register_routes(app, store, *, admin_required, can_access):
         result = {"configured": oauth_configured(), "protected": bool(store.connector_key), "connected": False, "saved_session": False}
         if store.connector_key:
             result["connected"] = bool(vault().get("gmail"))
-            result["saved_session"] = bool(vault().get("browser"))
+            result["saved_session"] = bool((vault().get("browser") or {}).get("cookies"))
         return result
 
     def check_csrf():
@@ -451,8 +481,10 @@ def register_routes(app, store, *, admin_required, can_access):
             last_read = {"id": selected_folder, "fields": fields, "checked_at": directory.stamp(snapshot), "listed": True} if fields else None
         else:
             last_read = store.successful_read(user, job_id=selected_id)
+        gmail = gmail_status()
         return app.jinja_env.get_template("edof_server_test.html").render(
-            csrf=csrf, config=configuration(), gmail=gmail_status(), gmail_notice={
+            csrf=csrf, config=configuration(), gmail=gmail,
+            efp=store.connection_status(user, gmail["saved_session"]), gmail_notice={
                 "connected": "Gmail est connecté. Vous pouvez lancer un essai serveur.",
                 "disconnected": "La connexion Gmail et la session EFP enregistrées sur Render ont été effacées. Vous pouvez aussi retirer l’autorisation dans votre compte Google.",
                 "canceled": "La connexion Google n’a pas été autorisée.",
@@ -471,6 +503,12 @@ def register_routes(app, store, *, admin_required, can_access):
     def status():
         user = results_owner()
         return jsonify(ok=True, config=configuration(), gmail=gmail_status(), jobs=store.latest(user))
+
+    @bp.get("/admin/edof-test/server/connection-status")
+    @admin_required
+    def connection_status():
+        user = results_owner()
+        return jsonify(store.connection_status(user, gmail_status()["saved_session"]))
 
     @bp.post("/admin/edof-test/server/gmail/connect")
     @admin_required
