@@ -12,7 +12,7 @@ import re
 import sys
 import time
 import unicodedata
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit
 
 from edof_readonly_test import (
     ATTENDEE_FIELDS, INFO_FIELDS, SIRET, TEST_SERVICE_ID, TOP_FIELDS,
@@ -250,6 +250,13 @@ def private_page(url):
             and route.startswith("/") and route != "/redirect-to-mire-connexion")
 
 
+def confirmed_dashboard(url, signals):
+    parsed = urlsplit(url)
+    return (parsed.scheme == "https" and parsed.netloc == EDOF_HOST
+            and private_page(url) and parsed.fragment.partition("?")[0].rstrip("/") == "/tableau-de-bord"
+            and signals.get("chooser_action") == "confirm" and signals.get("workspace_status") == 200)
+
+
 def permitted_request(url, method, *, edof_identity=False, frame_url=""):
     """Block business mutations even if the frontend initiates one itself."""
     parsed = urlsplit(url)
@@ -448,7 +455,7 @@ def select_establishment(page, step, signals):
     if step == "selected":
         if verified_chooser and confirm.count() == 1 and confirm.is_enabled():
             signals["chooser_action"] = "confirm"
-            confirm.click()
+            confirm.click(no_wait_after=True)
             return "confirmed"
         return step
     # The live EDOF selector is Angular Material. Open its visible trigger
@@ -542,7 +549,7 @@ def select_establishment(page, step, signals):
             return "searched"
         if labelled.count() == 1 and confirm.count() == 1 and confirm.is_enabled():
             signals["chooser_action"] = "confirm"
-            confirm.click()
+            confirm.click(no_wait_after=True)
             return "confirmed"
     return step
 
@@ -635,7 +642,9 @@ def run_browser(spec):
                     folder_id = item.get("id", "")
                     if isinstance(folder_id, str) and re.fullmatch(r"[0-9]{6,20}", folder_id):
                         items.append({"id": folder_id, "first_name": attendee.get("firstName"), "last_name": attendee.get("lastName")})
-                lists.append({"items": items, "total": raw.get("numberOfItems")})
+                name = identity(spec.get("last_name"))
+                filtered = bool(name) and any(name == identity(value) for _, value in parse_qsl(parsed.query))
+                lists.append({"items": items, "total": raw.get("numberOfItems"), "filtered": filtered})
                 del lists[:-2]
             elif isinstance(raw, dict) and raw.get("id") == tail:
                 # Keep only the specifically requested dossier, or a shortlisted
@@ -678,7 +687,13 @@ def run_browser(spec):
                 nonlocal otp_attempted, gmail_code_used
                 # Only derive categorical signals; never return the page body,
                 # which could contain identity information or an auth code.
-                text = page.locator("body").inner_text(timeout=3000)
+                if stage in {"organism", "search", "dossier"}:
+                    bodies = page.locator("body").all_inner_texts()
+                    if not bodies:
+                        return "loading"
+                    text = bodies[0]
+                else:
+                    text = page.locator("body").inner_text(timeout=3000)
                 code = classify_text(text)
                 if code and code != "verification_code":
                     raise StopRun(code)
@@ -776,7 +791,12 @@ def run_browser(spec):
             dossier_menu = page.locator('a[href$="/dossiers/en-cours"]')
             deadline = time.monotonic() + 35
             while time.monotonic() < deadline:
-                screen = checkpoint()
+                try:
+                    screen = checkpoint()
+                except BrowserTimeout:
+                    if confirmed_dashboard(page.url, signals):
+                        break
+                    raise
                 if private_page(page.url):
                     if location_category(page.url) == "edof_select_siret":
                         try:
@@ -797,29 +817,42 @@ def run_browser(spec):
                     chooser = location_category(page.url) == "edof_select_siret" or screen == "select_organisation"
                     if chooser:
                         signals["establishment_step"] = establishment_step
-                        establishment_step = select_establishment(page, establishment_step, signals)
+                        try:
+                            establishment_step = select_establishment(page, establishment_step, signals)
+                        except BrowserTimeout:
+                            # Continue can remove the control before Playwright
+                            # finishes waiting for it. Never submit it twice.
+                            if signals.get("chooser_action") != "confirm":
+                                raise
+                            establishment_step = "confirmed"
+                            if confirmed_dashboard(page.url, signals):
+                                break
                 page.wait_for_timeout(300)
             else:
                 raise StopRun("workspace_dialog_required" if signals.get("dialog_kind") in {"empty", "loading"} else "organism_selection_required")
 
             if not spec.get("folder_id"):
                 stage = "search"
-                page.goto(LIST_URL, wait_until="domcontentloaded")
-                page.get_by_text(re.compile(r"^Par nom d(?:u|e) stagiaire$", re.I)).click()
+                page.goto(LIST_URL, wait_until="commit", timeout=30000)
+                page.get_by_text(re.compile(r"^Par nom d(?:u|e) stagiaire$", re.I)).click(no_wait_after=True)
                 search = page.get_by_placeholder(
                     re.compile(r"rechercher un dossier de formation|nom (?:du |de )?stagiaire", re.I)
                 ).and_(page.locator("input:visible"))
                 search.wait_for(state="visible")
                 search.fill(spec["last_name"])
                 lists.clear()
-                search.press("Enter")
+                search.press("Enter", no_wait_after=True)
                 deadline = time.monotonic() + 15
-                while not lists and time.monotonic() < deadline:
+                result = None
+                while time.monotonic() < deadline:
+                    result = next((row for row in reversed(lists) if row["filtered"]), None)
+                    if result:
+                        break
                     checkpoint()
                     page.wait_for_timeout(250)
                 if not lists:
                     raise StopRun("search_unconfirmed")
-                result = lists[-1]
+                result = result or lists[-1]
                 candidates = [item for item in result["items"] if identity(item["first_name"]) == identity(spec["first_name"]) and identity(item["last_name"]) == identity(spec["last_name"])]
                 # Never infer uniqueness from a truncated/paginated result.
                 if not isinstance(result["total"], int) or result["total"] > len(result["items"]):
@@ -834,7 +867,7 @@ def run_browser(spec):
 
             stage = "dossier"
             folder_id = spec["selected_id"]
-            page.goto(DETAIL_PREFIX + folder_id, wait_until="domcontentloaded")
+            page.goto(DETAIL_PREFIX + folder_id, wait_until="commit", timeout=30000)
             deadline = time.monotonic() + 20
             while folder_id not in details and time.monotonic() < deadline:
                 checkpoint()
