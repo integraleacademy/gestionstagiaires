@@ -34,6 +34,38 @@ OTP_SELECTOR = 'input[autocomplete="one-time-code"]:visible, input[name="otp"]:v
 SIRET_TEXT = re.compile(r"(?<!\d)" + r"[\s.]*".join(SIRET) + r"(?!\d)")
 CHOOSER_ROUTE = re.compile(r"(?:choix|choisir|select|selection|selectionner)[-/]?(?:du[-/]|de[-/]l[-/])?(?:sirets?|organismes?|etablissements?)\b")
 CHOOSER_TEXT = re.compile(r"\b(?:choisir|choisissez|choix|selection|selectionner|selectionnez)\b.{0,55}\b(?:siret|organisme|etablissement)s?\b")
+CONFIRM_ESTABLISHMENT = re.compile(
+    r"^(?:(?:Valider|Confirmer)(?: (?:mon choix|ma sélection|le SIRET))?|Continuer|"
+    r"Acc[ée]der(?: à (?:mon|votre|cet|l[’'])\s*espace(?: (?:professionnel|EDOF))?| à EDOF)?|"
+    r"(?:Me |Se )?connecter(?: à (?:mon espace|EDOF))?)$", re.I)
+ESTABLISHMENT_STEPS = {"waiting", "opened", "filtered", "searched", "selected", "confirmed"}
+SIRET_FIELD = re.compile(r"siret|[ée]tablissement|organisme", re.I)
+CHOOSER_CONTROLS = {
+    "list": 'select:visible, [role="listbox"]:visible',
+    "combo": '[role="combobox"]:visible, [aria-haspopup="listbox"]:visible',
+    "radio": 'input[type="radio"]:visible, [role="radio"]:visible',
+    "input": 'input:not([type]):visible, input[type="text"]:visible, input[type="search"]:visible, input[type="tel"]:visible, input[type="number"]:visible',
+    "button": 'button:visible, input[type="submit"]:visible, [role="button"]:visible',
+}
+CHOOSER_WORDS = frozenset("""
+    acceder acces a au aux avec ce cet cette changer choix choisir choisissez confirmer
+    connexion connecter connectez continuer edof effectuer entrer etablissements etablissement
+    espace formation inscription l la le les liste ma me mon organisme organismes professionnel
+    professionnels rechercher recherche saisir se selection selectionnez selectionner siret sirets
+    sous suivant suivante un une valider validation votre vous de des du en mes sur
+""".split())
+
+
+def standard_choice_labels(labels):
+    """Only known navigation words may appear in the private test diagnostics."""
+    result = []
+    for label in labels:
+        words = identity(label).split()
+        if 0 < len(words) <= 10 and all(word in CHOOSER_WORDS for word in words):
+            value = " ".join(words)
+            if value not in result:
+                result.append(value)
+    return result[:8]
 
 
 def session_cookies(state):
@@ -191,6 +223,12 @@ def diagnostic_summary(location, password_visible, error_visible, signals):
         result["private_route"] = safe_edof_route(f"https://{EDOF_HOST}" + fragment)
         if isinstance(signals.get("expected_establishment_visible"), bool):
             result["expected_establishment_visible"] = signals["expected_establishment_visible"]
+        if signals.get("establishment_step") in ESTABLISHMENT_STEPS:
+            result["establishment_step"] = signals["establishment_step"]
+        if isinstance(signals.get("chooser_controls"), list):
+            result["chooser_controls"] = [kind for kind in CHOOSER_CONTROLS if kind in signals["chooser_controls"]]
+        if isinstance(signals.get("chooser_actions"), list):
+            result["chooser_actions"] = standard_choice_labels(signals["chooser_actions"])
     for key in ("login_post_status", "callback_status", "edof_token_status", "workspace_status", "folder_list_status", "folder_detail_status", "blocked_efp_posts", "blocked_edof_posts", "blocked_other_posts", "invalid_form_fields"):
         value = signals.get(key)
         if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 9999:
@@ -213,10 +251,17 @@ class StopRun(Exception):
         self.code = code
 
 
-def select_establishment(page):
-    """Select only this SIRET in an existing EDOF workspace choice."""
-    # Some versions display the registration number in groups or as a
-    # native select option. Do not submit forms for a new habilitation.
+def select_establishment(page, step):
+    """Advance one visible control at a time in the existing workspace chooser."""
+    if step == "confirmed":
+        return step
+    verified_chooser = location_category(page.url) == "edof_select_siret"
+    confirm = page.get_by_role("button", name=CONFIRM_ESTABLISHMENT).filter(visible=True)
+    if step == "selected":
+        if verified_chooser and confirm.count() == 1 and confirm.is_enabled():
+            confirm.click()
+            return "confirmed"
+        return step
     for select in page.locator("select:visible").all():
         matched = []
         for index, option in enumerate(select.locator("option").all()):
@@ -224,12 +269,42 @@ def select_establishment(page):
                 matched.append(index)
         if len(matched) == 1:
             select.select_option(index=matched[0])
-            return True
+            return "selected"
+    radio = page.get_by_role("radio", name=SIRET_TEXT).or_(page.locator(f'input[type="radio"][value="{SIRET}"]')).filter(visible=True)
+    if radio.count() == 1:
+        radio.check()
+        return "selected"
     choice = page.get_by_text(SIRET_TEXT).filter(visible=True)
     if choice.count() == 1:
         choice.click()
-        return True
-    return False
+        return "selected"
+    if not verified_chooser:
+        return step
+
+    # The exact /select-sirets screen may initially show only a collapsed
+    # combobox or a search field. Only filter with the configured SIRET.
+    fields = page.locator(CHOOSER_CONTROLS["input"])
+    labelled = fields.and_(page.get_by_label(SIRET_FIELD).or_(page.get_by_placeholder(SIRET_FIELD)))
+    if labelled.count() == 1:
+        fields = labelled
+    if step in {"waiting", "opened"} and fields.count() == 1 and fields.is_editable():
+        fields.fill(SIRET)
+        return "filtered"
+    if step == "waiting":
+        dropdown = page.locator('[role="combobox"]:not(select):visible, [aria-haspopup="listbox"]:visible, button.dropdown-toggle:visible').or_(
+            page.get_by_role("button", name=re.compile(r"^(?:Choisir|S[ée]lectionner|Choisissez|S[ée]lectionnez)\b.*(?:SIRET|[ée]tablissement|organisme)", re.I)))
+        if dropdown.count() == 1 and dropdown.is_enabled() and dropdown.get_attribute("aria-expanded") != "true":
+            dropdown.click()
+            return "opened"
+    if step == "filtered" and fields.count() == 1 and fields.input_value() == SIRET:
+        search = page.get_by_role("button", name=re.compile(r"^Rechercher$", re.I)).filter(visible=True)
+        if search.count() == 1 and search.is_enabled():
+            search.click()
+            return "searched"
+        if labelled.count() == 1 and confirm.count() == 1 and confirm.is_enabled():
+            confirm.click()
+            return "confirmed"
+    return step
 
 
 def run_browser(spec):
@@ -346,6 +421,12 @@ def run_browser(spec):
                         body = page.locator("body").inner_text(timeout=2000)
                         signals["expected_establishment_visible"] = bool(SIRET_TEXT.search(body))
                         signals["edof_screen"] = workspace_screen(body)
+                        if location_category(page.url) == "edof_select_siret":
+                            signals["chooser_controls"] = [kind for kind, selector in CHOOSER_CONTROLS.items()
+                                                          if page.locator(selector).count()]
+                            buttons = page.locator(CHOOSER_CONTROLS["button"] + ", a[href]:visible, [role=combobox]:visible")
+                            labels = buttons.evaluate_all("""els => els.map(e => e.getAttribute('aria-label') || e.innerText || e.title || '')""")
+                            signals["chooser_actions"] = standard_choice_labels(labels)
                     return diagnostic_summary(page.url,
                         page.locator('input[type="password"]:visible').count() > 0,
                         page.locator('#input-error:visible, .alert-error:visible, .pf-m-danger:visible, .fr-alert--error:visible').count() > 0,
@@ -451,7 +532,7 @@ def run_browser(spec):
             stage = "organism"
             # The OAuth callback may open the SPA before its organisation
             # session is ready. Let EDOF complete that flow before navigating.
-            choice_clicked = False
+            establishment_step = "waiting"
             dossier_menu = page.locator('a[href$="/dossiers/en-cours"]')
             deadline = time.monotonic() + 35
             while time.monotonic() < deadline:
@@ -462,8 +543,9 @@ def run_browser(spec):
                     if signals.get("workspace_status") or dossier_menu.count():
                         break
                     chooser = location_category(page.url) == "edof_select_siret" or screen == "select_organisation"
-                    if chooser and not choice_clicked:
-                        choice_clicked = select_establishment(page)
+                    if chooser:
+                        establishment_step = select_establishment(page, establishment_step)
+                        signals["establishment_step"] = establishment_step
                 page.wait_for_timeout(300)
             else:
                 raise StopRun("organism_selection_required")

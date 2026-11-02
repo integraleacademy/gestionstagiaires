@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+from unittest.mock import Mock
 
 from flask import Flask, jsonify, session
 import pytest
@@ -105,6 +106,30 @@ def test_workspace_choice_recognizes_existing_establishment_and_keeps_unknowns_p
                                        {"expected_establishment_visible": True})
     assert result["private_route"] == "/choix-etablissement/*" and result["expected_establishment_visible"]
     assert "secret" not in json.dumps(result) and "private-name" not in json.dumps(result)
+
+
+def test_establishment_confirmation_requires_one_enabled_button_on_the_chooser():
+    page = Mock()
+    page.url = f"https://{browser.EDOF_HOST}/espace-prive/html/#/select-sirets"
+    confirm = page.get_by_role.return_value.filter.return_value
+    confirm.count.return_value = 1
+    confirm.is_enabled.return_value = False
+    assert browser.select_establishment(page, "selected") == "selected"
+    confirm.is_enabled.return_value = True
+    confirm.count.return_value = 2
+    assert browser.select_establishment(page, "selected") == "selected"
+    confirm.count.return_value = 1
+    page.url = browser.LIST_URL
+    assert browser.select_establishment(page, "selected") == "selected"
+    confirm.click.assert_not_called()
+    page.url = f"https://{browser.EDOF_HOST}/espace-prive/html/#/select-sirets"
+    assert browser.select_establishment(page, "selected") == "confirmed"
+    assert browser.select_establishment(page, "confirmed") == "confirmed"
+    confirm.click.assert_called_once()
+    assert not browser.CONFIRM_ESTABLISHMENT.fullmatch("Valider le service fait")
+    assert not browser.CONFIRM_ESTABLISHMENT.fullmatch("Accepter les conditions")
+    assert browser.standard_choice_labels(["Valider mon choix", "Valider mon choix", "Exemple 123456",
+                                          "Personne Privée", "À mon espace"]) == ["valider mon choix", "a mon espace"]
 
 
 def test_blocked_request_diagnostics_do_not_disclose_paths_ids_queries_or_body_values():
