@@ -74,8 +74,9 @@ code. Infrastructure access logs must protect OAuth callback query parameters.
 - 210-second subprocess deadline; terminate the process group and clean its
   temporary profile even after timeout/crash. Only required runtime, EFP,
   Google client and derived encryption-key variables reach the child process.
-- Browser methods are restricted to reads plus EFP authentication/OIDC POSTs.
-  Every EDOF business mutation remains blocked.
+- Browser methods are restricted to reads, EFP authentication, and the same-origin
+  EDOF identity exchange at `/idp/edof/api/v2/token` after an EFP callback or
+  with a saved verified session. Every EDOF business mutation remains blocked.
 - Name search is exact-normalized in en-cours; homonyms, missing totals and
   paginated results are not automatically selected or associated to business data.
 - Only the requested dossier/SIRET and the normalized observation schema are
@@ -85,9 +86,9 @@ code. Infrastructure access logs must protect OAuth callback query parameters.
 
 ## Acceptance evidence still required
 
-The earlier real test reached the EFP verification-code step; no server-side
-authentication or dossier read succeeded. Unit tests of OAuth, encryption,
-message filtering and errors do not prove external integration.
+The live server verified a fresh Gmail code and received the EFP callback.
+The subsequent EDOF identity exchange was identified on Test V2. Dossier
+reading and session reuse require a successful live read.
 
 Before claiming autonomy, verify initial Google authorization, fresh EFP login
 with automatic code, actual dossier read, session reuse after process restart,
