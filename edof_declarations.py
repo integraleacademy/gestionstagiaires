@@ -116,13 +116,16 @@ def begin_send(directory, spec):
         return row.rowcount == 1
 
 
-def complete(directory, spec, code):
+def complete(directory, spec, code, confirmed_state=None):
     with closing(database(directory)) as db, db:
         row = db.execute("SELECT status FROM cpf_declarations WHERE token=?", (spec["operation"],)).fetchone()
         if not row or row["status"] in {"confirmed", "paused"}:
             return
         state = ("confirmed" if code == "declaration_confirmed" else
                  "uncertain" if row["status"] in {"sending", "uncertain"} and code != "declaration_refused" else "review")
+        if state == "confirmed" and confirmed_state:
+            db.execute("UPDATE cpf_declarations SET intent=json_set(intent,'$.confirmed_state',?) WHERE token=?",
+                       (confirmed_state, spec["operation"]))
         db.execute("UPDATE cpf_declarations SET status=?,detail=?,changed=?,checks=checks+? WHERE token=?",
                    (state, code, time.time(), int(spec["mode"] == "reconcile"), spec["operation"]))
 

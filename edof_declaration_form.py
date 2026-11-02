@@ -205,12 +205,15 @@ def binding_values(data, keys):
 def transmit(page, spec, fields, gate, reload_fields):
     intent = spec["intent"]
 
-    def result(code):
-        return {"code": code, "stage": "declaration"}
+    def result(code, verified=None):
+        outcome = {"code": code, "stage": "declaration"}
+        if verified is not None:
+            outcome["confirmed_state"] = verified["state"]
+        return outcome
     if not verify_identity(fields, spec):
         return result("declaration_changed")
     if is_recorded(fields, intent):
-        return result("declaration_confirmed")
+        return result("declaration_confirmed", fields)
     if spec["mode"] == "reconcile":
         return result("declaration_unverified")
     entry = intent["action"] == "entry_training"
@@ -278,7 +281,7 @@ def transmit(page, spec, fields, gate, reload_fields):
         return result("declaration_unverified")
     fresh = reload_fields()
     if fresh and verify_identity(fresh, spec) and is_recorded(fresh, intent):
-        return result("declaration_confirmed")
+        return result("declaration_confirmed", fresh)
     if gate.response_status in {400, 401, 403, 404, 422} and fresh and verify_identity(fresh, spec) and fresh.get("state") == fields.get("state"):
         return result("declaration_refused")
     return result("declaration_unverified")

@@ -32,6 +32,7 @@ from edof_gmail import Vault, GmailError, connector_key, oauth_configured, autho
 
 JOB_TIMEOUT = 210
 DIRECTORY_TIMEOUT = 420
+DECLARATION_TIMEOUT = 360
 RETENTION = 86400
 AUTH_MODES = {"read", "directory", "declare", "reconcile", "inspect_forms"}
 MESSAGES = {
@@ -138,8 +139,8 @@ class ServerTestStore:
         db.execute("CREATE TABLE IF NOT EXISTS directory_requested (owner TEXT PRIMARY KEY)")
         db.execute("DELETE FROM jobs WHERE created < ?", (time.time() - RETENTION,))
         db.execute("UPDATE jobs SET finished = ?, result = ? WHERE finished IS NULL "
-                   "AND created < ? - CASE WHEN mode = 'directory' THEN ? ELSE ? END",
-                   (time.time(), json.dumps({"code": "interrupted"}), time.time() - 30, DIRECTORY_TIMEOUT, JOB_TIMEOUT))
+                   "AND created < ? - CASE WHEN mode = 'directory' THEN ? WHEN mode IN ('declare','reconcile') THEN ? ELSE ? END",
+                   (time.time(), json.dumps({"code": "interrupted"}), time.time() - 30, DIRECTORY_TIMEOUT, DECLARATION_TIMEOUT, JOB_TIMEOUT))
         db.commit()
         return db
 
@@ -340,12 +341,13 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None):
         process = subprocess.Popen([sys.executable, str(Path(__file__).with_name("edof_server_browser.py"))],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             text=True, env=child_env, start_new_session=True, pass_fds=(lock_fd,) if provider_fd is None else (lock_fd, provider_fd))
-        output, _ = process.communicate(json.dumps(spec), timeout=DIRECTORY_TIMEOUT if spec["mode"] == "directory" else JOB_TIMEOUT)
+        timeout = {"directory": DIRECTORY_TIMEOUT, "declare": DECLARATION_TIMEOUT, "reconcile": DECLARATION_TIMEOUT}
+        output, _ = process.communicate(json.dumps(spec), timeout=timeout.get(spec["mode"], JOB_TIMEOUT))
         if process.returncode == 0 and len(output) < 32768:
             parsed = json.loads(output)
             if isinstance(parsed, dict) and parsed.get("code") in MESSAGES:
                 # The runner emits only the explicitly normalized dossier schema.
-                result = {key: parsed[key] for key in ("code", "stage", "fields", "fresh_session", "gmail_code_used", "session_saved", "candidate_count", "blocked_writes", "diagnostics") if key in parsed}
+                result = {key: parsed[key] for key in ("code", "stage", "fields", "confirmed_state", "fresh_session", "gmail_code_used", "session_saved", "candidate_count", "blocked_writes", "diagnostics") if key in parsed}
     except subprocess.TimeoutExpired:
         result = {"code": "timeout"}
     except Exception:
@@ -373,7 +375,7 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None):
                     # can retry local analysis without replaying external work.
                     result.setdefault("diagnostics", {})["local_analysis_pending"] = True
             if spec["mode"] in {"declare", "reconcile"}:
-                declarations.complete(store.directory, spec, result["code"])
+                declarations.complete(store.directory, spec, result["code"], result.get("confirmed_state"))
                 if result["code"] == "declaration_confirmed":
                     store.request_directory(spec["owner"])
             store.finish(job_id, result)
