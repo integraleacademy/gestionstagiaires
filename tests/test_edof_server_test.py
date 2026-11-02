@@ -144,6 +144,39 @@ def test_completed_siret_confirmation_requires_the_official_dashboard_and_worksp
     assert not browser.confirmed_dashboard(url, {"chooser_action": "confirm", "workspace_status": 403})
 
 
+def test_restore_requires_the_private_workspace_and_goes_there_first():
+    page, context, checkpoint = Mock(), Mock(), Mock()
+    page.url = browser.LIST_URL
+    assert not browser.restored_workspace(page, {})
+    assert browser.open_workspace_or_login(page, context, True, {"workspace_status": 200}, checkpoint)
+    page.goto.assert_called_once_with(browser.LIST_URL, wait_until="domcontentloaded", timeout=45000)
+    context.clear_cookies.assert_not_called()
+    page.url = browser.LOGIN_URL
+    assert not browser.restored_workspace(page, {"workspace_status": 200})
+    page.url = f"https://{browser.EFP_HOST}/auth/"
+    page.locator.return_value.count.return_value = 1
+    page.goto.reset_mock()
+    assert not browser.open_workspace_or_login(page, context, False, {}, checkpoint)
+    page.goto.assert_called_once_with(browser.LOGIN_URL, wait_until="domcontentloaded", timeout=45000)
+
+
+def test_empty_restored_shell_can_start_sso_without_clearing_efp_or_replaying_credentials(monkeypatch):
+    page, context, checkpoint = Mock(), Mock(), Mock()
+    page.locator.return_value.all_inner_texts.return_value = [""]
+    page.locator.return_value.count.return_value = 1
+    def navigate(url, **kwargs):
+        page.url = (f"https://{browser.EDOF_HOST}/espace-prive/html/" if url == browser.LIST_URL
+                    else f"https://{browser.EFP_HOST}/auth/")
+    page.goto.side_effect = navigate
+    monkeypatch.setattr(browser.time, "monotonic", Mock(side_effect=[0, 31, 32, 33]))
+    assert not browser.open_workspace_or_login(page, context, True, {}, checkpoint)
+    assert [call.args[0] for call in page.goto.call_args_list] == [browser.LIST_URL, browser.LOGIN_URL]
+    domain = context.clear_cookies.call_args.kwargs["domain"]
+    assert domain.fullmatch(browser.EDOF_HOST) and domain.fullmatch(".moncompteformation.gouv.fr")
+    assert not domain.fullmatch(browser.EFP_HOST) and not domain.fullmatch("other.invalid")
+    checkpoint.assert_called_once()
+
+
 def test_hash_navigation_timeout_needs_the_requested_url_and_its_successful_response():
     page = Mock()
     url = browser.DETAIL_PREFIX + "123456789"
