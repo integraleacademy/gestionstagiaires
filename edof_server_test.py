@@ -209,6 +209,21 @@ def execute_job(store, job_id, spec, lock_fd):
             os.close(lock_fd)
 
 
+def last_read_stalled_at_login(jobs):
+    if not jobs:
+        return False
+    last = jobs[0]
+    diag = last.get("diagnostics") or {}
+    return (last.get("finished") is True and last.get("mode") == "read"
+            and last.get("stage") == "login_page" and last.get("code") == "authentication_unconfirmed"
+            and last.get("gmail_code_used") is False
+            and diag.get("location") in {"edof_initialisation", "edof_folder_list", "edof_login_redirect"}
+            and diag.get("edof_screen") in {"empty", "loading", "other", "session_expired"}
+            and diag.get("error_banner_visible") is False and diag.get("password_form_visible") is False
+            and not any(diag.get(key) for key in ("workspace_status", "workspace_denied", "login_post_status",
+                                                  "blocked_edof_posts", "blocked_efp_posts", "blocked_other_posts")))
+
+
 def start_job(store, owner, spec):
     store.directory.mkdir(parents=True, exist_ok=True)
     lock_fd = os.open(store.directory / "edof_server_test.lock", os.O_CREAT | os.O_RDWR, 0o600)
@@ -217,6 +232,10 @@ def start_job(store, owner, spec):
             fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise ValueError("Un navigateur d’essai fonctionne déjà sur ce serveur.") from None
+        # A new, explicitly started read can use standard sign-in if the last
+        # run never reached an EFP form or the private workspace.
+        if spec["mode"] == "read" and last_read_stalled_at_login(store.latest(owner)):
+            spec = {**spec, "fresh_login": True}
         job_id = store.reserve(owner, spec["mode"])
         thread = threading.Thread(target=execute_job, args=(store, job_id, spec, lock_fd), daemon=True)
         thread.start()

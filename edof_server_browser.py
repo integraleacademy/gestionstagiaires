@@ -517,6 +517,8 @@ def diagnostic_summary(location, password_visible, error_visible, signals):
     if private_page(location):
         fragment = urlsplit(location).fragment.partition("?")[0]
         result["private_route"] = safe_edof_route(f"https://{EDOF_HOST}" + fragment)
+        if signals.get("workspace_denied") is True:
+            result["workspace_denied"] = True
         if signals.get("search_step") in {"opening_list", "name_mode", "input", "submit", "results"}:
             result["search_step"] = signals["search_step"]
         for key in ("name_tab_visible", "name_field_visible", "folder_field_visible"):
@@ -702,7 +704,8 @@ def run_browser(spec):
     if spec["mode"] == "read" and os.environ.get("EDOF_CONNECTOR_KEY"):
         try:
             vault = Vault(os.environ["EDOF_CONNECTOR_DIRECTORY"], os.environ["EDOF_CONNECTOR_KEY"])
-            saved = vault.get("browser")
+            if not spec.get("fresh_login"):
+                saved = vault.get("browser")
         except Exception:
             return {"code": "private_storage_unavailable"}
 
