@@ -33,10 +33,18 @@
   if ((!preview || freePractice) && !config.completed) {
     try { answers = {...answers, ...JSON.parse(sessionStorage.getItem(key) || '{}')}; } catch (_) { /* optional draft */ }
     for (const [id, item] of Object.entries(config.saved.practice_diagnostics || {})) {
-      if (fields.has(id) && JSON.stringify(answers[id]) === JSON.stringify(config.saved.practice_answers?.[id])) results.set(id, {correct:item.correct});
+      if (fields.has(id) && sameAnswer(answers[id], config.saved.practice_answers?.[id])) results.set(id, {correct:item.correct});
     }
   }
   answers = Object.fromEntries(Object.entries(answers).filter(([id]) => definitions.has(id)));
+  function sameAnswer(choice, saved) {
+    if (typeof choice === 'string') return choice === saved;
+    if (!choice || typeof choice !== 'object' || Array.isArray(choice) ||
+        !saved || typeof saved !== 'object' || Array.isArray(saved)) return false;
+    const rows = Object.keys(saved);
+    return rows.length === Object.keys(choice).length && rows.every(row =>
+      Object.hasOwn(choice, row) && choice[row] === saved[row]);
+  }
   function restore() {
     fields.forEach((el,id) => {
       el.querySelectorAll('input[type=radio]').forEach(input => { input.checked = input.value === answers[id]; });

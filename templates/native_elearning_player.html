@@ -363,7 +363,7 @@
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261102-completion') }}" defer></script>
 {% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261102-completion') }}" defer></script>{% endif %}
-{% if activity.practice and activity.practice.mode == 'journey' %}<script src="{{ url_for('static', filename='js/vtc-journey.js', v='20261102-vtc-completion') }}" defer></script>{% endif %}
+{% if activity.practice and activity.practice.mode == 'journey' %}<script src="{{ url_for('static', filename='js/vtc-journey.js', v='20261102-vtc-reprise') }}" defer></script>{% endif %}
 {% if activity.a3p and activity.a3p.kind == 'case' %}<script src="{{ url_for('static', filename='js/a3p-elearning.js', v='20261010-2') }}" defer></script>{% endif %}
 {% if activity.production %}<script src="{{ url_for('static', filename='js/vtc-production.js' if course.training_label == 'VTC' else 'js/aps62-production.js', v='20261012-autonomous-v2' if course.training_label == 'VTC' else '20261012-v12') }}" defer></script>{% endif %}
 </body>
