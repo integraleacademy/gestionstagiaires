@@ -6,10 +6,15 @@ const path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../static/js/vtc-journey.js'),'utf8');
 const playerSource=fs.readFileSync(path.join(__dirname,'../static/js/native-elearning-player.js'),'utf8');
 
-function fixture({preview=false,saved={},draft=null,adaptive=false,player=false,missingPractice=false}={}) {
+function fixture({preview=false,saved={},draft=null,adaptive=false,player=false,missingPractice=false,rowExercise=false}={}) {
   const config={courseVersion:'v3',activityId:'dossier',saved,completed:false,weakRefs:['A.02'],
-    practice:{adaptive,exercises:[{id:'one',kind:'single',competency:'A.01'},{id:'two',kind:'single',competency:'A.02'}]}};
-  const fields=['one','two'].map(id=>`<fieldset data-exercise-id="${id}" hidden><legend>Étape</legend><h3>Question ${id}</h3><input type="radio" name="${id}" value="yes"><input type="radio" name="${id}" value="no"><div data-step-feedback hidden></div></fieldset>`).join('');
+    practice:{adaptive,exercises:[{id:'one',kind:'single',competency:'A.01'},{id:'two',kind:rowExercise?'order':'single',competency:'A.02'}]}};
+  const fields=config.practice.exercises.map(({id,kind})=>{
+    const controls=kind==='order'
+      ? ['last','first'].map(row=>`<select data-row-id="${row}"><option></option><option>1</option><option>2</option></select>`).join('')
+      : `<input type="radio" name="${id}" value="yes"><input type="radio" name="${id}" value="no">`;
+    return `<fieldset data-exercise-id="${id}" hidden><legend>Étape</legend><h3>Question ${id}</h3>${controls}<div data-step-feedback hidden></div></fieldset>`;
+  }).join('');
   const dom=new JSDOM(`<section data-vtc-journey><p data-vtc-priority hidden></p><progress max="2"></progress><strong data-vtc-step></strong><form>${fields}<button type="button" data-vtc-prev>previous</button><button type="submit" data-vtc-check>check</button><button type="button" data-vtc-next hidden>next</button></form><section data-vtc-review hidden><h3>Bilan</h3><p data-vtc-summary></p><div data-vtc-weak></div><button data-vtc-retry>retry</button><button data-vtc-all>all</button><button data-vtc-verify hidden>verify</button></section><p data-vtc-message></p><section data-vtc-simulator data-config='{"cost_km":0.3}'><input type="range" data-sim-price min="20" max="200" value="100"><input type="range" data-sim-km min="10" max="150" value="50"><select data-sim-commission><option value="20">20</option></select><output data-sim-price-label></output><output data-sim-km-label></output><output data-sim-result></output></section></section><script type="application/json" id="vtcJourneyConfig">${JSON.stringify(config)}</script><script type="application/json" id="${preview?'nativePreviewConfig':'nativeElearningConfig'}">{"practiceUrl":"/practice","answerUrl":"/preview","csrfToken":"csrf","accessToken":"access"}</script>`,{url:'https://example.test/espace/alice/module',runScripts:'outside-only'});
   const {window}=dom,{document}=window,calls=[];let failure=false;
   const key='vtc-journey:/espace/alice/module:v3:dossier';
@@ -20,7 +25,7 @@ function fixture({preview=false,saved={},draft=null,adaptive=false,player=false,
     if (['/start', '/heartbeat', '/complete'].includes(url)) {
       return {ok:true, json:async()=>({ok:true, tracking_session_id:'session', progress:{}})};
     }
-    const feedback=Object.entries(body.practice_answers).map(([id,v])=>({id,correct:v==='yes',explanation:'Explication <script>danger</script>',coaching:'Revoir le cours',correction:['Oui']}));
+    const feedback=Object.entries(body.practice_answers).map(([id,v])=>({id,correct:rowExercise && id==='two' ? v?.first==='1' && v?.last==='2' : v==='yes',explanation:'Explication <script>danger</script>',coaching:'Revoir le cours',correction:['Oui']}));
     return{ok:true,json:async()=>({ok:true,correct:feedback.every(f=>f.correct),feedback})};
   };
   if (player) {
@@ -95,6 +100,27 @@ test('the player submits the verified VTC answers after resume and opens the nex
     assert.equal(f.window.location.hash, '#next-lesson');
     assert.equal(f.window.sessionStorage.getItem(f.key), null);
   } finally { f.close(); }
+});
+
+test('a saved ranking resumes when the same row choices arrive in another JSON order', async () => {
+  const saved = {practice_answers:{one:'yes', two:{first:'1', last:'2'}},
+    practice_diagnostics:{one:{correct:true}, two:{correct:true}}};
+  const f = fixture({rowExercise:true, player:true, saved, draft:{two:{last:'2', first:'1'}}});
+  try {
+    await f.settle();
+    assert.match(f.q('[data-vtc-summary]').textContent, /Activité réussie/);
+    await f.click('#nativeActionButton');
+    assert.deepEqual(f.calls.find(call=>call.url==='/complete').body.practice_answers, saved.practice_answers);
+    assert.equal(f.window.location.hash, '#next-lesson');
+  } finally { f.close(); }
+  for (const two of [{first:'2', last:'1'}, {first:'1'}, {first:'1', last:'2', extra:'1'}]) {
+    const changed = fixture({rowExercise:true, saved, draft:{two}});
+    try {
+      await changed.settle();
+      assert.equal(changed.q('[data-exercise-id=two]').hidden, false);
+      assert.throws(()=>changed.window.aps62Practice.collectForCompletion());
+    } finally { changed.close(); }
+  }
 });
 
 test('an unverified VTC journey cannot post completion from the player', async () => {
