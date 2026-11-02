@@ -207,6 +207,35 @@ def test_edof_dialog_only_closes_a_dismissible_notice():
     assert "personne" not in json.dumps(signals) and "12345" not in json.dumps(signals)
 
 
+@pytest.mark.parametrize("label,refuse", [
+    ("close Tout refuser et fermer", True), ("Continuer sans accepter", True),
+    ("Tout accepter et fermer", False), ("Paramétrer les cookies", False),
+    ("Ne pas tout refuser et fermer", False),
+])
+def test_cookie_refusal_uses_the_action_seen_in_edof(label, refuse):
+    assert bool(browser.COOKIE_DECLINE.search(label)) is refuse
+
+
+def test_real_material_select_opens_then_requires_the_unique_matching_option():
+    page = Mock()
+    page.url = f"https://{browser.EDOF_HOST}/espace-prive/html/#/select-sirets"
+    material = page.locator.return_value
+    material.count.return_value = 1
+    material.get_attribute.return_value = "false"
+    material.inner_text.return_value = "Sélectionnez un SIRET"
+    signals = {}
+    assert browser.select_establishment(page, "waiting", signals) == "opened"
+    material.click.assert_called_once_with(timeout=3000)
+    material.get_attribute.return_value = "true"
+    option = page.get_by_role.return_value.get_by_role.return_value.filter.return_value
+    option.count.return_value = 2
+    assert browser.select_establishment(page, "opened", signals) == "opened"
+    option.click.assert_not_called()
+    option.count.return_value = 1
+    assert browser.select_establishment(page, "opened", signals) == "selected"
+    option.click.assert_called_once_with(timeout=3000)
+
+
 @pytest.mark.parametrize("text,code", [("Nom d’utilisateur ou mot de passe invalide.", "credentials_rejected"), ("Votre compte est désactivé.", "account_unavailable"), ("Saisissez votre code d’authentification.", "verification_code")])
 def test_additional_authentication_outcomes(text, code):
     assert browser.classify_text(text) == code

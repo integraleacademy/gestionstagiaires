@@ -77,6 +77,12 @@ DIALOG_WORDS = CHOOSER_WORDS | set("""
 """.split())
 DIALOG_CLOSE = re.compile(r"^(?:Close|Fermer(?: (?:la|cette|le|ce|l[’'])\s*(?:fen[êe]tre(?: de dialogue)?|bo[iî]te de dialogue|modale|message|notification|pop[- ]?in|alerte))?)$", re.I)
 DIALOG_ACK = re.compile(r"^(?:J[’']ai compris|Compris|Plus tard|Non merci|Passer la visite)$", re.I)
+# Material includes a decorative icon before the visible refusal wording.
+COOKIE_DECLINE = re.compile(r"^(?!.*\b(?:accepter|autoriser|ne pas)\b.*\brefuser\b)(?:.*\s)?(?:tout refuser(?: et (?:fermer|continuer))?|refuser tout|refuser tous les cookies|continuer sans accepter)[.!]?\s*$", re.I | re.S)
+
+
+def decline_cookies_control(root):
+    return root.get_by_role("button", name=COOKIE_DECLINE).or_(root.get_by_role("link", name=COOKIE_DECLINE)).filter(visible=True)
 
 
 def dialog_labels(values):
@@ -124,12 +130,13 @@ def handle_chooser_dialog(page, signals):
     # A short redacted excerpt helps identify a notice whose title is not a heading.
     signals["dialog_prompt"] = dialog_labels([line for line in text.splitlines() if line.strip()][:3])
     frames_or_inputs = layer.locator('iframe:visible,input:visible,select:visible,textarea:visible,[role=checkbox]:visible,[role=combobox]:visible')
-    if kind in {"terms", "error", "account"} or frames_or_inputs.count():
+    if kind in {"terms", "error", "account"} or (kind != "cookies" and frames_or_inputs.count()):
         raise StopRun("workspace_dialog_required")
-    if signals.get("notice_closed"):
+    dismissed = "cookies_dismissed" if kind == "cookies" else "notice_closed"
+    if signals.get(dismissed):
         return True
     if kind == "cookies":
-        target = layer.get_by_role("button", name=re.compile(r"^(?:Tout refuser|Continuer sans accepter|Refuser tout)$", re.I))
+        target = decline_cookies_control(layer)
     else:
         target = layer.get_by_role("button", name=DIALOG_CLOSE)
         if target.count() != 1 and kind == "notice":
@@ -138,7 +145,7 @@ def handle_chooser_dialog(page, signals):
         raise StopRun("workspace_dialog_required")
     signals["chooser_action"] = "dismiss_cookies" if kind == "cookies" else "close_notice"
     target.click(timeout=3000)
-    signals["notice_closed"] = True
+    signals[dismissed] = True
     return True
 
 # A custom select can expose a clipped ARIA control next to the visible trigger.
@@ -411,6 +418,23 @@ def select_establishment(page, step, signals):
             confirm.click()
             return "confirmed"
         return step
+    # The live EDOF selector is Angular Material. Open its visible trigger
+    # normally, then pick the one option with the configured SIRET.
+    material = page.locator('mat-select[role="combobox"]:visible')
+    if verified_chooser and material.count() == 1:
+        if material.get_attribute("aria-expanded") == "true":
+            option = page.get_by_role("listbox").get_by_role("option", name=SIRET_TEXT).filter(visible=True)
+            if option.count() == 1 and option.is_enabled():
+                signals["chooser_action"] = "select_text"
+                option.click(timeout=3000)
+                return "selected"
+        elif SIRET_TEXT.search(material.inner_text()):
+            return "selected"
+        elif step == "waiting" and material.is_enabled():
+            signals["chooser_action"] = "open_click"
+            material.click(timeout=3000)
+            return "opened"
+        return step
     for select in page.locator("select:visible").all():
         matched = []
         for index, option in enumerate(select.locator("option").all()):
@@ -662,8 +686,7 @@ def run_browser(spec):
                     raise StopRun("sign_in_error")
                 if stage == "organism" and private_page(page.url):
                     if location_category(page.url) == "edof_select_siret" and "cookie" in text.lower() and not signals.get("cookies_dismissed"):
-                        decline = re.compile(r"^(?:Continuer sans accepter|Tout refuser(?: et continuer)?|Refuser (?:tout|tous les cookies))$", re.I)
-                        button = page.get_by_role("button", name=decline).or_(page.get_by_role("link", name=decline)).filter(visible=True)
+                        button = decline_cookies_control(page)
                         if button.count() == 1:
                             signals["chooser_action"] = "dismiss_cookies"
                             button.click(timeout=3000)
