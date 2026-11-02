@@ -40,7 +40,7 @@ CONFIRM_ESTABLISHMENT = re.compile(
     r"(?:Me |Se )?connecter(?: à (?:mon espace|EDOF))?)$", re.I)
 ESTABLISHMENT_STEPS = {"waiting", "keyboard", "opened", "filtered", "searched", "selected", "confirmed"}
 CHOOSER_ACTIONS = {"open_keyboard", "open_click", "select_native", "select_radio", "select_text",
-                   "filter", "search", "confirm", "dismiss_cookies"}
+                   "filter", "search", "confirm", "dismiss_cookies", "close_notice"}
 SIRET_FIELD = re.compile(r"siret|[ée]tablissement|organisme", re.I)
 CHOOSER_CONTROLS = {
     "list": 'select:visible, [role="listbox"]:visible',
@@ -57,6 +57,89 @@ CHOOSER_WORDS = frozenset("""
     sous suivant suivante un une valider validation votre vous de des du en mes sur
     accepter cookies consentement continuer fermer ma sans refuser tout tous les parametres
 """.split())
+DIALOG_WORDS = CHOOSER_WORDS | set("""
+    je j ai compris ok non merci plus tard passer visite fermer fermez cette fenetre boite
+    dialogue modale pop in message information informations important importante importantes
+    notification actualite actualites nouveaute nouveautes nouveau nouvelle bienvenue decouvrir
+    presentation changement lire prendre connaissance attention obligatoire obligatoires
+    conditions generales utilisation charte regles mentions legales acceptez cgu accepter
+    signature engagement consentement confidentialite politique protection donnees personnelles
+    parametrer choix preferences enregistrer personnaliser traceurs essentiels necessaires
+    erreurs erreur technique indisponible maintenance droit droits habilitation habilitations
+    identite verification authentification securite compte profil session expiree expiration
+    code telephone mail adresse service numerique site portail application organisme formation
+    organismes selectionnez accueil connexion et es platforme plateforme sur ce par pour que
+    ne pas afficher cet avertissement rappel plus prendre connaissance suite lecture cliquez
+    poursuivre authentifier identification valide validez validation acceder fermer continuer
+    derniere mise jour version activer vous devez vos le les ces ce des n d dit c est ai
+    annuler retour enregistrer valider nouveau mot passe referencement obligatoire responsable
+    references formation contrat declarations stagiaires factures dossiers temps chargement
+""".split())
+DIALOG_CLOSE = re.compile(r"^(?:Close|Fermer(?: (?:la|cette|le|ce|l[’'])\s*(?:fen[êe]tre(?: de dialogue)?|bo[iî]te de dialogue|modale|message|notification|pop[- ]?in|alerte))?)$", re.I)
+DIALOG_ACK = re.compile(r"^(?:J[’']ai compris|Compris|Plus tard|Non merci|Passer la visite)$", re.I)
+
+
+def dialog_labels(values):
+    """Mask any word outside the fixed UI vocabulary, including names and IDs."""
+    labels = []
+    for value in values[:12]:
+        words = [word if word in DIALOG_WORDS else "…" for word in identity(value).split()[:18]]
+        label = " ".join(word for i, word in enumerate(words) if word != "…" or i == 0 or words[i-1] != "…")
+        if label and label != "…" and label not in labels:
+            labels.append(label)
+    return labels
+
+
+def dialog_kind(text):
+    words = identity(text)
+    if any(x in words for x in ("conditions generales", "j accepte", "accepter les conditions", "la charte", "sur l honneur", "je certifie", "je m engage")):
+        return "terms"
+    if any(x in words for x in ("cookie", "traceurs")):
+        return "cookies"
+    if workspace_screen(text) in {"access_denied", "error", "session_expired"}:
+        return "error"
+    if any(x in words for x in ("identite", "mot de passe", "code de securite", "habilitation", "authentification")):
+        return "account"
+    if any(x in words for x in ("information", "nouveau", "nouveaute", "nouvelle", "bienvenue", "visite guidee", "actualite")):
+        return "notice"
+    return "other"
+
+
+def handle_chooser_dialog(page, signals):
+    """Handle a visible EDOF notice; return whether the chooser is still covered."""
+    layer = page.locator(".cdk-overlay-container:visible").filter(has=page.locator(".cdk-overlay-backdrop:visible"))
+    if layer.count() != 1 or layer.get_by_role("listbox").count():
+        return False
+    text = layer.inner_text(timeout=2000)
+    # Material sometimes attaches the backdrop before rendering the panel.
+    if not text.strip() and not layer.locator("iframe:visible").count():
+        signals["dialog_kind"] = "loading" if layer.locator('[role=progressbar],mat-spinner,mat-progress-spinner,.spinner').count() else "empty"
+        return True
+    buttons = layer.get_by_role("button").or_(layer.get_by_role("link")).filter(visible=True)
+    kind = dialog_kind(text)
+    signals["dialog_kind"] = kind
+    signals["dialog_headings"] = dialog_labels(layer.locator('h1,h2,h3,[role=heading],[mat-dialog-title],.mat-mdc-dialog-title').all_inner_texts())
+    signals["dialog_buttons"] = dialog_labels(buttons.evaluate_all("""nodes => nodes.map(n =>
+        n.getAttribute('aria-label') || n.innerText?.trim() || n.getAttribute('title') || '')"""))
+    # A short redacted excerpt helps identify a notice whose title is not a heading.
+    signals["dialog_prompt"] = dialog_labels([line for line in text.splitlines() if line.strip()][:3])
+    frames_or_inputs = layer.locator('iframe:visible,input:visible,select:visible,textarea:visible,[role=checkbox]:visible,[role=combobox]:visible')
+    if kind in {"terms", "error", "account"} or frames_or_inputs.count():
+        raise StopRun("workspace_dialog_required")
+    if signals.get("notice_closed"):
+        return True
+    if kind == "cookies":
+        target = layer.get_by_role("button", name=re.compile(r"^(?:Tout refuser|Continuer sans accepter|Refuser tout)$", re.I))
+    else:
+        target = layer.get_by_role("button", name=DIALOG_CLOSE)
+        if target.count() != 1 and kind == "notice":
+            target = layer.get_by_role("button", name=DIALOG_ACK)
+    if target.count() != 1 or not target.is_visible() or not target.is_enabled():
+        raise StopRun("workspace_dialog_required")
+    signals["chooser_action"] = "dismiss_cookies" if kind == "cookies" else "close_notice"
+    target.click(timeout=3000)
+    signals["notice_closed"] = True
+    return True
 
 # A custom select can expose a clipped ARIA control next to the visible trigger.
 # Identify a real, unobstructed pointer target within the same widget. An
@@ -287,6 +370,13 @@ def diagnostic_summary(location, password_visible, error_visible, signals):
         for key in ("control_shape", "cover_shape"):
             if isinstance(signals.get(key), list):
                 result[key] = chooser_element_shape(signals[key])
+        if signals.get("dialog_kind") in {"terms", "cookies", "error", "account", "notice", "other", "loading", "empty"}:
+            result["dialog_kind"] = signals["dialog_kind"]
+            for key in ("dialog_headings", "dialog_buttons", "dialog_prompt"):
+                labels = signals.get(key, [])
+                if isinstance(labels, list):
+                    result[key] = [label for label in labels[:12] if isinstance(label, str) and
+                                   0 < len(label.split()) <= 18 and all(w in DIALOG_WORDS or w == "…" for w in label.split())]
     for key in ("login_post_status", "callback_status", "edof_token_status", "workspace_status", "folder_list_status", "folder_detail_status", "blocked_efp_posts", "blocked_edof_posts", "blocked_other_posts", "invalid_form_fields"):
         value = signals.get(key)
         if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 9999:
@@ -638,6 +728,9 @@ def run_browser(spec):
             while time.monotonic() < deadline:
                 screen = checkpoint()
                 if private_page(page.url):
+                    if location_category(page.url) == "edof_select_siret" and handle_chooser_dialog(page, signals):
+                        page.wait_for_timeout(300)
+                        continue
                     if screen in {"access_denied", "session_expired", "terms", "error"}:
                         raise StopRun("organism_selection_required")
                     if signals.get("workspace_status") or dossier_menu.count():
@@ -648,7 +741,7 @@ def run_browser(spec):
                         establishment_step = select_establishment(page, establishment_step, signals)
                 page.wait_for_timeout(300)
             else:
-                raise StopRun("organism_selection_required")
+                raise StopRun("workspace_dialog_required" if signals.get("dialog_kind") in {"empty", "loading"} else "organism_selection_required")
 
             if not spec.get("folder_id"):
                 stage = "search"

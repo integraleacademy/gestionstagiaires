@@ -180,6 +180,33 @@ def test_blocked_request_diagnostics_do_not_disclose_paths_ids_queries_or_body_v
     assert "synthetic-secret" not in json.dumps(result)
 
 
+def test_edof_dialog_only_closes_a_dismissible_notice():
+    page = Mock()
+    layer = page.locator.return_value.filter.return_value
+    layer.count.return_value = 1
+    layer.get_by_role.return_value.count.return_value = 0
+    layer.locator.return_value.count.return_value = 0
+    layer.locator.return_value.all_inner_texts.return_value = ["Informations du compte Personne Exemple"]
+    actions = layer.get_by_role.return_value.or_.return_value.filter.return_value
+    actions.evaluate_all.return_value = ["Fermer cette fenêtre", "Personne Exemple 12345"]
+    layer.inner_text.return_value = "J’accepte les conditions générales. Personne Exemple."
+    signals = {}
+    with pytest.raises(browser.StopRun, match="workspace_dialog_required"):
+        browser.handle_chooser_dialog(page, signals)
+    assert signals["dialog_kind"] == "terms" and signals["dialog_buttons"] == ["fermer cette fenetre"]
+    layer.get_by_role.return_value.click.assert_not_called()
+    layer.inner_text.return_value = "Bienvenue. Une nouvelle fonctionnalité est disponible."
+    target = Mock()
+    target.count.return_value = 1
+    target.is_visible.return_value = target.is_enabled.return_value = True
+    original = layer.get_by_role.return_value
+    layer.get_by_role.side_effect = lambda role, **kw: target if kw.get("name") is browser.DIALOG_CLOSE else original
+    assert browser.handle_chooser_dialog(page, signals)
+    assert browser.handle_chooser_dialog(page, signals)
+    target.click.assert_called_once()
+    assert "personne" not in json.dumps(signals) and "12345" not in json.dumps(signals)
+
+
 @pytest.mark.parametrize("text,code", [("Nom d’utilisateur ou mot de passe invalide.", "credentials_rejected"), ("Votre compte est désactivé.", "account_unavailable"), ("Saisissez votre code d’authentification.", "verification_code")])
 def test_additional_authentication_outcomes(text, code):
     assert browser.classify_text(text) == code
