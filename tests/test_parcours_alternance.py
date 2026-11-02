@@ -29,11 +29,13 @@ def setup(tmp_path, monkeypatch):
 
 
 def payload(client):
-    response = client.get('/parcoursalternance/candidature')
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-    return dict(csrf=re.search(r'data-csrf="([^"]+)"', html)[1],
-                submission_token=re.search(r'data-token="([^"]+)"', html)[1],
+    # A tab opened before the move may still submit its already-issued credentials.
+    from itsdangerous import URLSafeTimedSerializer
+    from uuid import uuid4
+    with client.session_transaction() as session:
+        session['parcours_alternance_csrf'] = 'existing-form-csrf'
+    token = URLSafeTimedSerializer(host.app.secret_key,salt='parcours-alternance-2027').dumps(uuid4().hex)
+    return dict(csrf='existing-form-csrf', submission_token=token,
                 first_name='Alice', last_name='Exemple', birth_date='2005-05-15',
                 available_year=True, judicial_clear=True, license_b=True, mobile_departments=True,
                 privacy_consent=True, email='alice@example.test', phone='06 12 34 56 78',
@@ -58,6 +60,9 @@ def test_landing_assets_and_download(setup):
     client, _, _ = setup
     page = client.get('/parcoursalternance')
     assert page.status_code == 200
+    assert alt.APPLICATION_URL in page.text
+    redirect = client.get('/parcoursalternance/candidature')
+    assert redirect.status_code == 302 and redirect.location == alt.APPLICATION_URL
     assert 'formation est entièrement gratuite' in page.text
     assert 'Janvier → février' in page.text
     assert 'Agent de protection physique des personnes' in page.text

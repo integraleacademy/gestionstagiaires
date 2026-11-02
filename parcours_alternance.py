@@ -5,11 +5,14 @@ import datetime as dt
 import hashlib
 import hmac
 import json
+import os
 import re
 import secrets
 import sqlite3
 import threading
 import uuid
+
+import requests
 from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
@@ -20,6 +23,8 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 YEAR = 2027
 PUBLIC_URL = "https://www.integraleconnect.com/parcoursalternance"
+ADMISSIONS_URL = "https://inscriptionsbts.onrender.com"
+APPLICATION_URL = ADMISSIONS_URL + "/parcoursalternance/candidature"
 ADMIN_URL = "https://gestionstagiaires-r5no.onrender.com/admin/parcours-alternance"
 CONTACT = "aurelie@integraleacademy.com"
 STATUSES = {"new": "Nouvelle", "contacted": "À recontacter", "interview": "Entretien prévu", "accepted": "Retenue", "declined": "Non retenue", "archived": "Archivée"}
@@ -115,6 +120,8 @@ def database(host):
         );
         CREATE TABLE IF NOT EXISTS rate_limits (key TEXT PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);
         """)
+        db.execute("""CREATE TABLE IF NOT EXISTS admissions_transfer (
+            application_id TEXT PRIMARY KEY, candidate_id TEXT, retry_at INTEGER NOT NULL DEFAULT 0)""")
         yield db
         db.commit()
     except Exception:
@@ -204,13 +211,11 @@ def register(host):
     @bp.get("/parcoursalternance")
     @bp.get("/parcoursalternance/")
     def landing():
-        return render_template("parcours_alternance/landing.html", timeline=TIMELINE, public_url=PUBLIC_URL)
+        return render_template("parcours_alternance/landing.html", timeline=TIMELINE, public_url=PUBLIC_URL, application_url=APPLICATION_URL)
 
     @bp.get("/parcoursalternance/candidature")
     def application():
-        return render_template("parcours_alternance/application.html", timeline=TIMELINE, csrf=csrf(),
-            submission_token=serializer.dumps(uuid.uuid4().hex), server_date=today().isoformat(),
-            situations=SITUATIONS, slots=SLOTS, public_url=PUBLIC_URL)
+        return redirect(APPLICATION_URL, code=302)
 
     @bp.get("/parcoursalternance/brochure")
     def brochure():
@@ -273,13 +278,16 @@ def register(host):
             rows = [unpack(row) for row in db.execute("SELECT * FROM applications ORDER BY created_at DESC")]
         counts = {key: sum(row["status"] == key for row in rows) for key in STATUSES}
         selected = [row for row in rows if (not status or row["status"] == status) and (not query or query in " ".join(str(row[k]) for k in ("first_name", "last_name", "email", "city", "id")).casefold())]
-        return render_template("parcours_alternance/admin.html", applications=selected, counts=counts,
+        return render_template("parcours_alternance/admin.html", applications=selected, counts=counts, admissions_url=ADMISSIONS_URL+"/admin?bts=PARCOURS-SECURITE",
                                title="Parcours alternance · Candidatures", total=len(rows), statuses=STATUSES, status=status, q=request.args.get("q", ""), public_url=PUBLIC_URL)
 
     @bp.get("/admin/parcours-alternance/<application_id>")
     @staff_only
     def detail(application_id):
         with database(host) as db:
+            moved = db.execute("SELECT candidate_id FROM admissions_transfer WHERE application_id=?", (application_id,)).fetchone()
+            if moved and moved["candidate_id"]:
+                return redirect(ADMISSIONS_URL + "/admin/candidat/" + moved["candidate_id"], code=303)
             item = unpack(db.execute("SELECT * FROM applications WHERE id=?", (application_id,)).fetchone())
         return render_template("parcours_alternance/detail.html", title=f"{item['first_name']} {item['last_name']} · Parcours alternance", item=item, statuses=STATUSES, csrf=csrf())
 
@@ -289,7 +297,12 @@ def register(host):
         check_csrf(request.form.get("csrf"))
         action = request.form.get("action")
         with database(host) as db:
+            moved = db.execute("SELECT candidate_id FROM admissions_transfer WHERE application_id=?", (application_id,)).fetchone()
+            if moved and moved["candidate_id"]:
+                return redirect(ADMISSIONS_URL + "/admin/candidat/" + moved["candidate_id"], code=303)
             item = unpack(db.execute("SELECT * FROM applications WHERE id=?", (application_id,)).fetchone())
+            if moved and action in ("save", "delete"):
+                abort(409, "Le transfert de cette fiche vers la plateforme des inscriptions est en cours.")
             if action == "save":
                 status, notes = request.form.get("status"), request.form.get("notes", "").strip()
                 if status not in STATUSES or len(notes) > 4000:
@@ -319,6 +332,42 @@ def register(host):
     host.manuals_shop.SAFE_ENDPOINTS.update({"parcours_alternance." + name for name in ("landing", "application", "submit", "brochure")})
 
 
+def transfer_legacy_applications(host):
+    # This repository also serves test copies. Only the production disk is a migration source.
+    if os.getenv("RENDER_EXTERNAL_HOSTNAME") != "gestionstagiaires-r5no.onrender.com":
+        return
+    secret = os.getenv("BTS_IMPORT_API_KEY", "").strip()
+    if len(secret) < 32:
+        return
+    now = int(dt.datetime.now(dt.timezone.utc).timestamp())
+    with database(host) as db:
+        db.execute("BEGIN IMMEDIATE")
+        rows = db.execute("""SELECT a.id,a.payload,a.status,a.notes,a.created_at FROM applications a
+            LEFT JOIN admissions_transfer t ON t.application_id=a.id
+            WHERE t.candidate_id IS NULL AND coalesce(t.retry_at,0)<=? ORDER BY a.created_at LIMIT 5""", (now,)).fetchall()
+        db.executemany("""INSERT INTO admissions_transfer(application_id,retry_at) VALUES(?,?)
+            ON CONFLICT(application_id) DO UPDATE SET retry_at=excluded.retry_at""", [(r["id"],now+300) for r in rows])
+    key = hmac.digest(secret.encode(), b"parcours-securite-import-v1", "sha256")
+    for row in rows:
+        record = dict(row)
+        record["payload"] = json.loads(record["payload"])
+        body = json.dumps(record, ensure_ascii=False).encode()
+        try:
+            response = requests.post(ADMISSIONS_URL + "/api/admissions/reprise-parcours-securite", data=body,
+                headers={"X-Parcours-Signature": hmac.new(key,body,hashlib.sha256).hexdigest(), "Content-Type":"application/json"},
+                timeout=(3,10), allow_redirects=False)
+            response.raise_for_status()
+            result = response.json()
+            candidate_id = str(uuid.UUID(result["candidate_id"]))
+            if response.status_code != 200 or result.get("ok") is not True:
+                raise ValueError("Unconfirmed transfer")
+        except (requests.RequestException, ValueError, TypeError, KeyError):
+            host.app.logger.warning("parcours_alternance_transfer_pending reference=%s", row["id"])
+            continue
+        with database(host) as db:
+            db.execute("UPDATE admissions_transfer SET candidate_id=? WHERE application_id=?", (candidate_id, row["id"]))
+
+
 def maintain(host):
     """Retry unconfirmed mail after five minutes and enforce the retention period."""
     now = dt.datetime.now(dt.timezone.utc)
@@ -332,6 +381,7 @@ def maintain(host):
           ORDER BY created_at LIMIT 5""", (cutoff, cutoff)).fetchall()
     for row in rows:
         deliver(host, row["id"], automatic=True)
+    transfer_legacy_applications(host)
 
 
 def start_worker(host):

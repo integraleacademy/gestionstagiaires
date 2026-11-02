@@ -102,8 +102,13 @@ def candidate_values(candidate):
     if normalize(candidate.get("nationalite")) in {"france", "francaise", "francais", "fr"}:
         values["apprentice_nationality"] = "1"
     bts = str(candidate.get("bts") or "").upper().strip()
-    values["training_title"] = "BTS " + BTS_TITLES.get(bts, bts) if bts else ""
-    values["training_diploma_type"] = "54"
+    if bts == "PARCOURS-SECURITE":
+        values["training_title"] = "Parcours sécurité en alternance"
+    elif bts.startswith("TP "):
+        values["training_title"] = "Titre professionnel · " + bts[3:]
+    else:
+        values["training_title"] = "BTS " + BTS_TITLES.get(bts, bts) if bts else ""
+        values["training_diploma_type"] = "54"
     # CFA identity and MOS identifiers are explicitly stated in the supplied
     # school model, independently of the candidate's personal declarations.
     values.update(cfa_name="Intégrale Sécurité Formations", cfa_siret="84089988400026", cfa_uai="0831774C",
