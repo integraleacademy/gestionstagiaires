@@ -5,6 +5,7 @@ import fcntl
 import hashlib
 import hmac
 import importlib.util
+import itertools
 import json
 import math
 import os
@@ -127,7 +128,6 @@ class ServerTestStore:
         db.execute("PRAGMA secure_delete = ON")
         db.execute("CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY, owner TEXT NOT NULL, created REAL NOT NULL, finished REAL, mode TEXT NOT NULL, result TEXT NOT NULL)")
         db.execute("CREATE TABLE IF NOT EXISTS directory_activity (owner TEXT PRIMARY KEY, seen REAL NOT NULL)")
-        db.execute("DELETE FROM directory_activity WHERE seen < ?", (time.time() - RETENTION,))
         db.execute("DELETE FROM jobs WHERE created < ?", (time.time() - RETENTION,))
         db.execute("UPDATE jobs SET finished = ?, result = ? WHERE finished IS NULL "
                    "AND created < ? - CASE WHEN mode = 'directory' THEN ? ELSE ? END",
@@ -181,11 +181,32 @@ class ServerTestStore:
         finally:
             db.close()
 
-    def use_directory(self, owner):
+    def use_directory(self, owner, *, enable=False):
         db = self.connect()
         try:
             with db:
-                db.execute("INSERT OR REPLACE INTO directory_activity VALUES (?, ?)", (owner, time.time()))
+                if enable:
+                    db.execute("INSERT OR REPLACE INTO directory_activity VALUES (?, ?)", (owner, time.time()))
+                else:
+                    db.execute("UPDATE directory_activity SET seen = ? WHERE owner = ?", (time.time(), owner))
+        finally:
+            db.close()
+
+    def directory_enabled(self, owner):
+        db = self.connect()
+        try:
+            return db.execute("SELECT 1 FROM directory_activity WHERE owner = ?", (owner,)).fetchone() is not None
+        finally:
+            db.close()
+
+    def pause_directory(self, owner=None):
+        db = self.connect()
+        try:
+            with db:
+                if owner is None:
+                    db.execute("DELETE FROM directory_activity")
+                else:
+                    db.execute("DELETE FROM directory_activity WHERE owner = ?", (owner,))
         finally:
             db.close()
 
@@ -196,8 +217,9 @@ class ServerTestStore:
             return [row["owner"] for row in db.execute(
                 "SELECT a.owner FROM directory_activity a JOIN jobs j ON j.id = "
                 "(SELECT id FROM jobs WHERE owner = a.owner AND mode = 'directory' ORDER BY created DESC LIMIT 1) "
-                "WHERE a.seen > ? AND j.finished < ? AND json_extract(j.result, '$.code') = 'directory_ready' "
-                "ORDER BY j.finished", (time.time() - 3600, time.time() - directory.REFRESH_INTERVAL))]
+                "WHERE j.finished < ? - CASE WHEN a.seen > ? THEN ? ELSE ? END "
+                "AND json_extract(j.result, '$.code') = 'directory_ready' ORDER BY j.finished",
+                (time.time(), time.time() - 3600, directory.REFRESH_INTERVAL, directory.IDLE_REFRESH_INTERVAL))]
         finally:
             db.close()
 
@@ -439,7 +461,10 @@ def register_routes(app, store, *, admin_required, can_access):
                 **MESSAGES}.get(request.args.get("gmail"), ""),
             jobs=store.latest(user), last_read=last_read, selected_result=selected_folder is not None or selected_id is not None,
             directory_checked=directory.stamp(snapshot) if snapshot else None,
-            directory_count=len(snapshot["rows"]) if snapshot else 0, state_labels=STATE_LABELS)
+            directory_count=len(snapshot["rows"]) if snapshot else 0, directory_enabled=store.directory_enabled(user),
+            directory_examples=[{"fields":row, "key":directory.link_key(user, row["folder_id"])}
+                                for row in itertools.islice(snapshot["rows"].values(), 3)] if snapshot else [],
+            state_labels=STATE_LABELS)
 
     @bp.get("/admin/edof-test/server/status")
     @admin_required
@@ -486,7 +511,11 @@ def register_routes(app, store, *, admin_required, can_access):
     def gmail_disconnect():
         owner()
         check_csrf()
-        response = edit_connection(lambda: vault().clear())
+        def disconnect():
+            vault().clear()
+            store.pause_directory()
+
+        response = edit_connection(disconnect)
         if response.location.endswith("gmail=connected"):
             response.location = "/admin/edof-test/server?gmail=disconnected"
         return response
@@ -507,12 +536,20 @@ def register_routes(app, store, *, admin_required, can_access):
         try:
             active = next((job for job in store.latest(user) if job["mode"] == "directory" and not job["finished"]), None)
             job = active["id"] if active else start_job(store, user, {"mode": "directory", "owner": user})
-            store.use_directory(user)
+            store.use_directory(user, enable=True)
             return jsonify(ok=True, job_id=job), 202
         except JobCooldown as exc:
             return jsonify(ok=False, error=str(exc), retry_after=exc.remaining), 429
         except ValueError as exc:
             return jsonify(ok=False, error=str(exc)), 409
+
+    @bp.post("/admin/edof-test/server/directory/pause")
+    @admin_required
+    def pause_directory():
+        user = results_owner()
+        check_csrf()
+        store.pause_directory(user)
+        return redirect(url_for("edof_server_test.index", _anchor="directory-status"), code=303)
 
     @bp.post("/admin/edof-test/server/directory/lookup")
     @admin_required
@@ -545,7 +582,7 @@ def register_routes(app, store, *, admin_required, can_access):
         if snapshot:
             return jsonify(ok=True, message=f"Aucun dossier correspondant dans la liste EDOF du {directory.stamp(snapshot)}. "
                            "Utilisez « Relire sur EDOF » pour vérifier en direct.")
-        return jsonify(ok=True, message="La première synchronisation de la liste EDOF reste à terminer. "
+        return jsonify(ok=True, needs_sync=True, message="La première synchronisation de la liste EDOF reste à terminer. "
                        "Cliquez sur « Synchroniser la liste EDOF » pour la préparer.")
 
     @bp.post("/admin/edof-test/server/run")

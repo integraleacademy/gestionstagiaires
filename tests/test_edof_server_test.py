@@ -692,7 +692,7 @@ def test_directory_paginates_only_the_witnessed_official_list():
     def response(url, ids, total=3):
         r = Mock(url=url, status=200)
         r.body.return_value = json.dumps({"numberOfItems": total, "items": [
-            {"id": str(100000 + i), "attendee": {}} for i in ids]}).encode()
+            {"id": str(100000 + i), "attendee": {"firstName": "Test", "lastName": "Exemple"}} for i in ids]}).encode()
         return r
     first = response(official + "?page=0&size=1&state=accepted", [0])
     first.request.all_headers.return_value = {"authorization": "synthetic", "other": "excluded"}
@@ -705,6 +705,8 @@ def test_directory_paginates_only_the_witnessed_official_list():
         return response(url, [0, 1] if q["page"] == ["0"] else [2])
     tab.context.request.get.side_effect = get_batch
     assert len(directory.from_pages(browser.directory_pages(tab, first, Mock()))["rows"]) == 3
+    assert browser.is_directory_view(browser.LIST_URL)
+    assert not browser.is_directory_view(browser.DETAIL_PREFIX + "123456")
     assert not browser.directory_list_url(official + "?attendeeName=Example")
     assert not browser.directory_list_url(official.replace(browser.EDOF_HOST, "elsewhere.invalid"))
     assert not browser.directory_list_url(official.replace("/siret/" + browser.SIRET, "/siret/other"))
@@ -745,7 +747,7 @@ def test_directory_scheduler_pauses_after_failure_and_shares_login_cooldown(tmp_
     now = 1000000.0
     monkeypatch.setattr(server.time, "time", lambda: now)
     store = server.ServerTestStore(tmp_path)
-    store.use_directory("user")
+    store.use_directory("user", enable=True)
     store.finish(store.reserve("user", "directory"), {"code": "directory_ready"})
     with pytest.raises(server.JobCooldown):
         store.reserve("user", "read")
@@ -754,3 +756,33 @@ def test_directory_scheduler_pauses_after_failure_and_shares_login_cooldown(tmp_
     store.finish(store.reserve("user", "directory"), {"code": "human_verification"})
     now += directory.REFRESH_INTERVAL + 1
     assert not store.due_directories()
+
+
+def test_directory_keeps_refreshing_while_idle_until_paused(tmp_path, monkeypatch):
+    import edof_directory as directory
+    now = 1000000.0
+    monkeypatch.setattr(server.time, "time", lambda: now)
+    store = server.ServerTestStore(tmp_path)
+    store.use_directory("user", enable=True)
+    store.finish(store.reserve("user", "directory"), {"code": "directory_ready"})
+    now += 3601
+    assert not store.due_directories()
+    now += directory.IDLE_REFRESH_INTERVAL
+    assert store.due_directories() == ["user"]
+    store.pause_directory("user")
+    store.use_directory("user")
+    assert not store.directory_enabled("user") and not store.due_directories()
+
+
+def test_official_export_checks_scope_count_identity_and_drops_unused_columns():
+    import edof_directory as directory
+    header = "N° de dossier;Nom du titulaire;Prénom du titulaire;Statut du dossier;Intitulé de la formation;Date de début de session;Courriel\r\n"
+    content = header + "123456;Exemple;André;Accepté;VTC;02/11/2026;private@example.invalid\r\n"
+    first = {"numberOfItems": 1, "items": [{"id": "123456", "attendee": {"firstName": "ANDRE", "lastName": "EXEMPLE"}}]}
+    snapshot = directory.csv_snapshot(content.encode("cp1252"), first, {})
+    assert snapshot["rows"]["123456"]["title"] == "VTC"
+    assert snapshot["rows"]["123456"]["session_start_date"] == "2026-11-02"
+    assert "private@" not in str(snapshot)
+    for bad in (content.replace("123456", "654321"), content.replace("Exemple", "Autre"), header, content + content):
+        with pytest.raises(directory.IncompleteDirectory):
+            directory.csv_snapshot(bad.encode("utf-8-sig"), first, {})

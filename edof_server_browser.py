@@ -349,9 +349,77 @@ def directory_list_url(url):
                    "registrationfolderid", "externalid", "search"} for key, value in parse_qsl(parsed.query))
 
 
-def directory_pages(page, response, checkpoint):
+def is_directory_view(url):
+    parsed = urlsplit(url)
+    target = urlsplit(LIST_URL)
+    return ((parsed.scheme, parsed.netloc, parsed.path) == (target.scheme, target.netloc, target.path)
+            and parsed.fragment.split("?", 1)[0].rstrip("/") == target.fragment)
+
+
+def exported_directory(page, source, checkpoint, progress, timeout_error):
+    from pathlib import Path
+
+    first = source.json()
+    progress["expected"] = first.get("numberOfItems", 0)
+    label = re.compile(r"^(?:(?:download|file_download)\s+)?exporter\b.*$", re.I)
+    control = page.get_by_role("button", name=label).or_(page.get_by_role("link", name=label))
+    if not control.count():
+        control = page.get_by_text(re.compile(r"^Exporter$", re.I), exact=True)
+    if control.count() != 1 or not control.is_visible() or not control.is_enabled():
+        progress["export"] = "absent"
+        return None
+    downloads = []
+    listener = lambda item: downloads.append(item)
+    page.on("download", listener)
+    try:
+        checkpoint()
+        if not is_directory_view(page.url):
+            raise StopRun("directory_unavailable")
+        control.click(timeout=4000)
+        confirmed = False
+        deadline = time.monotonic() + 15
+        while not downloads and time.monotonic() < deadline:
+            checkpoint()
+            dialog = page.get_by_role("dialog").filter(has_text=re.compile(r"export|télécharg", re.I))
+            if not confirmed and dialog.count() == 1:
+                confirm = dialog.get_by_role("button", name=re.compile(r"^(exporter|télécharger)(?: les dossiers)?$", re.I))
+                if confirm.count() == 1 and confirm.is_visible() and confirm.is_enabled():
+                    confirm.click(timeout=3500)
+                    confirmed = True
+            page.wait_for_timeout(250)
+        if len(downloads) != 1:
+            progress["export"] = "no_download"
+            return None
+        item = downloads[0]
+        parsed = urlsplit(item.url.removeprefix("blob:"))
+        if parsed.scheme != "https" or parsed.netloc != EDOF_HOST:
+            raise StopRun("directory_unavailable")
+        path = item.path()
+        if path is None or not Path(path).is_file() or Path(path).stat().st_size > 24_000_000:
+            progress["export"] = "unreadable"
+            return None
+        try:
+            snapshot = directory.csv_snapshot(Path(path).read_bytes(), first, progress)
+            progress["export"] = "complete"
+            return snapshot
+        except (ValueError, UnicodeError, KeyError, TypeError):
+            progress["export"] = "format_or_scope"
+            return None
+        finally:
+            item.delete()
+    except timeout_error:
+        progress["export"] = "button_timeout"
+        return None
+    finally:
+        page.remove_listener("download", listener)
+
+
+def directory_pages(page, response, checkpoint, progress=None):
     """Only paginate the exact GET that the authenticated EDOF list just used."""
+    progress = progress if progress is not None else {}
+
     def read(reply):
+        progress["http"] = reply.status
         if reply.status != 200 or not directory_list_url(reply.url):
             raise directory.IncompleteDirectory()
         body = reply.body()
@@ -368,6 +436,7 @@ def directory_pages(page, response, checkpoint):
     cursors = [(key, value) for key, value in pairs if key.lower() in page_keys | offset_keys]
     sizes = [key for key, value in pairs if key.lower() in size_keys and value.isdigit()]
     if len(cursors) == 1 and cursors[0][1] in {"0", "1"}:
+        progress["method"] = "pages"
         key, value = cursors[0]
         if key.lower() in offset_keys and value != "0":
             raise directory.IncompleteDirectory()
@@ -383,6 +452,15 @@ def directory_pages(page, response, checkpoint):
             url = parsed._replace(query=urlencode(query), fragment="").geturl()
             reply = page.context.request.get(url, headers=headers, max_redirects=0, timeout=12000)
             try:
+                if reply.status == 429:
+                    progress["http"] = 429
+                    retry = reply.headers.get("retry-after", "60")
+                    if not retry.isdigit() or int(retry) > 90:
+                        raise directory.IncompleteDirectory()
+                    page.wait_for_timeout(max(1, int(retry)) * 1000)
+                    checkpoint()
+                    reply.dispose()
+                    reply = page.context.request.get(url, headers=headers, max_redirects=0, timeout=12000)
                 if page_size and reply.status in {400, 422}:
                     return None
                 return read(reply)
@@ -401,13 +479,16 @@ def directory_pages(page, response, checkpoint):
                 result, batch_size = larger, 100
         while True:
             yield result
+            page.wait_for_timeout(1400)
             position += len(result["items"]) if key.lower() in offset_keys else 1
             result = get_batch(position, batch_size)
             if result is None:
                 raise directory.IncompleteDirectory()
     else:
+        progress["method"] = "ui"
         yield result
         while True:
+            page.wait_for_timeout(1400)
             checkpoint()
             next_page = page.locator(
                 'button[aria-label*="suivant" i]:visible, a[aria-label*="suivant" i]:visible, '
@@ -918,7 +999,7 @@ def run_browser(spec):
         if tail == "pad":
             signals["folder_list_status"] = response.status
             if spec["mode"] == "directory":
-                if response.status == 200 and directory_list_url(response.url):
+                if response.status == 200 and directory_list_url(response.url) and is_directory_view(response.frame.url):
                     directory_responses[:] = [response]
                 return
             if (stage != "search" or "paired_name_search" not in signals
@@ -956,7 +1037,7 @@ def run_browser(spec):
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
         def browser_page(state):
-            context = browser.new_context(locale="fr-FR", accept_downloads=False, service_workers="block", storage_state=state)
+            context = browser.new_context(locale="fr-FR", accept_downloads=spec["mode"] == "directory", service_workers="block", storage_state=state)
             context.route("**/*", route_request)
             page = context.new_page()
             page.set_default_timeout(12000)
@@ -1156,6 +1237,8 @@ def run_browser(spec):
                 vault.delete("browser")
             if spec["mode"] == "directory":
                 stage = "directory"
+                if not is_directory_view(page.url):
+                    directory_responses.clear()
                 open_folder_view(page, LIST_URL, lambda: bool(directory_responses), BrowserTimeout)
                 deadline = time.monotonic() + 18
                 while not directory_responses and time.monotonic() < deadline:
@@ -1166,12 +1249,16 @@ def run_browser(spec):
                 checkpoint()
                 try:
                     signals["directory"] = {"seen": 0, "pages": 0}
-                    snapshot = directory.from_pages(directory_pages(page, directory_responses[-1], checkpoint), signals["directory"])
+                    source = directory_responses[-1]
+                    snapshot = exported_directory(page, source, checkpoint, signals["directory"], BrowserTimeout)
+                    if snapshot is None:
+                        snapshot = directory.from_pages(directory_pages(page, source, checkpoint, signals["directory"]), signals["directory"])
                 except (ValueError, KeyError, TypeError):
                     raise StopRun("directory_incomplete") from None
                 vault.put(directory.record_key(spec["owner"]), snapshot, ttl=directory.TTL)
                 vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                 return {"code": "directory_ready", "stage": stage, "candidate_count": len(snapshot["rows"]),
+                        "diagnostics": {"directory": signals["directory"]},
                         "fresh_session": not reused, "gmail_code_used": gmail_code_used, "session_saved": True}
             if not spec.get("folder_id"):
                 stage = "search"

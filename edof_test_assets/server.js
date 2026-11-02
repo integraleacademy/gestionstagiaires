@@ -71,9 +71,12 @@ const directoryStatus = document.getElementById("directory-status");
 const matchesBox = document.getElementById("directory-matches");
 const syncButton = document.getElementById("sync-directory");
 let lookupNumber = 0;
+let pendingDirectoryLookup = null;
+let syncingDirectory = false;
 
 async function lookupDirectory(spec) {
   const sequence = ++lookupNumber;
+  pendingDirectoryLookup = null;
   const panel = document.getElementById("dossier-lu");
   panel.hidden = true;
   matchesBox.textContent = "Recherche dans la liste EDOF…";
@@ -89,7 +92,10 @@ async function lookupDirectory(spec) {
       location.assign(result.matches[0].url);
       return;
     }
-    matchesBox.textContent = result.message || "Plusieurs dossiers correspondent. Sélectionnez la fiche souhaitée.";
+    if (result.needs_sync) pendingDirectoryLookup = spec;
+    matchesBox.textContent = result.needs_sync && syncingDirectory
+      ? "Votre recherche sera affichée dès la fin de la première synchronisation."
+      : result.message || "Plusieurs dossiers correspondent. Sélectionnez la fiche souhaitée.";
     for (const match of result.matches || []) {
       const link = document.createElement("a");
       link.href = match.url;
@@ -106,6 +112,7 @@ async function lookupDirectory(spec) {
 }
 
 async function watchDirectory(id) {
+  syncingDirectory = true;
   if (syncButton) syncButton.disabled = true;
   const stopAt = Date.now() + 455000;
   try {
@@ -119,12 +126,14 @@ async function watchDirectory(id) {
       if (!job || !job.finished) continue;
       directoryStatus.textContent = job.code === "directory_ready" ?
         job.candidate_count + " dossiers synchronisés. Vous pouvez rechercher un nom." : job.message;
+      if (job.code === "directory_ready" && pendingDirectoryLookup) await lookupDirectory(pendingDirectoryLookup);
       return;
     }
     directoryStatus.textContent = "Consultez l’historique pour connaître le résultat de la synchronisation.";
   } catch {
     directoryStatus.textContent = "Rechargez la page pour voir l’état de la synchronisation.";
   } finally {
+    syncingDirectory = false;
     if (syncButton) syncButton.disabled = false;
   }
 }
