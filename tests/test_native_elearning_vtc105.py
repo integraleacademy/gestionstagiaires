@@ -2,6 +2,7 @@
 import copy
 import json
 import re
+import sqlite3
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -118,6 +119,14 @@ class Vtc105WebTests(unittest.TestCase):
         config=self._player_config(self.client.get(url))
         blocked=config['practiceUrl'].replace(lesson['id'],dossier['id'])
         self.assertEqual(self._api_post(blocked,config,practice_answers={}).status_code,409)
+        # Resume a learner who has already spent the required time on the first lesson.
+        page_seconds = {page['id']: page['required_seconds'] for page in config['lessonPages']}
+        reading_seconds = sum(page_seconds.values())
+        with sqlite3.connect(self.persist_dir / 'native_elearning' / 'tracking.sqlite3') as db:
+            db.execute('''UPDATE learner_course_progress SET lesson_seconds_json=?, active_seconds=?
+                          WHERE course_id=? AND course_version=? AND trainee_id=?''',
+                       (json.dumps({lesson['id']: page_seconds}), reading_seconds,
+                        'academy-vtc-a', VERSION, 'trainee-1'))
         self.assertEqual(self._api_post(config['completeUrl'],config).status_code,200)
         config=self._player_config(self.client.get(url,query_string={'activity':workshop['id']}))
         self.assertEqual(self._api_post(config['completeUrl'],config,practice_answers=correct_answers(workshop['practice'])).status_code,200)
@@ -138,11 +147,16 @@ class Vtc105WebTests(unittest.TestCase):
         self.assertEqual(self._api_post(config['completeUrl'],config,practice_step=eid,practice_answers={eid:answers[eid]}).status_code,400)
         self.assertEqual(self._api_post(config['practiceUrl'],config,practice_step=eid,practice_answers={eid:answers[eid]}).status_code,200)
         self.assertTrue(self._api_post(config['practiceUrl'],config,practice_answers=answers).json['correct'])
-        completed=self._api_post(config['completeUrl'],config,practice_answers=answers)
+        self.assertEqual(self._api_post(config['completeUrl'],config).status_code,400)
+        resumed = self.client.get(url, query_string={'activity':dossier['id']})
+        config = self._player_config(resumed)
+        saved_answers = script_config(resumed, 'vtcJourneyConfig')['saved']['practice_answers']
+        completed=self._api_post(config['completeUrl'],config,practice_answers=saved_answers)
         self.assertEqual(completed.status_code,200)
         progress=completed.json['progress']
         self.assertIn(dossier['id'],progress['completed_activity_ids'])
-        self.assertEqual(progress['active_seconds'],0)
+        self.assertEqual(progress['active_seconds'],reading_seconds)
+        self.assertEqual(self._player_config(self.client.get(config['nextUrl']))['activityId'], 'vtc-a-02-cours')
         saved=copy.deepcopy(progress['answers'][dossier['id']])
         self.assertFalse(saved['practice_diagnostics'][eid]['first_correct'])
         self.assertEqual(saved['practice_diagnostics'][eid]['attempts'],2)
