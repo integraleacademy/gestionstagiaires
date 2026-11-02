@@ -138,7 +138,11 @@ class SingleWrite:
         entry = self.spec["intent"]["action"] == "entry_training"
         allowed = ({"in training", "intraining", "entry", "entry training", "training entry", "enter training", "begin training", "entry in training", "declare entry", "entry declaration", "start training", "begin date"}
                    if entry else {"service done", "service done declared", "declare service done", "training completion", "end training", "exit training", "end date", "service done declaration", "servicedone"})
-        if suffix and words not in allowed:
+        status_entry = entry and suffix == "status"
+        if self.spec["intent"].get("pilot_ticket") and not status_entry:
+            self.rejected = True
+            return False
+        if suffix and words not in allowed and not status_entry:
             self.rejected = True
             return False
         try:
@@ -148,6 +152,10 @@ class SingleWrite:
             return False
         values = list(data_values(body))
         date = self.spec["intent"]["actual_date"]
+        if status_entry and (request.method != "PUT" or body != {
+                "state": "IN_TRAINING", "date": dt.date.fromisoformat(date).strftime("%d/%m/%Y")}):
+            self.rejected = True
+            return False
         if not any(isinstance(v, str) and (v == date or v == dt.date.fromisoformat(date).strftime("%d/%m/%Y")
                    or re.fullmatch(re.escape(date)+r"T00:00:00(?:\.0+)?(?:Z|[+]00:00)?", v)) for v in values):
             self.rejected = True
@@ -235,7 +243,8 @@ def transmit(page, spec, fields, gate, reload_fields):
                 partial(page, intent)
         # The form itself constructs the transaction. The request fence is closed for every other click.
         gate.armed = True
-        use(button(page, "enregistrer"))
+        save = page.locator("sl7-registration-folder-set-in-training-form button#confirm-button:visible") if entry else None
+        use(save if save is not None and save.count() == 1 else button(page, "enregistrer"))
         if not gate.sent:
             dlg = page.get_by_role("dialog")
             confirm = dlg.get_by_role("button", name=exact(r"oui,? (?:enregistrer|confirmer|valider)"))

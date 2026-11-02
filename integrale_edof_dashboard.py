@@ -350,6 +350,16 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 bridge_error = str(exc)
         aligned = not selected["pending"] and not bridge_error and (
             production is None or selected["provider"] == production["provider"])
+        if detail and aligned and selected["provider"] == "wedof" and on_test_service():
+            try:
+                pilot = declarations.pilot_state(folder)
+                detail["pilot"] = pilot
+                detail["pilot_ready"] = declarations.matches_pilot(detail["record"], pilot)
+                proof = pilot.get("proof") or {}
+                if declarations.same_enrolment(detail["record"], proof) and proof.get("entry_training"):
+                    detail["pilot_proof"] = proof["entry_training"]
+            except (ValueError, ProviderUnavailable) as exc:
+                detail["pilot_error"] = str(exc)
         return app.jinja_env.get_template("integrale_edof.html").render(
             selection=selected, production=production, bridge_error=bridge_error, aligned=aligned, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=TABS, tab=tab,
             dispatch_labels=declarations.LABELS, dispatch_reasons=MESSAGES, motifs=declarations.MOTIFS,
@@ -539,6 +549,52 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         folder_record(owner, folder)
         declarations.request_recheck(store.directory, folder, request.form.get("action"))
         flash("Relecture demandée. Le connecteur vérifiera la réception sans renvoyer la déclaration.", "success")
+        return back(folder=folder)
+
+    @bp.post("/dossiers/<folder>/entry-pilot")
+    @admin_required
+    def pilot_entry(folder):
+        owner = results_owner()
+        if session.get("admin_role") == "viewer" or not on_test_service():
+            abort(403)
+        check_csrf()
+        actor = session.get("admin_username") or owner
+        try:
+            with provider_operation("wedof"):
+                row = folder_record(owner, folder)
+                mode = request.form.get("mode")
+                if mode == "recheck":
+                    declarations.request_recheck(store.directory, folder, "entry_training")
+                    flash("Relecture demandée pour cette entrée.", "success")
+                    return back(folder=folder)
+                state = declarations.pilot_state(folder)
+                if mode == "release":
+                    declarations.pilot_state(folder, "release", actor=actor)
+                    flash("Réservation levée pour cette entrée.", "success")
+                elif category(row) != "accepted" or not declarations.matches_pilot(row, state):
+                    raise ValueError("L’état ou les dates du dossier ne permettent pas de réserver cette entrée.")
+                elif mode == "reserve":
+                    if not declarations.pilot_state(folder, "reserve", actor=actor).get("reserved"):
+                        raise ValueError("L’exclusion de cette entrée n’est pas confirmée.")
+                    flash("L’entrée de ce dossier est exclue de l’automatisation WeDoF de production.", "success")
+                elif mode == "submit" and state["reserved"] and state.get("ticket"):
+                    action = "entry_training"
+                    if any((folder, k) in active_blocks(local_data()) for k in (action, "both")):
+                        raise ValueError("Une suspension est en cours sur ce dossier.")
+                    draft = declaration_draft(row, request.form)
+                    proof = state.get("proof") or {}
+                    automatic = proof.get(action)
+                    if automatic and declarations.same_enrolment(row, proof):
+                        if draft["actual_date"] != automatic["actual_date"]:
+                            raise ValueError("La date saisie diffère du justificatif de production.")
+                        draft = dict(automatic)
+                    draft["pilot_ticket"] = state["ticket"]
+                    result = declarations.enqueue(store.directory, owner, selection.state()["revision"], row, draft, actor)
+                    flash(declarations.LABELS[result], "success")
+                else:
+                    raise ValueError("Réservez d’abord l’entrée de ce dossier en production.")
+        except (ValueError, ProviderUnavailable) as exc:
+            flash(str(exc), "error")
         return back(folder=folder)
 
     @bp.post("/dossiers/<folder>/submit")
