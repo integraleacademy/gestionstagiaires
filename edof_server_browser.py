@@ -260,6 +260,13 @@ def confirmed_dashboard(url, signals):
             and signals.get("chooser_action") == "confirm" and signals.get("workspace_status") == 200)
 
 
+def returned_to_organisation(url, signals):
+    parsed = urlsplit(url)
+    return (parsed.scheme == "https" and parsed.netloc == EDOF_HOST and private_page(url)
+            and location_category(url) in {"edof_select_siret", "edof_dashboard", "edof_folder_list"}
+            and signals.get("callback_status") == 200 and signals.get("edof_token_status") == 200)
+
+
 def restored_workspace(page, signals):
     if not private_page(page.url):
         return False
@@ -1165,7 +1172,14 @@ def run_browser(spec):
                 username = password = None
                 deadline = time.monotonic() + 70
                 while time.monotonic() < deadline:
-                    checkpoint()
+                    try:
+                        checkpoint()
+                    except BrowserTimeout:
+                        # The old EFP document can vanish while the MFA checkpoint
+                        # reads it. Continue only after both official callbacks.
+                        # The organisation checkpoint still checks the new screen.
+                        if not returned_to_organisation(page.url, signals):
+                            raise
                     if private_page(page.url):
                         break
                     page.wait_for_timeout(500)
@@ -1250,6 +1264,11 @@ def run_browser(spec):
                 try:
                     signals["directory"] = {"seen": 0, "pages": 0}
                     source = directory_responses[-1]
+                    initial = source.json()
+                    if isinstance(initial, dict) and type(initial.get("numberOfItems")) is int and isinstance(initial.get("items"), list):
+                        # A verified private list already proves an authenticated
+                        # session, independent of the later export/pagination.
+                        vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                     snapshot = exported_directory(page, source, checkpoint, signals["directory"], BrowserTimeout)
                     if snapshot is None:
                         snapshot = directory.from_pages(directory_pages(page, source, checkpoint, signals["directory"]), signals["directory"])

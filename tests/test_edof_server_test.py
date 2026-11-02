@@ -786,3 +786,13 @@ def test_official_export_checks_scope_count_identity_and_drops_unused_columns():
     for bad in (content.replace("123456", "654321"), content.replace("Exemple", "Autre"), header, content + content):
         with pytest.raises(directory.IncompleteDirectory):
             directory.csv_snapshot(bad.encode("utf-8-sig"), first, {})
+
+
+def test_efp_navigation_timeout_requires_two_official_callbacks_and_a_private_view():
+    signals = {"callback_status": 200, "edof_token_status": 200}
+    chooser = "https://" + browser.EDOF_HOST + "/espace-prive/html/#/select-sirets"
+    assert browser.returned_to_organisation(chooser, signals)
+    assert not browser.returned_to_organisation(chooser, {"callback_status": 200})
+    assert not browser.returned_to_organisation(chooser.replace("https:", "http:"), signals)
+    assert not browser.returned_to_organisation(browser.LOGIN_URL, signals)
+    assert not browser.returned_to_organisation(chooser.replace(browser.EDOF_HOST, "other.invalid"), signals)
