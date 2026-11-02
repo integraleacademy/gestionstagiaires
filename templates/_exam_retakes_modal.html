@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="{{ url_for('static',filename='css/exam-retakes.css') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/exam-retakes.css',v='convocation-1') }}">
 <dialog id="retakeDialog" class="retake-dialog" aria-labelledby="retakeTitle" data-api="{{ url_for('retake_list',sid=session.id,tid=trainee.id) }}">
   <header class="retake-header"><div><p>ACCOMPAGNER LA RÉUSSITE</p><h2 id="retakeTitle">Rattrapage</h2><span>{{ trainee.first_name }} {{ trainee.last_name }} · {{ session.training_type }}</span></div><button type="button" data-retake-close aria-label="Fermer">×</button></header>
   <div class="retake-body">
@@ -28,9 +28,11 @@
         <div class="retake-total"><span>Total TTC à régler</span><strong id="retakeTotal">0,00 €</strong></div>
         <p class="retake-discount" id="retakeSavings" hidden></p>
         <p class="retake-help" id="retakeFlow"></p>
+        <p>La convocation à l’examen est envoyée par e-mail dès la confirmation du rattrapage.</p>
+        <label class="retake-check"><input type="checkbox" name="convocation_manual"> Je préfère envoyer la convocation manuellement.</label>
       </section>
       <footer class="retake-actions"><button type="button" class="btn btn-outline" id="retakeCancelEdit" hidden>Annuler les modifications</button><button type="submit" class="btn btn-primary" id="retakeSave">Enregistrer et préparer la convention</button></footer>
     </form>
   </div>
 </dialog>
-<script src="{{ url_for('static',filename='js/exam-retakes.js') }}" defer></script>
+<script src="{{ url_for('static',filename='js/exam-retakes.js',v='convocation-1') }}" defer></script>

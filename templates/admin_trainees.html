@@ -894,6 +894,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <a href="{{ url_for('admin_trainee_page',session_id=r.source_session,trainee_id=r.trainee_id) }}#rattrapage" style="font-weight:800;color:#6b4500">{{ r.trainee_name }}</a>
           <span style="margin-left:14px">{{ r.kind }} · {{ r.exam_date_label }}{% if r.exam_time %} à {{ r.exam_time }}{% endif %}</span>
           <span style="margin-left:14px">{% if r.total_cents %}Règlement confirmé{% else %}Offert · convention signée{% endif %}</span>
+          {% if r.convocation_url %}<span style="margin-left:14px"><a href="{{ r.convocation_url }}" target="_blank" rel="noopener">Prévisualiser la convocation</a> · <a href="{{ url_for('admin_trainee_page',session_id=r.source_session,trainee_id=r.trainee_id) }}#rattrapage">Gérer l’envoi</a></span>{% endif %}
           <small style="display:block;margin-top:5px">Présence à l’examen uniquement · hors effectifs et statistiques de la session</small>
         </td>
       </tr>

@@ -20,6 +20,7 @@ import threading
 import time
 import unicodedata
 import uuid
+from io import BytesIO
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -256,7 +257,7 @@ class Store:
         return [json.loads(row[0]) for row in rows]
 
     def document(self, rid, kind):
-        if not re.fullmatch(r"[a-f0-9]{32}", rid) or kind not in {"convention", "signed", "invoice"}:
+        if not re.fullmatch(r"[a-f0-9]{32}", rid) or kind not in {"convention", "signed", "invoice", "convocation"}:
             raise RetakeError("Document introuvable.")
         return self.root / (rid + "-" + kind + ".pdf")
 
@@ -360,7 +361,45 @@ LABELS = {"draft": "Brouillon", "queued": "Préparation de la signature", "signi
           "confirmed": "Rattrapage confirmé", "stopped": "Signature arrêtée", "cancelled": "Brouillon annulé"}
 
 
-def view(row, *, public=False, token=""):
+def convocation_confirmed(row):
+    if row["status"] != "confirmed" or not row.get("signed_at"):
+        return False
+    if row["total_cents"] == 0:
+        return row.get("payment_status") == "not_required"
+    return row.get("payment_status") == "paid" and row.get("paid_cents") == row["total_cents"]
+
+
+def exam_upcoming(row):
+    local_date = today()
+    if row["exam_date"] == local_date and row.get("exam_time"):
+        return row["exam_time"] > dt.datetime.now(ZoneInfo("Europe/Paris")).strftime("%H:%M")
+    return row["exam_date"] >= local_date
+
+
+def convocation_delivery_key(row):
+    generation = row.get("convocation_generation", 1)
+    return "convocation" if generation == 1 else "convocation_" + str(generation)
+
+
+def manual_convocation(row):
+    if "convocation_manual" in row:
+        return row["convocation_manual"]
+    # Earlier versions sent a confirmation without an invitation. Let the team
+    # explicitly issue one for those dossiers without bulk-mailing past confirmations.
+    emails = row.get("emails", {})
+    confirmation = "confirmed" if row["total_cents"] else "documents"
+    return "convocation" not in emails and bool(emails.get(confirmation, {}).get("sent_at"))
+
+
+def convocation_requested(row):
+    return not manual_convocation(row) or row.get("convocation_requested") == row.get("convocation_generation", 1)
+
+
+def public_convocation_available(row):
+    return convocation_confirmed(row) and bool(row.get("emails", {}).get("convocation", {}).get("sent_at"))
+
+
+def view(row, *, public=False, token="", target_active=True):
     totals = financial_totals(row)
     result = {k: row.get(k) for k in ("id", "status", "kind", "source_session", "trainee_id", "target_session", "target_name",
               "exam_date", "exam_time", "location", "days", "no_days", "notes", "exam_offered", "days_offered", "revision",
@@ -384,7 +423,14 @@ def view(row, *, public=False, token=""):
     result["convention_url"] = url_for(endpoint, rid=row["id"], kind="signed" if row.get("signed_at") else "convention",
                                        v=row.get("pdf_sha256") or row.get("revision", 1), **extra)
     result["invoice_url"] = url_for(endpoint, rid=row["id"], kind="invoice", **extra) if row.get("invoice_pdf") else ""
+    preview = public_convocation_available(row) if public else row["status"] not in {"cancelled", "stopped"}
+    result["convocation_url"] = url_for(endpoint, rid=row["id"], kind="convocation", **extra) if preview else ""
     if not public:
+        receipt = row.get("emails", {}).get(convocation_delivery_key(row), {})
+        result.update(convocation_generation=row.get("convocation_generation", 1),
+                      convocation_sent_at=receipt.get("sent_at", ""), convocation_recipient=row["person"].get("email", ""),
+                      convocation_manual=manual_convocation(row), convocation_requested=convocation_requested(row),
+                      convocation_sendable=convocation_confirmed(row) and exam_upcoming(row) and target_active)
         result.update(error=row.get("error", ""), price_reference=row.get("price_reference", {}),
                       needs_review=row["status"] == "draft" and row.get("document_version", 1) < 2,
                       email_sent=bool(row.get("emails", {}).get("documents", {}).get("sent_at")),
@@ -392,9 +438,15 @@ def view(row, *, public=False, token=""):
     return result
 
 
-def views(host, sid, tid, *, public=False, token=""):
-    return [view(r, public=public, token=token) for r in Store(host).query("source_session=? AND trainee=?", (sid, tid))
-            if not public or r["status"] not in {"draft", "cancelled", "queued"}]
+def views(host, sid, tid, *, public=False, token="", data=None):
+    records = []
+    for row in Store(host).query("source_session=? AND trainee=?", (sid, tid)):
+        if public and row["status"] in {"draft", "cancelled", "queued"}:
+            continue
+        target = host.find_session(data, row["target_session"]) if data is not None else None
+        records.append(view(row, public=public, token=token,
+                            target_active=data is None or bool(target and not target.get("archived"))))
+    return records
 
 
 def roster(host, sid):
@@ -438,13 +490,13 @@ def register(app, host):
     def retake_list(sid, tid):
         data, source, trainee = scoped(host, sid, tid)
         if request.args.get('status') == '1':
-            return jsonify(ok=True, records=views(host, sid, tid))
+            return jsonify(ok=True, records=views(host, sid, tid, data=data))
         defaults = []
         for kind, label in components(host, source).items():
             defaults.append({"kind": kind, "label": label, "prices": prices(host, source, trainee, kind),
                              "failed_exam_date": exam_date(host, source, kind) if exam_date(host, source, kind) <= today() else "",
                              "sessions": candidates(host, data, source, kind)})
-        return jsonify(ok=True, records=views(host, sid, tid), defaults=defaults,
+        return jsonify(ok=True, records=views(host, sid, tid, data=data), defaults=defaults,
                        csrf=session.setdefault("retake_csrf", secrets.token_urlsafe(32)),
                        location="Intégrale Academy 54 chemin du Carreou 83480 PUGET SUR ARGENS",
                        read_only=session.get("admin_role") == "viewer")
@@ -492,6 +544,8 @@ def register(app, host):
                            "created_at": (previous or {}).get("created_at", now()), "revision": (previous or {}).get("revision", 0) + 1,
                            "document_version": 2, "document_date": today(),
                            "actor": session.get("admin_username") or "Administration"}
+                    if "convocation_manual" in payload and not payload.get("refresh_convention"):
+                        row["convocation_manual"] = payload["convocation_manual"] is True
                     from exam_retakes_documents import build_convention
                     destination = store.document(row["id"], "convention")
                     # Keep the previous PDF intact if generation fails midway through.
@@ -549,6 +603,23 @@ def register(app, host):
                     row.update(status="queued", next_attempt=0, error="", submitted_at=now())
                 elif action == "refresh":
                     row.update(next_attempt=0, error="")
+                elif action in {"send-convocation", "resend-convocation"}:
+                    target = host.find_session(data, row["target_session"])
+                    if not convocation_confirmed(row) or not exam_upcoming(row) or not target or target.get("archived"):
+                        raise RetakeError("L’envoi nécessite un rattrapage confirmé pour un examen à venir dans une session active.")
+                    generation = row.get("convocation_generation", 1)
+                    if payload.get("generation") != generation:
+                        raise RetakeError("Le suivi de la convocation a évolué. Actualisez le dossier.")
+                    receipt = row.get("emails", {}).get(convocation_delivery_key(row), {})
+                    if action == "resend-convocation":
+                        if not receipt.get("sent_at") or payload.get("sent_at") != receipt["sent_at"]:
+                            raise RetakeError("Actualisez le dossier avant de demander un nouvel envoi.")
+                        row["convocation_generation"] = generation + 1
+                    elif receipt.get("sent_at"):
+                        return jsonify(ok=True, record=view(row), already_sent=True)
+                    row["convocation_manual"] = manual_convocation(row)
+                    row["convocation_requested"] = row.get("convocation_generation", 1)
+                    row.update(next_attempt=0, error="")
                 elif action == "cancel" and row["status"] == "draft":
                     row.update(status="cancelled")
                 else:
@@ -579,7 +650,7 @@ def register(app, host):
         row = store.get(rid)
         if not row or row["source_session"] != source["id"] or row["trainee_id"] != trainee["id"] or row["status"] in {"draft", "queued", "cancelled"}:
             abort(404)
-        return document_response(store, row, kind)
+        return document_response(store, row, kind, public=True)
 
 
 def check_csrf(payload):
@@ -588,13 +659,21 @@ def check_csrf(payload):
         abort(403)
 
 
-def document_response(store, row, kind):
-    if kind not in {"convention", "signed", "invoice"}:
+def document_response(store, row, kind, *, public=False):
+    if kind not in {"convention", "signed", "invoice", "convocation"}:
         abort(404)
     path = store.document(row["id"], kind)
-    if not path.is_file():
-        abort(404)
-    response = send_file(path, mimetype="application/pdf", download_name="rattrapage-" + kind + ".pdf", conditional=False)
+    if kind == "convocation":
+        if row["status"] in {"cancelled", "stopped"} or (public and not public_convocation_available(row)):
+            abort(404)
+        from exam_retakes_documents import build_convocation
+        source = path if path.is_file() else BytesIO(build_convocation(row))
+        filename = "Convocation-rattrapage-" + row["exam_date"] + ".pdf"
+    else:
+        if not path.is_file():
+            abort(404)
+        source, filename = path, "rattrapage-" + kind + ".pdf"
+    response = send_file(source, mimetype="application/pdf", download_name=filename, conditional=False)
     response.headers["Cache-Control"] = "private, no-store"
     return response
 

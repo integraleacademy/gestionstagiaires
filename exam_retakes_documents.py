@@ -1,29 +1,50 @@
-"""Branded retake agreement and the shared Academy email presentation."""
+"""Academy retake agreements, exam invitations and email presentations."""
 from html import escape
+from io import BytesIO
 from pathlib import Path
 
 from exam_retakes import date_label, discount_label, financial_totals, line_items, money
 
 
-def build_convention(row, destination):
-    from reportlab.lib import colors
-    from reportlab.lib.styles import ParagraphStyle
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.utils import ImageReader
+def retake_font():
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Flowable, PageBreak
     regular = Path('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')
     if regular.is_file():
         if 'RetakeSans' not in pdfmetrics.getRegisteredFontNames():
             pdfmetrics.registerFont(TTFont('RetakeSans', str(regular)))
             pdfmetrics.registerFont(TTFont('RetakeSans-Bold', str(regular.with_name('DejaVuSans-Bold.ttf'))))
             pdfmetrics.registerFontFamily('RetakeSans', normal='RetakeSans', bold='RetakeSans-Bold')
-        font = 'RetakeSans'
-    else:
-        font = 'Helvetica'
+        return 'RetakeSans'
+    return 'Helvetica'
+
+
+def retake_page_frame(font, document_label, ref):
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.utils import ImageReader
     logo = ImageReader(str(Path(__file__).parent / 'static' / 'parcours-alternance' / 'logo.png'))
-    navy, gold, muted = (colors.HexColor(v) for v in ('#14283F','#F3C65F','#596A7D'))
+    navy, gold, muted = (colors.HexColor(v) for v in ('#14283F', '#F3C65F', '#596A7D'))
+    def frame(canvas,doc):
+        canvas.saveState();canvas.setFillColor(navy);canvas.rect(0,A4[1]-100,A4[0],100,stroke=0,fill=1)
+        canvas.drawImage(logo,48,A4[1]-86,width=215,height=64,mask='auto',preserveAspectRatio=True)
+        canvas.setFillColor(gold);canvas.setFont(font+'-Bold',9);canvas.drawRightString(547,A4[1]-42,'VOTRE RATTRAPAGE')
+        canvas.setFillColor(colors.white);canvas.setFont(font,8);canvas.drawRightString(547,A4[1]-61,document_label+' '+ref)
+        canvas.setFillColor(gold);canvas.rect(0,A4[1]-103,A4[0],3,stroke=0,fill=1)
+        canvas.setStrokeColor(colors.HexColor('#D5DFE9'));canvas.line(48,42,547,42)
+        canvas.setFont(font,7);canvas.setFillColor(muted)
+        canvas.drawString(48,29,'Intégrale Academy - 04 22 47 07 68 - ecole@integraleacademy.com')
+        canvas.drawRightString(547,29,'Page '+str(doc.page));canvas.restoreState()
+    return frame
+
+
+def build_convention(row, destination):
+    from reportlab.lib import colors
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Flowable, PageBreak
+    font = retake_font()
+    navy, gold = colors.HexColor('#14283F'), colors.HexColor('#F3C65F')
     pale, green = colors.HexColor('#F1F5FA'), colors.HexColor('#E8F5EE')
     body = ParagraphStyle('RetakeBody', fontName=font, fontSize=9, leading=13.5, textColor=navy, spaceAfter=7)
     title = ParagraphStyle('RetakeTitle', parent=body, fontName=font+'-Bold', fontSize=23, leading=29, spaceAfter=10)
@@ -110,16 +131,7 @@ def build_convention(row, destination):
     signature=Table([[[p('Acceptation du stagiaire',heading),p('Je confirme les informations sur l’examen non réussi, les dates de préparation, les prestations, les remises et le montant à régler. Signature électronique avec vérification par SMS.',small)],SignatureBox()]],colWidths=[285,214])
     signature.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(0,0),0),('TOPPADDING',(0,0),(-1,-1),0),('BOTTOMPADDING',(0,0),(-1,-1),0)]))
     story += [Spacer(1,8),signature]
-    def frame(canvas,doc):
-        canvas.saveState();canvas.setFillColor(navy);canvas.rect(0,A4[1]-100,A4[0],100,stroke=0,fill=1)
-        canvas.drawImage(logo,48,A4[1]-86,width=215,height=64,mask='auto',preserveAspectRatio=True)
-        canvas.setFillColor(gold);canvas.setFont(font+'-Bold',9);canvas.drawRightString(547,A4[1]-42,'VOTRE RATTRAPAGE')
-        canvas.setFillColor(colors.white);canvas.setFont(font,8);canvas.drawRightString(547,A4[1]-61,'CONVENTION '+ref)
-        canvas.setFillColor(gold);canvas.rect(0,A4[1]-103,A4[0],3,stroke=0,fill=1)
-        canvas.setStrokeColor(colors.HexColor('#D5DFE9'));canvas.line(48,42,547,42)
-        canvas.setFont(font,7);canvas.setFillColor(muted)
-        canvas.drawString(48,29,'Intégrale Academy - 04 22 47 07 68 - ecole@integraleacademy.com')
-        canvas.drawRightString(547,29,'Page '+str(doc.page));canvas.restoreState()
+    frame = retake_page_frame(font, "CONVENTION", ref)
     temporary=str(destination)+'.tmp'
     SimpleDocTemplate(temporary,pagesize=A4,rightMargin=48,leftMargin=48,topMargin=118,bottomMargin=58,
                       title='Convention de rattrapage - '+full_name,author='Intégrale Academy').build(story,onFirstPage=frame,onLaterPages=frame)
@@ -127,7 +139,76 @@ def build_convention(row, destination):
     return signature_field
 
 
+def exam_appointment(row):
+    date = date_label(row["exam_date"])
+    return date + " à " + row["exam_time"] if row.get("exam_time") else date
+
+
+def build_convocation(row):
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+    font = retake_font()
+    navy, muted = colors.HexColor("#14283F"), colors.HexColor("#53687B")
+    body = ParagraphStyle("ConvocationBody", fontName=font, fontSize=11, leading=17, textColor=navy)
+    title = ParagraphStyle("ConvocationTitle", parent=body, fontName=font+"-Bold", fontSize=25, leading=31)
+    label = ParagraphStyle("ConvocationLabel", parent=body, fontSize=9, textColor=muted)
+    strong = ParagraphStyle("ConvocationValue", parent=body, fontName=font+"-Bold")
+
+    def line(value, style=body):
+        return Paragraph(escape(str(value or "")).replace("\n", "<br/>"), style)
+
+    person = row["person"]
+    full_name = person["first_name"] + " " + person["last_name"].upper()
+    details = [
+        ("Candidat", full_name), ("Examen", row["kind"]), ("Date et heure", exam_appointment(row)),
+        ("Lieu de l’examen", row["location"]), ("Session d’accueil", row["target_name"]),
+    ]
+    panel = Table([[line(key, label), line(value, strong)] for key, value in details],
+                  colWidths=[119, 363], hAlign="LEFT")
+    panel.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F1F5FA")),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 12),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 12), ("TOPPADDING", (0, 0), (-1, -1), 9),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
+    ]))
+    story = [line("Convocation à l’examen", title), line("Session de rattrapage", strong), Spacer(1, 22),
+             line("Bonjour " + person["first_name"] + ","),
+             line("Nous vous convoquons à l’examen de rattrapage aux coordonnées indiquées ci-dessous."),
+             Spacer(1, 15), panel, Spacer(1, 20)]
+    if not row.get("exam_time"):
+        story.extend([line("L’horaire reste à préciser. Contactez l’accueil avant le jour de l’examen."), Spacer(1, 8)])
+    story.extend([line("Le jour de l’examen, munissez-vous de cette convocation et d’une pièce d’identité."),
+                  Spacer(1, 16), line("Pour toute question ou en cas d’empêchement, contactez l’équipe au "
+                  "04 22 47 07 68 ou à ecole@integraleacademy.com."), Spacer(1, 16), line("L’équipe Intégrale Academy", strong)])
+    out = BytesIO()
+    frame = retake_page_frame(font, "CONVOCATION", row["id"][:12].upper())
+    SimpleDocTemplate(out, pagesize=A4, rightMargin=48, leftMargin=48, topMargin=128, bottomMargin=60,
+                      title="Convocation à l’examen de rattrapage - "+full_name, author="Intégrale Academy",
+                      invariant=1).build(story, onFirstPage=frame, onLaterPages=frame)
+    return out.getvalue()
+
+
 def email_content(host, row, kind, link):
+    if kind == 'convocation':
+        title = "Convocation à l’examen de rattrapage"
+        person = row["person"]["first_name"]
+        appointment = row["kind"] + " · " + exam_appointment(row)
+        intro = "Vous trouverez en pièce jointe votre convocation nominative à l’examen de rattrapage."
+        contact = "En cas d’empêchement, contactez l’équipe au 04 22 47 07 68."
+        confirmed = "Votre règlement est confirmé." if row["total_cents"] else "Votre inscription au rattrapage est confirmée."
+        lines = ["Bonjour " + person + ",", confirmed + " " + intro, appointment, row["location"]]
+        if not row.get("exam_time"):
+            lines.append("Contactez l’accueil pour connaître l’horaire de l’examen.")
+        lines.append(contact)
+        content = "".join("<p>" + escape(line).replace("\n", "<br/>") + "</p>" for line in lines)
+        if link:
+            content += '<p><a href="' + escape(link, quote=True) + '">Consulter mon espace stagiaire</a></p>'
+        return (title + " · " + appointment,
+                host.render_academy_email(content, title=title, eyebrow="VOTRE EXAMEN", signature="team"),
+                "\n\n".join(lines + ([link] if link else []) + ["L’équipe Intégrale Academy"]))
     name = escape(row['person']['first_name'])
     schedule = '<p><strong>Examen '+escape(row['kind'])+' :</strong> '+date_label(row['exam_date'])+(' à '+escape(row['exam_time']) if row['exam_time'] else '')+'<br/><strong>Session :</strong> '+escape(row['target_name'])+'<br/><strong>Lieu :</strong> '+escape(row['location'])+'</p>'
     if row.get('failed_exam_date'):

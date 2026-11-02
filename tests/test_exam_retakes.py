@@ -1,7 +1,9 @@
 """Financial and enrolment invariants of the retake workflow (no live services)."""
+import base64
 import copy
 import hashlib
 import json
+from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -183,6 +185,15 @@ def test_paid_end_to_end_is_idempotent_and_never_counts_as_enrolment(host,client
     before=copy.deepcopy(host.load_data())
     row=saved(host,client,no_days=False,days=[{'date':'2026-11-02'}])
     store=retakes.Store(host);signature,invoice=providers(host,store,row)
+    admin_path = '/admin/rattrapages/' + row['id'] + '/convocation.pdf'
+    public_path = '/espace/token-t1/rattrapages/' + row['id'] + '/convocation.pdf'
+    preview = client.get(admin_path)
+    assert preview.status_code == 200 and preview.mimetype == 'application/pdf'
+    assert 'no-store' in preview.headers['Cache-Control'] and not store.document(row['id'], 'convocation').exists()
+    assert not host.brevo_send_email.called
+    page = workflow.PdfReader(BytesIO(preview.data)).pages[0].extract_text()
+    assert all(value in page for value in ('Camille TEST', 'APS', '09/12/2026', '09:00', row['location']))
+    with client.session_transaction() as session: session['public_token'] = 'token-t1'
     assert send(client,row).status_code==200
     row=store.get(row['id']);workflow.process(host,store,row)
     assert row['status']=='signing' and host._qonto_request.call_count==0
@@ -191,10 +202,20 @@ def test_paid_end_to_end_is_idempotent_and_never_counts_as_enrolment(host,client
     assert host.brevo_send_email.call_count==2
     message=host.brevo_send_email.call_args
     assert len(message.kwargs['attachments'])==2 and 'https://pay.qonto.com/retake-1' in message.args[2]
+    assert client.get(public_path).status_code == 404
+    action = '/api/rattrapages/' + row['id'] + '/send-convocation'
+    assert client.post(action, json={'csrf':payload(client)['csrf'], 'generation':1}).status_code == 409
     with host.app.test_request_context():assert retakes.roster(host,'TARGET')==[]
     invoice.update(status='paid');workflow.process(host,store,row);workflow.process(host,store,row)
     assert row['status']=='confirmed'
     assert host.brevo_send_email.call_count==3
+    invitation = host.brevo_send_email.call_args
+    assert invitation.args[0] == row['person']['email'] and 'Convocation' in invitation.args[1]
+    assert '09/12/2026 à 09:00' in invitation.kwargs['text_content'] and row['location'] in invitation.args[2]
+    attachment, = invitation.kwargs['attachments']
+    assert attachment['name'] == 'Convocation-rattrapage-2026-12-09.pdf'
+    assert base64.b64decode(attachment['content']) == preview.data == client.get(admin_path).data
+    assert client.get(public_path).data == preview.data and client.get(public_path.replace('token-t1','token-other')).status_code == 403
     creates=[c for c in host._qonto_request.call_args_list if c.args[:2]==('POST','/v2/client_invoices')]
     assert len(creates)==1
     with host.app.test_request_context():assert len(retakes.roster(host,'TARGET'))==1
@@ -208,7 +229,107 @@ def test_free_retakes_skip_qonto_entirely(host,client):
     row=store.get(row['id']);workflow.process(host,store,row);signature['status']='done';workflow.process(host,store,row)
     assert row['status']=='confirmed' and row['payment_status']=='not_required'
     host._qonto_request.assert_not_called();host.get_or_create_qonto_billing_client.assert_not_called()
-    assert len(host.brevo_send_email.call_args.kwargs['attachments'])==1
+    assert [a['name'] for a in host.brevo_send_email.call_args.kwargs['attachments']] == [
+        'Convocation-rattrapage-2026-12-09.pdf', 'Convention-rattrapage-signee.pdf']
+
+
+@pytest.mark.parametrize('legacy', [False, True])
+def test_manual_and_previously_confirmed_invitations_are_deliberate(host, client, legacy):
+    row = saved(host, client, convocation_manual=True)
+    store = retakes.Store(host)
+    signature, invoice = providers(host, store, row)
+    send(client, row)
+    row = store.get(row['id'])
+    workflow.process(host, store, row)
+    signature['status'] = 'done'
+    workflow.process(host, store, row)
+    invoice.update(status='paid')
+    workflow.process(host, store, row)
+    assert row['status'] == 'confirmed' and 'convocation' not in row['emails']
+    if legacy:
+        del row['convocation_manual']
+        store.save(row)
+    host.brevo_send_email.reset_mock()
+    workflow.process(host, store, store.get(row['id']))
+    host.brevo_send_email.assert_not_called()
+    api = '/api/sessions/SOURCE/stagiaires/T1/rattrapages'
+    record = client.get(api).json['records'][0]
+    assert record['convocation_manual'] and record['convocation_sendable'] and not record['convocation_requested']
+    preview = client.get(record['convocation_url']).data
+    first = '/api/rattrapages/' + row['id'] + '/send-convocation'
+    again = first.replace('/send-convocation', '/resend-convocation')
+    data = {'csrf':client.get(api).json['csrf'], 'generation':1}
+    with client.session_transaction() as session: session['public_token'] = 'token-t1'
+    public = '/espace/token-t1/rattrapages/' + row['id'] + '/convocation.pdf'
+    assert client.get(public).status_code == 404
+    assert client.post(first, json={**data, 'csrf':'wrong'}).status_code == 403
+    assert client.post(again, json=data).status_code == 409
+    assert client.post(first, json=data).json['ok'] and client.post(first, json=data).json['ok']
+    workflow.process(host, store, store.get(row['id']))
+    workflow.process(host, store, store.get(row['id']))
+    host.brevo_send_email.assert_called_once()
+    assert client.get(public).data == preview
+    assert client.post(first, json=data).json['already_sent']
+    assert client.post(again, json={**data, 'sent_at':'old'}).status_code == 409
+    data['sent_at'] = client.get(api).json['records'][0]['convocation_sent_at']
+    with client.session_transaction() as session: session['admin_role'] = 'viewer'
+    assert client.post(again, json=data).status_code == 403
+    with client.session_transaction() as session: session['admin_role'] = 'admin'
+    assert client.post(again, json=data).json['ok'] and client.post(again, json=data).status_code == 409
+    workflow.process(host, store, store.get(row['id']))
+    workflow.process(host, store, store.get(row['id']))
+    first_mail, second_mail = host.brevo_send_email.call_args_list
+    assert first_mail.kwargs['metadata']['idempotency_key'] != second_mail.kwargs['metadata']['idempotency_key']
+    for mail in (first_mail, second_mail):
+        assert mail.kwargs['metadata']['purpose'] == 'exam_retake_convocation'
+        attachment, = mail.kwargs['attachments']
+        assert base64.b64decode(attachment['content']) == preview
+
+
+@pytest.mark.parametrize('inactive', ['past', 'archived'])
+def test_expired_or_archived_exams_cannot_issue_an_invitation(host, client, monkeypatch, inactive):
+    row = saved(host, client, convocation_manual=True, exam_offered=True)
+    store = retakes.Store(host)
+    signature, _ = providers(host, store, row)
+    send(client, row)
+    row = store.get(row['id'])
+    workflow.process(host, store, row)
+    signature['status'] = 'done'
+    workflow.process(host, store, row)
+    row['convocation_manual'] = False
+    store.save(row)
+    if inactive == 'past':
+        monkeypatch.setattr(retakes, 'today', lambda:'2026-12-10')
+    else:
+        host.load_data()['sessions'][1]['archived'] = True
+    host.brevo_send_email.reset_mock()
+    workflow.process(host, store, row)
+    host.brevo_send_email.assert_not_called()
+    listing = client.get('/api/sessions/SOURCE/stagiaires/T1/rattrapages').json
+    assert not listing['records'][0]['convocation_sendable']
+    assert client.post('/api/rattrapages/' + row['id'] + '/send-convocation',
+                       json={'csrf':listing['csrf'], 'generation':1}).status_code == 409
+
+
+def test_convocation_retry_reuses_the_file_and_delivery_key(host, client):
+    row = saved(host, client, exam_offered=True)
+    store = retakes.Store(host)
+    signature, _ = providers(host, store, row)
+    send(client, row)
+    row = store.get(row['id'])
+    workflow.process(host, store, row)
+    signature['status'] = 'done'
+    host.brevo_send_email.reset_mock()
+    host.brevo_send_email.side_effect = [TimeoutError(), {'ok':True, 'message_id':'accepted'}]
+    with pytest.raises(TimeoutError):
+        workflow.process(host, store, row)
+    persisted = store.get(row['id'])
+    assert not persisted['emails']['convocation'].get('sent_at')
+    workflow.process(host, store, persisted)
+    workflow.process(host, store, store.get(row['id']))
+    first_try, retry = host.brevo_send_email.call_args_list
+    assert first_try == retry
+    assert store.get(row['id'])['emails']['convocation']['message_id'] == 'accepted'
 
 
 def test_paid_status_with_partial_amount_does_not_confirm(host,client):
