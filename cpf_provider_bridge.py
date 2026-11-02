@@ -116,6 +116,16 @@ def register_production_control(legacy):
     def status():
         return jsonify(public_state(store.state()))
 
+    @bp.post("/evidence")
+    def cpf_evidence():
+        from cpf_production_evidence import read_evidence
+        body = request.get_json(silent=True)
+        ids = body.get("folders") if isinstance(body, dict) else None
+        if not isinstance(ids, list) or not 1 <= len(ids) <= 100 or any(not isinstance(i, str) or not FOLDER.fullmatch(i) for i in ids):
+            return jsonify(error="invalid_request"), 400
+        with provider_operation("integrale"):
+            return jsonify(**public_state(store.state()), evidence=read_evidence(legacy, ids))
+
     @bp.post("/receipt")
     def check_receipt():
         body = request.get_json(silent=True)

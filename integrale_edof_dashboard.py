@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 from flask import Blueprint, abort, flash, get_flashed_messages, redirect, request, session, url_for
 
 import edof_directory as directory
+import edof_declarations as declarations
 from cpf_provider import PROVIDERS, ProviderStore, ProviderUnavailable, on_test_service, provider_operation
 from cpf_provider_bridge import coordinated_switch, production_request
 from edof_matching import build_comparison, manual_options
@@ -166,6 +167,8 @@ def declaration_draft(row, fields):
         if not 0 <= rate <= 100 or (rate < 100 and not 3 <= len(reason) <= 250):
             raise ValueError("Vérifiez le taux réalisé et le motif en cas de parcours partiel.")
         result.update(rate=rate, reason=reason[:250] if rate < 100 else "")
+        if fields.get("motif") in declarations.MOTIFS and rate < 100:
+            result["motif"] = fields["motif"]
     return result
 
 
@@ -327,6 +330,18 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                       if x["folder"] in (snap or {}).get("rows", {})]
         gmail = gmail_status()
         selected = selection.state()
+        from edof_server_test import MESSAGES
+        dispatches = declarations.records(store.directory)
+        visible_folders = (snap or {}).get("rows", {})
+        dispatches = [d for d in dispatches if d["folder"] in visible_folders]
+        if detail:
+            detail["dispatches"] = [d for d in dispatches if d["folder"] == folder]
+        with closing(store.connect()) as db:
+            inspection = db.execute(
+                "SELECT result,finished FROM jobs WHERE owner=? AND mode='inspect_forms' ORDER BY created DESC LIMIT 1", (owner,)).fetchone()
+        check = json.loads(inspection["result"]) if inspection else None
+        if check:
+            check["message"] = MESSAGES.get(check["code"], "Contrôle à reprendre.")
         production, bridge_error = None, ""
         if on_test_service():
             try:
@@ -337,7 +352,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             production is None or selected["provider"] == production["provider"])
         return app.jinja_env.get_template("integrale_edof.html").render(
             selection=selected, production=production, bridge_error=bridge_error, aligned=aligned, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=TABS, tab=tab,
-            csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
+            dispatch_labels=declarations.LABELS, dispatch_reasons=MESSAGES, motifs=declarations.MOTIFS,
+            inspection=check, dispatches=dispatches, csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
             match_counts=Counter(m["status"] for m in matches.values()), total=len(rows), counts=counts,
             rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
             detail=detail, events=events, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=directory.stamp(snap) if snap else None, today=today, metrics=metrics,
@@ -361,7 +377,17 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         except ValueError:
             abort(400)
         try:
-            result = coordinated_switch(selection, target, revision, session.get("admin_username") or owner)
+            def check_production(body=None):
+                # coordinated_switch holds the exclusive provider lock while making this check.
+                if target == "wedof" and body is None:
+                    with closing(declarations.database(store.directory)) as db:
+                        outstanding = db.execute("SELECT folder FROM cpf_declarations WHERE status IN ('sending','uncertain') ORDER BY changed LIMIT 1").fetchone()
+                    if outstanding:
+                        raise ProviderUnavailable(f"Vérifiez d’abord la réception du dossier {outstanding['folder']} dans sa fiche pour éviter un double envoi.")
+                return production_request(body)
+
+            result = coordinated_switch(selection, target, revision, session.get("admin_username") or owner,
+                                        remote=check_production if on_test_service() else None)
         except ProviderUnavailable as exc:
             flash(str(exc), "warning")
             return back()
@@ -417,6 +443,13 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         clear = request.form.get("release") == "yes"
         if action not in ACTION_LABELS or (not clear and (action != ACTIONS.get(category(row)) or reason not in BLOCK_REASONS)):
             abort(400)
+        if not clear:
+            with closing(declarations.database(store.directory)) as db, db:
+                pending = db.execute(
+                    "SELECT action,status FROM cpf_declarations WHERE folder=?", (folder,)).fetchall()
+                if any(x["action"] in (action,) or action == "both" for x in pending if x["status"] in {"sending", "uncertain"}):
+                    raise ValueError("Un envoi est déjà parti. Vérifiez sa réception dans cette fiche.")
+                db.execute("UPDATE cpf_declarations SET status='review',detail='declaration_blocked' WHERE folder=? AND (action=? OR ?='both') AND status='queued'", (folder, action, action))
         now = dt.datetime.now(PARIS).isoformat()
         def apply(data):
             blocks = data.setdefault("wedof_automation_blocks", [])
@@ -470,6 +503,61 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         flash(note, "success")
         return back("requests",folder=folder)
 
+    @bp.post("/inspect-forms")
+    @admin_required
+    def inspect_forms():
+        owner = results_owner()
+        if session.get("admin_role") == "viewer":
+            abort(403)
+        check_csrf()
+        probes = {}
+        rows = (snapshot(owner) or {}).get("rows", {}).values()
+        today = dt.datetime.now(PARIS).date().isoformat()
+        def priority(row):
+            date = row.get("session_start_date" if category(row) == "accepted" else "session_end_date") or "9999-12-31"
+            return (date > today, abs((dt.date.fromisoformat(date) - dt.date.fromisoformat(today)).days))
+        for row in sorted(rows, key=priority):
+            action = ACTIONS.get(category(row))
+            if action and action not in probes:
+                probes[action] = row["folder_id"]
+            if len(probes) == 2:
+                break
+        if not probes:
+            flash("Aucun dossier accepté ou en formation dans la dernière liste.", "warning")
+        else:
+            try:
+                from edof_server_test import start_job
+                start_job(store, owner, {"mode": "inspect_forms", "probes": probes, "owner": owner})
+                flash("Contrôle lancé. Actualisez pour voir le résultat.", "success")
+            except ValueError as exc:
+                flash(str(exc), "warning")
+        return back("technical")
+
+    @bp.post("/dossiers/<folder>/recheck")
+    @native_action
+    def recheck(owner, folder):
+        folder_record(owner, folder)
+        declarations.request_recheck(store.directory, folder, request.form.get("action"))
+        flash("Relecture demandée. Le connecteur vérifiera la réception sans renvoyer la déclaration.", "success")
+        return back(folder=folder)
+
+    @bp.post("/dossiers/<folder>/submit")
+    @native_action
+    def submit(owner, folder):
+        row = folder_record(owner, folder)
+        action = ACTIONS.get(category(row))
+        blocks = active_blocks(local_data())
+        if (folder, action) in blocks or (folder, "both") in blocks:
+            raise ValueError("Une suspension est en cours sur ce dossier.")
+        fields = request.form.to_dict()
+        if fields.get("motif") in declarations.MOTIFS and not fields.get("reason", "").strip():
+            fields["reason"] = declarations.MOTIFS[fields["motif"]]
+        draft = declaration_draft(row, fields)
+        state = declarations.enqueue(store.directory, owner, selection.state()[
+                                     "revision"], row, draft, session.get("admin_username") or owner)
+        flash(declarations.LABELS[state], "success")
+        return back(folder=folder)
+
     @bp.post("/dossiers/<folder>/prepare")
     @native_action
     def prepare(owner, folder):
@@ -480,7 +568,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             raise ValueError("Le dossier est bloqué. Vérifiez le motif avant de préparer sa déclaration.")
         draft = declaration_draft(row, request.form)
         record_work(selection, folder, session.get("admin_username") or owner, draft=json.dumps(draft, ensure_ascii=False))
-        flash("Déclaration préparée. Sa transmission doit être confirmée dans le portail EDOF.", "success")
+        flash("Déclaration préparée. Vous pouvez la transmettre depuis cette fiche.", "success")
         return back(folder=folder)
 
     app.register_blueprint(bp)

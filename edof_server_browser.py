@@ -1,4 +1,4 @@
-"""Short-lived, read-only EDOF browser used by the Test V2 access experiment.
+"""Short-lived EDOF browser. Reads are isolated from explicitly queued declarations.
 
 Input is a small search specification on stdin. Output is one allowlisted JSON
 result. No screenshots, traces, raw responses or mail bodies are persisted.
@@ -970,9 +970,15 @@ def run_browser(spec):
     session_saved = False
     mailbox = None
     requested_at = None
-    if spec["mode"] in {"read", "directory"} and os.environ.get("EDOF_CONNECTOR_KEY"):
+    business_modes = {"declare", "reconcile"}
+    authenticated = spec["mode"] in {"read", "directory", "inspect_forms"} | business_modes
+    gate = None
+    if authenticated and os.environ.get("EDOF_CONNECTOR_KEY"):
         try:
             vault = Vault(os.environ["EDOF_CONNECTOR_DIRECTORY"], os.environ["EDOF_CONNECTOR_KEY"])
+            if spec["mode"] in business_modes:
+                from edof_declaration_form import SingleWrite
+                gate = SingleWrite(spec, EDOF_HOST, API_PREFIX, os.environ["EDOF_CONNECTOR_DIRECTORY"])
             if not spec.get("fresh_login"):
                 saved = vault.get("browser")
         except Exception:
@@ -982,14 +988,15 @@ def run_browser(spec):
         nonlocal blocked
         request = route.request
         returned = 200 <= signals.get("callback_status", 0) < 400
-        allow_identity = spec["mode"] in {"read", "directory"} and (returned or bool(saved))
+        allow_identity = authenticated and (returned or bool(saved))
         frame_url = ""
         if allow_identity and request.method == "POST" and urlsplit(request.url).netloc == EDOF_HOST:
             try:
                 frame_url = request.frame.url
             except Exception:
                 pass  # Unknown initiator: the identity POST stays blocked.
-        if permitted_request(request.url, request.method, edof_identity=allow_identity, frame_url=frame_url):
+        if (permitted_request(request.url, request.method, edof_identity=allow_identity, frame_url=frame_url)
+                or (gate and gate.allows(request))):
             route.continue_()
         else:
             blocked += 1
@@ -1005,6 +1012,8 @@ def run_browser(spec):
 
     def observe(response):
         nonlocal invalid_response
+        if gate:
+            gate.observe(response)
         parsed = urlsplit(response.url)
         if response.request.method == "POST" and parsed.hostname == EFP_HOST and parsed.path == "/auth/realms/efp/login-actions/authenticate":
             signals["login_post_status"] = response.status
@@ -1281,6 +1290,27 @@ def run_browser(spec):
                 # The normal sign-in worked. Retire the unusable cached browser
                 # even if the separate name search later fails.
                 vault.delete("browser")
+            if spec["mode"] == "inspect_forms":
+                from edof_declaration_form import ENTRY, EXIT, button
+                inspected = {}
+                for kind, folder in spec["probes"].items():
+                    spec["selected_id"] = folder
+                    stage = "dossier"
+                    open_folder_view(page, DETAIL_PREFIX+folder, lambda: folder in details, BrowserTimeout)
+                    until = time.monotonic()+15
+                    while folder not in details and time.monotonic() < until:
+                        checkpoint()
+                        page.wait_for_timeout(150)
+                    control = button(page, ENTRY if kind == "entry_training" else EXIT)
+                    try:
+                        control.wait_for(state="visible", timeout=5000)
+                        available = control.count() == 1 and control.is_visible()
+                    except BrowserTimeout:
+                        available = False
+                    inspected[kind] = {"read": folder in details, "control": available}
+                if inspected and all(i["read"] for i in inspected.values()) and vault:
+                    vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
+                return {"code": "declaration_inspected", "stage": stage, "diagnostics": {"forms": inspected}}
             if spec["mode"] == "directory":
                 stage = "directory"
                 if not is_directory_view(page.url):
@@ -1363,6 +1393,22 @@ def run_browser(spec):
                 # save an incomplete/OTP/challenge session or local storage.
                 vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                 session_saved = True
+            if spec["mode"] in business_modes:
+                from edof_declaration_form import transmit
+
+                def reload_fields():
+                    # A fresh top-level load causes a new authenticated GET for this exact folder.
+                    details.pop(folder_id, None)
+                    page.reload(wait_until="domcontentloaded", timeout=20000)
+                    until = time.monotonic()+15
+                    while folder_id not in details and time.monotonic() < until:
+                        checkpoint()
+                        page.wait_for_timeout(150)
+                    return details.get(folder_id)
+                stage = "declaration"
+                if not gate:
+                    raise StopRun("private_storage_unavailable")
+                return transmit(page, spec, fields, gate, reload_fields)
             return {"code": "read_success", "stage": stage, "fields": fields, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "session_saved": session_saved, "blocked_writes": blocked}
         except GmailError as exc:
             return {"code": exc.code, "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "diagnostics": exc.diagnostics}

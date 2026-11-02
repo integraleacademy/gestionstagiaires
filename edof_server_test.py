@@ -27,12 +27,17 @@ from cpf_provider import acquire_provider
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
 from edof_server_browser import stalled_before_login
 import edof_directory as directory
+import edof_declarations as declarations
 from edof_gmail import Vault, GmailError, connector_key, oauth_configured, authorization_url, finish_authorization
 
 JOB_TIMEOUT = 210
 DIRECTORY_TIMEOUT = 420
 RETENTION = 86400
+AUTH_MODES = {"read", "directory", "declare", "reconcile", "inspect_forms"}
 MESSAGES = {
+    **declarations.REASONS,
+    "declaration_confirmed": "Le statut et les valeurs de la déclaration ont été relus sur EDOF.",
+    "declaration_inspected": "Contrôle des commandes disponibles sur EDOF terminé en lecture seule.",
     "directory_ready": "La liste EDOF de l’établissement est disponible pour la recherche.",
     "directory_unavailable": "EDOF n’a pas renvoyé la liste de l’établissement. Vous pouvez reprendre la synchronisation.",
     "directory_incomplete": "La liste renvoyée par EDOF est incomplète. La dernière liste vérifiée reste consultable.",
@@ -146,9 +151,10 @@ class ServerTestStore:
                 if db.execute("SELECT 1 FROM jobs WHERE finished IS NULL").fetchone():
                     raise ValueError("Un essai est déjà en cours sur ce serveur.")
                 # Prevent repeated password attempts; no automatic retry loop.
-                auth = mode in {"read", "directory"}
-                recent = db.execute("SELECT MAX(created) AS created FROM jobs WHERE mode IN (?, ?)",
-                                    ("read", "directory") if auth else (mode, mode)).fetchone()
+                auth = mode in AUTH_MODES
+                group = sorted(AUTH_MODES) if auth else [mode]
+                recent = db.execute("SELECT MAX(created) AS created FROM jobs WHERE mode IN (" +
+                                    ",".join("?" for _ in group)+")", group).fetchone()
                 delay = 300 if auth else 30
                 remaining = math.ceil(recent["created"] + delay - time.time()) if recent["created"] is not None else 0
                 if remaining > 0:
@@ -256,7 +262,7 @@ class ServerTestStore:
         finally:
             db.close()
 
-    def due_directories(self):
+    def due_directories(self, *, operating=False):
         # Refresh active accounts in the background. A failed run pauses automatic sign-in.
         db = self.connect()
         try:
@@ -265,7 +271,7 @@ class ServerTestStore:
                 "(SELECT id FROM jobs WHERE owner = a.owner AND mode = 'directory' ORDER BY created DESC LIMIT 1) "
                 "WHERE j.finished < ? - CASE WHEN a.seen > ? THEN ? ELSE ? END "
                 "AND json_extract(j.result, '$.code') = 'directory_ready'",
-                (time.time(), time.time() - 3600, directory.REFRESH_INTERVAL, directory.IDLE_REFRESH_INTERVAL))]
+                (time.time(), time.time() - 3600, directory.REFRESH_INTERVAL, directory.REFRESH_INTERVAL if operating else directory.IDLE_REFRESH_INTERVAL))]
         finally:
             db.close()
 
@@ -325,7 +331,7 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None):
         # private working directory even after timeout/SIGKILL, not only when
         # Playwright manages to close the browser cleanly.
         child_env["TMPDIR"] = temporary.name
-        if store.connector_key and spec["mode"] in {"read", "directory"}:
+        if store.connector_key and spec["mode"] in AUTH_MODES:
             child_env["EDOF_CONNECTOR_KEY"] = store.connector_key
             child_env["EDOF_CONNECTOR_DIRECTORY"] = str(store.directory)
             for key in ("EDOF_GOOGLE_CLIENT_ID", "EDOF_GOOGLE_CLIENT_SECRET"):
@@ -359,11 +365,17 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None):
                     from integrale_edof_sync import process_directory
                     snapshot = Vault(store.directory, store.connector_key).get(directory.record_key(spec["owner"]))
                     if snapshot:
+                        snapshot = directory.dated_snapshot(snapshot)
                         process_directory(store, snapshot, store.data_file)
+                        declarations.discover(store, spec["owner"], snapshot)
                 except (OSError, ValueError, sqlite3.Error):
                     # Keep the verified source snapshot. The next full sync
                     # can retry local analysis without replaying external work.
                     result.setdefault("diagnostics", {})["local_analysis_pending"] = True
+            if spec["mode"] in {"declare", "reconcile"}:
+                declarations.complete(store.directory, spec, result["code"])
+                if result["code"] == "declaration_confirmed":
+                    store.request_directory(spec["owner"])
             store.finish(job_id, result)
         finally:
             os.close(lock_fd)
@@ -389,7 +401,9 @@ def start_job(store, owner, spec):
     lock_fd = os.open(store.directory / "edof_server_test.lock", os.O_CREAT | os.O_RDWR, 0o600)
     provider_fd = None
     try:
-        provider_fd = acquire_provider("integrale")
+        # A form inspection is a read-only job; it cannot construct a business-write gate.
+        if spec["mode"] != "inspect_forms":
+            provider_fd = acquire_provider("integrale")
         try:
             fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
@@ -398,6 +412,12 @@ def start_job(store, owner, spec):
         # run never reached an EFP form or the private workspace.
         if spec["mode"] in {"read", "directory"} and last_read_stalled_at_login(store.latest(owner)):
             spec = {**spec, "fresh_login": True}
+        if spec["mode"] in {"declare", "reconcile"}:
+            from cpf_provider import ProviderStore
+            if spec["mode"] == "declare" and ProviderStore(store.directory).state()["revision"] != spec["revision"]:
+                raise ValueError("Le choix de système a changé.")
+            if not declarations.check_before_job(store, spec):
+                raise ValueError("Cette déclaration est à vérifier dans la fiche.")
         job_id = store.reserve(owner, spec["mode"])
         thread = threading.Thread(target=execute_job, args=(store, job_id, spec, lock_fd, provider_fd), daemon=True)
         thread.start()
@@ -422,7 +442,14 @@ def register_edof_server_test(legacy):
         while True:
             time.sleep(60)
             try:
-                for user in store.due_directories():
+                from cpf_provider import ProviderStore
+                active = ProviderStore(store.directory).state()
+                if active["provider"] == "integrale" and not active["pending"]:
+                    pending = declarations.next_job(store, active["revision"])
+                    if pending:
+                        start_job(store, pending["owner"], pending)
+                        continue
+                for user in store.due_directories(operating=active["provider"] == "integrale"):
                     start_job(store, user, {"mode": "directory", "owner": user})
                     break
             except (OSError, sqlite3.Error, ValueError):
