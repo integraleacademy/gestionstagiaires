@@ -349,3 +349,28 @@ def test_retake_result_survives_reload_outside_enrolments(case):
     assert result['ssiap_exam_status'] == 'certified' and result['ssiap_diploma_number'].endswith('00001')
     assert all(t['id'] != candidate['id'] for t in persisted[0]['trainees'])
     assert persisted[1]['trainees'][0]['ssiap_exam_status'] == 'failed'
+
+
+def test_invalid_country_is_not_rendered_saved_or_issued(case):
+    client, path = case
+    data = json.loads(path.read_text())
+    candidate = data['sessions'][0]['trainees'][0]
+    malformed = '000 000 000 000 000'
+    candidate.update(birth_city='SALLANCHES (74)', birth_country=malformed, ssiap_exam_status='certified')
+    path.write_text(json.dumps(data))
+    row = next(t for t in view(case)['candidates'] if t['id'] == 'T1')
+    assert not row['values']['birth_country'] and 'pays de naissance' in row['missing']
+    assert malformed not in text(post(case, 'preview', trainee_id='T1'))
+    assert post(case, 'generate', trainee_id='T1').status_code == 400
+    with services.app.test_request_context():
+        with pytest.raises(ValueError, match='pays de naissance'):
+            services._reserve_ssiap_diploma_numbers('S1','T1')
+    row['values']['birth_country'] = malformed
+    assert post(case, 'save', [row]).status_code == 400
+    row['values']['birth_country'] = ''
+    assert post(case, 'save', [row]).status_code == 200
+    row = next(t for t in view(case)['candidates'] if t['id'] == 'T1')
+    assert not row['values']['birth_country']
+    row['values']['birth_country'] = 'France'
+    assert post(case, 'save', [row]).status_code == 200
+    assert post(case, 'generate', trainee_id='T1').status_code == 200
