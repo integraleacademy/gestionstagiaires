@@ -70,7 +70,7 @@ def retry_allowed(attempt, now):
         return False
 
 
-def preparation_error(services, training, config, member):
+def preparation_error(services, training, config, member, *, data=None):
     if not eligible(services, training):
         return 'Session inactive ou organisation non enregistrée'
     if not all(config.get(k) for k in ('date', 'time', 'location', 'address')) or not due_date(config):
@@ -79,19 +79,19 @@ def preparation_error(services, training, config, member):
         return 'E-mail du centre à compléter'
     if not MAIL_RE.fullmatch(member.get('email', '')):
         return 'E-mail du jury à compléter'
-    if not any(candidate_settings(training, t)['included'] for t in active_candidates(services, training)):
+    if not any(candidate_settings(training, t)['included'] for t in active_candidates(services, training, data=data)):
         return 'Aucun candidat présenté'
     return ''
 
 
-def schedule(services, training, *, now=None):
+def schedule(services, training, *, now=None, data=None):
     local = local_clock(now)
     config = settings(training)
     due = due_date(config)
     members = {}
     for member in config['jury']:
         attempt = attempt_for(training, member, config)
-        error = preparation_error(services, training, config, member)
+        error = preparation_error(services, training, config, member, data=data)
         if attempt:
             status = attempt.get('status', 'unknown')
             label = {'sent': 'Envoyé', 'sending': 'En cours / à vérifier', 'unknown': 'Envoi à vérifier',
@@ -128,7 +128,7 @@ def run(services, *, now=None, dry_run=False, limit=10):
         for member in config['jury']:
             report['checked'] += 1
             identity = (training['id'], state_key(training), member.get('email', '').casefold())
-            if (identity not in seen and not preparation_error(services, training, config, member)
+            if (identity not in seen and not preparation_error(services, training, config, member, data=data)
                     and retry_allowed(attempt_for(training, member, config), local)):
                 seen.add(identity)
                 candidates.append((training['id'], state_key(training).removesuffix('_exam'), member['id'], config['date'], member['email']))
@@ -148,12 +148,12 @@ def run(services, *, now=None, dry_run=False, limit=10):
             config = settings(training)
             member = next((m for m in config['jury'] if m['id'] == jury_id), None)
             if (not member or config['date'] != exam_date or member['email'] != recipient
-                    or due_date(config) != local.date() or preparation_error(services, training, config, member)):
+                    or due_date(config) != local.date() or preparation_error(services, training, config, member, data=current)):
                 return {}
             previous = attempt_for(training, member, config)
             if not retry_allowed(previous, local):
                 return {}
-            count = sum(candidate_settings(training, t)['included'] for t in active_candidates(services, training))
+            count = sum(candidate_settings(training, t)['included'] for t in active_candidates(services, training, data=current))
             from jury_planning import mail_context
             content = build_mail(training, config, member, 'reminder', count,
                                  services.APP_BASE_URL.rstrip('/') + '/static/logo-integrale.png', today=local.date(),

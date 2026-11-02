@@ -14,6 +14,11 @@ def eligible(services, training, trainee):
             and exam.candidate_settings(exam.for_family(training, "ssiap"), trainee)["included"])
 
 
+def numbering_trainees(services, training):
+    retakes = training.get("ssiap_exam", {}).get("retake_results", {})
+    return services._session_trainees_list(training) + list(retakes.values())
+
+
 def scope(services, data, training):
     owner = training.get("partner_id") or services.INTEGRALE_PARTNER_ID
     trainings = [s for s in data.get("sessions", [])
@@ -53,7 +58,7 @@ def reconcile(services, data, training, *, deleted=(), years=()):
     so withdrawing the first or last diploma also releases its number.
     """
     parse = services.SSIAP_DIPLOMA_NUMBER_RE.fullmatch
-    affected = services._session_trainees_list(training) + list(deleted)
+    affected = numbering_trainees(services, training) + list(deleted)
     matches = [m for t in affected if (m := parse(str(t.get("ssiap_diploma_number") or "").strip()))]
     years = set(years) | {int(m.group(1)) for m in matches}
     if not years:
@@ -64,7 +69,7 @@ def reconcile(services, data, training, *, deleted=(), years=()):
         entries = []
         positions = [int(m.group(2)) for m in matches if int(m.group(1)) == year]
         for current in trainings:
-            for trainee in services._session_trainees_list(current):
+            for trainee in numbering_trainees(services, current):
                 match = parse(str(trainee.get("ssiap_diploma_number") or "").strip())
                 if match and int(match.group(1)) == year:
                     position = int(match.group(2))

@@ -24471,7 +24471,7 @@ def _ssiap_diploma_row(session_item: Dict[str, Any], trainee: Dict[str, Any], *,
 def _next_ssiap_diploma_sequence(data: Dict[str, Any], year: int) -> int:
     highest = 0
     for session_item in data.get("sessions", []):
-        for trainee in _session_trainees_list(session_item):
+        for trainee in ssiap_diploma_numbers.numbering_trainees(sys.modules[__name__], session_item):
             match = SSIAP_DIPLOMA_NUMBER_RE.match(str(trainee.get("ssiap_diploma_number") or "").strip())
             if match and int(match.group(1)) == year:
                 highest = max(highest, int(match.group(2)))
@@ -24513,13 +24513,14 @@ def _reserve_ssiap_diploma_numbers(
 ) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
     # Resolve towns before taking the shared data lock. Recheck the source fields
     # inside the transaction so a concurrent birthplace edit cannot be overwritten.
-    preflight = find_session(load_data(run_background_tasks=False), session_id)
+    preflight_data = load_data(run_background_tasks=False)
+    preflight = find_session(preflight_data, session_id)
     department_sources = {}
     source_keys = ("birth_city", "birth_place", "birth_country", "birth_department", "department",
                    "birth_postal_code", "birth_zip_code", "ssiap_diploma_birth_city",
                    "ssiap_diploma_birth_country", "ssiap_diploma_birth_department")
     if preflight:
-        for original in _session_trainees_list(preflight):
+        for original in ssiap_exam.active_candidates(sys.modules[__name__], ssiap_exam.for_family(preflight, "ssiap"), data=preflight_data):
             if trainee_id is not None and str(original.get("id")) != str(trainee_id):
                 continue
             if not ssiap_diploma_numbers.eligible(sys.modules[__name__], preflight, original):
@@ -24541,7 +24542,10 @@ def _reserve_ssiap_diploma_numbers(
         if "SSIAP" not in training_label and not ssiap_exam.supported(session_item):
             raise ValueError("Cette action est réservée aux sessions SSIAP.")
 
-        trainees = _session_trainees_list(session_item)
+        registered = _session_trainees_list(session_item)
+        config = ssiap_exam.settings(ssiap_exam.for_family(session_item, "ssiap"))
+        trainees = registered + exam_retakes.participants(sys.modules[__name__], session_item, data=data,
+                                                         kind=config["level"], exam_day=config["date"], writable=True)
         if not trainees:
             raise ValueError("Aucun stagiaire dans cette session SSIAP.")
 
@@ -24621,7 +24625,7 @@ def _reserve_ssiap_diploma_numbers(
         numbering_data = {"sessions": numbering_sessions, "ssiap_diploma_sequences": sequences}
         diploma_number_counts: Dict[str, int] = {}
         for existing_session in numbering_sessions:
-            for existing_trainee in _session_trainees_list(existing_session):
+            for existing_trainee in ssiap_diploma_numbers.numbering_trainees(sys.modules[__name__], existing_session):
                 existing_number = str(existing_trainee.get("ssiap_diploma_number") or "").strip()
                 if existing_number:
                     diploma_number_counts[existing_number] = diploma_number_counts.get(existing_number, 0) + 1
@@ -24644,7 +24648,7 @@ def _reserve_ssiap_diploma_numbers(
 
             diploma_rows.append(_ssiap_diploma_row(session_item, trainee, lookup_department=False))
 
-        session_item["trainees"] = trainees
+        session_item["trainees"] = registered
         session_item.pop("stagiaires", None)
         sequences[str(year)] = next_sequence - 1
         return {"session": session_item, "diplomas": diploma_rows}
@@ -24892,12 +24896,13 @@ def admin_trainees_print(session_id: str):
         "exam_practice_date": _session_get(s, "exam_practice_date", ""),
     }
 
-    trainees = _registered_trainees(s)
+    trainees = _registered_trainees(s) + exam_retakes.participants(sys.modules[__name__], s, data=data)
     printable_trainees = []
     for t in trainees:
         printable_trainees.append({
             "last_name": normalize_last_name(t.get("last_name") or ""),
             "first_name": normalize_first_name(t.get("first_name") or ""),
+            "retake_date": (t.get("_retake") or {}).get("exam_date", ""),
             "email": (t.get("email") or "").strip(),
             "phone": format_phone_fr_for_display((t.get("phone") or "").strip()),
         })

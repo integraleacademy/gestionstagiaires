@@ -895,7 +895,11 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <span style="margin-left:14px">{{ r.kind }} · {{ r.exam_date_label }}{% if r.exam_time %} à {{ r.exam_time }}{% endif %}</span>
           <span style="margin-left:14px">{% if r.total_cents %}Règlement confirmé{% else %}Offert · convention signée{% endif %}</span>
           {% if r.convocation_url %}<span style="margin-left:14px"><a href="{{ r.convocation_url }}" target="_blank" rel="noopener">Prévisualiser la convocation</a> · <a href="{{ url_for('admin_trainee_page',session_id=r.source_session,trainee_id=r.trainee_id) }}#rattrapage">Gérer l’envoi</a></span>{% endif %}
-          <small style="display:block;margin-top:5px">Présence à l’examen uniquement · hors effectifs et statistiques de la session</small>
+          <small style="display:block;margin-top:5px">{% if r.days %}{{ r.days|length }} journée{{ 's' if r.days|length > 1 }} de préparation et présentation à l’examen{% else %}Présentation à l’examen uniquement{% endif %}</small>
+          {% if ssiap_exam_supported and r.kind.startswith('SSIAP') %}
+          <span><a href="{{ url_for('admin_ssiap_exam_attendance', session_id=session.id) }}" target="_blank" rel="noopener">Feuille de présence de l’examen</a>
+          {% if r.days %} · <a href="{{ url_for('admin_ssiap_preparation_attendance', session_id=session.id, day='toutes') }}" target="_blank" rel="noopener">Feuilles de présence de préparation</a>{% endif %}</span>
+          {% endif %}
         </td>
       </tr>
       {% endfor %}

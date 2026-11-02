@@ -13,6 +13,8 @@ import secrets
 from zoneinfo import ZoneInfo
 import security_exam_jury
 import afc_schedule
+import exam_retakes
+import ssiap_pathways
 from exam_context import all_exams, for_family
 
 from flask import abort, jsonify, request, session, send_file, url_for
@@ -274,11 +276,34 @@ def photo_path(services, trainee):
     return ''
 
 
-def active_candidates(services, training):
+def active_candidates(services, training, *, data=None, writable=False):
     if security_exam_jury.level(training) and hasattr(services, '_registered_trainees'):
         return services._registered_trainees(training)
-    return sorted([t for t in services._session_trainees_list(training) if not services._trainee_registration_is_cancelled(t)],
-                  key=lambda t: (str(t.get('last_name', '')).casefold(), str(t.get('first_name', '')).casefold()))
+    candidates = [t for t in services._session_trainees_list(training) if not services._trainee_registration_is_cancelled(t)]
+    config = settings(training)
+    candidates.extend(exam_retakes.participants(services, training, data=data, kind=config["level"],
+                                                exam_day=config["date"], writable=writable))
+    return sorted(candidates, key=lambda t: (str(t.get('last_name', '')).casefold(), str(t.get('first_name', '')).casefold()))
+
+
+def preparation_dates(candidates):
+    return sorted({day["date"] for t in candidates for day in t.get("_retake", {}).get("days", [])})
+
+
+def preparation_attendees(training, candidates, date):
+    attendees = []
+    for trainee in candidates:
+        if trainee.get("_retake"):
+            day = next((d for d in trainee["_retake"]["days"] if d["date"] == date), None)
+            if day:
+                attendees.append({**trainee, "_preparation_day": day})
+        else:
+            period = afc_schedule.effective_session(training, trainee)
+            start, end = period.get("date_start") or period.get("date_debut"), period.get("date_end") or period.get("date_fin")
+            pathway = ssiap_pathways.resolve(training, trainee)
+            if (start and end and start <= date <= end) or (pathway and date in pathway["sst_dates"]):
+                attendees.append(trainee)
+    return attendees
 
 
 def build_mail(training, config, member, kind, count, logo_url, *, today=None, planning=None):
@@ -312,16 +337,17 @@ def register(app, services):
         return get_training(data, session_id, security='/security-exam' in request.path)
 
     def read(session_id):
-        return get_training(services.load_data(run_background_tasks=False), session_id)
+        data = services.load_data(run_background_tasks=False)
+        return data, get_training(data, session_id)
 
     from ssiap_exam_diplomas import register as register_diplomas
     register_diplomas(app, services, get_training)
 
-    def active(training):
-        return active_candidates(services, training)
+    def active(training, data):
+        return active_candidates(services, training, data=data)
 
-    def find_candidate(training, trainee_id):
-        trainee = next((t for t in active(training) if t.get("id") == trainee_id), None)
+    def find_candidate(data, training, trainee_id):
+        trainee = next((t for t in active(training, data) if t.get("id") == trainee_id), None)
         if not trainee:
             abort(404)
         return trainee
@@ -345,7 +371,7 @@ def register(app, services):
         member = next((m for m in config["jury"] if m["id"] == jury_id), None)
         if not member:
             raise ValueError("Membre du jury introuvable.")
-        count = sum(candidate_settings(training, t)["included"] for t in active(training))
+        count = sum(candidate_settings(training, t)["included"] for t in active(training, data))
         return build_mail(training, config, member, kind, count,
                           url_for("static", filename="logo-integrale.png", _external=True),
                           planning=mail_context(services, data, training, member))
@@ -357,21 +383,28 @@ def register(app, services):
         all_data = services.load_data(run_background_tasks=False)
         training = get_training(all_data, session_id)
         rows = []
-        for trainee in active(training):
+        candidates = active(training, all_data)
+        for trainee in candidates:
             docs = documents(services, trainee)
+            retake = trainee.get("_retake", {})
             rows.append({"id": trainee["id"], "first_name": trainee.get("first_name", ""), "last_name": trainee.get("last_name", ""),
                          "candidate": candidate_settings(training, trainee), "result": services._ssiap_exam_status(trainee),
                          "documents": [{k: v for k, v in d.items() if k != "paths"} for d in docs],
                          "dossier_url": url_for('admin_ssiap_exam_dossier', session_id=session_id, trainee_id=trainee["id"]),
                          "pv_url": url_for('admin_ssiap_exam_individual', session_id=session_id, trainee_id=trainee["id"]),
-                         "edit_url": url_for('admin_trainee_page', session_id=session_id, trainee_id=trainee["id"])})
+                         "retake": bool(retake),
+                         "edit_url": url_for('admin_trainee_page', session_id=retake.get("source_session", session_id),
+                                             trainee_id=retake.get("trainee_id", trainee["id"]))})
+        dates = preparation_dates(candidates)
         return jsonify(ok=True, config=settings(training), revision=state(training).get("revision", 0), candidates=rows,
                        read_only=session.get("admin_role") == "viewer", csrf=session.setdefault("ssiap_exam_csrf", secrets.token_urlsafe(32)),
                        excluded_count=sum(services._trainee_registration_is_cancelled(t) for t in services._session_trainees_list(training)),
                        history=state(training).get("mail_history", [])[-60:][::-1],
                        directory=jury_directory(all_data, services.INTEGRALE_PARTNER_ID),
                        mail_status={m["id"]: mail_status(training, m) for m in settings(training)["jury"]},
-                       automatic_reminders=schedule(services, training),
+                       automatic_reminders=schedule(services, training, data=all_data),
+                       preparation_dates=[{"label": frdate(d), "url": url_for("admin_ssiap_preparation_attendance", session_id=session_id, day=d)} for d in dates],
+                       preparation_url=url_for("admin_ssiap_preparation_attendance", session_id=session_id, day="toutes") if dates else "",
                        attendance_url=url_for('admin_ssiap_exam_attendance', session_id=session_id),
                        collective_url=url_for('admin_ssiap_exam_collective', session_id=session_id))
 
@@ -383,13 +416,13 @@ def register(app, services):
         training = get_training(data, session_id, security=True)
         config = settings(training)
         return jsonify(ok=True, config=config, revision=state(training).get("revision", 0),
-                       candidates=[{"id": t["id"], "candidate": {"included": True}} for t in active(training)],
+                       candidates=[{"id": t["id"], "candidate": {"included": True}} for t in active(training, data)],
                        read_only=session.get("admin_role") == "viewer",
                        csrf=session.setdefault("ssiap_exam_csrf", secrets.token_urlsafe(32)),
                        history=state(training).get("mail_history", [])[-60:][::-1],
                        directory=jury_directory(data, services.INTEGRALE_PARTNER_ID),
                        mail_status={m["id"]: mail_status(training, m) for m in config["jury"]},
-                       automatic_reminders=schedule(services, training))
+                       automatic_reminders=schedule(services, training, data=data))
 
     @app.post('/api/admin/sessions/<session_id>/security-exam')
     @app.post('/api/admin/sessions/<session_id>/ssiap-exam')
@@ -417,7 +450,7 @@ def register(app, services):
                     if afc_schedule.enabled(training):
                         training['afc_dates_changed_at'] = services._now_iso()
                 elif payload.get("action") == "candidate" and supported(training):
-                    trainee = find_candidate(training, payload.get("trainee_id"))
+                    trainee = find_candidate(data, training, payload.get("trainee_id"))
                     candidate = validate_candidate(payload.get("candidate"), settings(training))
                     current.setdefault("candidates", {})[trainee["id"]] = candidate
                 else:
@@ -437,8 +470,8 @@ def register(app, services):
     @services.admin_login_required
     def admin_ssiap_exam_dossier(session_id, trainee_id):
         from ssiap_exam_pdf import dossier
-        training = read(session_id)
-        trainee = find_candidate(training, trainee_id)
+        data, training = read(session_id)
+        trainee = find_candidate(data, training, trainee_id)
         try:
             content = dossier(training, trainee, settings(training), candidate_settings(training, trainee), documents(services, trainee),
                               app.root_path, photo_path(services, trainee))
@@ -450,8 +483,8 @@ def register(app, services):
     @services.admin_login_required
     def admin_ssiap_exam_individual(session_id, trainee_id):
         from ssiap_exam_pdf import individual
-        training = read(session_id)
-        trainee = find_candidate(training, trainee_id)
+        data, training = read(session_id)
+        trainee = find_candidate(data, training, trainee_id)
         try:
             content = individual(training, trainee, settings(training), candidate_settings(training, trainee), app.root_path)
         except ValueError as exc:
@@ -462,8 +495,8 @@ def register(app, services):
     @services.admin_login_required
     def admin_ssiap_exam_collective(session_id):
         from ssiap_exam_pdf import collective
-        training = read(session_id)
-        candidates = [t for t in active(training) if candidate_settings(training, t)["included"]]
+        data, training = read(session_id)
+        candidates = [t for t in active(training, data) if candidate_settings(training, t)["included"]]
         try:
             content = collective(training, candidates, settings(training), app.root_path)
         except (ValueError, RuntimeError) as exc:
@@ -474,10 +507,34 @@ def register(app, services):
     @services.admin_login_required
     def admin_ssiap_exam_attendance(session_id):
         from ssiap_exam_pdf import attendance
-        training = read(session_id)
-        candidates = [t for t in active(training) if candidate_settings(training, t)['included']]
+        data, training = read(session_id)
+        candidates = [t for t in active(training, data) if candidate_settings(training, t)['included']]
         content = attendance(training, candidates, settings(training), app.root_path)
         return response_pdf(content, f'Feuille_presence_examen_SSIAP_{session_id}.pdf')
+
+    @app.get('/admin/sessions/<session_id>/ssiap-exam/preparation/<day>/presence.pdf')
+    @services.admin_login_required
+    def admin_ssiap_preparation_attendance(session_id, day):
+        from pypdf import PdfWriter
+        from ssiap_exam_pdf import attendance
+        data, training = read(session_id)
+        candidates = active(training, data)
+        dates = preparation_dates(candidates)
+        if not dates or (day != "toutes" and day not in dates):
+            abort(404)
+        config = settings(training)
+        writer = PdfWriter()
+        for date in (dates if day == "toutes" else [day]):
+            people = preparation_attendees(training, candidates, date)
+            daily = {**config, "date": date, "jury": [], "time": "", "end_time": ""}
+            locations = {t["_retake"]["location"] for t in people if t.get("_retake") and t["_retake"].get("location")}
+            if len(locations) == 1:
+                daily.update(location=locations.pop(), address="")
+            content = attendance(training, people, daily, app.root_path, preparation=True)
+            writer.append(io.BytesIO(content))
+        result = io.BytesIO()
+        writer.write(result)
+        return response_pdf(result.getvalue(), f'Presences_preparation_SSIAP_{day}_{session_id}.pdf')
 
     @app.get('/api/admin/sessions/<session_id>/security-exam/jury/<jury_id>/<kind>/preview')
     @app.get('/api/admin/sessions/<session_id>/ssiap-exam/jury/<jury_id>/<kind>/preview')

@@ -101,6 +101,7 @@
     if (sent) {
       const date = new Intl.DateTimeFormat('fr-FR', {dateStyle:'short',timeStyle:'short',timeZone:'Europe/Paris'});
       description = `Envoyée le ${date.format(new Date(record.convocation_sent_at))} à ${record.convocation_recipient}.`;
+      if (record.convocation_updated) description += ' La version enrichie est disponible en aperçu et prête à être renvoyée.';
     } else if (record.convocation_sendable && !record.convocation_requested) {
       description = 'Envoi manuel. La convocation est prête pour ' + record.convocation_recipient + '.';
     } else if (record.convocation_sendable) {

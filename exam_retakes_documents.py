@@ -152,10 +152,12 @@ def build_convocation(row):
 
     font = retake_font()
     navy, muted = colors.HexColor("#14283F"), colors.HexColor("#53687B")
-    body = ParagraphStyle("ConvocationBody", fontName=font, fontSize=11, leading=17, textColor=navy)
+    body = ParagraphStyle("ConvocationBody", fontName=font, fontSize=10, leading=14, textColor=navy)
     title = ParagraphStyle("ConvocationTitle", parent=body, fontName=font+"-Bold", fontSize=25, leading=31)
     label = ParagraphStyle("ConvocationLabel", parent=body, fontSize=9, textColor=muted)
     strong = ParagraphStyle("ConvocationValue", parent=body, fontName=font+"-Bold")
+    heading = ParagraphStyle("ConvocationHeading", parent=strong, fontSize=12, leading=16,
+                             spaceBefore=9, spaceAfter=4, keepWithNext=True)
 
     def line(value, style=body):
         return Paragraph(escape(str(value or "")).replace("\n", "<br/>"), style)
@@ -163,7 +165,7 @@ def build_convocation(row):
     person = row["person"]
     full_name = person["first_name"] + " " + person["last_name"].upper()
     details = [
-        ("Candidat", full_name), ("Examen", row["kind"]), ("Date et heure", exam_appointment(row)),
+        ("Candidat", full_name), ("Votre rendez-vous", row["kind"] + " · " + exam_appointment(row)),
         ("Lieu de l’examen", row["location"]), ("Session d’accueil", row["target_name"]),
     ]
     panel = Table([[line(key, label), line(value, strong)] for key, value in details],
@@ -171,21 +173,47 @@ def build_convocation(row):
     panel.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F1F5FA")),
         ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 12),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 12), ("TOPPADDING", (0, 0), (-1, -1), 9),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 12), ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
-    story = [line("Convocation à l’examen", title), line("Session de rattrapage", strong), Spacer(1, 22),
+    story = [line("Convocation à l’examen", title), line("Session de rattrapage", strong), Spacer(1, 10),
              line("Bonjour " + person["first_name"] + ","),
-             line("Nous vous convoquons à l’examen de rattrapage aux coordonnées indiquées ci-dessous."),
-             Spacer(1, 15), panel, Spacer(1, 20)]
+             line("Conformément à votre convention de rattrapage, vous êtes attendu(e) à la nouvelle session ci-dessous."),
+             Spacer(1, 8), panel]
     if not row.get("exam_time"):
         story.extend([line("L’horaire reste à préciser. Contactez l’accueil avant le jour de l’examen."), Spacer(1, 8)])
-    story.extend([line("Le jour de l’examen, munissez-vous de cette convocation et d’une pièce d’identité."),
-                  Spacer(1, 16), line("Pour toute question ou en cas d’empêchement, contactez l’équipe au "
-                  "04 22 47 07 68 ou à ecole@integraleacademy.com."), Spacer(1, 16), line("L’équipe Intégrale Academy", strong)])
+    if row.get("source_name") or row.get("failed_exam_date") or row.get("failed_exam_details"):
+        story.append(line("Votre parcours", heading))
+    if row.get("source_name"):
+        period = (" · du " + date_label(row["source_date_start"]) + " au " + date_label(row["source_date_end"])
+                  if row.get("source_date_start") and row.get("source_date_end") else "")
+        story.append(line("Session initiale · " + row["source_name"] + period))
+    if row.get("failed_exam_date"):
+        story.append(line("Examen non validé · " + row["kind"] + " du " + date_label(row["failed_exam_date"])))
+    if row.get("failed_exam_details"):
+        story.append(line("Épreuves ou compétences à retravailler · " + row["failed_exam_details"]))
+    story.append(line("Votre préparation", heading))
+    if row.get("days"):
+        cells = [[line(text, strong) for text in ("Date", "Horaires", "Programme")]]
+        for day in row["days"]:
+            cells.append([line(date_label(day["date"])), line(day["start"] + " – " + day["end"]), line(day["topic"])])
+        schedule = Table(cells, colWidths=[87, 100, 295], repeatRows=1, hAlign="LEFT")
+        schedule.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"), ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F1F5FA")),
+            ("LINEBELOW", (0, 0), (-1, -1), .35, colors.HexColor("#D5DFE9")),
+            ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]))
+        story.append(schedule)
+    else:
+        story.append(line("Votre convention prévoit uniquement la présentation à l’examen."))
+    story.append(line("Le jour de l’examen", heading))
+    story.append(line("Présentez-vous avec cette convocation et une pièce d’identité."))
+    if row.get("notes"):
+        story.append(line(row["notes"]))
+    story.extend([Spacer(1, 7), line("En cas de question ou d’empêchement, contactez l’équipe au "
+                  "04 22 47 07 68 ou à ecole@integraleacademy.com."), Spacer(1, 6), line("L’équipe Intégrale Academy", strong)])
     out = BytesIO()
     frame = retake_page_frame(font, "CONVOCATION", row["id"][:12].upper())
-    SimpleDocTemplate(out, pagesize=A4, rightMargin=48, leftMargin=48, topMargin=128, bottomMargin=60,
+    SimpleDocTemplate(out, pagesize=A4, rightMargin=48, leftMargin=48, topMargin=112, bottomMargin=52,
                       title="Convocation à l’examen de rattrapage - "+full_name, author="Intégrale Academy",
                       invariant=1).build(story, onFirstPage=frame, onLaterPages=frame)
     return out.getvalue()
@@ -200,6 +228,10 @@ def email_content(host, row, kind, link):
         contact = "En cas d’empêchement, contactez l’équipe au 04 22 47 07 68."
         confirmed = "Votre règlement est confirmé." if row["total_cents"] else "Votre inscription au rattrapage est confirmée."
         lines = ["Bonjour " + person + ",", confirmed + " " + intro, appointment, row["location"]]
+        if row.get("failed_exam_date"):
+            lines.append("Cette nouvelle présentation fait suite à l’examen du " + date_label(row["failed_exam_date"]) + ".")
+        if row.get("days"):
+            lines.append("Vos journées de préparation sont détaillées dans la convocation jointe.")
         if not row.get("exam_time"):
             lines.append("Contactez l’accueil pour connaître l’horaire de l’examen.")
         lines.append(contact)
