@@ -98,6 +98,10 @@ def location_category(url):
             return "edof_callback"
         if parsed.path.startswith("/espace-prive/"):
             route = parsed.fragment.partition("?")[0].rstrip("/")
+            if not route or not route.startswith("/"):
+                return "edof_initialisation"
+            if route == "/redirect-to-mire-connexion":
+                return "edof_login_redirect"
             if route == "/dossiers/en-cours":
                 return "edof_folder_list"
             if re.fullmatch(r"/dossiers/detail/[0-9]{6,20}", route):
@@ -111,6 +115,39 @@ def location_category(url):
     return "other_origin"
 
 
+# Render short route shapes using only fixed public vocabulary. Unknown
+# components, ids, query strings, fragments, headers and bodies never leave
+# the browser, including when a provider adds a new authentication step.
+ROUTE_WORDS = frozenset("""
+    idp edof api v1 v2 v3 public private espace prive html auth authentication
+    authentification authorization authorize oauth oauth2 openid connect protocol
+    real realm realms login signin logout connexion callback redirect redirection
+    mire code grant token tokens access refresh exchange generate validate check
+    session sessions user users userinfo info me account current of organismes
+    organisms siret select selection switch unknown establishment etablissement
+    client clients identity credentials get post create set init initialize return
+    registration folders pad in training service done declared validated notifications
+    message messages read unread acknowledge accept acceptance consent consents cgu
+    authenticate exchange logout-ticket jwt jwts cas keycloak tickets ticket validate
+    provider providers identification tokeninfo verifier verify callback request
+    saml2 authorize-idp connexion-efp authentifier portal portail credentials
+    terms conditions preferences profile profiles trace traces analytics telemetry
+    collect events event monitoring log logs tracking stats statistics matomo js environments
+    saml sso federation state status context contexts connection proxy authenticationgateway
+""".split())
+
+
+def safe_edof_route(url):
+    parsed = urlsplit(url)
+    if parsed.scheme != "https" or parsed.hostname != EDOF_HOST:
+        return "other_origin"
+    shape = []
+    for segment in parsed.path.strip("/").split("/")[:12]:
+        words = re.sub(r"([a-z])([A-Z])", r"\1-\2", segment).lower().split("-")
+        shape.append("-".join(words) if words and all(w in ROUTE_WORDS for w in words) else "*")
+    return "/" + "/".join(shape)
+
+
 def diagnostic_summary(location, password_visible, error_visible, signals):
     """Allowlist scalar signals; deliberately no page/error/input text."""
     result = {"location": location_category(location), "password_form_visible": bool(password_visible), "error_banner_visible": bool(error_visible)}
@@ -118,6 +155,16 @@ def diagnostic_summary(location, password_visible, error_visible, signals):
         value = signals.get(key)
         if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 9999:
             result[key] = value
+    # The only source of these paths is the fixed vocabulary above.
+    blocked = signals.get("edof_blocked_routes")
+    if isinstance(blocked, list):
+        result["edof_blocked_routes"] = [path for path in blocked[:4]
+            if isinstance(path, str) and path.startswith("/") and len(path) < 200
+            and safe_edof_route(f"https://{EDOF_HOST}" + path) == path]
+    screen = signals.get("edof_screen")
+    if screen in {"access_denied", "session_expired", "terms", "select_organisation",
+                  "dashboard", "folders", "error", "loading", "empty", "other"}:
+        result["edof_screen"] = screen
     return result
 
 
@@ -161,6 +208,11 @@ def run_browser(spec):
             host = urlsplit(route.request.url).hostname
             key = "blocked_efp_posts" if host == EFP_HOST else "blocked_edof_posts" if host == EDOF_HOST else "blocked_other_posts"
             signals[key] += 1
+            if host == EDOF_HOST and route.request.method == "POST":
+                routes = signals.setdefault("edof_blocked_routes", [])
+                shape = safe_edof_route(route.request.url)
+                if len(routes) < 4 and shape not in routes:
+                    routes.append(shape)
             route.abort()
 
     def observe(response):
@@ -220,6 +272,18 @@ def run_browser(spec):
             def diagnostics():
                 try:
                     signals["invalid_form_fields"] = page.locator('input:invalid:visible').count()
+                    if urlsplit(page.url).hostname == EDOF_HOST:
+                        visible = identity(page.locator("body").inner_text(timeout=2000))
+                        groups = (
+                            ("access_denied", ("acces refuse", "vous n etes pas habilite", "vous n avez pas acces", "acces interdit")),
+                            ("session_expired", ("session a expire", "session est expiree", "veuillez vous reconnecter")),
+                            ("terms", ("j accepte les conditions", "accepter les conditions", "accepter la charte")),
+                            ("select_organisation", ("selectionnez votre etablissement", "choisissez votre etablissement", "selectionnez un etablissement")),
+                            ("folders", ("dossiers en cours",)), ("dashboard", ("tableau de bord",)),
+                            ("error", ("une erreur", "erreur technique", "probleme technique")),
+                            ("loading", ("chargement", "redirection en cours", "veuillez patienter")),
+                        )
+                        signals["edof_screen"] = next((key for key, phrases in groups if any(s in visible for s in phrases)), "other" if visible else "empty")
                     return diagnostic_summary(page.url,
                         page.locator('input[type="password"]:visible').count() > 0,
                         page.locator('#input-error:visible, .alert-error:visible, .pf-m-danger:visible, .fr-alert--error:visible').count() > 0,

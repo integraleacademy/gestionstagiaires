@@ -57,7 +57,8 @@
         <p class="{{ 'match' if job.code == 'read_success' else 'review-note' }}">{% if job.code == 'gmail_code_missing' and job.diagnostics and job.diagnostics.gmail_messages_checked is defined %}{% if job.diagnostics.gmail_messages_checked == 0 %}Gmail n’a trouvé aucun nouveau message de l’expéditeur EFP attendu pendant cet essai.{% else %}Gmail a trouvé un message, mais les vérifications du code EFP ont échoué. Le motif figure dans le diagnostic ci-dessous.{% endif %}{% else %}{{ job.message }}{% endif %}</p>
         {% if job.stage %}<p class="hint">Étape : {{ {'browser':'démarrage du navigateur','login_page':'accès au formulaire','authentication':'connexion EFP','organism':'sélection de l’établissement','search':'recherche par nom','dossier':'lecture du dossier'}.get(job.stage, 'essai') }}.</p>{% endif %}
         {% if job.code == 'read_success' %}<p class="hint">Connexion : {{ 'nouvelle authentification' if job.fresh_session else 'session serveur réutilisée' }}. Code Gmail utilisé : {{ 'oui' if job.gmail_code_used else 'non' }}. Connexion conservée : {{ 'oui' if job.session_saved else 'non' }}.</p>
-        {% elif job.gmail_code_used and job.stage in ['organism','search','dossier'] %}<p class="hint">Connexion EFP réussie avec le code reçu dans Gmail.</p>{% endif %}
+        {% elif job.gmail_code_used and job.stage in ['organism','search','dossier'] %}<p class="hint">Connexion EFP réussie avec le code reçu dans Gmail.</p>
+        {% elif job.gmail_code_used %}<p class="hint">Le serveur a trouvé et saisi le code Gmail sur EFP.</p>{% endif %}
         {% if job.diagnostics %}<details><summary>Diagnostic technique sans identifiants</summary><dl>
           {% if job.diagnostics.gmail_messages_checked is defined %}
           <dt>Nouveaux messages Gmail examinés</dt><dd>{{ job.diagnostics.gmail_messages_checked }}</dd>
@@ -79,6 +80,7 @@
           {% endfor %}
           {% else %}
           <dt>Page atteinte</dt><dd>{{ job.diagnostics.location }}</dd>
+          {% if job.diagnostics.edof_screen %}<dt>Écran EDOF</dt><dd>{{ {'access_denied':'Accès refusé','session_expired':'Session expirée','terms':'Conditions à accepter','select_organisation':'Choix de l’établissement','dashboard':'Tableau de bord','folders':'Dossiers','error':'Erreur signalée','loading':'Chargement','empty':'Page vide','other':'Autre écran'}.get(job.diagnostics.edof_screen, 'Autre écran') }}</dd>{% endif %}
           <dt>Formulaire encore visible</dt><dd>{{ 'Oui' if job.diagnostics.password_form_visible else 'Non' }}</dd>
           <dt>Erreur affichée par EFP</dt><dd>{{ 'Oui' if job.diagnostics.error_banner_visible else 'Non' }}</dd>
           <dt>Champs refusés par le formulaire</dt><dd>{{ job.diagnostics.invalid_form_fields|default(0) }}</dd>
@@ -90,6 +92,7 @@
           <dt>Réponse de la fiche demandée</dt><dd>{{ job.diagnostics.folder_detail_status|default('Non observée') }}</dd>
           {% endif %}
           <dt>Envois bloqués par l’essai</dt><dd>EFP : {{ job.diagnostics.blocked_efp_posts|default(0) }} · EDOF : {{ job.diagnostics.blocked_edof_posts|default(0) }} · autres : {{ job.diagnostics.blocked_other_posts|default(0) }}</dd>
+          {% if job.diagnostics.edof_blocked_routes %}<dt>Requêtes EDOF bloquées (chemins anonymisés)</dt><dd>{{ job.diagnostics.edof_blocked_routes|join(', ') }}</dd>{% endif %}
           {% endif %}
         </dl></details>{% endif %}
         {% if job.fields %}{% set f = job.fields %}<dl><dt>Numéro CPF</dt><dd>{{ f.folder_id }}</dd><dt>Stagiaire</dt><dd>{{ f.first_name or '—' }} {{ f.last_name or '' }}</dd><dt>E-mail</dt><dd>{{ f.email or 'Non renseigné' }}</dd><dt>Formation</dt><dd>{{ f.title or 'Non renseignée' }}</dd><dt>Dates de session</dt><dd>{{ f.session_start_date or '—' }} → {{ f.session_end_date or '—' }}</dd><dt>Statut</dt><dd>{{ state_labels.get(f.state, f.state or 'Non renseigné') }}</dd></dl>{% endif %}

@@ -75,6 +75,22 @@ def test_private_page_waits_for_callback_and_folder_diagnostics_hide_identifiers
                       "password_form_visible": False, "workspace_status": 200, "folder_detail_status": 403}
 
 
+def test_blocked_request_diagnostics_do_not_disclose_paths_ids_queries_or_body_values():
+    root = "https://" + browser.EDOF_HOST
+    url = root + "/idp/edof/api/v2/exchange-token?code=synthetic-secret#extra"
+    folder = root + "/edof-api/v1/api/private/siret/12345678900000/registration-folders/123456/makeChange"
+    route = browser.safe_edof_route(url)
+    assert route == "/idp/edof/api/v2/exchange-token"
+    assert browser.safe_edof_route(folder) == "/edof-api/v1/api/private/siret/*/registration-folders/*/*"
+    assert browser.safe_edof_route("https://example.invalid/private") == "other_origin"
+    result = browser.diagnostic_summary(root + "/espace-prive/html/#/redirect-to-mire-connexion?code=synthetic-secret", False, False, {
+        "edof_blocked_routes": [route, "/secret/person-name", "/api?token=synthetic-secret"],
+        "edof_screen": "untrusted text"})
+    assert result["edof_blocked_routes"] == [route]
+    assert result["location"] == "edof_login_redirect" and "edof_screen" not in result
+    assert "synthetic-secret" not in json.dumps(result)
+
+
 @pytest.mark.parametrize("text,code", [("Nom d’utilisateur ou mot de passe invalide.", "credentials_rejected"), ("Votre compte est désactivé.", "account_unavailable"), ("Saisissez votre code d’authentification.", "verification_code")])
 def test_additional_authentication_outcomes(text, code):
     assert browser.classify_text(text) == code
