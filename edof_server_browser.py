@@ -12,7 +12,7 @@ import re
 import sys
 import time
 import unicodedata
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from edof_readonly_test import (
     ATTENDEE_FIELDS, INFO_FIELDS, SIRET, TEST_SERVICE_ID, TOP_FIELDS,
@@ -71,6 +71,14 @@ def identity(value):
     return " ".join(re.sub(r"[^a-z0-9]+", " ", "".join(c for c in value if not unicodedata.combining(c)).lower()).split())
 
 
+def matches_name_query(query, first_name, last_name):
+    # EDOF also fetches the default list when the page or the search tab opens.
+    # Only the response to this form submission can establish a match.
+    filters = parse_qs(query, keep_blank_values=True)
+    return (filters.get("attendeeName") == [last_name]
+            and filters.get("attendeeFirstName") == [first_name])
+
+
 def project_folder(raw):
     """Discard all unneeded PII before normalization or output."""
     folder = {key: raw.get(key) for key in TOP_FIELDS}
@@ -112,6 +120,8 @@ def location_category(url):
                 return "edof_login_redirect"
             if route == "/dossiers/en-cours":
                 return "edof_folder_list"
+            if route == "/siret" and parsed.scheme == "https" and parsed.netloc == EDOF_HOST:
+                return "edof_siret_form"
             if re.fullmatch(r"/dossiers/detail/[0-9]{6,20}", route):
                 return "edof_folder_detail"
             return "edof_select_siret" if "select-siret" in route.split("/") else "edof_private"
@@ -179,6 +189,28 @@ def diagnostic_summary(location, password_visible, error_visible, signals):
 class StopRun(Exception):
     def __init__(self, code):
         self.code = code
+
+
+def submit_siret_form(page):
+    form = page.locator("sl7-siret-selector-form")
+    selector = form.locator('mat-select[formcontrolname="siret"]')
+    if not selector.is_visible():
+        return False
+    # EDOF displays each option as "<14 digits> - <city>".
+    target = re.compile(rf"^\s*{SIRET}(?=\s*(?:-|$))")
+    if not target.match(selector.inner_text()):
+        selector.click()
+        menu = page.get_by_role("listbox")
+        menu.wait_for(state="visible")
+        option = menu.get_by_role("option", name=target)
+        if option.count() != 1:
+            raise StopRun("organism_selection_required")
+        option.click()
+    submit = form.locator("button#submit-button")
+    if not target.match(selector.inner_text()) or not submit.is_visible() or not submit.is_enabled():
+        raise StopRun("organism_selection_required")
+    submit.click()
+    return True
 
 
 def run_browser(spec):
@@ -250,6 +282,8 @@ def run_browser(spec):
         tail = parsed.path[len(API_PREFIX):]
         if tail == "pad":
             signals["folder_list_status"] = response.status
+            if stage != "search" or not matches_name_query(parsed.query, spec["first_name"], spec["last_name"]):
+                return
         elif tail and tail in (spec.get("folder_id"), spec.get("selected_id")):
             signals["folder_detail_status"] = response.status
         else:
@@ -411,7 +445,11 @@ def run_browser(spec):
             deadline = time.monotonic() + 35
             while time.monotonic() < deadline:
                 checkpoint()
-                if location_category(page.url) == "edof_select_siret":
+                location = location_category(page.url)
+                if location == "edof_siret_form":
+                    if not choice_clicked:
+                        choice_clicked = submit_siret_form(page)
+                elif location == "edof_select_siret":
                     choice = page.get_by_text(SIRET, exact=False).filter(visible=True)
                     if not choice_clicked and choice.count() == 1:
                         choice.click()
@@ -426,13 +464,12 @@ def run_browser(spec):
                 stage = "search"
                 page.goto(LIST_URL, wait_until="domcontentloaded")
                 page.get_by_text(re.compile(r"^Par nom d(?:u|e) stagiaire$", re.I)).click()
-                search = page.get_by_placeholder(
-                    re.compile(r"rechercher un dossier de formation|nom (?:du |de )?stagiaire", re.I)
-                ).and_(page.locator("input:visible"))
-                search.wait_for(state="visible")
-                search.fill(spec["last_name"])
+                last_name = page.locator('input[name="searchByRegistrationFolderTraineeName"]:visible')
+                first_name = page.locator('input[name="searchByRegistrationFolderTraineeFirstName"]:visible')
+                last_name.fill(spec["last_name"])
+                first_name.fill(spec["first_name"])
                 lists.clear()
-                search.press("Enter")
+                first_name.press("Enter")
                 deadline = time.monotonic() + 15
                 while not lists and time.monotonic() < deadline:
                     checkpoint()

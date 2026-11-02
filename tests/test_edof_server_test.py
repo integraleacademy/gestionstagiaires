@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+from unittest.mock import Mock
 
 from flask import Flask, jsonify, session
 import pytest
@@ -67,6 +68,39 @@ def test_search_input_rejects_injection_and_credential_submission(payload):
 def test_search_spec_and_identity():
     assert server.validate_spec({"mode": "read", "first_name": " Camille ", "last_name": "EXEMPLE"})["first_name"] == "Camille"
     assert browser.identity(" Jean-François ") == browser.identity("JEAN FRANCOIS")
+
+
+def test_name_search_only_reads_the_list_filtered_by_both_requested_names():
+    query = "page=0&attendeeName=LE+TEST&attendeeFirstName=Andr%C3%A9"
+    assert browser.matches_name_query(query, "André", "LE TEST")
+    for other in ("page=0", "attendeeName=LE+TEST",
+                  query + "&attendeeName=AUTRE", query.replace("LE+TEST", "LE+TESTEUR")):
+        assert not browser.matches_name_query(other, "André", "LE TEST")
+
+
+@pytest.mark.parametrize("initial,options,final,allowed", [
+    (browser.SIRET, 0, browser.SIRET, True),
+    ("12345678901234", 1, browser.SIRET + " - Ville", True),
+    ("12345678901234", 0, "", False),
+    ("12345678901234", 2, browser.SIRET, False),
+    ("12345678901234", 1, browser.SIRET + "9", False),
+])
+def test_siret_form_continues_only_after_the_exact_establishment_is_selected(initial, options, final, allowed):
+    assert browser.location_category(f"https://{browser.EDOF_HOST}/espace-prive/html/#/siret") == "edof_siret_form"
+    page, selector, submit = Mock(), Mock(), Mock()
+    form = page.locator.return_value
+    form.locator.side_effect = {'mat-select[formcontrolname="siret"]': selector, "button#submit-button": submit}.__getitem__
+    selector.inner_text.side_effect = [initial, final]
+    option = page.get_by_role.return_value.get_by_role.return_value
+    option.count.return_value = options
+    if allowed:
+        assert browser.submit_siret_form(page)
+        submit.click.assert_called_once()
+    else:
+        with pytest.raises(browser.StopRun) as exc:
+            browser.submit_siret_form(page)
+        assert exc.value.code == "organism_selection_required"
+        submit.click.assert_not_called()
 
 
 def test_diagnostics_only_expose_categories_not_auth_parameters():
