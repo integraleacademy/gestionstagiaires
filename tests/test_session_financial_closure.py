@@ -1,5 +1,7 @@
 import datetime
 import re
+from collections import OrderedDict
+from copy import deepcopy
 from unittest.mock import Mock
 
 import pytest
@@ -73,3 +75,54 @@ def test_only_ended_cards_have_financial_border_and_link_to_same_report(monkeypa
         kpi = re.search(r'financial-card--balance.*?financial-card__value">(.*?)</strong>', report.get_data(as_text=True), re.S).group(1)
         assert amount in kpi
     remote.assert_not_called()
+
+
+@pytest.mark.parametrize('legacy', [False, True], ids=['current-line', 'id-only-line'])
+def test_card_cache_tracks_the_affected_session_and_matches_the_report(monkeypatch, legacy):
+    def make_session(identifier):
+        return {'id': identifier, 'training_type': 'APS', 'date_start': '2026-09-01',
+                'trainees': [{'id': 'T', 'last_name': 'Test', 'personal_amount': 100}]}
+
+    first, second = make_session('A'), make_session('B')
+    line = {'id': gestion_app._billing_line_id('A', 'T', 'PERSONNEL', 'legacy'),
+            'qontoInvoiceId': 'invoice-A', 'invoiceStatus': 'sent',
+            'qonto_total_amount_cents': 10000, 'qonto_amount_paid_cents': 0}
+    if not legacy:
+        line.update(sessionId='A', traineeId='T', financingType='PERSONNEL', financingRef='legacy')
+    data = {'sessions': [first, second], 'billing_lines': [line]}
+    report = gestion_app._session_financial_report
+    spy = Mock(wraps=report)
+    index = Mock(wraps=gestion_app._existing_cpf_invoices_by_trainee)
+    monkeypatch.setattr(gestion_app, '_session_card_overviews', OrderedDict())
+    monkeypatch.setattr(gestion_app, '_session_financial_report', spy)
+    monkeypatch.setattr(gestion_app, '_existing_cpf_invoices_by_trainee', index)
+
+    def open_cards():
+        snapshot = deepcopy(data)
+        read = gestion_app._session_card_overview_reader(snapshot)
+        return [read(item) for item in snapshot['sessions']]
+
+    initial = open_cards()
+    assert [item['remaining'] for item in initial] == [100, 100]
+    assert spy.call_count == 2
+    assert index.call_count == 1
+    assert open_cards() == initial
+    assert spy.call_count == 2
+
+    line['qonto_amount_paid_cents'] = 9500
+    updated, other = open_cards()
+    assert spy.call_count == 3
+    assert updated == report(data, first, include_cpf=False)['overview']
+    assert (updated['remaining'], updated['closed']) == (5, True)
+    assert other == initial[1]
+
+    first['trainees'].append({'id': 'T2', 'last_name': 'Autre', 'personal_amount': 1})
+    updated, _ = open_cards()
+    assert spy.call_count == 4
+    assert (updated['remaining'], updated['closed']) == (6, False)
+    first['trainees'][-1]['registration_cancelled'] = True
+    assert open_cards()[0]['closed']
+    assert spy.call_count == 5
+
+    data['billing_lines'].clear()
+    assert open_cards()[0]['remaining'] == 100

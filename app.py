@@ -66,6 +66,7 @@ except ImportError:
     resource = None
 from typing import Dict, Any, Optional, List, Iterable, Tuple, Set, Callable
 from functools import lru_cache, wraps
+from collections import OrderedDict
 from zoneinfo import ZoneInfo
 from flask import session
 import werkzeug.security as werkzeug_security
@@ -17684,7 +17685,7 @@ def admin_sessions():
             save_data(data)
     _log_memory_stage("ADMIN_SESSIONS_AFTER_LOAD_DATA", admin_sessions_started_at, "/admin/sessions")
     out_sessions = []
-    financial_billing_map = None
+    collection_overview_for = None
     current_year = datetime.date.today().year
     dashboard_start = datetime.date(current_year, 1, 1)
     dashboard_end = datetime.date(current_year, 12, 31)
@@ -17856,13 +17857,9 @@ def admin_sessions():
 
         financial_overview = None
         if status_key == "ended":
-            if financial_billing_map is None:
-                financial_billing_map = _billing_existing_map(data)
-            financial_overview = _session_financial_report(
-                data, s,
-                session_lines=buildBillingLinesFromSessions([s], financial_billing_map),
-                include_cpf=False,
-            )["overview"]
+            if collection_overview_for is None:
+                collection_overview_for = _session_card_overview_reader(data)
+            financial_overview = collection_overview_for(s)
 
         training_type_raw = (_session_get(s, "training_type", "") or "").strip().upper()
         if training_type_raw.startswith("APS"):
@@ -26178,6 +26175,46 @@ def _session_cpf_payment_report(
         "payment_percentage": round(totals["paid"] * 100 / total_cents, 1) if total_cents else 0,
         "unverified_percentage": round(totals["unverified"] * 100 / total_cents, 1) if total_cents else 0,
     }
+
+
+_session_card_overviews = OrderedDict()
+_session_card_overviews_lock = threading.Lock()
+
+
+def _financial_input_digest(value: Any) -> bytes:
+    return hashlib.sha256(json.dumps(value, ensure_ascii=True, separators=(",", ":")).encode()).digest()
+
+
+def _session_card_overview_reader(data: Dict[str, Any]):
+    """Index this request's billing snapshot once. Cache only digests and totals."""
+    existing = _billing_existing_map(data)
+    cpf_by_trainee = _existing_cpf_invoices_by_trainee(existing)
+
+    def overview_for(session_item):
+        session_id = str(session_item.get("id") or "")
+        # Resolve the same inputs as the detailed report, including legacy
+        # billing rows that only have a generated ID and no sessionId.
+        sources = [
+            source
+            for trainee in _session_trainees_list(session_item)
+            for source in _trainee_billing_sources(session_id, trainee, existing, cpf_by_trainee)
+        ] if session_id and _billable_session_start(session_item) else []
+        key = _financial_input_digest((session_item, sources))
+        with _session_card_overviews_lock:
+            cached = _session_card_overviews.get(key)
+            if cached is not None:
+                _session_card_overviews.move_to_end(key)
+                return cached.copy()
+
+        lines = buildBillingLinesFromSessions([session_item], existing, cpf_by_trainee=cpf_by_trainee)
+        overview = _session_financial_report(data, session_item, session_lines=lines, include_cpf=False)["overview"]
+        with _session_card_overviews_lock:
+            _session_card_overviews[key] = overview.copy()
+            if len(_session_card_overviews) > 512:
+                _session_card_overviews.popitem(last=False)
+        return overview
+
+    return overview_for
 
 
 def _session_collection_overview(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -43399,51 +43436,68 @@ def _legacy_trainee_qonto_invoice_candidate(trainee: Dict[str, Any], financing: 
     return inv
 
 
-def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
-    existing = existing or {}
+def _existing_cpf_invoices_by_trainee(existing: Dict[str, Dict[str, Any]]) -> Dict[Tuple[str, str], Dict[str, Any]]:
     existing_cpf_by_trainee: Dict[Tuple[str, str], Dict[str, Any]] = {}
     for row in existing.values():
         if (
             isinstance(row, dict)
-            and is_cpf_billing_context(row)
             and (row.get('qontoInvoiceId') or row.get('qontoDraftId'))
+            and is_cpf_billing_context(row)
         ):
             key = (
                 str(row.get('sessionId') or ''),
                 str(row.get('traineeId') or row.get('studentId') or ''),
             )
             existing_cpf_by_trainee.setdefault(key, row)
+    return existing_cpf_by_trainee
+
+
+def _trainee_billing_sources(session_id, trainee, existing, cpf_by_trainee):
+    if not isinstance(trainee, dict):
+        return
+    trainee_id = str(trainee.get('id') or '')
+    if not trainee_id or not (trainee.get('last_name') or trainee.get('first_name')):
+        return
+    financing_entries = _financing_entries(trainee)
+    cpf_entry = _cpf_invoice_tracking_financing_entry(trainee, cpf_by_trainee.get((session_id, trainee_id)))
+    if cpf_entry:
+        financing_entries.insert(0, cpf_entry)
+    for financing in financing_entries:
+        line_id = _billing_line_id(session_id, trainee_id, financing['type'], financing.get('ref'))
+        yield financing, line_id, existing.get(line_id) or {}
+
+
+def _billable_session_start(sess):
+    start = _parse_date_safe(_session_get(sess, 'date_start', ''))
+    if start and start < BILLING_START_DATE:
+        # VAE dossiers remain billable even when they predate the billing rollout.
+        training = _session_get(sess, 'training_type', '') or _session_get(sess, 'name', '') or ''
+        if 'VAE' not in training.upper():
+            return None
+    return start
+
+
+def buildBillingLinesFromSessions(
+    sessions: List[Dict[str, Any]], existing: Optional[Dict[str, Dict[str, Any]]] = None, *,
+    cpf_by_trainee: Optional[Dict[Tuple[str, str], Dict[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
+    existing = existing or {}
+    if cpf_by_trainee is None:
+        cpf_by_trainee = _existing_cpf_invoices_by_trainee(existing)
     out = []
     for sess in sessions or []:
-        start = _parse_date_safe(_session_get(sess, 'date_start', ''))
+        start = _billable_session_start(sess)
+        if not start:
+            continue
         end = _parse_date_safe(_session_get(sess, 'date_end', '')) or start
-        if not start or start < BILLING_START_DATE:
-            # VAE dossiers can remain billable well after their administrative
-            # session started.  Do not hide their personal-financing line from
-            # Qonto solely because that start date predates the general billing
-            # rollout; otherwise the trainee page has a balance to invoice but
-            # no invoice action.
-            training_name = (_session_get(sess, 'training_type', '') or _session_get(sess, 'name', '') or '').upper()
-            if not start or 'VAE' not in training_name:
-                continue
         session_id = str(sess.get('id') or '')
         training = (_session_get(sess, 'training_type', '') or _session_get(sess, 'name', '') or '').strip()
         if not session_id or not training:
             continue
         for trainee in _session_trainees_list(sess):
-            trainee_id = str(trainee.get('id') or '')
-            if not trainee_id or not (trainee.get('last_name') or trainee.get('first_name')):
-                continue
-            financing_entries = _financing_entries(trainee)
-            cpf_tracking_entry = _cpf_invoice_tracking_financing_entry(
-                trainee,
-                existing_cpf_by_trainee.get((session_id, trainee_id)),
-            )
-            if cpf_tracking_entry:
-                financing_entries.insert(0, cpf_tracking_entry)
-            for financing in financing_entries:
-                line_id = _billing_line_id(session_id, trainee_id, financing['type'], financing.get('ref'))
-                persisted = dict(existing.get(line_id) or {})
+            for financing, line_id, stored in _trainee_billing_sources(session_id, trainee, existing, cpf_by_trainee):
+                trainee_id = str(trainee['id'])
+                persisted = dict(stored)
                 legacy_inv = _legacy_trainee_qonto_invoice_candidate(trainee, financing, persisted)
                 if legacy_inv:
                     legacy_status = _normalize_billing_invoice_status(legacy_inv.get('qonto_invoice_status') or ('draft' if legacy_inv.get('qonto_invoice_id') else 'not_invoiced'))
