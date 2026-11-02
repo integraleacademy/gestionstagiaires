@@ -10,6 +10,13 @@
   <header><a href="/admin/edof-test">← Essais EDOF</a><span>INTÉGRALE <b>ACADEMY</b></span><span class="badge">TEST V2</span></header>
   <main data-csrf="{{ csrf }}">
     <div class="intro"><p class="eyebrow">DOSSIERS EDOF · TEST V2</p><h1>Rechercher un dossier EDOF</h1><p>Consultez la liste des dossiers de votre établissement par nom ou par numéro CPF.</p></div>
+    <section class="card result efp-status" id="connexion-efp" aria-labelledby="efp-title">
+      <div class="section-head"><h2 id="efp-title">Connexion EFP Connect</h2>
+        <strong id="efp-state" data-state="{{ efp.state }}" role="status">{{ efp.label }}</strong></div>
+      <p id="efp-checked">{{ 'Dernier contrôle sur EDOF le ' ~ efp.checked_at ~ ' (Paris).' if efp.checked_at else 'Aucun contrôle de session enregistré au cours des dernières 24 heures.' }}</p>
+      <p class="hint">L’état provient de la dernière lecture ou synchronisation sur EDOF. Actualiser cet affichage ne demande aucun code.</p>
+      <button type="button" class="button secondary" id="refresh-efp-state" data-url="{{ url_for('edof_server_test.connection_status') }}">Actualiser l’état affiché</button>
+    </section>
     <section class="card result" id="dossier-lu">
       {% if last_read %}{% set f = last_read.fields %}
         <p class="eyebrow">{{ "LISTE EDOF SYNCHRONISÉE LE" if last_read.listed else "DOSSIER EDOF · LECTURE DU" }} {{ last_read.checked_at }} (PARIS)</p>
@@ -26,8 +33,7 @@
     <section class="card result"><p class="eyebrow">CONNEXION GMAIL</p><h2>Recevoir les codes EFP automatiquement</h2>
       {% if gmail_notice %}<p class="review-note" role="status">{{ gmail_notice }}</p>{% endif %}
       {% if gmail.connected %}
-        <p class="match">Gmail est connecté au compte EFP configuré. L’accès réel à EDOF reste à vérifier par un essai serveur.</p>
-        <p>{{ 'Une connexion EFP a été enregistrée après une lecture réussie.' if gmail.saved_session else 'Aucune connexion EFP réutilisable n’a encore été validée.' }}</p>
+        <p class="match">Gmail est connecté pour recevoir les codes EFP. <a href="#connexion-efp">Voir l’état de la connexion EFP</a>.</p>
         <form method="post" action="/admin/edof-test/server/gmail/disconnect"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="button secondary" type="submit">Déconnecter Gmail et effacer la connexion EFP</button></form>
       {% else %}
         <p>Une autorisation initiale auprès de Google permettra au serveur de rechercher les nouveaux codes EFP. Le mot de passe Gmail n’est pas demandé.</p>
