@@ -80,7 +80,8 @@ DIALOG_ACK = re.compile(r"^(?:J[’']ai compris|Compris|Plus tard|Non merci|Pass
 # Material includes a decorative icon before the visible refusal wording.
 COOKIE_DECLINE = re.compile(r"^(?!.*\b(?:accepter|autoriser|ne pas)\b.*\brefuser\b)(?:.*\s)?(?:tout refuser(?: et (?:fermer|continuer))?|refuser tout|refuser tous les cookies|continuer sans accepter)[.!]?\s*$", re.I | re.S)
 NAME_TAB = re.compile(r"\bpar\s+nom\s+du\s+stagiaire\b", re.I)
-NAME_FIELD = re.compile(r"\bnom\s+(?:du\s+|de\s+)?stagiaire\b|\bpar\s+nom\b", re.I)
+NAME_FIELD = re.compile(r"^nom(?:\s+de famille)?\s*\*?$|\bnom\s+(?:du\s+|de\s+)?stagiaire\b|\bpar\s+nom\b", re.I)
+LEGACY_NAME_PLACEHOLDER = re.compile(r"^(?!.*\bnum[ée]ro\b).*rechercher un dossier de formation", re.I)
 TRAINEE_SURNAME = 'input[name="searchByRegistrationFolderTraineeName"]:visible'
 TRAINEE_FIRST_NAME = 'input[name="searchByRegistrationFolderTraineeFirstName"]:visible'
 
@@ -365,30 +366,34 @@ def submit_name_search(page, surname, first_name, lists, signals, timeout_error)
     inputs = page.locator("input:visible")
     named_surname = page.locator(TRAINEE_SURNAME)
     given = page.locator(TRAINEE_FIRST_NAME)
-    name_field = named_surname.or_(page.get_by_placeholder(NAME_FIELD)).or_(page.get_by_label(NAME_FIELD)).and_(inputs)
-    search = name_field
-    if name_field.count() != 1:
+    legacy = page.get_by_placeholder(NAME_FIELD).or_(page.get_by_label(NAME_FIELD)).and_(page.get_by_role("textbox")).and_(inputs)
+    candidates = named_surname.or_(legacy)
+    if not candidates.count():
         signals["search_step"] = "name_mode"
         tab = page.get_by_text(NAME_TAB).filter(visible=True)
         try:
             activate_name_tab(page, tab, signals)
         except timeout_error:
-            if name_field.count() != 1:
+            if not candidates.count():
                 raise
         signals["search_step"] = "waiting_inputs"
         try:
-            name_field.wait_for(state="visible", timeout=8000)
+            # Waiting for any match is safe. Only a unique, identified surname
+            # field can receive text below, even if labels match both textboxes.
+            candidates.first.wait_for(state="visible", timeout=8000)
         except timeout_error:
             if signals.get("name_activation") == "keyboard" and tab.count() == 1:
                 # A visible custom tab may be tabbable without handling Enter.
                 # Use its normal click only while its name fields are still absent.
                 tab.click(no_wait_after=True, timeout=8000)
-            search = page.get_by_placeholder(re.compile(r"rechercher un dossier de formation", re.I)).and_(inputs)
-            if name_field.count() == 1:
-                search = name_field
+            if not candidates.count():
+                legacy = page.get_by_placeholder(LEGACY_NAME_PLACEHOLDER).and_(inputs)
+                named_surname.or_(legacy).first.wait_for(state="visible", timeout=8000)
     signals["search_step"] = "input"
-    search.wait_for(state="visible", timeout=8000)
     paired = named_surname.count() == 1 or given.count() == 1
+    search = named_surname if named_surname.count() else legacy
+    if search.count() != 1:
+        raise StopRun("search_unconfirmed")
     signals["paired_name_search"] = paired
     lists.clear()
     search.fill(surname, timeout=8000)
@@ -562,7 +567,7 @@ def diagnostic_summary(location, password_visible, error_visible, signals):
             result["search_step"] = signals["search_step"]
         if signals.get("name_activation") in {"keyboard", "pointer"}:
             result["name_activation"] = signals["name_activation"]
-        for key in ("name_tab_visible", "name_field_visible", "folder_field_visible"):
+        for key in ("name_tab_visible", "name_field_visible", "given_field_visible", "folder_field_visible"):
             if isinstance(signals.get(key), bool):
                 result[key] = signals[key]
         if signals.get("timeout_cause") in {"covered", "hidden", "disabled", "navigation", "locator", "other"}:
@@ -849,7 +854,10 @@ def run_browser(spec):
                         if location_category(page.url) == "edof_folder_list":
                             inputs = page.locator("input:visible")
                             signals["name_tab_visible"] = page.get_by_text(NAME_TAB).filter(visible=True).count() == 1
-                            signals["name_field_visible"] = page.locator(TRAINEE_SURNAME).or_(page.get_by_placeholder(NAME_FIELD)).or_(page.get_by_label(NAME_FIELD)).and_(inputs).count() == 1
+                            text_fields = page.get_by_role("textbox").and_(inputs)
+                            signals["name_field_visible"] = (page.locator(TRAINEE_SURNAME).count() == 1 or
+                                page.get_by_placeholder(NAME_FIELD).or_(page.get_by_label(NAME_FIELD)).and_(text_fields).count() == 1)
+                            signals["given_field_visible"] = page.locator(TRAINEE_FIRST_NAME).count() == 1
                             signals["folder_field_visible"] = page.get_by_placeholder(re.compile(r"rechercher un dossier de formation", re.I)).and_(inputs).count() == 1
                         if location_category(page.url) == "edof_select_siret":
                             signals["chooser_controls"] = [kind for kind, selector in CHOOSER_CONTROLS.items()
