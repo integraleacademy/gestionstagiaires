@@ -55,8 +55,12 @@ def test_real_request_fence_requires_provider_target_action_date_and_single_send
                          verify_gate, None)["code"] == "declaration_unverified"
     result = form.transmit(None, verify, {**ROW, "state": "inTraining",
                            "start_date": ENTRY["actual_date"]}, verify_gate, None)
-    ledger.complete(tmp_path, verify, result["code"])
-    assert ledger.records(tmp_path)[0]["status"] == "confirmed"
+    assert result["confirmed_state"] == "inTraining"
+    assert "fields" not in result
+    ledger.complete(tmp_path, verify, result["code"], result["confirmed_state"])
+    receipt = ledger.records(tmp_path)[0]
+    assert receipt["status"] == "confirmed"
+    assert receipt["intent"]["confirmed_state"] == "inTraining"
 
 
 def test_queued_work_expires_on_provider_change_and_resume(tmp_path):
@@ -176,3 +180,28 @@ def test_reservation_ui_cannot_submit_an_exit_or_another_folder_while_wedof_is_a
     post(**params,action="entry_training")
     assert ledger.records(site.store.directory)[0]["intent"]["pilot_ticket"] == "f"*32
     assert site.gate.state()["provider"] == "wedof"
+
+
+def test_new_receipt_updates_old_directory_view_only_for_same_enrolment(site):
+    from integrale_edof_dashboard import apply_confirmed_entries
+    from edof_directory import dated_snapshot, record_key
+    current = dated_snapshot(site.vault.get(record_key(site.owner)))
+    folder = "100000"
+    row = current["rows"][folder]
+    draft = {**ENTRY, "actual_date": row["session_start_date"], "pilot_ticket": "a"*32}
+    ledger.enqueue(site.store.directory, site.owner, 0, row, draft, "admin")
+    spec = ledger.next_job(site.store, 0, provider="wedof")
+    def present(snap, owner=site.owner):
+        return apply_confirmed_entries(snap, site.store.directory, owner)["rows"][folder]
+
+    assert present(current)["state"] == "Accepté"
+    ledger.complete(site.store.directory, spec, "declaration_confirmed")
+    assert present(current)["state"] == "Entrée déclarée"
+    state_view = site.client.get("/admin/edof-test?section=state&q="+folder).text
+    assert "Entrée confirmée le " in state_view
+    assert present({**current,"checked":1e11})["state"] == "Accepté"
+    assert present(current, "autre compte")["state"] == "Accepté"
+    stale = {**current,"rows":{folder:{**row,"last_name":"Homonyme"}}}
+    assert "entry_confirmed_on" not in present(stale)
+    advanced = {**current,"rows":{folder:{**row,"state":"Annulé par le titulaire"}}}
+    assert present(advanced)["state"] == "Annulé par le titulaire"

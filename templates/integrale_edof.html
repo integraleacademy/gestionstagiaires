@@ -78,7 +78,7 @@
 {% if rows %}<div class="table-wrap"><table><thead><tr><th>Dossier CPF</th><th>Stagiaire et formation</th><th>Session</th><th>État EDOF</th><th>Suivi et actions</th></tr></thead>
 <tbody>{% for r in rows %}<tr><td><a href="{{ url_for('integrale_edof.index', section=section, tab=tab, folder=r.folder_id, page=page, q=query, _anchor='dossier') }}">{{ r.folder_id }}</a></td>
 <td><strong>{{ r.first_name }} {{ r.last_name }}</strong><br>{{ r.title or 'Formation non renseignée' }}</td><td>{{ date_fr(r.session_start_date) }}<br>{{ date_fr(r.session_end_date) }}</td>
-<td>{{ r.label }}{% if previewing %}<br><strong>{{ 'Correspondance fiable' if matches[r.folder_id].status == 'exact_match' else 'À vérifier' }}</strong>{% if matches[r.folder_id].status == 'exact_match' %}<br>{{ matches[r.folder_id].session }} · {{ matches[r.folder_id].trainee }}{% endif %}{% endif %}{% if testing and r.evaluation %}<br><strong>{{ simulation_labels[r.evaluation] }}</strong>{% endif %}{% if r.block %}<br><span class="warning">Bloqué · {{ block_reasons.get(r.block.reason_code, 'À vérifier') }}</span>{% endif %}</td>
+<td>{{ r.label }}{% if r.entry_confirmed_on %}<br><small>Entrée confirmée le {{ date_fr(r.entry_confirmed_on) }}</small>{% endif %}{% if previewing %}<br><strong>{{ 'Correspondance fiable' if matches[r.folder_id].status == 'exact_match' else 'À vérifier' }}</strong>{% if matches[r.folder_id].status == 'exact_match' %}<br>{{ matches[r.folder_id].session }} · {{ matches[r.folder_id].trainee }}{% endif %}{% endif %}{% if testing and r.evaluation %}<br><strong>{{ simulation_labels[r.evaluation] }}</strong>{% endif %}{% if r.block %}<br><span class="warning">Bloqué · {{ block_reasons.get(r.block.reason_code, 'À vérifier') }}</span>{% endif %}</td>
 <td><a href="{{ url_for('integrale_edof.index', section=section, tab=tab, folder=r.folder_id, page=page, q=query, _anchor='dossier') }}">{{ 'Voir l’association' if r.link else 'Consulter / associer' }}</a>
 {% if r.action and active %}<details><summary>Automatisation</summary><form method="post" action="{{ url_for('integrale_edof.block', folder=r.folder_id) }}">{{ token() }}
 <input type="hidden" name="action" value="{{ r.block.action if r.block else r.action }}">{% if r.block %}<input type="hidden" name="release" value="yes">{{ btn('Lever le blocage') }}
@@ -113,7 +113,7 @@
 {% else %}<p>Aucun envoi enregistré par Intégrale EDOF pour ce dossier.</p>{% endfor %}
 {% set pilot = detail.pilot %}
 {% if detail.pilot_error %}<p role="alert">{{ detail.pilot_error }}</p>{% endif %}
-{% if pilot and detail.action == 'entry_training' %}<h3>Opérateur de cette entrée</h3>
+{% if pilot and (detail.action == 'entry_training' or pilot.reserved) %}<h3>Opérateur de cette entrée</h3>
 {% if pilot.reserved %}<p class="notice"><strong>Entrée exclue de WeDoF en production.</strong> Intégrale EDOF est réservé à cette entrée.</p>
 {% if not pilot.operation %}<form method="post" action="{{ url_for('integrale_edof.pilot_entry',folder=f.folder_id) }}">{{ token() }}<input type="hidden" name="mode" value="release">{{ btn('Rendre cette entrée à WeDoF') }}</form>{% endif %}
 {% elif detail.pilot_ready %}<p>Entrée programmée par WeDoF{% if pilot.hour %} à {{ pilot.hour }}{% endif %}.</p><form method="post" action="{{ url_for('integrale_edof.pilot_entry',folder=f.folder_id) }}">{{ token() }}<input type="hidden" name="mode" value="reserve">{{ btn('Réserver uniquement cette entrée à Intégrale EDOF') }}</form>

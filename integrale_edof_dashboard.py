@@ -61,6 +61,24 @@ def category(row):
     return STATES.get(raw, "unknown")
 
 
+def apply_confirmed_entries(snapshot, directory_path, owner):
+    if not snapshot:
+        return snapshot
+    with closing(declarations.database(directory_path)) as db:
+        verified = db.execute("""SELECT folder, intent FROM cpf_declarations
+            WHERE owner=? AND action='entry_training' AND status='confirmed' AND changed>?
+            ORDER BY changed""", (owner, snapshot.get("checked") or 0)).fetchall()
+    rows = dict(snapshot["rows"])
+    for record in verified:
+        row = rows.get(record["folder"])
+        intent = json.loads(record["intent"])
+        if row and category(row) == "accepted" and declarations.same_enrolment(row, intent):
+            # Older receipts certify entry, even if their precise portal state wasn't stored.
+            rows[record["folder"]] = {**row, "state": intent.get("confirmed_state") or "Entrée déclarée",
+                                      "entry_confirmed_on": intent["actual_date"]}
+    return {**snapshot, "rows": rows}
+
+
 def folder_for_matching(row):
     return {"external_id": row["folder_id"], "type": "cpf", "first_name": row.get("first_name"),
             "last_name": row.get("last_name"), "email": row.get("email"), "training_title": row.get("title"),
@@ -197,7 +215,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
     def snapshot(owner):
         saved = vault().get(directory.record_key(owner)) if store.connector_key else None
         # Previously synchronized dossiers also contain French display dates.
-        return directory.dated_snapshot(saved)
+        return apply_confirmed_entries(directory.dated_snapshot(saved), store.directory, owner)
 
     def folder_record(owner, folder):
         if not ID_RE.fullmatch(folder):
