@@ -12,7 +12,8 @@ from zoneinfo import ZoneInfo
 from flask import Blueprint, abort, flash, get_flashed_messages, redirect, request, session, url_for
 
 import edof_directory as directory
-from cpf_provider import PROVIDERS, ProviderStore, ProviderUnavailable, provider_operation
+from cpf_provider import PROVIDERS, ProviderStore, ProviderUnavailable, on_test_service, provider_operation
+from cpf_provider_bridge import coordinated_switch, production_request
 from edof_matching import build_comparison, manual_options
 from edof_readonly_test import ID_RE
 from edof_server_browser import DETAIL_PREFIX
@@ -326,8 +327,16 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                       if x["folder"] in (snap or {}).get("rows", {})]
         gmail = gmail_status()
         selected = selection.state()
+        production, bridge_error = None, ""
+        if on_test_service():
+            try:
+                production = production_request()
+            except ProviderUnavailable as exc:
+                bridge_error = str(exc)
+        aligned = not selected["pending"] and not bridge_error and (
+            production is None or selected["provider"] == production["provider"])
         return app.jinja_env.get_template("integrale_edof.html").render(
-            selection=selected, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=TABS, tab=tab,
+            selection=selected, production=production, bridge_error=bridge_error, aligned=aligned, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=TABS, tab=tab,
             csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
             match_counts=Counter(m["status"] for m in matches.values()), total=len(rows), counts=counts,
             rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
@@ -352,7 +361,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         except ValueError:
             abort(400)
         try:
-            result = selection.switch(target, revision, session.get("admin_username") or owner)
+            result = coordinated_switch(selection, target, revision, session.get("admin_username") or owner)
         except ProviderUnavailable as exc:
             flash(str(exc), "warning")
             return back()
@@ -360,7 +369,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         # after several weeks away. A failed sign-in cannot reschedule itself.
         if target == "integrale" and result["revision"] != revision:
             store.request_directory(owner)
-        flash(f"{PROVIDERS[target]} est le système actif sur Test V2.", "success")
+        flash(f"{PROVIDERS[target]} est actif pour votre établissement. Bascule confirmée.", "success")
         return back()
 
     @bp.post("/associate-reliable")
