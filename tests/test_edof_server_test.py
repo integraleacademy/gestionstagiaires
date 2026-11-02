@@ -88,7 +88,23 @@ def test_private_page_waits_for_callback_and_folder_diagnostics_hide_identifiers
     result = browser.diagnostic_summary(base + "/dossiers/detail/123456789012?state=synthetic", False, False,
         {"workspace_status": 200, "folder_detail_status": 403, "folder_list_status": "untrusted"})
     assert result == {"location": "edof_folder_detail", "error_banner_visible": False,
-                      "password_form_visible": False, "workspace_status": 200, "folder_detail_status": 403}
+                      "private_route": "/dossiers/detail/*", "password_form_visible": False,
+                      "workspace_status": 200, "folder_detail_status": 403}
+
+
+def test_workspace_choice_recognizes_existing_establishment_and_keeps_unknowns_private():
+    base = f"https://{browser.EDOF_HOST}/espace-prive/html/#"
+    assert browser.location_category(base + "/choix-etablissement") == "edof_select_siret"
+    assert browser.workspace_screen("Choisissez le SIRET de votre établissement") == "select_organisation"
+    assert browser.workspace_screen("Demander un accès. Choisissez votre établissement") == "access_denied"
+    assert browser.workspace_screen("J’accepte les conditions. Choisissez un établissement") == "terms"
+    formatted = f"{browser.SIRET[:3]} {browser.SIRET[3:6]} {browser.SIRET[6:9]} {browser.SIRET[9:]}"
+    assert browser.SIRET_TEXT.search("SIRET " + formatted)
+    assert not browser.SIRET_TEXT.search(browser.SIRET + "1")
+    result = browser.diagnostic_summary(base + "/choix-etablissement/private-name?state=secret", False, False,
+                                       {"expected_establishment_visible": True})
+    assert result["private_route"] == "/choix-etablissement/*" and result["expected_establishment_visible"]
+    assert "secret" not in json.dumps(result) and "private-name" not in json.dumps(result)
 
 
 def test_blocked_request_diagnostics_do_not_disclose_paths_ids_queries_or_body_values():
