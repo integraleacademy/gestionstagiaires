@@ -276,10 +276,12 @@ def register(host):
         status = request.args.get("status", "")
         with database(host) as db:
             rows = [unpack(row) for row in db.execute("SELECT * FROM applications ORDER BY created_at DESC")]
+            transferred = db.execute("""SELECT count(*) FROM applications a JOIN admissions_transfer t
+                                     ON t.application_id=a.id WHERE t.candidate_id IS NOT NULL""").fetchone()[0]
         counts = {key: sum(row["status"] == key for row in rows) for key in STATUSES}
         selected = [row for row in rows if (not status or row["status"] == status) and (not query or query in " ".join(str(row[k]) for k in ("first_name", "last_name", "email", "city", "id")).casefold())]
         return render_template("parcours_alternance/admin.html", applications=selected, counts=counts, admissions_url=ADMISSIONS_URL+"/admin?bts=PARCOURS-SECURITE",
-                               title="Parcours alternance · Candidatures", total=len(rows), statuses=STATUSES, status=status, q=request.args.get("q", ""), public_url=PUBLIC_URL)
+                               title="Parcours alternance · Candidatures", total=len(rows), transferred=transferred, transfer_configured=len(os.getenv("BTS_IMPORT_API_KEY","").strip())>=32, statuses=STATUSES, status=status, q=request.args.get("q", ""), public_url=PUBLIC_URL)
 
     @bp.get("/admin/parcours-alternance/<application_id>")
     @staff_only
@@ -375,6 +377,7 @@ def maintain(host):
     with database(host) as db:
         db.execute("DELETE FROM applications WHERE created_at<?", ((now - dt.timedelta(days=365)).isoformat(),))
         db.execute("DELETE FROM rate_limits WHERE expires<?", (int(now.timestamp()),))
+        db.execute("DELETE FROM admissions_transfer WHERE NOT EXISTS (SELECT 1 FROM applications WHERE id=application_id)")
         rows = db.execute("""SELECT id FROM applications WHERE
           (staff_mail!='sent' AND staff_tries<5 AND (staff_attempt IS NULL OR staff_attempt<?)) OR
           (candidate_mail!='sent' AND candidate_tries<5 AND (candidate_attempt IS NULL OR candidate_attempt<?))
