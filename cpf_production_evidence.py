@@ -25,8 +25,9 @@ def hours(raw):
         return None
 
 
-def read_evidence(legacy, requested):
-    data = legacy.load_data()
+def read_evidence(legacy, requested, *, data=None):
+    if data is None:
+        data = legacy.load_data()
     sessions = {str(s.get("id")): s for s in data.get("sessions", []) if isinstance(s, dict)}
     links = {}
     registrations = {}
