@@ -1138,6 +1138,10 @@ def run_browser(spec):
                 if not saved or not can_restart_saved_login(exc.code, page, diagnostics, checkpoint):
                     raise
                 context.close()
+                if vault:
+                    # The stored cookies just failed the explicit safe restore
+                    # check; leave a subsequent run free to start at normal EFP.
+                    vault.delete("browser")
                 saved = None
                 signals.clear()
                 signals.update(blocked_efp_posts=0, blocked_edof_posts=0, blocked_other_posts=0)
@@ -1192,6 +1196,8 @@ def run_browser(spec):
             establishment_step = "waiting"
             dossier_menu = page.locator('a[href$="/dossiers/en-cours"]')
             deadline = time.monotonic() + 35
+            chooser_limit = deadline + 55
+            progress_steps = set()
             while time.monotonic() < deadline:
                 try:
                     screen = checkpoint()
@@ -1210,6 +1216,9 @@ def run_browser(spec):
                                 raise StopRun("workspace_dialog_required")
                             covered = False
                         if covered:
+                            if signals.get("cookies_dismissed") and "cookies_dismissed" not in progress_steps:
+                                progress_steps.add("cookies_dismissed")
+                                deadline = min(chooser_limit, max(deadline, time.monotonic() + 25))
                             page.wait_for_timeout(300)
                             continue
                     if screen in {"access_denied", "session_expired", "terms", "error"}:
@@ -1241,6 +1250,11 @@ def run_browser(spec):
                                     raise
                             else:
                                 raise
+                        if establishment_step in {"opened", "selected", "confirmed"} and establishment_step not in progress_steps:
+                            # Selecting the correct SIRET at the end of the initial
+                            # window still needs time for the official Continue action.
+                            progress_steps.add(establishment_step)
+                            deadline = min(chooser_limit, max(deadline, time.monotonic() + 25))
                 page.wait_for_timeout(300)
             else:
                 raise StopRun("workspace_dialog_required" if signals.get("dialog_kind") in {"empty", "loading"} else "organism_selection_required")
