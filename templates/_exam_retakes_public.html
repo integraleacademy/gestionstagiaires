@@ -16,6 +16,7 @@
       {% if r.signature_url %}<a class="btn" href="{{ r.signature_url }}" target="_blank" rel="noopener">Signer ma convention</a>{% endif %}
       <a class="btn secondary" href="{{ r.convention_url }}" target="_blank" rel="noopener">Convention{% if r.signed_at %} signée{% endif %}</a>
       {% if r.invoice_url %}<a class="btn secondary" href="{{ r.invoice_url }}" target="_blank" rel="noopener">Ma facture Qonto</a>{% endif %}
+      {% if r.convocation_url %}<a class="btn" href="{{ r.convocation_url }}" target="_blank" rel="noopener">Ma convocation à l’examen</a>{% endif %}
       {% if r.payment_url %}<a class="btn" href="{{ r.payment_url }}" target="_blank" rel="noopener">Régler par carte bancaire</a>{% endif %}
     </div>
     {% if r.status=='confirmed' %}<p style="color:#14704a;font-weight:700">Votre participation au rattrapage est confirmée.</p>{% endif %}

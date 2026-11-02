@@ -46,6 +46,7 @@ def test_button_and_modal_render_in_real_trainee_sheet(real_app):
     page=html.fromstring(response.data)
     assert len(page.xpath('//button[@id="retakeOpen"]'))==1
     assert len(page.xpath('//dialog[@id="retakeDialog"]'))==1
+    assert page.xpath('//input[@type="checkbox" and @name="convocation_manual" and not(@checked)]')
 
 
 def test_preparation_defaults_use_receiving_session(real_app):
@@ -75,6 +76,9 @@ def test_roster_is_highlighted_without_a_normal_trainee_row(real_app):
     retake_rows=page.xpath('//tr[@class="exam-retake-roster"]')
     assert len(retake_rows)==1 and 'Camille TEST' in retake_rows[0].text_content()
     assert 'Rattrapage examen' in retake_rows[0].text_content()
+    links = {a.text_content(): a.get('href') for a in retake_rows[0].xpath('.//a')}
+    assert links['Prévisualiser la convocation'] == '/admin/rattrapages/' + row['id'] + '/convocation.pdf'
+    assert links['Gérer l’envoi'].endswith('/S1/stagiaires/T1#rattrapage')
     assert not page.xpath('//tr[@data-trainee-id="T1"]')
     assert data['sessions'][1]['trainees']==[]
 
@@ -82,7 +86,8 @@ def test_roster_is_highlighted_without_a_normal_trainee_row(real_app):
 def test_public_page_displays_only_its_retakes(real_app):
     client,_=real_app
     row=create(real_app,exam_price='60',day_price='70',no_days=False,days=[{'date':'2026-12-07'},{'date':'2026-12-08'}])
-    row.update(status='confirmed',signed_at=retakes.now(),payment_status='paid',confirmed_at=retakes.now())
+    row.update(status='confirmed',signed_at=retakes.now(),payment_status='paid',paid_cents=row['total_cents'],
+               confirmed_at=retakes.now(),emails={'convocation':{'sent_at':retakes.now()}})
     retakes.Store(host).save(row)
     response=client.get('/espace/PUB-T1')
     assert response.status_code==200
@@ -90,6 +95,8 @@ def test_public_page_displays_only_its_retakes(real_app):
     section=page.xpath('//section[@id="rattrapage"]')[0]
     assert '09/12/2026' in section.text_content()
     assert 'Convention signée' in section.text_content()
+    assert section.xpath('.//a[contains(., "Ma convocation à l’examen")]/@href') == [
+        '/espace/PUB-T1/rattrapages/' + row['id'] + '/convocation.pdf']
     assert 'Votre participation au rattrapage est confirmée.' in section.text_content()
     assert '12/10/2026' in section.text_content()
     assert 'Remise de 20,00 € (25 %)' in section.text_content()

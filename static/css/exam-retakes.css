@@ -2,3 +2,6 @@
 
 .retake-discount{padding:11px 14px;border-radius:10px;background:#e9f6ef;color:#176344;font-size:13px;line-height:1.6}.retake-discount[hidden]{display:none!important}
 .retake-actions{flex-wrap:wrap}
+.retake-invitation{margin:14px 0;padding:14px 16px;border:1px solid #c9d9ea;border-radius:12px;background:#f3f7fb}
+.retake-invitation h4{margin:0;color:#172c4c;font-size:16px}
+.retake-invitation p{margin:6px 0 10px;overflow-wrap:anywhere}

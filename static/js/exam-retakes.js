@@ -85,7 +85,7 @@
       for (const key of ['target_session','exam_date','exam_time','location','exam_price','day_price','notes']) field(key).value = record[key] || '';
       if(record.failed_exam_date)field('failed_exam_date').value=record.failed_exam_date;
       field('failed_exam_details').value=record.failed_exam_details || '';
-      for (const key of ['exam_offered','days_offered','no_days']) field(key).checked = Boolean(record[key]);
+      for (const key of ['exam_offered','days_offered','no_days','convocation_manual']) field(key).checked = Boolean(record[key]);
       days.replaceChildren();
       record.days.forEach(addDay);
     }
@@ -94,8 +94,27 @@
   function showHistory() {
     form.hidden = true;editing = null;history.hidden = false;renderHistory();
   }
+  function convocationControls(record) {
+    if (!record.convocation_url) return '';
+    const sent = Boolean(record.convocation_sent_at);
+    let description = record.convocation_manual ? 'Envoi manuel après confirmation du rattrapage.' : 'L’envoi automatique aura lieu à la confirmation du rattrapage.';
+    if (sent) {
+      const date = new Intl.DateTimeFormat('fr-FR', {dateStyle:'short',timeStyle:'short',timeZone:'Europe/Paris'});
+      description = `Envoyée le ${date.format(new Date(record.convocation_sent_at))} à ${record.convocation_recipient}.`;
+    } else if (record.convocation_sendable && !record.convocation_requested) {
+      description = 'Envoi manuel. La convocation est prête pour ' + record.convocation_recipient + '.';
+    } else if (record.convocation_sendable) {
+      description = record.error ? 'Envoi à vérifier. Consultez le détail du suivi.' : 'Envoi en attente pour ' + record.convocation_recipient + '.';
+    } else if (record.status === 'confirmed') {
+      description = 'Aucun envoi programmé.';
+    }
+    const button = record.convocation_sendable && !state.read_only
+      ? `<button type="button" class="btn btn-primary" data-action="${sent?'resend-convocation':'send-convocation'}" data-id="${esc(record.id)}">${sent?'Renvoyer':'Envoyer'} la convocation</button>` : '';
+    return `<section class="retake-invitation"><h4>Convocation à l’examen</h4><p>${esc(description)}</p>
+      <div class="retake-links"><a class="btn btn-outline" target="_blank" rel="noopener" href="${esc(record.convocation_url)}">Prévisualiser la convocation</a>${button}</div></section>`;
+  }
   function renderHistory() {
-    history.innerHTML = state.records.map(r => `<article class="retake-record"><h3>${esc(r.kind)} · ${esc(r.exam_date_label)}</h3><span class="retake-status ${esc(r.status)}">${esc(r.label)}</span><p>${esc(r.target_name)}<br>${esc(r.location)}<br><strong>${esc(r.total)} TTC</strong>${r.email_sent ? ' · Documents envoyés par e-mail' : ''}</p>${r.days.length ? '<p>'+r.days.map(d=>`${esc(d.date.split('-').reverse().join('/'))} · ${esc(d.start)}–${esc(d.end)} · ${esc(d.topic)}`).join('<br>')+'</p>' : '<p>Aucune journée de cours supplémentaire.</p>'}${r.failed_exam_date?'<p>Examen non réussi : '+esc(r.failed_exam_date_label)+'</p>':''}${r.has_discount?'<p class="retake-discount">Remises commerciales accordées : '+esc(r.financials.discount_cents)+'</p>':''}${r.needs_review?'<p class="retake-help">Complétez puis enregistrez la nouvelle convention pour ajouter le rappel de l’examen et le détail des remises.</p>':''}${r.error ? `<p class="retake-error" role="alert">${esc(r.error)}</p>` : ''}<div class="retake-links"><a class="btn btn-outline" target="_blank" rel="noopener" href="${esc(r.convention_url)}">Convention${r.signed_at?' signée':''}</a>${r.invoice_url ? `<a class="btn btn-outline" target="_blank" rel="noopener" href="${esc(r.invoice_url)}">Facture Qonto</a>`:''}${r.payment_url ? `<a class="btn btn-outline" target="_blank" rel="noopener" href="${esc(r.payment_url)}">Lien de paiement</a>`:''}${state.read_only?'':r.status==='draft'?`<button type="button" class="btn btn-outline" data-edit="${esc(r.id)}">Modifier</button><button type="button" class="btn btn-outline" data-action="regenerate" data-id="${esc(r.id)}">Actualiser la convention</button><button type="button" class="btn btn-primary" data-action="send" data-id="${esc(r.id)}">Envoyer en signature</button><button type="button" class="btn btn-outline" data-action="cancel" data-id="${esc(r.id)}">Annuler le brouillon</button>`:r.status!=='cancelled'?`<button type="button" class="btn btn-outline" data-action="refresh" data-id="${esc(r.id)}">Actualiser le suivi</button>`:''}</div></article>`).join('');
+    history.innerHTML = state.records.map(r => `<article class="retake-record"><h3>${esc(r.kind)} · ${esc(r.exam_date_label)}</h3><span class="retake-status ${esc(r.status)}">${esc(r.label)}</span>${convocationControls(r)}<p>${esc(r.target_name)}<br>${esc(r.location)}<br><strong>${esc(r.total)} TTC</strong>${r.email_sent ? ' · Documents envoyés par e-mail' : ''}</p>${r.days.length ? '<p>'+r.days.map(d=>`${esc(d.date.split('-').reverse().join('/'))} · ${esc(d.start)}–${esc(d.end)} · ${esc(d.topic)}`).join('<br>')+'</p>' : '<p>Aucune journée de cours supplémentaire.</p>'}${r.failed_exam_date?'<p>Examen non réussi : '+esc(r.failed_exam_date_label)+'</p>':''}${r.has_discount?'<p class="retake-discount">Remises commerciales accordées : '+esc(r.financials.discount_cents)+'</p>':''}${r.needs_review?'<p class="retake-help">Complétez puis enregistrez la nouvelle convention pour ajouter le rappel de l’examen et le détail des remises.</p>':''}${r.error ? `<p class="retake-error" role="alert">${esc(r.error)}</p>` : ''}<div class="retake-links"><a class="btn btn-outline" target="_blank" rel="noopener" href="${esc(r.convention_url)}">Convention${r.signed_at?' signée':''}</a>${r.invoice_url ? `<a class="btn btn-outline" target="_blank" rel="noopener" href="${esc(r.invoice_url)}">Facture Qonto</a>`:''}${r.payment_url ? `<a class="btn btn-outline" target="_blank" rel="noopener" href="${esc(r.payment_url)}">Lien de paiement</a>`:''}${state.read_only?'':r.status==='draft'?`<button type="button" class="btn btn-outline" data-edit="${esc(r.id)}">Modifier</button><button type="button" class="btn btn-outline" data-action="regenerate" data-id="${esc(r.id)}">Actualiser la convention</button><button type="button" class="btn btn-primary" data-action="send" data-id="${esc(r.id)}">Envoyer en signature</button><button type="button" class="btn btn-outline" data-action="cancel" data-id="${esc(r.id)}">Annuler le brouillon</button>`:r.status!=='cancelled'?`<button type="button" class="btn btn-outline" data-action="refresh" data-id="${esc(r.id)}">Actualiser le suivi</button>`:''}</div></article>`).join('');
     document.getElementById('retakeNew').hidden = state.read_only || !state.records.length || !form.hidden;
   }
   async function load(initial = false) {
@@ -105,7 +124,9 @@
     renderHistory();
     if (initial && !form.hidden) edit();
     clearTimeout(timer);
-    if (dialog.open && state.records.some(r=>['queued','signed','signing','payment'].includes(r.status))) timer = setTimeout(()=>load().catch(e=>say(e.message,true)),5000);
+    const working = state.records.some(r=>['queued','signed','signing','payment'].includes(r.status)
+      || (r.convocation_sendable && r.convocation_requested && !r.convocation_sent_at && !r.error));
+    if (dialog.open && working) timer = setTimeout(()=>load().catch(e=>say(e.message,true)),5000);
   }
   open.onclick = async () => {dialog.showModal();say('Chargement du rattrapage…');try {await load(true);say();} catch(e){say(e.message,true);}};
   dialog.querySelector('[data-retake-close]').onclick = () => dialog.close();
@@ -123,7 +144,7 @@
     saveButton.disabled = true;say(updating ? 'Actualisation de votre convention…' : 'Préparation de votre convention…');
     const payload={id:editing?.id,revision:editing?.revision};
     for(const key of ['kind','target_session','exam_date','exam_time','location','exam_price','day_price','notes','failed_exam_date','failed_exam_details'])payload[key]=field(key).value;
-    for(const key of ['exam_offered','days_offered','no_days'])payload[key]=field(key).checked;
+    for(const key of ['exam_offered','days_offered','no_days','convocation_manual'])payload[key]=field(key).checked;
     payload.days=[...days.children].map(row=>Object.fromEntries([...row.querySelectorAll('[data-day]')].map(input=>[input.dataset.day,input.value])));
     try{await api(dialog.dataset.api,payload);showHistory();await load();say(updating ? 'Convention actualisée. Le bouton « Convention » ouvre la nouvelle version.' : 'Convention préparée. Vous pouvez la consulter puis l’envoyer en signature.');}catch(e){say(e.message,true);}finally{busy=false;saveButton.disabled=false;}
   };
@@ -131,10 +152,20 @@
     if (busy || !form.hidden) return;
     const editButton=event.target.closest('[data-edit]');if(editButton){edit(state.records.find(r=>r.id===editButton.dataset.edit));return;}
     const button=event.target.closest('[data-action]');if(!button||busy)return;
-    const record=state.records.find(r=>r.id===button.dataset.id);busy=true;button.disabled=true;
+    const record=state.records.find(r=>r.id===button.dataset.id);
+    const invitation = ['send-convocation','resend-convocation'].includes(button.dataset.action);
+    if (button.dataset.action === 'resend-convocation' && !window.confirm('Renvoyer la convocation à ' + record.convocation_recipient + ' ?')) return;
+    busy=true;button.disabled=true;
     const regenerating = button.dataset.action === 'regenerate';
     say(regenerating ? 'Actualisation de la convention avec les informations enregistrées…' : button.dataset.action==='send'?'Convention en cours de transmission pour signature…':'Mise à jour du suivi…');
     try{
+      if(invitation) {
+        const result = await api(`/api/rattrapages/${encodeURIComponent(record.id)}/${button.dataset.action}`,
+          {generation:record.convocation_generation, sent_at:record.convocation_sent_at});
+        await load();
+        say(result.already_sent ? 'La convocation a déjà été envoyée.' : 'Demande enregistrée. La date d’envoi apparaîtra dès la prise en charge du courriel.');
+        return;
+      }
       if(regenerating) await api(dialog.dataset.api,{id:record.id,revision:record.revision,refresh_convention:true});
       else await api(`/api/rattrapages/${encodeURIComponent(record.id)}/${button.dataset.action}`,{revision:record.revision});
       showHistory();await load();

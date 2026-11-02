@@ -8,8 +8,9 @@ from io import BytesIO
 
 from pypdf import PdfReader
 
-from exam_retakes import RetakeError, cents, components, discount_label, line_items, money, now, today
-from exam_retakes_documents import email_content
+from exam_retakes import (RetakeError, cents, components, convocation_confirmed, convocation_delivery_key, convocation_requested,
+                          discount_label, exam_upcoming, line_items, money, now, today)
+from exam_retakes_documents import build_convocation, email_content
 from manuals_commerce import read_invoice_link_payments, safe_payment_url
 
 
@@ -270,10 +271,10 @@ def ensure_payment(host,store,row,invoice):
     record_payment(store, row, 'unpaid', 0, url)
 
 
-def send_email(host,store,row,kind,link,paths):
-    state=row.setdefault('emails',{}).setdefault(kind,{'key':str(uuid.uuid4())})
+def send_email(host,store,row,kind,link,paths,*,delivery_key=None):
+    state=row.setdefault('emails',{}).setdefault(delivery_key or kind,{'key':str(uuid.uuid4())})
     if state.get('sent_at'):
-        return
+        return state
     # Brevo deduplication is bounded. Do not retry an ambiguous send after its window.
     if state.get('uncertain_at') and time.time()-state['uncertain_at'] > 600:
         raise RetakeError('L’envoi de l’e-mail reste à vérifier dans l’historique Brevo avant une nouvelle tentative.')
@@ -290,6 +291,31 @@ def send_email(host,store,row,kind,link,paths):
         raise RetakeError('L’e-mail n’a pas été confirmé. Le suivi et les documents sont conservés.')
     state.update(sent_at=now(),message_id=result.get('message_id',''))
     state.pop('uncertain_at',None)
+    store.save(row)
+    return state
+
+
+def send_confirmed_documents(host, store, row, target, portal, documents):
+    emails = row.setdefault('emails', {})
+    if convocation_confirmed(row) and convocation_requested(row) and exam_upcoming(row) and not target.get('archived'):
+        key = convocation_delivery_key(row)
+        receipt = emails.get(key, {})
+        if not receipt.get('sent_at'):
+            path = store.document(row['id'], 'convocation')
+            if not path.is_file():
+                store_pdf(path, build_convocation(row))
+            files = [('Convocation-rattrapage-' + row['exam_date'] + '.pdf', path)]
+            if not emails.get('documents', {}).get('sent_at'):
+                files.extend(documents)
+            receipt = send_email(host, store, row, 'convocation', portal, files, delivery_key=key)
+        # Preserve the original confirmation and document checkpoints, including on restart.
+        if row['total_cents'] and not emails.get('confirmed', {}).get('sent_at'):
+            emails['confirmed'] = dict(receipt)
+    else:
+        kind = 'confirmed' if row['total_cents'] else 'documents'
+        receipt = send_email(host, store, row, kind, portal, documents)
+    if not emails.get('documents', {}).get('sent_at'):
+        emails['documents'] = dict(receipt)
     store.save(row)
 
 
@@ -332,7 +358,7 @@ def process(host,store,row):
     portal=host.PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')+'/espace/'+str(trainee.get('public_token') or '')
     if row['total_cents']==0:
         checkpoint(store,row,status='confirmed',payment_status='not_required',confirmed_at=row.get('confirmed_at') or now())
-        send_email(host,store,row,'documents',portal,attachments)
+        send_confirmed_documents(host, store, row, target, portal, attachments)
         return
     invoice=ensure_invoice(host,store,row)
     ensure_payment(host,store,row,invoice)
@@ -342,12 +368,6 @@ def process(host,store,row):
         checkpoint(store,row,invoice_pdf=True)
     attachments.append(('Facture-rattrapage-Qonto.pdf',store.document(row['id'],'invoice')))
     if row['status']=='confirmed':
-        # The first notification still includes both signed convention and invoice.
-        if not row.get('emails',{}).get('documents',{}).get('sent_at'):
-            send_email(host,store,row,'confirmed',portal,attachments)
-            row.setdefault('emails',{})['documents']=dict(row['emails']['confirmed'])
-            store.save(row)
-        else:
-            send_email(host,store,row,'confirmed',portal,attachments)
+        send_confirmed_documents(host, store, row, target, portal, attachments)
     elif row.get('payment_url'):
         send_email(host,store,row,'documents',row['payment_url'],attachments)
