@@ -236,9 +236,9 @@ def candidate_portrait(c, path, x, y, width, height):
                     clip = c.beginPath()
                     clip.roundRect(x, y, width, height, 6)
                     c.clipPath(clip, stroke=0)
-                    # Fill the frame without distortion; favour the upper part for faces.
+                    # Centre the portrait within the printed identity frame.
                     c.drawImage(ImageReader(photo), x - (image_width - width) / 2,
-                                y - (image_height - height) * 0.75, image_width, image_height)
+                                y - (image_height - height) / 2, image_width, image_height)
                 finally:
                     c.restoreState()
             return
@@ -292,15 +292,19 @@ def cover(training, trainee, config, candidate, docs, root, photo_path=''):
               WIDTH - 156, 7.5, MUTED)
     candidate_portrait(c, photo_path, W - M - 112, 421, 102, 123)
 
-    for x, label in [(M, 'JOUR DE L’EXAMEN'), (M + 265, 'PÉRIODE DE FORMATION')]:
+    retake = trainee.get('_retake')
+    for x, label in [(M, 'JOUR DE L’EXAMEN'), (M + 265, 'RATTRAPAGE' if retake else 'PÉRIODE DE FORMATION')]:
         paragraph(c, label, x, 387, 225, 8, TEAL, bold=True)
     paragraph(c, frdate(config['date']), M, 371, 240, 21, bold=True)
     hours = config['time'] or 'Horaire à renseigner'
     if config['end_time']:
         hours += ' - ' + config['end_time']
     paragraph(c, hours, M, 339, 240, 11, MUTED)
-    paragraph(c, f"Du {frdate(training.get('date_start'))}\nau {frdate(training.get('date_end'))}",
-              M + 265, 367, WIDTH - 265, 12, leading=20)
+    period = f"Du {frdate(training.get('date_start'))}\nau {frdate(training.get('date_end'))}"
+    if retake:
+        period = ('Examen non validé le ' + frdate(retake['failed_exam_date']) if retake.get('failed_exam_date')
+                  else 'Nouvelle présentation à l’examen')
+    paragraph(c, period, M + 265, 367, WIDTH - 265, 12, leading=20)
     c.setFillColor(LIGHT)
     c.roundRect(M, 239, WIDTH, 78, 8, fill=1, stroke=0)
     paragraph(c, 'LIEU DE L’EXAMEN', M + 16, 305, WIDTH - 32, 8, TEAL, bold=True)
@@ -424,7 +428,7 @@ def dossier(training, trainee, config, candidate, docs, root, photo_path=''):
     return out.getvalue()
 
 
-def attendance(training, trainees, config, root):
+def attendance(training, trainees, config, root, *, preparation=False):
     """Keep candidates and jury together, with readable overflow for large groups."""
     widths = [26, WIDTH - 244, 109, 109]
     rows = []
@@ -434,9 +438,18 @@ def attendance(training, trainees, config, root):
                 'attendance-name', fontName=BOLD, fontSize=9.5, leading=12, textColor=NAVY))
             _, title_height = title.wrap(widths[1] - 14, H)
             detail, detail_height = None, 0
+            label = ''
             if group == 'Jury':
                 role = 'Président du jury' if person['role'] == 'president' else 'Membre du jury'
                 label = role + (' · ' + person['company'] if person.get('company') else '')
+            elif person.get('_retake'):
+                label = 'Rattrapage'
+                day = person.get('_preparation_day')
+                if day:
+                    label += ' · ' + day['start'] + ' – ' + day['end']
+                elif person['_retake'].get('exam_time'):
+                    label += ' · convocation à ' + person['_retake']['exam_time']
+            if label:
                 detail = Paragraph(escape(label), ParagraphStyle(
                     'attendance-role', fontName=FONT, fontSize=7.5, leading=10, textColor=MUTED))
                 _, detail_height = detail.wrap(widths[1] - 14, H)
@@ -451,15 +464,17 @@ def attendance(training, trainees, config, root):
         logo = os.path.join(root, 'static', 'logo-integrale.png')
         if os.path.isfile(logo):
             c.drawImage(logo, M, H - 83, 49, 49, preserveAspectRatio=True, anchor='c', mask='auto')
-        paragraph(c, 'INTÉGRALE ACADEMY · EXAMEN ' + config['level'], M + 65, H - 36,
+        activity = 'PRÉPARATION ' if preparation else 'EXAMEN '
+        paragraph(c, 'INTÉGRALE ACADEMY · ' + activity + config['level'], M + 65, H - 36,
                   WIDTH - 65, 8, TEAL, bold=True)
         paragraph(c, 'Feuille de présence', M + 65, H - 51, WIDTH - 65, 23, bold=True)
         hours = config['time'] or 'Horaire à renseigner'
         if config['end_time']:
             hours += ' - ' + config['end_time']
-        y = paragraph(c, 'Examen du ' + frdate(config['date']) + ' · ' + hours,
+        subtitle = 'Préparation du ' + frdate(config['date']) if preparation else 'Examen du ' + frdate(config['date']) + ' · ' + hours
+        y = paragraph(c, subtitle,
                       M, H - 105, size=12, bold=True) - 5
-        y = paragraph(c, config['location'] + ' · ' + config['address'], M, y, size=9, color=MUTED) - 14
+        y = paragraph(c, ' · '.join(filter(None, (config['location'], config['address']))), M, y, size=9, color=MUTED) - 14
         return paragraph(c, 'Émarger matin et après-midi. Indiquer « absent » ou « non concerné » si nécessaire.',
                          M, y, size=8, color=MUTED) - 12
 
@@ -489,7 +504,7 @@ def attendance(training, trainees, config, root):
             if group != previous:
                 if previous:
                     y -= 12
-                labels = ['N°', 'Candidats · Nom et prénom' if group == 'Candidats' else 'Membres du jury',
+                labels = ['N°', ('Stagiaires · Nom et prénom' if preparation else 'Candidats · Nom et prénom') if group == 'Candidats' else 'Membres du jury',
                           'Matin\nSignature', 'Après-midi\nSignature']
                 c.setFillColor(NAVY)
                 c.roundRect(M, y - 30, WIDTH, 30, 4, fill=1, stroke=0)

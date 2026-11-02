@@ -70,7 +70,7 @@
           {% for t in trainees %}
           <tr data-trainee-row>
             <td class="num">{{ loop.index }}</td>
-            <td>{{ t.last_name }}</td>
+            <td>{{ t.last_name }}{% if t.retake_date %}<br><small>Rattrapage · {{ t.retake_date|frdate }}</small>{% endif %}</td>
             <td>{{ t.first_name }}</td>
             <td>{{ t.email }}</td>
             <td>{{ t.phone }}</td>

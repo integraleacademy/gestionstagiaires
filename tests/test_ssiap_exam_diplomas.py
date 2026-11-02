@@ -322,3 +322,30 @@ def test_missing_letter_signature_cannot_allocate_numbers(case, monkeypatch):
     monkeypatch.setattr(ssiap_exam_pdf, 'signature_assets', unavailable)
     assert post(case, 'letter').status_code == 503
     assert not json.loads(case[1].read_text()).get('ssiap_diploma_sequences')
+
+
+def test_retake_result_survives_reload_outside_enrolments(case):
+    import exam_retakes
+    client, path = case
+    data = json.loads(path.read_text())
+    source = data['sessions'][1]
+    source.update(id='SOURCE', training_type='SSIAP 1', trainees=[{
+        'id':'ORIGINAL', 'first_name':'Camille', 'last_name':'REPRISE', 'email':'reprise@example.test',
+        'birth_date':'1992-01-01', 'birth_city':'PARIS', 'birth_department':'75', 'ssiap_exam_status':'failed'}])
+    path.write_text(json.dumps(data))
+    rid = 'a' * 32
+    row = {'id':rid, 'status':'confirmed', 'source_session':'SOURCE', 'trainee_id':'ORIGINAL', 'target_session':'S1',
+           'kind':'SSIAP 1', 'exam_date':'2026-10-28','signed_at':exam_retakes.now(), 'payment_status':'paid',
+           'paid_cents':5000,'total_cents':5000, 'days':[], 'person':source['trainees'][0].copy()}
+    row['person'] = {k:row['person'][k] for k in ('first_name','last_name','email','birth_date')}
+    exam_retakes.Store(services).save(row)
+    candidate = next(t for t in view(case)['candidates'] if t['id'] == 'retake-'+rid)
+    assert candidate['values']['result'] == 'pending_results'
+    candidate['values']['result'] = 'certified'
+    assert post(case, 'save', [candidate]).status_code == 200
+    assert post(case, 'generate', trainee_id=candidate['id']).status_code == 200
+    persisted = json.loads(path.read_text())['sessions']
+    result = persisted[0]['ssiap_exam']['retake_results'][candidate['id']]
+    assert result['ssiap_exam_status'] == 'certified' and result['ssiap_diploma_number'].endswith('00001')
+    assert all(t['id'] != candidate['id'] for t in persisted[0]['trainees'])
+    assert persisted[1]['trainees'][0]['ssiap_exam_status'] == 'failed'

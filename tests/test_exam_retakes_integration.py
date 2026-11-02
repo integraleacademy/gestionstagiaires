@@ -1,8 +1,10 @@
 """Render the real admin/public pages and route verified callbacks to the queue."""
 import copy
+import io
 from unittest.mock import Mock
 
 from lxml import html
+from pypdf import PdfReader
 import pytest
 
 import app as host
@@ -150,3 +152,118 @@ def test_combined_afc_offers_separate_exam_dates():
     assert set(retakes.components(host,source))=={'APS','SSIAP 1'}
     assert retakes.exam_date(host,source,'APS')=='2026-12-01'
     assert retakes.exam_date(host,source,'SSIAP 1')=='2026-12-03'
+
+
+@pytest.fixture
+def confirmed_ssiap(real_app, monkeypatch):
+    client, data = real_app
+    source, target = data['sessions']
+    source.update(training_type='SSIAP 1', name='SSIAP octobre')
+    original = source['trainees'][0]
+    original.update(ssiap_exam_status='failed', birth_city='Sallanches', birth_department='74', birth_country='France')
+    target.update(training_type='SSIAP 1', name='SSIAP décembre', ssiap_exam_number='VAR-TEST',
+                  trainees=[{'id':'REG', 'first_name':'Alex', 'last_name':'ORDINAIRE'},
+                            {'id':'ANN', 'first_name':'Dominique', 'last_name':'ANNULE', 'registration_cancelled':True}])
+    days = [{'date':'2026-12-07', 'start':'08:30', 'end':'16:30', 'topic':'Révision pratique'},
+            {'date':'2026-12-08', 'start':'09:00', 'end':'12:00', 'topic':'Préparation orale'}]
+    row = create(real_app, kind='SSIAP 1', no_days=False, days=days, exam_time='08:00',
+                 failed_exam_details='Épreuve pratique', notes='Accueil au bâtiment principal.')
+    row.update(status='confirmed', signed_at=retakes.now(), payment_status='paid', paid_cents=row['total_cents'],
+               confirmed_at=retakes.now(), emails={'convocation':{'sent_at':retakes.now()}})
+    retakes.Store(host).save(row)
+    monkeypatch.setattr(host, '_atomic_update_data', lambda action:action(data))
+    return client, data, row
+
+
+def pdf_text(response):
+    assert response.status_code == 200, response.data[:160]
+    return [page.extract_text() for page in PdfReader(io.BytesIO(response.data)).pages]
+
+
+def test_enriched_invitation_replaces_preview_without_repeating_the_first_send(confirmed_ssiap):
+    client, _, row = confirmed_ssiap
+    store = retakes.Store(host)
+    old = store.root / (row['id'] + '-convocation.pdf')
+    old.write_bytes(b'old delivery kept for audit')
+    record = client.get('/api/sessions/S1/stagiaires/T1/rattrapages?status=1').json['records'][0]
+    assert record['convocation_updated'] and record['convocation_sent_at']
+    text = ' '.join(pdf_text(client.get(record['convocation_url'])))
+    for field in ('SSIAP octobre', '12/10/2026', 'Épreuve pratique', '09/12/2026', '08:00', '07/12/2026',
+                  'Révision pratique', '08/12/2026', '09:00', 'Préparation orale', 'Accueil au bâtiment principal.'):
+        assert field in text
+    assert old.read_bytes() == b'old delivery kept for audit'
+    assert store.get(row['id'])['emails'] == row['emails']
+
+
+def test_confirmed_candidate_on_exam_and_exact_preparation_days(confirmed_ssiap):
+    client, data, row = confirmed_ssiap
+    source, target = data['sessions']
+    extra = {**source['trainees'][0], 'id':'T2','first_name':'Jo','last_name':'AUTREDATE','email':'jo@example.test'}
+    source['trainees'].append(extra)
+    second = {**row, 'id':'b'*32, 'trainee_id':'T2', 'person':extra, 'days':[row['days'][1]]}
+    store = retakes.Store(host)
+    store.save(second)
+    base = '/api/admin/sessions/S2/ssiap-exam'
+    listing = client.get(base).json
+    entries = {t['id']:t for t in listing['candidates']}
+    cid = 'retake-' + row['id']
+    assert set(entries) == {'REG', cid, 'retake-'+second['id']}
+    assert entries[cid]['result'] == 'pending_results' and entries[cid]['edit_url'].endswith('/S1/stagiaires/T1')
+    assert 'RATTRAPAGE' in ' '.join(pdf_text(client.get(entries[cid]['dossier_url'])))
+    assert 'TEST' in ' '.join(pdf_text(client.get(listing['collective_url'])))
+    exam = ' '.join(pdf_text(client.get(listing['attendance_url'])))
+    assert all(name in exam for name in ('TEST','ORDINAIRE','AUTREDATE')) and 'ANNULE' not in exam
+    assert [d['label'] for d in listing['preparation_dates']] == ['07/12/2026','08/12/2026']
+    first, last = pdf_text(client.get(listing['preparation_url']))
+    assert all(name in first for name in ('07/12/2026','TEST','ORDINAIRE','08:30')) and 'AUTREDATE' not in first
+    assert all(name in last for name in ('08/12/2026','TEST','ORDINAIRE','09:00','AUTREDATE'))
+    assert 'Membres du jury' not in first and 'ANNULE' not in last
+    assert client.get(listing['preparation_dates'][0]['url'].replace('2026-12-07','2026-12-06')).status_code == 404
+    printable = html.fromstring(client.get('/admin/sessions/S2/trainees/print').data)
+    assert len(printable.xpath('//tr[@data-trainee-row][contains(., "TEST") and contains(., "Rattrapage")]')) == 1
+    assert 'retake_results' not in target.get('ssiap_exam', {})
+    assert client.post(base, json={'csrf':listing['csrf'],'revision':listing['revision'],'action':'candidate',
+                                   'trainee_id':cid,'candidate':{'included':False}}).json['ok']
+    assert 'TEST' not in ' '.join(pdf_text(client.get(listing['attendance_url'])))
+    assert 'TEST' in ' '.join(pdf_text(client.get(listing['preparation_dates'][0]['url'])))
+    assert [t['id'] for t in target['trainees']] == ['REG','ANN']
+
+
+def test_exam_result_and_diploma_numbers_are_independent_on_retake(confirmed_ssiap):
+    client, data, row = confirmed_ssiap
+    source, target = data['sessions']
+    original = copy.deepcopy(source['trainees'][0])
+    route = '/api/admin/sessions/S2/ssiap-exam/diplomas'
+    state = client.get(route).json
+    cid = 'retake-' + row['id']
+    candidate = next(t for t in state['candidates'] if t['id'] == cid)
+    assert candidate['values']['result'] == 'pending_results'
+    assert candidate['photo_api'].startswith('/api/admin/sessions/S1/') or '/S1/' in candidate['photo_api']
+    candidate['values']['result'] = 'certified'
+    assert client.post(route, json={'csrf':state['csrf'], 'action':'save', 'candidates':[candidate]}).json['ok']
+    candidate = next(t for t in client.get(route).json['candidates'] if t['id'] == cid)
+    assert candidate['values']['result'] == 'certified'
+    with host.app.test_request_context():
+        _, diplomas = host._reserve_ssiap_diploma_numbers(target['id'], cid)
+        _, repeat = host._reserve_ssiap_diploma_numbers(target['id'], cid)
+        assert repeat[0]['number'] == diplomas[0]['number'] and diplomas[0]['number'].endswith('00001')
+        target['trainees'][0].update(ssiap_exam_status='certified', birth_date='1992-01-01', birth_city='PARIS', birth_department='75')
+        _, ordinary = host._reserve_ssiap_diploma_numbers(target['id'], 'REG')
+        assert ordinary[0]['number'].endswith('00002')
+    assert source['trainees'][0] == original and [t['id'] for t in target['trainees']] == ['REG','ANN']
+
+
+@pytest.mark.parametrize('condition', ['unsigned','partial','wrong_kind','other_exam_date','duplicate','foreign'])
+def test_exam_ignores_unrelated_or_duplicate_retake_participants(confirmed_ssiap, condition):
+    client, data, row = confirmed_ssiap
+    source, target = data['sessions']
+    if condition == 'unsigned': row['signed_at'] = ''
+    if condition == 'partial': row['paid_cents'] -= 1
+    if condition == 'wrong_kind': row['kind'] = 'APS'
+    if condition == 'other_exam_date': row['exam_date'] = '2026-12-10'
+    if condition == 'foreign': source['partner_id'] = 'external'
+    if condition == 'duplicate': target['trainees'][0].update(first_name='Camille', last_name='TEST', email=row['person']['email'])
+    retakes.Store(host).save(row)
+    listing = client.get('/api/admin/sessions/S2/ssiap-exam').json
+    assert [t['id'] for t in listing['candidates']] == ['REG']
+    assert not listing['preparation_dates']

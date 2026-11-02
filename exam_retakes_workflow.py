@@ -8,7 +8,7 @@ from io import BytesIO
 
 from pypdf import PdfReader
 
-from exam_retakes import (RetakeError, cents, components, convocation_confirmed, convocation_delivery_key, convocation_requested,
+from exam_retakes import (CONVOCATION_VERSION, RetakeError, cents, components, convocation_confirmed, convocation_delivery_key, convocation_requested,
                           discount_label, exam_upcoming, line_items, money, now, today)
 from exam_retakes_documents import build_convocation, email_content
 from manuals_commerce import read_invoice_link_payments, safe_payment_url
@@ -290,6 +290,8 @@ def send_email(host,store,row,kind,link,paths,*,delivery_key=None):
             store.save(row)
         raise RetakeError('L’e-mail n’a pas été confirmé. Le suivi et les documents sont conservés.')
     state.update(sent_at=now(),message_id=result.get('message_id',''))
+    if kind == 'convocation':
+        state['document_version'] = CONVOCATION_VERSION
     state.pop('uncertain_at',None)
     store.save(row)
     return state

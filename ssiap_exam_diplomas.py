@@ -103,21 +103,28 @@ def clean(services, raw):
 
 
 def register(app, services, get_training):
-    def rows(training):
+    def photo(training, trainee):
+        retake = trainee.get("_retake")
+        if retake:
+            return photo_metadata(services, retake["source_session"], {**trainee, "id": retake["trainee_id"]})
+        return photo_metadata(services, training["id"], trainee)
+
+    def rows(training, data):
         return [{"id": str(t["id"]), "values": values(services, training, t),
                  "revision": revision(services, training, t),
                  "included": exam.candidate_settings(training, t)["included"],
                  "number": str(t.get("ssiap_diploma_number") or ""),
-                 **{key: value for key, value in photo_metadata(services, session_id=training['id'], trainee=t).items()
+                 **{key: value for key, value in photo(training, t).items()
                     if key in {'photo_available', 'photo_url', 'photo_api'}},
                  "missing": missing(services, values(services, training, t))}
-                for t in exam.active_candidates(services, training)]
+                for t in exam.active_candidates(services, training, data=data)]
 
     @app.get('/api/admin/sessions/<session_id>/ssiap-exam/diplomas')
     @services.admin_login_required
     def api_ssiap_diplomas(session_id):
-        training = get_training(services.load_data(run_background_tasks=False), session_id)
-        response = jsonify(ok=True, candidates=rows(training),
+        data = services.load_data(run_background_tasks=False)
+        training = get_training(data, session_id)
+        response = jsonify(ok=True, candidates=rows(training, data),
                            exam_number=exam.settings(training).get("exam_number", ""),
                            exam_date=exam.settings(training).get("date", ""),
                            csrf=session.setdefault("ssiap_exam_csrf", secrets.token_urlsafe(32)),
@@ -144,8 +151,9 @@ def register(app, services, get_training):
         is_letter = action in {"letter", "letter_preview"}
         if not is_preview and session.get("admin_role") == "viewer":
             abort(403)
-        training = get_training(services.load_data(run_background_tasks=False), session_id)
-        current = {str(t["id"]): t for t in exam.active_candidates(services, training)}
+        data = services.load_data(run_background_tasks=False)
+        training = get_training(data, session_id)
+        current = {str(t["id"]): t for t in exam.active_candidates(services, training, data=data)}
         try:
             changes = payload.get("candidates", [])
             if not isinstance(changes, list) or len(changes) > len(current):
@@ -168,14 +176,14 @@ def register(app, services, get_training):
             if action == "save":
                 def update(data):
                     canonical = get_training(data, session_id)
-                    trainees = {str(t["id"]): t for t in exam.active_candidates(services, canonical)}
+                    trainees = {str(t["id"]): t for t in exam.active_candidates(services, canonical, data=data, writable=True)}
                     for key, (_, expected) in prepared.items():
                         if key not in trainees or expected != revision(services, canonical, trainees[key]):
                             return {"ok": False, "error": "Un dossier a changé depuis son ouverture. Actualisez les diplômes avant de réessayer.", "status": 409}
                     for key, (info, _) in prepared.items():
                         apply_info(trainees[key], info)
                     numbering_changes = services._reconcile_ssiap_diploma_numbers(data, canonical)
-                    return {"ok": True, "candidates": rows(canonical),
+                    return {"ok": True, "candidates": rows(canonical, data),
                             "numbering_changed": bool(numbering_changes)}
                 result = services._atomic_update_data(update)
                 status = result.pop("status", 200)

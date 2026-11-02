@@ -20,6 +20,7 @@ import threading
 import time
 import unicodedata
 import uuid
+from collections import ChainMap
 from io import BytesIO
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
@@ -30,6 +31,9 @@ from flask import abort, jsonify, request, send_file, session, url_for
 
 class RetakeError(ValueError):
     pass
+
+
+CONVOCATION_VERSION = 2
 
 
 def now():
@@ -259,7 +263,8 @@ class Store:
     def document(self, rid, kind):
         if not re.fullmatch(r"[a-f0-9]{32}", rid) or kind not in {"convention", "signed", "invoice", "convocation"}:
             raise RetakeError("Document introuvable.")
-        return self.root / (rid + "-" + kind + ".pdf")
+        suffix = f"convocation-v{CONVOCATION_VERSION}" if kind == "convocation" else kind
+        return self.root / (rid + "-" + suffix + ".pdf")
 
 
 def line_items(row):
@@ -429,6 +434,7 @@ def view(row, *, public=False, token="", target_active=True):
         receipt = row.get("emails", {}).get(convocation_delivery_key(row), {})
         result.update(convocation_generation=row.get("convocation_generation", 1),
                       convocation_sent_at=receipt.get("sent_at", ""), convocation_recipient=row["person"].get("email", ""),
+                      convocation_updated=bool(receipt.get("sent_at") and receipt.get("document_version", 1) < CONVOCATION_VERSION),
                       convocation_manual=manual_convocation(row), convocation_requested=convocation_requested(row),
                       convocation_sendable=convocation_confirmed(row) and exam_upcoming(row) and target_active)
         result.update(error=row.get("error", ""), price_reference=row.get("price_reference", {}),
@@ -451,6 +457,46 @@ def views(host, sid, tid, *, public=False, token="", data=None):
 
 def roster(host, sid):
     return [view(r) for r in Store(host).query("target_session=? AND status='confirmed'", (sid,))]
+
+
+def participants(host, training, *, data=None, kind=None, exam_day=None, writable=False):
+    """Exam-only identities. The new result belongs to the receiving exam, never the original enrolment."""
+    if (not getattr(host, "PERSIST_DIR", None) or training.get("partner_id") not in (None, "", host.INTEGRALE_PARTNER_ID)
+            or not (Path(host.PERSIST_DIR) / "exam_retakes" / "retakes.sqlite3").is_file()):
+        return []
+    records = [r for r in Store(host).query("target_session=? AND status='confirmed'", (training["id"],))
+               if convocation_confirmed(r) and (not kind or kind == r["kind"])
+               and (not exam_day or r["exam_date"] == exam_day)]
+    if not records:
+        return []
+    data = host.load_data(run_background_tasks=False) if data is None else data
+    ordinary = [t for t in host._session_trainees_list(training) if not host._trainee_registration_is_cancelled(t)]
+    seen_ids = {t.get("id") for t in ordinary}
+    def identity(t):
+        return tuple(str(t.get(k) or "").strip().casefold() for k in ("email", "first_name", "last_name"))
+    seen_people = {identity(t) for t in ordinary if t.get("email")}
+    candidates = []
+    for row in records:
+        source = host.find_session(data, row["source_session"])
+        if not source or source.get("partner_id") not in (None, "", host.INTEGRALE_PARTNER_ID):
+            continue
+        trainee = next((t for t in host._session_trainees_list(source) if t.get("id") == row["trainee_id"]), None)
+        if not trainee or row["trainee_id"] in seen_ids or identity(row["person"]) in seen_people:
+            continue
+        seen_ids.add(row["trainee_id"])
+        if row["person"].get("email"):
+            seen_people.add(identity(row["person"]))
+        # Only identity, photo and supporting evidence travel with the person.
+        details = {k: trainee[k] for k in ("civility", "birth_city", "birth_place", "birth_country", "birth_department",
+                   "department", "birth_postal_code", "birth_zip_code", "identity_photo", "identity_photo_original",
+                   "identity_photo_crop", "documents", "deliverables") if k in trainee}
+        cid = "retake-" + row["id"]
+        details.update(row["person"], id=cid, _retake=row)
+        result = training.get("ssiap_exam", {}).get("retake_results", {}).get(cid, {})
+        if writable:
+            result = training.setdefault("ssiap_exam", {}).setdefault("retake_results", {}).setdefault(cid, {"id": cid})
+        candidates.append(ChainMap(result, details))
+    return candidates
 
 
 def scoped(host, sid, tid):

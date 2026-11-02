@@ -37,7 +37,7 @@
   function chip(label, ok, review = false) { return `<span class="exam-chip ${ok && !review ? 'ok' : 'warn'}">${ok && !review ? '✓' : '!'} ${esc(label)}</span>`; }
   function renderCandidate(row) {
     const c = row.candidate;
-    return `<article class="exam-card" data-candidate-id="${esc(row.id)}"><div class="exam-candidate-top"><div><div class="exam-candidate-name">${esc(row.first_name)} ${esc(row.last_name)}</div><span class="exam-muted">${c.included ? 'Présenté à l’examen' : 'Non présenté à l’examen'}</span></div><div class="exam-actions"><a class="btn btn-primary" data-dossier-link href="${esc(row.dossier_url)}" target="_blank" rel="noopener">Dossier examen PDF</a><a class="btn btn-outline" data-dossier-link href="${esc(row.dossier_url)}?download=1" target="_blank" rel="noopener">Télécharger</a></div></div>
+    return `<article class="exam-card" data-candidate-id="${esc(row.id)}"><div class="exam-candidate-top"><div><div class="exam-candidate-name">${esc(row.first_name)} ${esc(row.last_name)}</div><span class="exam-muted">${row.retake ? 'Rattrapage · ' : ''}${c.included ? 'Présenté à l’examen' : 'Non présenté à l’examen'}</span></div><div class="exam-actions"><a class="btn btn-primary" data-dossier-link href="${esc(row.dossier_url)}" target="_blank" rel="noopener">Dossier examen PDF</a><a class="btn btn-outline" data-dossier-link href="${esc(row.dossier_url)}?download=1" target="_blank" rel="noopener">Télécharger</a></div></div>
       <div class="exam-chips">${row.documents.map(d => chip(d.label + (!d.available ? ' manquant' : d.review ? ' à vérifier' : ''), d.available, !!d.review)).join('')}${chip('Attestations signées et tamponnées', true)}</div>
       <div class="exam-actions"><a href="${esc(row.edit_url)}" target="_blank" rel="noopener">Ouvrir la fiche et les pièces</a></div>
       <details class="exam-details"><summary>Présentation à l’examen</summary><form data-candidate-form="${esc(row.id)}"><fieldset ${data.read_only ? 'disabled' : ''}>
@@ -84,6 +84,12 @@
     if (prefix !== 'ssiapExam') configForm.innerHTML = configForm.innerHTML.replaceAll('id="ssiapExam', 'id="' + prefix);
     configDirty = false;
     if (!organizationOnly) byId('ssiapExamAttendance').innerHTML = `<div class="exam-card"><span class="exam-eyebrow" style="color:#008da8">JOUR DE L’EXAMEN</span><h3 style="margin-top:12px">Feuille de présence ${esc(c.level)}</h3><div class="exam-pv-count">${count}</div><p>candidat${count > 1 ? 's' : ''} et ${c.jury.length} membre${c.jury.length > 1 ? 's' : ''} du jury</p><p class="exam-muted">La date, les horaires et les noms sont préremplis. Imprimez la feuille pour recueillir les signatures du matin et de l’après-midi. Les candidats et le jury sont regroupés sur la même feuille. Les inscriptions annulées et les candidats non présentés sont exclus.</p><div class="exam-actions"><a class="btn btn-primary" href="${esc(data.attendance_url)}" target="_blank" rel="noopener">Ouvrir la feuille de présence</a><a class="btn btn-outline" href="${esc(data.attendance_url)}?download=1" target="_blank" rel="noopener">Télécharger</a></div></div>`;
+    if (!organizationOnly && data.preparation_dates?.length) {
+      const links = data.preparation_dates.map(day => `<a class="btn btn-outline" target="_blank" rel="noopener" href="${esc(day.url)}">${esc(day.label)}</a>`).join(' ');
+      byId('ssiapExamAttendance').insertAdjacentHTML('beforeend', `<div class="exam-card"><h3>Journées de préparation</h3>
+        <p>Chaque feuille reprend les stagiaires attendus ce jour-là. Les horaires des rattrapages sont ceux de leur convention.</p>
+        <div class="exam-actions">${links}</div><p><a class="btn btn-primary" target="_blank" rel="noopener" href="${esc(data.preparation_url)}">Générer toutes les feuilles de préparation</a></p></div>`);
+    }
     renderHistory();
     renderMailOverview();
   }
