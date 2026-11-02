@@ -290,7 +290,7 @@ def test_sdis_window_address_is_fixed_and_first_page_stays_clear_of_candidate_li
     pdf = fitz.open(stream=data, filetype='pdf')
     assert len(pdf) == 2
     page = pdf[0]
-    window = fitz.Rect(105*mm, 50*mm, 205*mm, 95*mm)
+    window = fitz.Rect(105*mm, 40*mm, 205*mm, 85*mm)
     lines = ['DDSIS du Var', 'Groupement Prévention - Secrétariat', '24, Allée de Vaugrenier',
              'ZAC Les Ferrières', '83490 LE MUY']
     for line in lines:
@@ -299,6 +299,7 @@ def test_sdis_window_address_is_fixed_and_first_page_stays_clear_of_candidate_li
         assert window.contains(matches[0])
     visible_address = ' '.join(page.get_text(clip=window).split())
     assert visible_address == ' '.join(lines)
+    assert page.search_for('83490 LE MUY')[0].y1 <= 72*mm
     assert page.search_for('Objet :')[0].y0 >= 105*mm
     assert 'EXEMPLE-' not in page.get_text()
     assert 'Clément VAILLANT' in page.get_text()
