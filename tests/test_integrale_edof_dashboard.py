@@ -190,3 +190,15 @@ def test_selected_folder_scope_and_unconfirmed_billing():
     assert dashboard.category({"state":"waitingAcceptation"}) == "waiting"
     assert dashboard.category({"state":"serviceDoneValidated","billing_state":"billed"}) == "invoiced"
     assert dashboard.category({"state":"serviceDoneValidated"}) == "service"
+
+
+def test_simulate_at_actual_paris_cutoff_without_sending(site):
+    before = dt.datetime(2026,2,2,17,59,tzinfo=dashboard.PARIS)
+    after = before + dt.timedelta(minutes=1)
+    assert dashboard.simulate("accepted", "2026-02-02", None, None, before) == "planned"
+    assert dashboard.simulate("accepted", "2026-02-02", None, None, after) == "unconfirmed"
+    assert dashboard.simulate("accepted", "2026-02-02", {"active":True}, None, after) == "blocked"
+    assert dashboard.simulate("accepted", "2026-02-02", None, {"action":"entry_training","evidence":"LMS","actual_date":"2026-02-02"}, after) == "ready"
+    reply = site.client.get("/admin/edof-test?section=state&simulation=1")
+    assert reply.status_code == 200 and "Résultat du test des automatisations" in reply.text
+    assert site.gate.state()["provider"] == "wedof"

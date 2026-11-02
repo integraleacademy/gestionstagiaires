@@ -13,7 +13,7 @@ from flask import Blueprint, abort, flash, get_flashed_messages, redirect, reque
 
 import edof_directory as directory
 from cpf_provider import PROVIDERS, ProviderStore, ProviderUnavailable, provider_operation
-from edof_matching import build_comparison
+from edof_matching import build_comparison, manual_options
 from edof_readonly_test import ID_RE
 from edof_server_browser import DETAIL_PREFIX
 from integrale_edof_sync import event_tables
@@ -41,6 +41,8 @@ STATE_KEYS = {
     "refused": {"refused", "refusedbyattendee", "refusedbyorganism", "rejected", "refuse", "refusee"},
 }
 STATES = {raw: key for key, aliases in STATE_KEYS.items() for raw in aliases}
+SIMULATION = {"planned": "Échéance à venir", "ready": "Justificatif disponible",
+              "unconfirmed": "Justificatif à renseigner", "blocked": "Blocage administrateur", "missing": "Date à vérifier"}
 ACTIONS = {"accepted": "entry_training", "training": "service_done"}
 ACTION_LABELS = {"entry_training": "Entrée en formation", "service_done": "Sortie et service fait", "both": "Entrée et sortie"}
 BLOCK_REASONS = {"no_show": "Absence", "postponed": "Report", "abandonment": "Abandon",
@@ -68,7 +70,23 @@ def active_blocks(data):
             if isinstance(x, dict) and x.get("active")}
 
 
-def dashboard_rows(snapshot, data, operations, today):
+def simulate(kind, date, block, draft, now):
+    if kind not in ACTIONS:
+        return None
+    if block:
+        return "blocked"
+    try:
+        scheduled = dt.datetime.combine(dt.date.fromisoformat(date), dt.time(18 if kind == "accepted" else 23), PARIS)
+    except (TypeError, ValueError):
+        return "missing"
+    if scheduled > now:
+        return "planned"
+    if draft and draft.get("action") == ACTIONS[kind] and draft.get("actual_date") and draft.get("evidence"):
+        return "ready"
+    return "unconfirmed"
+
+
+def dashboard_rows(snapshot, data, operations, now):
     links = {str(x.get("external_id")): x for x in data.get("wedof_links", []) if isinstance(x, dict) and x.get("active")}
     blocked = active_blocks(data)
     rows, counts = [], Counter()
@@ -78,18 +96,19 @@ def dashboard_rows(snapshot, data, operations, today):
         action = ACTIONS.get(kind)
         date = (record.get("session_start_date") if kind == "accepted" else record.get("session_end_date")) or ""
         block = blocked.get((folder, action)) or blocked.get((folder, "both"))
-        due = bool(action and not block and date and date <= today)
+        flags = operations.get(folder, {})
+        evaluation = simulate(kind, date, block, flags.get("draft"), now)
+        due = evaluation in {"unconfirmed","ready"}
         tags = {kind, "all"}
-        if due:
+        if evaluation in {"planned", "unconfirmed", "ready"}:
             tags.add("due")
         if folder not in links and action:
             tags.add("unlinked")
         if block or kind == "unknown" or (action and not date):
             tags.add("anomaly")
         counts.update(tags)
-        flags = operations.get(folder, {})
         rows.append({**record, "kind": kind, "label": LABELS[kind] if kind != "unknown" else record.get("state") or LABELS[kind],
-                     "action": action, "due": due, "block": block, "tags": tags, "link": links.get(folder),
+                     "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": links.get(folder),
                      "handled": bool(flags.get("handled")), "archived": bool(flags.get("archived")),
                      "draft": flags.get("draft"), "official_url": DETAIL_PREFIX + folder})
     return rows, counts
@@ -187,10 +206,12 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             data = json.load(source)
         sessions = []
         for group in data.get("sessions", []):
+            if not isinstance(group,dict):
+                continue
             summary = {key:group[key] for key in ("id", "name", "training_type", "date_start", "date_end",
                   "date_debut", "date_fin", "archived", "is_archived", "status") if key in group}
             summary["trainees"] = [{key:t[key] for key in ("id","first_name","last_name","prenom","nom","email","mail")
-                                    if key in t} for t in group.get("trainees", group.get("stagiaires", [])) if isinstance(t,dict)]
+                                    if key in t} for t in (group.get("trainees") or group.get("stagiaires") or []) if isinstance(t,dict)]
             sessions.append(summary)
         return {"sessions": sessions, "wedof_links": data.get("wedof_links", []),
                 "wedof_automation_blocks": data.get("wedof_automation_blocks", [])}
@@ -231,9 +252,14 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         snap = snapshot(owner)
         if snap:
             store.use_directory(owner)
-        today = dt.datetime.now(PARIS).date().isoformat()
+        now = dt.datetime.now(PARIS)
+        today = now.date().isoformat()
         data = local_data() if snap and section in {"state", "requests", "cancellations"} else {}
-        rows, counts = dashboard_rows(snap, data, local_operations(selection), today)
+        rows, counts = dashboard_rows(snap, data, local_operations(selection), now)
+        testing = section == "state" and request.args.get("simulation") == "1"
+        simulation = Counter(r["evaluation"] for r in rows if r["evaluation"])
+        if testing:
+            rows = [r for r in rows if r["evaluation"]]
         q = directory.normalized(request.args.get("q", "")[:140])
         if section in {"requests", "cancellations"}:
             kind = "request" if section == "requests" else "canceled"
@@ -249,10 +275,16 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         detail = None
         folder = request.args.get("folder", "")
         if folder:
+            if not ID_RE.fullmatch(folder) or folder not in (snap or {}).get("rows", {}):
+                abort(404)
             record = folder_record(owner, folder)
             if not data:
                 data = local_data()
             detail = {"record": record, "comparison": build_comparison(data, enrich(owner, record))}
+            detail["query"] = request.args.get("inscription","")[:120].strip()
+            if detail["query"]:
+                detail["comparison"] = {**detail["comparison"], "status":"manual_search",
+                                        "candidates":manual_options(data, enrich(owner, record), query=detail["query"])}
             detail["key"] = directory.link_key(owner, folder)
             detail["draft"] = local_operations(selection).get(folder, {}).get("draft")
             detail["action"] = ACTIONS.get(category(record))
@@ -269,7 +301,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         return app.jinja_env.get_template("integrale_edof.html").render(
             selection=selected, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=TABS, tab=tab,
             csrf=csrf, flashes=get_flashed_messages(with_categories=True), total=len(rows), counts=counts,
-            rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140],
+            rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
             detail=detail, events=events, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=directory.stamp(snap) if snap else None, today=today, metrics=metrics,
             jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
             scope=(snap or {}).get("scope", "open"), directory_enabled=store.directory_enabled(owner), snapshot_count=len((snap or {}).get("rows", {})),
@@ -332,9 +364,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         sid, tid = request.form.get("session_id"), request.form.get("trainee_id")
         outcome = []
         def apply(data):
-            options = build_comparison(data, row)
-            candidate = next((x for x in options["candidates"] if x["session_id"] == sid and x["trainee_id"] == tid), None)
-            if not candidate or candidate["issues"] or request.form.get("verified") != "yes":
+            choices = manual_options(data, row, pair=(sid, tid))
+            if len(choices) != 1 or choices[0]["issues"] or request.form.get("verified") != "yes":
                 raise ValueError("Vérifiez l’identité, la session et les éventuels conflits avant d’associer.")
             result = save_manual_wedof_link(data, external_id=folder, session_id=sid, trainee_id=tid,
                        state=folder_for_matching(row)["state"], date_start=row.get("session_start_date"), date_end=row.get("session_end_date"))
