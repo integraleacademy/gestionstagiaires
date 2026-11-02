@@ -16,7 +16,7 @@
 <p>Ce choix s’applique à Test V2 et aux traitements WeDoF de Gestion Stagiaires en production pour Intégrale Academy.</p>
 {% if production %}<p><strong>Production vérifiée · {{ providers[production.provider] }}</strong></p>{% endif %}
 {% if bridge_error %}<p role="status">La production est injoignable ou la liaison n’est pas configurée. Actualisez pour vérifier le système actif.</p>{% endif %}
-<p>Activer Intégrale EDOF suspend WeDoF en production. Les entrées, sorties et services faits préparés dans Intégrale EDOF doivent actuellement être validés sur le portail officiel. Réactiver WeDoF permet la reprise au prochain passage planifié.</p>
+<p>Activer Intégrale EDOF suspend WeDoF en production. Intégrale EDOF transmet les entrées, les sorties et les services faits depuis cette plateforme, puis relit chaque dossier pour vérifier sa réception. Réactiver WeDoF permet la reprise au prochain passage planifié.</p>
 {% if selection.pending %}
 <p role="status">Confirmation en attente pour {{ providers[selection.pending.target] }}. Les deux traitements de Test V2 sont suspendus.</p>
 <form method="post" action="{{ url_for('integrale_edof.switch') }}">{{ token() }}
@@ -43,8 +43,13 @@
 <dl><dt>Connexion EFP Connect</dt><dd><strong>{{ efp.label }}</strong>{% if efp.checked_at %} · Vérifiée le {{ efp.checked_at }}{% endif %}</dd>
 <dt>Compte Gmail pour les codes EFP</dt><dd>{{ 'Connecté' if gmail.connected else 'À connecter' }}</dd>
 <dt>Liste des dossiers EDOF</dt><dd>{{ checked or 'Première synchronisation à réaliser' }}</dd>
-<dt>Entrées, sorties et services faits</dt><dd>Préparation dans Intégrale EDOF, validation finale sur le portail officiel.</dd>
+<dt>Entrées, sorties et services faits</dt><dd>Envoi depuis Gestion Stagiaires. Le suivi distingue l’envoi en attente, la réception vérifiée et la validation du service fait par la Caisse des Dépôts.</dd>
 <dt>Transfert des demandes</dt><dd>Envoi sur validation depuis la fiche vers le CRM ou Salesforce.</dd></dl>
+<h3>Vérifier les commandes EDOF</h3><p>Le connecteur ouvre un dossier accepté et un dossier en formation pour vérifier les commandes proposées par EDOF. Ce contrôle en lecture seule est disponible même lorsque WeDoF est actif.</p>
+<form method="post" action="{{ url_for('integrale_edof.inspect_forms') }}">{{ token() }}{{ btn('Vérifier les commandes en lecture seule') }}</form>
+{% if inspection %}<p role="status">{{ inspection.message }}</p>
+{% for key,i in (inspection.get('diagnostics',{}).get('forms',{})).items() %}<p>{{ action_labels[key] }} · {{ 'Commande visible sur EDOF' if i.control else ('Dossier lu · commande non proposée' if i.read else 'Lecture à vérifier') }}</p>{% endfor %}
+<a href="{{ url_for('integrale_edof.index',section='technical') }}">Actualiser le contrôle</a>{% endif %}
 <div class="actions"><a class="btn" href="{{ url_for('edof_server_test.index', _anchor='connexion-efp') }}">Gérer la connexion EFP Connect</a>
 <a class="btn btn-outline" href="{{ url_for('edof_server_test.index', _anchor='directory-status') }}">Synchroniser la liste EDOF</a>
 <a class="btn btn-outline" href="{{ url_for('edof_test.index') }}">Lecture manuelle avec le module Chrome</a></div></section>
@@ -53,6 +58,8 @@
 {% for label,value in [('Synchronisations',metrics.get('directory',0)),('Lectures de dossier',metrics.get('read',0)),('Dossiers de la dernière liste',snapshot_count)] %}<div><strong>{{ value }}</strong><span>{{ label }}</span></div>{% endfor %}</div>
 <h3>Changements de dossier détectés automatiquement</h3><p>Dernière analyse de la liste · {{ analysis_checked or 'en attente de la première synchronisation active' }}.</p>
 {% for e in events %}<p>Dossier {{ e.folder }} · {{ labels.get(e.previous,'Nouveau dossier') }} → {{ labels.get(e.state,e.state) }}</p>{% else %}<p>Aucun changement détecté depuis la première analyse.</p>{% endfor %}
+<h3>Déclarations transmises depuis Gestion Stagiaires</h3>
+{% for d in dispatches[:25] %}<p><a href="{{ url_for('integrale_edof.index',folder=d.folder,_anchor='dossier') }}">{{ d.folder }}</a> · {{ action_labels[d.action] }} · {{ dispatch_labels[d.status] }}</p>{% else %}<p>Aucun envoi enregistré par Intégrale EDOF.</p>{% endfor %}
 <h3>Dernières opérations</h3>{% for job in jobs %}<p>{{ job.created_at[:16]|replace('T',' ') }} UTC · {{ job.message }}</p>{% else %}<p>Aucune opération enregistrée dans les dernières 24 heures.</p>{% endfor %}
 <a class="btn btn-outline" href="{{ url_for('integrale_edof.index', section='consumption') }}">Actualiser les compteurs</a></section>
 {% else %}
@@ -61,7 +68,7 @@
 {% for key,label in simulation_labels.items() %}<div><strong>{{ simulation[key] or 0 }}</strong>{{ label }}</div>{% endfor %}</div></section>{% endif %}
 {% if section == 'state' %}<section class="wedof-panel"><span class="wedof-eyebrow">SUIVI CPF</span><h2>État des dossiers</h2>
 <nav class="metrics state-tabs" aria-label="Filtres d’état">{% for key,label in tabs.items() %}<a href="{{ link('state', key) }}" {{ 'aria-current=page' if tab == key }}><strong>{{ counts[key] or 0 }}</strong><span>{{ label }}</span></a>{% endfor %}</nav>
-{% if tab == 'due' %}<p>Ces dossiers ont une échéance d’entrée ou de sortie. Ouvrez le dossier pour vérifier la présence et préparer l’entrée, ou la sortie et le service fait.</p>{% endif %}</section>{% endif %}
+{% if tab == 'due' %}<p>Ces dossiers ont une échéance d’entrée ou de sortie. Les justificatifs vérifiés de production déclenchent l’envoi. Si une information manque, ouvrez le dossier pour compléter la déclaration ici.</p>{% endif %}</section>{% endif %}
 <section class="wedof-panel"><span class="wedof-eyebrow">INTÉGRALE EDOF</span><h2>{{ {'state':'Dossiers CPF','requests':'Demandes entrantes','cancellations':'Annulations'}[section] }}</h2>
 {% if section == 'requests' %}<p>Demandes à traiter identifiées dans la liste EDOF synchronisée.</p>{% elif section == 'cancellations' %}<p>Dossiers dont l’état dans la liste synchronisée indique une annulation.{% if scope != 'all' %} La dernière lecture couvre les dossiers en cours. Les annulations archivées peuvent être absentes de cet export.{% endif %}</p>{% endif %}
 <form class="filter" method="get"><input type="hidden" name="section" value="{{ section }}"><input type="hidden" name="tab" value="{{ tab }}">
@@ -99,10 +106,15 @@
 {% if detail.comparison.status == 'found' %}<p>Association locale enregistrée.</p>
 {% elif active and not c.issues %}<form method="post" action="{{ url_for('integrale_edof.associate',folder=f.folder_id) }}">{{ token() }}<input type="hidden" name="session_id" value="{{ c.session_id }}"><input type="hidden" name="trainee_id" value="{{ c.trainee_id }}"><label><input type="checkbox" name="verified" value="yes" required> J’ai vérifié l’identité et la session.</label>{{ btn('Associer ce stagiaire') }}</form>{% endif %}</div>
 {% else %}<p>Aucune inscription locale correspondante.</p>{% endfor %}
-{% if detail.action %}<h3>{{ action_labels[detail.action] }}</h3>{% if detail.draft and detail.draft.action == detail.action %}<p class="notice">Préparation enregistrée pour le {{ date_fr(detail.draft.actual_date) }}{% if detail.draft.rate is defined %}, taux de réalisation {{ detail.draft.rate }} %{% endif %}. Justificatif · {{ detail.draft.evidence }}.{% if detail.draft.source == 'lms' %} Préparation automatique à partir d’une activité pédagogique enregistrée.{% endif %} Transmission à confirmer dans EDOF.</p>{% endif %}
-{% if active %}<form class="draft" method="post" action="{{ url_for('integrale_edof.prepare',folder=f.folder_id) }}">{{ token() }}<input type="hidden" name="action" value="{{ detail.action }}">
-<label>Date effective<input type="date" name="actual_date" min="{{ f.session_start_date or '' }}" max="{{ today }}" required></label>
-<label>Référence du justificatif<input type="text" name="evidence" maxlength="250" placeholder="Feuille de présence ou activité pédagogique" required></label>
-{% if detail.action == 'service_done' %}<label>Taux réalisé (%)<input type="number" name="rate" min="0" max="100" required></label><label>Motif en cas de réalisation partielle<input type="text" maxlength="250" name="reason"></label>{% endif %}
-<label><input type="checkbox" name="attested" value="yes" required> J’ai vérifié la réalisation effective de la formation.</label>{{ btn('Préparer la déclaration') }}</form>{% endif %}{% endif %}</section>{% endif %}
+<h3>Suivi des déclarations</h3>
+{% for d in detail.dispatches %}<p class="notice"><strong>{{ action_labels[d.action] }} · {{ dispatch_labels[d.status] }}</strong><br>{{ date_fr(d.intent.actual_date) }}{% if d.intent.rate is defined %} · {{ d.intent.rate }} %{% endif %} · {{ d.intent.evidence }}
+{% if d.detail %}<br>{{ dispatch_reasons.get(d.detail, 'Consultez le contrôle de connexion.') }}{% endif %}</p>
+{% if active and d.status in ['sending','uncertain'] %}<form method="post" action="{{ url_for('integrale_edof.recheck',folder=f.folder_id) }}">{{ token() }}<input type="hidden" name="action" value="{{ d.action }}">{{ btn('Vérifier la réception dans EDOF') }}</form>{% endif %}
+{% else %}<p>Aucun envoi enregistré par Intégrale EDOF pour ce dossier.</p>{% endfor %}
+{% if detail.action %}<h3>{{ action_labels[detail.action] }}</h3>{% if detail.draft and detail.draft.action == detail.action %}<p class="notice">Préparation enregistrée pour le {{ date_fr(detail.draft.actual_date) }}{% if detail.draft.rate is defined %}, taux de réalisation {{ detail.draft.rate }} %{% endif %}. Justificatif · {{ detail.draft.evidence }}.{% if detail.draft.source == 'lms' %} Préparation automatique à partir d’une activité pédagogique enregistrée.{% endif %} Vous pouvez transmettre cette déclaration depuis cette fiche.</p>{% endif %}
+{% if active %}<form class="draft" method="post" action="{{ url_for('integrale_edof.submit',folder=f.folder_id) }}">{{ token() }}<input type="hidden" name="action" value="{{ detail.action }}">
+<label>Date effective<input type="date" name="actual_date" value="{{ detail.draft.actual_date if detail.draft and detail.draft.action==detail.action else '' }}" min="{{ f.session_start_date or '' }}" max="{{ today }}" required></label>
+<label>Référence du justificatif<input type="text" name="evidence" value="{{ detail.draft.evidence if detail.draft and detail.draft.action==detail.action else '' }}" maxlength="250" placeholder="Feuille de présence ou activité pédagogique" required></label>
+{% if detail.action == 'service_done' %}<label>Taux réalisé (%)<input type="number" name="rate" value="{{ detail.draft.rate if detail.draft and detail.draft.action==detail.action and detail.draft.rate is defined else '' }}" min="0" max="100" required></label><label>Motif en cas de réalisation partielle<select name="motif"><option value="">Parcours intégral ou motif à choisir</option>{% for key,label in motifs.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>{% endif %}
+<label><input type="checkbox" name="attested" value="yes" required> J’ai vérifié la réalisation effective de la formation.</label><button class="btn primary" type="submit">{{ 'Transmettre l’entrée à EDOF' if detail.action=='entry_training' else 'Transmettre la sortie et le service fait à EDOF' }}</button></form>{% endif %}{% endif %}</section>{% endif %}
 </main></body></html>
