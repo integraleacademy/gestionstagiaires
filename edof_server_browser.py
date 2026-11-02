@@ -22,6 +22,8 @@ from edof_gmail import Vault, GmailCodes, GmailError
 
 EDOF_HOST = "of.moncompteformation.gouv.fr"
 EFP_HOST = "efpconnect.emploi.gouv.fr"
+EDOF_CALLBACK_PATH = "/idp/edof/api/v2/callback"
+EDOF_TOKEN_PATH = "/idp/edof/api/v2/token"
 LOGIN_URL = f"https://{EDOF_HOST}/espace-prive/html/#/redirect-to-mire-connexion"
 LIST_URL = f"https://{EDOF_HOST}/espace-prive/html/#/dossiers/en-cours"
 DETAIL_PREFIX = f"https://{EDOF_HOST}/espace-prive/html/#/dossiers/detail/"
@@ -43,16 +45,22 @@ def private_page(url):
             and route.startswith("/") and route != "/redirect-to-mire-connexion")
 
 
-def permitted_request(url, method):
+def permitted_request(url, method, *, edof_identity=False, frame_url=""):
     """Block business mutations even if the frontend initiates one itself."""
     parsed = urlsplit(url)
     if parsed.scheme not in {"http", "https"}:
         return False
     if method in READ_METHODS:
         return True
-    # Only the actual EFP password form / OIDC exchange may submit data.
-    # All EDOF mutations (including read acknowledgments) remain blocked.
-    return parsed.scheme == "https" and parsed.hostname == EFP_HOST and method == "POST" and (
+    if parsed.scheme != "https" or method != "POST":
+        return False
+    # EDOF exchanges the completed EFP login before its private SPA loads.
+    # This single same-origin identity endpoint cannot write a dossier.
+    if edof_identity and parsed.netloc == EDOF_HOST and parsed.path == EDOF_TOKEN_PATH:
+        origin = urlsplit(frame_url)
+        return (origin.scheme == "https" and origin.netloc == EDOF_HOST
+                and (origin.path.startswith("/espace-prive/") or origin.path == EDOF_CALLBACK_PATH))
+    return parsed.netloc == EFP_HOST and (
         parsed.path == "/auth/realms/efp/login-actions/authenticate"
         or parsed.path == "/auth/realms/efp/protocol/openid-connect/token"
     )
@@ -94,7 +102,7 @@ def location_category(url):
             return "efp_login"
         return "efp_account"
     if parsed.hostname == EDOF_HOST:
-        if parsed.path == "/idp/edof/api/v2/callback":
+        if parsed.path == EDOF_CALLBACK_PATH:
             return "edof_callback"
         if parsed.path.startswith("/espace-prive/"):
             route = parsed.fragment.partition("?")[0].rstrip("/")
@@ -151,7 +159,7 @@ def safe_edof_route(url):
 def diagnostic_summary(location, password_visible, error_visible, signals):
     """Allowlist scalar signals; deliberately no page/error/input text."""
     result = {"location": location_category(location), "password_form_visible": bool(password_visible), "error_banner_visible": bool(error_visible)}
-    for key in ("login_post_status", "callback_status", "workspace_status", "folder_list_status", "folder_detail_status", "blocked_efp_posts", "blocked_edof_posts", "blocked_other_posts", "invalid_form_fields"):
+    for key in ("login_post_status", "callback_status", "edof_token_status", "workspace_status", "folder_list_status", "folder_detail_status", "blocked_efp_posts", "blocked_edof_posts", "blocked_other_posts", "invalid_form_fields"):
         value = signals.get(key)
         if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 9999:
             result[key] = value
@@ -201,7 +209,16 @@ def run_browser(spec):
 
     def route_request(route):
         nonlocal blocked
-        if permitted_request(route.request.url, route.request.method):
+        request = route.request
+        returned = 200 <= signals.get("callback_status", 0) < 400
+        allow_identity = spec["mode"] == "read" and (returned or bool(saved))
+        frame_url = ""
+        if allow_identity and request.method == "POST" and urlsplit(request.url).netloc == EDOF_HOST:
+            try:
+                frame_url = request.frame.url
+            except Exception:
+                pass  # Unknown initiator: the identity POST stays blocked.
+        if permitted_request(request.url, request.method, edof_identity=allow_identity, frame_url=frame_url):
             route.continue_()
         else:
             blocked += 1
@@ -220,8 +237,10 @@ def run_browser(spec):
         parsed = urlsplit(response.url)
         if response.request.method == "POST" and parsed.hostname == EFP_HOST and parsed.path == "/auth/realms/efp/login-actions/authenticate":
             signals["login_post_status"] = response.status
-        if parsed.hostname == EDOF_HOST and parsed.path == "/idp/edof/api/v2/callback":
+        if parsed.netloc == EDOF_HOST and parsed.path == EDOF_CALLBACK_PATH:
             signals["callback_status"] = response.status
+        if parsed.netloc == EDOF_HOST and parsed.path == EDOF_TOKEN_PATH and response.request.method == "POST":
+            signals["edof_token_status"] = response.status
         if response.request.method != "GET" or parsed.hostname != EDOF_HOST or not parsed.path.startswith(WORKSPACE_API_PREFIX):
             return
         if 200 <= response.status < 300:

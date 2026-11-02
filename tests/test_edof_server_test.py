@@ -27,6 +27,22 @@ def test_only_official_efp_login_can_post():
     assert browser.permitted_request(f"https://{browser.EDOF_HOST}{browser.API_PREFIX}123456789012", "GET")
 
 
+def test_observed_edof_token_post_needs_a_verified_return_and_same_origin_frame():
+    origin = "https://" + browser.EDOF_HOST
+    target = origin + "/idp/edof/api/v2/token"
+    frame = origin + "/espace-prive/html/#/redirect-to-mire-connexion"
+    assert browser.permitted_request(target, "POST", edof_identity=True, frame_url=frame)
+    assert browser.permitted_request(target, "POST", edof_identity=True, frame_url=origin + browser.EDOF_CALLBACK_PATH)
+    assert not browser.permitted_request(target, "POST", frame_url=frame)
+    for other_frame in ("", "https://example.invalid/espace-prive/", origin + "/espace-public/"):
+        assert not browser.permitted_request(target, "POST", edof_identity=True, frame_url=other_frame)
+    for destination in (target + "/extra", target.replace("https:", "http:"), target.replace("fr/", "fr:8443/"),
+                        target.replace("fr/", "fr.example.invalid/"), origin + browser.API_PREFIX + "123456/inTraining"):
+        assert not browser.permitted_request(destination, "POST", edof_identity=True, frame_url=frame)
+    for method in ("PUT", "PATCH", "DELETE"):
+        assert not browser.permitted_request(target, method, edof_identity=True, frame_url=frame)
+
+
 def test_projection_removes_pii_and_preserves_unknowns():
     raw = {"id": "123456789012", "title": "0", "attendee": {"firstName": "Camille", "lastName": "EXEMPLE", "phoneNumber": "synthetic-private", "birthDate": "synthetic-private"},
         "trainingActionInfo": {"title": "Formation exemple", "totalIncl": 1600},

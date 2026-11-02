@@ -86,6 +86,7 @@
           <dt>Champs refusés par le formulaire</dt><dd>{{ job.diagnostics.invalid_form_fields|default(0) }}</dd>
           <dt>Réponse à la connexion</dt><dd>{{ job.diagnostics.login_post_status|default('Non observée') }}</dd>
           <dt>Retour vers EDOF</dt><dd>{{ job.diagnostics.callback_status|default('Non observé') }}</dd>
+          {% if job.diagnostics.edof_token_status is defined %}<dt>Finalisation de la connexion EDOF</dt><dd>{{ job.diagnostics.edof_token_status }}</dd>{% endif %}
           {% if job.stage in ['organism','search','dossier'] %}
           <dt>Réponse de l’établissement</dt><dd>{{ job.diagnostics.workspace_status|default('Non observée') }}</dd>
           <dt>Réponse de la liste des dossiers</dt><dd>{{ job.diagnostics.folder_list_status|default('Non observée') }}</dd>
