@@ -5493,23 +5493,44 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     document.body.insertAdjacentHTML('beforeend', `<div class="qonto-sync-overlay no-print" id="qontoSyncProgressModal" role="dialog" aria-modal="true" aria-labelledby="qontoSyncProgressTitle" aria-describedby="qontoSyncProgressDescription"><div class="qonto-sync-dialog"><div class="qonto-sync-brand">Connexion sécurisée</div><div class="qonto-sync-visual" aria-hidden="true"><span class="qonto-sync-ring"></span><span class="qonto-sync-icon">↻</span></div><h2 id="qontoSyncProgressTitle">${esc(title)}</h2><p id="qontoSyncProgressDescription">${esc(description)}</p><div class="qonto-sync-progress" aria-hidden="true"><span></span></div><div class="qonto-sync-safe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>Vous pouvez laisser cette fenêtre ouverte</div></div></div>`);
   }
   function hideQontoSyncModal(){ document.getElementById('qontoSyncProgressModal')?.remove(); }
-  document.getElementById('btnAssignBankTransfer')?.addEventListener('click',()=>{
-    const line=currentLines.find(item=>String(item.financingType||'').toUpperCase()==='PERSONNEL');
-    if(!line){showQontoFeedback('Aucun financement personnel renseigné pour ce dossier.','error');return;}
-    const start=new Date((line.dateStart||new Date().toISOString().slice(0,10))+'T12:00:00');
-    start.setDate(start.getDate()-180);
-    const since=Number.isNaN(start.getTime())?'':start.toISOString().slice(0,10);
-    const name=`${line.traineeFirstName||''} ${line.traineeLastName||''}`.trim();
+  function bankTransferLines(lines){
+    return lines.filter(item=>['PERSONNEL','AUTRE'].includes(String(item.financingType||'').toUpperCase()) && !isCpfQontoLine(item) && !['cancelled','canceled','deleted'].includes(String(item.invoiceStatus||'').toLowerCase()));
+  }
+  function bankTransferLabel(line){
+    return String(line.financingType||'').toUpperCase()==='PERSONNEL'?'Financement personnel':(line.financeurName||line.financingLabel||'Autre financement');
+  }
+  async function openBankTransferModal(){
+    if(readOnly || document.getElementById('bankTransferModal'))return;
     const overlay=document.createElement('div');
-    overlay.className='billing-modal-overlay no-print';
+    overlay.id='bankTransferModal';overlay.className='billing-modal-overlay no-print';
     overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','bankTransferTitle');
-    overlay.innerHTML=`<div class="billing-modal"><div class="billing-modal-head"><div><h2 id="bankTransferTitle">Affecter un virement reçu</h2><p>Recherchez le payeur, même si son nom est différent de celui du stagiaire.</p></div><button type="button" class="billing-modal-close" data-bank-close aria-label="Fermer">✕</button></div><div class="billing-modal-summary"><strong>Dossier : ${esc(name)}</strong><p>Financement personnel · ${esc(line.qontoInvoiceNumber||'Sans numéro de facture')} · Reste à payer : ${fmtMoney(lineRemaining(line))}</p></div><form data-bank-search><div class="billing-modal-grid"><label>Nom du payeur ou libellé<input name="query" type="search" placeholder="Ex. : nom du parent ou du conjoint" minlength="2" maxlength="100" required></label><label>Virements reçus depuis le<input name="dateFrom" type="date" value="${esc(since)}" max="${new Date().toISOString().slice(0,10)}"></label></div><div class="billing-modal-actions"><button class="btn btn-primary" type="submit">Rechercher les virements</button></div></form><div data-bank-feedback role="status" aria-live="polite"></div><div data-bank-results></div><div class="billing-modal-actions"><button type="button" class="btn btn-outline" data-bank-close>Fermer</button></div></div>`;
+    overlay.innerHTML=`<div class="billing-modal"><div class="billing-modal-head"><div><h2 id="bankTransferTitle">Affecter un virement reçu</h2><p>Recherchez le payeur, même si son nom est différent de celui du stagiaire.</p></div><button type="button" class="billing-modal-close" data-bank-close aria-label="Fermer">✕</button></div><div data-bank-body role="status" aria-live="polite">Chargement des financements…</div><div class="billing-modal-actions"><button type="button" class="btn btn-outline" data-bank-close>Fermer</button></div></div>`;
     document.body.appendChild(overlay);
-    const form=overlay.querySelector('form'),feedback=overlay.querySelector('[data-bank-feedback]'),results=overlay.querySelector('[data-bank-results]');
     let busy=false;
     function close(){if(!busy){overlay.remove();document.getElementById('btnAssignBankTransfer')?.focus();}}
     overlay.querySelectorAll('[data-bank-close]').forEach(button=>button.onclick=close);
     overlay.addEventListener('keydown',event=>{if(event.key==='Escape')close();});
+    overlay.querySelector('[data-bank-close]').focus();
+    const content=overlay.querySelector('[data-bank-body]');
+    try{await load();}catch(error){content.className='qonto-error';content.textContent=error.message||'Chargement des financements impossible. Fermez puis réessayez.';return;}
+    if(!overlay.isConnected)return;
+    const lines=bankTransferLines(currentLines);
+    if(!lines.length){content.textContent='Aucun financement personnel ou autre financement hors CPF renseigné pour ce dossier. Renseignez le financement dans les paramètres avant d’affecter un virement.';return;}
+    let line=lines.find(item=>lineRemaining(item)>0)||lines[0];
+    const start=new Date((line.dateStart||new Date().toISOString().slice(0,10))+'T12:00:00');
+    start.setDate(start.getDate()-180);
+    const since=Number.isNaN(start.getTime())?'':start.toISOString().slice(0,10);
+    const name=`${line.traineeFirstName||''} ${line.traineeLastName||''}`.trim();
+    content.removeAttribute('role');content.removeAttribute('aria-live');
+    content.innerHTML=`<div class="billing-modal-summary" data-bank-summary></div><form data-bank-search>${lines.length>1?`<label>Financement à créditer<select name="lineId">${lines.map(item=>`<option value="${esc(item.id)}" ${item.id===line.id?'selected':''}>${esc(bankTransferLabel(item))} · ${esc(item.qontoInvoiceNumber||'Sans numéro de facture')} · ${fmtMoney(lineRemaining(item))} restant</option>`).join('')}</select></label>`:''}<div class="billing-modal-grid"><label>Nom du payeur ou libellé<input name="query" type="search" placeholder="Ex. : nom du parent, du conjoint ou de l’entreprise" minlength="2" maxlength="100" required></label><label>Virements reçus depuis le<input name="dateFrom" type="date" value="${esc(since)}" max="${new Date().toISOString().slice(0,10)}"></label></div><div class="billing-modal-actions"><button class="btn btn-primary" type="submit">Rechercher les virements</button></div></form><div data-bank-feedback role="status" aria-live="polite"></div><div data-bank-results></div>`;
+    const form=overlay.querySelector('form'),feedback=overlay.querySelector('[data-bank-feedback]'),results=overlay.querySelector('[data-bank-results]');
+    function updateSummary(){overlay.querySelector('[data-bank-summary]').innerHTML=`<strong>Dossier : ${esc(name)}</strong><p>${esc(bankTransferLabel(line))} · ${esc(line.qontoInvoiceNumber||'Sans numéro de facture')} · Reste à payer : ${fmtMoney(lineRemaining(line))}</p>`;}
+    updateSummary();
+    if(form.elements.lineId)form.elements.lineId.onchange=()=>{
+      if(busy){form.elements.lineId.value=line.id;return;}
+      line=lines.find(item=>item.id===form.elements.lineId.value)||line;
+      results.replaceChildren();feedback.textContent='';updateSummary();
+    };
     form.elements.query.focus();
     form.onsubmit=async event=>{
       event.preventDefault();if(busy||!form.reportValidity())return;
@@ -5523,21 +5544,22 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
         results.querySelectorAll('[data-bank-assign]').forEach(button=>button.onclick=async()=>{
           if(busy)return;
           const transfer=transfers[Number(button.dataset.bankAssign)];
-          if(!confirm(`Affecter le virement de ${fmtMoney(transfer.amount_cents/100)} reçu de ${transfer.payer_name||transfer.label} le ${formatIsoDateFr(String(transfer.paid_at).slice(0,10))} au dossier de ${name} ?\n\nReste à payer après affectation : ${fmtMoney((response.remaining_cents-transfer.amount_cents)/100)}.`))return;
+          if(!confirm(`Affecter le virement de ${fmtMoney(transfer.amount_cents/100)} reçu de ${transfer.payer_name||transfer.label} le ${formatIsoDateFr(String(transfer.paid_at).slice(0,10))} au dossier de ${name} (${bankTransferLabel(line)}) ?\n\nReste à payer après affectation : ${fmtMoney((response.remaining_cents-transfer.amount_cents)/100)}.`))return;
           busy=true;overlay.querySelectorAll('button').forEach(item=>item.disabled=true);
           feedback.className='muted';feedback.textContent='Vérification du virement et affectation au dossier…';
           try{
             const assigned=await billingApi('/api/billing/bank-transfers/assign',{selectionToken:transfer.selection_token});
             await load();overlay.remove();
             const payments=document.getElementById('financePayments');if(payments?.closest('details'))payments.closest('details').open=true;
-            showQontoFeedback(`${assigned.message} ${assigned.remaining_cents===0?'Financement personnel soldé.':`Reste à payer : ${fmtMoney(assigned.remaining_cents/100)}.`}`);
+            showQontoFeedback(`${assigned.message} ${assigned.remaining_cents===0?'Financement soldé.':`Reste à payer : ${fmtMoney(assigned.remaining_cents/100)}.`}`);
           }catch(error){feedback.className='qonto-error';feedback.textContent=error.message||'Affectation impossible.';results.replaceChildren();}
           finally{busy=false;overlay.querySelectorAll('button').forEach(item=>item.disabled=false);}
         });
       }catch(error){feedback.className='qonto-error';feedback.textContent=error.message||'Recherche impossible.';}
       finally{busy=false;form.querySelector('button').disabled=false;}
     };
-  });
+  }
+  document.getElementById('btnAssignBankTransfer')?.addEventListener('click',openBankTransferModal);
   function setRowBusy(btn,busy){
     const row = btn.closest('.qonto-invoice-row');
     row?.querySelectorAll('[data-action-control]').forEach(control=>{ if('disabled' in control) control.disabled=busy; else control.setAttribute('aria-disabled', busy?'true':'false'); });

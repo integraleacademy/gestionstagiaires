@@ -4,6 +4,11 @@
 
 {% include "_afc_style.html" %}
 <style>
+  .session-card.session-card--ended.session-card--financial-closed{border:3px solid #16a34a;}
+  .session-card.session-card--ended.session-card--financial-open{border:3px solid #dc2626;}
+  .pill-financial-closed{background:#dcfce7;color:#166534;border:1px solid #86efac;}
+  .pill-financial-open{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
+
   .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;}
 
   .admin-actions[hidden],
@@ -908,7 +913,7 @@
   {% set docs_total = s.total or 0 %}
   {% set cnaps_done = s.cnaps_accepted_count or 0 %}
   {% set cnaps_total = s.total or 0 %}
-  <article class="card session-card session-card--{{ s.status_key }} training-{{ s.training_type_class }}{% if 'VAE' in training_upper %} training-vae{% endif %}{% if s.show_cash_payment_alert %} has-cash-alert session-card--alert{% endif %}" data-session-training-type="{{ training_upper }}">
+  <article class="card session-card session-card--{{ s.status_key }}{% if s.status_key == "ended" and s.financial_overview %} session-card--financial-{{ "closed" if s.financial_overview.closed else "open" }}{% endif %} training-{{ s.training_type_class }}{% if 'VAE' in training_upper %} training-vae{% endif %}{% if s.show_cash_payment_alert %} has-cash-alert session-card--alert{% endif %}" data-session-training-type="{{ training_upper }}">
     <div class="session-card__header">
       <div class="session-card__identity">
         <h2 class="session-card__title {% if not is_read_only %}session-name-editable{% endif %}"
@@ -920,6 +925,9 @@
         <div class="session-tags" aria-label="Type et statut de session">
           <span class="pill pill-training">{{ "AFC APS + SSIAP 1" if s.afc_enabled else ("CHAUFFEUR VTC" if training_upper == "VTC" else s.training_type) }}</span>
           <span class="pill pill-status pill-status--{{ s.status_key }}">{{ s.status_label }}</span>
+          {% if s.status_key == 'ended' and s.financial_overview %}
+          <a class="pill pill-financial-{{ 'closed' if s.financial_overview.closed else 'open' }}" href="{{ url_for('admin_session_financial_report', session_id=s.id) }}" title="Reste à encaisser hors CPF : {{ '%.2f'|format(s.financial_overview.remaining) }} €{% if s.financial_overview.unverified %} · {{ '%.2f'|format(s.financial_overview.unverified) }} € à vérifier{% endif %}">{{ 'Clôturée' if s.financial_overview.closed else ('Paiements à vérifier' if s.financial_overview.unverified else 'Non clôturée') }}</a>
+          {% endif %}
           {% if s.session_dossier_complete %}<span class="pill pill-complete">Dossier complet</span>{% endif %}
         </div>
       </div>

@@ -3,22 +3,7 @@
 {% macro money(value) -%}{{ "{:,.2f}".format(value|default(0, true)).replace(',', ' ').replace('.', ',') }} €{%- endmacro %}
 {% set status_labels = {'paid':'Facture émise','sent':'Facture émise','finalized':'Facture émise','draft':'Brouillon','cancelled':'Annulée','control':'À vérifier','external_generated':'Créée ailleurs','not_invoiced':'À facturer'} %}
 {% set financer_labels = {'PERSONNEL':'Personnel','CPF':'CPF','AUTRE':'Autre financeur'} %}
-{% set overview = namespace(remaining=0, paid=0, checks=0, unverified=0) %}
-{% for row in report.rows %}
-  {% set state = namespace(unknown=false, control=false, personal_unknown=false, other_unknown=false) %}
-  {% for invoice in row.invoices %}
-    {% if invoice.financer_type|default('PERSONNEL') != 'CPF' and invoice.status != 'cancelled' %}
-      {% if invoice.external and not invoice.payment_known %}{% set state.unknown = true %}{% if invoice.financer_type|default('PERSONNEL') == 'AUTRE' %}{% set state.other_unknown = true %}{% else %}{% set state.personal_unknown = true %}{% endif %}{% endif %}
-      {% if invoice.status == 'control' %}{% set state.control = true %}{% endif %}
-    {% endif %}
-  {% endfor %}
-  {% set balance = row.personal_remaining + row.other_remaining %}
-  {% set overview.paid = overview.paid + row.personal_paid|default(row.personal - row.personal_remaining) + row.other_paid|default(row.other - row.other_remaining) %}
-  {% set unknown_balance = (row.personal_remaining if state.personal_unknown else 0) + (row.other_remaining if state.other_unknown else 0) %}
-  {% set overview.unverified = overview.unverified + unknown_balance %}
-  {% set overview.remaining = overview.remaining + balance - unknown_balance %}
-  {% if state.unknown or state.control or row.gap|abs >= 0.01 %}{% set overview.checks = overview.checks + 1 %}{% endif %}
-{% endfor %}
+{% set overview = report.overview %}
 <style>
 body.endpoint-admin-session-financial-report > .container,
 body.endpoint-admin-session-financial-report .app-shell{width:100%;max-width:none;box-sizing:border-box}
