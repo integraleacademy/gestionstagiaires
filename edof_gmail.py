@@ -217,12 +217,23 @@ def extract_code(message, recipient, started):
             for child in part.get("parts", [])[:20]:
                 visit(child, depth + 1)
         visit(payload)
-        text = normal_text(" ".join(headers.get("subject", []) + texts))
+        sources = [normal_text(value) for value in headers.get("subject", []) + texts]
+        text = " ".join(sources)
         if "efp" not in text and "edof" not in text:
             return None
         if any(term in text for term in ("reinitialiser", "reinitialisation", "reset password", "creer votre compte", "creation de compte", "responsable des acces")):
             return None
-        codes = set(re.findall(r"\bcode(?:\s+d['’ ]authentification|\s+de\s+(?:verification|securite|connexion)|\s+a\s+usage\s+unique)?(?:\s+(?:est|suivant|personnel|unique))?\s*[:：\-]?\s*(\d{6,8})\b", text))
+        patterns = (
+            r"\bcode(?:\s+d['’ ]authentification|\s+de\s+(?:verification|securite|connexion)|\s+a\s+usage\s+unique)?(?:\s+(?:est|suivant|personnel|unique))?\s*[:：\-]?\s*(\d{6,8})\b",
+            # Current EFP login subject and body. Match explicit labels, never
+            # arbitrary numbers elsewhere in the message (dates, IDs, etc.).
+            r"\b([0-9]{6,8}) est votre code de securite efp connect pour acceder au service numerique edof\b",
+            r"\bcode de securite ci[-\u2010\u2011 ]dessous sur efp connect\s*[:：\-]\s*([0-9]{6,8})\b",
+        )
+        # Inspect each MIME representation independently: a label in one part
+        # must not become attached to a number in a different part. Repeated
+        # copies of the same code are fine; conflicting values fail closed.
+        codes = {code for source in sources for pattern in patterns for code in re.findall(pattern, source)}
         return next(iter(codes)) if len(codes) == 1 else None
     except (KeyError, TypeError, ValueError):
         return None
