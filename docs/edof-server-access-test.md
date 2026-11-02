@@ -39,8 +39,9 @@ The public Access test always starts without saved cookies or credentials.
 Read tests first try server-generated cookies. Otherwise they refresh Google,
 record pre-existing EFP mail IDs, and submit the EFP password form once.
 
-Mail queries use the exact EFP recipient, sender `no-reply@emploi.gouv.fr` and
-login timestamp. At most ten hits and one page are accepted. Stale messages,
+Mail queries use the exact EFP recipient, the login timestamp and either of two
+exact senders: `no-reply@efpconnect.emploi.gouv.fr` or `no-reply@emploi.gouv.fr`.
+At most ten hits and one page are accepted. Stale messages,
 wrong recipients, unauthenticated senders and reset/create-account messages
 are rejected. The first Google ingress Authentication-Results must authenticate
 an emploi.gouv.fr domain using DKIM or DMARC. Only text MIME bodies are read;

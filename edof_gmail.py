@@ -28,7 +28,8 @@ CALLBACK = "https://gestionstagiaires-test-v2.onrender.com/admin/edof-test/serve
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 GMAIL_URL = "https://gmail.googleapis.com/gmail/v1/users/me"
-SENDER = "no-reply@emploi.gouv.fr"
+SENDER = "no-reply@efpconnect.emploi.gouv.fr"
+EFP_SENDERS = (SENDER, "no-reply@emploi.gouv.fr")
 
 
 class GmailError(Exception):
@@ -261,7 +262,8 @@ def extract_code(message, recipient, started, *, rejections=None):
         headers = {}
         for header in payload.get("headers", []):
             headers.setdefault(header["name"].lower(), []).append(header["value"])
-        if [address.lower() for _, address in getaddresses(headers.get("from", []))] != [SENDER]:
+        senders = getaddresses(headers.get("from", []))
+        if len(senders) != 1 or senders[0][1].lower() not in EFP_SENDERS:
             return reject("sender_mismatch")
         if recipient.lower() not in [address.lower() for _, address in getaddresses(headers.get("to", []) + headers.get("delivered-to", []))]:
             return reject("recipient_mismatch")
@@ -335,8 +337,9 @@ class GmailCodes:
 
     def list_ids(self, since):
         # No broad inbox enumeration and no mailbox changes. Maximum 10 hits.
+        sender_filter = "{" + " ".join(f"from:{address}" for address in EFP_SENDERS) + "}"
         result = google_json("GET", GMAIL_URL + "/messages", headers=self.headers,
-            params={"q": f"from:({SENDER}) to:({self.recipient}) after:{int(since)}", "maxResults": 10})
+            params={"q": f"{sender_filter} to:({self.recipient}) after:{int(since)}", "maxResults": 10})
         if result.get("nextPageToken"):
             raise GmailError("gmail_messages_ambiguous")
         return [item["id"] for item in result.get("messages", []) if re.fullmatch(r"[a-zA-Z0-9_-]{1,100}", item.get("id", ""))]

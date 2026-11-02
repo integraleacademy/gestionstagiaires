@@ -103,7 +103,8 @@ def test_html_and_attachments_are_not_executed_or_read():
     assert gmail.extract_code(item, EMAIL, time.time() - 1) is None
 
 
-def test_gmail_reads_skip_preexisting_messages_and_never_modify_mail(vault, monkeypatch):
+@pytest.mark.parametrize("sender", ["no-reply@efpconnect.emploi.gouv.fr", "no-reply@emploi.gouv.fr"])
+def test_gmail_reads_skip_preexisting_messages_and_never_modify_mail(vault, monkeypatch, sender):
     vault.put("gmail", {"refresh_token": "synthetic-refresh"})
     monkeypatch.setattr(gmail, "token_request", lambda data: {"access_token": "synthetic-access", "scope": gmail.SCOPE})
     calls = []
@@ -114,13 +115,31 @@ def test_gmail_reads_skip_preexisting_messages_and_never_modify_mail(vault, monk
         if url.endswith("/messages"):
             return {"messages": next(lists)}
         assert url.endswith("/new")
-        return message()
+        item = message()
+        item["payload"]["headers"][0]["value"] = f"EFP Connect <{sender}>"
+        item["payload"]["headers"][-1]["value"] = f"mx.google.com; dmarc=pass header.from={sender.split('@')[1]}"
+        return item
     monkeypatch.setattr(gmail, "google_json", get)
     inbox = gmail.GmailCodes(vault, EMAIL)
     assert inbox.wait_for_code(time.time() - 1) == "123456"
     assert len(calls) == 3
-    assert gmail.SENDER in calls[0][1]["params"]["q"]
-    assert EMAIL in calls[0][1]["params"]["q"]
+    for _, options in calls[:2]:
+        query = options["params"]["q"]
+        assert query.startswith("{from:no-reply@efpconnect.emploi.gouv.fr from:no-reply@emploi.gouv.fr} ")
+        assert f"to:({EMAIL}) after:" in query
+
+
+@pytest.mark.parametrize("other", [
+    "no-reply@efpconnect.emploi.gouv.fr.example.invalid",
+    "other@efpconnect.emploi.gouv.fr",
+    "no-reply@efpconnect.emploi.gouv.fr, no-reply@emploi.gouv.fr",
+])
+def test_efp_sender_must_be_one_exact_address(other):
+    item = message()
+    item["payload"]["headers"][0]["value"] = other
+    reasons = {}
+    assert gmail.extract_code(item, EMAIL, time.time() - 1, rejections=reasons) is None
+    assert reasons == {"sender_mismatch": 1}
 
 
 @pytest.mark.parametrize("result,accepted", [
