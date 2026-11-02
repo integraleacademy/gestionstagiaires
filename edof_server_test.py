@@ -39,6 +39,7 @@ MESSAGES = {
     "login_form_not_allowed": "La destination du formulaire EFP diffère du parcours prévu. L’essai doit être adapté ; aucun identifiant n’a été saisi.",
     "authentication_unconfirmed": "La connexion n’a pas pu être confirmée. Aucun dossier n’a été lu.",
     "organism_selection_required": "La sélection automatique de l’établissement n’a pas abouti. Le parcours doit être adapté.",
+    "workspace_dialog_required": "EDOF affiche une fenêtre devant le choix de l’établissement. Consultez le titre et les actions observés dans le diagnostic.",
     "search_unconfirmed": "La recherche par nom n’a pas produit de réponse exploitable. Le parcours doit être adapté.",
     "search_incomplete": "La recherche comporte plusieurs pages ou son total est inconnu. Aucune correspondance unique n’a été affirmée.",
     "no_match": "Aucun dossier ne correspond exactement au nom et au prénom dans le résultat de cette recherche.",

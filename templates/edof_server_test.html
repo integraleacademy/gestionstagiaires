@@ -80,6 +80,11 @@
           {% endfor %}
           {% else %}
           <dt>Page atteinte</dt><dd>{{ job.diagnostics.location }}</dd>
+          {% if job.diagnostics.private_route %}<dt>Page de l’espace privé</dt><dd>{{ job.diagnostics.private_route }}</dd>{% endif %}
+          {% if job.diagnostics.dialog_kind %}<dt>Fenêtre devant le choix du SIRET</dt><dd>{{ {'terms':'Conditions à valider','cookies':'Préférences de cookies','error':'Erreur signalée','account':'Vérification du compte','notice':'Information','other':'Fenêtre à identifier','loading':'Chargement','empty':'Aucun contenu visible'}.get(job.diagnostics.dialog_kind) }}</dd>
+          {% if job.diagnostics.dialog_headings %}<dt>Titre de la fenêtre</dt><dd>{{ job.diagnostics.dialog_headings|join(' · ') }}</dd>{% endif %}
+          {% if job.diagnostics.dialog_buttons %}<dt>Boutons de la fenêtre</dt><dd>{{ job.diagnostics.dialog_buttons|join(' · ') }}</dd>{% endif %}{% endif %}
+          {% if job.diagnostics.expected_establishment_visible is defined %}<dt>SIRET attendu affiché</dt><dd>{{ 'Oui' if job.diagnostics.expected_establishment_visible else 'Non' }}</dd>{% endif %}
           {% if job.diagnostics.edof_screen %}<dt>Écran EDOF</dt><dd>{{ {'access_denied':'Accès refusé','session_expired':'Session expirée','terms':'Conditions à accepter','select_organisation':'Choix de l’établissement','dashboard':'Tableau de bord','folders':'Dossiers','error':'Erreur signalée','loading':'Chargement','empty':'Page vide','other':'Autre écran'}.get(job.diagnostics.edof_screen, 'Autre écran') }}</dd>{% endif %}
           <dt>Formulaire encore visible</dt><dd>{{ 'Oui' if job.diagnostics.password_form_visible else 'Non' }}</dd>
           <dt>Erreur affichée par EFP</dt><dd>{{ 'Oui' if job.diagnostics.error_banner_visible else 'Non' }}</dd>

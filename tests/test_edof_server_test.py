@@ -70,39 +70,6 @@ def test_search_spec_and_identity():
     assert browser.identity(" Jean-François ") == browser.identity("JEAN FRANCOIS")
 
 
-def test_name_search_only_reads_the_list_filtered_by_both_requested_names():
-    query = "page=0&attendeeName=LE+TEST&attendeeFirstName=Andr%C3%A9"
-    assert browser.matches_name_query(query, "André", "LE TEST")
-    for other in ("page=0", "attendeeName=LE+TEST",
-                  query + "&attendeeName=AUTRE", query.replace("LE+TEST", "LE+TESTEUR")):
-        assert not browser.matches_name_query(other, "André", "LE TEST")
-
-
-@pytest.mark.parametrize("initial,options,final,allowed", [
-    (browser.SIRET, 0, browser.SIRET, True),
-    ("12345678901234", 1, browser.SIRET + " - Ville", True),
-    ("12345678901234", 0, "", False),
-    ("12345678901234", 2, browser.SIRET, False),
-    ("12345678901234", 1, browser.SIRET + "9", False),
-])
-def test_siret_form_continues_only_after_the_exact_establishment_is_selected(initial, options, final, allowed):
-    assert browser.location_category(f"https://{browser.EDOF_HOST}/espace-prive/html/#/siret") == "edof_siret_form"
-    page, selector, submit = Mock(), Mock(), Mock()
-    form = page.locator.return_value
-    form.locator.side_effect = {'mat-select[formcontrolname="siret"]': selector, "button#submit-button": submit}.__getitem__
-    selector.inner_text.side_effect = [initial, final]
-    option = page.get_by_role.return_value.get_by_role.return_value
-    option.count.return_value = options
-    if allowed:
-        assert browser.submit_siret_form(page)
-        submit.click.assert_called_once()
-    else:
-        with pytest.raises(browser.StopRun) as exc:
-            browser.submit_siret_form(page)
-        assert exc.value.code == "organism_selection_required"
-        submit.click.assert_not_called()
-
-
 def test_diagnostics_only_expose_categories_not_auth_parameters():
     url = f"https://{browser.EFP_HOST}/auth/realms/efp/login-actions/authenticate?session_code=synthetic-secret&username=synthetic@example.invalid"
     signals = {"login_post_status": 200, "callback_status": None, "blocked_efp_posts": 0, "raw_error": "synthetic-secret", "cookie": "synthetic-secret"}
@@ -122,7 +89,162 @@ def test_private_page_waits_for_callback_and_folder_diagnostics_hide_identifiers
     result = browser.diagnostic_summary(base + "/dossiers/detail/123456789012?state=synthetic", False, False,
         {"workspace_status": 200, "folder_detail_status": 403, "folder_list_status": "untrusted"})
     assert result == {"location": "edof_folder_detail", "error_banner_visible": False,
-                      "password_form_visible": False, "workspace_status": 200, "folder_detail_status": 403}
+                      "private_route": "/dossiers/detail/*", "password_form_visible": False,
+                      "workspace_status": 200, "folder_detail_status": 403}
+
+
+def test_workspace_choice_recognizes_existing_establishment_and_keeps_unknowns_private():
+    base = f"https://{browser.EDOF_HOST}/espace-prive/html/#"
+    assert browser.location_category(base + "/choix-etablissement") == "edof_select_siret"
+    assert browser.workspace_screen("Choisissez le SIRET de votre établissement") == "select_organisation"
+    assert browser.workspace_screen("Demander un accès. Choisissez votre établissement") == "access_denied"
+    assert browser.workspace_screen("J’accepte les conditions. Choisissez un établissement") == "terms"
+    formatted = f"{browser.SIRET[:3]} {browser.SIRET[3:6]} {browser.SIRET[6:9]} {browser.SIRET[9:]}"
+    assert browser.SIRET_TEXT.search("SIRET " + formatted)
+    assert not browser.SIRET_TEXT.search(browser.SIRET + "1")
+    result = browser.diagnostic_summary(base + "/choix-etablissement/private-name?state=secret", False, False,
+                                       {"expected_establishment_visible": True})
+    assert result["private_route"] == "/choix-etablissement/*" and result["expected_establishment_visible"]
+    assert "secret" not in json.dumps(result) and "private-name" not in json.dumps(result)
+
+
+def test_establishment_confirmation_requires_one_enabled_button_on_the_chooser():
+    page = Mock()
+    signals = {}
+    page.url = f"https://{browser.EDOF_HOST}/espace-prive/html/#/select-sirets"
+    confirm = page.get_by_role.return_value.filter.return_value
+    confirm.count.return_value = 1
+    confirm.is_enabled.return_value = False
+    assert browser.select_establishment(page, "selected", signals) == "selected"
+    confirm.is_enabled.return_value = True
+    confirm.count.return_value = 2
+    assert browser.select_establishment(page, "selected", signals) == "selected"
+    confirm.count.return_value = 1
+    page.url = browser.LIST_URL
+    assert browser.select_establishment(page, "selected", signals) == "selected"
+    confirm.click.assert_not_called()
+    page.url = f"https://{browser.EDOF_HOST}/espace-prive/html/#/select-sirets"
+    assert browser.select_establishment(page, "selected", signals) == "confirmed"
+    assert browser.select_establishment(page, "confirmed", signals) == "confirmed"
+    assert signals == {"chooser_action": "confirm"}
+    confirm.click.assert_called_once()
+    assert not browser.CONFIRM_ESTABLISHMENT.fullmatch("Valider le service fait")
+    assert not browser.CONFIRM_ESTABLISHMENT.fullmatch("Accepter les conditions")
+    assert browser.standard_choice_labels(["Valider mon choix", "Valider mon choix", "Exemple 123456",
+                                          "Personne Privée", "À mon espace"]) == ["valider mon choix", "a mon espace"]
+
+
+def test_completed_siret_confirmation_requires_the_official_dashboard_and_workspace_response():
+    url = f"https://{browser.EDOF_HOST}/espace-prive/html/#/tableau-de-bord"
+    signals = {"chooser_action": "confirm", "workspace_status": 200}
+    assert browser.confirmed_dashboard(url, signals)
+    assert not browser.confirmed_dashboard(url.replace("tableau-de-bord", "select-sirets"), signals)
+    assert not browser.confirmed_dashboard(url.replace(browser.EDOF_HOST, "example.invalid"), signals)
+    assert not browser.confirmed_dashboard(url, {"chooser_action": "confirm"})
+    assert not browser.confirmed_dashboard(url, {"chooser_action": "confirm", "workspace_status": 403})
+
+
+def test_hash_navigation_timeout_needs_the_requested_url_and_its_successful_response():
+    page = Mock()
+    url = browser.DETAIL_PREFIX + "123456789"
+    page.url = browser.LIST_URL
+    def change_hash(*args, **kwargs):
+        page.url = url
+        raise TimeoutError()
+    page.goto.side_effect = change_hash
+    browser.open_folder_view(page, url, lambda: True, TimeoutError)
+    with pytest.raises(TimeoutError):
+        browser.open_folder_view(page, url, lambda: False, TimeoutError)
+    page.goto.side_effect = TimeoutError()
+    page.url = browser.LIST_URL
+    with pytest.raises(TimeoutError):
+        browser.open_folder_view(page, url, lambda: True, TimeoutError)
+
+
+def test_name_search_submits_only_the_control_attached_to_the_named_field():
+    page = Mock()
+    surname, given = Mock(), Mock()
+    surname.count.return_value = given.count.return_value = 0
+    page.locator.side_effect = {browser.TRAINEE_SURNAME: surname, browser.TRAINEE_FIRST_NAME: given, "input:visible": Mock()}.__getitem__
+    field = surname.or_.return_value.or_.return_value.and_.return_value
+    field.count.return_value = 1
+    group = field.locator.return_value
+    group.locator.return_value.count.return_value = 1
+    button = group.get_by_role.return_value.filter.return_value
+    button.count.return_value = 1
+    button.evaluate.return_value = "arrow_forward"
+    signals, lists = {}, ["previous"]
+    browser.submit_name_search(page, "Exemple", "Camille", lists, signals, TimeoutError)
+    assert signals["search_step"] == "results" and not lists
+    page.get_by_text.assert_not_called()
+    button.click.assert_called_once()
+    field.fill.assert_called_once_with("Exemple", timeout=8000)
+    field.press.assert_not_called()
+    button.reset_mock()
+    button.evaluate.return_value = "Exporter"
+    browser.submit_name_search(page, "Exemple", "Camille", lists, signals, TimeoutError)
+    button.click.assert_not_called()
+    field.press.assert_called_once()
+
+
+def test_paired_form_fills_both_names_and_submits_their_search_button():
+    page, surname, given = Mock(), Mock(), Mock()
+    page.locator.side_effect = {browser.TRAINEE_SURNAME: surname, browser.TRAINEE_FIRST_NAME: given, "input:visible": Mock()}.__getitem__
+    field = surname.or_.return_value.or_.return_value.and_.return_value
+    field.count.return_value = surname.count.return_value = given.count.return_value = 1
+    group = given.locator.return_value
+    group.locator.side_effect = {"input:visible": Mock(), browser.TRAINEE_SURNAME: surname}.__getitem__
+    group.locator("input:visible").count.return_value = 2
+    button = group.get_by_role.return_value.filter.return_value
+    button.count.return_value = 1
+    button.evaluate.return_value = "Rechercher"
+    signals = {}
+    browser.submit_name_search(page, "Le Test", "André", [], signals, TimeoutError)
+    field.fill.assert_called_once_with("Le Test", timeout=8000)
+    given.fill.assert_called_once_with("André", timeout=8000)
+    button.click.assert_called_once()
+    assert signals["paired_name_search"] is True
+
+
+@pytest.mark.parametrize("query,paired,found", [
+    ("page=0&attendeeName=LE+TEST&attendeeFirstName=Andr%C3%A9", True, True),
+    ("page=0", True, False), ("tag=Le+Test&attendeeFirstName=Andr%C3%A9", True, False),
+    ("attendeeName=Le+Test", True, False), ("attendeeName=Le+Test", False, True),
+    ("attendeeName=Le+Test&attendeeFirstName=autre", False, False),
+    ("attendeeName=Le+Test&attendeeName=autre&attendeeFirstName=Andr%C3%A9", True, False),
+])
+def test_only_the_requested_edof_name_filter_can_supply_candidates(query, paired, found):
+    assert browser.matches_name_query(query, "Le Test", "André", paired) == found
+
+
+def test_establishment_dropdown_uses_standard_keyboard_action_and_respects_an_overlay():
+    page = Mock()
+    page.url = f"https://{browser.EDOF_HOST}/espace-prive/html/#/select-sirets"
+    locator = page.locator.return_value
+    locator.all.return_value = []
+    locator.count.return_value = 0
+    locator.and_.return_value.count.return_value = 0
+    page.get_by_role.return_value.or_.return_value.filter.return_value.count.return_value = 0
+    page.get_by_text.return_value.filter.return_value.count.return_value = 0
+    dropdown = locator.or_.return_value
+    dropdown.count.return_value = 1
+    dropdown.is_enabled.return_value = True
+    dropdown.get_attribute.return_value = "false"
+    dropdown.evaluate.side_effect = [
+        {"surface": "dialog", "depth": 0}, [["span private-name"], ["div modal secret"]],
+        {"surface": "control", "depth": 0}, {"surface": "widget", "depth": 2},
+    ]
+    signals = {}
+    assert browser.select_establishment(page, "waiting", signals) == "waiting"
+    dropdown.press.assert_not_called()
+    dropdown.click.assert_not_called()
+    assert browser.select_establishment(page, "waiting", signals) == "keyboard"
+    dropdown.press.assert_called_once_with("ArrowDown", timeout=3000)
+    assert signals["chooser_surface"] == "control" and signals["chooser_action"] == "open_keyboard"
+    assert signals["cover_shape"] == ["div-modal"] and signals["control_shape"] == ["span"]
+    assert browser.select_establishment(page, "waiting", signals) == "opened"
+    dropdown.locator.assert_called_once_with("xpath=../..")
+    dropdown.locator.return_value.click.assert_called_once_with(timeout=3000)
 
 
 def test_blocked_request_diagnostics_do_not_disclose_paths_ids_queries_or_body_values():
@@ -139,6 +261,85 @@ def test_blocked_request_diagnostics_do_not_disclose_paths_ids_queries_or_body_v
     assert result["edof_blocked_routes"] == [route]
     assert result["location"] == "edof_login_redirect" and "edof_screen" not in result
     assert "synthetic-secret" not in json.dumps(result)
+
+
+def test_edof_dialog_only_closes_a_dismissible_notice():
+    page = Mock()
+    layer = page.locator.return_value.filter.return_value
+    layer.count.return_value = 1
+    layer.get_by_role.return_value.count.return_value = 0
+    layer.locator.return_value.count.return_value = 0
+    layer.locator.return_value.all_inner_texts.return_value = ["Informations du compte Personne Exemple"]
+    actions = layer.get_by_role.return_value.or_.return_value.filter.return_value
+    actions.evaluate_all.return_value = ["Fermer cette fenêtre", "Personne Exemple 12345"]
+    layer.all_inner_texts.return_value = ["J’accepte les conditions générales. Personne Exemple."]
+    signals = {}
+    with pytest.raises(browser.StopRun, match="workspace_dialog_required"):
+        browser.handle_chooser_dialog(page, signals)
+    assert signals["dialog_kind"] == "terms" and signals["dialog_buttons"] == ["fermer cette fenetre"]
+    layer.get_by_role.return_value.click.assert_not_called()
+    layer.all_inner_texts.return_value = ["Bienvenue. Une nouvelle fonctionnalité est disponible."]
+    target = Mock()
+    target.count.return_value = 1
+    target.is_visible.return_value = target.is_enabled.return_value = True
+    original = layer.get_by_role.return_value
+    layer.get_by_role.side_effect = lambda role, **kw: target if kw.get("name") is browser.DIALOG_CLOSE else original
+    assert browser.handle_chooser_dialog(page, signals)
+    assert browser.handle_chooser_dialog(page, signals)
+    target.click.assert_called_once()
+    assert "personne" not in json.dumps(signals) and "12345" not in json.dumps(signals)
+
+
+@pytest.mark.parametrize("label,refuse", [
+    ("close Tout refuser et fermer", True), ("Continuer sans accepter", True),
+    ("Tout accepter et fermer", False), ("Paramétrer les cookies", False),
+    ("Ne pas tout refuser et fermer", False),
+])
+def test_cookie_refusal_uses_the_action_seen_in_edof(label, refuse):
+    assert bool(browser.COOKIE_DECLINE.search(label)) is refuse
+
+
+def test_cookie_keyboard_only_activates_the_observed_refusal_when_focused():
+    page, target = Mock(), Mock()
+    target.count.return_value = 1
+    target.evaluate_all.side_effect = [False, False, True]
+    assert browser.activate_cookie_refusal(page, target) == "keyboard"
+    assert [c.args[0] for c in page.keyboard.press.call_args_list] == ["Tab", "Tab", "Enter"]
+    target.click.assert_not_called()
+    target.evaluate_all.side_effect = [False]
+    target.count.return_value = 0
+    page.keyboard.press.reset_mock()
+    assert browser.activate_cookie_refusal(page, target) == "disappeared"
+    page.keyboard.press.assert_not_called()
+
+
+def test_disappearing_cookie_panel_does_not_wait_for_a_stale_locator():
+    page = Mock()
+    layer = page.locator.return_value.filter.return_value
+    layer.all_inner_texts.return_value = []
+    signals = {"cookies_dismissed": True}
+    assert browser.handle_chooser_dialog(page, signals) is False and signals["cookie_dialog_closed"] is True
+    layer.inner_text.assert_not_called()
+
+
+def test_real_material_select_opens_then_requires_the_unique_matching_option():
+    page = Mock()
+    page.url = f"https://{browser.EDOF_HOST}/espace-prive/html/#/select-sirets"
+    material = page.locator.return_value
+    material.count.return_value = 1
+    material.get_attribute.return_value = "false"
+    material.inner_text.return_value = "Sélectionnez un SIRET"
+    signals = {}
+    assert browser.select_establishment(page, "waiting", signals) == "opened"
+    material.click.assert_called_once_with(timeout=3000)
+    material.get_attribute.return_value = "true"
+    option = page.get_by_role.return_value.get_by_role.return_value.filter.return_value
+    option.count.return_value = 2
+    assert browser.select_establishment(page, "opened", signals) == "opened"
+    option.click.assert_not_called()
+    option.count.return_value = 1
+    assert browser.select_establishment(page, "opened", signals) == "selected"
+    option.click.assert_called_once_with(timeout=3000)
 
 
 @pytest.mark.parametrize("text,code", [("Nom d’utilisateur ou mot de passe invalide.", "credentials_rejected"), ("Votre compte est désactivé.", "account_unavailable"), ("Saisissez votre code d’authentification.", "verification_code")])
