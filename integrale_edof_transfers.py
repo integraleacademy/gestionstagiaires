@@ -1,45 +1,11 @@
 """Operator-initiated CPF transfers from a verified EDOF record to the CRM or Salesforce."""
 from contextlib import closing
-from functools import wraps
 import os
 import time
 
 import cpf_provider
 
-TARGETS = {"crm": "CRM", "salesforce": "Salesforce"}
-
-
-def receipts(db):
-    db.execute("""CREATE TABLE IF NOT EXISTS cpf_transfers (
-        folder TEXT NOT NULL, target TEXT NOT NULL, state TEXT NOT NULL, changed REAL NOT NULL,
-        PRIMARY KEY(folder,target))""")
-
-
-def receipt(store, folder, target):
-    with closing(store.connect()) as db:
-        receipts(db)
-        row = db.execute("SELECT state FROM cpf_transfers WHERE folder=? AND target=?", (folder,target)).fetchone()
-        return row[0] if row else ""
-
-
-def respect_native_receipt(target):
-    """After a switch back, a WeDoF callback cannot repeat a native transfer."""
-    def decorate(send):
-        @wraps(send)
-        def protected(entry):
-            store = cpf_provider.current_store()
-            if store is not None and entry.get("provider") != "integrale_edof":
-                from wedof_requests import registration_id
-                folder = str(entry.get("folder_id") or registration_id(entry.get("payload") or {}) or "")
-                if folder:
-                    status = receipt(store, folder, target)
-                    if status == "sent":
-                        return {"success":True, target+"_sent":True, "skipped":True, "reason":"already_sent_by_integrale"}, 200
-                    if status in {"processing","uncertain"}:
-                        return {"success":False, "error":"Vérifiez la réception de la transmission Intégrale EDOF avant tout nouvel envoi."}, 409
-            return send(entry)
-        return protected
-    return decorate
+from cpf_transfer_history import TARGETS, historical_delivery, receipt, receipts, respect_native_receipt
 
 
 def transfer(store, legacy, row, target, official_url):
@@ -48,17 +14,19 @@ def transfer(store, legacy, row, target, official_url):
     # A name alone is not enough to create an external prospect.
     if not row.get("first_name") or not row.get("last_name") or not row.get("email"):
         raise ValueError("Relisez la fiche détaillée dans EDOF pour vérifier les coordonnées avant le transfert.")
-    from wedof_requests import registration_id
     if target == "crm" and not (os.getenv("CRM_WEDOF_WEBHOOK_SECRET") or os.getenv("WEDOF_WEBHOOK_SECRET") or "").strip():
         raise ValueError("Le secret de transmission du CRM doit être configuré.")
-    for entry in legacy._load_wedof_webhooks():
-        if not isinstance(entry,dict):
-            continue
-        known = entry.get("folder_id") or registration_id(entry.get("wedof_folder_details") or entry.get("payload") or {})
-        if str(known) == folder and entry.get(target + "_sent"):
-            return f"Ce dossier a déjà été transmis au {label}."
-        if str(known) == folder and entry.get(target + "_delivery_uncertain"):
-            raise ValueError(f"Un envoi antérieur au {label} est à vérifier.")
+    known = historical_delivery(legacy, folder, target)
+    if cpf_provider.on_test_service() and known != "sent":
+        from cpf_provider_bridge import production_request
+        production = production_request({"folder": folder, "target": target}, path="/receipt")
+        if production.get("receipt") not in {"", "sent", "processing", "uncertain", "refused"}:
+            raise ValueError(f"Impossible de vérifier les envois de production au {label}.")
+        known = known or production["receipt"]
+    if known == "sent":
+        return f"Ce dossier a déjà été transmis au {label}."
+    if known in {"processing", "uncertain"}:
+        raise ValueError(f"Un envoi antérieur au {label} est à vérifier.")
     complete = {"externalId":folder, "type":"cpf", "state":"notProcessed", "permalink":official_url,
                 "attendee":{"firstName":row["first_name"],"lastName":row["last_name"],"email":row["email"]},
                 "trainingActionInfo":{"title":row.get("title"), "sessionStartDate":row.get("session_start_date"),

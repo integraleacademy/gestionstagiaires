@@ -8,16 +8,26 @@
 {% macro token() %}<input type="hidden" name="csrf" value="{{ csrf }}">{% endmacro %}
 {% macro btn(label) %}<button class="btn btn-outline" type="submit">{{ label }}</button>{% endmacro %}
 {% macro link(section, tab='all', page=1) %}{{ url_for('integrale_edof.index', section=section, tab=tab, page=page, q=query, simulation=(1 if testing else none), matching=(1 if previewing else none)) }}{% endmacro %}
-{% set active = selection.provider == 'integrale' %}
+{% set active = aligned and selection.provider == 'integrale' %}
 <nav class="return-nav" aria-label="Navigation"><a href="/admin">← Administration</a><a href="/admin/wedof">Tableau de bord WeDoF</a></nav>
 {% for type, msg in flashes %}<p role="status" class="wedof-flash is-{{ type }}">{{ msg }}</p>{% endfor %}
 <header class="wedof-panel selection"><span class="wedof-eyebrow">INTÉGRALE ACADEMY · TEST V2</span>
-<h1>Pilotage des dossiers CPF</h1><p>Choisissez le système qui traite les dossiers sur Test V2. Activer l’un désactive l’autre. La production dispose de son propre traitement.</p>
-<div class="choices">{% for key, name in providers.items() %}{% set on = selection.provider == key %}<div class="choice {{ 'on' if on else '' }}">
-<div><h2>{{ name }}</h2><span class="status {{ 'on' if on else '' }}">{{ 'Actif' if on else 'Désactivé' }}</span></div>
+<h1>Pilotage des dossiers CPF</h1>
+<p>Ce choix s’applique à Test V2 et aux traitements WeDoF de Gestion Stagiaires en production pour Intégrale Academy.</p>
+{% if production %}<p><strong>Production vérifiée · {{ providers[production.provider] }}</strong></p>{% endif %}
+{% if bridge_error %}<p role="status">La production est injoignable ou la liaison n’est pas configurée. Actualisez pour vérifier le système actif.</p>{% endif %}
+<p>Activer Intégrale EDOF suspend WeDoF en production. Les entrées, sorties et services faits préparés dans Intégrale EDOF doivent actuellement être validés sur le portail officiel. Réactiver WeDoF permet la reprise au prochain passage planifié.</p>
+{% if selection.pending %}
+<p role="status">Confirmation en attente pour {{ providers[selection.pending.target] }}. Les deux traitements de Test V2 sont suspendus.</p>
+<form method="post" action="{{ url_for('integrale_edof.switch') }}">{{ token() }}
+<input type="hidden" name="revision" value="{{ selection.revision }}"><input type="hidden" name="provider" value="{{ selection.pending.target }}">
+{{ btn('Reprendre la bascule vers ' ~ providers[selection.pending.target]) }}</form>
+{% else %}
+<div class="choices">{% for key, name in providers.items() %}{% set on = aligned and selection.provider == key %}<div class="choice {{ 'on' if on else '' }}">
+<div><h2>{{ name }}</h2><span class="status {{ 'on' if on else '' }}">{{ ('Actif' if on else 'Désactivé') if aligned else 'À confirmer' }}</span></div>
 <form method="post" action="{{ url_for('integrale_edof.switch') }}">{{ token() }}
 <input type="hidden" name="revision" value="{{ selection.revision }}"><input type="hidden" name="provider" value="{{ ('integrale' if key == 'wedof' else 'wedof') if on else key }}">
-<button class="btn {{ 'btn-outline' if on else 'primary' }}" type="submit">{{ 'Désactiver' if on else 'Activer' }} {{ name }}</button></form></div>{% endfor %}</div>
+<button class="btn {{ 'btn-outline' if on else 'primary' }}" type="submit" {% if bridge_error %}disabled{% endif %}>{{ 'Désactiver' if on else 'Activer' }} {{ name }}</button></form></div>{% endfor %}</div>{% endif %}
 {% if changed %}<small>Dernière bascule le {{ changed }}.</small>{% endif %}
 </header>
 <section class="wedof-hero"><div class="wedof-hero-copy"><span class="wedof-eyebrow">CPF · INTÉGRALE EDOF</span><h2>Tableau de bord Intégrale EDOF</h2>
