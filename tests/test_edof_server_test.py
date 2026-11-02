@@ -144,6 +144,46 @@ def test_completed_siret_confirmation_requires_the_official_dashboard_and_worksp
     assert not browser.confirmed_dashboard(url, {"chooser_action": "confirm", "workspace_status": 403})
 
 
+def test_hash_navigation_timeout_needs_the_requested_url_and_its_successful_response():
+    page = Mock()
+    url = browser.DETAIL_PREFIX + "123456789"
+    page.url = browser.LIST_URL
+    def change_hash(*args, **kwargs):
+        page.url = url
+        raise TimeoutError()
+    page.goto.side_effect = change_hash
+    browser.open_folder_view(page, url, lambda: True, TimeoutError)
+    with pytest.raises(TimeoutError):
+        browser.open_folder_view(page, url, lambda: False, TimeoutError)
+    page.goto.side_effect = TimeoutError()
+    page.url = browser.LIST_URL
+    with pytest.raises(TimeoutError):
+        browser.open_folder_view(page, url, lambda: True, TimeoutError)
+
+
+def test_name_search_submits_only_the_control_attached_to_the_named_field():
+    page = Mock()
+    field = page.get_by_placeholder.return_value.or_.return_value.and_.return_value
+    field.count.return_value = 1
+    group = field.locator.return_value
+    group.locator.return_value.count.return_value = 1
+    button = group.get_by_role.return_value.filter.return_value
+    button.count.return_value = 1
+    button.evaluate.return_value = "arrow_forward"
+    signals, lists = {}, ["previous"]
+    browser.submit_name_search(page, "Exemple", lists, signals, TimeoutError)
+    assert signals["search_step"] == "results" and not lists
+    page.get_by_text.assert_not_called()
+    button.click.assert_called_once()
+    field.fill.assert_called_once_with("Exemple", timeout=8000)
+    field.press.assert_not_called()
+    button.reset_mock()
+    button.evaluate.return_value = "Exporter"
+    browser.submit_name_search(page, "Exemple", lists, signals, TimeoutError)
+    button.click.assert_not_called()
+    field.press.assert_called_once()
+
+
 def test_establishment_dropdown_uses_standard_keyboard_action_and_respects_an_overlay():
     page = Mock()
     page.url = f"https://{browser.EDOF_HOST}/espace-prive/html/#/select-sirets"
