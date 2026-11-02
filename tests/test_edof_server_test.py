@@ -162,8 +162,10 @@ def test_restore_requires_the_private_workspace_and_goes_there_first():
 
 def test_empty_restored_shell_can_start_sso_without_clearing_efp_or_replaying_credentials(monkeypatch):
     page, context, checkpoint = Mock(), Mock(), Mock()
-    page.locator.return_value.all_inner_texts.return_value = [""]
-    page.locator.return_value.count.return_value = 1
+    body, username, controls = Mock(), Mock(), Mock()
+    body.all_inner_texts.return_value = [""]
+    username.count.return_value, controls.count.return_value = 1, 0
+    page.locator.side_effect = lambda selector: {"body": body, 'input[name="username"]:visible': username}.get(selector, controls)
     def navigate(url, **kwargs):
         page.url = (f"https://{browser.EDOF_HOST}/espace-prive/html/" if url == browser.LIST_URL
                     else f"https://{browser.EFP_HOST}/auth/")
@@ -175,6 +177,24 @@ def test_empty_restored_shell_can_start_sso_without_clearing_efp_or_replaying_cr
     assert domain.fullmatch(browser.EDOF_HOST) and domain.fullmatch(".moncompteformation.gouv.fr")
     assert not domain.fullmatch(browser.EFP_HOST) and not domain.fullmatch("other.invalid")
     checkpoint.assert_called_once()
+
+
+def test_saved_cookie_fallback_only_after_two_inactive_portal_views(monkeypatch):
+    page, context = Mock(), Mock()
+    page.locator.return_value.all_inner_texts.return_value = ["Mon Compte Formation"]
+    page.locator.return_value.count.return_value = 0
+    page.goto.side_effect = lambda url, **kwargs: setattr(page, "url", url)
+    monkeypatch.setattr(browser.time, "monotonic", Mock(side_effect=[0, 20, 21, 41]))
+    with pytest.raises(browser.StopRun, match="saved_session_unavailable"):
+        browser.open_workspace_or_login(page, context, True, {}, Mock())
+    assert [c.args[0] for c in page.goto.call_args_list] == [browser.LIST_URL, browser.LOGIN_URL]
+    for signals in ({"workspace_status": 200}, {"workspace_denied": True}):
+        assert not browser.inactive_saved_view(page, signals)
+    page.locator.return_value.all_inner_texts.return_value = ["Accepter la charte"]
+    assert not browser.inactive_saved_view(page, {})
+    page.locator.return_value.all_inner_texts.return_value = [""]
+    page.locator.return_value.count.return_value = 1
+    assert not browser.inactive_saved_view(page, {})
 
 
 def test_hash_navigation_timeout_needs_the_requested_url_and_its_successful_response():
