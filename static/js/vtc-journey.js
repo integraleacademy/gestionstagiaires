@@ -116,7 +116,14 @@
       const result=await post({practice_answers:answers});
       if(!result.correct) throw new Error('Une réponse doit être revue. Reprenez les étapes.');
       verified=JSON.stringify(answers);
-      text.textContent=freePractice?'Entraînement terminé. Vous pouvez choisir une autre situation ou revenir au parcours.':preview?'Activité réussie. Vous pouvez explorer la suite du parcours.':'Activité réussie. Cliquez sur « Terminer l’activité » pour enregistrer votre progression et poursuivre.';
+      if (freePractice) {
+        text.textContent = 'Entraînement terminé. Vous pouvez choisir une autre situation ou revenir au parcours.';
+      } else if (preview) {
+        text.textContent = 'Activité réussie. Vous pouvez explorer la suite du parcours.';
+      } else {
+        const label = document.getElementById('nativeActionButton')?.textContent.trim() || 'Terminer et continuer';
+        text.textContent = `Activité réussie. Cliquez sur « ${label} » sous l’activité pour enregistrer votre progression et poursuivre.`;
+      }
       root.querySelector('progress').value=fields.size;
     } catch(error){verified='';text.textContent=error.message;verify.hidden=false;} finally{busy=false;}
   }

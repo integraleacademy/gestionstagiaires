@@ -4,8 +4,9 @@ const {JSDOM}=require('jsdom');
 const fs=require('node:fs');
 const path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../static/js/vtc-journey.js'),'utf8');
+const playerSource=fs.readFileSync(path.join(__dirname,'../static/js/native-elearning-player.js'),'utf8');
 
-function fixture({preview=false,saved={},draft=null,adaptive=false}={}) {
+function fixture({preview=false,saved={},draft=null,adaptive=false,player=false}={}) {
   const config={courseVersion:'v3',activityId:'dossier',saved,completed:false,weakRefs:['A.02'],
     practice:{adaptive,exercises:[{id:'one',kind:'single',competency:'A.01'},{id:'two',kind:'single',competency:'A.02'}]}};
   const fields=['one','two'].map(id=>`<fieldset data-exercise-id="${id}" hidden><legend>Étape</legend><h3>Question ${id}</h3><input type="radio" name="${id}" value="yes"><input type="radio" name="${id}" value="no"><div data-step-feedback hidden></div></fieldset>`).join('');
@@ -16,9 +17,20 @@ function fixture({preview=false,saved={},draft=null,adaptive=false}={}) {
   window.fetch=async(url,options)=>{
     const body=JSON.parse(options.body);calls.push({url,options,body});
     if(failure)throw new Error('Connexion interrompue');
+    if (['/start', '/heartbeat', '/complete'].includes(url)) {
+      return {ok:true, json:async()=>({ok:true, tracking_session_id:'session', progress:{}})};
+    }
     const feedback=Object.entries(body.practice_answers).map(([id,v])=>({id,correct:v==='yes',explanation:'Explication <script>danger</script>',coaching:'Revoir le cours',correction:['Oui']}));
     return{ok:true,json:async()=>({ok:true,correct:feedback.every(f=>f.correct),feedback})};
   };
+  if (player) {
+    const node = document.getElementById('nativeElearningConfig');
+    node.textContent = JSON.stringify({...JSON.parse(node.textContent), activityId:config.activityId,
+      startUrl:'/start', heartbeatUrl:'/heartbeat', completeUrl:'/complete', nextUrl:'#next-lesson'});
+    document.body.insertAdjacentHTML('beforeend',
+      '<button id="nativeActionButton" data-mode="complete">Terminer et continuer →</button><div id="nativeToast"></div>');
+    window.eval(playerSource);
+  }
   window.eval(source);
   const settle=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
   const q=s=>document.querySelector(s);
@@ -60,6 +72,37 @@ test('network errors preserve learner choices and offer a final verification ret
     f.fail(false);await f.click('[data-vtc-verify]');assert.equal(f.window.aps62Practice.collectForCompletion().two,'yes');
     f.window.aps62Practice.clearDraft();assert.equal(f.window.sessionStorage.length,0);
   }finally{f.close();}
+});
+
+test('the player submits the verified VTC answers after resume and opens the next lesson only on success', async () => {
+  const answers = {one:'yes', two:'yes'};
+  const saved = {practice_answers:answers, practice_diagnostics:{one:{correct:true}, two:{correct:true}}};
+  const f = fixture({player:true, saved, draft:answers});
+  try {
+    await f.settle();
+    assert.equal(f.q('[data-vtc-review]').hidden, false);
+    assert.ok(f.q('[data-vtc-summary]').textContent.includes(`« ${f.q('#nativeActionButton').textContent} »`));
+
+    f.fail(true);
+    await f.click('#nativeActionButton');
+    assert.deepEqual(f.calls.filter(call => call.url === '/complete').at(-1).body.practice_answers, answers);
+    assert.deepEqual(JSON.parse(f.window.sessionStorage.getItem(f.key)), answers);
+    assert.equal(f.window.location.hash, '');
+
+    f.fail(false);
+    await f.click('#nativeActionButton');
+    assert.equal(f.window.location.hash, '#next-lesson');
+    assert.equal(f.window.sessionStorage.getItem(f.key), null);
+  } finally { f.close(); }
+});
+
+test('an unverified VTC journey cannot post completion from the player', async () => {
+  const f = fixture({player:true});
+  try {
+    await f.click('#nativeActionButton');
+    assert.equal(f.calls.some(call => call.url === '/complete'), false);
+    assert.match(f.q('#nativeToast').textContent, /consultez le bilan/);
+  } finally { f.close(); }
 });
 
 test('resume trusts only matching server-marked answers; adaptive review prioritizes weak concepts',async()=>{
