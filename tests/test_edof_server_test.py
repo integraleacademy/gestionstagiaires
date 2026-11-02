@@ -110,26 +110,52 @@ def test_workspace_choice_recognizes_existing_establishment_and_keeps_unknowns_p
 
 def test_establishment_confirmation_requires_one_enabled_button_on_the_chooser():
     page = Mock()
+    signals = {}
     page.url = f"https://{browser.EDOF_HOST}/espace-prive/html/#/select-sirets"
     confirm = page.get_by_role.return_value.filter.return_value
     confirm.count.return_value = 1
     confirm.is_enabled.return_value = False
-    assert browser.select_establishment(page, "selected") == "selected"
+    assert browser.select_establishment(page, "selected", signals) == "selected"
     confirm.is_enabled.return_value = True
     confirm.count.return_value = 2
-    assert browser.select_establishment(page, "selected") == "selected"
+    assert browser.select_establishment(page, "selected", signals) == "selected"
     confirm.count.return_value = 1
     page.url = browser.LIST_URL
-    assert browser.select_establishment(page, "selected") == "selected"
+    assert browser.select_establishment(page, "selected", signals) == "selected"
     confirm.click.assert_not_called()
     page.url = f"https://{browser.EDOF_HOST}/espace-prive/html/#/select-sirets"
-    assert browser.select_establishment(page, "selected") == "confirmed"
-    assert browser.select_establishment(page, "confirmed") == "confirmed"
+    assert browser.select_establishment(page, "selected", signals) == "confirmed"
+    assert browser.select_establishment(page, "confirmed", signals) == "confirmed"
+    assert signals == {"chooser_action": "confirm"}
     confirm.click.assert_called_once()
     assert not browser.CONFIRM_ESTABLISHMENT.fullmatch("Valider le service fait")
     assert not browser.CONFIRM_ESTABLISHMENT.fullmatch("Accepter les conditions")
     assert browser.standard_choice_labels(["Valider mon choix", "Valider mon choix", "Exemple 123456",
                                           "Personne Privée", "À mon espace"]) == ["valider mon choix", "a mon espace"]
+
+
+def test_establishment_dropdown_uses_standard_keyboard_action_and_respects_an_overlay():
+    page = Mock()
+    page.url = f"https://{browser.EDOF_HOST}/espace-prive/html/#/select-sirets"
+    locator = page.locator.return_value
+    locator.all.return_value = []
+    locator.count.return_value = 0
+    locator.and_.return_value.count.return_value = 0
+    page.get_by_role.return_value.or_.return_value.filter.return_value.count.return_value = 0
+    page.get_by_text.return_value.filter.return_value.count.return_value = 0
+    dropdown = locator.or_.return_value
+    dropdown.count.return_value = 1
+    dropdown.is_enabled.return_value = True
+    dropdown.get_attribute.return_value = "false"
+    dropdown.evaluate.return_value = "dialog"
+    signals = {}
+    assert browser.select_establishment(page, "waiting", signals) == "waiting"
+    dropdown.press.assert_not_called()
+    dropdown.click.assert_not_called()
+    dropdown.evaluate.return_value = "control"
+    assert browser.select_establishment(page, "waiting", signals) == "keyboard"
+    dropdown.press.assert_called_once_with("ArrowDown", timeout=3000)
+    assert signals == {"chooser_surface": "control", "chooser_action": "open_keyboard"}
 
 
 def test_blocked_request_diagnostics_do_not_disclose_paths_ids_queries_or_body_values():
