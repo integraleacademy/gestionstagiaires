@@ -268,6 +268,28 @@ def restored_workspace(page, signals):
             and page.locator('mat-select[role="combobox"]:visible').count() == 1)
 
 
+def stalled_before_login(diag):
+    return (diag.get("location") in {"edof_initialisation", "edof_folder_list", "edof_login_redirect"}
+            and diag.get("edof_screen") in {"empty", "loading", "other", "session_expired"}
+            and diag.get("error_banner_visible") is False and diag.get("password_form_visible") is False
+            and not any(diag.get(key) for key in ("workspace_status", "workspace_denied", "login_post_status",
+                                                  "callback_status", "edof_token_status", "folder_list_status",
+                                                  "blocked_edof_posts", "blocked_efp_posts", "blocked_other_posts")))
+
+
+def can_restart_saved_login(code, page, diagnostics, checkpoint):
+    if code == "saved_session_unavailable":
+        return True
+    if code != "authentication_unconfirmed" or not stalled_before_login(diagnostics()):
+        return False
+    # The list URL alone does not establish a session. Before signing in
+    # normally, check again for a challenge or an account-related dialog.
+    checkpoint()
+    dialogs = page.locator('dialog[open]:visible,[role=dialog]:visible,'
+                           '[role=alertdialog]:visible,[aria-modal=true]:visible').all_inner_texts()
+    return all(dialog_kind(text) == "cookies" for text in dialogs)
+
+
 def inactive_saved_view(page, signals):
     if location_category(page.url) not in {"edof_initialisation", "edof_folder_list", "edof_login_redirect"}:
         return False
@@ -939,7 +961,7 @@ def run_browser(spec):
             try:
                 reused = open_workspace_or_login(page, context, saved, signals, checkpoint)
             except StopRun as exc:
-                if exc.code != "saved_session_unavailable" or not saved:
+                if not saved or not can_restart_saved_login(exc.code, page, diagnostics, checkpoint):
                     raise
                 context.close()
                 saved = None
