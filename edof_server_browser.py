@@ -270,6 +270,18 @@ def restored_workspace(page, signals):
             and page.locator('mat-select[role="combobox"]:visible').count() == 1)
 
 
+def inactive_saved_view(page, signals):
+    if location_category(page.url) not in {"edof_initialisation", "edof_folder_list", "edof_login_redirect"}:
+        return False
+    if signals.get("workspace_status") or signals.get("workspace_denied"):
+        return False
+    body = " ".join(page.locator("body").all_inner_texts())
+    if workspace_screen(body) not in {"empty", "loading", "session_expired", "other"} or classify_text(body):
+        return False
+    return not page.locator('[aria-modal=true]:visible,[role=alertdialog]:visible,[role=dialog]:visible,'
+                            'iframe[title*="captcha" i]:visible,input:visible').count()
+
+
 def open_workspace_or_login(page, context, saved, signals, checkpoint):
     # A restored browser enters the actual workspace. The explicit login route
     # is for signing in and may leave an already authenticated browser on a blank shell.
@@ -278,14 +290,11 @@ def open_workspace_or_login(page, context, saved, signals, checkpoint):
         if saved and entry == LOGIN_URL:
             # Only an inert first-party shell can take this recovery path. Keep
             # EFP's existing sign-in and device cookies for its normal SSO flow.
-            if location_category(page.url) not in {"edof_initialisation", "edof_folder_list", "edof_login_redirect"}:
-                raise StopRun("authentication_unconfirmed")
-            body = " ".join(page.locator("body").all_inner_texts())
-            if workspace_screen(body) not in {"empty", "loading", "session_expired"}:
+            if not inactive_saved_view(page, signals):
                 raise StopRun("authentication_unconfirmed")
             context.clear_cookies(domain=re.compile(r"^\.?(?:of\.)?moncompteformation\.gouv\.fr$"))
         page.goto(entry, wait_until="domcontentloaded", timeout=45000)
-        deadline = time.monotonic() + 30
+        deadline = time.monotonic() + (18 if saved else 30)
         while time.monotonic() < deadline:
             checkpoint()
             if urlsplit(page.url).hostname == EFP_HOST and page.locator('input[name="username"]:visible').count():
@@ -293,6 +302,10 @@ def open_workspace_or_login(page, context, saved, signals, checkpoint):
             if saved and restored_workspace(page, signals):
                 return True
             page.wait_for_timeout(500)
+    if saved and inactive_saved_view(page, signals):
+        # No password or code has been sent in this run. The caller can open a
+        # clean browser and use the regular login flow exactly once.
+        raise StopRun("saved_session_unavailable")
     raise StopRun("authentication_unconfirmed")
 
 
@@ -729,6 +742,8 @@ def run_browser(spec):
             signals["edof_token_status"] = response.status
         if response.request.method != "GET" or parsed.hostname != EDOF_HOST or not parsed.path.startswith(WORKSPACE_API_PREFIX):
             return
+        if response.status == 403:
+            signals["workspace_denied"] = True
         if 200 <= response.status < 300:
             signals["workspace_status"] = response.status
         if not parsed.path.startswith(API_PREFIX):
@@ -770,13 +785,16 @@ def run_browser(spec):
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
-        try:
-            context = browser.new_context(locale="fr-FR", accept_downloads=False, service_workers="block", storage_state=saved)
+        def browser_page(state):
+            context = browser.new_context(locale="fr-FR", accept_downloads=False, service_workers="block", storage_state=state)
             context.route("**/*", route_request)
             page = context.new_page()
             page.set_default_timeout(12000)
             page.on("response", observe)
+            return context, page
 
+        try:
+            context, page = browser_page(saved)
             def diagnostics():
                 try:
                     signals["invalid_form_fields"] = page.locator('input:invalid:visible').count()
@@ -855,7 +873,17 @@ def run_browser(spec):
                     return workspace_screen(text)
 
             stage = "login_page"
-            reused = open_workspace_or_login(page, context, saved, signals, checkpoint)
+            try:
+                reused = open_workspace_or_login(page, context, saved, signals, checkpoint)
+            except StopRun as exc:
+                if exc.code != "saved_session_unavailable" or not saved:
+                    raise
+                context.close()
+                saved = None
+                signals.clear()
+                signals.update(blocked_efp_posts=0, blocked_edof_posts=0, blocked_other_posts=0)
+                context, page = browser_page(None)
+                open_workspace_or_login(page, context, None, signals, checkpoint)
             if spec["mode"] == "access":
                 checkpoint()
                 return {"code": "login_reachable", "stage": stage, "fresh_session": True}
