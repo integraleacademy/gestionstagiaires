@@ -210,9 +210,12 @@ def execute_job(store, job_id, spec, lock_fd):
 
 
 def last_read_stalled_at_login(jobs):
-    if not jobs:
-        return False
-    last = jobs[0]
+    # A failed lookup after a successful fresh login has not saved a new
+    # browser, so it must not hide the preceding failed cookie restore.
+    last = next((job for job in jobs if not (
+        job.get("code") in {"timeout", "search_unconfirmed"} and job.get("stage") in {"search", "dossier"}
+        and job.get("fresh_session") is True and job.get("gmail_code_used") is True and not job.get("session_saved")
+    )), {})
     diag = last.get("diagnostics") or {}
     return (last.get("finished") is True and last.get("mode") == "read"
             and last.get("stage") == "login_page" and last.get("code") == "authentication_unconfirmed"

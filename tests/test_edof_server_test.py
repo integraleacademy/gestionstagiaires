@@ -150,6 +150,9 @@ def test_new_read_uses_normal_signin_only_after_an_unconfirmed_workspace():
     last = {"finished": True, "mode": "read", "stage": "login_page", "code": "authentication_unconfirmed",
             "gmail_code_used": False, "diagnostics": diag}
     assert server.last_read_stalled_at_login([last])
+    lookup_timeout = {"stage": "search", "code": "timeout", "fresh_session": True, "gmail_code_used": True}
+    assert server.last_read_stalled_at_login([lookup_timeout, last])
+    assert not server.last_read_stalled_at_login([{"code": "read_success", "session_saved": True}, last])
     assert not server.last_read_stalled_at_login([])
     for changed in ({"code": "human_verification"}, {"stage": "authentication"}, {"gmail_code_used": True},
                     {"diagnostics": dict(diag, workspace_denied=True)}, {"diagnostics": dict(diag, edof_screen="terms")},
@@ -253,6 +256,21 @@ def test_name_search_submits_only_the_control_attached_to_the_named_field():
     browser.submit_name_search(page, "Exemple", "Camille", lists, signals, TimeoutError)
     button.click.assert_not_called()
     field.press.assert_called_once()
+
+
+def test_visible_name_tab_waits_for_focus_before_activation():
+    page, tab, signals = Mock(), Mock(), {}
+    page.locator.return_value.count.return_value = 0
+    tab.evaluate_all.side_effect = ["", "", "Space"]
+    browser.activate_name_tab(page, tab, signals)
+    assert [call.args[0] for call in page.keyboard.press.call_args_list] == ["Tab", "Tab", "Space"]
+    tab.click.assert_not_called()
+    assert signals["name_activation"] == "keyboard"
+    page.keyboard.press.reset_mock()
+    page.locator.return_value.count.side_effect = [0, 1]
+    with pytest.raises(browser.StopRun, match="workspace_dialog_required"):
+        browser.activate_name_tab(page, tab, signals)
+    page.keyboard.press.assert_not_called()
 
 
 def test_paired_form_fills_both_names_and_submits_their_search_button():
