@@ -79,6 +79,8 @@ DIALOG_CLOSE = re.compile(r"^(?:Close|Fermer(?: (?:la|cette|le|ce|l[’'])\s*(?:
 DIALOG_ACK = re.compile(r"^(?:J[’']ai compris|Compris|Plus tard|Non merci|Passer la visite)$", re.I)
 # Material includes a decorative icon before the visible refusal wording.
 COOKIE_DECLINE = re.compile(r"^(?!.*\b(?:accepter|autoriser|ne pas)\b.*\brefuser\b)(?:.*\s)?(?:tout refuser(?: et (?:fermer|continuer))?|refuser tout|refuser tous les cookies|continuer sans accepter)[.!]?\s*$", re.I | re.S)
+NAME_TAB = re.compile(r"\bpar\s+nom\s+du\s+stagiaire\b", re.I)
+NAME_FIELD = re.compile(r"\bnom\s+(?:du\s+|de\s+)?stagiaire\b|\bpar\s+nom\b", re.I)
 
 
 def decline_cookies_control(root):
@@ -257,6 +259,52 @@ def confirmed_dashboard(url, signals):
             and signals.get("chooser_action") == "confirm" and signals.get("workspace_status") == 200)
 
 
+def open_folder_view(page, url, arrived, timeout_error):
+    """A hash navigation may already have delivered the requested view when it times out."""
+    if page.url == url and arrived():
+        return
+    try:
+        page.goto(url, wait_until="commit", timeout=18000)
+    except timeout_error:
+        if page.url != url or not arrived():
+            raise
+
+
+def submit_name_search(page, surname, lists, signals, timeout_error):
+    inputs = page.locator("input:visible")
+    name_field = page.get_by_placeholder(NAME_FIELD).or_(page.get_by_label(NAME_FIELD)).and_(inputs)
+    search = name_field
+    if name_field.count() != 1:
+        signals["search_step"] = "name_mode"
+        tab = page.get_by_text(NAME_TAB).filter(visible=True)
+        try:
+            tab.click(no_wait_after=True, timeout=8000)
+        except timeout_error:
+            if name_field.count() != 1:
+                raise
+        if name_field.count() != 1:
+            search = page.get_by_placeholder(re.compile(r"rechercher un dossier de formation", re.I)).and_(inputs)
+    signals["search_step"] = "input"
+    lists.clear()
+    search.fill(surname, timeout=8000)
+    signals["search_step"] = "submit"
+    # The visible blue search arrow shares a small container with the field.
+    # If it is not a unique, identifiable search control, use the field's Enter action.
+    for depth in (1, 2, 3):
+        group = search.locator("xpath=" + "/".join([".."] * depth))
+        buttons = group.get_by_role("button").filter(visible=True)
+        if group.locator("input:visible").count() != 1 or buttons.count() != 1:
+            continue
+        label = buttons.evaluate("e => [e.getAttribute('aria-label'),e.title,e.innerText].filter(Boolean).join(' ')")
+        if (re.fullmatch(r"(?:rechercher|lancer la recherche|valider la recherche|search|arrow[_ ](?:forward|right(?:_alt)?))", label.strip(), re.I)
+                or (not label.strip() and buttons.get_attribute("type") == "submit")):
+            buttons.click(no_wait_after=True, timeout=5000)
+            break
+    else:
+        search.press("Enter", no_wait_after=True, timeout=5000)
+    signals["search_step"] = "results"
+
+
 def permitted_request(url, method, *, edof_identity=False, frame_url=""):
     """Block business mutations even if the frontend initiates one itself."""
     parsed = urlsplit(url)
@@ -398,6 +446,13 @@ def diagnostic_summary(location, password_visible, error_visible, signals):
     if private_page(location):
         fragment = urlsplit(location).fragment.partition("?")[0]
         result["private_route"] = safe_edof_route(f"https://{EDOF_HOST}" + fragment)
+        if signals.get("search_step") in {"opening_list", "name_mode", "input", "submit", "results"}:
+            result["search_step"] = signals["search_step"]
+        for key in ("name_tab_visible", "name_field_visible", "folder_field_visible"):
+            if isinstance(signals.get(key), bool):
+                result[key] = signals[key]
+        if signals.get("timeout_cause") in {"covered", "hidden", "disabled", "navigation", "locator", "other"}:
+            result["timeout_cause"] = signals["timeout_cause"]
         if isinstance(signals.get("expected_establishment_visible"), bool):
             result["expected_establishment_visible"] = signals["expected_establishment_visible"]
         if signals.get("establishment_step") in ESTABLISHMENT_STEPS:
@@ -670,6 +725,11 @@ def run_browser(spec):
                         body = page.locator("body").inner_text(timeout=2000)
                         signals["expected_establishment_visible"] = bool(SIRET_TEXT.search(body))
                         signals["edof_screen"] = workspace_screen(body)
+                        if location_category(page.url) == "edof_folder_list":
+                            inputs = page.locator("input:visible")
+                            signals["name_tab_visible"] = page.get_by_text(NAME_TAB).filter(visible=True).count() == 1
+                            signals["name_field_visible"] = page.get_by_placeholder(NAME_FIELD).or_(page.get_by_label(NAME_FIELD)).and_(inputs).count() == 1
+                            signals["folder_field_visible"] = page.get_by_placeholder(re.compile(r"rechercher un dossier de formation", re.I)).and_(inputs).count() == 1
                         if location_category(page.url) == "edof_select_siret":
                             signals["chooser_controls"] = [kind for kind, selector in CHOOSER_CONTROLS.items()
                                                           if page.locator(selector).count()]
@@ -820,28 +880,39 @@ def run_browser(spec):
                         try:
                             establishment_step = select_establishment(page, establishment_step, signals)
                         except BrowserTimeout:
-                            # Continue can remove the control before Playwright
-                            # finishes waiting for it. Never submit it twice.
-                            if signals.get("chooser_action") != "confirm":
+                            action = signals.get("chooser_action")
+                            if action == "confirm":
+                                establishment_step = "confirmed"
+                                if confirmed_dashboard(page.url, signals):
+                                    break
+                            elif action in {"open_click", "select_text"}:
+                                # A dispatched click may time out after Material replaces
+                                # the trigger with the option list or selected value.
+                                widget = page.locator('mat-select[role="combobox"]:visible')
+                                if widget.count() != 1:
+                                    raise
+                                if widget.get_attribute("aria-expanded") == "true":
+                                    establishment_step = "opened"
+                                elif SIRET_TEXT.search(" ".join(widget.all_inner_texts())):
+                                    establishment_step = "selected"
+                                else:
+                                    raise
+                            else:
                                 raise
-                            establishment_step = "confirmed"
-                            if confirmed_dashboard(page.url, signals):
-                                break
                 page.wait_for_timeout(300)
             else:
                 raise StopRun("workspace_dialog_required" if signals.get("dialog_kind") in {"empty", "loading"} else "organism_selection_required")
 
             if not spec.get("folder_id"):
                 stage = "search"
-                page.goto(LIST_URL, wait_until="commit", timeout=30000)
-                page.get_by_text(re.compile(r"^Par nom d(?:u|e) stagiaire$", re.I)).click(no_wait_after=True)
-                search = page.get_by_placeholder(
-                    re.compile(r"rechercher un dossier de formation|nom (?:du |de )?stagiaire", re.I)
-                ).and_(page.locator("input:visible"))
-                search.wait_for(state="visible")
-                search.fill(spec["last_name"])
-                lists.clear()
-                search.press("Enter", no_wait_after=True)
+                signals["search_step"] = "opening_list"
+                open_folder_view(page, LIST_URL, lambda: signals.get("folder_list_status") == 200, BrowserTimeout)
+                try:
+                    submit_name_search(page, spec["last_name"], lists, signals, BrowserTimeout)
+                except BrowserTimeout:
+                    if signals.get("search_step") != "submit" or not any(row["filtered"] for row in lists):
+                        raise
+                    signals["search_step"] = "results"
                 deadline = time.monotonic() + 15
                 result = None
                 while time.monotonic() < deadline:
@@ -867,7 +938,7 @@ def run_browser(spec):
 
             stage = "dossier"
             folder_id = spec["selected_id"]
-            page.goto(DETAIL_PREFIX + folder_id, wait_until="commit", timeout=30000)
+            open_folder_view(page, DETAIL_PREFIX + folder_id, lambda: folder_id in details, BrowserTimeout)
             deadline = time.monotonic() + 20
             while folder_id not in details and time.monotonic() < deadline:
                 checkpoint()
@@ -889,7 +960,13 @@ def run_browser(spec):
             if vault and exc.code in {"credentials_rejected", "account_unavailable", "otp_rejected", "verification_code", "sign_in_error"}:
                 vault.delete("browser")
             return {"code": exc.code, "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "blocked_writes": blocked, "diagnostics": diagnostics()}
-        except BrowserTimeout:
+        except BrowserTimeout as exc:
+            # Keep only a fixed cause. Playwright messages can contain private values.
+            reason = str(exc).lower()
+            signals["timeout_cause"] = next((cause for needle, cause in (
+                ("intercepts pointer events", "covered"), ("not visible", "hidden"),
+                ("not enabled", "disabled"), ("navigation", "navigation"), ("locator", "locator")
+            ) if needle in reason), "other")
             try:
                 checkpoint(False)
             except StopRun as exc:
