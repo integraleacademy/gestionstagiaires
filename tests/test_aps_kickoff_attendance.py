@@ -15,11 +15,11 @@ class ApsKickoffAttendanceTests(unittest.TestCase):
             "sessions": [
                 {
                     "id": "S-APS",
-                    "name": "TFP APS septembre 2026",
+                    "name": "TFP APS novembre 2026",
                     "training_type": "APS",
-                    "date_start": "2026-09-07",
-                    "date_end": "2026-10-09",
-                    "aps_in_person_start": "2026-09-18",
+                    "date_start": "2026-11-03",
+                    "date_end": "2026-12-08",
+                    "aps_in_person_start": "2026-11-17",
                     "trainees": [
                         {"id": "T2", "last_name": "zola", "first_name": "zoé", "documents": []},
                         {"id": "T1", "last_name": "bernard", "first_name": "alice", "documents": []},
@@ -42,7 +42,7 @@ class ApsKickoffAttendanceTests(unittest.TestCase):
             ]
         }
 
-    def test_print_sheet_uses_first_in_person_day_and_active_trainees(self):
+    def test_print_sheet_uses_training_start_and_active_trainees(self):
         with patch.object(gestion_app, "load_data", return_value=self.data):
             response = self.client.get(
                 "/admin/sessions/S-APS/trainees/aps-kickoff-attendance/print?autoprint=1"
@@ -52,7 +52,8 @@ class ApsKickoffAttendanceTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn("Feuille de présence", html)
         self.assertIn("Réunion de démarrage et présentation du e-learning", html)
-        self.assertIn("18/09/2026", html)
+        self.assertEqual(html.count("03/11/2026"), 2)
+        self.assertNotIn("17/11/2026", html)
         self.assertIn("Intégrale Sécurité Formations", html)
         self.assertIn("54 chemin du Carreou", html)
         self.assertIn("83480 PUGET-SUR-ARGENS", html)
@@ -68,6 +69,16 @@ class ApsKickoffAttendanceTests(unittest.TestCase):
         self.assertNotIn("ANNULÉ", html)
         self.assertLess(html.index("BERNARD"), html.index("ZOLA"))
         self.assertIn("window.print()", html)
+
+    def test_print_sheet_uses_remote_start_when_session_start_is_missing(self):
+        training = self.data["sessions"][0]
+        training.pop("date_start")
+        training["aps_remote_start"] = "2026-11-03"
+        with patch.object(gestion_app, "load_data", return_value=self.data):
+            response = self.client.get("/admin/sessions/S-APS/trainees/aps-kickoff-attendance/print")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_data(as_text=True).count("03/11/2026"), 2)
 
     def test_print_sheet_is_not_available_for_a3p(self):
         with patch.object(gestion_app, "load_data", return_value=self.data):

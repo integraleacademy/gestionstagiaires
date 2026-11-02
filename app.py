@@ -24928,13 +24928,11 @@ def admin_aps_kickoff_attendance_print(session_id: str):
         "id": session_item.get("id"),
         "name": _session_get(session_item, "name", ""),
         "training_type": _session_get(session_item, "training_type", ""),
-        "date_start": _session_get(session_item, "date_start", ""),
-        "date_end": _session_get(session_item, "date_end", ""),
-        "aps_in_person_start": _session_get(session_item, "aps_in_person_start", ""),
+        "kickoff_date": (
+            _session_get(session_item, "date_start", "")
+            or _session_get(session_item, "aps_remote_start", "")
+        ),
     }
-    session_view["kickoff_date"] = (
-        session_view["aps_in_person_start"] or session_view["date_start"]
-    )
 
     trainees = [
         {
