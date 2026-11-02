@@ -134,6 +134,16 @@ def test_establishment_confirmation_requires_one_enabled_button_on_the_chooser()
                                           "Personne Privée", "À mon espace"]) == ["valider mon choix", "a mon espace"]
 
 
+def test_completed_siret_confirmation_requires_the_official_dashboard_and_workspace_response():
+    url = f"https://{browser.EDOF_HOST}/espace-prive/html/#/tableau-de-bord"
+    signals = {"chooser_action": "confirm", "workspace_status": 200}
+    assert browser.confirmed_dashboard(url, signals)
+    assert not browser.confirmed_dashboard(url.replace("tableau-de-bord", "select-sirets"), signals)
+    assert not browser.confirmed_dashboard(url.replace(browser.EDOF_HOST, "example.invalid"), signals)
+    assert not browser.confirmed_dashboard(url, {"chooser_action": "confirm"})
+    assert not browser.confirmed_dashboard(url, {"chooser_action": "confirm", "workspace_status": 403})
+
+
 def test_establishment_dropdown_uses_standard_keyboard_action_and_respects_an_overlay():
     page = Mock()
     page.url = f"https://{browser.EDOF_HOST}/espace-prive/html/#/select-sirets"
