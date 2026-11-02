@@ -24,7 +24,7 @@ PHOTO_WIDTH, PHOTO_HEIGHT = 35 * mm, 45 * mm
 
 # A fixed right-hand window area on the A4 insert. The address stays inside
 # this zone with generous inset margins; the letter starts below it.
-SDIS_WINDOW = (105 * mm, 50 * mm, 100 * mm, 45 * mm)  # left, top, width, height
+SDIS_WINDOW = (105 * mm, 40 * mm, 100 * mm, 45 * mm)  # left, top, width, height
 
 
 def watermark(pdf, width, height, text="APERÇU - NON VALABLE"):
