@@ -234,11 +234,9 @@ def test_hash_navigation_timeout_needs_the_requested_url_and_its_successful_resp
 
 def test_name_search_submits_only_the_control_attached_to_the_named_field():
     page = Mock()
-    surname, given = Mock(), Mock()
-    surname.count.return_value = given.count.return_value = 0
-    page.locator.side_effect = {browser.TRAINEE_SURNAME: surname, browser.TRAINEE_FIRST_NAME: given, "input:visible": Mock()}.__getitem__
-    field = surname.or_.return_value.or_.return_value.and_.return_value
-    field.count.return_value = 1
+    boxes = page.locator.return_value
+    boxes.evaluate_all.return_value = ["surname"]
+    field = boxes.nth.return_value
     group = field.locator.return_value
     group.locator.return_value.count.return_value = 1
     button = group.get_by_role.return_value.filter.return_value
@@ -275,21 +273,28 @@ def test_visible_name_tab_waits_for_focus_before_activation():
 
 def test_paired_form_fills_both_names_and_submits_their_search_button():
     page, surname, given = Mock(), Mock(), Mock()
-    page.locator.side_effect = {browser.TRAINEE_SURNAME: surname, browser.TRAINEE_FIRST_NAME: given, "input:visible": Mock()}.__getitem__
-    field = surname.or_.return_value.or_.return_value.and_.return_value
-    field.count.return_value = surname.count.return_value = given.count.return_value = 1
+    boxes = page.locator.return_value
+    boxes.evaluate_all.return_value = ["other", "surname", "given"]
+    boxes.nth.side_effect = [Mock(), surname, given].__getitem__
     group = given.locator.return_value
-    group.locator.side_effect = {"input:visible": Mock(), browser.TRAINEE_SURNAME: surname}.__getitem__
     group.locator("input:visible").count.return_value = 2
+    group.locator("input:visible").and_.return_value.count.return_value = 1
     button = group.get_by_role.return_value.filter.return_value
     button.count.return_value = 1
     button.evaluate.return_value = "Rechercher"
     signals = {}
     browser.submit_name_search(page, "Le Test", "André", [], signals, TimeoutError)
-    field.fill.assert_called_once_with("Le Test", timeout=8000)
+    surname.fill.assert_called_once_with("Le Test", timeout=8000)
     given.fill.assert_called_once_with("André", timeout=8000)
     button.click.assert_called_once()
     assert signals["paired_name_search"] is True
+
+
+def test_ambiguous_name_fields_do_not_receive_a_search_value():
+    page, signals = Mock(), {}
+    page.locator.return_value.evaluate_all.return_value = ["surname", "surname", "given"]
+    assert browser.name_search_inputs(page, signals) == (None, None)
+    page.locator.return_value.nth.assert_not_called()
 
 
 @pytest.mark.parametrize("query,paired,found", [

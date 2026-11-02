@@ -80,9 +80,7 @@ DIALOG_ACK = re.compile(r"^(?:J[’']ai compris|Compris|Plus tard|Non merci|Pass
 # Material includes a decorative icon before the visible refusal wording.
 COOKIE_DECLINE = re.compile(r"^(?!.*\b(?:accepter|autoriser|ne pas)\b.*\brefuser\b)(?:.*\s)?(?:tout refuser(?: et (?:fermer|continuer))?|refuser tout|refuser tous les cookies|continuer sans accepter)[.!]?\s*$", re.I | re.S)
 NAME_TAB = re.compile(r"\bpar\s+nom\s+du\s+stagiaire\b", re.I)
-NAME_FIELD = re.compile(r"\bnom\s+(?:du\s+|de\s+)?stagiaire\b|\bpar\s+nom\b", re.I)
-TRAINEE_SURNAME = 'input[name="searchByRegistrationFolderTraineeName"]:visible'
-TRAINEE_FIRST_NAME = 'input[name="searchByRegistrationFolderTraineeFirstName"]:visible'
+SEARCH_TEXTBOXES = 'input:not([type]):visible,input[type=text]:visible,input[type=search]:visible'
 
 
 def decline_cookies_control(root):
@@ -361,37 +359,55 @@ def activate_name_tab(page, tab, signals):
     tab.click(no_wait_after=True, timeout=12000)
 
 
+def name_search_inputs(page, signals):
+    boxes = page.locator(SEARCH_TEXTBOXES)
+    kinds = boxes.evaluate_all(r"""nodes => nodes.map(e => {
+        const labels = e.labels ? Array.from(e.labels, l => l.textContent) : [];
+        const labelled = (e.getAttribute('aria-labelledby') || '').split(/\s+/)
+            .map(id => e.ownerDocument.getElementById(id)?.textContent);
+        for (const value of [e.name, e.getAttribute('formcontrolname'), e.id,
+                             e.getAttribute('aria-label'), e.placeholder, ...labels, ...labelled]) {
+            const words = (value || '').replace(/([a-z])([A-Z])/g, '$1 $2').normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]+/g, ' ').trim();
+            const last = /\b(nom|surname|lastname|(?:last|family|trainee|attendee) name)\b/.test(words);
+            const first = /\b(prenom|firstname|(?:first|given) name)\b/.test(words);
+            if (last !== first) return last ? 'surname' : 'given';
+        }
+        return 'other';
+    })""")
+    signals["name_form_fields"] = kinds[:10]
+    if kinds.count("surname") != 1 or kinds.count("given") > 1:
+        return None, None
+    if "given" not in kinds and len(kinds) != 1:
+        return None, None
+    return boxes.nth(kinds.index("surname")), boxes.nth(kinds.index("given")) if "given" in kinds else None
+
+
 def submit_name_search(page, surname, first_name, lists, signals, timeout_error):
-    inputs = page.locator("input:visible")
-    named_surname = page.locator(TRAINEE_SURNAME)
-    given = page.locator(TRAINEE_FIRST_NAME)
-    name_field = named_surname.or_(page.get_by_placeholder(NAME_FIELD)).or_(page.get_by_label(NAME_FIELD)).and_(inputs)
-    search = name_field
-    if name_field.count() != 1:
+    search, given = name_search_inputs(page, signals)
+    if search is None:
         signals["search_step"] = "name_mode"
         tab = page.get_by_text(NAME_TAB).filter(visible=True)
         try:
             activate_name_tab(page, tab, signals)
         except timeout_error:
-            if name_field.count() != 1:
+            search, given = name_search_inputs(page, signals)
+            if search is None:
                 raise
         signals["search_step"] = "waiting_inputs"
-        try:
-            name_field.wait_for(state="visible", timeout=8000)
-        except timeout_error:
-            if signals.get("name_activation") == "keyboard" and tab.count() == 1:
-                # A visible custom tab may be tabbable without handling Enter.
-                # Use its normal click only while its name fields are still absent.
-                tab.click(no_wait_after=True, timeout=8000)
-            search = page.get_by_placeholder(re.compile(r"rechercher un dossier de formation", re.I)).and_(inputs)
-            if name_field.count() == 1:
-                search = name_field
+        deadline = time.monotonic() + 15
+        while search is None and time.monotonic() < deadline:
+            search, given = name_search_inputs(page, signals)
+            if search is None:
+                page.wait_for_timeout(250)
+        if search is None:
+            raise StopRun("search_unconfirmed")
     signals["search_step"] = "input"
-    search.wait_for(state="visible", timeout=8000)
-    paired = named_surname.count() == 1 or given.count() == 1
+    paired = given is not None
     signals["paired_name_search"] = paired
     lists.clear()
     search.fill(surname, timeout=8000)
+    surname_field = search
     if paired:
         given.fill(first_name, timeout=8000)
         search = given
@@ -402,7 +418,7 @@ def submit_name_search(page, surname, first_name, lists, signals, timeout_error)
         group = search.locator("xpath=" + "/".join([".."] * depth))
         buttons = group.get_by_role("button").filter(visible=True)
         count = group.locator("input:visible").count()
-        both_fields = paired and count == 2 and group.locator(TRAINEE_SURNAME).count() == 1
+        both_fields = paired and count == 2 and group.locator("input:visible").and_(surname_field).count() == 1
         if buttons.count() != 1 or (count != 1 and not both_fields):
             continue
         label = buttons.evaluate("e => [e.getAttribute('aria-label'),e.title,e.innerText].filter(Boolean).join(' ')")
@@ -562,6 +578,8 @@ def diagnostic_summary(location, password_visible, error_visible, signals):
             result["search_step"] = signals["search_step"]
         if signals.get("name_activation") in {"keyboard", "pointer"}:
             result["name_activation"] = signals["name_activation"]
+        if isinstance(signals.get("name_form_fields"), list):
+            result["name_form_fields"] = [k for k in signals["name_form_fields"][:10] if k in {"surname", "given", "other"}]
         for key in ("name_tab_visible", "name_field_visible", "folder_field_visible"):
             if isinstance(signals.get(key), bool):
                 result[key] = signals[key]
@@ -849,7 +867,8 @@ def run_browser(spec):
                         if location_category(page.url) == "edof_folder_list":
                             inputs = page.locator("input:visible")
                             signals["name_tab_visible"] = page.get_by_text(NAME_TAB).filter(visible=True).count() == 1
-                            signals["name_field_visible"] = page.locator(TRAINEE_SURNAME).or_(page.get_by_placeholder(NAME_FIELD)).or_(page.get_by_label(NAME_FIELD)).and_(inputs).count() == 1
+                            name_field, _ = name_search_inputs(page, signals)
+                            signals["name_field_visible"] = name_field is not None
                             signals["folder_field_visible"] = page.get_by_placeholder(re.compile(r"rechercher un dossier de formation", re.I)).and_(inputs).count() == 1
                         if location_category(page.url) == "edof_select_siret":
                             signals["chooser_controls"] = [kind for kind, selector in CHOOSER_CONTROLS.items()
