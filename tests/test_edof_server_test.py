@@ -147,15 +147,21 @@ def test_establishment_dropdown_uses_standard_keyboard_action_and_respects_an_ov
     dropdown.count.return_value = 1
     dropdown.is_enabled.return_value = True
     dropdown.get_attribute.return_value = "false"
-    dropdown.evaluate.return_value = "dialog"
+    dropdown.evaluate.side_effect = [
+        {"surface": "dialog", "depth": 0}, [["span private-name"], ["div modal secret"]],
+        {"surface": "control", "depth": 0}, {"surface": "widget", "depth": 2},
+    ]
     signals = {}
     assert browser.select_establishment(page, "waiting", signals) == "waiting"
     dropdown.press.assert_not_called()
     dropdown.click.assert_not_called()
-    dropdown.evaluate.return_value = "control"
     assert browser.select_establishment(page, "waiting", signals) == "keyboard"
     dropdown.press.assert_called_once_with("ArrowDown", timeout=3000)
-    assert signals == {"chooser_surface": "control", "chooser_action": "open_keyboard"}
+    assert signals["chooser_surface"] == "control" and signals["chooser_action"] == "open_keyboard"
+    assert signals["cover_shape"] == ["div-modal"] and signals["control_shape"] == ["span"]
+    assert browser.select_establishment(page, "waiting", signals) == "opened"
+    dropdown.locator.assert_called_once_with("xpath=../..")
+    dropdown.locator.return_value.click.assert_called_once_with(timeout=3000)
 
 
 def test_blocked_request_diagnostics_do_not_disclose_paths_ids_queries_or_body_values():
