@@ -58,6 +58,54 @@ CHOOSER_WORDS = frozenset("""
     accepter cookies consentement continuer fermer ma sans refuser tout tous les parametres
 """.split())
 
+# A custom select can expose a clipped ARIA control next to the visible trigger.
+# Identify a real, unobstructed pointer target within the same widget. An
+# unrelated overlay, iframe or dialog never becomes a target.
+CHOOSER_HIT_TEST = r"""e => {
+    const popup = 'dialog,[role="dialog"],[role="alertdialog"],[aria-modal="true"],.modal,.modal-backdrop,iframe';
+    const center = n => {
+        const r = n.getBoundingClientRect();
+        return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    };
+    const hit = center(e);
+    const info = {surface: 'covered', depth: 0};
+    if (hit?.closest(popup)) return {...info, surface:'dialog'};
+    if (hit && e.contains(hit)) return {...info, surface:'control'};
+    if (hit?.closest('label')?.control === e) return {...info, surface:'label'};
+
+    for (let n=e.parentElement, depth=1; n && depth<=7; n=n.parentElement, depth++) {
+        if (n.matches('body,html,form,main,section,fieldset,' + popup)) break;
+        const type = n.localName + ' ' + Array.from(n.classList).join(' ');
+        if (!/select|dropdown|combobox|listbox|list-box|menu-deroulant/i.test(type)) continue;
+        const controls = n.querySelectorAll('[role=combobox],select');
+        if (controls.length > 1 || n.querySelector('input[type=password],input[type=checkbox],button[type=submit]')) continue;
+        const r = n.getBoundingClientRect(), target = center(n);
+        if (r.width < 22 || r.height < 14 || r.height > 130 || !target || !n.contains(target) || target.closest(popup)) continue;
+        const button = target.closest('button,a,input');
+        if (button && button !== e && !button.matches('[aria-haspopup=listbox],[aria-expanded],button[type=button]:empty')) continue;
+        return {surface:'widget', depth};
+    }
+    if (!hit) return {...info, surface:'offscreen'};
+    if (e.parentElement !== document.body && e.parentElement?.contains(hit)) return {...info, surface:'parent'};
+    return info;
+}"""
+
+
+def chooser_element_shape(components):
+    """Retain generic markup vocabulary only; no text, IDs or arbitrary class names."""
+    words = set("""div span label ul li select input i svg path button p body html section main form
+        mat mdc cdk ng p ui fr dsfr edof angular react select select2 choices dropdown combobox
+        control container trigger value wrapper field hidden accessible visually sr only placeholder
+        overlay modal backdrop dialog banner cookie cookies consent fixed sticky header footer
+        icon arrow panel options content box group list disabled block screen blockui
+        tarteaucitron didomi onetrust preference preferences drupal""".split())
+    shape = []
+    for component in components[:6]:
+        parts = re.findall(r"[a-z]+", re.sub(r"([a-z])([A-Z])", r"\1-\2", component).lower())
+        known = list(dict.fromkeys(word for word in parts if word in words))
+        shape.append("-".join(known[:8]) or "*")
+    return shape
+
 
 def standard_choice_labels(labels):
     """Only known navigation words may appear in the private test diagnostics."""
@@ -234,8 +282,11 @@ def diagnostic_summary(location, password_visible, error_visible, signals):
             result["chooser_actions"] = standard_choice_labels(signals["chooser_actions"])
         if signals.get("chooser_action") in CHOOSER_ACTIONS:
             result["chooser_action"] = signals["chooser_action"]
-        if signals.get("chooser_surface") in {"control", "label", "parent", "dialog", "covered", "offscreen"}:
+        if signals.get("chooser_surface") in {"control", "label", "parent", "widget", "dialog", "covered", "offscreen"}:
             result["chooser_surface"] = signals["chooser_surface"]
+        for key in ("control_shape", "cover_shape"):
+            if isinstance(signals.get(key), list):
+                result[key] = chooser_element_shape(signals[key])
     for key in ("login_post_status", "callback_status", "edof_token_status", "workspace_status", "folder_list_status", "folder_detail_status", "blocked_efp_posts", "blocked_edof_posts", "blocked_other_posts", "invalid_form_fields"):
         value = signals.get(key)
         if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 9999:
@@ -307,16 +358,26 @@ def select_establishment(page, step, signals):
             page.get_by_role("button", name=re.compile(r"^(?:Choisir|S[ée]lectionner|Choisissez|S[ée]lectionnez)\b.*(?:SIRET|[ée]tablissement|organisme)", re.I)))
         if dropdown.count() == 1 and dropdown.is_enabled() and dropdown.get_attribute("aria-expanded") != "true":
             dropdown.scroll_into_view_if_needed(timeout=3000)
-            surface = dropdown.evaluate("""e => {
-                const r = e.getBoundingClientRect();
-                const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
-                if (!hit) return 'offscreen';
-                if (e.contains(hit)) return 'control';
-                if (hit.closest('label')?.control === e) return 'label';
-                if (hit.closest('dialog,[role="dialog"],[aria-modal="true"]')) return 'dialog';
-                return e.parentElement && e.parentElement !== document.body && e.parentElement.contains(hit) ? 'parent' : 'covered';
-            }""")
+            target = dropdown.evaluate(CHOOSER_HIT_TEST)
+            surface = target["surface"]
             signals["chooser_surface"] = surface
+            if surface == "widget":
+                signals["chooser_action"] = "open_click"
+                widget = dropdown.locator("xpath=" + "/".join([".."] * target["depth"]))
+                widget.click(timeout=3000)
+                return "opened"
+            if surface in {"covered", "dialog"} and "cover_shape" not in signals:
+                structure = dropdown.evaluate("""e => {
+                    function chain(node) {
+                        const tags = [];
+                        for (; node && tags.length < 6; node=node.parentElement)
+                            tags.push(node.localName + ' ' + Array.from(node.classList).join(' '));
+                        return tags;
+                    }
+                    const r=e.getBoundingClientRect();
+                    return [chain(e), chain(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))];
+                }""")
+                signals["control_shape"], signals["cover_shape"] = map(chooser_element_shape, structure)
             if surface not in {"control", "label", "parent"}:
                 return step
             if step == "waiting":
