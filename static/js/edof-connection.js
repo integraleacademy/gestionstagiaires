@@ -3,9 +3,35 @@
   const lamp = document.getElementById("edof-lamp");
   const note = document.getElementById("edof-connection-note");
   if (!box || !lamp || !note) return;
+  const manualSync = box.querySelector("[data-manual-sync]");
+  const feedback = box.querySelector("[data-sync-feedback]");
+  let submitting = false;
+  let submittedAt = 0;
+  let awaitingList = Boolean(manualSync?.querySelector("button").disabled);
+  manualSync?.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (submitting) return;
+    submitting = true;
+    manualSync.querySelector("button").disabled = true;
+    submittedAt = Date.now();
+    try {
+      const response = await fetch(manualSync.action, {method:"POST", body:new FormData(manualSync),
+        headers:{Accept:"application/json"}, cache:"no-store"});
+      const result = await response.json();
+      feedback.textContent = result.message;
+      awaitingList = response.ok;
+      if (!response.ok) manualSync.querySelector("button").disabled = false;
+    } catch {
+      feedback.textContent = "La demande n’a pas pu être confirmée. Vérifiez la connexion et réessayez.";
+      manualSync.querySelector("button").disabled = false;
+    } finally {
+      submitting = false;
+    }
+  });
   async function refresh() {
     if (!document.hidden) {
       try {
+        const started = Date.now();
         const response = await fetch(box.dataset.statusUrl, {cache: "no-store"});
         if (!response.ok) throw Error();
         const state = await response.json();
@@ -21,9 +47,21 @@
         }
         full.hidden = !Number(full.dataset.stamp) || Number(full.dataset.stamp) >= Number(latest.dataset.stamp);
         const activate = document.getElementById("edof-activate");
-        activate.hidden = state.manual && (state.active || state.pending || state.paused);
-        activate.querySelector("button").textContent = state.manual ? "Réessayer la lecture" : "Activer la connexion pour 1 heure";
-        document.getElementById("edof-resume").hidden = !state.paused;
+        if (manualSync && !submitting && started > submittedAt && state.manual_sync) {
+          manualSync.querySelector("button").disabled = state.manual_sync.busy;
+          feedback.textContent = state.manual_sync.message;
+          if (state.manual_sync.busy) awaitingList = true;
+          else if (awaitingList && state.manual_sync.updated && box.dataset.detail === "0") {
+            if (!document.activeElement.matches("input, textarea, select")) {
+              location.reload();
+              return;
+            }
+          } else awaitingList = false;
+        }
+        if (activate) activate.hidden = state.manual && (state.active || state.pending || state.paused);
+        if (activate) activate.querySelector("button").textContent = state.manual ? "Réessayer la lecture" : "Activer la connexion pour 1 heure";
+        const resume = document.getElementById("edof-resume");
+        if (resume) resume.hidden = !state.paused;
         lamp.classList.toggle("on", state.active);
         lamp.textContent = state.active ? "Connexion EDOF active" : "Connexion EDOF inactive";
         note.textContent = [state.schedule, state.pending ? (state.phase || "Lecture en cours…") : state.error,
@@ -75,8 +113,10 @@
       }
       if (prior === focused) focusTarget = field;
     }
-    const oldDetails = section.querySelectorAll("details");
-    next.querySelectorAll("details").forEach((el, i) => { if (oldDetails[i]?.open) el.open = true; });
+    for (const old of section.querySelectorAll("details[data-fold]")) {
+      const replacement = next.querySelector('details[data-fold="' + old.dataset.fold + '"]');
+      if (replacement) replacement.open = old.open;
+    }
     section.replaceWith(next);
     section = next;
     if (focusTarget) {
@@ -122,6 +162,12 @@
       if (button) button.disabled = false;
     }
   }
+  document.addEventListener("invalid", event => {
+    if (!event.target.closest(".edof-proposal-form")) return;
+    for (let el = event.target.parentElement; el; el = el.parentElement) {
+      if (el.tagName === "DETAILS") el.open = true;
+    }
+  }, true);
   document.addEventListener("input", markEdited);
   document.addEventListener("change", markEdited);
   document.addEventListener("submit", event => {

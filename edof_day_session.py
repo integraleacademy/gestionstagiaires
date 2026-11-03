@@ -114,7 +114,7 @@ class DayWorker:
             try:
                 started = datetime.now(PARIS).timestamp()
                 command = {key:spec.get(key) for key in ("provider", "verified_at", "recover_return")}
-                command.update(owner=self.owner, manual_until=spec.get("manual_until", 0))
+                command.update(owner=self.owner, manual_until=spec.get("manual_until", 0), full_sync=bool(spec.get("full_sync_until")))
                 self.process.stdin.write(json.dumps(command) + "\n")
                 self.process.stdin.flush()
                 now = datetime.now(PARIS)
@@ -152,7 +152,7 @@ def serve():
                 owner = command["owner"]
                 result = run_browser({"mode": "directory", "owner": owner, "day_session": True,
                                       "provider":command.get("provider"), "manual_until": manual_until, "recover_return": command.get("recover_return", False),
-                                      "verified_at": command.get("verified_at")}, live=live)
+                                      "verified_at": command.get("verified_at"), "full_sync": command.get("full_sync", False)}, live=live)
                 live["return_pending"] = awaiting_edof_return(result)
                 if result["code"] in {"directory_ready", "requests_ready"}:
                     live["verified"] = True

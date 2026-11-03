@@ -98,6 +98,9 @@ def displayed(source, row):
             values["priceTotal"] = source["total"]
         elif any(v not in ("", None) for v in amounts):
             values["priceTotal"] = number_string(sum(Decimal(v or "0") for v in amounts))
+    for key in ("priceTotal","indicativeDuration","weeklyDuration"):
+        if re.fullmatch(r"0+(?:[.,]0+)?", scalar(values.get(key))):
+            values[key] = ""
     return values
 
 

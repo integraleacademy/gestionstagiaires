@@ -1559,11 +1559,11 @@ def run_browser(spec, *, live=None):
                         progress("pending_verified")
                         pending_result = {"code":"requests_ready","stage":"directory","candidate_count":len(pending["rows"]),
                                           "fresh_session":not reused,"session_saved":True,"gmail_code_used":gmail_code_used}
-                        if not bulk_due:
+                        if not bulk_due and not spec.get("full_sync"):
                             return pending_result
                     # Give the optional full scan a bounded share of the polling interval.
                     # Never replace a complete saved directory with a partial result.
-                    if pending_result or prior_pending:
+                    if (pending_result or prior_pending) and not spec.get("full_sync"):
                         bulk_deadline = time.monotonic() + 35
                     vault.put("edof-full-attempt:"+spec["owner"], time.time(), ttl=900)
                 if private_witness is None:
