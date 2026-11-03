@@ -288,7 +288,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         return redirect(url_for("integrale_edof.index", section=section if section in SECTIONS else "state", **kwargs), code=303)
 
     def snapshot(owner):
-        saved = vault().get(directory.record_key(owner)) if store.connector_key else None
+        saved = vault().get(directory.record_key(owner), keep=True) if store.connector_key else None
         # Previously synchronized dossiers also contain French display dates.
         pending = vault().get(directory.pending_key(owner)) if store.connector_key else None
         accepted = vault().get(directory.accepted_key(owner)) if store.connector_key else None
@@ -591,7 +591,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             raise ValueError("Le système CPF a changé. Actualisez la page avant de relancer.")
         if not store.connector_key or not gmail_status()["connected"]:
             raise ValueError("Connectez EFP et Gmail avant de lancer le rattrapage.")
-        store.queue_full_sync(owner, catchup_revision=selected["revision"])
+        store.queue_sync(owner, "all", catchup_revision=selected["revision"])
         return back("automations", tab="due", _anchor="rattrapage")
 
     @bp.post("/automatisations/entrees-effectives")

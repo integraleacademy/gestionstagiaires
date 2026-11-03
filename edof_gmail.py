@@ -75,7 +75,7 @@ class Vault:
         with self.connect() as db:
             db.execute("INSERT OR REPLACE INTO private_records VALUES (?, ?)", (name, sealed))
 
-    def get(self, name, *, consume=False):
+    def get(self, name, *, consume=False, keep=False):
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT sealed FROM private_records WHERE name=?", (name,)).fetchone()
@@ -89,6 +89,13 @@ class Vault:
                 with self.connect() as db:
                     db.execute("DELETE FROM private_records WHERE name=? AND sealed=?", (name, row[0]))
                 return None
+            if keep and payload["expires"] and not consume:
+                # Promote an existing directory snapshot without reviving expired data
+                # or overwriting a newer sync (or an explicit disconnect).
+                payload["expires"] = None
+                sealed = self.cipher.encrypt(json.dumps(payload).encode())
+                with self.connect() as db:
+                    db.execute("UPDATE private_records SET sealed=? WHERE name=? AND sealed=?", (sealed, name, row[0]))
             return payload["value"]
         except (InvalidToken, ValueError, KeyError, TypeError):
             return None

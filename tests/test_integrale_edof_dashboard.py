@@ -482,21 +482,21 @@ def test_full_sync_button_queues_once_survives_restart_and_preserves_provider(si
     for _ in range(2):
         assert site.client.post(path, data={"csrf":site.csrf}, headers=headers).status_code == 202
     store = server.ServerTestStore(site.store.directory)
-    assert store.next_full_sync()["owner"] == site.owner
-    job = store.reserve(site.owner,"directory",day_session=True,full_sync=True)
-    assert store.next_full_sync() is None and store.full_sync_status(site.owner)["busy"]
+    assert store.next_manual_sync()["owner"] == site.owner
+    job = store.reserve(site.owner,"directory",day_session=True,sync_scope="all")
+    assert store.next_manual_sync() is None and store.manual_sync_status(site.owner,"all")["busy"]
     with open(store.directory / "edof_server_test.lock", "a") as active:
         server.fcntl.flock(active, server.fcntl.LOCK_EX)
         store.recover_directory_reads()
-        assert store.next_full_sync() is None
+        assert store.next_manual_sync() is None
     store.recover_directory_reads()
-    assert store.next_full_sync()["owner"] == site.owner
-    retry = store.reserve(site.owner,"directory",day_session=True,full_sync=True)
+    assert store.next_manual_sync()["owner"] == site.owner
+    retry = store.reserve(site.owner,"directory",day_session=True,sync_scope="all")
     store.finish(retry, {"code":"requests_ready"})
-    assert "liste générale n’a pas pu" in store.full_sync_status(site.owner)["message"]
-    assert store.next_full_sync() is None
+    assert "liste générale n’a pas pu" in store.manual_sync_status(site.owner,"all")["message"]
+    assert store.next_manual_sync() is None
     assert site.gate.state()["provider"] == "wedof" and not store.directory_enabled(site.owner)
-    assert store.full_sync_status("someone-else") is None
+    assert store.manual_sync_status("someone-else","all") is None
     with site.client.session_transaction() as session:
         session["admin_role"] = "viewer"
     assert site.client.post(path,data={"csrf":site.csrf},headers=headers).status_code == 403
@@ -505,8 +505,37 @@ def test_full_sync_button_queues_once_survives_restart_and_preserves_provider(si
 def test_course_header_and_folded_sections_show_session_first(site):
     html = site.client.get("/admin/edof-test?section=requests&tab=request&folder=100002").text
     assert "<h1>Formation test</h1>" in html and "<strong>Anne Exemple</strong>" in html
-    assert "Synchroniser les dossiers" in html and 'data-manual-sync' in html
+    assert "Synchro manuelle nouveaux dossiers" in html and "Synchro manuelle tous les dossiers" in html
+    assert 'data-manual-sync="new"' in html and 'data-manual-sync="all"' in html
     assert re.findall(r'data-fold="(\w+)" open',html) == ["session"]
     session_fields = html.split('data-fold="session"',1)[1].split("</details>",1)[0]
     assert 'name="sessionStartDate" value="2026-02-02"' in session_fields
     assert 'name="priceTotal"' in session_fields and 'name="trainingGoal"' in html
+
+def test_new_and_full_manual_requests_are_independent_and_coalesced(site,monkeypatch):
+    monkeypatch.setattr(server,"configuration",lambda:{"credentials_configured":True})
+    site.vault.put("gmail", {"fixture":True})
+    def post(scope):
+        return site.client.post("/admin/edof-test/synchroniser", data={"scope":scope,"csrf":site.csrf},
+                                headers={"Accept":"application/json"})
+    assert post("unknown").status_code == 400
+    for scope in ["new","all","new","all"]:
+        assert post(scope).status_code == 202
+    store = server.ServerTestStore(site.store.directory)
+    assert store.next_manual_sync()["scope"] == "new"
+    job = store.reserve(site.owner,"directory",day_session=True,sync_scope="new")
+    assert store.next_manual_sync()["scope"] == "all"
+    store.finish(job,{"code":"requests_ready"})
+    badge = site.client.get("/admin/edof-test/connection-status").json
+    assert not badge["new_sync"]["busy"] and "Nouveaux dossiers" in badge["new_sync"]["message"]
+    assert badge["manual_sync"]["busy"]
+    assert not store.directory_enabled(site.owner)
+
+def test_legacy_full_request_survives_queue_upgrade(site):
+    from contextlib import closing
+    import time
+    with closing(site.store.connect()) as db, db:
+        db.execute("CREATE TABLE manual_directory (owner TEXT PRIMARY KEY, requested REAL, job_id TEXT)")
+        db.execute("INSERT INTO manual_directory VALUES(?,?,NULL)",(site.owner,time.time()))
+    assert site.store.next_manual_sync()["scope"] == "all"
+    assert site.store.manual_sync_status(site.owner,"all")["busy"]

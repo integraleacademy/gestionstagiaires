@@ -1150,7 +1150,6 @@ def run_browser(spec, *, live=None):
             return {"code": "private_storage_unavailable"}
 
     pending_result = None
-    bulk_deadline = None
 
     def progress(phase):
         if vault and spec.get("day_session"):
@@ -1264,7 +1263,7 @@ def run_browser(spec, *, live=None):
         except Exception:
             invalid_response = True
 
-    from edof_day_session import POLL_SECONDS, SHARED_JOB_MODES
+    from edof_day_session import SHARED_JOB_MODES
     if live is not None and spec["mode"] != "directory" and not (spec.get("shared_job") and spec["mode"] in SHARED_JOB_MODES):
         raise ValueError("Opération non réservée sur la session de veille.")
     with (nullcontext(live["pw"]) if live is not None else sync_playwright()) as pw:
@@ -1275,6 +1274,7 @@ def run_browser(spec, *, live=None):
             else:
                 context = browser.new_context(locale="fr-FR", accept_downloads=spec["mode"] == "directory", service_workers="block", storage_state=state)
                 if live is not None:
+                    live.pop("pending_witness", None)
                     # With no active read policy, the idle page cannot send requests.
                     context.route("**/*", lambda route: route.abort())
                 page = context.new_page()
@@ -1374,14 +1374,32 @@ def run_browser(spec, *, live=None):
             def checkpoint(allow_otp=True):
                 if signals.get("throttled"):
                     raise signals["throttled"]
-                if bulk_deadline is not None and time.monotonic() >= bulk_deadline:
-                    raise StopRun("bulk_deferred")
                 try:
                     return check_document(allow_otp)
                 except Exception as exc:
                     if navigation_in_progress(exc) and urlsplit(page.url).hostname in {EDOF_HOST, EFP_HOST}:
                         return "loading"
                     raise
+
+            def save_pending(snapshot, witness, reused):
+                vault.put(directory.pending_key(spec["owner"]), snapshot, ttl=directory.TTL)
+                vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
+                if live is not None and witness is not None:
+                    live["pending_witness"] = witness
+                progress("pending_verified")
+                return {"code":"requests_ready","stage":"directory","candidate_count":len(snapshot["rows"]),
+                        "fresh_session":not reused,"session_saved":True,"gmail_code_used":gmail_code_used}
+
+            # A verified open tab can read just the filtered endpoint. Its prior request
+            # stays in this browser's memory; only a fresh successful response counts.
+            if warm and spec.get("day_session") and not spec.get("full_sync") and vault:
+                witness = live.pop("pending_witness", None)
+                if witness is not None and private_page(page.url):
+                    stage = "directory"
+                    progress("reading_pending_tab")
+                    pending = read_pending_with_private_session(context, witness, checkpoint)
+                    if pending is not None:
+                        return save_pending(pending, witness, True)
 
             stage = "login_page"
             progress("opening_workspace")
@@ -1562,11 +1580,6 @@ def run_browser(spec, *, live=None):
                 stage = "directory"
                 progress("reading_directory")
                 if spec.get("day_session") and vault:
-                    prior_pending = vault.get(directory.pending_key(spec["owner"]))
-                    full = vault.get(directory.record_key(spec["owner"])) or {}
-                    last_attempt = vault.get("edof-full-attempt:"+spec["owner"]) or 0
-                    bulk_due = bool(prior_pending and time.time()-prior_pending["checked"] < POLL_SECONDS+120 and
-                                    time.time()-max(full.get("checked", 0), last_attempt) >= 900)
                     if private_witness is not None:
                         # Preserve only official secure cookies after a private
                         # response from the configured establishment.
@@ -1579,18 +1592,11 @@ def run_browser(spec, *, live=None):
                         except BrowserTimeout:
                             pending = None
                     if pending is not None:
-                        vault.put(directory.pending_key(spec["owner"]), pending, ttl=directory.TTL)
-                        vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
-                        progress("pending_verified")
-                        pending_result = {"code":"requests_ready","stage":"directory","candidate_count":len(pending["rows"]),
-                                          "fresh_session":not reused,"session_saved":True,"gmail_code_used":gmail_code_used}
-                        if not bulk_due and not spec.get("full_sync"):
+                        pending_result = save_pending(pending, private_witness, reused)
+                    if not spec.get("full_sync"):
+                        if pending_result is not None:
                             return pending_result
-                    # Give the optional full scan a bounded share of the polling interval.
-                    # Never replace a complete saved directory with a partial result.
-                    if (pending_result or prior_pending) and not spec.get("full_sync"):
-                        bulk_deadline = time.monotonic() + 35
-                    vault.put("edof-full-attempt:"+spec["owner"], time.time(), ttl=900)
+                        raise StopRun("pending_unavailable")
                 if private_witness is None:
                     open_folder_view(page, LIST_URL, lambda: private_witness is not None, BrowserTimeout)
                     deadline = time.monotonic() + 10
@@ -1622,7 +1628,7 @@ def run_browser(spec, *, live=None):
                         pending_result["diagnostics"] = {"directory":detail}
                     raise StopRun("directory_incomplete") from None
                 progress("saving_directory")
-                vault.put(directory.record_key(spec["owner"]), snapshot, ttl=directory.TTL)
+                vault.put(directory.record_key(spec["owner"]), snapshot)
                 vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                 return {"code": "directory_ready", "stage": stage, "candidate_count": len(snapshot["rows"]),
                         "diagnostics": {"directory": signals["directory"]},
@@ -1709,10 +1715,8 @@ def run_browser(spec, *, live=None):
         except (StopRun, directory.PortalThrottled) as exc:
             if vault and isinstance(exc, directory.PortalThrottled):
                 vault.put("edof-throttled", True, ttl=exc.delay)
-            if exc.code in {"directory_unavailable","directory_incomplete","bulk_deferred"} and pending_result:
+            if exc.code in {"directory_unavailable","directory_incomplete"} and pending_result:
                 return pending_result
-            if exc.code == "bulk_deferred":
-                return {"code":"directory_incomplete","stage":stage,"fresh_session":not reused,"gmail_code_used":gmail_code_used}
             if vault and exc.code in {"credentials_rejected", "account_unavailable", "otp_rejected", "verification_code", "sign_in_error"}:
                 vault.delete("browser")
             return {"code": exc.code, "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "blocked_writes": blocked, "diagnostics": diagnostics()}

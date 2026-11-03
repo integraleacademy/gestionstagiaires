@@ -3,8 +3,11 @@
   const lamp = document.getElementById("edof-lamp");
   const note = document.getElementById("edof-connection-note");
   if (!box || !lamp || !note) return;
-  const manualSync = box.querySelector("[data-manual-sync]");
-  const feedback = box.querySelector("[data-sync-feedback]");
+  const syncControls = Array.from(box.querySelectorAll("[data-manual-sync]"), form => ({
+    form, button:form.querySelector("button"), feedback:form.querySelector("[data-sync-feedback]"),
+    submitting:false, submittedAt:0, awaiting:form.querySelector("button").disabled,
+    statusKey:form.dataset.manualSync === "new" ? "new_sync" : "manual_sync"
+  }));
   const catchupPanel = document.getElementById("rattrapage");
   const catchupButton = catchupPanel?.querySelector("[data-catchup-button]");
   let leavingForCatchup = false;
@@ -27,30 +30,29 @@
     leavingForCatchup = true;
     showCatchup("scan", "Demande de rattrapage en cours…");
   });
-  let submitting = false;
-  let submittedAt = 0;
-  let awaitingList = Boolean(manualSync?.querySelector("button").disabled);
-  manualSync?.addEventListener("submit", async event => {
-    event.preventDefault();
-    if (submitting) return;
-    submitting = true;
-    busy(manualSync.querySelector("button"), true);
-    feedback.textContent = "Demande de synchronisation en cours…";
-    submittedAt = Date.now();
-    try {
-      const response = await fetch(manualSync.action, {method:"POST", body:new FormData(manualSync),
-        headers:{Accept:"application/json"}, cache:"no-store"});
-      const result = await response.json();
-      feedback.textContent = result.message;
-      awaitingList = response.ok;
-      if (!response.ok) busy(manualSync.querySelector("button"), false);
-    } catch {
-      feedback.textContent = "La demande n’a pas pu être confirmée. Vérifiez la connexion et réessayez.";
-      busy(manualSync.querySelector("button"), false);
-    } finally {
-      submitting = false;
-    }
-  });
+  for (const control of syncControls) {
+    control.form.addEventListener("submit", async event => {
+      event.preventDefault();
+      if (control.submitting || control.button.disabled) return;
+      control.submitting = true;
+      busy(control.button, true);
+      control.feedback.textContent = "Demande de synchronisation en cours…";
+      try {
+        const response = await fetch(control.form.action, {method:"POST", body:new FormData(control.form),
+          headers:{Accept:"application/json"}, cache:"no-store"});
+        const result = await response.json();
+        control.feedback.textContent = result.message;
+        control.awaiting = response.ok;
+        if (!response.ok) busy(control.button, false);
+      } catch {
+        control.feedback.textContent = "La demande n’a pas pu être confirmée. Vérifiez la connexion et réessayez.";
+        busy(control.button, false);
+      } finally {
+        control.submittedAt = Date.now();
+        control.submitting = false;
+      }
+    });
+  }
   function preserveSelection() {
     return document.activeElement.matches("input, textarea, select") ||
       document.querySelector('input[form="edof-effective-entries"]:checked');
@@ -80,16 +82,17 @@
         }
         full.hidden = !Number(full.dataset.stamp) || Number(full.dataset.stamp) >= Number(latest.dataset.stamp);
         const activate = document.getElementById("edof-activate");
-        if (manualSync && !submitting && started > submittedAt && state.manual_sync) {
-          busy(manualSync.querySelector("button"), state.manual_sync.busy);
-          feedback.textContent = state.manual_sync.message;
-          if (state.manual_sync.busy) awaitingList = true;
-          else if (awaitingList && state.manual_sync.updated && box.dataset.detail === "0") {
-            if (!preserveSelection()) {
-              location.reload();
-              return;
-            }
-          } else awaitingList = false;
+        for (const control of syncControls) {
+          const status = state[control.statusKey];
+          if (control.submitting || started <= control.submittedAt || !status) continue;
+          busy(control.button, status.busy);
+          control.feedback.textContent = status.message;
+          if (control.awaiting && !status.busy && status.updated && box.dataset.detail === "0") {
+            if (preserveSelection()) continue;
+            location.reload();
+            return;
+          }
+          control.awaiting = status.busy;
         }
         if (["scan","send"].includes(priorPhase) && state.catchup?.phase !== priorPhase && !leavingForCatchup
             && !preserveSelection()) {
@@ -113,7 +116,7 @@
         note.textContent = "Le serveur n’a pas pu confirmer la connexion.";
       }
     }
-    const active = awaitingList || ["scan","send"].includes(catchupPanel?.dataset.phase);
+    const active = syncControls.some(control => control.awaiting) || ["scan","send"].includes(catchupPanel?.dataset.phase);
     setTimeout(refresh, active ? 3000 : 15000);
   }
   setTimeout(refresh, 3000);

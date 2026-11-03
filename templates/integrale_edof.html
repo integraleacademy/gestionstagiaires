@@ -5,7 +5,7 @@
   {% endif %}
   {% if detail and detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'] %}<meta http-equiv="refresh" content="10">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-dates-effectives') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-synchros-distinctes') }}">
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
@@ -17,14 +17,19 @@
 {% endmacro %}
 {% macro sync_button() %}
   {% if session.get('admin_role') != 'viewer' %}<div class="edof-sync-control">
-    <form method="post" action="{{ url_for('edof_server_test.sync_now') }}" data-manual-sync>
-      {{ token() }}<input type="hidden" name="section" value="{{ section }}"><input type="hidden" name="tab" value="{{ tab }}">
+    {% for scope, label, running, status in [
+        ('new', 'Synchro manuelle nouveaux dossiers', 'Lecture des nouveaux dossiers…', live.new_sync),
+        ('all', 'Synchro manuelle tous les dossiers', 'Lecture de tous les dossiers…', live.manual_sync)] %}
+    <form method="post" action="{{ url_for('edof_server_test.sync_now') }}" data-manual-sync="{{ scope }}">
+      {{ token() }}<input type="hidden" name="scope" value="{{ scope }}">
+      <input type="hidden" name="section" value="{{ section }}"><input type="hidden" name="tab" value="{{ tab }}">
       {% if detail %}<input type="hidden" name="folder" value="{{ detail.record.folder_id }}">{% endif %}
-      <button class="edof-sync-button" type="submit" aria-busy="{{ 'true' if live.manual_sync and live.manual_sync.busy else 'false' }}" {% if live.manual_sync and live.manual_sync.busy %}disabled{% endif %}>
+      <button class="edof-sync-button" type="submit" aria-busy="{{ 'true' if status and status.busy else 'false' }}" {% if status and status.busy %}disabled{% endif %}>
         <svg class="edof-idle" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 8a8 8 0 0 0-14-2L3 9m0-5v5h5M4 16a8 8 0 0 0 14 2l3-3m0 5v-5h-5"/></svg>
-        {{ activity_label('Synchroniser les dossiers', 'Synchronisation en cours…') }}</button>
+        {{ activity_label(label, running) }}</button>
+      <small data-sync-feedback role="status">{{ status.message if status else '' }}</small>
     </form>
-    <small data-sync-feedback role="status">{{ live.manual_sync.message if live.manual_sync else '' }}</small>
+    {% endfor %}
   </div>{% endif %}
 {% endmacro %}
 {% set active = aligned and selection.provider == 'integrale' %}
@@ -91,7 +96,7 @@
 </div></section>
 <section class="wedof-panel"><div class="wedof-panel-header"><div><span class="wedof-section-label">Connexion</span><h2>Connexion et paramètres techniques</h2></div></div><div class="edof-panel-body">
 <dl><dt>Connexion EFP Connect</dt><dd><strong>{{ efp.label }}</strong>{% if efp.checked_at %} · Vérifiée le {{ efp.checked_at }}{% endif %}</dd>
-<dt>Veille des demandes CPF</dt><dd>Tous les jours de 7 h à 19 h, heure de Paris. La liste est vérifiée environ toutes les cinq minutes. La session est réutilisée. Une seule nouvelle authentification automatique est permise par jour pour ce compte. Si elle expire à nouveau, vous pouvez autoriser un nouveau code.
+<dt>Veille des demandes CPF</dt><dd>Tous les jours de 7 h à 19 h, heure de Paris. Toutes les deux minutes, la veille lit uniquement les nouveaux dossiers « À traiter » en réutilisant la session du serveur. Vous pouvez fermer votre navigateur. Utilisez la synchro de tous les dossiers pour actualiser les autres statuts. Une seule nouvelle authentification automatique est permise par jour pour ce compte. Si elle expire à nouveau, vous pouvez autoriser un nouveau code.
 {% if live.paused %}<form method="post" action="{{ url_for('edof_server_test.resume_day') }}">{{ token() }}{{ btn('Autoriser un nouveau code pour reprendre la veille') }}</form>{% endif %}
 {% if not directory_enabled %}<form method="post" action="{{ url_for('edof_server_test.schedule_directory') }}">{{ token() }}{{ btn('Activer la veille de 7 h à 19 h') }}</form>{% endif %}</dd>
 <dt>Compte Gmail pour les codes EFP</dt><dd>{{ 'Connecté' if gmail.connected else 'À connecter' }}</dd>
@@ -298,5 +303,5 @@
 </div>
 {% endblock %}
 {% block scripts %}
-  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261103-dates-effectives') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261103-synchros-distinctes') }}" defer></script>
 {% endblock %}

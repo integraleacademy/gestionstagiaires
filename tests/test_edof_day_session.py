@@ -114,28 +114,38 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
             raise
         live = {"pw":pw, "browser":browser}
         for size in (0,1):
-            result = runner.run_browser({"mode":"directory", "day_session":True, "owner":"fixture"}, live=live)
+            result = runner.run_browser({"mode":"directory", "day_session":True, "full_sync":True, "owner":"fixture"}, live=live)
             assert result["code"] == "directory_ready", result
             assert result["gmail_code_used"] is False and result["fresh_session"] is False
             assert result["candidate_count"] == size
             folders.append({"id":"100088","attendee":{"firstName":"Test","lastName":"Exemple"},"beginDate":"01/01/2026","currentState":"notProcessed"})
         assert vault.get(directory.record_key("fixture"))["rows"]["100088"]["state"] == "notProcessed"
-        # A slow full scan must not erase the live tab or mask freshly read pending rows.
+        # Age of the last general list never causes a background full scan.
         import time
         full = vault.get(directory.record_key("fixture"))
         full["checked"] = time.time()-1800
         vault.put(directory.record_key("fixture"), full)
-        vault.put("edof-full-attempt:fixture", time.time()-1800)
         snapshot = {"checked":time.time(),"rows":full["rows"]}
         vault.put(directory.pending_key("fixture"), snapshot)
         read_pending = Mock(return_value=snapshot)
         monkeypatch.setattr(runner, "read_pending_with_private_session", read_pending)
-        scan = Mock(side_effect=runner.StopRun("bulk_deferred"))
+        scan = Mock(side_effect=AssertionError("A new-only read attempted the general list"))
         monkeypatch.setattr(runner, "read_recent_directory", scan)
         checked = runner.run_browser({"mode":"directory","day_session":True,"owner":"fixture"}, live=live)
-        scan.assert_called_once()
+        scan.assert_not_called()
         assert checked["code"] == "requests_ready" and not checked["gmail_code_used"]
         assert vault.get(directory.record_key("fixture")) == full
+        with monkeypatch.context() as scoped:
+            scoped.setattr(runner, "open_workspace_or_login", lambda *a: pytest.fail("Warm poll reopened the portal"))
+            assert runner.run_browser({"mode":"directory","day_session":True,"owner":"fixture"},live=live)["code"] == "requests_ready"
+        with monkeypatch.context() as scoped:
+            scoped.setattr(runner, "read_pending_with_private_session", lambda *a: None)
+            scoped.setattr(runner, "read_official_pending", lambda *a: None)
+            failed = runner.run_browser({"mode":"directory","day_session":True,"owner":"fixture"},live=live)
+            assert failed["code"] == "pending_unavailable"
+        scan.assert_not_called()
+        assert vault.get(directory.record_key("fixture")) == full
+        assert vault.get(directory.pending_key("fixture")) == snapshot
         # A dossier job uses the very same tab and EFP session, with only its own
         # write fence. All HTTP in this test stays on synthetic local routes.
         active_page = live["page"][1]
@@ -488,3 +498,13 @@ def test_efp_form_posts_are_single_use_and_allow_the_normal_otp_step(tmp_path,mo
         assert calls==[root+"?step=password",root+"?step=otp"]
         assert Vault(tmp_path,key).get("efp-login-day")["count"]==1
         browser.close()
+
+def test_watch_is_due_at_two_minutes(tmp_path,monkeypatch):
+    start = dt.datetime(2026,11,7,7,tzinfo=PARIS)
+    monkeypatch.setattr("edof_server_test.time.time", lambda: start.timestamp())
+    store = ServerTestStore(tmp_path)
+    store.use_directory("owner",enable=True)
+    job = store.reserve("owner","directory",day_session=True)
+    store.finish(job,{"code":"requests_ready","day_session":True})
+    assert store.day_owners(start + dt.timedelta(seconds=119)) == []
+    assert store.day_owners(start + dt.timedelta(seconds=120)) == ["owner"]

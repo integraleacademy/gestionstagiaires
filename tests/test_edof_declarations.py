@@ -273,10 +273,10 @@ def test_manual_catchup_runs_only_when_active_and_reuses_the_durable_ledger(site
     with site.client.session_transaction() as sess:
         sess["admin_role"]="admin"
     assert site.client.post(url,data=form).status_code == 303
-    first = site.store.next_full_sync()
+    first = site.store.next_manual_sync()
     assert first["catchup"] and site.store.catchup_status(site.owner)["busy"]
     assert site.client.post(url,data=form).status_code == 303
-    assert first["requested"] == site.store.next_full_sync()["requested"]
+    assert first["requested"] == site.store.next_manual_sync()["requested"]
     assert "Relancez" not in site.store.catchup_status(site.owner)["message"]
     monkeypatch.setattr(cpf_provider,"on_test_service",lambda:True)
     monkeypatch.setattr("cpf_provider_bridge.production_request", lambda:{"provider":"integrale"})
@@ -295,7 +295,7 @@ def test_manual_catchup_runs_only_when_active_and_reuses_the_durable_ledger(site
     ledger.hold_folder(site.store.directory,"100003",True)
     ledger.enqueue(site.store.directory,site.owner,1,rows["100005"],ENTRY,"admin")
     old = next(r for r in ledger.records(site.store.directory) if r["folder"]=="100005")
-    job = site.store.reserve(site.owner,"directory",day_session=True,full_sync=True)
+    job = site.store.reserve(site.owner,"directory",day_session=True,sync_scope="all")
     site.store.process_catchups(site.gate.state())
     assert site.store.catchup_status(site.owner)["busy"]
     site.vault.put(edof_directory.record_key(site.owner),{"scope":"all","rows":rows,"checked":time.time()})
@@ -347,11 +347,11 @@ def test_manual_catchup_runs_only_when_active_and_reuses_the_durable_ledger(site
 def test_manual_catchup_rejects_partial_reads_and_provider_switches(site):
     store = site.store
     site.gate.switch("integrale",0,"admin")
-    store.queue_full_sync(site.owner,catchup_revision=1)
-    store.finish(store.reserve(site.owner,"directory",day_session=True,full_sync=True), {"code":"requests_ready"})
+    store.queue_sync(site.owner,"all",catchup_revision=1)
+    store.finish(store.reserve(site.owner,"directory",day_session=True,sync_scope="all"), {"code":"requests_ready"})
     store.process_catchups(site.gate.state())
     assert "liste générale EDOF n’a pas été actualisée" in store.catchup_status(site.owner)["message"]
-    store.queue_full_sync(site.owner,catchup_revision=1)
+    store.queue_sync(site.owner,"all",catchup_revision=1)
     site.gate.switch("wedof",1,"admin")
     store.process_catchups(site.gate.state())
     assert "système de traitement CPF a changé" in store.catchup_status(site.owner)["message"]

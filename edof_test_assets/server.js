@@ -93,7 +93,7 @@ async function runServerTest(spec) {
 
 const directoryStatus = document.getElementById("directory-status");
 const matchesBox = document.getElementById("directory-matches");
-const syncButton = document.getElementById("sync-directory");
+const syncButtons = Array.from(document.querySelectorAll("[data-sync-scope]"));
 let lookupNumber = 0;
 let pendingDirectoryLookup = null;
 let syncingDirectory = false;
@@ -135,12 +135,12 @@ async function lookupDirectory(spec) {
   }
 }
 
-async function watchDirectory(id) {
-  syncingDirectory = true;
-  if (syncButton) syncButton.disabled = true;
+async function watchDirectory(id, scope = "all") {
+  syncingDirectory = scope === "all";
+  syncButtons.forEach(button => { button.disabled = true; });
   const stopAt = Date.now() + 455000;
   try {
-    directoryStatus.textContent = "Synchronisation de la liste EDOF en cours sur le serveur. Vous pouvez continuer vos recherches.";
+    directoryStatus.textContent = scope === "new" ? "Lecture des nouveaux dossiers à traiter en cours…" : "Lecture de tous les dossiers en cours…";
     while (Date.now() < stopAt) {
       await new Promise(resolve => setTimeout(resolve, 2500));
       const url = id ? "/admin/edof-test/server/status" : "/admin/edof-test/connection-status";
@@ -148,10 +148,10 @@ async function watchDirectory(id) {
       if (!response.ok) throw new Error();
       const data = await response.json();
       if (!id) {
-        const sync = data.manual_sync;
+        const sync = scope === "new" ? data.new_sync : data.manual_sync;
         if (!sync || sync.busy) continue;
         directoryStatus.textContent = sync.message;
-        if (pendingDirectoryLookup) await lookupDirectory(pendingDirectoryLookup);
+        if (scope === "all" && sync.updated && pendingDirectoryLookup) await lookupDirectory(pendingDirectoryLookup);
         return;
       }
       const job = data.jobs.find(item => item.id === id);
@@ -167,24 +167,31 @@ async function watchDirectory(id) {
     directoryStatus.textContent = "Rechargez la page pour voir l’état de la synchronisation.";
   } finally {
     syncingDirectory = false;
-    if (syncButton) syncButton.disabled = false;
+    syncButtons.forEach(button => { button.disabled = false; });
   }
 }
 
-syncButton?.addEventListener("click", async () => {
-  syncButton.disabled = true;
-  try {
-    const response = await fetch("/admin/edof-test/synchroniser", {
-      method: "POST", credentials: "same-origin", redirect: "error", headers: {"X-CSRF-Token": serverCsrf, Accept:"application/json"}
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.message || "Synchronisation indisponible.");
-    await watchDirectory();
-  } catch (error) {
-    directoryStatus.textContent = error.message || "Synchronisation indisponible.";
-    syncButton.disabled = false;
-  }
-});
+for (const button of syncButtons) {
+  button.addEventListener("click", async () => {
+    const scope = button.dataset.syncScope;
+    syncButtons.forEach(control => { control.disabled = true; });
+    button.setAttribute("aria-busy", "true");
+    try {
+      const response = await fetch("/admin/edof-test/synchroniser", {
+        method: "POST", credentials: "same-origin", redirect: "error",
+        headers: {"X-CSRF-Token":serverCsrf, Accept:"application/json"}, body:new URLSearchParams({scope})
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Synchronisation indisponible.");
+      await watchDirectory(null, scope);
+    } catch (error) {
+      directoryStatus.textContent = error.message || "Synchronisation indisponible.";
+    } finally {
+      button.removeAttribute("aria-busy");
+      syncButtons.forEach(control => { control.disabled = false; });
+    }
+  });
+}
 
 document.getElementById("access-test").addEventListener("click", () => runServerTest({mode: "access"}));
 document.getElementById("server-read-form").addEventListener("submit", event => {
