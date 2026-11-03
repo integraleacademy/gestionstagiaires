@@ -143,9 +143,17 @@ async function watchDirectory(id) {
     directoryStatus.textContent = "Synchronisation de la liste EDOF en cours sur le serveur. Vous pouvez continuer vos recherches.";
     while (Date.now() < stopAt) {
       await new Promise(resolve => setTimeout(resolve, 2500));
-      const response = await fetch("/admin/edof-test/server/status", {credentials: "same-origin", redirect: "error", cache: "no-store"});
+      const url = id ? "/admin/edof-test/server/status" : "/admin/edof-test/connection-status";
+      const response = await fetch(url, {credentials: "same-origin", redirect: "error", cache: "no-store"});
       if (!response.ok) throw new Error();
       const data = await response.json();
+      if (!id) {
+        const sync = data.manual_sync;
+        if (!sync || sync.busy) continue;
+        directoryStatus.textContent = sync.message;
+        if (pendingDirectoryLookup) await lookupDirectory(pendingDirectoryLookup);
+        return;
+      }
       const job = data.jobs.find(item => item.id === id);
       if (!job || !job.finished) continue;
       void refreshEfpState();
@@ -166,12 +174,12 @@ async function watchDirectory(id) {
 syncButton?.addEventListener("click", async () => {
   syncButton.disabled = true;
   try {
-    const response = await fetch("/admin/edof-test/server/directory/refresh", {
-      method: "POST", credentials: "same-origin", redirect: "error", headers: {"X-CSRF-Token": serverCsrf}
+    const response = await fetch("/admin/edof-test/synchroniser", {
+      method: "POST", credentials: "same-origin", redirect: "error", headers: {"X-CSRF-Token": serverCsrf, Accept:"application/json"}
     });
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Synchronisation indisponible.");
-    await watchDirectory(result.job_id);
+    if (!response.ok) throw new Error(result.message || "Synchronisation indisponible.");
+    await watchDirectory();
   } catch (error) {
     directoryStatus.textContent = error.message || "Synchronisation indisponible.";
     syncButton.disabled = false;

@@ -318,6 +318,8 @@ def test_background_offer_preserves_input_and_focus_in_chromium(site):
         assert page.locator("[name=sessionStartDate]").input_value() == "2026-02-02"
         assert price.is_visible()
         price.fill("1875.25")
+        page.locator(".step-programme > summary").click()
+        price.focus()
         ticket = jobs.next_job(site.store.directory, site.gate.state())
         site.vault.put(jobs.source_key(site.owner,FOLDER),offer.project(official()))
         site.vault.put(jobs.option_key(site.owner),OPTIONS)
@@ -325,5 +327,6 @@ def test_background_offer_preserves_input_and_focus_in_chromium(site):
         page.get_by_text("Conditions chargées.",exact=True).wait_for()
         assert price.input_value() == "1875.25" and price.evaluate("(el) => el === document.activeElement")
         assert page.locator("[name=trainingGoal]").input_value() == "Objectifs du parcours"
+        assert page.locator(".step-programme").evaluate("(e) => e.open")
         assert "proposal_read=" not in page.url
         browser.close()

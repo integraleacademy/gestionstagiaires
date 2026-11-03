@@ -477,3 +477,42 @@ def test_sync_badge_distinguishes_general_list_requests_and_later_login(site):
     with closing(site.store.connect()) as db, db:
         db.execute("UPDATE jobs SET finished=? WHERE id='full'", (stamp+400,))
     assert site.client.get("/admin/edof-test/connection-status").json["sync"]["scope"] == "Liste générale"
+
+
+def test_full_sync_button_queues_once_survives_restart_and_preserves_provider(site, monkeypatch):
+    monkeypatch.setattr(server,"configuration",lambda:{"credentials_configured":True})
+    site.vault.put("gmail", {"fixture":True})
+    path = "/admin/edof-test/synchroniser"
+    headers = {"Accept":"application/json"}
+    assert site.client.post(path, headers=headers).status_code == 403
+    for _ in range(2):
+        assert site.client.post(path, data={"csrf":site.csrf}, headers=headers).status_code == 202
+    store = server.ServerTestStore(site.store.directory)
+    assert store.next_full_sync()["owner"] == site.owner
+    job = store.reserve(site.owner,"directory",day_session=True,full_sync=True)
+    assert store.next_full_sync() is None and store.full_sync_status(site.owner)["busy"]
+    with open(store.directory / "edof_server_test.lock", "a") as active:
+        server.fcntl.flock(active, server.fcntl.LOCK_EX)
+        store.recover_directory_reads()
+        assert store.next_full_sync() is None
+    store.recover_directory_reads()
+    assert store.next_full_sync()["owner"] == site.owner
+    retry = store.reserve(site.owner,"directory",day_session=True,full_sync=True)
+    store.finish(retry, {"code":"requests_ready"})
+    assert "liste générale n’a pas pu" in store.full_sync_status(site.owner)["message"]
+    assert store.next_full_sync() is None
+    assert site.gate.state()["provider"] == "wedof" and not store.directory_enabled(site.owner)
+    assert store.full_sync_status("someone-else") is None
+    with site.client.session_transaction() as session:
+        session["admin_role"] = "viewer"
+    assert site.client.post(path,data={"csrf":site.csrf},headers=headers).status_code == 403
+
+
+def test_course_header_and_folded_sections_show_session_first(site):
+    html = site.client.get("/admin/edof-test?section=requests&tab=request&folder=100002").text
+    assert "<h1>Formation test</h1>" in html and "<strong>Anne Exemple</strong>" in html
+    assert "Synchroniser les dossiers" in html and 'data-manual-sync' in html
+    assert re.findall(r'data-fold="(\w+)" open',html) == ["session"]
+    session_fields = html.split('data-fold="session"',1)[1].split("</details>",1)[0]
+    assert 'name="sessionStartDate" value="2026-02-02"' in session_fields
+    assert 'name="priceTotal"' in session_fields and 'name="trainingGoal"' in html
