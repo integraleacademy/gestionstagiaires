@@ -78,6 +78,14 @@ class EmployerSigningTests(unittest.TestCase):
         self.schedule.assert_called_once()
         self.student_mail.assert_not_called()
 
+    def test_send_uses_contact_saved_with_the_pdf(self):
+        person = dict(first_name="Anne", last_name="Martin", email="anne@example.org", phone="+33612345678")
+        self.trainee["company_convention"]["signer"] = person
+        self.client.post(self.url, data={"version": self.payload["version"], "action": "send"})
+        signer = self.posted["/signature_requests/request1/signers"]["json"]["info"]
+        self.assertEqual(signer["email"], person["email"])
+        self.assertEqual(signer["phone_number"], person["phone"])
+
     def test_existing_signed_contract_keeps_its_signature(self):
         personal = {"status":"done", "signed_pdf_path":"/original.pdf"}
         self.trainee.update(company_convention=None, company_convention_copy={"name":"Entreprise"},
