@@ -302,7 +302,7 @@ def test_program_day_without_immediate_login_or_provider_switch(site, monkeypatc
 
 
 def test_admin_resume_requires_a_paused_open_watch(site, monkeypatch):
-    monkeypatch.setattr(server, "working_hours", lambda:True)
+    monkeypatch.setattr(server, "working_hours", lambda **kwargs:True)
     site.store.use_directory(site.owner, enable=True)
     url = "/admin/edof-test/server/directory/resume"
     assert site.client.post(url, data={"csrf":site.csrf}).status_code == 409

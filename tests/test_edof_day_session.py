@@ -294,3 +294,56 @@ def test_sorted_portal_query_stops_at_cutoff_and_keeps_january_first():
     result = reader.read_recent_directory(ctx,source,"all",lambda:None,{})
     assert set(result["rows"]) == {"100000","100001"} and ctx.request.get.call_count == 2
     assert result["rows"]["100001"]["ft_pending"]
+
+
+def test_expired_verified_session_renews_after_restart_without_reusing_proof(tmp_path, monkeypatch):
+    now = dt.datetime.now(PARIS).replace(hour=12, minute=15, second=0, microsecond=0)
+    monkeypatch.setattr("edof_server_test.time.time", lambda: now.timestamp())
+    store = ServerTestStore(tmp_path)
+    key = store.connector_key = connector_key("test" * 12)
+    vault = Vault(tmp_path, key)
+    store.use_directory("A", enable=True)
+    store.use_directory("B", enable=True)
+    # Older deployments stored the count but no timestamp. Both owners are paused.
+    vault.put("efp-login-day", {"date":now.date().isoformat(), "count":3})
+    start = now.replace(hour=9, minute=21)
+    with store.connect() as db:
+        for index, (owner, moment, code) in enumerate((
+            ("A",start,"requests_ready"), ("A",start+dt.timedelta(minutes=3),"day_login_used"),
+            ("B",start+dt.timedelta(minutes=3),"day_login_used")
+        )):
+            db.execute("INSERT INTO jobs VALUES(?,?,?,?,?,?)", (str(index),owner,moment.timestamp()-10,
+                       moment.timestamp(),"directory",'{"code":"'+code+'"}'))
+    assert store.day_owners(now, daily=True) == ["A"]
+    proof = store.verified_watch_at("A", now)
+    assert allow_login(vault, automatic=True, owner="A", now=now, daily=True, verified_at=proof)
+    assert not allow_login(Vault(tmp_path,key), automatic=True, owner="A", now=now+dt.timedelta(hours=1),
+                           daily=True, verified_at=proof)
+    assert store.day_owners(now+dt.timedelta(minutes=15), daily=True) == []
+    # A fresh successful read allows a later expiry to recover, subject to the cooldown.
+    fresh = now + dt.timedelta(minutes=2)
+    with store.connect() as db:
+        db.execute("INSERT INTO jobs VALUES('new','A',?,?,'directory',?)",
+                   (fresh.timestamp()-5,fresh.timestamp(),'{"code":"directory_ready"}'))
+        db.execute("INSERT INTO jobs VALUES('blocked','A',?,?,'directory',?)",
+                   (fresh.timestamp()+60,fresh.timestamp()+61,'{"code":"day_login_used"}'))
+    assert not store.day_owners(now+dt.timedelta(minutes=5), daily=True)
+    assert store.day_owners(now+dt.timedelta(minutes=10), daily=True) == ["A"]
+    assert store.day_owners(now.replace(hour=19), daily=True) == []
+    with store.connect() as db:
+        db.execute("INSERT INTO jobs VALUES('denied','A',?,?,'directory',?)",
+                   (fresh.timestamp()+120,fresh.timestamp()+121,'{"code":"credentials_rejected"}'))
+    assert store.next_renewal("A", now+dt.timedelta(minutes=20)) is None
+    assert not store.day_owners(now+dt.timedelta(minutes=20), daily=True)
+
+
+def test_enabled_weekend_watch_stops_at_19_and_respects_pause(tmp_path, monkeypatch):
+    store = ServerTestStore(tmp_path)
+    saturday = dt.datetime(2026,11,7,8,tzinfo=PARIS)
+    monkeypatch.setattr("edof_server_test.time.time", lambda:saturday.timestamp())
+    store.use_directory("A",enable=True)
+    assert not store.day_owners(saturday-dt.timedelta(seconds=1), daily=True)
+    assert store.day_owners(saturday, daily=True) == ["A"]
+    assert not store.day_owners(saturday.replace(hour=19), daily=True)
+    store.pause_directory("A")
+    assert not store.day_owners(saturday, daily=True)

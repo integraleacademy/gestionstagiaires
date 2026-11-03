@@ -26,7 +26,7 @@
         document.getElementById("edof-resume").hidden = !state.paused;
         lamp.classList.toggle("on", state.active);
         lamp.textContent = state.active ? "Connexion EDOF active" : "Connexion EDOF inactive";
-        note.textContent = [state.pending ? (state.phase || "Lecture en cours…") : state.error,
+        note.textContent = [state.schedule, state.pending ? (state.phase || "Lecture en cours…") : state.error,
           state.until && "Activation manuelle jusqu’à " + state.until,
           state.checked && "Dernier contrôle le " + state.checked].filter(Boolean).join(" · ");
         if (state.active && box.dataset.list === "1" && state.stamp > Number(box.dataset.stamp)

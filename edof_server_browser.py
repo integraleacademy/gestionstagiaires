@@ -1405,7 +1405,7 @@ def run_browser(spec, *, live=None):
                 page.locator('input[name="password"]').fill(password)
                 from edof_day_session import allow_login
                 if not allow_login(vault, automatic=bool(spec.get("day_session")),
-                                   daily=spec.get("provider") == "integrale", manual_until=spec.get("manual_until", 0), recover_return=bool(spec.get("recover_return")),
+                                   daily=True, verified_at=spec.get("verified_at"), manual_until=spec.get("manual_until", 0), recover_return=bool(spec.get("recover_return")),
                                    owner=spec.get("owner"), verified_tab=bool(warm and live.get("verified"))):
                     raise StopRun("day_login_used")
                 requested_at = time.time()

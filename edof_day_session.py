@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 PARIS = ZoneInfo("Europe/Paris")
 POLL_SECONDS = 120
+RENEWAL_INTERVAL = 10 * 60
 
 
 def working_hours(now=None, *, daily=False):
@@ -33,7 +34,18 @@ def awaiting_edof_return(result):
             and diag.get("location") == "edof_initialisation" and not diag.get("workspace_denied"))
 
 
-def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None, manual_until=0, recover_return=False, daily=False):
+def renewal_time(previous, verified_at, now):
+    """A verified directory read permits one more sign-in, including after a restart."""
+    if not verified_at or not (now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+                               <= verified_at <= now.timestamp()):
+        return None
+    attempted_at = previous.get("at", 0) if isinstance(previous, dict) else 0
+    if verified_at <= attempted_at:
+        return None
+    return max(verified_at, attempted_at + RENEWAL_INTERVAL)
+
+
+def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None, manual_until=0, recover_return=False, daily=False, verified_at=None):
     """Called under the shared job lock before the password POST can issue a code."""
     now = (now or datetime.now(PARIS)).astimezone(PARIS)
     today = now.date().isoformat()
@@ -45,9 +57,13 @@ def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None, m
         if session_deadline(now, manual_until, daily=daily) <= now.timestamp():
             return False
         override = bool(owner) and vault.get("day-login-override:" + owner, consume=True) == today
-        if count and not (count == 1 and (verified_tab or manual_until > now.timestamp() and recover_return)) and not override:
+        renewal = renewal_time(previous, verified_at, now)
+        may_renew = renewal is not None and renewal <= now.timestamp()
+        initial_recovery = count == 1 and ((verified_tab and not verified_at)
+                                           or (manual_until > now.timestamp() and recover_return))
+        if count and not (may_renew or initial_recovery or override):
             return False
-    vault.put("efp-login-day", {"date": today, "count": count + 1}, ttl=2 * 86400)
+    vault.put("efp-login-day", {"date": today, "count": count + 1, "at": now.timestamp()}, ttl=2 * 86400)
     return True
 
 
@@ -73,7 +89,7 @@ class DayWorker:
     def read(self, spec, env, timeout):
         with self.mutex:
             now = datetime.now(PARIS)
-            deadline = session_deadline(now, spec.get("manual_until", 0), daily=spec.get("provider") == "integrale")
+            deadline = session_deadline(now, spec.get("manual_until", 0), daily=True)
             if deadline <= now.timestamp():
                 return {"code": "day_closed"}
             if self.process is None or self.owner != spec["owner"] or self.process.poll() is not None:
@@ -85,7 +101,8 @@ class DayWorker:
                 count = budget.get("count",0) if isinstance(budget,dict) and budget.get("date")==today else int(budget==today)
                 # Without a reusable session or an authorised sign-in there is
                 # no work for a fresh Chromium process to do on this instance.
-                if (count and not (vault.get("browser") or {}).get("cookies")
+                renewal = renewal_time(budget, spec.get("verified_at"), now)
+                if (count and not (renewal is not None and renewal <= now.timestamp()) and not (vault.get("browser") or {}).get("cookies")
                         and vault.get("day-login-override:"+spec["owner"]) != today
                         and not (count==1 and spec.get("recover_return") and spec.get("manual_until",0)>now.timestamp())):
                     return {"code":"day_login_used", "gmail_code_used":False}
@@ -96,7 +113,9 @@ class DayWorker:
                 self.owner = spec["owner"]
             try:
                 started = datetime.now(PARIS).timestamp()
-                self.process.stdin.write(json.dumps({"owner": self.owner, "provider":spec.get("provider"), "manual_until": spec.get("manual_until", 0), "recover_return": spec.get("recover_return", False)}) + "\n")
+                command = {key:spec.get(key) for key in ("provider", "verified_at", "recover_return")}
+                command.update(owner=self.owner, manual_until=spec.get("manual_until", 0))
+                self.process.stdin.write(json.dumps(command) + "\n")
                 self.process.stdin.flush()
                 now = datetime.now(PARIS)
                 remaining = deadline - now.timestamp()
@@ -127,13 +146,13 @@ def serve():
             for line in sys.stdin:
                 command = json.loads(line)
                 now = datetime.now(PARIS)
-                daily = command.get("provider") == "integrale"
                 manual_until = command.get("manual_until", 0)
-                if session_deadline(now, manual_until, daily=daily) <= now.timestamp():
+                if session_deadline(now, manual_until, daily=True) <= now.timestamp():
                     break
                 owner = command["owner"]
                 result = run_browser({"mode": "directory", "owner": owner, "day_session": True,
-                                      "provider":command.get("provider"), "manual_until": manual_until, "recover_return": command.get("recover_return", False)}, live=live)
+                                      "provider":command.get("provider"), "manual_until": manual_until, "recover_return": command.get("recover_return", False),
+                                      "verified_at": command.get("verified_at")}, live=live)
                 live["return_pending"] = awaiting_edof_return(result)
                 if result["code"] in {"directory_ready", "requests_ready"}:
                     live["verified"] = True
