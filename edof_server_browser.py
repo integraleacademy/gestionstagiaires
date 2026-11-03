@@ -990,6 +990,10 @@ def run_browser(spec, *, live=None):
         return {"code": "wrong_environment"}
     from playwright.sync_api import sync_playwright, TimeoutError as BrowserTimeout
 
+    def record_phase(phase):
+        if live is not None and "record_phase" in live:
+            live["record_phase"](phase)
+
     stage = "browser"
     blocked = 0
     lists = []
@@ -1187,6 +1191,7 @@ def run_browser(spec, *, live=None):
                     if not target or target["method"] != "POST" or not permitted_request(target["action"], target["method"]):
                         raise StopRun("otp_form_unrecognized")
                     otp_attempted = True
+                    record_phase("wait_code")
                     code_value = mailbox.wait_for_code(requested_at, tick=lambda: checkpoint(False))
                     # Recheck destination after the mail wait, before filling.
                     current = otp_fields.evaluate("el => el.form ? {action: el.form.action, method: el.form.method.toUpperCase()} : null")
@@ -1194,6 +1199,7 @@ def run_browser(spec, *, live=None):
                         raise StopRun("otp_form_unrecognized")
                     otp_fields.fill(code_value)
                     code_value = None
+                    record_phase("submit_code")
                     otp_fields.press("Enter")
                     gmail_code_used = True
                     # Give the normal form navigation a chance to finish; no
@@ -1215,6 +1221,7 @@ def run_browser(spec, *, live=None):
                         return "loading"
                     raise
 
+            record_phase("open_login")
             stage = "login_page"
             if warm:
                 # Refresh this tab with its original session storage and current cookies.
@@ -1247,6 +1254,7 @@ def run_browser(spec, *, live=None):
             if not reused:
                 if urlsplit(page.url).hostname != EFP_HOST:
                     raise StopRun("unexpected_page")
+                record_phase("password_form")
                 stage = "authentication"
                 signals["initial_phase"] = "password_form"
                 checkpoint()
@@ -1295,6 +1303,7 @@ def run_browser(spec, *, live=None):
                 else:
                     raise StopRun("authentication_unconfirmed")
 
+            record_phase("select_organisation")
             stage = "organism"
             # The OAuth callback may open the SPA before its organisation
             # session is ready. Let EDOF complete that flow before navigating.
@@ -1390,6 +1399,7 @@ def run_browser(spec, *, live=None):
                     vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                 return {"code": "declaration_inspected", "stage": stage, "diagnostics": {"forms": inspected}}
             if spec["mode"] == "directory":
+                record_phase("open_directory")
                 stage = "directory"
                 if not is_directory_view(page.url):
                     directory_responses.clear()
@@ -1417,12 +1427,15 @@ def run_browser(spec, *, live=None):
                         # A verified private list already proves an authenticated
                         # session, independent of the later export/pagination.
                         vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
+                    record_phase("export_directory")
                     snapshot = exported_directory(page, source, checkpoint, signals["directory"], BrowserTimeout, target_directory)
                     if snapshot is None:
+                        record_phase("paginate_directory")
                         snapshot = directory.from_pages(directory_pages(page, source, checkpoint, signals["directory"]), signals["directory"])
                 except (ValueError, KeyError, TypeError):
                     raise StopRun("directory_incomplete") from None
                 snapshot["scope"] = "all" if target_directory != LIST_URL else "open"
+                record_phase("save_directory")
                 vault.put(directory.record_key(spec["owner"]), snapshot, ttl=directory.TTL)
                 vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                 return {"code": "directory_ready", "stage": stage, "candidate_count": len(snapshot["rows"]),
