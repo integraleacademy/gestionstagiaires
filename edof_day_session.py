@@ -21,7 +21,12 @@ def working_hours(now=None):
     return now.weekday() < 5 and 8 <= now.hour < 19
 
 
-def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None):
+def session_deadline(now, manual_until=0):
+    scheduled = now.replace(hour=19, minute=0, second=0, microsecond=0).timestamp() if working_hours(now) else 0
+    return max(scheduled, manual_until)
+
+
+def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None, manual_until=0):
     """Called under the shared job lock before the password POST can issue a code."""
     now = (now or datetime.now(PARIS)).astimezone(PARIS)
     today = now.date().isoformat()
@@ -30,7 +35,7 @@ def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None):
     if isinstance(previous, dict) and previous.get("date") == today:
         count = previous["count"]
     if automatic:
-        if not working_hours(now):
+        if session_deadline(now, manual_until) <= now.timestamp():
             return False
         override = bool(owner) and vault.get("day-login-override:" + owner, consume=True) == today
         if count and not (verified_tab and count == 1) and not override:
@@ -60,7 +65,9 @@ class DayWorker:
 
     def read(self, spec, env, timeout):
         with self.mutex:
-            if not working_hours():
+            now = datetime.now(PARIS)
+            deadline = session_deadline(now, spec.get("manual_until", 0))
+            if deadline <= now.timestamp():
                 return {"code": "day_closed"}
             if self.process is None or self.owner != spec["owner"] or self.process.poll() is not None:
                 self.close()
@@ -70,13 +77,13 @@ class DayWorker:
                     env={**env, "TMPDIR": self.temp.name}, text=True, start_new_session=True)
                 self.owner = spec["owner"]
             try:
-                self.process.stdin.write(json.dumps({"owner": self.owner}) + "\n")
+                self.process.stdin.write(json.dumps({"owner": self.owner, "manual_until": spec.get("manual_until", 0)}) + "\n")
                 self.process.stdin.flush()
                 now = datetime.now(PARIS)
-                remaining = (now.replace(hour=19, minute=0, second=0, microsecond=0) - now).total_seconds()
+                remaining = deadline - now.timestamp()
                 if not select.select([self.process.stdout], [], [], min(timeout, max(0, remaining)))[0]:
                     self.close()
-                    return {"code": "timeout" if working_hours() else "day_closed"}
+                    return {"code": "timeout" if datetime.now(PARIS).timestamp() < deadline else "day_closed"}
                 result = json.loads(self.process.stdout.readline(32768))
                 if result.get("code") not in {"directory_ready", "directory_incomplete", "directory_unavailable"}:
                     self.close()
@@ -93,10 +100,13 @@ def serve():
         live = {"pw": pw, "browser": pw.chromium.launch(headless=True)}
         try:
             for line in sys.stdin:
-                if not working_hours():
+                command = json.loads(line)
+                now = datetime.now(PARIS)
+                manual_until = command.get("manual_until", 0)
+                if session_deadline(now, manual_until) <= now.timestamp():
                     break
-                owner = json.loads(line)["owner"]
-                result = run_browser({"mode": "directory", "owner": owner, "day_session": True}, live=live)
+                owner = command["owner"]
+                result = run_browser({"mode": "directory", "owner": owner, "day_session": True, "manual_until": manual_until}, live=live)
                 if result["code"] == "directory_ready":
                     live["verified"] = True
                 print(json.dumps(result), flush=True)

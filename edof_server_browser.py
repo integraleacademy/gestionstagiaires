@@ -368,7 +368,7 @@ def all_dossiers_link(page):
     # Follow the official menu link itself so route changes cannot direct the
     # browser to another host, a filtered search or an individual dossier.
     from urllib.parse import urljoin
-    link = page.get_by_role("link", name=re.compile(r"^Tous les dossiers$", re.I))
+    link = page.get_by_role("link", name=re.compile(r"^Tous les dossiers$", re.I)).filter(visible=True)
     if link.count() != 1 or not link.is_visible():
         return None
     target = urljoin(page.url, link.get_attribute("href") or "")
@@ -1217,7 +1217,7 @@ def run_browser(spec, *, live=None):
                 page.locator('input[name="password"]').fill(password)
                 from edof_day_session import allow_login
                 if not allow_login(vault, automatic=bool(spec.get("day_session")),
-                                   owner=spec.get("owner"), verified_tab=bool(warm and live.get("verified"))):
+                                   manual_until=spec.get("manual_until", 0), owner=spec.get("owner"), verified_tab=bool(warm and live.get("verified"))):
                     raise StopRun("day_login_used")
                 requested_at = time.time()
                 page.locator("#kc-login").click()
@@ -1338,6 +1338,9 @@ def run_browser(spec, *, live=None):
                     directory_responses.clear()
                 open_folder_view(page, LIST_URL, lambda: bool(directory_responses), BrowserTimeout)
                 full_list = all_dossiers_link(page)
+                if not full_list and spec.get("manual_until"):
+                    # The official “Tous les dossiers” page also works when the responsive menu is collapsed.
+                    full_list = LIST_URL.rsplit("/", 1)[0] + "/tous"
                 if full_list:
                     target_directory = full_list
                     directory_responses.clear()

@@ -14,6 +14,13 @@
 {% for type, msg in flashes %}<p role="status" class="wedof-flash is-{{ type }}">{{ msg }}</p>{% endfor %}
 <header class="wedof-panel selection"><span class="wedof-eyebrow">INTÉGRALE ACADEMY · TEST V2</span>
 <h1>Pilotage des dossiers CPF</h1>
+<section aria-label="Connexion EDOF" id="edof-live" data-status-url="{{ url_for('integrale_edof.connection_badge') }}" data-stamp="{{ live.stamp }}" data-list="{{ '1' if section=='state' and tab=='request' and not detail else '0' }}">
+<style>#edof-live{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;margin:1rem 0}#edof-live .lamp{display:inline-block;padding:.55rem .9rem;border-radius:1.2rem;background:#a1232c;color:white;font-weight:700}#edof-live .lamp.on{background:#17643d}#edof-live form{margin:0}</style>
+<span role="status" class="lamp {{ 'on' if live.active else '' }}" id="edof-lamp">Connexion EDOF {{ 'active' if live.active else 'inactive' }}</span>
+<span id="edof-connection-note">{{ 'Connexion en cours…' if live.pending else ('Activation manuelle jusqu’à ' ~ live.until if live.manual else ('Dernier contrôle le ' ~ live.checked if live.checked else 'En attente du premier contrôle')) }}</span>
+{% if not live.manual %}<form method="post" action="{{ url_for('edof_server_test.activate_manual') }}">{{ token() }}<button class="btn btn-outline" type="submit">Activer la connexion pour 1 heure</button></form>{% endif %}
+{% if live.paused %}<form method="post" action="{{ url_for('edof_server_test.resume_day') }}">{{ token() }}{{ btn('Autoriser un nouveau code') }}</form>{% endif %}
+</section><script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js') }}" defer></script>
 <p>Ce choix s’applique à Test V2 et aux traitements WeDoF de Gestion Stagiaires en production pour Intégrale Academy.</p>
 {% if production %}<p><strong>Production vérifiée · {{ providers[production.provider] }}</strong></p>{% endif %}
 {% if bridge_error %}<p role="status">La production est injoignable ou la liaison n’est pas configurée. Actualisez pour vérifier le système actif.</p>{% endif %}
@@ -72,7 +79,7 @@
 {% for key,label in simulation_labels.items() %}<div><strong>{{ simulation[key] or 0 }}</strong>{{ label }}</div>{% endfor %}</div></section>{% endif %}
 {% if section == 'state' %}<section class="wedof-panel"><span class="wedof-eyebrow">SUIVI CPF</span><h2>État des dossiers</h2>
 <nav class="metrics state-tabs" aria-label="Filtres d’état">{% for key,label in tabs.items() %}<a href="{{ link('state', key) }}" {{ 'aria-current=page' if tab == key }}><strong>{{ counts[key] or 0 }}</strong><span>{{ label }}</span></a>{% endfor %}</nav>
-{% if tab == 'request' %}<p>Demandes CPF reçues dans EDOF et restant à traiter. Les demandes traitées ou archivées localement quittent cette vue.</p>{% endif %}
+{% if tab == 'request' %}<p>Dossiers « À traiter » dans EDOF lors de la dernière synchronisation. Le suivi local ne change pas ce compteur.</p>{% endif %}
 {% if tab == 'due' %}<p>Ces dossiers ont une échéance d’entrée ou de sortie. Les justificatifs vérifiés de production déclenchent l’envoi. Si une information manque, ouvrez le dossier pour compléter la déclaration ici.</p>{% endif %}</section>{% endif %}
 <section class="wedof-panel"><span class="wedof-eyebrow">INTÉGRALE EDOF</span><h2>{{ {'state':'Dossiers CPF','requests':'Demandes entrantes','cancellations':'Annulations'}[section] }}</h2>
 {% if section == 'requests' %}<p>Demandes à traiter identifiées dans la liste EDOF synchronisée.</p>{% elif section == 'cancellations' %}<p>Dossiers dont l’état dans la liste synchronisée indique une annulation.{% if scope != 'all' %} La dernière lecture couvre les dossiers en cours. Les annulations archivées peuvent être absentes de cet export.{% endif %}</p>{% endif %}
@@ -88,7 +95,7 @@
 {% if r.action and active %}<details><summary>Automatisation</summary><form method="post" action="{{ url_for('integrale_edof.block', folder=r.folder_id) }}">{{ token() }}
 <input type="hidden" name="action" value="{{ r.block.action if r.block else r.action }}">{% if r.block %}<input type="hidden" name="release" value="yes">{{ btn('Lever le blocage') }}
 {% else %}<label>Motif du blocage<select name="reason">{% for key,label in block_reasons.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>{{ btn('Bloquer cette action') }}{% endif %}</form></details>{% endif %}
-{% if section == 'requests' or (section == 'state' and tab == 'request') %}<small>{{ 'Traitée localement' if r.handled else 'À traiter' }}</small>{% if active %}<form class="actions" method="post" action="{{ url_for('integrale_edof.follow_up',folder=r.folder_id) }}">{{ token() }}
+{% if section == 'requests' or (section == 'state' and tab == 'request') %}<small>{{ 'Archivée localement' if r.archived else ('Traitée localement' if r.handled else 'À traiter') }}</small>{% if active %}<form class="actions" method="post" action="{{ url_for('integrale_edof.follow_up',folder=r.folder_id) }}">{{ token() }}
 <button class="btn" name="change" value="{{ 'reopen' if r.handled else 'handled' }}">{{ 'Rouvrir' if r.handled else 'Marquer traitée' }}</button><button class="btn btn-outline" name="change" value="archived">Archiver</button></form>{% endif %}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
 <nav class="pagination" aria-label="Pagination">{% if page > 1 %}<a href="{{ link(section,tab,page-1) }}">← Précédent</a>{% endif %}<span>Page {{ page }} sur {{ pages }}</span>{% if page < pages %}<a href="{{ link(section,tab,page+1) }}">Suivant →</a>{% endif %}</nav>
 {% elif checked %}<p>Aucun dossier dans cette sélection.</p>{% endif %}</section>

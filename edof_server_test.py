@@ -21,7 +21,8 @@ import threading
 import time
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, abort, jsonify, redirect, request, send_file, session, url_for
+from contextlib import closing
+from flask import flash, Blueprint, abort, jsonify, redirect, request, send_file, session, url_for
 
 from cpf_provider import acquire_provider
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
@@ -139,6 +140,7 @@ class ServerTestStore:
         db.execute("PRAGMA secure_delete = ON")
         db.execute("CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY, owner TEXT NOT NULL, created REAL NOT NULL, finished REAL, mode TEXT NOT NULL, result TEXT NOT NULL)")
         db.execute("CREATE TABLE IF NOT EXISTS directory_activity (owner TEXT PRIMARY KEY, seen REAL NOT NULL)")
+        db.execute("CREATE TABLE IF NOT EXISTS manual_sessions (owner TEXT PRIMARY KEY, started REAL NOT NULL, until REAL NOT NULL)")
         db.execute("CREATE TABLE IF NOT EXISTS directory_requested (owner TEXT PRIMARY KEY)")
         db.execute("DELETE FROM jobs WHERE created < ?", (time.time() - RETENTION,))
         db.execute("UPDATE jobs SET finished = ?, result = ? WHERE finished IS NULL "
@@ -262,9 +264,11 @@ class ServerTestStore:
                 if owner is None:
                     db.execute("DELETE FROM directory_requested")
                     db.execute("DELETE FROM directory_activity")
+                    db.execute("DELETE FROM manual_sessions")
                 else:
                     db.execute("DELETE FROM directory_requested WHERE owner = ?", (owner,))
                     db.execute("DELETE FROM directory_activity WHERE owner = ?", (owner,))
+                    db.execute("DELETE FROM manual_sessions WHERE owner=?", (owner,))
         finally:
             db.close()
 
@@ -281,21 +285,61 @@ class ServerTestStore:
         finally:
             db.close()
 
+    def live_connection(self, owner, saved_session):
+        now = dt.datetime.now(PARIS)
+        manual = self.manual_until(owner)
+        open_now = bool(manual or working_hours(now) and self.directory_enabled(owner))
+        with closing(self.connect()) as db:
+            row = db.execute("""SELECT finished,created,json_extract(result,'$.code') code
+                FROM jobs WHERE owner=? AND mode='directory' ORDER BY created DESC LIMIT 1""", (owner,)).fetchone()
+            last = db.execute("""SELECT finished,json_extract(result,'$.code') code FROM jobs
+                WHERE owner=? AND mode='directory' AND finished IS NOT NULL ORDER BY finished DESC LIMIT 1""", (owner,)).fetchone()
+        stamp = last["finished"] if last else 0
+        earliest = now.astimezone(PARIS).replace(hour=8, minute=0, second=0, microsecond=0).timestamp()
+        if manual:
+            earliest = min(earliest, manual - 3600) if working_hours(now) and self.directory_enabled(owner) else manual - 3600
+        verified = bool(stamp >= earliest and open_now and saved_session and last and last["code"] == "directory_ready" and
+                        0 <= now.timestamp() - stamp < POLL_SECONDS * 3)
+        pending = bool(open_now and row and row["finished"] is None)
+        checked = dt.datetime.fromtimestamp(stamp, PARIS).strftime("%d/%m à %H h %M") if stamp else ""
+        return {"active": verified, "pending": pending, "checked": checked,
+                "stamp": stamp, "manual": bool(manual),
+                "until": dt.datetime.fromtimestamp(manual, PARIS).strftime("%H h %M") if manual else "",
+                "paused": bool(open_now and last and last["code"] == "day_login_used"),
+                "error": MESSAGES.get(last["code"], "") if open_now and last and last["code"] != "directory_ready" else ""}
+
+    def manual_until(self, owner):
+        with closing(self.connect()) as db:
+            row = db.execute("SELECT until FROM manual_sessions WHERE owner=? AND until>?", (owner, time.time())).fetchone()
+            return row["until"] if row else 0
+
+    def activate_manual(self, owner):
+        now = time.time()
+        with closing(self.connect()) as db, db:
+            db.execute("BEGIN IMMEDIATE")
+            previous = db.execute("SELECT until FROM manual_sessions WHERE owner=?", (owner,)).fetchone()
+            if previous and previous["until"] > now:
+                return False
+            db.execute("INSERT OR REPLACE INTO manual_sessions VALUES (?,?,?)", (owner, now, now + 3600))
+            db.execute("INSERT OR IGNORE INTO directory_requested VALUES (?)", (owner,))
+            return True
+
     def day_owners(self, now):
         """A new workday restarts enabled accounts, including after a weekend or failed login."""
-        if not working_hours(now):
-            return []
         start = now.astimezone(PARIS).replace(hour=8, minute=0, second=0, microsecond=0).timestamp()
         db = self.connect()
         try:
             rows = db.execute("""
                 SELECT a.owner,j.created,j.finished,json_extract(j.result,'$.code') AS code,
                        EXISTS(SELECT 1 FROM directory_requested r WHERE r.owner=a.owner) AS requested
-                FROM directory_activity a LEFT JOIN jobs j ON j.id = (
-                    SELECT id FROM jobs WHERE owner=a.owner AND mode='directory' AND created>=?
+                FROM (SELECT owner,max(seen) AS seen FROM (SELECT owner,seen FROM directory_activity WHERE ?
+                      UNION ALL SELECT owner,started AS seen FROM manual_sessions WHERE until>?) GROUP BY owner) a
+                LEFT JOIN manual_sessions m ON m.owner=a.owner AND m.until>?
+                LEFT JOIN jobs j ON j.id = (
+                    SELECT id FROM jobs WHERE owner=a.owner AND mode='directory' AND created>=CASE WHEN m.started IS NOT NULL THEN m.started ELSE ? END
                     ORDER BY created DESC LIMIT 1)
                 ORDER BY coalesce(j.created,0),a.seen DESC
-            """, (start,))
+            """, (int(working_hours(now)), now.timestamp(), now.timestamp(), start))
             due = []
             for row in rows:
                 if row["created"] is None:
@@ -405,7 +449,7 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
                     if snapshot:
                         snapshot = directory.dated_snapshot(snapshot)
                         process_directory(store, snapshot, store.data_file)
-                        if not day_worker or spec["provider"] == "integrale":
+                        if not day_worker or (spec["provider"] == "integrale" and working_hours()):
                             declarations.discover(store, spec["owner"], snapshot)
                 except (OSError, ValueError, sqlite3.Error):
                     # Keep the verified source snapshot. The next full sync
@@ -448,8 +492,11 @@ def start_job(store, owner, spec, *, day_worker=None):
     try:
         # A form inspection is a read-only job; it cannot construct a business-write gate.
         if day_worker is not None:
-            if spec["mode"] != "directory" or not working_hours() or not store.directory_enabled(owner):
+            now = dt.datetime.now(PARIS)
+            until = store.manual_until(owner)
+            if spec["mode"] != "directory" or not (until or working_hours(now) and store.directory_enabled(owner)):
                 raise ValueError("Veille indisponible.")
+            spec = {**spec, "manual_until": until}
             provider_fd = acquire_provider(spec["provider"])
         elif spec["mode"] != "inspect_forms":
             ticket = (spec.get("intent") or {}).get("pilot_ticket")
@@ -504,7 +551,7 @@ def register_edof_server_test(legacy):
                     time.sleep(20)
                     try:
                         now = dt.datetime.now(PARIS)
-                        if not working_hours(now) or (worker.owner and not store.directory_enabled(worker.owner)):
+                        if worker.owner and not (store.manual_until(worker.owner) or working_hours(now) and store.directory_enabled(worker.owner)):
                             worker.close()
                         from cpf_provider import ProviderStore
                         active = ProviderStore(store.directory).state()
@@ -721,18 +768,38 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
         store.use_directory(user, enable=True)
         return redirect(url_for("integrale_edof.index", section="technical"), code=303)
 
+    @bp.post("/admin/edof-test/server/directory/manual")
+    @admin_required
+    def activate_manual():
+        user = results_owner()
+        check_csrf()
+        if session.get("admin_role") == "viewer":
+            abort(403)
+        target = url_for("integrale_edof.index", section="state", tab="request")
+        if not configuration()["credentials_configured"] or not gmail_status()["connected"]:
+            flash("Connectez EFP et Gmail dans les paramètres pour activer la connexion.", "error")
+            return redirect(target, code=303)
+        def activate():
+            if store.activate_manual(user):
+                vault().put("day-login-override:" + user, dt.datetime.now(PARIS).date().isoformat(), ttl=600)
+        response = edit_connection(activate)
+        if response.location.endswith("gmail=busy"):
+            flash("Une lecture EDOF est déjà en cours. Réessayez après sa fin.", "warning")
+        return redirect(target, code=303)
+
     @bp.post("/admin/edof-test/server/directory/resume")
     @admin_required
     def resume_day():
         user = results_owner()
         check_csrf()
-        if not working_hours() or not store.directory_enabled(user):
+        if not store.manual_until(user) and (not working_hours() or not store.directory_enabled(user)):
             return jsonify(ok=False, error="La veille doit être ouverte."), 409
         def permit():
             if store.connection_status(user, True)["state"] != "day_paused":
                 raise ValueError("La veille ne demande pas de nouveau code.")
             vault().put("day-login-override:" + user, dt.datetime.now(PARIS).date().isoformat(), ttl=600)
-            store.request_directory(user)
+            with closing(store.connect()) as db, db:
+                db.execute("INSERT OR IGNORE INTO directory_requested VALUES (?)", (user,))
         try:
             response = edit_connection(permit)
         except ValueError as exc:

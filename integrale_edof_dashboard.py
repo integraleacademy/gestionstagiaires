@@ -9,7 +9,7 @@ from pathlib import Path
 import secrets
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, abort, flash, get_flashed_messages, redirect, request, session, url_for
+from flask import g, jsonify, Blueprint, abort, flash, get_flashed_messages, redirect, request, session, url_for
 
 from edof_day_session import working_hours
 import edof_directory as directory
@@ -122,8 +122,6 @@ def dashboard_rows(snapshot, data, operations, now):
         evaluation = simulate(kind, date, block, flags.get("draft"), now)
         due = evaluation in {"unconfirmed","ready"}
         tags = {kind, "all"}
-        if kind == "request" and (flags.get("archived") or flags.get("handled")):
-            tags.discard("request")
         if evaluation in {"planned", "unconfirmed", "ready"}:
             tags.add("due")
         if folder not in links and action:
@@ -280,15 +278,24 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
 
     @bp.after_request
     def private(response):
+        script_policy = "'nonce-" + g.edof_nonce + "'" if hasattr(g, "edof_nonce") else "'none'"
         response.headers.update({"Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
                                  "X-Content-Type-Options": "nosniff",
-                                 "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"})
+                                 "Content-Security-Policy": f"default-src 'self'; style-src 'self' 'unsafe-inline'; script-src {script_policy}; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"})
         return response
+
+    @bp.get("/connection-status")
+    @admin_required
+    def connection_badge():
+        owner = results_owner()
+        saved = gmail_status()["saved_session"]
+        return jsonify(store.live_connection(owner, saved))
 
     @bp.get("")
     @admin_required
     def index():
         owner = results_owner()
+        g.edof_nonce = secrets.token_urlsafe(24)
         csrf = session.setdefault("edof_server_csrf", secrets.token_urlsafe(32))
         section = request.args.get("section", "state")
         if section not in SECTIONS:
@@ -388,7 +395,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             match_counts=Counter(m["status"] for m in matches.values()), total=len(rows), counts=counts,
             rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
             detail=detail, events=events, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=directory.stamp(snap) if snap else None, today=today, metrics=metrics,
-            jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
+            live=store.live_connection(owner, gmail["saved_session"]), nonce=g.edof_nonce, jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
             scope=(snap or {}).get("scope", "open"), day_open=working_hours(now), directory_enabled=store.directory_enabled(owner), snapshot_count=len((snap or {}).get("rows", {})),
             block_reasons=BLOCK_REASONS, action_labels=ACTION_LABELS,
             changed=dt.datetime.fromtimestamp(selected["changed"], PARIS).strftime("%d/%m/%Y à %H h %M") if selected["changed"] else None)
