@@ -264,3 +264,26 @@ def test_legacy_french_dates_work_in_live_simulation_and_declarations_without_re
         "action":"entry_training","actual_date":"2026-02-03","attested":"yes","evidence":"Présence signée","csrf":site.csrf}, follow_redirects=True)
     assert "Déclaration préparée" in result.text
     assert edof_directory.session_date("31/02/2026") == ""
+
+
+def test_new_requests_tab_counts_current_unarchived_requests(site):
+    page = site.client.get("/admin/edof-test?section=state&tab=request")
+    assert page.status_code == 200
+    assert page.text.index("<span>Nouvelle demande</span>") < page.text.index("<span>Acceptés</span>")
+    assert "<strong>1</strong><span>Nouvelle demande</span>" in page.text
+    assert "100002" in page.text and "100001" not in page.text
+    dashboard.record_work(site.gate, "100002", "admin", archived=1)
+    page = site.client.get("/admin/edof-test?section=state&tab=request")
+    assert "<strong>0</strong><span>Nouvelle demande</span>" in page.text and "100002" not in page.text
+    assert dashboard.category({"state":"Non traité"}) == "request"
+    assert dashboard.category({"state":"Accepté"}) == "accepted"
+
+
+def test_program_day_without_immediate_login_or_provider_switch(site, monkeypatch):
+    monkeypatch.setattr(server, "configuration", lambda: {"credentials_configured":True})
+    site.vault.put("gmail", {"fixture":True})
+    target = "/admin/edof-test/server/directory/schedule"
+    assert site.client.post(target, data={"csrf":""}).status_code == 403
+    assert site.client.post(target, data={"csrf":site.csrf}).status_code == 303
+    assert site.store.directory_enabled(site.owner)
+    assert site.gate.state()["provider"] == "wedof" and not site.store.latest(site.owner)
