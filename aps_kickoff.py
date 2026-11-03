@@ -206,7 +206,7 @@ def _calendar(page, dates, city):
     if dates['aps_remote_end'] == dates['aps_in_person_start']:
         transition = french(dates['aps_in_person_start'])
         _text(page, f'Le {transition} marque la fin du distanciel et le début du présentiel.',
-              45, 486, 15, NAVY, width=870)
+              420, 119, 14, NAVY, width=495)
 
 
 def _dated_labels(dates, month_label, city, address):
