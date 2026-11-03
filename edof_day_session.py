@@ -90,9 +90,13 @@ class DayWorker:
                 remaining = deadline - now.timestamp()
                 if not select.select([self.process.stdout], [], [], min(timeout, max(0, remaining)))[0]:
                     self.close()
-                    return {"code": "timeout" if datetime.now(PARIS).timestamp() < deadline else "day_closed"}
+                    from edof_gmail import Vault
+                    checkpoint = Vault(env["EDOF_CONNECTOR_DIRECTORY"], env["EDOF_CONNECTOR_KEY"]).get("edof-phase:"+spec["owner"]) or {}
+                    return {"code": "timeout" if datetime.now(PARIS).timestamp() < deadline else "day_closed",
+                            "stage": checkpoint.get("phase"), "gmail_code_used": checkpoint.get("mail_used"),
+                            "diagnostics":{"callback_status":checkpoint.get("callback"), "workspace_status":checkpoint.get("private_status")}}
                 result = json.loads(self.process.stdout.readline(32768))
-                if result.get("code") not in {"directory_ready", "directory_incomplete", "directory_unavailable"} and not awaiting_edof_return(result):
+                if result.get("code") not in {"directory_ready", "requests_ready", "directory_incomplete", "directory_unavailable"} and not awaiting_edof_return(result):
                     self.close()
                 return result
             except (OSError, ValueError):
@@ -116,7 +120,7 @@ def serve():
                 result = run_browser({"mode": "directory", "owner": owner, "day_session": True,
                                       "manual_until": manual_until, "recover_return": command.get("recover_return", False)}, live=live)
                 live["return_pending"] = awaiting_edof_return(result)
-                if result["code"] == "directory_ready":
+                if result["code"] in {"directory_ready", "requests_ready"}:
                     live["verified"] = True
                 print(json.dumps(result), flush=True)
         finally:

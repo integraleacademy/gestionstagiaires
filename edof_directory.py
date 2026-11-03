@@ -106,6 +106,20 @@ def record_key(owner):
     return "edof-directory-v1-" + owner
 
 
+def pending_key(owner):
+    return "edof-pending-v1-" + owner
+
+
+def with_pending(full, pending):
+    if not pending or full and pending["checked"] <= full["checked"]:
+        return full
+    combined = dict(full or {"checked":0, "rows":{}, "scope":"pending"})
+    combined["rows"] = {**combined["rows"], **pending["rows"]}
+    combined["pending_ids"] = set(pending["rows"])
+    combined["pending_checked"] = pending["checked"]
+    return combined
+
+
 def stamp(snapshot):
     return datetime.fromtimestamp(snapshot["checked"], ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y à %H h %M")
 

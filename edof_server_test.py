@@ -43,6 +43,7 @@ MESSAGES = {
     "day_closed": "La veille est ouverte du lundi au vendredi, de 8 h à 19 h, heure de Paris.",
     "declaration_confirmed": "Le statut et les valeurs de la déclaration ont été relus sur EDOF.",
     "declaration_inspected": "Contrôle des commandes disponibles sur EDOF terminé en lecture seule.",
+    "requests_ready": "Les dossiers À traiter ont été relus dans l’onglet officiel EDOF.",
     "directory_ready": "La liste EDOF de l’établissement est disponible pour la recherche.",
     "directory_unavailable": "EDOF n’a pas renvoyé la liste de l’établissement. Vous pouvez reprendre la synchronisation.",
     "directory_incomplete": "La liste renvoyée par EDOF est incomplète. La dernière liste vérifiée reste consultable.",
@@ -224,7 +225,7 @@ class ServerTestStore:
             state, label = "reconnect", "Reconnexion nécessaire"
         elif not saved_session:
             state, label = "missing", "Aucune session réutilisable"
-        elif row and row["code"] in {"directory_ready", "read_success"}:
+        elif row and row["code"] in {"directory_ready", "requests_ready", "read_success"}:
             state, label = "confirmed", "Active au dernier contrôle"
         else:
             state, label = "unknown", "État à confirmer"
@@ -299,15 +300,29 @@ class ServerTestStore:
         earliest = now.astimezone(PARIS).replace(hour=8, minute=0, second=0, microsecond=0).timestamp()
         if manual:
             earliest = min(earliest, manual - 3600) if working_hours(now) and self.directory_enabled(owner) else manual - 3600
-        verified = bool(stamp >= earliest and open_now and saved_session and last and last["code"] == "directory_ready" and
+        verified = bool(stamp >= earliest and open_now and saved_session and last and last["code"] in {"directory_ready","requests_ready"} and
                         0 <= now.timestamp() - stamp < POLL_SECONDS * 3)
+        phase = {}
+        if open_now and self.connector_key:
+            phase = Vault(self.directory,self.connector_key).get("edof-phase:"+owner) or {}
+        private_at = phase.get("at", 0)
+        if (open_now and private_at >= earliest and now.timestamp()-private_at < POLL_SECONDS*3
+                and phase.get("private_status") == 200 and (private_at >= stamp or last and last["code"] in {"requests_ready","directory_ready"})):
+            verified = True
         pending = bool(open_now and (queued or row and row["finished"] is None))
         checked = dt.datetime.fromtimestamp(stamp, PARIS).strftime("%d/%m à %H h %M") if stamp else ""
+        if private_at >= earliest and private_at > stamp and phase.get("private_status") == 200:
+            checked = dt.datetime.fromtimestamp(private_at, PARIS).strftime("%d/%m à %H h %M")
+        labels = {"opening_workspace":"Ouverture du portail EDOF", "efp_form":"Connexion à EFP",
+                  "otp_submitted":"Retour d’EFP vers EDOF", "selecting_organisation":"Ouverture de l’établissement",
+                  "reading_directory":"Lecture de la liste", "reading_pending_tab":"Lecture des dossiers À traiter",
+                  "reading_all_folders":"Synchronisation de tous les dossiers", "pending_verified":"Demandes vérifiées"}
         return {"active": verified, "pending": pending, "checked": checked,
+                "phase": labels.get(phase.get("phase"), "") if private_at >= earliest and pending else "",
                 "stamp": stamp, "manual": bool(manual),
                 "until": dt.datetime.fromtimestamp(manual, PARIS).strftime("%H h %M") if manual else "",
                 "paused": bool(open_now and stamp >= earliest and last and last["code"] == "day_login_used"),
-                "error": MESSAGES.get(last["code"], "") if open_now and stamp >= earliest and last and last["code"] != "directory_ready" else ""}
+                "error": MESSAGES.get(last["code"], "") if open_now and stamp >= earliest and last and last["code"] not in {"directory_ready","requests_ready"} else ""}
 
     def manual_until(self, owner):
         with closing(self.connect()) as db:
@@ -320,6 +335,9 @@ class ServerTestStore:
             db.execute("BEGIN IMMEDIATE")
             previous = db.execute("SELECT until FROM manual_sessions WHERE owner=?", (owner,)).fetchone()
             if previous and previous["until"] > now:
+                last = db.execute("SELECT finished,json_extract(result,'$.code') AS code FROM jobs WHERE owner=? AND mode='directory' ORDER BY created DESC LIMIT 1", (owner,)).fetchone()
+                if last and last["finished"] and last["finished"]+60 <= now and last["code"] in {"browser_error","timeout","directory_incomplete","directory_unavailable","authentication_unconfirmed"}:
+                    db.execute("INSERT OR IGNORE INTO directory_requested VALUES (?)", (owner,))
                 return False
             db.execute("INSERT OR REPLACE INTO manual_sessions VALUES (?,?,?)", (owner, now, now + 3600))
             db.execute("INSERT OR IGNORE INTO directory_requested VALUES (?)", (owner,))
@@ -345,11 +363,11 @@ class ServerTestStore:
             for row in rows:
                 if row["created"] is None:
                     due.append(row["owner"])
-                elif row["finished"] and row["requested"] and row["code"] in {"day_login_used", "directory_ready"}:
+                elif row["finished"] and row["requested"] and row["code"] in {"day_login_used", "directory_ready","requests_ready","browser_error","timeout","directory_unavailable","directory_incomplete","authentication_unconfirmed"}:
                     due.append(row["owner"])
-                elif row["finished"] and row["code"] in ("directory_ready","directory_incomplete","directory_unavailable","timeout","browser_error","interrupted"):
+                elif row["finished"] and row["code"] in ("directory_ready","requests_ready","directory_incomplete","directory_unavailable","timeout","browser_error","interrupted"):
                     result = json.loads(row["result"])
-                    delay = POLL_SECONDS if row["code"] == "directory_ready" or awaiting_edof_return(result) else 900
+                    delay = POLL_SECONDS if row["code"] in {"directory_ready","requests_ready"} or awaiting_edof_return(result) else 900
                     if (delay == 900 and row["manual_start"] and row["code"] == "browser_error"
                             and result.get("stage") == "login_page" and not result.get("gmail_code_used")
                             and not (result.get("diagnostics") or {}).get("login_post_status")):
@@ -799,6 +817,9 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
             return redirect(target, code=303)
         def activate():
             if store.activate_manual(user):
+                budget = vault().get("efp-login-day")
+                if isinstance(budget, dict) and budget.get("date") == dt.datetime.now(PARIS).date().isoformat() and budget.get("count", 0) >= 2:
+                    return
                 vault().put("day-login-override:" + user, dt.datetime.now(PARIS).date().isoformat(), ttl=600)
         response = edit_connection(activate)
         if response.location.endswith("gmail=busy"):

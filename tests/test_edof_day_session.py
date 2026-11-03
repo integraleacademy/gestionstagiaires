@@ -177,3 +177,34 @@ def test_navigation_between_efp_and_edof_keeps_waiting_without_restarting():
     assert check.call_count == 2 and page.goto.call_count == 1
     with pytest.raises(RuntimeError, match="not a navigation"):
         portal.open_workspace_or_login(page, Mock(), False, {}, Mock(side_effect=RuntimeError("not a navigation")))
+
+
+def test_pending_filter_reads_four_private_rows_and_preserves_other_dossiers(monkeypatch):
+    import json
+    import edof_directory as directory
+    import edof_server_browser as reader
+    from playwright.sync_api import sync_playwright, TimeoutError as BrowserTimeout
+    raw = [{"id":str(100000+i),"attendee":{"firstName":"Test","lastName":"Exemple"},"currentState":"notProcessed"} for i in range(4)]
+    full = {"checked":1,"rows":{"999999":{"state":"accepted"}}}
+    with sync_playwright() as pw:
+        try:
+            browser = pw.chromium.launch(executable_path=os.environ.get("EDOF_TEST_CHROMIUM"), headless=True)
+        except Exception as exc:
+            if "Executable doesn't exist" in str(exc):
+                pytest.skip("Chromium absent")
+            raise
+        page=browser.new_page()
+        def local(route):
+            assert route.request.method=="GET"
+            if reader.API_PREFIX+"pad" in route.request.url:
+                route.fulfill(json={"items":raw,"numberOfItems":4})
+            else:
+                route.fulfill(content_type="text/html",body="<meta charset=utf-8><button>À traiter <span>4</span></button><script>document.querySelector('button').onclick=()=>fetch("+json.dumps(reader.API_PREFIX+"pad?state=notProcessed")+")</script>")
+        page.route("**/*",local)
+        pending=reader.read_official_pending(page, lambda: None, BrowserTimeout)
+        assert set(pending["rows"]) == {r["id"] for r in raw}
+        merged=directory.with_pending(full,pending)
+        assert len(merged["rows"])==5 and merged["pending_ids"]==set(pending["rows"])
+        assert merged["checked"]==1 and merged["pending_checked"]==pending["checked"]
+        assert directory.with_pending({**full,"checked":pending["checked"]+1},pending)["rows"]==full["rows"]
+        browser.close()
