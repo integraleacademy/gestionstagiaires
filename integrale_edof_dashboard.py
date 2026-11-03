@@ -122,6 +122,8 @@ def dashboard_rows(snapshot, data, operations, now):
         evaluation = simulate(kind, date, block, flags.get("draft"), now)
         due = evaluation in {"unconfirmed","ready"}
         tags = {kind, "all"}
+        if kind == "request" and "pending_ids" in snapshot and folder not in snapshot["pending_ids"]:
+            tags.discard("request")
         if evaluation in {"planned", "unconfirmed", "ready"}:
             tags.add("due")
         if folder not in links and action:
@@ -216,7 +218,9 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
     def snapshot(owner):
         saved = vault().get(directory.record_key(owner)) if store.connector_key else None
         # Previously synchronized dossiers also contain French display dates.
-        return apply_confirmed_entries(directory.dated_snapshot(saved), store.directory, owner)
+        pending = vault().get(directory.pending_key(owner)) if store.connector_key else None
+        full = apply_confirmed_entries(directory.dated_snapshot(saved), store.directory, owner)
+        return directory.with_pending(full, pending)
 
     def folder_record(owner, folder):
         if not ID_RE.fullmatch(folder):
@@ -321,7 +325,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         q = directory.normalized(request.args.get("q", "")[:140])
         if section in {"requests", "cancellations"}:
             kind = "request" if section == "requests" else "canceled"
-            rows = [row for row in rows if row["kind"] == kind and not row["archived"]]
+            rows = [row for row in rows if kind in row["tags"] and not row["archived"]]
         else:
             rows = [row for row in rows if tab in row["tags"]]
         if q:
@@ -394,7 +398,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             inspection=check, dispatches=dispatches, csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
             match_counts=Counter(m["status"] for m in matches.values()), total=len(rows), counts=counts,
             rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
-            detail=detail, events=events, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=directory.stamp(snap) if snap else None, today=today, metrics=metrics,
+            detail=detail, events=events, full_checked=directory.stamp(snap) if snap and snap.get("checked") else None, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=(directory.stamp({"checked":snap["pending_checked"]}) if snap and snap.get("pending_checked") and (tab=="request" or section=="requests") else directory.stamp(snap) if snap and snap.get("checked") else None), today=today, metrics=metrics,
             live=store.live_connection(owner, gmail["saved_session"]), nonce=g.edof_nonce, jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
             scope=(snap or {}).get("scope", "open"), day_open=working_hours(now), directory_enabled=store.directory_enabled(owner), snapshot_count=len((snap or {}).get("rows", {})),
             block_reasons=BLOCK_REASONS, action_labels=ACTION_LABELS,

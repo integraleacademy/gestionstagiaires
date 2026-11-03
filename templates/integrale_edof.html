@@ -18,7 +18,7 @@
 <style>#edof-live{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;margin:1rem 0}#edof-live .lamp{display:inline-block;padding:.55rem .9rem;border-radius:1.2rem;background:#a1232c;color:white;font-weight:700}#edof-live .lamp.on{background:#17643d}#edof-live form{margin:0}</style>
 <span role="status" class="lamp {{ 'on' if live.active else '' }}" id="edof-lamp">Connexion EDOF {{ 'active' if live.active else 'inactive' }}</span>
 <span id="edof-connection-note">{{ 'Connexion en cours…' if live.pending else ('Activation manuelle jusqu’à ' ~ live.until if live.manual else ('Dernier contrôle le ' ~ live.checked if live.checked else 'En attente du premier contrôle')) }}</span>
-<form id="edof-activate" {% if live.manual %}hidden{% endif %} method="post" action="{{ url_for('edof_server_test.activate_manual') }}">{{ token() }}<button class="btn btn-outline" type="submit">Activer la connexion pour 1 heure</button></form>
+<form id="edof-activate" {% if live.manual and (live.active or live.pending or live.paused) %}hidden{% endif %} method="post" action="{{ url_for('edof_server_test.activate_manual') }}">{{ token() }}<button class="btn btn-outline" type="submit">{{ 'Réessayer la lecture' if live.manual else 'Activer la connexion pour 1 heure' }}</button></form>
 <form id="edof-resume" {% if not live.paused %}hidden{% endif %} method="post" action="{{ url_for('edof_server_test.resume_day') }}">{{ token() }}{{ btn('Autoriser un nouveau code') }}</form>
 </section><script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js') }}" defer></script>
 <p>Ce choix s’applique à Test V2 et aux traitements WeDoF de Gestion Stagiaires en production pour Intégrale Academy.</p>
@@ -39,7 +39,7 @@
 {% if changed %}<small>Dernière bascule le {{ changed }}.</small>{% endif %}
 </header>
 <section class="wedof-hero"><div class="wedof-hero-copy"><span class="wedof-eyebrow">CPF · INTÉGRALE EDOF</span><h2>Tableau de bord Intégrale EDOF</h2>
-<p>Dossiers lus dans l’espace EDOF de l’établissement. Dernière synchronisation {{ checked or 'à réaliser' }}.</p>
+<p>Dossiers lus dans l’espace EDOF de l’établissement. Dernière synchronisation de la liste complète {{ full_checked or 'à réaliser' }}.</p>
 <div class="wedof-hero-meta"><span class="wedof-status-pill">{{ snapshot_count }} dossiers synchronisés</span><span class="wedof-status-pill">{{ efp.label }}</span>
 <span class="wedof-status-pill">{{ 'Veille programmée · lun.–ven. 8 h–19 h (Paris)' if directory_enabled else 'Veille suspendue' }}</span></div></div>
 <div class="wedof-hero-actions"><a class="btn" href="{{ url_for('integrale_edof.index', section='state', matching=1, _anchor='matching') }}">Réanalyser les dossiers</a>

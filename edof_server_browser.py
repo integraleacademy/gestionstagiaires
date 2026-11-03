@@ -416,6 +416,32 @@ def all_dossiers_link(page):
     return target
 
 
+def read_official_pending(page, checkpoint, timeout_error):
+    """Read the dashboard's À traiter tab, requiring the displayed count and matching private rows."""
+    target = LIST_URL.rsplit("/", 1)[0] + "/tous"
+    if not is_directory_view(page.url, target):
+        page.goto(target, wait_until="commit", timeout=18000)
+    badge = page.get_by_text(re.compile(r"^[àa]\s+traiter\s*\d+$", re.I)).filter(visible=True)
+    try:
+        badge.first.wait_for(state="visible", timeout=9000)
+        if badge.count() != 1:
+            return None
+        count = int(re.search(r"(\d+)$", badge.inner_text().strip()).group(1))
+        checkpoint()
+        with page.expect_response(lambda r: r.request.method == "GET" and r.status == 200
+                                  and directory_list_url(r.url), timeout=9000) as response:
+            badge.click(timeout=3000)
+        snapshot = directory.from_pages(directory_pages(page, response.value, checkpoint))
+    except (timeout_error, ValueError, TypeError, AttributeError):
+        return None
+    if len(snapshot["rows"]) != count or any(directory.normalized(r["state"]) not in
+            {"notprocessed", "not processed", "tobeprocessed", "to be processed", "a traiter", "non traite",
+             "dossier non traite", "received", "demande recue", "demande d inscription"}
+            for r in snapshot["rows"].values()):
+        return None
+    return snapshot
+
+
 def exported_directory(page, source, checkpoint, progress, timeout_error, target_url=LIST_URL):
     from pathlib import Path
 
@@ -1020,6 +1046,12 @@ def run_browser(spec, *, live=None):
         except Exception:
             return {"code": "private_storage_unavailable"}
 
+    def progress(phase):
+        if vault and spec.get("day_session"):
+            vault.put("edof-phase:" + spec["owner"], {"phase":phase, "at":time.time(),
+                      "mail_used":gmail_code_used, "callback":signals.get("callback_status"),
+                      "private_status":signals.get("workspace_status")}, ttl=900)
+
     def route_request(route):
         nonlocal blocked
         request = route.request
@@ -1196,6 +1228,7 @@ def run_browser(spec, *, live=None):
                     code_value = None
                     otp_fields.press("Enter")
                     gmail_code_used = True
+                    progress("otp_submitted")
                     # Give the normal form navigation a chance to finish; no
                     # repeat submission, resend or new code on any failure.
                     page.wait_for_timeout(1200)
@@ -1216,6 +1249,7 @@ def run_browser(spec, *, live=None):
                     raise
 
             stage = "login_page"
+            progress("opening_workspace")
             if warm:
                 # Refresh this tab with its original session storage and current cookies.
                 page.reload(wait_until="domcontentloaded", timeout=45000)
@@ -1248,6 +1282,7 @@ def run_browser(spec, *, live=None):
                 if urlsplit(page.url).hostname != EFP_HOST:
                     raise StopRun("unexpected_page")
                 stage = "authentication"
+                progress("efp_form")
                 signals["initial_phase"] = "password_form"
                 checkpoint()
                 target = page.locator('input[name="username"]').evaluate("el => el.form ? {action: el.form.action, method: el.form.method.toUpperCase()} : null")
@@ -1296,6 +1331,7 @@ def run_browser(spec, *, live=None):
                     raise StopRun("authentication_unconfirmed")
 
             stage = "organism"
+            progress("selecting_organisation")
             # The OAuth callback may open the SPA before its organisation
             # session is ready. Let EDOF complete that flow before navigating.
             establishment_step = "waiting"
@@ -1391,6 +1427,27 @@ def run_browser(spec, *, live=None):
                 return {"code": "declaration_inspected", "stage": stage, "diagnostics": {"forms": inspected}}
             if spec["mode"] == "directory":
                 stage = "directory"
+                progress("reading_directory")
+                if spec.get("day_session") and vault:
+                    prior_pending = vault.get(directory.pending_key(spec["owner"]))
+                    full = vault.get(directory.record_key(spec["owner"])) or {}
+                    last_attempt = vault.get("edof-full-attempt:"+spec["owner"]) or 0
+                    bulk_due = bool(prior_pending and time.time()-prior_pending["checked"] < 300 and
+                                    time.time()-max(full.get("checked", 0), last_attempt) >= 900)
+                    if not bulk_due:
+                        progress("reading_pending_tab")
+                        pending = read_official_pending(page, checkpoint, BrowserTimeout)
+                        if pending is not None:
+                            vault.put(directory.pending_key(spec["owner"]), pending, ttl=directory.TTL)
+                            vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
+                            progress("pending_verified")
+                            return {"code":"requests_ready","stage":"directory","candidate_count":len(pending["rows"]),
+                                    "fresh_session":not reused,"session_saved":True,"gmail_code_used":gmail_code_used}
+                        directory_responses.clear()
+                        page.goto(LIST_URL, wait_until="commit", timeout=18000)
+                        page.reload(wait_until="domcontentloaded", timeout=45000)
+                    vault.put("edof-full-attempt:"+spec["owner"], time.time(), ttl=900)
+                    progress("reading_all_folders")
                 if not is_directory_view(page.url):
                     directory_responses.clear()
                 open_folder_view(page, LIST_URL, lambda: bool(directory_responses), BrowserTimeout)
