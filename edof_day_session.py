@@ -51,6 +51,16 @@ def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None, m
     return True
 
 
+# These fixed labels are the only child diagnostics exposed on a hard timeout.
+PHASE_STAGES = {
+    "browser_start": "browser", "open_login": "login_page",
+    "password_form": "authentication", "wait_code": "authentication",
+    "submit_code": "authentication", "select_organisation": "organism",
+    "open_directory": "directory", "export_directory": "directory",
+    "paginate_directory": "directory", "save_directory": "directory",
+}
+
+
 class DayWorker:
     """One isolated child controlled through anonymous pipes, with no network listener."""
     def __init__(self):
@@ -84,13 +94,19 @@ class DayWorker:
                     env={**env, "TMPDIR": self.temp.name}, text=True, start_new_session=True)
                 self.owner = spec["owner"]
             try:
+                progress_file = Path(self.temp.name) / "edof-phase"
+                progress_file.write_text("browser_start")
                 self.process.stdin.write(json.dumps({"owner": self.owner, "manual_until": spec.get("manual_until", 0), "recover_return": spec.get("recover_return", False)}) + "\n")
                 self.process.stdin.flush()
                 now = datetime.now(PARIS)
                 remaining = deadline - now.timestamp()
                 if not select.select([self.process.stdout], [], [], min(timeout, max(0, remaining)))[0]:
+                    phase = progress_file.read_text()
                     self.close()
-                    return {"code": "timeout" if datetime.now(PARIS).timestamp() < deadline else "day_closed"}
+                    code = "timeout" if datetime.now(PARIS).timestamp() < deadline else "day_closed"
+                    if phase in PHASE_STAGES:
+                        return {"code": code, "stage": PHASE_STAGES[phase], "diagnostics": {"initial_phase": phase}}
+                    return {"code": code}
                 result = json.loads(self.process.stdout.readline(32768))
                 if result.get("code") not in {"directory_ready", "directory_incomplete", "directory_unavailable"} and not awaiting_edof_return(result):
                     self.close()
@@ -105,6 +121,13 @@ def serve():
     from edof_server_browser import run_browser
     with sync_playwright() as pw:
         live = {"pw": pw, "browser": pw.chromium.launch(headless=True)}
+        progress_file = Path(os.environ["TMPDIR"]) / "edof-phase"
+        def record_phase(phase):
+            if phase in PHASE_STAGES:
+                temp_path = progress_file.with_suffix(".tmp")
+                temp_path.write_text(phase)
+                temp_path.replace(progress_file)
+        live["record_phase"] = record_phase
         try:
             for line in sys.stdin:
                 command = json.loads(line)
