@@ -423,3 +423,22 @@ def test_native_catchup_uses_linked_local_effective_date_if_production_only_know
     assert ledger.check_before_job(site.store,spec)
     remote[FOLDER]["first_name"] = "Autre"
     assert not ledger.check_before_job(site.store,spec)
+
+def test_exercise_on_a_later_day_does_not_move_an_entry_and_a_partial_draft_has_priority(site,monkeypatch):
+    import json
+    import integrale_edof_dashboard as dashboard
+    site.gate.switch("integrale",0,"admin")
+    monkeypatch.setattr(providers,"on_test_service",lambda:True)
+    remote = {**ROW,"entry_training":{**ENTRY,"source":"production","evidence":"Activité pédagogique enregistrée en production, événement 936"}}
+    monkeypatch.setattr(ledger,"authoritative_proofs",lambda ids:{FOLDER:remote})
+    def scan(state):
+        return ledger.discover(site.store,site.owner,{"rows":{FOLDER:{**ROW,"state":state}}})
+    assert scan("accepted")["missing"] == 1
+    assert not ledger.records(site.store.directory)
+    remote["service_done"] = {**EXIT,"rate":100,"source":"production","actual_date":ROW["session_end_date"]}
+    saved = {**ROW, **EXIT, "source":"admin","operator_confirmed":True}
+    dashboard.record_work(site.gate,FOLDER,"admin",draft=json.dumps(saved))
+    assert scan("inTraining")["service_done"] == 1
+    job = ledger.next_job(site.store,1)
+    assert job["intent"]["rate"] == 65 and job["intent"]["actual_date"] == EXIT["actual_date"]
+    assert ledger.check_before_job(site.store,job)

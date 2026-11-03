@@ -209,8 +209,12 @@ def operations_db(store):
 
 def local_operations(store):
     with closing(operations_db(store)) as db:
-        return {x["folder"]: {**dict(x), "draft": json.loads(x["draft"]) if x["draft"] else None}
-                for x in db.execute("SELECT * FROM dossier_work")}
+        result = {}
+        for row in db.execute("SELECT * FROM dossier_work"):
+            draft = json.loads(row["draft"]) if row["draft"] else None
+            # Legacy exercise drafts cannot establish a different start date.
+            result[row["folder"]] = {**dict(row), "draft": None if draft and draft.get("source") == "lms" else draft}
+        return result
 
 
 def record_work(store, folder, actor, **changes):
