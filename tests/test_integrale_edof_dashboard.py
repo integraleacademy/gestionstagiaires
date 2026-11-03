@@ -266,18 +266,18 @@ def test_legacy_french_dates_work_in_live_simulation_and_declarations_without_re
     assert edof_directory.session_date("31/02/2026") == ""
 
 
-def test_new_requests_tab_counts_current_unarchived_requests(site):
+def test_new_requests_counts_official_state_independently_of_local_notes(site):
     page = site.client.get("/admin/edof-test?section=state&tab=request")
     assert page.status_code == 200
     assert page.text.index("<span>Nouvelle demande</span>") < page.text.index("<span>Acceptés</span>")
     assert "<strong>1</strong><span>Nouvelle demande</span>" in page.text
     assert "100002" in page.text and "100001" not in page.text
     dashboard.record_work(site.gate, "100002", "admin", handled=1)
-    assert "100002" not in site.client.get("/admin/edof-test?section=state&tab=request").text
+    assert "100002" in site.client.get("/admin/edof-test?section=state&tab=request").text
     assert "100002" in site.client.get("/admin/edof-test?section=requests").text
     dashboard.record_work(site.gate, "100002", "admin", handled=0, archived=1)
     page = site.client.get("/admin/edof-test?section=state&tab=request")
-    assert "<strong>0</strong><span>Nouvelle demande</span>" in page.text and "100002" not in page.text
+    assert "<strong>1</strong><span>Nouvelle demande</span>" in page.text and "Archivée localement" in page.text
     assert dashboard.category({"state":"Non traité"}) == "request"
     assert dashboard.category({"state":"Accepté"}) == "accepted"
 
@@ -303,3 +303,26 @@ def test_admin_resume_requires_a_paused_open_watch(site, monkeypatch):
     assert site.client.post(url, data={"csrf":site.csrf}).status_code == 303
     assert site.vault.get("day-login-override:"+site.owner) == dt.datetime.now(dashboard.PARIS).date().isoformat()
     assert site.gate.state()["provider"] == "wedof"
+
+
+def test_manual_activation_updates_lamp_only_after_private_read(site, monkeypatch):
+    monkeypatch.setattr(server, "configuration", lambda: {"credentials_configured": True})
+    site.vault.put("gmail", {"fixture":True})
+    path = "/admin/edof-test/server/directory/manual"
+    assert site.client.post(path, data={"csrf":""}).status_code == 403
+    assert site.client.post(path, data={"csrf":site.csrf}).status_code == 303
+    expires = site.store.manual_until(site.owner)
+    assert expires and site.gate.state()["provider"] == "wedof"
+    assert site.client.post(path, data={"csrf":site.csrf}).status_code == 303
+    assert expires == site.store.manual_until(site.owner)
+    badge = "/admin/edof-test/connection-status"
+    assert site.client.get(badge).json["active"] is False
+    jid = site.store.reserve(site.owner, "directory", day_session=True)
+    assert site.client.get(badge).json["pending"] is True
+    site.vault.put("browser", {"cookies":[{"name":"fixture"}]})
+    site.store.finish(jid, {"code":"directory_ready", "day_session":True})
+    assert site.client.get(badge).json["active"] is True
+    assert "Connexion EDOF active" in site.client.get("/admin/edof-test").text
+    jid = site.store.reserve(site.owner, "directory", day_session=True)
+    site.store.finish(jid, {"code":"day_login_used", "day_session":True})
+    assert not site.client.get(badge).json["active"]

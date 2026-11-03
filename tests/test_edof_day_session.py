@@ -126,3 +126,22 @@ def test_only_a_verified_tab_can_automatically_renew_once(tmp_path):
     assert not allow_login(vault, automatic=True, owner="B", now=day.replace(hour=17))
     assert allow_login(vault, automatic=True, owner="A", now=day.replace(hour=17))
     assert not allow_login(vault, automatic=True, owner="A", now=day.replace(hour=18))
+
+
+def test_manual_window_on_weekend_expires_without_enabling_weekday_schedule(tmp_path, monkeypatch):
+    from edof_day_session import session_deadline
+    saturday = dt.datetime(2026, 11, 7, 10, tzinfo=PARIS)
+    monkeypatch.setattr("edof_server_test.time.time", lambda: saturday.timestamp())
+    store = ServerTestStore(tmp_path)
+    assert store.activate_manual("owner")
+    assert not store.activate_manual("owner")
+    until = store.manual_until("owner")
+    assert not store.directory_enabled("owner")
+    assert session_deadline(saturday, until) == (saturday+dt.timedelta(hours=1)).timestamp()
+    assert store.day_owners(saturday) == ["owner"]
+    assert store.day_owners(saturday+dt.timedelta(hours=1)) == []
+    vault = Vault(tmp_path, connector_key("test" * 12))
+    assert allow_login(vault, automatic=True, manual_until=until, now=saturday)
+    assert not allow_login(vault, automatic=True, manual_until=until, now=saturday+dt.timedelta(hours=1))
+    store.pause_directory("owner")
+    assert not store.manual_until("owner")
