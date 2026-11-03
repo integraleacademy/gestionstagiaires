@@ -21,6 +21,7 @@ from edof_readonly_test import (
 )
 from edof_gmail import Vault, GmailCodes, GmailError
 import edof_directory as directory
+import edof_session_clock as session_clock
 
 EDOF_HOST = "of.moncompteformation.gouv.fr"
 EFP_HOST = "efpconnect.emploi.gouv.fr"
@@ -342,6 +343,7 @@ def open_workspace_or_login(page, context, saved, signals, checkpoint):
             # EFP's existing sign-in and device cookies for its normal SSO flow.
             if not inactive_saved_view(page, signals):
                 raise StopRun("authentication_unconfirmed")
+            signals["local_session_reset"] = True
             context.clear_cookies(domain=re.compile(r"^\.?(?:of\.)?moncompteformation\.gouv\.fr$"))
         signals["initial_phase"] = "navigation"
         try:
@@ -1157,6 +1159,14 @@ def run_browser(spec, *, live=None):
                       "mail_used":gmail_code_used, "callback":signals.get("callback_status"),
                       "private_status":signals.get("workspace_status")}, ttl=900)
 
+    def clock_event(event, *, fresh=False):
+        if live is None or not vault or not spec.get("owner"):
+            return
+        if event != "verified" and not live.get("timing_observed"):
+            return
+        session_clock.record(vault, spec["owner"], event, fresh=fresh)
+        live["timing_observed"] = event == "verified"
+
     def route_request(route):
         nonlocal blocked, efp_form_target
         if signals.get("throttled"):
@@ -1274,6 +1284,9 @@ def run_browser(spec, *, live=None):
             else:
                 context = browser.new_context(locale="fr-FR", accept_downloads=spec["mode"] == "directory", service_workers="block", storage_state=state)
                 if live is not None:
+                    if vault and spec.get("owner"):
+                        session_clock.record(vault, spec["owner"], "interrupted")
+                    live["timing_observed"] = False
                     live.pop("pending_witness", None)
                     # With no active read policy, the idle page cannot send requests.
                     context.route("**/*", lambda route: route.abort())
@@ -1327,12 +1340,27 @@ def run_browser(spec, *, live=None):
                     if not bodies:
                         return "loading"
                     text = bodies[0]
+                if live is not None and live.get("timing_observed"):
+                    location = urlsplit(page.url)
+                    if signals.get("local_session_reset"):
+                        clock_event("interrupted")
+                    elif ((location.scheme, location.netloc) == ("https", EDOF_HOST)
+                          and workspace_screen(text) == "session_expired"):
+                        # A dossier's free-text description cannot end the clock.
+                        notices = page.locator('[role=alert]:visible,[role=dialog]:visible,[role=alertdialog]:visible,.fr-alert:visible')
+                        if (location_category(page.url) in {"edof_initialisation","edof_login_redirect","edof_select_siret"}
+                                or any(workspace_screen(notice) == "session_expired" for notice in notices.all_inner_texts())):
+                            clock_event("reauth")
                 code = classify_text(text)
                 if code and code != "verification_code":
                     raise StopRun(code)
                 if page.locator('iframe[title*="captcha" i]:visible, iframe[title*="challenge" i]:visible').count():
                     raise StopRun("human_verification")
                 otp_fields = page.locator(OTP_SELECTOR)
+                if (live is not None and live.get("timing_observed") and urlsplit(page.url).scheme == "https"
+                        and urlsplit(page.url).netloc == EFP_HOST
+                        and (page.locator('input[name="username"]:visible').count() or otp_fields.count())):
+                    clock_event("reauth")
                 if code == "verification_code" or otp_fields.count():
                     if not allow_otp:
                         return
@@ -1386,6 +1414,7 @@ def run_browser(spec, *, live=None):
                 vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                 if live is not None and witness is not None:
                     live["pending_witness"] = witness
+                clock_event("verified", fresh=not reused)
                 progress("pending_verified")
                 return {"code":"requests_ready","stage":"directory","candidate_count":len(snapshot["rows"]),
                         "fresh_session":not reused,"session_saved":True,"gmail_code_used":gmail_code_used}
@@ -1411,6 +1440,7 @@ def run_browser(spec, *, live=None):
             except StopRun as exc:
                 if not saved or not can_restart_saved_login(exc.code, page, diagnostics, checkpoint):
                     raise
+                clock_event("interrupted")
                 context.close()
                 if live is not None:
                     live.pop("page", None)
@@ -1443,6 +1473,7 @@ def run_browser(spec, *, live=None):
                     raise StopRun("login_form_not_allowed")
                 if not vault:
                     raise StopRun("private_storage_unavailable")
+                clock_event("interrupted" if signals.get("local_session_reset") else "reauth")
                 # Refresh Google and record pre-existing mail BEFORE requesting
                 # an EFP code. This cannot reuse a code from an earlier run.
                 from edof_day_session import allow_login
@@ -1630,6 +1661,7 @@ def run_browser(spec, *, live=None):
                 progress("saving_directory")
                 vault.put(directory.record_key(spec["owner"]), snapshot)
                 vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
+                clock_event("verified", fresh=not reused)
                 return {"code": "directory_ready", "stage": stage, "candidate_count": len(snapshot["rows"]),
                         "diagnostics": {"directory": signals["directory"]},
                         "fresh_session": not reused, "gmail_code_used": gmail_code_used, "session_saved": True}
@@ -1679,6 +1711,7 @@ def run_browser(spec, *, live=None):
                 # save an incomplete/OTP/challenge session or local storage.
                 vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                 session_saved = True
+                clock_event("verified", fresh=not reused)
             if proposal_mode:
                 if not vault:
                     raise StopRun("private_storage_unavailable")

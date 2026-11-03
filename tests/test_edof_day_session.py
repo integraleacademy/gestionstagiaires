@@ -169,6 +169,28 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
                                          "intent":{"action":"entry_training"}},live=live)
             assert result["code"] == "declaration_confirmed",result
             assert result["session_saved"] and not result["gmail_code_used"] and not result["fresh_session"]
+        # A real login form in this same previously verified tab ends the timer
+        # before any mail lookup. This entire exchange is routed locally.
+        timing = runner.session_clock.read_clock(vault, "fixture")
+        assert timing["current"]["last"] >= timing["current"]["start"]
+        login = f"https://{runner.EFP_HOST}/auth/realms/efp/login-actions/authenticate"
+        def expired_portal(route, **kwargs):
+            if route.request.url == login:
+                return route.fulfill(content_type="text/html", body=f'<form method="post" action="{login}"><input name="username"><input type="password" name="password"></form>')
+            return dossier_http(route, **kwargs)
+        def require_login(page, context, saved, signals, checkpoint):
+            page.goto(login)
+            checkpoint()
+            return False
+        monkeypatch.setattr(Route, "continue_", expired_portal)
+        monkeypatch.setattr(runner, "open_workspace_or_login", require_login)
+        monkeypatch.setattr(runner, "read_pending_with_private_session", lambda *a: None)
+        vault.put("efp-login-day", {"date":dt.datetime.now(PARIS).date().isoformat(),"count":1})
+        result = runner.run_browser({"mode":"directory","day_session":True,"owner":"fixture"},live=live)
+        assert result["code"] == "day_login_used" and not result["gmail_code_used"]
+        measured = runner.session_clock.read_clock(vault, "fixture")
+        assert "current" not in measured and measured["previous"]["last"] == timing["current"]["last"]
+        assert measured["previous"]["detected"] >= timing["current"]["last"]
         assert len(browser.contexts) == len(browser.contexts[0].pages) == 1
         browser.close()
 

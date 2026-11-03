@@ -379,3 +379,17 @@ body.admin-sidebar-active .main-content:has(.edof-workspace) { max-width: none; 
 .edof-entries-bar p { margin:4px 0 0; }
 .edof-entry-choice { display:inline-flex; align-items:center; gap:6px; color:#263e77; font-weight:650; }
 .edof-entries-bar button:disabled { opacity:.55; }
+
+.edof-clock { max-width: 48rem; margin: 12px 0 0; padding: 12px 15px; border: 1px solid #d6e1ef;
+  border-radius: 14px; background: #f8faff; color: #233756; }
+.edof-clock-main { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.edof-clock-main svg { color: #4056a0; flex: none; }
+.edof-clock-main div { flex: 1 1 10em; }
+.edof-clock-main strong, .edof-clock-main span { display: block; }
+.edof-clock-main strong { font-size: 14px; }
+.edof-clock-main span, .edof-clock p { font-size: 12px; line-height: 1.45; }
+.edof-clock output { padding: 4px 10px; border-radius: 8px; background: #e7edfc; color: #253e85;
+  font-size: 19px; font-variant-numeric: tabular-nums; font-weight: 750; }
+.edof-clock p { margin: 7px 0 0; color: #475b78; }
+.edof-clock-previous { padding-top: 7px; border-top: 1px solid #dae3f0; }
+.edof-clock-previous strong { margin-right: .5em; }

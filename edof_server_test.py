@@ -28,6 +28,7 @@ from cpf_provider import ProviderStore, acquire_provider, provider_operation
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
 from edof_day_session import DayWorker, OPEN_HOUR, POLL_SECONDS, PARIS, working_hours, awaiting_edof_return
 import edof_directory as directory
+import edof_session_clock as session_clock
 import edof_proposal_jobs as proposals
 import edof_declarations as declarations
 from edof_gmail import Vault, GmailError, connector_key, oauth_configured, authorization_url, finish_authorization
@@ -287,6 +288,11 @@ class ServerTestStore:
             except BlockingIOError:
                 return
             with closing(self.connect()) as db, db:
+                if self.connector_key:
+                    vault = Vault(self.directory, self.connector_key)
+                    owners = db.execute("SELECT owner FROM directory_activity UNION SELECT owner FROM manual_sessions UNION SELECT DISTINCT owner FROM jobs")
+                    for item in owners:
+                        session_clock.record(vault, item["owner"], "interrupted")
                 db.execute("""UPDATE jobs SET finished=?, result=?
                     WHERE mode='directory' AND finished IS NULL""",
                     (time.time(), json.dumps({"code":"interrupted", "restart":True, "day_session":True})))
@@ -456,7 +462,10 @@ class ServerTestStore:
         watch_enabled = self.directory_enabled(owner)
         watch_open = working_hours(now, daily=True)
         open_now = bool(manual or watch_open and watch_enabled)
+        timing = session_clock.read_clock(Vault(self.directory,self.connector_key), owner) if self.connector_key else {}
         with closing(self.connect()) as db:
+            if not timing:
+                timing = session_clock.legacy_observation(db, owner)
             queued = bool(db.execute("SELECT 1 FROM directory_requested WHERE owner=?", (owner,)).fetchone())
             row = db.execute("""SELECT finished,created,json_extract(result,'$.code') code
                 FROM jobs WHERE owner=? AND mode='directory' ORDER BY created DESC LIMIT 1""", (owner,)).fetchone()
@@ -501,7 +510,8 @@ class ServerTestStore:
         blocked = open_now and not verified and stamp >= earliest and last and last["code"] == "day_login_used"
         error = MESSAGES.get(last["code"], "") if open_now and not verified and stamp >= earliest and last and last["code"] not in {"directory_ready","requests_ready"} else ""
         schedule = ("Veille programmée de 7 h à 19 h (Paris)" if watch_open else "Hors plage de veille (7 h à 19 h, Paris)") if watch_enabled else "Veille automatique suspendue"
-        return {"active": verified, "pending": pending, "checked": checked, "sync": sync, "schedule": schedule, "manual_sync": self.manual_sync_status(owner, "all"),
+        clock = session_clock.clock_view(timing, now.timestamp(), open_now=open_now, verified=verified)
+        return {"clock":clock, "active": verified, "pending": pending, "checked": checked, "sync": sync, "schedule": schedule, "manual_sync": self.manual_sync_status(owner, "all"),
                 "new_sync": self.manual_sync_status(owner, "new"),
                 "phase": labels.get(phase.get("phase"), "") if private_at >= earliest and pending else "",
                 "stamp": stamp, "manual": bool(manual),

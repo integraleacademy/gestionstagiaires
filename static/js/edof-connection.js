@@ -8,6 +8,36 @@
     submitting:false, submittedAt:0, awaiting:form.querySelector("button").disabled,
     statusKey:form.dataset.manualSync === "new" ? "new_sync" : "manual_sync"
   }));
+  const clock = document.getElementById("edof-session-clock");
+  let tickTimer;
+  function animateClock(elapsed, seconds, confirmed) {
+    clearInterval(tickTimer);
+    if (!clock || !seconds) return;
+    const received = performance.now();
+    const value = clock.querySelector("[data-clock-value]");
+    tickTimer = setInterval(() => {
+      const delta = Math.floor((performance.now() - received) / 1000);
+      if (delta >= seconds) {
+        clearInterval(tickTimer);
+        value.textContent = confirmed;
+        clock.querySelector("[data-clock-label]").textContent = "En attente du prochain contrôle";
+        return;
+      }
+      const total = elapsed + delta;
+      value.textContent = [Math.floor(total / 3600), Math.floor(total / 60) % 60, total % 60]
+        .map(unit => String(unit).padStart(2,"0")).join(":");
+    }, 1000);
+  }
+  function updateClock(state) {
+    if (!clock || !state) return;
+    clock.querySelector("[data-clock-label]").textContent = state.label;
+    clock.querySelector("[data-clock-value]").textContent = state.display;
+    clock.querySelector("[data-clock-detail]").textContent = state.detail;
+    clock.querySelector("[data-clock-previous]").textContent = state.previous;
+    clock.dataset.confirmed = state.confirmed;
+    animateClock(state.elapsed, state.tick_for, state.confirmed);
+  }
+  if (clock) animateClock(Number(clock.dataset.elapsed), Number(clock.dataset.tickFor), clock.dataset.confirmed);
   const catchupPanel = document.getElementById("rattrapage");
   const catchupButton = catchupPanel?.querySelector("[data-catchup-button]");
   let leavingForCatchup = false;
@@ -64,6 +94,7 @@
         const response = await fetch(box.dataset.statusUrl, {cache: "no-store"});
         if (!response.ok) throw Error();
         const state = await response.json();
+        updateClock(state.clock);
         const priorPhase = catchupPanel?.dataset.phase;
         if (catchupPanel && state.catchup && !leavingForCatchup) {
           showCatchup(state.catchup.phase, state.catchup.message);
@@ -114,6 +145,11 @@
         lamp.classList.remove("on");
         lamp.textContent = "Connexion EDOF inactive";
         note.textContent = "Le serveur n’a pas pu confirmer la connexion.";
+        clearInterval(tickTimer);
+        if (clock && clock.dataset.confirmed !== "—") {
+          clock.querySelector("[data-clock-value]").textContent = clock.dataset.confirmed;
+          clock.querySelector("[data-clock-label]").textContent = "Durée confirmée au dernier accès";
+        }
       }
     }
     const active = syncControls.some(control => control.awaiting) || ["scan","send"].includes(catchupPanel?.dataset.phase);

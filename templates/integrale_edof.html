@@ -5,7 +5,7 @@
   {% endif %}
   {% if detail and detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'] %}<meta http-equiv="refresh" content="10">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-synchros-distinctes') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-compteur-efp') }}">
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
@@ -53,6 +53,16 @@
         <span id="edof-reading" class="wedof-status-pill" role="status" {% if not live.pending %}hidden{% endif %}><i class="edof-spinner" aria-hidden="true"></i>Synchronisation EDOF en cours…</span>
       </div>
       <small id="edof-connection-note">{{ live.schedule }}{% if live.pending %} · {{ live.phase or 'Lecture en cours…' }}{% elif live.error %} · {{ live.error }}{% endif %}{% if live.until %} · Activation manuelle jusqu’à {{ live.until }}{% endif %}{% if live.checked %} · Dernier contrôle le {{ live.checked }}{% endif %}</small>
+      <section class="edof-clock" id="edof-session-clock" aria-label="Durée de connexion EFP"
+               data-elapsed="{{ live.clock.elapsed }}" data-tick-for="{{ live.clock.tick_for }}" data-confirmed="{{ live.clock.confirmed }}">
+        <div class="edof-clock-main">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="14" r="8"/><path d="M12 6V3m-3 0h6m-3 7v4l3 2m3-10 2-2"/></svg>
+          <div><strong>Durée de connexion EFP</strong><span data-clock-label>{{ live.clock.label }}</span></div>
+          <output data-clock-value role="timer" aria-live="off">{{ live.clock.display }}</output>
+        </div>
+        <p data-clock-detail>{{ live.clock.detail }}</p>
+        <p class="edof-clock-previous"><strong>Dernière expiration observée</strong><span data-clock-previous>{{ live.clock.previous }}</span></p>
+      </section>
     </div>
     <div class="wedof-hero-actions" aria-label="Actions Intégrale EDOF">
       {{ sync_button() }}
@@ -303,5 +313,5 @@
 </div>
 {% endblock %}
 {% block scripts %}
-  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261103-synchros-distinctes') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261103-compteur-efp') }}" defer></script>
 {% endblock %}
