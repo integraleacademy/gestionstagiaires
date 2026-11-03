@@ -1,4 +1,12 @@
 const sheetContext = JSON.parse(document.getElementById("traineeSheetContext").textContent);
+const rosterReturnLink = document.querySelector("[data-return-to-roster]");
+if (rosterReturnLink && document.referrer) {
+  const previous = new URL(document.referrer);
+  if (previous.origin === location.origin &&
+      [rosterReturnLink.pathname, rosterReturnLink.dataset.allVtc].includes(previous.pathname)) {
+    rosterReturnLink.href = previous.pathname + previous.search;
+  }
+}
 const vaeResetDossierForm = document.getElementById("vaeResetDossierForm");
 const vaeResetConfirmModal = document.getElementById("vaeResetConfirmModal");
 const vaeResetConfirmYes = document.getElementById("vaeResetConfirmYes");

@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/trainee-sheet.css', v='20261104') }}">
 
 <div class="breadcrumbs">
-  <a href="{{ url_for('admin_trainees', session_id=session.id, **request.args) }}">← Retour stagiaires</a>
+  <a data-return-to-roster data-all-vtc="{{ url_for('admin_vtc_trainees_all') }}" href="{{ url_for('admin_trainees', session_id=session.id, **request.args) }}">← Retour stagiaires</a>
 </div>
 
 {% for message in get_flashed_messages(category_filter=['document_conversion_error']) %}
