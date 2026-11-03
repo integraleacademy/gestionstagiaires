@@ -3,7 +3,6 @@ from unittest.mock import Mock
 
 import pytest
 
-import crm_app
 import app as host
 
 
@@ -20,7 +19,7 @@ def test_opening_roster_and_sheet_requires_no_business_write_or_remote_lookup(mo
     for name in ["save_data", "_refresh_yousign_convention_status_if_pending", "_refresh_cpf_link_from_wedof",
                  "fetch_hebergement_status", "fetch_cnapsv3_tracking_requests"]:
         monkeypatch.setattr(host, name, Mock(side_effect=AssertionError(name)))
-    client = crm_app.app.test_client()
+    client = host.app.test_client()
     with client.session_transaction() as user:
         user.update(admin_logged_in=True, admin_role="admin")
     for path in ["/admin/sessions/S/trainees", "/admin/sessions/S/stagiaires/T"]:
@@ -34,7 +33,7 @@ def test_opening_roster_and_sheet_requires_no_business_write_or_remote_lookup(mo
 
 
 def test_badge_cache_is_scoped_and_counts_documents_not_people(monkeypatch):
-    client = crm_app.app.test_client()
+    client = host.app.test_client()
     path = "/api/admin/navigation-counts"
     assert client.get(path).status_code in (401, 302)
     monkeypatch.setattr(host, "_navigation_counts_cache", host.OrderedDict())
