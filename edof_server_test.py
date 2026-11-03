@@ -329,7 +329,7 @@ class ServerTestStore:
                 if selected["provider"] == "integrale" and not selected["pending"] and selected["revision"] == row["revision"]:
                     phase = "send"
         state = {"busy":phase != "done", "phase":phase, "requested":row["requested"],
-                 "message":message or "Lecture des dossiers dans EDOF, puis vérification des échéances et des justificatifs."}
+                 "message":message or "Lecture des dossiers dans EDOF, puis préparation des déclarations arrivées à échéance."}
         if include_outcomes:
             state["outcomes"] = outcomes
         return state
@@ -364,7 +364,7 @@ class ServerTestStore:
                     when = dt.datetime.now(PARIS).strftime("%d/%m à %H h %M")
                     message = (f"Liste vérifiée le {when}. En file de transmission : entrées en formation · {report['entry_training']}, "
                                f"sorties avec service fait · {report['service_done']}. Déjà traitées ou en cours : {report['existing']}. "
-                               f"Bloquées : {report['blocked']}. Sans justificatif correspondant : {report['missing']}. "
+                               f"Bloquées : {report['blocked']}. Date effective ou réalisation à préciser : {report['missing']}. "
                                f"À vérifier : {report['review']}.")
                     if not any(report.values()):
                         message = f"Liste vérifiée le {when}. Aucune automatisation en retard."
