@@ -78,6 +78,17 @@ class DayWorker:
                 return {"code": "day_closed"}
             if self.process is None or self.owner != spec["owner"] or self.process.poll() is not None:
                 self.close()
+                from edof_gmail import Vault
+                vault = Vault(env["EDOF_CONNECTOR_DIRECTORY"], env["EDOF_CONNECTOR_KEY"])
+                today = now.date().isoformat()
+                budget = vault.get("efp-login-day")
+                count = budget.get("count",0) if isinstance(budget,dict) and budget.get("date")==today else int(budget==today)
+                # Without a reusable session or an authorised sign-in there is
+                # no work for a fresh Chromium process to do on this instance.
+                if (count and not (vault.get("browser") or {}).get("cookies")
+                        and vault.get("day-login-override:"+spec["owner"]) != today
+                        and not (count==1 and spec.get("recover_return") and spec.get("manual_until",0)>now.timestamp())):
+                    return {"code":"day_login_used", "gmail_code_used":False}
                 self.temp = tempfile.TemporaryDirectory(prefix="edof-working-day-")
                 self.process = subprocess.Popen([sys.executable, str(Path(__file__).resolve())],
                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,

@@ -235,3 +235,18 @@ def test_private_list_fallback_requires_complete_matching_rows():
     source.url="https://unrelated.invalid"+API_PREFIX+"pad"
     assert read_pending_with_private_session(context,source) is None
     context.request.get.assert_not_called()
+
+
+def test_no_cold_browser_without_existing_session_or_login_budget(tmp_path, monkeypatch):
+    from edof_day_session import DayWorker
+    from unittest.mock import Mock
+    now=dt.datetime.now(PARIS)
+    key=connector_key("test"*12)
+    vault=Vault(tmp_path,key)
+    vault.put("efp-login-day", {"date":now.date().isoformat(), "count":3})
+    launch=Mock(side_effect=AssertionError("unexpected browser"))
+    monkeypatch.setattr("edof_day_session.subprocess.Popen",launch)
+    outcome=DayWorker().read({"owner":"example", "manual_until":now.timestamp()+3600},
+                              {"EDOF_CONNECTOR_DIRECTORY":str(tmp_path), "EDOF_CONNECTOR_KEY":key},30)
+    assert outcome["code"]=="day_login_used" and not outcome["gmail_code_used"]
+    launch.assert_not_called()

@@ -447,7 +447,8 @@ def read_official_pending(page, checkpoint, timeout_error):
 
 
 def read_pending_with_private_session(context, witness):
-    """Fallback when the portal has authenticated the SIRET but its list view has not rendered."""
+    """Read only the pending rows for an establishment already verified by its portal."""
+    from playwright.sync_api import Error as BrowserError
     if witness is None:
         return None
     origin = urlsplit(witness.url)
@@ -481,7 +482,7 @@ def read_pending_with_private_session(context, witness):
     iterator = pages()
     try:
         return directory.from_pages(iterator)
-    except (ValueError, TypeError, AttributeError):
+    except (ValueError, TypeError, AttributeError, OSError, BrowserError):
         return None
     finally:
         iterator.close()
@@ -1491,12 +1492,12 @@ def run_browser(spec, *, live=None):
                         vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                     if not bulk_due:
                         progress("reading_pending_tab")
-                        try:
-                            pending = read_official_pending(page, checkpoint, BrowserTimeout)
-                        except BrowserTimeout:
-                            pending = None
-                        if pending is None and private_witness is not None:
-                            pending = read_pending_with_private_session(context, private_witness)
+                        pending = read_pending_with_private_session(context, private_witness)
+                        if pending is None:
+                            try:
+                                pending = read_official_pending(page, checkpoint, BrowserTimeout)
+                            except BrowserTimeout:
+                                pending = None
                         if pending is not None:
                             vault.put(directory.pending_key(spec["owner"]), pending, ttl=directory.TTL)
                             vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
