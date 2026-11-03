@@ -298,15 +298,41 @@ class ServerTestStore:
             if catchup_revision is not None:
                 db.execute("INSERT OR REPLACE INTO automation_catchups VALUES (?,?,?,'')", (owner,catchup_revision,now))
 
-    def catchup_status(self, owner):
+    def catchup_status(self, owner, *, include_outcomes=False):
         with closing(self.connect()) as db:
-            row = db.execute("SELECT requested,message FROM automation_catchups WHERE owner=?", (owner,)).fetchone()
+            row = db.execute("SELECT requested,revision,message FROM automation_catchups WHERE owner=?", (owner,)).fetchone()
         if not row:
             return None
         message = row["message"]
-        if not message and row["requested"] < time.time()-3600:
+        outcomes = {}
+        # Older runs stored just the summary. New reports also retain each decision.
+        if message.startswith("{"):
+            result = json.loads(message)
+            message, outcomes = result["summary"], result["outcomes"]
+        active_run = row["requested"] >= time.time() - 3600
+        if not message and not active_run:
             message = "Le délai de rattrapage a expiré. Relancez-le pour actualiser la liste."
-        return {"busy":not message, "message":message or "Rattrapage en cours. La liste des dossiers est relue dans EDOF."}
+        phase = "done" if message else "scan"
+        targets = {f:action for f,(action,status) in outcomes.items() if status in {"queued","sending"}}
+        if targets:
+            with closing(declarations.database(self.directory)) as db:
+                states = db.execute("""SELECT d.status, COUNT(*) FROM cpf_declarations d
+                    JOIN json_each(?) t ON d.folder=t.key AND d.action=t.value
+                    WHERE d.revision=? GROUP BY d.status""", (json.dumps(targets),row["revision"])).fetchall()
+            counts = dict(states)
+            waiting = counts.get("queued",0) + counts.get("sending",0)
+            verified = counts.get("confirmed",0)
+            review = sum(counts.get(k,0) for k in ("uncertain","review","paused"))
+            message += f" Suivi des envois de ce passage · en attente : {waiting}, confirmés par EDOF : {verified}, à vérifier : {review}."
+            if waiting and active_run:
+                selected = ProviderStore(self.directory).state()
+                if selected["provider"] == "integrale" and not selected["pending"] and selected["revision"] == row["revision"]:
+                    phase = "send"
+        state = {"busy":phase != "done", "phase":phase, "requested":row["requested"],
+                 "message":message or "Lecture des dossiers dans EDOF, puis vérification des échéances et des justificatifs."}
+        if include_outcomes:
+            state["outcomes"] = outcomes
+        return state
 
     def process_catchups(self, selection):
         from integrale_edof_dashboard import apply_confirmed_entries
@@ -331,7 +357,8 @@ class ServerTestStore:
                             raise ValueError("La liste complète est indisponible.")
                         if ProviderStore(self.directory).state()["revision"] != run["revision"]:
                             raise ValueError("Le choix du système CPF a changé.")
-                        report = declarations.discover(self, run["owner"], apply_confirmed_entries(snap,self.directory,run["owner"]))
+                        outcomes = {}
+                        report = declarations.discover(self, run["owner"], apply_confirmed_entries(snap,self.directory,run["owner"]), outcomes=outcomes)
                         if report is None:
                             raise ValueError("Intégrale EDOF doit être actif.")
                     when = dt.datetime.now(PARIS).strftime("%d/%m à %H h %M")
@@ -341,6 +368,7 @@ class ServerTestStore:
                                f"À vérifier : {report['review']}.")
                     if not any(report.values()):
                         message = f"Liste vérifiée le {when}. Aucune automatisation en retard."
+                    message = json.dumps({"summary":message, "outcomes":outcomes}, ensure_ascii=False)
                 except (OSError, ValueError) as exc:
                     message = ("Analyse interrompue. " + str(exc) if isinstance(exc, ValueError) else
                                "Analyse interrompue. Les données sont momentanément indisponibles.")

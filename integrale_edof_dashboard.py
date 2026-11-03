@@ -485,6 +485,16 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         dispatches = declarations.records(store.directory)
         visible_folders = (snap or {}).get("rows", {})
         dispatches = [d for d in dispatches if d["folder"] in visible_folders]
+        catchup = None
+        if section == "automations" and not detail:
+            catchup = store.catchup_status(owner, include_outcomes=True)
+            outcomes = (catchup or {}).get("outcomes", {})
+            by_action = {(d["folder"], d["action"]):d["status"] for d in dispatches
+                         if d["revision"] == selected["revision"] or d["status"] in {"confirmed","sending","uncertain","review"}}
+            for row in rows:
+                action, outcome = outcomes.get(row["folder_id"], (None,None))
+                row["dispatch_status"] = by_action.get((row["folder_id"],row["action"]))
+                row["catchup_outcome"] = outcome if action == row["action"] else None
         if detail:
             detail["dispatches"] = [d for d in dispatches if d["folder"] == folder]
         with closing(store.connect()) as db:
@@ -517,7 +527,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             inspection=check, dispatches=dispatches, csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
             match_counts=Counter(m["status"] for m in matches.values()), total=len(rows), counts=counts,
             rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
-            catchup=store.catchup_status(owner) if section == "automations" and not detail else None,
+            catchup=catchup,
             detail=detail, events=events, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=(directory.stamp({"checked":snap["pending_checked"]}) if snap and snap.get("pending_checked") and tab=="request" else directory.stamp({"checked":snap["accepted_checked"]}) if snap and snap.get("accepted_checked") and tab=="accepted" else directory.stamp(snap) if snap and snap.get("checked") else directory.stamp({"checked":snap["receipt_checked"]}) if snap and snap.get("receipt_checked") and tab!="request" else None), today=today, metrics=metrics,
             live=store.live_connection(owner, gmail["saved_session"], snapshot=snap), nonce=g.edof_nonce, jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
             scope=(snap or {}).get("scope", "open"), directory_enabled=store.directory_enabled(owner), snapshot_count=len((snap or {}).get("rows", {})),

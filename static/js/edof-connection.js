@@ -5,6 +5,28 @@
   if (!box || !lamp || !note) return;
   const manualSync = box.querySelector("[data-manual-sync]");
   const feedback = box.querySelector("[data-sync-feedback]");
+  const catchupPanel = document.getElementById("rattrapage");
+  const catchupButton = catchupPanel?.querySelector("[data-catchup-button]");
+  let leavingForCatchup = false;
+  function busy(button, running, unavailable = false) {
+    if (!button) return;
+    button.setAttribute("aria-busy", String(running));
+    button.disabled = running || unavailable;
+  }
+  function showCatchup(phase, message) {
+    if (!catchupPanel) return;
+    catchupPanel.dataset.phase = phase;
+    catchupPanel.querySelector(".edof-report").hidden = false;
+    const titles = {scan:"Lecture des dossiers EDOF en cours…", send:"Transmission des déclarations en cours…", done:"Dernier bilan"};
+    catchupPanel.querySelector("[data-stage-title]").textContent = titles[phase];
+    catchupPanel.querySelector("[role=status]").textContent = message;
+    busy(catchupButton, phase !== "done", catchupButton?.dataset.active !== "1");
+  }
+  // Keep the regular form navigation and CSRF checks; show activity immediately.
+  catchupButton?.form.addEventListener("submit", () => {
+    leavingForCatchup = true;
+    showCatchup("scan", "Demande de rattrapage en cours…");
+  });
   let submitting = false;
   let submittedAt = 0;
   let awaitingList = Boolean(manualSync?.querySelector("button").disabled);
@@ -12,7 +34,8 @@
     event.preventDefault();
     if (submitting) return;
     submitting = true;
-    manualSync.querySelector("button").disabled = true;
+    busy(manualSync.querySelector("button"), true);
+    feedback.textContent = "Demande de synchronisation en cours…";
     submittedAt = Date.now();
     try {
       const response = await fetch(manualSync.action, {method:"POST", body:new FormData(manualSync),
@@ -20,10 +43,10 @@
       const result = await response.json();
       feedback.textContent = result.message;
       awaitingList = response.ok;
-      if (!response.ok) manualSync.querySelector("button").disabled = false;
+      if (!response.ok) busy(manualSync.querySelector("button"), false);
     } catch {
       feedback.textContent = "La demande n’a pas pu être confirmée. Vérifiez la connexion et réessayez.";
-      manualSync.querySelector("button").disabled = false;
+      busy(manualSync.querySelector("button"), false);
     } finally {
       submitting = false;
     }
@@ -35,12 +58,12 @@
         const response = await fetch(box.dataset.statusUrl, {cache: "no-store"});
         if (!response.ok) throw Error();
         const state = await response.json();
-        const catchup = document.getElementById("edof-catchup-result");
-        if (catchup && state.catchup) {
-          catchup.textContent = state.catchup.message;
-          const button = document.querySelector("[data-catchup-button]");
-          if (button) button.disabled = button.dataset.active !== "1" || state.catchup.busy;
+        const priorPhase = catchupPanel?.dataset.phase;
+        if (catchupPanel && state.catchup && !leavingForCatchup) {
+          showCatchup(state.catchup.phase, state.catchup.message);
         }
+        const reading = document.getElementById("edof-reading");
+        if (reading) reading.hidden = !state.pending;
         const latest = document.getElementById("edof-sync");
         const full = document.getElementById("edof-full-sync");
         if (state.sync.stamp && state.sync.stamp >= Number(latest.dataset.stamp)) {
@@ -54,7 +77,7 @@
         full.hidden = !Number(full.dataset.stamp) || Number(full.dataset.stamp) >= Number(latest.dataset.stamp);
         const activate = document.getElementById("edof-activate");
         if (manualSync && !submitting && started > submittedAt && state.manual_sync) {
-          manualSync.querySelector("button").disabled = state.manual_sync.busy;
+          busy(manualSync.querySelector("button"), state.manual_sync.busy);
           feedback.textContent = state.manual_sync.message;
           if (state.manual_sync.busy) awaitingList = true;
           else if (awaitingList && state.manual_sync.updated && box.dataset.detail === "0") {
@@ -63,6 +86,11 @@
               return;
             }
           } else awaitingList = false;
+        }
+        if (["scan","send"].includes(priorPhase) && state.catchup?.phase !== priorPhase && !leavingForCatchup
+            && !document.activeElement.matches("input, textarea, select")) {
+          location.reload();
+          return;
         }
         if (activate) activate.hidden = state.manual && (state.active || state.pending || state.paused);
         if (activate) activate.querySelector("button").textContent = state.manual ? "Réessayer la lecture" : "Activer la connexion pour 1 heure";
@@ -81,7 +109,8 @@
         note.textContent = "Le serveur n’a pas pu confirmer la connexion.";
       }
     }
-    setTimeout(refresh, 15000);
+    const active = awaitingList || ["scan","send"].includes(catchupPanel?.dataset.phase);
+    setTimeout(refresh, active ? 3000 : 15000);
   }
   setTimeout(refresh, 3000);
 })();
