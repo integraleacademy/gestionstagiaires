@@ -5,7 +5,7 @@
   {% endif %}
   {% if detail and detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'] %}<meta http-equiv="refresh" content="10">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-fiche-sync') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-veille') }}">
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
@@ -30,7 +30,7 @@
         <span id="edof-full-sync" class="wedof-status-pill" data-stamp="{{ live.sync.full_stamp }}" {% if not live.sync.full_stamp or live.sync.stamp <= live.sync.full_stamp %}hidden{% endif %}>Liste générale · {{ live.sync.full_label }}</span>
         <span class="wedof-status-pill">{{ snapshot_count }} dossiers synchronisés</span>
       </div>
-      <small id="edof-connection-note">{{ 'Connexion en cours…' if live.pending else ('Activation manuelle jusqu’à ' ~ live.until if live.manual else ('Dernier contrôle le ' ~ live.checked if live.checked else 'En attente du premier contrôle')) }}</small>
+      <small id="edof-connection-note">{{ live.schedule }}{% if live.pending %} · {{ live.phase or 'Lecture en cours…' }}{% elif live.error %} · {{ live.error }}{% endif %}{% if live.until %} · Activation manuelle jusqu’à {{ live.until }}{% endif %}{% if live.checked %} · Dernier contrôle le {{ live.checked }}{% endif %}</small>
     </div>
     <div class="wedof-hero-actions" aria-label="Actions Intégrale EDOF">
       <a class="btn wedof-primary-action" href="{{ url_for('integrale_edof.index', section='state', matching=1, _anchor='matching') }}">Réanalyser les dossiers</a>
@@ -73,8 +73,8 @@
 </div></section>
 <section class="wedof-panel"><div class="wedof-panel-header"><div><span class="wedof-section-label">Connexion</span><h2>Connexion et paramètres techniques</h2></div></div><div class="edof-panel-body">
 <dl><dt>Connexion EFP Connect</dt><dd><strong>{{ efp.label }}</strong>{% if efp.checked_at %} · Vérifiée le {{ efp.checked_at }}{% endif %}</dd>
-<dt>Veille des demandes CPF</dt><dd>{{ "Tous les jours" if active else "Du lundi au vendredi" }} de 8 h à 19 h, heure de Paris. La veille réutilise la session ouverte. Si EFP impose une nouvelle connexion après une lecture réussie dans cet onglet, une seule reprise automatique supplémentaire est permise dans la journée. La liste est vérifiée environ toutes les deux minutes.
-{% if day_open and directory_enabled and efp.state == 'day_paused' %}<form method="post" action="{{ url_for('edof_server_test.resume_day') }}">{{ token() }}{{ btn('Autoriser un nouveau code pour reprendre la veille') }}</form>{% endif %}
+<dt>Veille des demandes CPF</dt><dd>Tous les jours de 8 h à 19 h, heure de Paris. La liste est vérifiée environ toutes les deux minutes. Si EFP redemande une connexion après une lecture réussie, la veille peut se reconnecter automatiquement, même après un redémarrage du serveur.
+{% if live.paused %}<form method="post" action="{{ url_for('edof_server_test.resume_day') }}">{{ token() }}{{ btn('Autoriser un nouveau code pour reprendre la veille') }}</form>{% endif %}
 {% if not directory_enabled %}<form method="post" action="{{ url_for('edof_server_test.schedule_directory') }}">{{ token() }}{{ btn('Activer la veille de 8 h à 19 h') }}</form>{% endif %}</dd>
 <dt>Compte Gmail pour les codes EFP</dt><dd>{{ 'Connecté' if gmail.connected else 'À connecter' }}</dd>
 <dt>Liste des dossiers EDOF</dt><dd>{{ checked or 'Première synchronisation à réaliser' }}</dd>
@@ -234,5 +234,5 @@
 </div>
 {% endblock %}
 {% block scripts %}
-  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261103-fiche-sync') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261103-veille') }}" defer></script>
 {% endblock %}
