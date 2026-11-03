@@ -6,6 +6,7 @@ Only server-created authentication cookies may be saved in the encrypted vault;
 no cookie or token is taken from the user's Chrome.
 """
 
+from contextlib import nullcontext
 import json
 import os
 import re
@@ -949,7 +950,7 @@ def select_establishment(page, step, signals):
     return step
 
 
-def run_browser(spec):
+def run_browser(spec, *, live=None):
     if os.environ.get("RENDER_SERVICE_ID") != TEST_SERVICE_ID:
         return {"code": "wrong_environment"}
     from playwright.sync_api import sync_playwright, TimeoutError as BrowserTimeout
@@ -1068,17 +1069,28 @@ def run_browser(spec):
         except Exception:
             invalid_response = True
 
-    with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
+    if live is not None and spec["mode"] != "directory":
+        raise ValueError("The working-day browser only reads the directory.")
+    with (nullcontext(live["pw"]) if live is not None else sync_playwright()) as pw:
+        browser = live["browser"] if live is not None else pw.chromium.launch(headless=True)
         def browser_page(state):
-            context = browser.new_context(locale="fr-FR", accept_downloads=spec["mode"] == "directory", service_workers="block", storage_state=state)
+            if live is not None and "page" in live:
+                context, page = live["page"]
+            else:
+                context = browser.new_context(locale="fr-FR", accept_downloads=spec["mode"] == "directory", service_workers="block", storage_state=state)
+                if live is not None:
+                    # With no active read policy, the idle page cannot send requests.
+                    context.route("**/*", lambda route: route.abort())
+                page = context.new_page()
+                if live is not None:
+                    live["page"] = (context, page)
             context.route("**/*", route_request)
-            page = context.new_page()
             page.set_default_timeout(12000)
             page.on("response", observe)
             return context, page
 
         try:
+            warm = live is not None and "page" in live
             context, page = browser_page(saved)
             def diagnostics():
                 try:
@@ -1159,12 +1171,17 @@ def run_browser(spec):
                     return workspace_screen(text)
 
             stage = "login_page"
+            if warm:
+                # Refresh this tab with its original session storage and current cookies.
+                page.reload(wait_until="domcontentloaded", timeout=45000)
             try:
                 reused = open_workspace_or_login(page, context, saved, signals, checkpoint)
             except StopRun as exc:
                 if not saved or not can_restart_saved_login(exc.code, page, diagnostics, checkpoint):
                     raise
                 context.close()
+                if live is not None:
+                    live.pop("page", None)
                 if vault:
                     # The stored cookies just failed the explicit safe restore
                     # check; leave a subsequent run free to start at normal EFP.
@@ -1198,6 +1215,9 @@ def run_browser(spec):
                 target = None
                 page.locator('input[name="username"]').fill(username)
                 page.locator('input[name="password"]').fill(password)
+                from edof_day_session import allow_login
+                if not allow_login(vault, automatic=bool(spec.get("day_session"))):
+                    raise StopRun("day_login_used")
                 requested_at = time.time()
                 page.locator("#kc-login").click()
                 username = password = None
@@ -1435,7 +1455,12 @@ def run_browser(spec):
             # authentication parameters; never print or log it.
             return {"code": "browser_error", "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "diagnostics": diagnostics()}
         finally:
-            browser.close()
+            if live is None:
+                browser.close()
+            elif live.get("page"):
+                context, page = live["page"]
+                page.remove_listener("response", observe)
+                context.unroute("**/*", route_request)
 
 
 if __name__ == "__main__":

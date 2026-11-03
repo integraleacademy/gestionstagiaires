@@ -26,6 +26,7 @@ from flask import Blueprint, abort, jsonify, redirect, request, send_file, sessi
 from cpf_provider import acquire_provider
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
 from edof_server_browser import stalled_before_login
+from edof_day_session import DayWorker, POLL_SECONDS, PARIS, working_hours
 import edof_directory as directory
 import edof_declarations as declarations
 from edof_gmail import Vault, GmailError, connector_key, oauth_configured, authorization_url, finish_authorization
@@ -37,6 +38,8 @@ RETENTION = 86400
 AUTH_MODES = {"read", "directory", "declare", "reconcile", "inspect_forms"}
 MESSAGES = {
     **declarations.REASONS,
+    "day_login_used": "EFP demande une nouvelle authentification. La veille automatique reprendra au prochain jour ouvré pour éviter un deuxième code.",
+    "day_closed": "La veille est ouverte du lundi au vendredi, de 8 h à 19 h, heure de Paris.",
     "declaration_confirmed": "Le statut et les valeurs de la déclaration ont été relus sur EDOF.",
     "declaration_inspected": "Contrôle des commandes disponibles sur EDOF terminé en lecture seule.",
     "directory_ready": "La liste EDOF de l’établissement est disponible pour la recherche.",
@@ -144,7 +147,7 @@ class ServerTestStore:
         db.commit()
         return db
 
-    def reserve(self, owner, mode):
+    def reserve(self, owner, mode, *, day_session=False):
         db = self.connect()
         try:
             with db:
@@ -154,17 +157,17 @@ class ServerTestStore:
                 # Prevent repeated password attempts; no automatic retry loop.
                 auth = mode in AUTH_MODES
                 group = sorted(AUTH_MODES) if auth else [mode]
-                recent = db.execute("SELECT MAX(created) AS created FROM jobs WHERE mode IN (" +
+                recent = db.execute("SELECT MAX(created) AS created FROM jobs WHERE coalesce(json_extract(result,'$.day_session'),0)=0 AND mode IN (" +
                                     ",".join("?" for _ in group)+")", group).fetchone()
                 delay = 300 if auth else 30
                 remaining = math.ceil(recent["created"] + delay - time.time()) if recent["created"] is not None else 0
-                if remaining > 0:
+                if remaining > 0 and not day_session:
                     raise JobCooldown(remaining)
                 if mode == "directory":
                     db.execute("DELETE FROM directory_requested WHERE owner=?", (owner,))
                 job_id = secrets.token_hex(16)
                 db.execute("INSERT INTO jobs (id, owner, created, mode, result) VALUES (?, ?, ?, ?, ?)",
-                           (job_id, owner, time.time(), mode, json.dumps({"code": "running"})))
+                           (job_id, owner, time.time(), mode, json.dumps({"code": "running", "day_session": day_session})))
             return job_id
         finally:
             db.close()
@@ -212,6 +215,8 @@ class ServerTestStore:
             checked_at = dt.datetime.fromtimestamp(row["finished"], ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y à %H h %M")
         if row and row["screen"] == "session_expired":
             state, label = "expired", "Session expirée au dernier contrôle"
+        elif row and row["code"] == "day_login_used":
+            state, label = "reconnect", "Veille en pause · EFP redemande un code"
         elif row and row["code"] in {"credentials_rejected", "account_unavailable", "verification_code",
                                     "otp_rejected", "account_action_required", "sign_in_error"}:
             state, label = "reconnect", "Reconnexion nécessaire"
@@ -276,6 +281,32 @@ class ServerTestStore:
         finally:
             db.close()
 
+    def day_owners(self, now):
+        """A new workday restarts enabled accounts, including after a weekend or failed login."""
+        if not working_hours(now):
+            return []
+        start = now.astimezone(PARIS).replace(hour=8, minute=0, second=0, microsecond=0).timestamp()
+        db = self.connect()
+        try:
+            rows = db.execute("""
+                SELECT a.owner,j.created,j.finished,json_extract(j.result,'$.code') AS code
+                FROM directory_activity a LEFT JOIN jobs j ON j.id = (
+                    SELECT id FROM jobs WHERE owner=a.owner AND mode='directory' AND created>=?
+                    ORDER BY created DESC LIMIT 1)
+                ORDER BY coalesce(j.created,0),a.seen DESC
+            """, (start,))
+            due = []
+            for row in rows:
+                if row["created"] is None:
+                    due.append(row["owner"])
+                elif row["finished"] and row["code"] in ("directory_ready","directory_incomplete","directory_unavailable","timeout","browser_error","interrupted"):
+                    delay = POLL_SECONDS if row["code"] == "directory_ready" else 900
+                    if row["created"] + delay <= now.timestamp() and row["finished"] + 20 <= now.timestamp():
+                        due.append(row["owner"])
+            return due
+        finally:
+            db.close()
+
     def migrate_history(self, previous_owner, account_owner):
         db = self.connect()
         try:
@@ -319,7 +350,7 @@ class ServerTestStore:
             db.close()
 
 
-def execute_job(store, job_id, spec, lock_fd, provider_fd=None):
+def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None):
     process = None
     temporary = tempfile.TemporaryDirectory(prefix="edof-server-test-")
     result = {"code": "browser_error"}
@@ -338,16 +369,18 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None):
             for key in ("EDOF_GOOGLE_CLIENT_ID", "EDOF_GOOGLE_CLIENT_SECRET"):
                 if key in os.environ:
                     child_env[key] = os.environ[key]
-        process = subprocess.Popen([sys.executable, str(Path(__file__).with_name("edof_server_browser.py"))],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            text=True, env=child_env, start_new_session=True, pass_fds=(lock_fd,) if provider_fd is None else (lock_fd, provider_fd))
-        timeout = {"directory": DIRECTORY_TIMEOUT, "declare": DECLARATION_TIMEOUT, "reconcile": DECLARATION_TIMEOUT}
-        output, _ = process.communicate(json.dumps(spec), timeout=timeout.get(spec["mode"], JOB_TIMEOUT))
-        if process.returncode == 0 and len(output) < 32768:
-            parsed = json.loads(output)
-            if isinstance(parsed, dict) and parsed.get("code") in MESSAGES:
-                # The runner emits only the explicitly normalized dossier schema.
-                result = {key: parsed[key] for key in ("code", "stage", "fields", "confirmed_state", "fresh_session", "gmail_code_used", "session_saved", "candidate_count", "blocked_writes", "diagnostics") if key in parsed}
+        if day_worker is not None:
+            parsed = day_worker.read(spec, child_env, DIRECTORY_TIMEOUT)
+        else:
+            process = subprocess.Popen([sys.executable, str(Path(__file__).with_name("edof_server_browser.py"))],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                text=True, env=child_env, start_new_session=True, pass_fds=(lock_fd,) if provider_fd is None else (lock_fd, provider_fd))
+            timeout = {"directory": DIRECTORY_TIMEOUT, "declare": DECLARATION_TIMEOUT, "reconcile": DECLARATION_TIMEOUT}
+            output, _ = process.communicate(json.dumps(spec), timeout=timeout.get(spec["mode"], JOB_TIMEOUT))
+            parsed = json.loads(output) if process.returncode == 0 and len(output) < 32768 else {}
+        if isinstance(parsed, dict) and parsed.get("code") in MESSAGES:
+            # The runner emits only the explicitly normalized dossier schema.
+            result = {key: parsed[key] for key in ("code", "stage", "fields", "confirmed_state", "fresh_session", "gmail_code_used", "session_saved", "candidate_count", "blocked_writes", "diagnostics") if key in parsed}
     except subprocess.TimeoutExpired:
         result = {"code": "timeout"}
     except Exception:
@@ -369,7 +402,8 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None):
                     if snapshot:
                         snapshot = directory.dated_snapshot(snapshot)
                         process_directory(store, snapshot, store.data_file)
-                        declarations.discover(store, spec["owner"], snapshot)
+                        if not day_worker or spec["provider"] == "integrale":
+                            declarations.discover(store, spec["owner"], snapshot)
                 except (OSError, ValueError, sqlite3.Error):
                     # Keep the verified source snapshot. The next full sync
                     # can retry local analysis without replaying external work.
@@ -378,6 +412,8 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None):
                 declarations.complete(store.directory, spec, result["code"], result.get("confirmed_state"))
                 if result["code"] == "declaration_confirmed":
                     store.request_directory(spec["owner"])
+            if day_worker is not None:
+                result["day_session"] = True
             store.finish(job_id, result)
         finally:
             os.close(lock_fd)
@@ -398,13 +434,17 @@ def last_read_stalled_at_login(jobs):
             and stalled_before_login(last.get("diagnostics") or {}))
 
 
-def start_job(store, owner, spec):
+def start_job(store, owner, spec, *, day_worker=None):
     store.directory.mkdir(parents=True, exist_ok=True)
     lock_fd = os.open(store.directory / "edof_server_test.lock", os.O_CREAT | os.O_RDWR, 0o600)
     provider_fd = None
     try:
         # A form inspection is a read-only job; it cannot construct a business-write gate.
-        if spec["mode"] != "inspect_forms":
+        if day_worker is not None:
+            if spec["mode"] != "directory" or not working_hours() or not store.directory_enabled(owner):
+                raise ValueError("Veille indisponible.")
+            provider_fd = acquire_provider(spec["provider"])
+        elif spec["mode"] != "inspect_forms":
             ticket = (spec.get("intent") or {}).get("pilot_ticket")
             if ticket and spec["mode"] in {"declare", "reconcile"}:
                 from cpf_provider import ProviderStore
@@ -426,8 +466,8 @@ def start_job(store, owner, spec):
                 raise ValueError("Le choix de système a changé.")
             if not declarations.check_before_job(store, spec):
                 raise ValueError("Cette déclaration est à vérifier dans la fiche.")
-        job_id = store.reserve(owner, spec["mode"])
-        thread = threading.Thread(target=execute_job, args=(store, job_id, spec, lock_fd, provider_fd), daemon=True)
+        job_id = store.reserve(owner, spec["mode"], day_session=day_worker is not None)
+        thread = threading.Thread(target=execute_job, args=(store, job_id, spec, lock_fd, provider_fd, day_worker), daemon=True)
         thread.start()
         return job_id
     except Exception:
@@ -447,21 +487,36 @@ def register_edof_server_test(legacy):
         can_access=lambda: legacy._is_super_admin_session() and not session.get("assist_partner_id"))
 
     def refresh_active_directories():
-        while True:
-            time.sleep(60)
+        worker = DayWorker()
+        # Gunicorn can have several schedulers. Only one owns the in-memory tab.
+        store.directory.mkdir(parents=True, exist_ok=True)
+        with open(store.directory / "edof_day_leader.lock", "a") as leader:
             try:
-                from cpf_provider import ProviderStore
-                active = ProviderStore(store.directory).state()
-                if not active["pending"]:
-                    pending = declarations.next_job(store, active["revision"], provider=active["provider"])
-                    if pending:
-                        start_job(store, pending["owner"], pending)
+                fcntl.flock(leader, fcntl.LOCK_EX)
+                while True:
+                    time.sleep(20)
+                    try:
+                        now = dt.datetime.now(PARIS)
+                        if not working_hours(now) or (worker.owner and not store.directory_enabled(worker.owner)):
+                            worker.close()
+                        from cpf_provider import ProviderStore
+                        active = ProviderStore(store.directory).state()
+                        if active["pending"]:
+                            continue
+                        pending = declarations.next_job(store, active["revision"], provider=active["provider"])
+                        if pending:
+                            start_job(store, pending["owner"], pending)
+                            continue
+                        for user in store.day_owners(now):
+                            if not store.connector_key or not Vault(store.directory, store.connector_key).get("gmail"):
+                                worker.close()
+                                break
+                            start_job(store, user, {"mode": "directory", "owner": user, "provider": active["provider"]}, day_worker=worker)
+                            break
+                    except (OSError, sqlite3.Error, ValueError):
                         continue
-                for user in store.due_directories(operating=active["provider"] == "integrale"):
-                    start_job(store, user, {"mode": "directory", "owner": user})
-                    break
-            except (OSError, sqlite3.Error, ValueError):
-                continue  # A live read or deployment can own the shared lock.
+            finally:
+                worker.close()
 
     threading.Thread(target=refresh_active_directories, name="edof-directory", daemon=True).start()
 
@@ -648,6 +703,16 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
             return jsonify(ok=False, error=str(exc), retry_after=exc.remaining), 429
         except ValueError as exc:
             return jsonify(ok=False, error=str(exc)), 409
+
+    @bp.post("/admin/edof-test/server/directory/schedule")
+    @admin_required
+    def schedule_directory():
+        user = results_owner()
+        check_csrf()
+        if not configuration()["credentials_configured"] or not gmail_status()["connected"]:
+            return jsonify(ok=False, error="Connectez le compte EFP et Gmail pour activer la veille."), 409
+        store.use_directory(user, enable=True)
+        return redirect(url_for("integrale_edof.index", section="technical"), code=303)
 
     @bp.post("/admin/edof-test/server/directory/pause")
     @admin_required

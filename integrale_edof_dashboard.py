@@ -26,7 +26,7 @@ from wedof_matching import match_folder
 PARIS = ZoneInfo("Europe/Paris")
 SECTIONS = {"consumption": "Consommation Intégrale EDOF", "state": "État des dossiers",
             "technical": "Connexion et paramètres techniques", "requests": "Demandes entrantes", "cancellations": "Annulations"}
-TABS = {"all": "Tous", "due": "Automatisations prévues", "accepted": "Acceptés", "training": "En formation",
+TABS = {"all": "Tous", "due": "Automatisations prévues", "request": "Nouvelle demande", "accepted": "Acceptés", "training": "En formation",
         "service": "Services faits", "invoiced": "Facturés", "unlinked": "À associer", "anomaly": "Anomalies"}
 LABELS = {"accepted": "Accepté", "training": "En formation", "service": "Service fait",
           "invoiced": "Facturé", "request": "À traiter", "waiting": "En attente", "canceled": "Annulé",
@@ -36,7 +36,7 @@ STATE_KEYS = {
     "training": {"intraining", "en formation", "entree declaree", "entree en formation declaree"},
     "service": {"servicedonedeclared", "servicedonevalidated", "service fait declare", "service fait valide"},
     "invoiced": {"billed", "invoiced", "paid", "facture", "facturee", "paye"},
-    "request": {"notprocessed", "tobeprocessed", "received", "a traiter", "demande recue", "demande d inscription"},
+    "request": {"notprocessed", "tobeprocessed", "received", "a traiter", "demande recue", "demande d inscription", "non traite", "dossier non traite", "not processed", "to be processed"},
     "waiting": {"validated", "waiting", "waitingacceptation", "en attente", "proposition de commande envoyee"},
     "canceled": {"canceled", "cancelled", "cancelledbyattendee", "canceledbyattendee", "canceledbyorganism",
                  "annule", "annulee", "annulation", "canceledbyattendeenotrealized", "non realisee annulation titulaire", "annule par le titulaire", "annule par l organisme"},
@@ -121,6 +121,8 @@ def dashboard_rows(snapshot, data, operations, now):
         evaluation = simulate(kind, date, block, flags.get("draft"), now)
         due = evaluation in {"unconfirmed","ready"}
         tags = {kind, "all"}
+        if kind == "request" and flags.get("archived"):
+            tags.discard("request")
         if evaluation in {"planned", "unconfirmed", "ready"}:
             tags.add("due")
         if folder not in links and action:

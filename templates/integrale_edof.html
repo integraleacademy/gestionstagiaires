@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+{% if section == "state" and tab == "request" and not detail and not query and page == 1 %}<meta http-equiv="refresh" content="45">{% endif %}
 <title>Intégrale EDOF · Pilotage CPF</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css') }}"></head>
@@ -33,7 +34,7 @@
 <section class="wedof-hero"><div class="wedof-hero-copy"><span class="wedof-eyebrow">CPF · INTÉGRALE EDOF</span><h2>Tableau de bord Intégrale EDOF</h2>
 <p>Dossiers lus dans l’espace EDOF de l’établissement. Dernière synchronisation {{ checked or 'à réaliser' }}.</p>
 <div class="wedof-hero-meta"><span class="wedof-status-pill">{{ snapshot_count }} dossiers synchronisés</span><span class="wedof-status-pill">{{ efp.label }}</span>
-<span class="wedof-status-pill">{{ 'Synchronisation activée' if active and directory_enabled else 'Synchronisation suspendue' }}</span></div></div>
+<span class="wedof-status-pill">{{ 'Veille programmée · lun.–ven. 8 h–19 h (Paris)' if directory_enabled else 'Veille suspendue' }}</span></div></div>
 <div class="wedof-hero-actions"><a class="btn" href="{{ url_for('integrale_edof.index', section='state', matching=1, _anchor='matching') }}">Réanalyser les dossiers</a>
 {% if active %}<form method="post" action="{{ url_for('integrale_edof.associate_reliable') }}">{{ token() }}{{ btn('Enregistrer les associations fiables') }}</form>{% endif %}
 <a class="btn" href="{{ url_for('integrale_edof.index',section='state',simulation=1, _anchor='simulation') }}">Tester les automatisations</a></div></section>
@@ -41,6 +42,8 @@
 
 {% if section == 'technical' %}<section class="wedof-panel"><span class="wedof-eyebrow">CONNEXION</span><h2>Connexion et paramètres techniques</h2>
 <dl><dt>Connexion EFP Connect</dt><dd><strong>{{ efp.label }}</strong>{% if efp.checked_at %} · Vérifiée le {{ efp.checked_at }}{% endif %}</dd>
+<dt>Veille des demandes CPF</dt><dd>Du lundi au vendredi de 8 h à 19 h, heure de Paris. La veille réutilise le navigateur et tente une seule nouvelle connexion automatique par jour. Si EFP en exige une deuxième, la veille se met en pause. La liste est vérifiée environ toutes les deux minutes.
+{% if not directory_enabled %}<form method="post" action="{{ url_for('edof_server_test.schedule_directory') }}">{{ token() }}{{ btn('Activer la veille de 8 h à 19 h') }}</form>{% endif %}</dd>
 <dt>Compte Gmail pour les codes EFP</dt><dd>{{ 'Connecté' if gmail.connected else 'À connecter' }}</dd>
 <dt>Liste des dossiers EDOF</dt><dd>{{ checked or 'Première synchronisation à réaliser' }}</dd>
 <dt>Entrées, sorties et services faits</dt><dd>Envoi depuis Gestion Stagiaires. Le suivi distingue l’envoi en attente, la réception vérifiée et la validation du service fait par la Caisse des Dépôts.</dd>
@@ -68,6 +71,7 @@
 {% for key,label in simulation_labels.items() %}<div><strong>{{ simulation[key] or 0 }}</strong>{{ label }}</div>{% endfor %}</div></section>{% endif %}
 {% if section == 'state' %}<section class="wedof-panel"><span class="wedof-eyebrow">SUIVI CPF</span><h2>État des dossiers</h2>
 <nav class="metrics state-tabs" aria-label="Filtres d’état">{% for key,label in tabs.items() %}<a href="{{ link('state', key) }}" {{ 'aria-current=page' if tab == key }}><strong>{{ counts[key] or 0 }}</strong><span>{{ label }}</span></a>{% endfor %}</nav>
+{% if tab == 'request' %}<p>Demandes CPF à traiter reçues dans EDOF. Cette liste est relue pendant les heures de veille.</p>{% endif %}
 {% if tab == 'due' %}<p>Ces dossiers ont une échéance d’entrée ou de sortie. Les justificatifs vérifiés de production déclenchent l’envoi. Si une information manque, ouvrez le dossier pour compléter la déclaration ici.</p>{% endif %}</section>{% endif %}
 <section class="wedof-panel"><span class="wedof-eyebrow">INTÉGRALE EDOF</span><h2>{{ {'state':'Dossiers CPF','requests':'Demandes entrantes','cancellations':'Annulations'}[section] }}</h2>
 {% if section == 'requests' %}<p>Demandes à traiter identifiées dans la liste EDOF synchronisée.</p>{% elif section == 'cancellations' %}<p>Dossiers dont l’état dans la liste synchronisée indique une annulation.{% if scope != 'all' %} La dernière lecture couvre les dossiers en cours. Les annulations archivées peuvent être absentes de cet export.{% endif %}</p>{% endif %}
@@ -83,7 +87,7 @@
 {% if r.action and active %}<details><summary>Automatisation</summary><form method="post" action="{{ url_for('integrale_edof.block', folder=r.folder_id) }}">{{ token() }}
 <input type="hidden" name="action" value="{{ r.block.action if r.block else r.action }}">{% if r.block %}<input type="hidden" name="release" value="yes">{{ btn('Lever le blocage') }}
 {% else %}<label>Motif du blocage<select name="reason">{% for key,label in block_reasons.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>{{ btn('Bloquer cette action') }}{% endif %}</form></details>{% endif %}
-{% if section == 'requests' %}<small>{{ 'Traitée localement' if r.handled else 'À traiter' }}</small>{% if active %}<form class="actions" method="post" action="{{ url_for('integrale_edof.follow_up',folder=r.folder_id) }}">{{ token() }}
+{% if section == 'requests' or (section == 'state' and tab == 'request') %}<small>{{ 'Traitée localement' if r.handled else 'À traiter' }}</small>{% if active %}<form class="actions" method="post" action="{{ url_for('integrale_edof.follow_up',folder=r.folder_id) }}">{{ token() }}
 <button class="btn" name="change" value="{{ 'reopen' if r.handled else 'handled' }}">{{ 'Rouvrir' if r.handled else 'Marquer traitée' }}</button><button class="btn btn-outline" name="change" value="archived">Archiver</button></form>{% endif %}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
 <nav class="pagination" aria-label="Pagination">{% if page > 1 %}<a href="{{ link(section,tab,page-1) }}">← Précédent</a>{% endif %}<span>Page {{ page }} sur {{ pages }}</span>{% if page < pages %}<a href="{{ link(section,tab,page+1) }}">Suivant →</a>{% endif %}</nav>
 {% elif checked %}<p>Aucun dossier dans cette sélection.</p>{% endif %}</section>
