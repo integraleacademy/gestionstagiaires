@@ -1219,6 +1219,7 @@ def run_browser(spec, *, live=None):
                     if not target or target["method"] != "POST" or not permitted_request(target["action"], target["method"]):
                         raise StopRun("otp_form_unrecognized")
                     otp_attempted = True
+                    progress("waiting_for_code")
                     code_value = mailbox.wait_for_code(requested_at, tick=lambda: checkpoint(False))
                     # Recheck destination after the mail wait, before filling.
                     current = otp_fields.evaluate("el => el.form ? {action: el.form.action, method: el.form.method.toUpperCase()} : null")
@@ -1474,12 +1475,15 @@ def run_browser(spec, *, live=None):
                         # A verified private list already proves an authenticated
                         # session, independent of the later export/pagination.
                         vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
+                    progress("exporting_directory")
                     snapshot = exported_directory(page, source, checkpoint, signals["directory"], BrowserTimeout, target_directory)
                     if snapshot is None:
+                        progress("paginating_directory")
                         snapshot = directory.from_pages(directory_pages(page, source, checkpoint, signals["directory"]), signals["directory"])
                 except (ValueError, KeyError, TypeError):
                     raise StopRun("directory_incomplete") from None
                 snapshot["scope"] = "all" if target_directory != LIST_URL else "open"
+                progress("saving_directory")
                 vault.put(directory.record_key(spec["owner"]), snapshot, ttl=directory.TTL)
                 vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                 return {"code": "directory_ready", "stage": stage, "candidate_count": len(snapshot["rows"]),
