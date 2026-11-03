@@ -316,6 +316,12 @@ def inactive_saved_view(page, signals):
                             'iframe[title*="captcha" i]:visible,input:visible').count()
 
 
+def navigation_in_progress(exc):
+    text = str(exc).lower()
+    return any(part in text for part in ("execution context was destroyed", "cannot find context", "frame was detached",
+        "interrupted by another navigation", "net::err_aborted", "most likely because of a navigation"))
+
+
 def open_workspace_or_login(page, context, saved, signals, checkpoint):
     # A restored browser enters the actual workspace. The explicit login route
     # is for signing in and may leave an already authenticated browser on a blank shell.
@@ -327,14 +333,22 @@ def open_workspace_or_login(page, context, saved, signals, checkpoint):
             if not inactive_saved_view(page, signals):
                 raise StopRun("authentication_unconfirmed")
             context.clear_cookies(domain=re.compile(r"^\.?(?:of\.)?moncompteformation\.gouv\.fr$"))
-        page.goto(entry, wait_until="domcontentloaded", timeout=45000)
+        try:
+            page.goto(entry, wait_until="domcontentloaded", timeout=45000)
+        except Exception as exc:
+            if not navigation_in_progress(exc) or urlsplit(page.url).hostname not in {EDOF_HOST, EFP_HOST}:
+                raise
         deadline = time.monotonic() + (18 if saved else 30)
         while time.monotonic() < deadline:
-            checkpoint()
-            if urlsplit(page.url).hostname == EFP_HOST and page.locator('input[name="username"]:visible').count():
-                return False
-            if saved and restored_workspace(page, signals):
-                return True
+            try:
+                checkpoint()
+                if urlsplit(page.url).hostname == EFP_HOST and page.locator('input[name="username"]:visible').count():
+                    return False
+                if restored_workspace(page, signals):
+                    return True
+            except Exception as exc:
+                if not navigation_in_progress(exc) or urlsplit(page.url).hostname not in {EDOF_HOST, EFP_HOST}:
+                    raise
             page.wait_for_timeout(500)
     if saved and inactive_saved_view(page, signals):
         # No password or code has been sent in this run. The caller can open a
@@ -1123,7 +1137,7 @@ def run_browser(spec, *, live=None):
                 except Exception:
                     return diagnostic_summary(page.url, False, False, signals)
 
-            def checkpoint(allow_otp=True):
+            def check_document(allow_otp=True):
                 nonlocal otp_attempted, gmail_code_used
                 # Only derive categorical signals; never return the page body,
                 # which could contain identity information or an auth code.
@@ -1173,6 +1187,14 @@ def run_browser(spec, *, live=None):
                     raise StopRun("sign_in_error")
                 if stage == "organism" and private_page(page.url):
                     return workspace_screen(text)
+
+            def checkpoint(allow_otp=True):
+                try:
+                    return check_document(allow_otp)
+                except Exception as exc:
+                    if navigation_in_progress(exc) and urlsplit(page.url).hostname in {EDOF_HOST, EFP_HOST}:
+                        return "loading"
+                    raise
 
             stage = "login_page"
             if warm:
@@ -1469,10 +1491,18 @@ def run_browser(spec, *, live=None):
             except Exception:
                 pass
             return {"code": "timeout", "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "diagnostics": diagnostics()}
-        except Exception:
-            # Playwright exception text may include filled values or URLs with
-            # authentication parameters; never print or log it.
-            return {"code": "browser_error", "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "diagnostics": diagnostics()}
+        except Exception as exc:
+            # Expose a fixed category only. Exception text may contain auth material.
+            name = type(exc).__name__
+            fault = name if name in {"Error", "AttributeError", "TypeError", "KeyError", "ValueError", "OSError"} else "other"
+            reason = str(exc).lower()
+            for needle, tag in (("execution context", "document_changed"), ("net::err_", "network"), ("closed", "closed"),
+                                ("strict mode", "ambiguous_control"), ("detached", "detached")):
+                if needle in reason:
+                    fault = tag
+                    break
+            return {"code": "browser_error", "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used,
+                    "diagnostics": {**diagnostics(), "fault": fault}}
         finally:
             if live is None:
                 browser.close()
