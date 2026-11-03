@@ -475,7 +475,9 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
                 # Operational proof without account, dossier, cookie or code values.
                 print(f"EDOF_DAY status={result['code']} fresh={result.get('fresh_session')} "
                       f"mail_used={result.get('gmail_code_used')} stage={result.get('stage')} "
-                      f"fault={(result.get('diagnostics') or {}).get('fault')}", flush=True)
+                      f"fault={(result.get('diagnostics') or {}).get('fault')} "
+                      f"operation={(result.get('diagnostics') or {}).get('operation')} "
+                      f"phase={(result.get('diagnostics') or {}).get('initial_phase')}", flush=True)
         finally:
             os.close(lock_fd)
             if provider_fd is not None:

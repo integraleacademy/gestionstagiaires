@@ -322,6 +322,16 @@ def navigation_in_progress(exc):
         "interrupted by another navigation", "net::err_aborted", "most likely because of a navigation"))
 
 
+def await_initial_document(exc, page):
+    # Before credentials are even filled, EFP and the EDOF SPA can replace
+    # the top-level document. Allow the bounded observation loop to settle.
+    # Explicit StopRun/CAPTCHA decisions never take this branch.
+    from playwright.sync_api import Error
+    if page.url != "about:blank" and urlsplit(page.url).hostname not in {EDOF_HOST, EFP_HOST}:
+        return False
+    return navigation_in_progress(exc) or (isinstance(exc, Error) and not page.is_closed())
+
+
 def open_workspace_or_login(page, context, saved, signals, checkpoint):
     # A restored browser enters the actual workspace. The explicit login route
     # is for signing in and may leave an already authenticated browser on a blank shell.
@@ -333,11 +343,13 @@ def open_workspace_or_login(page, context, saved, signals, checkpoint):
             if not inactive_saved_view(page, signals):
                 raise StopRun("authentication_unconfirmed")
             context.clear_cookies(domain=re.compile(r"^\.?(?:of\.)?moncompteformation\.gouv\.fr$"))
+        signals["initial_phase"] = "navigation"
         try:
             page.goto(entry, wait_until="domcontentloaded", timeout=45000)
         except Exception as exc:
-            if not navigation_in_progress(exc) or urlsplit(page.url).hostname not in {EDOF_HOST, EFP_HOST}:
+            if not await_initial_document(exc, page):
                 raise
+        signals["initial_phase"] = "document"
         deadline = time.monotonic() + (18 if saved else 30)
         while time.monotonic() < deadline:
             try:
@@ -347,9 +359,13 @@ def open_workspace_or_login(page, context, saved, signals, checkpoint):
                 if restored_workspace(page, signals):
                     return True
             except Exception as exc:
-                if not navigation_in_progress(exc) or urlsplit(page.url).hostname not in {EDOF_HOST, EFP_HOST}:
+                if not await_initial_document(exc, page):
                     raise
-            page.wait_for_timeout(500)
+            try:
+                page.wait_for_timeout(500)
+            except Exception as exc:
+                if not await_initial_document(exc, page):
+                    raise
     if saved and inactive_saved_view(page, signals):
         # No password or code has been sent in this run. The caller can open a
         # clean browser and use the regular login flow exactly once.
@@ -1143,10 +1159,13 @@ def run_browser(spec, *, live=None):
                 # which could contain identity information or an auth code.
                 # During the redirects the old document can disappear before a
                 # body exists on the new one. Keep polling inside the deadline.
-                bodies = page.locator("body").all_inner_texts()
-                if not bodies:
-                    return "loading"
-                text = bodies[0]
+                if stage in {"login_page","authentication"} and not returning_shell(page.url, signals):
+                    text = page.locator("body").inner_text(timeout=3000)
+                else:
+                    bodies = page.locator("body").all_inner_texts()
+                    if not bodies:
+                        return "loading"
+                    text = bodies[0]
                 code = classify_text(text)
                 if code and code != "verification_code":
                     raise StopRun(code)
@@ -1226,10 +1245,11 @@ def run_browser(spec, *, live=None):
             if not username or not password:
                 return {"code": "credentials_missing", "stage": stage, "fresh_session": True}
             if not reused:
-                checkpoint()
                 if urlsplit(page.url).hostname != EFP_HOST:
                     raise StopRun("unexpected_page")
                 stage = "authentication"
+                signals["initial_phase"] = "password_form"
+                checkpoint()
                 target = page.locator('input[name="username"]').evaluate("el => el.form ? {action: el.form.action, method: el.form.method.toUpperCase()} : null")
                 if not target or not permitted_request(target["action"], target["method"]) or target["method"] != "POST":
                     raise StopRun("login_form_not_allowed")
@@ -1493,6 +1513,8 @@ def run_browser(spec, *, live=None):
             return {"code": "timeout", "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "diagnostics": diagnostics()}
         except Exception as exc:
             # Expose a fixed category only. Exception text may contain auth material.
+            operation = re.match(r"^([A-Za-z]{1,25}\.[A-Za-z_]{1,35}):", str(exc))
+            method = operation.group(1) if operation else "unknown"
             name = type(exc).__name__
             fault = name if name in {"Error", "AttributeError", "TypeError", "KeyError", "ValueError", "OSError"} else "other"
             reason = str(exc).lower()
@@ -1502,7 +1524,8 @@ def run_browser(spec, *, live=None):
                     fault = tag
                     break
             return {"code": "browser_error", "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used,
-                    "diagnostics": {**diagnostics(), "fault": fault}}
+                    "diagnostics": {**diagnostics(), "fault": fault, "operation": method,
+                                    "initial_phase": signals.get("initial_phase", "unknown")}}
         finally:
             if live is None:
                 browser.close()
