@@ -65,7 +65,7 @@ def schedule(services, training):
         raise ValueError('Complétez les dates du e-learning, du présentiel et de l’examen dans « Modifier la session ».')
     start, remote_end = values['aps_remote_start'], values['aps_remote_end']
     onsite, end, exam = (values[k] for k in ('aps_in_person_start', 'aps_in_person_end', 'exam_date'))
-    if not start <= remote_end < onsite <= end <= exam:
+    if not start <= remote_end <= onsite <= end <= exam:
         raise ValueError('Vérifiez l’ordre des dates : e-learning, présentiel, puis examen.')
     if (exam - values['date_start']).days > 366:
         raise ValueError('Vérifiez les dates de la session APS : la période dépasse un an.')
@@ -177,6 +177,8 @@ def _calendar(page, dates, city):
                     value = date(year, month, day)
                     color = calendar_phase(value, dates)
                     page.draw_rect(fitz.Rect(x, y, x+cw-2, y+rh-2), color=None, fill=_rgb(color))
+                    if color == BLUE and value == dates['aps_in_person_start']:
+                        page.draw_rect(fitz.Rect(x+(cw-2)/2, y, x+cw-2, y+rh-2), color=None, fill=_rgb(GREEN))
                     _text(page, str(day), x, y+21, min(17, cw*.40),
                           '#FFFFFF' if color in (BLUE, GREEN) else NAVY, color == GOLD,
                           width=cw-2, align='center')
@@ -201,6 +203,10 @@ def _calendar(page, dates, city):
         _text(page, label, x, 407, 17, color, True, width)
         _text(page, period(first, last), x, 432, 16, NAVY, True, width)
         _text(page, detail, x, 455, 15, MUTED, width=width)
+    if dates['aps_remote_end'] == dates['aps_in_person_start']:
+        transition = french(dates['aps_in_person_start'])
+        _text(page, f'Le {transition} marque la fin du distanciel et le début du présentiel.',
+              45, 486, 15, NAVY, width=870)
 
 
 def _dated_labels(dates, month_label, city, address):
