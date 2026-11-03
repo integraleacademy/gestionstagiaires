@@ -114,6 +114,22 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
             assert result["candidate_count"] == size
             folders.append({"id":"100088","attendee":{"firstName":"Test","lastName":"Exemple"},"currentState":"notProcessed"})
         assert vault.get(directory.record_key("fixture"))["rows"]["100088"]["state"] == "notProcessed"
+        # A slow full scan must not erase the live tab or mask freshly read pending rows.
+        import time
+        full = vault.get(directory.record_key("fixture"))
+        full["checked"] = time.time()-1800
+        vault.put(directory.record_key("fixture"), full)
+        vault.put("edof-full-attempt:fixture", time.time()-1800)
+        snapshot = {"checked":time.time(),"rows":full["rows"]}
+        vault.put(directory.pending_key("fixture"), snapshot)
+        read_pending = Mock(return_value=snapshot)
+        monkeypatch.setattr(runner, "read_pending_with_private_session", read_pending)
+        scan = Mock(side_effect=runner.StopRun("bulk_deferred"))
+        monkeypatch.setattr(runner, "exported_directory", scan)
+        checked = runner.run_browser({"mode":"directory","day_session":True,"owner":"fixture"}, live=live)
+        scan.assert_called_once()
+        assert checked["code"] == "requests_ready" and not checked["gmail_code_used"]
+        assert vault.get(directory.record_key("fixture")) == full
         assert len(browser.contexts) == len(browser.contexts[0].pages) == 1
         browser.close()
 
