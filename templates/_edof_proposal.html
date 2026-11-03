@@ -1,4 +1,4 @@
-<section id="proposition-edof" class="edof-proposal">
+<section id="proposition-edof" class="edof-proposal" {% if detail.proposal_reading %}data-poll-url="{{ detail.proposal_poll_url }}"{% endif %}>
   <span class="wedof-section-label">Demande d’inscription</span>
   <h3>Proposition de commande EDOF</h3>
   {% set work = detail.proposal_job %}
@@ -17,18 +17,18 @@
     {% set v = detail.proposal_values %}
     {% set options = detail.proposal_options or {} %}
     {% set readonly = session.get('admin_role') == 'viewer' %}
-    {% if detail.proposal_read_note %}<p role="status">{{ detail.proposal_read_note }}</p>{% endif %}
-    {% if detail.proposal_reading %}<a href="{{ url_for('integrale_edof.index',section='requests',tab='request',folder=f.folder_id,_anchor='proposition-edof') }}">Préparer un brouillon pendant la lecture</a>{% endif %}
-    {% if not source %}<p>Chargez l’offre EDOF pour reprendre les conditions du catalogue. Vous pouvez déjà préparer les dates, les heures et le prix ci-dessous.</p>{% endif %}
-    {% if not readonly and not detail.proposal_reading %}
+    <p data-proposal-note role="status" {% if not detail.proposal_read_note %}hidden{% endif %}>{{ detail.proposal_read_note or '' }}</p>
+    {% if not source %}<p>Les champs reprennent les informations déjà synchronisées. Vous pouvez compléter la proposition pendant la lecture de l’offre EDOF.</p>{% endif %}
+    {% if detail.proposal_connector and not readonly %}
       <form id="edof-proposal-load" {% if detail.proposal_auto_load %}data-autoload{% endif %} method="post" action="{{ url_for('integrale_edof.load_proposal',folder=f.folder_id) }}">
         {{ token() }}{{ btn('Relire les conditions sur EDOF' if source else 'Charger les conditions depuis EDOF') }}
       </form>
     {% endif %}
+    {% if detail.proposal_reading %}<noscript><a href="{{ request.url }}">Vérifier si l’offre a été chargée</a></noscript>{% endif %}
     {% if source and (not options.get('typeOfTrainingCourse') or not options.get('trainingPaces')) %}
       <p class="warning">Certains choix du catalogue n’ont pas été chargés. Relisez les conditions sur EDOF pour actualiser les listes.</p>
     {% endif %}
-    {% if v and not detail.proposal_reading %}
+    {% if v %}
       {% macro field(key,label,kind='text',required=false) %}
         <label>{{ label }}<input type="{{ kind }}" name="{{ key }}" value="{{ v.get(key,'') }}" {% if required %}required{% endif %}
           {% if kind == 'number' %}min="0" step="0.01"{% endif %} {% if key=='sessionStartDate' and source and source.minimum %}min="{{ source.minimum }}"{% endif %}></label>
@@ -42,16 +42,22 @@
       {% endmacro %}
       <form method="post" action="{{ url_for('integrale_edof.send_proposal',folder=f.folder_id) }}" class="edof-proposal-form">
         {{ token() }}<input type="hidden" name="signature" value="{{ source.signature if source else '' }}">
-        <fieldset {% if readonly %}disabled{% endif %}><legend>Session et durée</legend>
+        <fieldset {% if readonly %}disabled{% endif %}><legend>Session, durée et tarif</legend>
           <div class="edof-field-grid">
             {% for k,label in proposal_fields.DATES.items() %}{{ field(k,label,'date',true) }}{% endfor %}
-            {% for k,label in proposal_fields.HOURS.items() %}{{ field(k,label ~ ' (h)','number',k in ['indicativeDuration','weeklyDuration']) }}{% endfor %}
+            {{ field('indicativeDuration','Durée totale de la formation (h)','number',true) }}
+            {{ field('priceTotal','Prix total de la formation TTC (€)','number',true) }}
           </div>
+          {% if not v.priceTotal %}<small>Le tarif TTC n’a pas été récupéré. Vous pouvez le renseigner.</small>{% endif %}
           {% if source and source.minimum %}<small>Première date de début autorisée par EDOF · {{ date_fr(source.minimum) }}.</small>{% endif %}
         </fieldset>
-        <fieldset {% if readonly %}disabled{% endif %}><legend>Prix et frais d’examen</legend>
+        <fieldset {% if readonly %}disabled{% endif %}><legend>Répartition des heures</legend>
           <div class="edof-field-grid">
-            {{ field('priceTotal','Prix total de la formation TTC (€)','number',true) }}
+            {% for k,label in proposal_fields.HOURS.items() if k != 'indicativeDuration' %}{{ field(k,label ~ ' (h)','number',k == 'weeklyDuration') }}{% endfor %}
+          </div>
+        </fieldset>
+        <fieldset {% if readonly %}disabled{% endif %}><legend>Frais d’examen et TVA</legend>
+          <div class="edof-field-grid">
             {{ select_field('exam','Frais d’examen',proposal_fields.EXAM,true) }}
             {{ field('montantFraisCertificationInclus','Dont frais d’examen inclus TTC (€)','number') }}
             {{ field('additionalFees','Frais annexes à la charge du titulaire (€)','number') }}
@@ -89,12 +95,12 @@
             {% for code,name in source.blocks.items() %}<label><input type="checkbox" name="blocks" value="{{ code }}" {% if code in v.blocks %}checked{% endif %} {% if not source.editable_blocks %}disabled{% endif %}> {{ code }} · {{ name }}</label>{% endfor %}
           </div>{% endif %}
         </fieldset>
-        {% if not readonly %}
+        {% if not readonly and detail.proposal_connector %}
           <button class="btn btn-outline" type="submit" formaction="{{ url_for('integrale_edof.save_proposal_draft',folder=f.folder_id) }}" formnovalidate>Enregistrer le brouillon</button>
           {% if not active %}<p>L’envoi nécessite <a href="{{ url_for('integrale_edof.index',section='technical') }}">Intégrale EDOF actif</a>.</p>{% endif %}
           {% if source and active %}<label class="edof-confirm"><input type="checkbox" name="confirm" value="yes" required> J’ai vérifié les conditions de la proposition à envoyer au titulaire.</label>{% endif %}
           <button type="submit" class="btn btn-blue" {% if not source or not active %}disabled{% endif %}>Valider et envoyer la proposition à EDOF</button>
-        {% endif %}
+        {% elif not detail.proposal_connector %}<p>Le stockage du connecteur EDOF est indisponible.</p>{% endif %}
       </form>
     {% endif %}
   {% endif %}

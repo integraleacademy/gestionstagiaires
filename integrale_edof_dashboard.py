@@ -321,7 +321,18 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         fields = previous["fields"] if previous else {}
         if fields and all(directory.normalized(fields.get(k) or "") == directory.normalized(row.get(k) or "")
                           for k in ("first_name", "last_name")):
-            return {**row, "email": fields.get("email", "")}
+            enriched = {**row, "email": fields.get("email", "")}
+            start = fields.get("session_start_date")
+            if category(row) == "request" and (not start or start >= directory.FIRST_SESSION) and not any(
+                row.get(k) and fields.get(k) and row[k] != fields[k]
+                for k in ("session_start_date", "session_end_date", "title")
+            ):
+                summary = {key:fields[k] for k,key in (("total_incl","priceTotal"), ("duration_hours","indicativeDuration"),
+                                                       ("center_hours","hoursInCenter")) if fields.get(k) is not None}
+                enriched["offer_summary"] = {**summary, **(row.get("offer_summary") or {})}
+                for k in ("session_start_date", "session_end_date"):
+                    enriched[k] = row.get(k) or fields.get(k) or ""
+            return enriched
         return row
 
     def matching_rows(owner, snapshot, data):
@@ -410,19 +421,22 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         if folder:
             if not ID_RE.fullmatch(folder) or not selected_row:
                 abort(404)
-            record = snap["rows"][folder]
+            record = enrich(owner, snap["rows"][folder])
             if not data:
                 data = local_data()
-            detail = {"record": record, "display": selected_row, "comparison": build_comparison(data, enrich(owner, record))}
+            detail = {"record": record, "display": selected_row, "comparison": build_comparison(data, record)}
             detail["query"] = request.args.get("inscription","")[:120].strip()
             if detail["query"]:
                 detail["comparison"] = {**detail["comparison"], "status":"manual_search",
-                                        "candidates":manual_options(data, enrich(owner, record), query=detail["query"])}
+                                        "candidates":manual_options(data, record, query=detail["query"])}
             detail["key"] = directory.link_key(owner, folder)
             detail["draft"] = local_operations(selection).get(folder, {}).get("draft")
             detail["action"] = ACTIONS.get(category(record))
             detail["request"] = category(record) == "request"
             detail["proposal_job"] = proposals.record(store.directory,folder,owner)
+            if detail["request"]:
+                detail["proposal_values"] = proposal_form.initial(record)
+                detail["proposal_connector"] = bool(store.connector_key)
             if detail["request"] and store.connector_key:
                 private = vault()
                 source = private.get(proposals.source_key(owner,folder))
@@ -438,6 +452,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                     read = proposals.read_ticket(store.directory,owner,folder,read_job)
                     if read:
                         detail["proposal_reading"] = read["status"] in {"queued","reading"}
+                        detail["proposal_poll_url"] = url_for("integrale_edof.proposal_read_status", folder=folder, ticket=read_job)
                         detail["proposal_read_note"] = read["message"] or "Lecture des conditions de l’offre en attente du connecteur EDOF."
                 detail["proposal_auto_load"] = request.args.get("prepare")=="1" and not read_job and not source
 
@@ -499,8 +514,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             inspection=check, dispatches=dispatches, csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
             match_counts=Counter(m["status"] for m in matches.values()), total=len(rows), counts=counts,
             rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
-            detail=detail, events=events, full_checked=directory.stamp(snap) if snap and snap.get("checked") else None, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=(directory.stamp({"checked":snap["pending_checked"]}) if snap and snap.get("pending_checked") and tab=="request" else directory.stamp(snap) if snap and snap.get("checked") else directory.stamp({"checked":snap["receipt_checked"]}) if snap and snap.get("receipt_checked") and tab!="request" else None), today=today, metrics=metrics,
-            live=store.live_connection(owner, gmail["saved_session"]), nonce=g.edof_nonce, jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
+            detail=detail, events=events, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=(directory.stamp({"checked":snap["pending_checked"]}) if snap and snap.get("pending_checked") and tab=="request" else directory.stamp(snap) if snap and snap.get("checked") else directory.stamp({"checked":snap["receipt_checked"]}) if snap and snap.get("receipt_checked") and tab!="request" else None), today=today, metrics=metrics,
+            live=store.live_connection(owner, gmail["saved_session"], snapshot=snap), nonce=g.edof_nonce, jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
             scope=(snap or {}).get("scope", "open"), day_open=working_hours(now), directory_enabled=store.directory_enabled(owner), snapshot_count=len((snap or {}).get("rows", {})),
             held=held, block_reasons=BLOCK_REASONS, action_labels=ACTION_LABELS,
             changed=dt.datetime.fromtimestamp(selected["changed"], PARIS).strftime("%d/%m/%Y à %H h %M") if selected["changed"] else None)
@@ -592,10 +607,23 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             if category(row) != "request" or not store.connector_key:
                 raise ValueError("Cette proposition ne peut pas être chargée.")
             jid = proposals.request_read(store.directory,owner,row)
+            if request.accept_mimetypes.best == "application/json":
+                return jsonify(poll_url=url_for("integrale_edof.proposal_read_status", folder=folder, ticket=jid))
             return proposal_back(folder, proposal_read=jid)
         except (ValueError,ProviderUnavailable) as exc:
+            if request.accept_mimetypes.best == "application/json":
+                return jsonify(message=str(exc)), 409
             flash(str(exc),"error")
         return proposal_back(folder)
+
+    @bp.get("/dossiers/<folder>/proposal/read/<ticket>")
+    @admin_required
+    def proposal_read_status(folder, ticket):
+        read = proposals.read_ticket(store.directory, results_owner(), folder, ticket)
+        if not read:
+            abort(404)
+        return jsonify(status=read["status"], message=read["message"], detail_url=url_for(
+            "integrale_edof.index", section="requests", tab="request", folder=folder, proposal_read=ticket))
 
     @bp.post("/dossiers/<folder>/proposal/draft")
     @admin_required
@@ -616,7 +644,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             flash("Les conditions ont changé. Rechargez la proposition EDOF.","error")
         else:
             values = proposal_form.form_values(request.form)
-            original = proposal_form.displayed(source if signature else None,row)
+            original = proposal_form.displayed(source if signature else None, enrich(owner,row))
             changes = {k:v for k,v in values.items() if v!=original.get(k)}
             if any(isinstance(v,str) and len(v)>16000 for v in changes.values()):
                 abort(400)

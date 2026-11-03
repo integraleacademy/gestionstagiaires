@@ -235,3 +235,5 @@
 .edof-pace { display: flex; flex-wrap: wrap; gap: 12px; }
 .edof-proposal-form .edof-pace label { display: inline-flex; align-items: center; }
 .edof-proposal-form > button { justify-self: start; }
+
+.native-cpf .wedof-hero-meta [hidden] { display: none; }
