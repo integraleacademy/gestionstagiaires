@@ -1216,7 +1216,8 @@ def run_browser(spec, *, live=None):
                 page.locator('input[name="username"]').fill(username)
                 page.locator('input[name="password"]').fill(password)
                 from edof_day_session import allow_login
-                if not allow_login(vault, automatic=bool(spec.get("day_session"))):
+                if not allow_login(vault, automatic=bool(spec.get("day_session")),
+                                   owner=spec.get("owner"), verified_tab=bool(warm and live.get("verified"))):
                     raise StopRun("day_login_used")
                 requested_at = time.time()
                 page.locator("#kc-login").click()

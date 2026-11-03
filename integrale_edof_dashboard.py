@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 
 from flask import Blueprint, abort, flash, get_flashed_messages, redirect, request, session, url_for
 
+from edof_day_session import working_hours
 import edof_directory as directory
 import edof_declarations as declarations
 from cpf_provider import PROVIDERS, ProviderStore, ProviderUnavailable, on_test_service, provider_operation
@@ -121,7 +122,7 @@ def dashboard_rows(snapshot, data, operations, now):
         evaluation = simulate(kind, date, block, flags.get("draft"), now)
         due = evaluation in {"unconfirmed","ready"}
         tags = {kind, "all"}
-        if kind == "request" and flags.get("archived"):
+        if kind == "request" and (flags.get("archived") or flags.get("handled")):
             tags.discard("request")
         if evaluation in {"planned", "unconfirmed", "ready"}:
             tags.add("due")
@@ -388,7 +389,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
             detail=detail, events=events, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=directory.stamp(snap) if snap else None, today=today, metrics=metrics,
             jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
-            scope=(snap or {}).get("scope", "open"), directory_enabled=store.directory_enabled(owner), snapshot_count=len((snap or {}).get("rows", {})),
+            scope=(snap or {}).get("scope", "open"), day_open=working_hours(now), directory_enabled=store.directory_enabled(owner), snapshot_count=len((snap or {}).get("rows", {})),
             block_reasons=BLOCK_REASONS, action_labels=ACTION_LABELS,
             changed=dt.datetime.fromtimestamp(selected["changed"], PARIS).strftime("%d/%m/%Y à %H h %M") if selected["changed"] else None)
 

@@ -71,7 +71,7 @@
         <div id="directory-matches" aria-live="polite"></div>
         <p class="hint">« Consulter le dossier » recherche dans la liste EDOF synchronisée ou les lectures conservées 24 heures. « Relire sur EDOF » ouvre directement la fiche sur le portail et peut prendre plusieurs minutes.</p>
         {% if gmail.connected and config.credentials_configured %}<button class="button secondary" id="sync-directory" type="button">Synchroniser la liste EDOF</button>
-        <p class="hint">La veille consulte EDOF du lundi au vendredi, de 8 h à 19 h (heure de Paris), environ toutes les deux minutes. Le navigateur reste ouvert pendant cette plage. Si EFP redemande une authentification après la première tentative du jour, la veille reprend le prochain jour ouvré.</p>{% endif %}
+        <p class="hint">La veille consulte EDOF du lundi au vendredi, de 8 h à 19 h (heure de Paris), environ toutes les deux minutes. Le navigateur reste ouvert pendant cette plage. Si EFP ferme une session déjà vérifiée, la veille peut demander un seul code de secours. En cas de nouvelle interruption, consultez les paramètres de connexion.</p>{% endif %}
         {% if directory_enabled %}<form method="post" action="{{ url_for('edof_server_test.pause_directory') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="button secondary" type="submit">Suspendre les actualisations automatiques</button></form>{% endif %}
       </section>
     </div>

@@ -38,7 +38,7 @@ RETENTION = 86400
 AUTH_MODES = {"read", "directory", "declare", "reconcile", "inspect_forms"}
 MESSAGES = {
     **declarations.REASONS,
-    "day_login_used": "EFP demande une nouvelle authentification. La veille automatique reprendra au prochain jour ouvré pour éviter un deuxième code.",
+    "day_login_used": "EFP demande encore une authentification. La veille est en pause. Autorisez une reprise dans les paramètres ou attendez le prochain jour ouvré.",
     "day_closed": "La veille est ouverte du lundi au vendredi, de 8 h à 19 h, heure de Paris.",
     "declaration_confirmed": "Le statut et les valeurs de la déclaration ont été relus sur EDOF.",
     "declaration_inspected": "Contrôle des commandes disponibles sur EDOF terminé en lecture seule.",
@@ -216,7 +216,7 @@ class ServerTestStore:
         if row and row["screen"] == "session_expired":
             state, label = "expired", "Session expirée au dernier contrôle"
         elif row and row["code"] == "day_login_used":
-            state, label = "reconnect", "Veille en pause · EFP redemande un code"
+            state, label = "day_paused", "Veille en pause · EFP redemande un code"
         elif row and row["code"] in {"credentials_rejected", "account_unavailable", "verification_code",
                                     "otp_rejected", "account_action_required", "sign_in_error"}:
             state, label = "reconnect", "Reconnexion nécessaire"
@@ -289,7 +289,8 @@ class ServerTestStore:
         db = self.connect()
         try:
             rows = db.execute("""
-                SELECT a.owner,j.created,j.finished,json_extract(j.result,'$.code') AS code
+                SELECT a.owner,j.created,j.finished,json_extract(j.result,'$.code') AS code,
+                       EXISTS(SELECT 1 FROM directory_requested r WHERE r.owner=a.owner) AS requested
                 FROM directory_activity a LEFT JOIN jobs j ON j.id = (
                     SELECT id FROM jobs WHERE owner=a.owner AND mode='directory' AND created>=?
                     ORDER BY created DESC LIMIT 1)
@@ -298,6 +299,8 @@ class ServerTestStore:
             due = []
             for row in rows:
                 if row["created"] is None:
+                    due.append(row["owner"])
+                elif row["finished"] and row["requested"] and row["code"] in {"day_login_used", "directory_ready"}:
                     due.append(row["owner"])
                 elif row["finished"] and row["code"] in ("directory_ready","directory_incomplete","directory_unavailable","timeout","browser_error","interrupted"):
                     delay = POLL_SECONDS if row["code"] == "directory_ready" else 900
@@ -415,6 +418,10 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
             if day_worker is not None:
                 result["day_session"] = True
             store.finish(job_id, result)
+            if day_worker is not None:
+                # Operational proof without account, dossier, cookie or code values.
+                print(f"EDOF_DAY status={result['code']} fresh={result.get('fresh_session')} "
+                      f"mail_used={result.get('gmail_code_used')}", flush=True)
         finally:
             os.close(lock_fd)
             if provider_fd is not None:
@@ -712,6 +719,26 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
         if not configuration()["credentials_configured"] or not gmail_status()["connected"]:
             return jsonify(ok=False, error="Connectez le compte EFP et Gmail pour activer la veille."), 409
         store.use_directory(user, enable=True)
+        return redirect(url_for("integrale_edof.index", section="technical"), code=303)
+
+    @bp.post("/admin/edof-test/server/directory/resume")
+    @admin_required
+    def resume_day():
+        user = results_owner()
+        check_csrf()
+        if not working_hours() or not store.directory_enabled(user):
+            return jsonify(ok=False, error="La veille doit être ouverte."), 409
+        def permit():
+            if store.connection_status(user, True)["state"] != "day_paused":
+                raise ValueError("La veille ne demande pas de nouveau code.")
+            vault().put("day-login-override:" + user, dt.datetime.now(PARIS).date().isoformat(), ttl=600)
+            store.request_directory(user)
+        try:
+            response = edit_connection(permit)
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 409
+        if response.location.endswith("gmail=busy"):
+            return jsonify(ok=False, error="Une lecture est en cours. Réessayez après sa fin."), 409
         return redirect(url_for("integrale_edof.index", section="technical"), code=303)
 
     @bp.post("/admin/edof-test/server/directory/pause")
