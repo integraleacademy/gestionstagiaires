@@ -1,4 +1,4 @@
-"""Private, read-only EDOF browser for the Paris working day."""
+"""One private EDOF session for the Paris working day."""
 from contextlib import suppress
 from datetime import datetime
 import json
@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import select
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -13,17 +14,19 @@ import threading
 from zoneinfo import ZoneInfo
 
 PARIS = ZoneInfo("Europe/Paris")
-POLL_SECONDS = 120
-RENEWAL_INTERVAL = 10 * 60
+POLL_SECONDS = 5 * 60
+OPEN_HOUR = 7
+CLOSE_HOUR = 19
+SHARED_JOB_MODES = frozenset({"declare","reconcile","proposal_read","proposal_check","proposal_send"})
 
 
-def working_hours(now=None, *, daily=False):
+def working_hours(now=None, *, daily=True):
     now = (now or datetime.now(PARIS)).astimezone(PARIS)
-    return (daily or now.weekday() < 5) and 8 <= now.hour < 19
+    return (daily or now.weekday() < 5) and OPEN_HOUR <= now.hour < CLOSE_HOUR
 
 
-def session_deadline(now, manual_until=0, *, daily=False):
-    scheduled = now.replace(hour=19, minute=0, second=0, microsecond=0).timestamp() if working_hours(now, daily=daily) else 0
+def session_deadline(now, manual_until=0, *, daily=True):
+    scheduled = now.astimezone(PARIS).replace(hour=CLOSE_HOUR, minute=0, second=0, microsecond=0).timestamp() if working_hours(now, daily=daily) else 0
     return max(scheduled, manual_until)
 
 
@@ -34,43 +37,33 @@ def awaiting_edof_return(result):
             and diag.get("location") == "edof_initialisation" and not diag.get("workspace_denied"))
 
 
-def renewal_time(previous, verified_at, now):
-    """A verified directory read permits one more sign-in, including after a restart."""
-    if not verified_at or not (now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
-                               <= verified_at <= now.timestamp()):
-        return None
-    attempted_at = previous.get("at", 0) if isinstance(previous, dict) else 0
-    if verified_at <= attempted_at:
-        return None
-    return max(verified_at, attempted_at + RENEWAL_INTERVAL)
+def login_count(vault, today):
+    prior = vault.get("efp-login-day")
+    if isinstance(prior, dict):
+        return prior.get("count", 0) if prior.get("date") == today else 0
+    return int(prior == today)
 
 
-def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None, manual_until=0, recover_return=False, daily=False, verified_at=None):
-    """Called under the shared job lock before the password POST can issue a code."""
+def allow_login(vault, *, owner=None, now=None, manual_until=0):
+    """Reserve the account's attempt before submitting credentials, under the job lock."""
     now = (now or datetime.now(PARIS)).astimezone(PARIS)
+    if session_deadline(now, manual_until) <= now.timestamp():
+        return False
     today = now.date().isoformat()
-    previous = vault.get("efp-login-day")
-    count = int(previous == today)  # Compatible with the original date-only entry.
-    if isinstance(previous, dict) and previous.get("date") == today:
-        count = previous["count"]
-    if automatic:
-        if session_deadline(now, manual_until, daily=daily) <= now.timestamp():
-            return False
-        override = bool(owner) and vault.get("day-login-override:" + owner, consume=True) == today
-        renewal = renewal_time(previous, verified_at, now)
-        may_renew = renewal is not None and renewal <= now.timestamp()
-        initial_recovery = count == 1 and ((verified_tab and not verified_at)
-                                           or (manual_until > now.timestamp() and recover_return))
-        if count and not (may_renew or initial_recovery or override):
-            return False
-    vault.put("efp-login-day", {"date": today, "count": count + 1, "at": now.timestamp()}, ttl=2 * 86400)
+    count = login_count(vault, today)
+    override = bool(owner) and vault.get("day-login-override:" + owner, consume=True) == today
+    if count and not override:
+        vault.put("efp-paused-day", today, ttl=86400)
+        return False
+    vault.put("efp-login-day", {"date":today, "count":count+1, "at":now.timestamp()}, ttl=2*86400)
+    vault.delete("efp-paused-day")
     return True
 
 
 class DayWorker:
-    """One isolated child controlled through anonymous pipes, with no network listener."""
+    """One isolated child controlled by a private socket pair, with no network listener."""
     def __init__(self):
-        self.process = self.temp = self.owner = None
+        self.process = self.temp = self.owner = self.provider = self.channel = None
         self.mutex = threading.RLock()
 
     def close(self):
@@ -79,44 +72,46 @@ class DayWorker:
                 with suppress(ProcessLookupError):
                     os.killpg(self.process.pid, signal.SIGKILL)
                 self.process.wait()
-                self.process.stdin.close()
                 self.process.stdout.close()
-                self.process = self.owner = None
+                self.process = self.owner = self.provider = None
+            if self.channel is not None:
+                self.channel.close()
+                self.channel = None
             if self.temp is not None:
                 self.temp.cleanup()
                 self.temp = None
 
-    def read(self, spec, env, timeout):
+    def read(self, spec, env, timeout, *, lock_fds=()):
         with self.mutex:
             now = datetime.now(PARIS)
             deadline = session_deadline(now, spec.get("manual_until", 0), daily=True)
             if deadline <= now.timestamp():
                 return {"code": "day_closed"}
-            if self.process is None or self.owner != spec["owner"] or self.process.poll() is not None:
+            if spec["mode"] not in SHARED_JOB_MODES | {"directory"}:
+                raise ValueError("Opération hors veille EDOF.")
+            if (self.process is None or self.owner != spec["owner"] or self.provider != spec.get("provider")
+                    or self.process.poll() is not None):
                 self.close()
                 from edof_gmail import Vault
                 vault = Vault(env["EDOF_CONNECTOR_DIRECTORY"], env["EDOF_CONNECTOR_KEY"])
+                if vault.get("edof-throttled"):
+                    return {"code":"portal_throttled"}
                 today = now.date().isoformat()
-                budget = vault.get("efp-login-day")
-                count = budget.get("count",0) if isinstance(budget,dict) and budget.get("date")==today else int(budget==today)
-                # Without a reusable session or an authorised sign-in there is
-                # no work for a fresh Chromium process to do on this instance.
-                renewal = renewal_time(budget, spec.get("verified_at"), now)
-                if (count and not (renewal is not None and renewal <= now.timestamp()) and not (vault.get("browser") or {}).get("cookies")
-                        and vault.get("day-login-override:"+spec["owner"]) != today
-                        and not (count==1 and spec.get("recover_return") and spec.get("manual_until",0)>now.timestamp())):
+                if (login_count(vault,today) and vault.get("day-login-override:"+spec["owner"]) != today
+                        and (vault.get("efp-paused-day") == today or not (vault.get("browser") or {}).get("cookies"))):
                     return {"code":"day_login_used", "gmail_code_used":False}
                 self.temp = tempfile.TemporaryDirectory(prefix="edof-working-day-")
-                self.process = subprocess.Popen([sys.executable, str(Path(__file__).resolve())],
-                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                    env={**env, "TMPDIR": self.temp.name}, text=True, start_new_session=True)
-                self.owner = spec["owner"]
+                self.channel, child = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
+                with child:
+                    self.process = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), str(child.fileno())],
+                        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, pass_fds=(child.fileno(),),
+                        env={**env, "TMPDIR":self.temp.name}, text=True, start_new_session=True)
+                self.owner, self.provider = spec["owner"], spec.get("provider")
             try:
                 started = datetime.now(PARIS).timestamp()
-                command = {key:spec.get(key) for key in ("provider", "verified_at", "recover_return")}
-                command.update(owner=self.owner, manual_until=spec.get("manual_until", 0), full_sync=bool(spec.get("full_sync_until")))
-                self.process.stdin.write(json.dumps(command) + "\n")
-                self.process.stdin.flush()
+                command = {**spec, "full_sync":bool(spec.get("full_sync_until"))}
+                # Both locks must cover the child's work even if the scheduler is killed.
+                socket.send_fds(self.channel, [json.dumps(command).encode()], list(lock_fds))
                 now = datetime.now(PARIS)
                 remaining = deadline - now.timestamp()
                 if not select.select([self.process.stdout], [], [], min(timeout, max(0, remaining)))[0]:
@@ -129,7 +124,9 @@ class DayWorker:
                             "stage": checkpoint.get("phase"), "gmail_code_used": checkpoint.get("mail_used"),
                             "diagnostics":{"callback_status":checkpoint.get("callback"), "workspace_status":checkpoint.get("private_status")}}
                 result = json.loads(self.process.stdout.readline(32768))
-                if result.get("code") not in {"directory_ready", "requests_ready", "directory_incomplete", "directory_unavailable"} and not awaiting_edof_return(result):
+                if ((spec["mode"] == "directory" and result.get("code") not in
+                     {"directory_ready","requests_ready","directory_incomplete","directory_unavailable"} and not awaiting_edof_return(result))
+                    or result.get("code") in {"browser_error","day_login_used","otp_rejected","human_verification","account_unavailable"}):
                     self.close()
                 return result
             except (OSError, ValueError):
@@ -137,29 +134,38 @@ class DayWorker:
                 return {"code": "browser_error"}
 
 
-def serve():
+def serve(channel):
     from playwright.sync_api import sync_playwright
     from edof_server_browser import run_browser
     with sync_playwright() as pw:
-        live = {"pw": pw, "browser": pw.chromium.launch(headless=True)}
+        live = {"pw":pw, "browser":pw.chromium.launch(headless=True)}
         try:
-            for line in sys.stdin:
-                command = json.loads(line)
-                now = datetime.now(PARIS)
-                manual_until = command.get("manual_until", 0)
-                if session_deadline(now, manual_until, daily=True) <= now.timestamp():
-                    break
-                owner = command["owner"]
-                result = run_browser({"mode": "directory", "owner": owner, "day_session": True,
-                                      "provider":command.get("provider"), "manual_until": manual_until, "recover_return": command.get("recover_return", False),
-                                      "verified_at": command.get("verified_at"), "full_sync": command.get("full_sync", False)}, live=live)
-                live["return_pending"] = awaiting_edof_return(result)
-                if result["code"] in {"directory_ready", "requests_ready"}:
-                    live["verified"] = True
-                print(json.dumps(result), flush=True)
+            while True:
+                data, locks, flags, _ = socket.recv_fds(channel, 131072, 2)
+                try:
+                    if not data:
+                        break
+                    if flags & (socket.MSG_TRUNC | socket.MSG_CTRUNC) or len(locks) != 2:
+                        raise ValueError("Commande EDOF incomplète.")
+                    cmd = json.loads(data)
+                    if cmd["mode"] not in SHARED_JOB_MODES | {"directory"}:
+                        raise ValueError("Opération inconnue.")
+                    now = datetime.now(PARIS)
+                    if session_deadline(now, cmd.get("manual_until",0)) <= now.timestamp():
+                        result = {"code":"day_closed"}
+                    else:
+                        result = run_browser({**cmd, "day_session":cmd["mode"] == "directory", "shared_job":True}, live=live)
+                        live["return_pending"] = awaiting_edof_return(result)
+                        if result["code"] in {"directory_ready","requests_ready"}:
+                            live["verified"] = True
+                finally:
+                    for fd in locks:
+                        os.close(fd)
+                print(json.dumps(result),flush=True)
         finally:
             live["browser"].close()
 
 
 if __name__ == "__main__":
-    serve()
+    with socket.socket(fileno=int(sys.argv[1])) as channel:
+        serve(channel)

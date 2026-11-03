@@ -202,6 +202,7 @@ def perform(context, witness, spec, path, vault, prefix, origin):
             arguments["data"] = payload
         reply = getattr(context.request, method)(url, **arguments)
         try:
+            directory.check_throttling(reply)
             if reply.url != url or len(reply.body()) > 2_000_000:
                 raise ValueError("Réponse EDOF non reconnue.")
             try:

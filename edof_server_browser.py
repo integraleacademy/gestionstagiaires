@@ -476,6 +476,7 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
         reply = context.request.get(target, params=params, headers=headers, max_redirects=0, timeout=20000)
         try:
             progress["http"] = reply.status
+            directory.check_throttling(reply)
             if index == 0 and size > 10 and reply.status in {400, 422}:
                 size = 10  # The official list's default page size.
                 continue
@@ -597,6 +598,7 @@ def directory_pages(page, response, checkpoint, progress=None):
 
     def read(reply):
         progress["http"] = reply.status
+        directory.check_throttling(reply)
         if reply.status != 200 or not directory_list_url(reply.url):
             raise directory.IncompleteDirectory()
         body = reply.body()
@@ -630,16 +632,6 @@ def directory_pages(page, response, checkpoint, progress=None):
             url = parsed._replace(query=urlencode(query), fragment="").geturl()
             reply = page.context.request.get(url, headers=headers, max_redirects=0, timeout=12000)
             try:
-                if reply.status == 429:
-                    progress["http"] = 429
-                    retry = reply.headers.get("retry-after", "60")
-                    if not retry.isdigit() or int(retry) > 90:
-                        raise directory.IncompleteDirectory()
-                    for _ in range(max(1, int(retry))):
-                        page.wait_for_timeout(1000)
-                        checkpoint()
-                    reply.dispose()
-                    reply = page.context.request.get(url, headers=headers, max_redirects=0, timeout=12000)
                 if page_size and reply.status in {400, 422}:
                     return None
                 return read(reply)
@@ -1134,6 +1126,7 @@ def run_browser(spec, *, live=None):
     vault = None
     saved = None
     reused = False
+    efp_form_target = None
     otp_attempted = False
     gmail_code_used = False
     session_saved = False
@@ -1150,8 +1143,9 @@ def run_browser(spec, *, live=None):
             if spec["mode"] in business_modes:
                 from edof_declaration_form import SingleWrite
                 gate = SingleWrite(spec, EDOF_HOST, API_PREFIX, os.environ["EDOF_CONNECTOR_DIRECTORY"])
-            if not spec.get("fresh_login"):
-                saved = vault.get("browser")
+            if vault.get("edof-throttled"):
+                return {"code":"portal_throttled"}
+            saved = vault.get("browser")
         except Exception:
             return {"code": "private_storage_unavailable"}
 
@@ -1165,7 +1159,10 @@ def run_browser(spec, *, live=None):
                       "private_status":signals.get("workspace_status")}, ttl=900)
 
     def route_request(route):
-        nonlocal blocked
+        nonlocal blocked, efp_form_target
+        if signals.get("throttled"):
+            route.abort()
+            return
         request = route.request
         returned = 200 <= signals.get("callback_status", 0) < 400
         allow_identity = authenticated and (returned or bool(saved) or bool(live and (live.get("verified") or live.get("return_pending"))))
@@ -1175,8 +1172,13 @@ def run_browser(spec, *, live=None):
                 frame_url = request.frame.url
             except Exception:
                 pass  # Unknown initiator: the identity POST stays blocked.
-        if (permitted_request(request.url, request.method, edof_identity=allow_identity, frame_url=frame_url)
-                or (gate and (gate.allows_simulation(request) or gate.allows(request)))):
+        permit = permitted_request(request.url, request.method, edof_identity=allow_identity, frame_url=frame_url)
+        parsed = urlsplit(request.url)
+        if request.method == "POST" and parsed.netloc == EFP_HOST and parsed.path == "/auth/realms/efp/login-actions/authenticate":
+            permit = permit and request.url == efp_form_target
+            if permit:
+                efp_form_target = None
+        if permit or (gate and (gate.allows_simulation(request) or gate.allows(request))):
             route.continue_()
         else:
             blocked += 1
@@ -1197,6 +1199,12 @@ def run_browser(spec, *, live=None):
         if gate:
             gate.observe(response)
         parsed = urlsplit(response.url)
+        if response.status == 429 and parsed.netloc in {EDOF_HOST,EFP_HOST}:
+            pause = directory.PortalThrottled(response.headers.get("retry-after"))
+            signals["throttled"] = pause
+            if vault:
+                vault.put("edof-throttled", True, ttl=pause.delay)
+            return
         if response.request.method == "POST" and parsed.hostname == EFP_HOST and parsed.path == "/auth/realms/efp/login-actions/authenticate":
             signals["login_post_status"] = response.status
         if parsed.netloc == EDOF_HOST and parsed.path == EDOF_CALLBACK_PATH:
@@ -1256,8 +1264,9 @@ def run_browser(spec, *, live=None):
         except Exception:
             invalid_response = True
 
-    if live is not None and spec["mode"] != "directory":
-        raise ValueError("The working-day browser only reads the directory.")
+    from edof_day_session import POLL_SECONDS, SHARED_JOB_MODES
+    if live is not None and spec["mode"] != "directory" and not (spec.get("shared_job") and spec["mode"] in SHARED_JOB_MODES):
+        raise ValueError("Opération non réservée sur la session de veille.")
     with (nullcontext(live["pw"]) if live is not None else sync_playwright()) as pw:
         browser = live["browser"] if live is not None else pw.chromium.launch(headless=True)
         def browser_page(state):
@@ -1306,7 +1315,7 @@ def run_browser(spec, *, live=None):
                     return diagnostic_summary(page.url, False, False, signals)
 
             def check_document(allow_otp=True):
-                nonlocal otp_attempted, gmail_code_used
+                nonlocal otp_attempted, gmail_code_used, efp_form_target
                 # Only derive categorical signals; never return the page body,
                 # which could contain identity information or an auth code.
                 # During the redirects the old document can disappear before a
@@ -1347,6 +1356,7 @@ def run_browser(spec, *, live=None):
                         raise StopRun("otp_form_unrecognized")
                     otp_fields.fill(code_value)
                     code_value = None
+                    efp_form_target = current["action"].partition("#")[0]
                     otp_fields.press("Enter")
                     gmail_code_used = True
                     progress("otp_submitted")
@@ -1362,6 +1372,8 @@ def run_browser(spec, *, live=None):
                     return workspace_screen(text)
 
             def checkpoint(allow_otp=True):
+                if signals.get("throttled"):
+                    raise signals["throttled"]
                 if bulk_deadline is not None and time.monotonic() >= bulk_deadline:
                     raise StopRun("bulk_deferred")
                 try:
@@ -1377,7 +1389,7 @@ def run_browser(spec, *, live=None):
                 # Refresh this tab with its original session storage and current cookies.
                 page.reload(wait_until="domcontentloaded", timeout=45000)
             try:
-                reused = open_workspace_or_login(page, context, saved or (warm and live.get("return_pending")), signals, checkpoint)
+                reused = open_workspace_or_login(page, context, saved or warm, signals, checkpoint)
             except StopRun as exc:
                 if not saved or not can_restart_saved_login(exc.code, page, diagnostics, checkpoint):
                     raise
@@ -1415,16 +1427,15 @@ def run_browser(spec, *, live=None):
                     raise StopRun("private_storage_unavailable")
                 # Refresh Google and record pre-existing mail BEFORE requesting
                 # an EFP code. This cannot reuse a code from an earlier run.
+                from edof_day_session import allow_login
+                if not allow_login(vault, owner=spec.get("owner"), manual_until=spec.get("manual_until", 0)):
+                    raise StopRun("day_login_used")
                 mailbox = GmailCodes(vault, username)
-                target = None
                 page.locator('input[name="username"]').fill(username)
                 page.locator('input[name="password"]').fill(password)
-                from edof_day_session import allow_login
-                if not allow_login(vault, automatic=bool(spec.get("day_session")),
-                                   daily=True, verified_at=spec.get("verified_at"), manual_until=spec.get("manual_until", 0), recover_return=bool(spec.get("recover_return")),
-                                   owner=spec.get("owner"), verified_tab=bool(warm and live.get("verified"))):
-                    raise StopRun("day_login_used")
                 requested_at = time.time()
+                efp_form_target = target["action"].partition("#")[0]
+                target = None
                 page.locator("#kc-login").click()
                 username = password = None
                 deadline = time.monotonic() + 160
@@ -1524,10 +1535,8 @@ def run_browser(spec, *, live=None):
             else:
                 raise StopRun("workspace_dialog_required" if signals.get("dialog_kind") in {"empty", "loading"} else "organism_selection_required")
 
-            if spec.get("fresh_login") and vault and signals.get("workspace_status") == 200:
-                # The normal sign-in worked. Retire the unusable cached browser
-                # even if the separate name search later fails.
-                vault.delete("browser")
+            if vault and signals.get("workspace_status") == 200:
+                vault.delete("efp-paused-day")
             if spec["mode"] == "inspect_forms":
                 from edof_declaration_form import ENTRY, EXIT, button
                 inspected = {}
@@ -1556,7 +1565,7 @@ def run_browser(spec, *, live=None):
                     prior_pending = vault.get(directory.pending_key(spec["owner"]))
                     full = vault.get(directory.record_key(spec["owner"])) or {}
                     last_attempt = vault.get("edof-full-attempt:"+spec["owner"]) or 0
-                    bulk_due = bool(prior_pending and time.time()-prior_pending["checked"] < 300 and
+                    bulk_due = bool(prior_pending and time.time()-prior_pending["checked"] < POLL_SECONDS+120 and
                                     time.time()-max(full.get("checked", 0), last_attempt) >= 900)
                     if private_witness is not None:
                         # Preserve only official secure cookies after a private
@@ -1669,7 +1678,8 @@ def run_browser(spec, *, live=None):
                     raise StopRun("private_storage_unavailable")
                 from edof_proposal_jobs import perform
                 try:
-                    return perform(context, proposal_witness, spec, os.environ["EDOF_CONNECTOR_DIRECTORY"], vault, API_PREFIX, EDOF_HOST)
+                    result = perform(context, proposal_witness, spec, os.environ["EDOF_CONNECTOR_DIRECTORY"], vault, API_PREFIX, EDOF_HOST)
+                    return {**result,"fresh_session":not reused,"gmail_code_used":gmail_code_used,"session_saved":session_saved}
                 except ValueError as exc:
                     # Only form validation messages may be presented to the operator.
                     from edof_proposal import InvalidTerms
@@ -1691,11 +1701,14 @@ def run_browser(spec, *, live=None):
                 stage = "declaration"
                 if not gate:
                     raise StopRun("private_storage_unavailable")
-                return transmit(page, spec, fields, gate, reload_fields)
+                result = transmit(page, spec, fields, gate, reload_fields)
+                return {**result,"fresh_session":not reused,"gmail_code_used":gmail_code_used,"session_saved":session_saved}
             return {"code": "read_success", "stage": stage, "fields": fields, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "session_saved": session_saved, "blocked_writes": blocked}
         except GmailError as exc:
             return {"code": exc.code, "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "diagnostics": exc.diagnostics}
-        except StopRun as exc:
+        except (StopRun, directory.PortalThrottled) as exc:
+            if vault and isinstance(exc, directory.PortalThrottled):
+                vault.put("edof-throttled", True, ttl=exc.delay)
             if exc.code in {"directory_unavailable","directory_incomplete","bulk_deferred"} and pending_result:
                 return pending_result
             if exc.code == "bulk_deferred":
@@ -1714,7 +1727,7 @@ def run_browser(spec, *, live=None):
             ) if needle in reason), "other")
             try:
                 checkpoint(False)
-            except StopRun as exc:
+            except (StopRun, directory.PortalThrottled) as exc:
                 return {"code": exc.code, "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "diagnostics": diagnostics()}
             except Exception:
                 pass
