@@ -164,3 +164,16 @@ def test_delayed_official_return_recovers_only_during_manual_hour(tmp_path):
     assert not allow_login(vault, automatic=True, manual_until=until, now=instant)
     assert allow_login(vault, automatic=True, manual_until=until, now=instant, recover_return=True)
     assert not allow_login(vault, automatic=True, manual_until=until, now=instant, recover_return=True)
+
+
+def test_navigation_between_efp_and_edof_keeps_waiting_without_restarting():
+    from unittest.mock import Mock
+    import edof_server_browser as portal
+    page = Mock()
+    page.url = "https://"+portal.EFP_HOST+"/auth/"
+    page.locator.return_value.count.return_value = 1
+    check = Mock(side_effect=[RuntimeError("Execution context was destroyed, most likely because of a navigation"),None])
+    assert not portal.open_workspace_or_login(page, Mock(), False, {}, check)
+    assert check.call_count == 2 and page.goto.call_count == 1
+    with pytest.raises(RuntimeError, match="not a navigation"):
+        portal.open_workspace_or_login(page, Mock(), False, {}, Mock(side_effect=RuntimeError("not a navigation")))

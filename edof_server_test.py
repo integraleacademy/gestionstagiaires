@@ -331,7 +331,7 @@ class ServerTestStore:
         db = self.connect()
         try:
             rows = db.execute("""
-                SELECT a.owner,j.created,j.finished,j.result,json_extract(j.result,'$.code') AS code,
+                SELECT a.owner,m.started AS manual_start,j.created,j.finished,j.result,json_extract(j.result,'$.code') AS code,
                        EXISTS(SELECT 1 FROM directory_requested r WHERE r.owner=a.owner) AS requested
                 FROM (SELECT owner,max(seen) AS seen FROM (SELECT owner,seen FROM directory_activity WHERE ?
                       UNION ALL SELECT owner,started AS seen FROM manual_sessions WHERE until>?) GROUP BY owner) a
@@ -348,7 +348,15 @@ class ServerTestStore:
                 elif row["finished"] and row["requested"] and row["code"] in {"day_login_used", "directory_ready"}:
                     due.append(row["owner"])
                 elif row["finished"] and row["code"] in ("directory_ready","directory_incomplete","directory_unavailable","timeout","browser_error","interrupted"):
-                    delay = POLL_SECONDS if row["code"] == "directory_ready" or awaiting_edof_return(json.loads(row["result"])) else 900
+                    result = json.loads(row["result"])
+                    delay = POLL_SECONDS if row["code"] == "directory_ready" or awaiting_edof_return(result) else 900
+                    if (delay == 900 and row["manual_start"] and row["code"] == "browser_error"
+                            and result.get("stage") == "login_page" and not result.get("gmail_code_used")
+                            and not (result.get("diagnostics") or {}).get("login_post_status")):
+                        attempts = db.execute("SELECT count(*) FROM jobs WHERE owner=? AND mode='directory' AND created>=?",
+                                              (row["owner"], row["manual_start"])).fetchone()[0]
+                        if attempts < 4:
+                            delay = POLL_SECONDS
                     if row["created"] + delay <= now.timestamp() and row["finished"] + 20 <= now.timestamp():
                         due.append(row["owner"])
             return due
@@ -466,7 +474,8 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
             if day_worker is not None:
                 # Operational proof without account, dossier, cookie or code values.
                 print(f"EDOF_DAY status={result['code']} fresh={result.get('fresh_session')} "
-                      f"mail_used={result.get('gmail_code_used')}", flush=True)
+                      f"mail_used={result.get('gmail_code_used')} stage={result.get('stage')} "
+                      f"fault={(result.get('diagnostics') or {}).get('fault')}", flush=True)
         finally:
             os.close(lock_fd)
             if provider_fd is not None:
@@ -497,8 +506,13 @@ def start_job(store, owner, spec, *, day_worker=None):
             until = store.manual_until(owner)
             if spec["mode"] != "directory" or not (until or working_hours(now) and store.directory_enabled(owner)):
                 raise ValueError("Veille indisponible.")
-            last_directory = next((job for job in store.latest(owner) if job["mode"] == "directory"), {})
-            spec = {**spec, "manual_until": until, "recover_return": bool(until and awaiting_edof_return(last_directory))}
+            prior = None
+            if until:
+                with closing(store.connect()) as db:
+                    prior = db.execute("""SELECT result FROM jobs WHERE owner=? AND mode='directory' AND created>=?
+                        AND json_extract(result,'$.gmail_code_used')=1 ORDER BY created DESC LIMIT 1""",
+                        (owner, until-3600)).fetchone()
+            spec = {**spec, "manual_until": until, "recover_return": bool(prior and awaiting_edof_return(json.loads(prior[0])))}
             provider_fd = acquire_provider(spec["provider"])
         elif spec["mode"] != "inspect_forms":
             ticket = (spec.get("intent") or {}).get("pilot_ticket")
