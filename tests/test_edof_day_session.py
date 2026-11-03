@@ -97,7 +97,13 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
             route.fulfill(status=404, body="")
     from playwright.sync_api import APIRequestContext
     from unittest.mock import Mock
-    monkeypatch.setattr(APIRequestContext, "get", lambda *_a, **_kw: Mock(status=409))
+    def private_read(_context, url, *, params, **_kw):
+        reply = Mock(status=200, url=url)
+        items = folders if params["state"] == "all" else []
+        reply.body.return_value = json.dumps({"items":items, "numberOfItems":len(items)}).encode()
+        return reply
+    monkeypatch.setattr(APIRequestContext, "get", private_read)
+    monkeypatch.setattr(runner, "read_pending_with_private_session", lambda *_: None)
     monkeypatch.setattr(Route, "continue_", local_reply)
     with sync_playwright() as pw:
         try:
@@ -112,7 +118,7 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
             assert result["code"] == "directory_ready", result
             assert result["gmail_code_used"] is False and result["fresh_session"] is False
             assert result["candidate_count"] == size
-            folders.append({"id":"100088","attendee":{"firstName":"Test","lastName":"Exemple"},"currentState":"notProcessed"})
+            folders.append({"id":"100088","attendee":{"firstName":"Test","lastName":"Exemple"},"beginDate":"01/01/2026","currentState":"notProcessed"})
         assert vault.get(directory.record_key("fixture"))["rows"]["100088"]["state"] == "notProcessed"
         # A slow full scan must not erase the live tab or mask freshly read pending rows.
         import time
@@ -125,7 +131,7 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
         read_pending = Mock(return_value=snapshot)
         monkeypatch.setattr(runner, "read_pending_with_private_session", read_pending)
         scan = Mock(side_effect=runner.StopRun("bulk_deferred"))
-        monkeypatch.setattr(runner, "exported_directory", scan)
+        monkeypatch.setattr(runner, "read_recent_directory", scan)
         checked = runner.run_browser({"mode":"directory","day_session":True,"owner":"fixture"}, live=live)
         scan.assert_called_once()
         assert checked["code"] == "requests_ready" and not checked["gmail_code_used"]
@@ -203,8 +209,8 @@ def test_pending_filter_reads_four_private_rows_and_preserves_other_dossiers(mon
     import edof_directory as directory
     import edof_server_browser as reader
     from playwright.sync_api import sync_playwright, TimeoutError as BrowserTimeout
-    raw = [{"id":str(100000+i),"attendee":{"firstName":"Test","lastName":"Exemple"},"currentState":"notProcessed"} for i in range(4)]
-    full = {"checked":1,"rows":{"999999":{"state":"accepted"}}}
+    raw = [{"id":str(100000+i),"attendee":{"firstName":"Test","lastName":"Exemple"},"beginDate":"01/01/2026","currentState":"notProcessed"} for i in range(4)]
+    full = {"checked":1,"rows":{"999999":{"folder_id":"999999","session_start_date":"2026-01-01","session_end_date":"","state":"accepted"}}}
     with sync_playwright() as pw:
         try:
             browser = pw.chromium.launch(executable_path=os.environ.get("EDOF_TEST_CHROMIUM"), headless=True)
@@ -237,7 +243,7 @@ def test_private_list_fallback_requires_complete_matching_rows():
     source = Mock(method="GET", url=base+"pad")
     source.all_headers.return_value={"accept":"application/json", "irrelevant":"discard"}
     context = Mock()
-    raw=[{"id":str(200000+i),"attendee":{"firstName":"Test","lastName":"Exemple"},"currentState":"notProcessed"} for i in range(4)]
+    raw=[{"id":str(200000+i),"attendee":{"firstName":"Test","lastName":"Exemple"},"beginDate":"01/01/2026","currentState":"notProcessed"} for i in range(4)]
     response=Mock(status=200,url=base+"pad?page=0&size=100&state=notProcessed")
     response.body.return_value=json.dumps({"items":raw,"numberOfItems":4}).encode()
     context.request.get.return_value=response
@@ -266,3 +272,25 @@ def test_no_cold_browser_without_existing_session_or_login_budget(tmp_path, monk
                               {"EDOF_CONNECTOR_DIRECTORY":str(tmp_path), "EDOF_CONNECTOR_KEY":key},30)
     assert outcome["code"]=="day_login_used" and not outcome["gmail_code_used"]
     launch.assert_not_called()
+
+
+def test_sorted_portal_query_stops_at_cutoff_and_keeps_january_first():
+    import json
+    from unittest.mock import Mock
+    import edof_server_browser as reader
+    url = f"https://{reader.EDOF_HOST}{reader.API_PREFIX}pad"
+    source = Mock(method="GET", url=url)
+    source.all_headers.return_value = {}
+    ctx = Mock()
+    def reply(_url, *, params, **kwargs):
+        assert params["sort"] == "DATE_DEBUT_SESSION" and params["order"] == "DESC"
+        days = (["2027-03-01","2026-01-01"], ["2025-12-31","2025-12-30"])[params["page"]]
+        res = Mock(status=200,url=url)
+        res.body.return_value = json.dumps({"numberOfItems":7000, "items":[
+            {"id":str(100000+params["page"]*2+i),"currentState":"validated","beginDate":d,"trainingActionInfo":{
+             "solicitations":[{"fundingType":9,"status":"inProgress"}]}} for i,d in enumerate(days)]}).encode()
+        return res
+    ctx.request.get.side_effect = reply
+    result = reader.read_recent_directory(ctx,source,"all",lambda:None,{})
+    assert set(result["rows"]) == {"100000","100001"} and ctx.request.get.call_count == 2
+    assert result["rows"]["100001"]["ft_pending"]

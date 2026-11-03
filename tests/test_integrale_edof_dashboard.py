@@ -73,6 +73,7 @@ def site(tmp_path, monkeypatch):
     monkeypatch.setattr(server, "start_job", lambda *a: pytest.fail("Viewing or switching must not start a browser"))
     root = Path(__file__).resolve().parents[1]
     app = Flask(__name__, template_folder=str(root/"templates"))
+    app.add_url_rule("/session/<session_id>/stagiaire/<trainee_id>", "admin_trainee_page", lambda **kwargs: "stagiaire")
     app.secret_key = "synthetic-only-key-for-isolated-dashboard-tests"
     datafile = tmp_path / "data.json"
     data = {"sessions": [{"id":"s1", "name":"Formation test", "date_start":"2026-02-02", "date_end":"2026-02-06",
@@ -172,7 +173,7 @@ def test_native_sync_prepares_entries_from_real_activity_and_never_replays_histo
     process_directory(site.store,{"checked":101,"rows":{"100000":{**record,"state":"inTraining"}}},site.local)
     process_directory(site.store,snap,site.local)
     with site.gate.connect() as db:
-        assert list(map(tuple,db.execute("SELECT previous,state FROM directory_events"))) == [("accepted","training")]
+        assert list(map(tuple,db.execute("SELECT previous,state FROM directory_events"))) == [("accepted","entry")]
     assert dashboard.local_operations(site.gate)["100000"]["draft"] == draft
 
 
@@ -189,11 +190,11 @@ def test_selected_folder_scope_and_unconfirmed_billing():
     assert dashboard.category({"state":"canceledByAttendeeNotRealized"}) == "canceled"
     assert dashboard.category({"state":"waitingAcceptation"}) == "waiting"
     assert dashboard.category({"state":"serviceDoneValidated","billing_state":"billed"}) == "invoiced"
-    assert dashboard.category({"state":"serviceDoneValidated"}) == "service"
+    assert dashboard.category({"state":"serviceDoneValidated"}) == "billable"
 
 
 def test_simulate_at_actual_paris_cutoff_without_sending(site):
-    before = dt.datetime(2026,2,2,17,59,tzinfo=dashboard.PARIS)
+    before = dt.datetime(2026,2,2,7,59,tzinfo=dashboard.PARIS)
     after = before + dt.timedelta(minutes=1)
     assert dashboard.simulate("accepted", "2026-02-02", None, None, before) == "planned"
     assert dashboard.simulate("accepted", "2026-02-02", None, None, after) == "unconfirmed"
@@ -326,3 +327,72 @@ def test_manual_activation_updates_lamp_only_after_private_read(site, monkeypatc
     jid = site.store.reserve(site.owner, "directory", day_session=True)
     site.store.finish(jid, {"code":"day_login_used", "day_session":True})
     assert not site.client.get(badge).json["active"]
+
+
+def test_processing_pages_classify_official_states_and_exclude_legacy_folders(site):
+    snapshot = site.vault.get(edof_directory.record_key(site.owner))
+    template = snapshot["rows"]["100000"]
+    cases = {"waiting":{"state":"validated"}, "ft":{"state":"validated","ft_pending":True},
+             "out":{"state":"terminated"}, "declared":{"state":"serviceDoneDeclared"},
+             "billable":{"state":"serviceDoneValidated"}, "invoiced":{"state":"serviceDoneValidated","billing_state":"billed"},
+             "paid":{"state":"serviceDoneValidated","billing_state":"billed","payment_state":"Issued"}}
+    for i, fields in enumerate(cases.values()):
+        folder = str(200000+i)
+        snapshot["rows"][folder] = {**template, "folder_id":folder, **fields}
+    old = {**template,"folder_id":"900000","session_start_date":"31/12/2025"}
+    snapshot["rows"][old["folder_id"]] = old
+    site.vault.put(edof_directory.record_key(site.owner), snapshot)
+    site.vault.put(edof_directory.pending_key(site.owner), {"checked":snapshot["checked"]+1,"rows":{old["folder_id"]:old}})
+    for i, tab in enumerate(cases):
+        section = "requests" if tab in dashboard.REQUEST_TABS else "automations"
+        page = site.client.get("/admin/edof-test", query_string={"section":section, "tab":tab})
+        assert page.status_code == 200 and dashboard.SECTIONS[section] in page.text
+        assert "900000" not in page.text and str(200000+i) in page.text
+        assert all(str(200000+j) not in page.text for j in range(len(cases)) if i != j)
+    assert site.client.get("/admin/edof-test?folder=900000").status_code == 404
+
+
+def test_global_hold_survives_state_changes_and_release(site):
+    import edof_declarations as ledger
+    site.gate.switch("integrale", 0, "admin")
+    url = "/admin/edof-test/dossiers/100000/hold"
+    assert site.client.post(url, data={"csrf":site.csrf, "hold":"yes"}).status_code == 303
+    row = site.vault.get(edof_directory.record_key(site.owner))["rows"]["100000"]
+    for action in ("entry_training","service_done"):
+        draft = {"action":action,"actual_date":"2026-02-02","evidence":"Feuille signée","rate":100}
+        assert ledger.enqueue(site.store.directory,site.owner,1,row,draft,"test",automatic=True) == "paused"
+    assert site.client.post(url,data={"csrf":site.csrf}).status_code == 303
+    assert not ledger.folder_holds(site.store.directory)
+
+
+def test_trainee_import_requires_verified_detail_and_is_idempotent(site, monkeypatch):
+    import integrale_edof_registration as registrations
+    started = []
+    monkeypatch.setattr(server, "start_job", lambda *args: started.append(args[-1]))
+    post = lambda folder: site.client.post(f"/admin/edof-test/dossiers/{folder}/create-trainee",
+                                            data={"csrf":site.csrf,"session_id":"s1"}, follow_redirects=True)
+    assert "Choisissez une session" in post("100002").text and not started
+    assert "Lecture de la fiche complète" in post("100000").text
+    assert started[0]["folder_id"] == "100000" and started[0]["import_session"] == "s1"
+    data = json.loads(site.local.read_text())
+    fields = {**site.vault.get(edof_directory.record_key(site.owner))["rows"]["100000"], "birth_date":"1986-03-12",
+              "email":"edof@example.invalid","phone":"0600000000", "total_incl":"1250.00"}
+    def mutate(fn):
+        saved = json.loads(site.local.read_text())
+        fn(saved)
+        site.local.write_text(json.dumps(saved))
+    legacy = SimpleNamespace(INTEGRALE_PARTNER_ID="academy", _atomic_update_data=mutate,
+                             _session_trainees_list=lambda s:s["trainees"],
+                             _new_session_trainee=lambda s,r: {"id":"test-id", **{k:r[k] for k in ("first_name","last_name","email","birth_date","phone")}},
+                             _apply_pending_cnaps_imports_for_trainee=Mock(), increment_partner_trainee_usage=Mock())
+    with pytest.raises(ValueError,match="existe déjà"):
+        registrations.create_registration(legacy,"100000","s1",fields)
+    data["sessions"][0]["trainees"].clear()
+    site.local.write_text(json.dumps(data))
+    for _ in range(2):
+        registrations.create_registration(legacy,"100000","s1",fields)
+    saved = json.loads(site.local.read_text())
+    assert len(saved["sessions"][0]["trainees"]) == len(saved["wedof_links"]) == 1
+    trainee = saved["sessions"][0]["trainees"][0]
+    assert trainee["birth_date"] == fields["birth_date"] and trainee["phone"] == fields["phone"]
+    assert trainee["edof_registration"]["folder_id"] == "100000" and trainee["training_price"] == "1250.00"

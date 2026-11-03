@@ -44,6 +44,7 @@ MESSAGES = {
     "declaration_confirmed": "Le statut et les valeurs de la déclaration ont été relus sur EDOF.",
     "declaration_inspected": "Contrôle des commandes disponibles sur EDOF terminé en lecture seule.",
     "requests_ready": "Les dossiers À traiter ont été relus dans l’onglet officiel EDOF.",
+    "declaration_exit_confirmed": "Sortie confirmée dans EDOF. Le service fait reste à transmettre.",
     "directory_ready": "La liste EDOF de l’établissement est disponible pour la recherche.",
     "directory_unavailable": "EDOF n’a pas renvoyé la liste de l’établissement. Vous pouvez reprendre la synchronisation.",
     "directory_incomplete": "La liste renvoyée par EDOF est incomplète. La dernière liste vérifiée reste consultable.",
@@ -289,7 +290,9 @@ class ServerTestStore:
     def live_connection(self, owner, saved_session):
         now = dt.datetime.now(PARIS)
         manual = self.manual_until(owner)
-        open_now = bool(manual or working_hours(now) and self.directory_enabled(owner))
+        from cpf_provider import ProviderStore
+        watch_open = working_hours(now, daily=ProviderStore(self.directory).state()["provider"] == "integrale")
+        open_now = bool(manual or watch_open and self.directory_enabled(owner))
         with closing(self.connect()) as db:
             queued = bool(db.execute("SELECT 1 FROM directory_requested WHERE owner=?", (owner,)).fetchone())
             row = db.execute("""SELECT finished,created,json_extract(result,'$.code') code
@@ -299,7 +302,7 @@ class ServerTestStore:
         stamp = last["finished"] if last else 0
         earliest = now.astimezone(PARIS).replace(hour=8, minute=0, second=0, microsecond=0).timestamp()
         if manual:
-            earliest = min(earliest, manual - 3600) if working_hours(now) and self.directory_enabled(owner) else manual - 3600
+            earliest = min(earliest, manual - 3600) if watch_open and self.directory_enabled(owner) else manual - 3600
         verified = bool(stamp >= earliest and open_now and saved_session and last and last["code"] in {"directory_ready","requests_ready"} and
                         0 <= now.timestamp() - stamp < POLL_SECONDS * 3)
         phase = {}
@@ -343,7 +346,7 @@ class ServerTestStore:
             db.execute("INSERT OR IGNORE INTO directory_requested VALUES (?)", (owner,))
             return True
 
-    def day_owners(self, now):
+    def day_owners(self, now, *, daily=False):
         """A new workday restarts enabled accounts, including after a weekend or failed login."""
         start = now.astimezone(PARIS).replace(hour=8, minute=0, second=0, microsecond=0).timestamp()
         db = self.connect()
@@ -358,7 +361,7 @@ class ServerTestStore:
                     SELECT id FROM jobs WHERE owner=a.owner AND mode='directory' AND created>=CASE WHEN m.started IS NOT NULL THEN m.started ELSE ? END
                     ORDER BY created DESC LIMIT 1)
                 ORDER BY coalesce(j.created,0),a.seen DESC
-            """, (int(working_hours(now)), now.timestamp(), now.timestamp(), start))
+            """, (int(working_hours(now, daily=daily)), now.timestamp(), now.timestamp(), start))
             due = []
             for row in rows:
                 if row["created"] is None:
@@ -416,7 +419,8 @@ class ServerTestStore:
                             return None
                         continue
                 checked = dt.datetime.fromtimestamp(row["finished"], ZoneInfo("Europe/Paris"))
-                found = {"id": row["id"], "checked_at": checked.strftime("%d/%m/%Y à %H h %M"), "fields": fields}
+                found = {"id": row["id"], "checked_at": checked.strftime("%d/%m/%Y à %H h %M"), "fields": fields,
+                         "import_error": json.loads(row["result"]).get("import_error")}
                 if not spec or spec["folder_id"]:
                     break
             return found
@@ -469,6 +473,15 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
             process.communicate()
         try:
             temporary.cleanup()
+            if spec.get("import_session") and result.get("code") == "read_success":
+                from integrale_edof_registration import create_registration
+                try:
+                    with store.legacy.app.app_context():
+                        create_registration(store.legacy, spec["folder_id"], spec["import_session"], result["fields"])
+                except ValueError as exc:
+                    result["import_error"] = str(exc)
+                except (OSError, sqlite3.Error):
+                    result["import_error"] = "Enregistrement local indisponible. Réessayez depuis le dossier."
             if result.get("code") == "directory_ready" and store.data_file and spec.get("owner"):
                 try:
                     from integrale_edof_sync import process_directory
@@ -476,8 +489,7 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
                     if snapshot:
                         snapshot = directory.dated_snapshot(snapshot)
                         process_directory(store, snapshot, store.data_file)
-                        if not day_worker or (spec["provider"] == "integrale" and working_hours()):
-                            declarations.discover(store, spec["owner"], snapshot)
+
                 except (OSError, ValueError, sqlite3.Error):
                     # Keep the verified source snapshot. The next full sync
                     # can retry local analysis without replaying external work.
@@ -524,7 +536,7 @@ def start_job(store, owner, spec, *, day_worker=None):
         if day_worker is not None:
             now = dt.datetime.now(PARIS)
             until = store.manual_until(owner)
-            if spec["mode"] != "directory" or not (until or working_hours(now) and store.directory_enabled(owner)):
+            if spec["mode"] != "directory" or not (until or working_hours(now, daily=spec.get("provider") == "integrale") and store.directory_enabled(owner)):
                 raise ValueError("Veille indisponible.")
             prior = None
             if until:
@@ -534,6 +546,9 @@ def start_job(store, owner, spec, *, day_worker=None):
                         (owner, until-3600)).fetchone()
             spec = {**spec, "manual_until": until, "recover_return": bool(prior and awaiting_edof_return(json.loads(prior[0])))}
             provider_fd = acquire_provider(spec["provider"])
+        elif spec["mode"] == "read" and spec.get("import_session"):
+            from cpf_provider import ProviderStore
+            provider_fd = acquire_provider(ProviderStore(store.directory).state()["provider"])
         elif spec["mode"] != "inspect_forms":
             ticket = (spec.get("intent") or {}).get("pilot_ticket")
             if ticket and spec["mode"] in {"declare", "reconcile"}:
@@ -572,12 +587,14 @@ def register_edof_server_test(legacy):
         return
     store = ServerTestStore("/var/data")
     store.data_file = legacy.DATA_FILE
+    store.legacy = legacy
     register_routes(legacy.app, store, legacy=legacy,
         admin_required=legacy.admin_login_required,
         can_access=lambda: legacy._is_super_admin_session() and not session.get("assist_partner_id"))
 
     def refresh_active_directories():
         worker = DayWorker()
+        inspected = None
         # Gunicorn can have several schedulers. Only one owns the in-memory tab.
         store.directory.mkdir(parents=True, exist_ok=True)
         with open(store.directory / "edof_day_leader.lock", "a") as leader:
@@ -587,17 +604,34 @@ def register_edof_server_test(legacy):
                     time.sleep(20)
                     try:
                         now = dt.datetime.now(PARIS)
-                        if worker.owner and not (store.manual_until(worker.owner) or working_hours(now) and store.directory_enabled(worker.owner)):
-                            worker.close()
                         from cpf_provider import ProviderStore
                         active = ProviderStore(store.directory).state()
+                        daily = active["provider"] == "integrale"
+                        if worker.owner and not (store.manual_until(worker.owner) or working_hours(now, daily=daily) and store.directory_enabled(worker.owner)):
+                            worker.close()
                         if active["pending"]:
                             continue
                         pending = declarations.next_job(store, active["revision"], provider=active["provider"])
                         if pending:
                             start_job(store, pending["owner"], pending)
                             continue
-                        for user in store.day_owners(now):
+                        # Re-evaluate deadlines even when no new export was needed this minute.
+                        tick = (active["revision"], int(now.timestamp()) // 300)
+                        if daily and inspected != tick and store.connector_key:
+                            inspected = tick
+                            with closing(store.connect()) as db:
+                                owners = [r[0] for r in db.execute("SELECT owner FROM directory_activity")]
+                            vault = Vault(store.directory, store.connector_key)
+                            for owner in owners:
+                                snap = directory.dated_snapshot(vault.get(directory.record_key(owner)))
+                                if snap:
+                                    from integrale_edof_dashboard import apply_confirmed_entries
+                                    declarations.discover(store, owner, apply_confirmed_entries(snap, store.directory, owner))
+                            pending = declarations.next_job(store, active["revision"])
+                            if pending:
+                                start_job(store, pending["owner"], pending)
+                                continue
+                        for user in store.day_owners(now, daily=daily):
                             if not store.connector_key or not Vault(store.directory, store.connector_key).get("gmail"):
                                 worker.close()
                                 break
@@ -679,7 +713,7 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
     def index():
         user = results_owner()
         csrf = session.setdefault("edof_server_csrf", secrets.token_urlsafe(32))
-        snapshot = vault().get(directory.record_key(user)) if store.connector_key else None
+        snapshot = directory.dated_snapshot(vault().get(directory.record_key(user))) if store.connector_key else None
         if snapshot:
             store.use_directory(user)
         selected_folder = request.args.get("fiche")
@@ -868,7 +902,7 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
                 raise ValueError("Renseignez un numéro CPF ou le nom et le prénom.")
         except ValueError as exc:
             return jsonify(ok=False, error=str(exc)), 400
-        snapshot = vault().get(directory.record_key(user)) if store.connector_key else None
+        snapshot = directory.dated_snapshot(vault().get(directory.record_key(user))) if store.connector_key else None
         hits = []
         if snapshot:
             store.use_directory(user)

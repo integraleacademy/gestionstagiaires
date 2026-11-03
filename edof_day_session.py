@@ -16,13 +16,13 @@ PARIS = ZoneInfo("Europe/Paris")
 POLL_SECONDS = 120
 
 
-def working_hours(now=None):
+def working_hours(now=None, *, daily=False):
     now = (now or datetime.now(PARIS)).astimezone(PARIS)
-    return now.weekday() < 5 and 8 <= now.hour < 19
+    return (daily or now.weekday() < 5) and 8 <= now.hour < 19
 
 
-def session_deadline(now, manual_until=0):
-    scheduled = now.replace(hour=19, minute=0, second=0, microsecond=0).timestamp() if working_hours(now) else 0
+def session_deadline(now, manual_until=0, *, daily=False):
+    scheduled = now.replace(hour=19, minute=0, second=0, microsecond=0).timestamp() if working_hours(now, daily=daily) else 0
     return max(scheduled, manual_until)
 
 
@@ -33,7 +33,7 @@ def awaiting_edof_return(result):
             and diag.get("location") == "edof_initialisation" and not diag.get("workspace_denied"))
 
 
-def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None, manual_until=0, recover_return=False):
+def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None, manual_until=0, recover_return=False, daily=False):
     """Called under the shared job lock before the password POST can issue a code."""
     now = (now or datetime.now(PARIS)).astimezone(PARIS)
     today = now.date().isoformat()
@@ -42,7 +42,7 @@ def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None, m
     if isinstance(previous, dict) and previous.get("date") == today:
         count = previous["count"]
     if automatic:
-        if session_deadline(now, manual_until) <= now.timestamp():
+        if session_deadline(now, manual_until, daily=daily) <= now.timestamp():
             return False
         override = bool(owner) and vault.get("day-login-override:" + owner, consume=True) == today
         if count and not (count == 1 and (verified_tab or manual_until > now.timestamp() and recover_return)) and not override:
@@ -73,7 +73,7 @@ class DayWorker:
     def read(self, spec, env, timeout):
         with self.mutex:
             now = datetime.now(PARIS)
-            deadline = session_deadline(now, spec.get("manual_until", 0))
+            deadline = session_deadline(now, spec.get("manual_until", 0), daily=spec.get("provider") == "integrale")
             if deadline <= now.timestamp():
                 return {"code": "day_closed"}
             if self.process is None or self.owner != spec["owner"] or self.process.poll() is not None:
@@ -96,7 +96,7 @@ class DayWorker:
                 self.owner = spec["owner"]
             try:
                 started = datetime.now(PARIS).timestamp()
-                self.process.stdin.write(json.dumps({"owner": self.owner, "manual_until": spec.get("manual_until", 0), "recover_return": spec.get("recover_return", False)}) + "\n")
+                self.process.stdin.write(json.dumps({"owner": self.owner, "provider":spec.get("provider"), "manual_until": spec.get("manual_until", 0), "recover_return": spec.get("recover_return", False)}) + "\n")
                 self.process.stdin.flush()
                 now = datetime.now(PARIS)
                 remaining = deadline - now.timestamp()
@@ -127,12 +127,13 @@ def serve():
             for line in sys.stdin:
                 command = json.loads(line)
                 now = datetime.now(PARIS)
+                daily = command.get("provider") == "integrale"
                 manual_until = command.get("manual_until", 0)
-                if session_deadline(now, manual_until) <= now.timestamp():
+                if session_deadline(now, manual_until, daily=daily) <= now.timestamp():
                     break
                 owner = command["owner"]
                 result = run_browser({"mode": "directory", "owner": owner, "day_session": True,
-                                      "manual_until": manual_until, "recover_return": command.get("recover_return", False)}, live=live)
+                                      "provider":command.get("provider"), "manual_until": manual_until, "recover_return": command.get("recover_return", False)}, live=live)
                 live["return_pending"] = awaiting_edof_return(result)
                 if result["code"] in {"directory_ready", "requests_ready"}:
                     live["verified"] = True
