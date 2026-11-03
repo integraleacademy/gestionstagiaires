@@ -615,11 +615,14 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
             store.finish(job_id, result)
             if day_worker is not None:
                 # Operational proof without account, dossier, cookie or code values.
+                report = (result.get("diagnostics") or {}).get("directory") or {}
                 print(f"EDOF_DAY status={result['code']} fresh={result.get('fresh_session')} "
                       f"mail_used={result.get('gmail_code_used')} stage={result.get('stage')} "
                       f"fault={(result.get('diagnostics') or {}).get('fault')} "
                       f"operation={(result.get('diagnostics') or {}).get('operation')} "
-                      f"phase={(result.get('diagnostics') or {}).get('initial_phase')}", flush=True)
+                      f"phase={(result.get('diagnostics') or {}).get('initial_phase')} "
+                      f"full_http={report.get('http')} page={report.get('page')} total={report.get('total')} "
+                      f"seen={report.get('seen')} reason={report.get('failure')}", flush=True)
         finally:
             os.close(lock_fd)
             if provider_fd is not None:

@@ -5,7 +5,7 @@
   {% endif %}
   {% if detail and detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'] %}<meta http-equiv="refresh" content="10">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-fiche-formation') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-liste-complete') }}">
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
