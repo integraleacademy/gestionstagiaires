@@ -9,10 +9,10 @@ from edof_server_test import ServerTestStore
 
 
 @pytest.mark.parametrize("instant, expected", [
-    ("2026-11-02T06:59:59+00:00", False), ("2026-11-02T07:00:00+00:00", True),
+    ("2026-11-02T05:59:59+00:00", False), ("2026-11-02T06:00:00+00:00", True),
     ("2026-11-06T17:59:59+00:00", True), ("2026-11-06T18:00:00+00:00", False),
-    ("2026-11-07T12:00:00+00:00", False), ("2026-11-08T12:00:00+00:00", False),
-    ("2027-07-05T06:00:00+00:00", True),
+    ("2026-11-07T12:00:00+00:00", True), ("2026-11-08T12:00:00+00:00", True),
+    ("2027-07-05T04:59:59+00:00", False), ("2027-07-05T05:00:00+00:00", True),
 ])
 def test_paris_hours(instant, expected):
     assert working_hours(dt.datetime.fromisoformat(instant)) is expected
@@ -21,16 +21,16 @@ def test_paris_hours(instant, expected):
 def test_single_automatic_sign_in_survives_restart_and_manual_login(tmp_path):
     key = connector_key("test" * 12)
     now = dt.datetime(2026, 11, 6, 8, tzinfo=PARIS)
-    assert allow_login(Vault(tmp_path, key), automatic=True, now=now)
-    assert not allow_login(Vault(tmp_path, key), automatic=True, now=now.replace(hour=17))
-    assert not allow_login(Vault(tmp_path, key), automatic=True, now=now + dt.timedelta(days=1))
+    assert allow_login(Vault(tmp_path, key), now=now)
+    assert not allow_login(Vault(tmp_path, key), now=now.replace(hour=17))
+    assert allow_login(Vault(tmp_path, key), now=now + dt.timedelta(days=1))
     monday = now + dt.timedelta(days=3)
-    assert allow_login(Vault(tmp_path, key), automatic=False, now=monday)
-    assert not allow_login(Vault(tmp_path, key), automatic=True, now=monday)
-    assert allow_login(Vault(tmp_path, key), automatic=True, now=monday + dt.timedelta(days=1))
+    assert allow_login(Vault(tmp_path, key), now=monday)
+    assert not allow_login(Vault(tmp_path, key), now=monday)
+    assert allow_login(Vault(tmp_path, key), now=monday + dt.timedelta(days=1))
 
 
-def test_failed_watch_resumes_next_weekday_and_respects_pause(tmp_path, monkeypatch):
+def test_failed_watch_resumes_next_day_and_respects_pause(tmp_path, monkeypatch):
     store = ServerTestStore(tmp_path)
     now = dt.datetime.now(PARIS)
     monday = (now-dt.timedelta(days=now.weekday())).replace(hour=8, minute=0, second=0, microsecond=0)
@@ -136,24 +136,47 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
         scan.assert_called_once()
         assert checked["code"] == "requests_ready" and not checked["gmail_code_used"]
         assert vault.get(directory.record_key("fixture")) == full
+        # A dossier job uses the very same tab and EFP session, with only its own
+        # write fence. All HTTP in this test stays on synthetic local routes.
+        active_page = live["page"][1]
+        def inspect_dossier(page, url, arrived, timeout):
+            assert page is active_page
+            page.evaluate("url => fetch(url)", "https://"+runner.EDOF_HOST+runner.API_PREFIX+"100088")
+        def dossier_http(route, **kwargs):
+            if route.request.url.endswith(runner.API_PREFIX+"100088"):
+                return route.fulfill(json=folders[0])
+            return local_reply(route, **kwargs)
+        monkeypatch.setattr(Route,"continue_",dossier_http)
+        monkeypatch.setattr(runner,"open_folder_view",inspect_dossier)
+        monkeypatch.setattr(runner,"project_folder",lambda raw, **kw:{"folder_id":raw["id"]})
+        from edof_declaration_form import SingleWrite
+        def receipt(page,spec,fields,gate,reload_fields):
+            assert page is active_page and isinstance(gate,SingleWrite) and not gate.armed and not gate.sent
+            return {"code":"declaration_confirmed"}
+        monkeypatch.setattr("edof_declaration_form.transmit",receipt)
+        for mode in ("declare","reconcile"):
+            result = runner.run_browser({"mode":mode,"owner":"fixture","shared_job":True,"folder_id":"100088",
+                                         "intent":{"action":"entry_training"}},live=live)
+            assert result["code"] == "declaration_confirmed",result
+            assert result["session_saved"] and not result["gmail_code_used"] and not result["fresh_session"]
         assert len(browser.contexts) == len(browser.contexts[0].pages) == 1
         browser.close()
 
 
-def test_only_a_verified_tab_can_automatically_renew_once(tmp_path):
+def test_only_an_explicit_single_use_permit_can_request_another_code(tmp_path):
     vault = Vault(tmp_path, connector_key("test" * 12))
     day = dt.datetime(2026, 11, 3, 8, tzinfo=PARIS)
-    assert allow_login(vault, automatic=True, owner="A", now=day)
-    assert not allow_login(vault, automatic=True, owner="A", now=day.replace(hour=9))
-    assert allow_login(vault, automatic=True, owner="A", verified_tab=True, now=day.replace(hour=11))
-    assert not allow_login(vault, automatic=True, owner="A", verified_tab=True, now=day.replace(hour=16))
+    assert allow_login(vault, owner="A", now=day)
+    assert not allow_login(vault, owner="A", now=day.replace(hour=9))
+    assert not allow_login(vault, owner="A", now=day.replace(hour=11))
+    assert not allow_login(vault, owner="A", now=day.replace(hour=16))
     vault.put("day-login-override:A", day.date().isoformat(), ttl=600)
-    assert not allow_login(vault, automatic=True, owner="B", now=day.replace(hour=17))
-    assert allow_login(vault, automatic=True, owner="A", now=day.replace(hour=17))
-    assert not allow_login(vault, automatic=True, owner="A", now=day.replace(hour=18))
+    assert not allow_login(vault, owner="B", now=day.replace(hour=17))
+    assert allow_login(vault, owner="A", now=day.replace(hour=17))
+    assert not allow_login(vault, owner="A", now=day.replace(hour=18))
 
 
-def test_manual_window_on_weekend_expires_without_enabling_weekday_schedule(tmp_path, monkeypatch):
+def test_manual_window_expires_without_enabling_the_watch(tmp_path, monkeypatch):
     from edof_day_session import session_deadline
     saturday = dt.datetime(2026, 11, 7, 10, tzinfo=PARIS)
     monkeypatch.setattr("edof_server_test.time.time", lambda: saturday.timestamp())
@@ -162,17 +185,17 @@ def test_manual_window_on_weekend_expires_without_enabling_weekday_schedule(tmp_
     assert not store.activate_manual("owner")
     until = store.manual_until("owner")
     assert not store.directory_enabled("owner")
-    assert session_deadline(saturday, until) == (saturday+dt.timedelta(hours=1)).timestamp()
+    assert session_deadline(saturday, until) == saturday.replace(hour=19).timestamp()
     assert store.day_owners(saturday) == ["owner"]
     assert store.day_owners(saturday+dt.timedelta(hours=1)) == []
     vault = Vault(tmp_path, connector_key("test" * 12))
-    assert allow_login(vault, automatic=True, manual_until=until, now=saturday)
-    assert not allow_login(vault, automatic=True, manual_until=until, now=saturday+dt.timedelta(hours=1))
+    assert allow_login(vault, manual_until=until, now=saturday)
+    assert not allow_login(vault, manual_until=until, now=saturday+dt.timedelta(hours=1))
     store.pause_directory("owner")
     assert not store.manual_until("owner")
 
 
-def test_delayed_official_return_recovers_only_during_manual_hour(tmp_path):
+def test_delayed_official_return_never_grants_a_second_code(tmp_path):
     from edof_day_session import awaiting_edof_return
     from edof_server_browser import returning_shell, EDOF_HOST
     result = {"code":"timeout","stage":"authentication","gmail_code_used":True,
@@ -185,10 +208,8 @@ def test_delayed_official_return_recovers_only_during_manual_hour(tmp_path):
     vault = Vault(tmp_path, connector_key("test" * 12))
     instant = dt.datetime(2026,11,3,6,30,tzinfo=PARIS)
     until = instant.timestamp()+3600
-    assert allow_login(vault, automatic=True, manual_until=until, now=instant)
-    assert not allow_login(vault, automatic=True, manual_until=until, now=instant)
-    assert allow_login(vault, automatic=True, manual_until=until, now=instant, recover_return=True)
-    assert not allow_login(vault, automatic=True, manual_until=until, now=instant, recover_return=True)
+    assert allow_login(vault, manual_until=until, now=instant)
+    assert not allow_login(vault, manual_until=until, now=instant)
 
 
 def test_navigation_between_efp_and_edof_keeps_waiting_without_restarting():
@@ -268,7 +289,7 @@ def test_no_cold_browser_without_existing_session_or_login_budget(tmp_path, monk
     vault.put("efp-login-day", {"date":now.date().isoformat(), "count":3})
     launch=Mock(side_effect=AssertionError("unexpected browser"))
     monkeypatch.setattr("edof_day_session.subprocess.Popen",launch)
-    outcome=DayWorker().read({"owner":"example", "manual_until":now.timestamp()+3600},
+    outcome=DayWorker().read({"mode":"directory","owner":"example", "manual_until":now.timestamp()+3600},
                               {"EDOF_CONNECTOR_DIRECTORY":str(tmp_path), "EDOF_CONNECTOR_KEY":key},30)
     assert outcome["code"]=="day_login_used" and not outcome["gmail_code_used"]
     launch.assert_not_called()
@@ -296,50 +317,28 @@ def test_sorted_portal_query_stops_at_cutoff_and_keeps_january_first():
     assert result["rows"]["100001"]["ft_pending"]
 
 
-def test_expired_verified_session_renews_after_restart_without_reusing_proof(tmp_path, monkeypatch):
-    now = dt.datetime.now(PARIS).replace(hour=12, minute=15, second=0, microsecond=0)
-    monkeypatch.setattr("edof_server_test.time.time", lambda: now.timestamp())
+def test_old_counters_and_verified_reads_do_not_grant_an_extra_login(tmp_path, monkeypatch):
+    now = dt.datetime.now(PARIS).replace(hour=12,minute=15,second=0,microsecond=0)
+    monkeypatch.setattr("edof_server_test.time.time",lambda:now.timestamp())
     store = ServerTestStore(tmp_path)
-    key = store.connector_key = connector_key("test" * 12)
-    vault = Vault(tmp_path, key)
-    store.use_directory("A", enable=True)
-    store.use_directory("B", enable=True)
-    # Older deployments stored the count but no timestamp. Both owners are paused.
-    vault.put("efp-login-day", {"date":now.date().isoformat(), "count":3})
-    start = now.replace(hour=9, minute=21)
+    key = store.connector_key = connector_key("test"*12)
+    vault = Vault(tmp_path,key)
+    store.use_directory("A",enable=True)
     with store.connect() as db:
-        for index, (owner, moment, code) in enumerate((
-            ("A",start,"requests_ready"), ("A",start+dt.timedelta(minutes=3),"day_login_used"),
-            ("B",start+dt.timedelta(minutes=3),"day_login_used")
-        )):
-            db.execute("INSERT INTO jobs VALUES(?,?,?,?,?,?)", (str(index),owner,moment.timestamp()-10,
-                       moment.timestamp(),"directory",'{"code":"'+code+'"}'))
-    assert store.day_owners(now, daily=True) == ["A"]
-    proof = store.verified_watch_at("A", now)
-    assert allow_login(vault, automatic=True, owner="A", now=now, daily=True, verified_at=proof)
-    assert not allow_login(Vault(tmp_path,key), automatic=True, owner="A", now=now+dt.timedelta(hours=1),
-                           daily=True, verified_at=proof)
-    assert store.day_owners(now+dt.timedelta(minutes=15), daily=True) == []
-    # A fresh successful read allows a later expiry to recover, subject to the cooldown.
-    fresh = now + dt.timedelta(minutes=2)
-    with store.connect() as db:
-        db.execute("INSERT INTO jobs VALUES('new','A',?,?,'directory',?)",
-                   (fresh.timestamp()-5,fresh.timestamp(),'{"code":"directory_ready"}'))
-        db.execute("INSERT INTO jobs VALUES('blocked','A',?,?,'directory',?)",
-                   (fresh.timestamp()+60,fresh.timestamp()+61,'{"code":"day_login_used"}'))
-    assert not store.day_owners(now+dt.timedelta(minutes=5), daily=True)
-    assert store.day_owners(now+dt.timedelta(minutes=10), daily=True) == ["A"]
-    assert store.day_owners(now.replace(hour=19), daily=True) == []
-    with store.connect() as db:
-        db.execute("INSERT INTO jobs VALUES('denied','A',?,?,'directory',?)",
-                   (fresh.timestamp()+120,fresh.timestamp()+121,'{"code":"credentials_rejected"}'))
-    assert store.next_renewal("A", now+dt.timedelta(minutes=20)) is None
-    assert not store.day_owners(now+dt.timedelta(minutes=20), daily=True)
+        for idx,code in enumerate(("directory_ready","day_login_used")):
+            stamp = now.timestamp()-600+idx*60
+            db.execute("INSERT INTO jobs VALUES(?,?,?,?,?,?)",
+                       (str(idx),"A",stamp,stamp+2,"directory",'{"code":"'+code+'"}'))
+    for legacy in (now.date().isoformat(), {"date":now.date().isoformat(),"count":3}):
+        vault.put("efp-login-day",legacy)
+        assert not store.day_owners(now)
+        assert not allow_login(Vault(tmp_path,key),owner="A",now=now)
+        assert store.day_owners(now+dt.timedelta(days=1)) == ["A"]
 
 
 def test_enabled_weekend_watch_stops_at_19_and_respects_pause(tmp_path, monkeypatch):
     store = ServerTestStore(tmp_path)
-    saturday = dt.datetime(2026,11,7,8,tzinfo=PARIS)
+    saturday = dt.datetime(2026,11,7,7,tzinfo=PARIS)
     monkeypatch.setattr("edof_server_test.time.time", lambda:saturday.timestamp())
     store.use_directory("A",enable=True)
     assert not store.day_owners(saturday-dt.timedelta(seconds=1), daily=True)
@@ -384,3 +383,108 @@ def test_recent_accepted_tab_reconciles_without_certifying_a_complete_list():
     pending = {"checked":4,"rows":{"100001":row("100001","notProcessed")}}
     assert directory.with_accepted(directory.with_pending(full,pending),accepted)["rows"]["100001"]["state"] == "notProcessed"
     assert directory.with_accepted({**full,"checked":5},accepted)["rows"] == full["rows"]
+
+
+def test_dossier_login_is_limited_by_the_watch_even_in_a_fresh_browser(tmp_path, monkeypatch):
+    from playwright.sync_api import sync_playwright, Route
+    import edof_server_browser as runner
+
+    key = connector_key("local-fixture-only" * 3)
+    vault = Vault(tmp_path,key)
+    today = dt.datetime.now(PARIS).date().isoformat()
+    monkeypatch.setenv("RENDER_SERVICE_ID", runner.TEST_SERVICE_ID)
+    monkeypatch.setenv("EDOF_CONNECTOR_KEY",key)
+    monkeypatch.setenv("EDOF_CONNECTOR_DIRECTORY",str(tmp_path))
+    monkeypatch.setenv("EDOF_EFP_USERNAME","fixture@example.invalid")
+    monkeypatch.setenv("EDOF_EFP_PASSWORD","local-browser-fixture")
+    vault.put("efp-login-day", {"date":today,"count":1})
+    login = f"https://{runner.EFP_HOST}/auth/realms/efp/login-actions/authenticate"
+    def local_only(route, **_):
+        assert route.request.method == "GET"
+        route.fulfill(content_type="text/html",body=f'<form method="post" action="{login}"><input name="username"><input type="password" name="password"><button id="kc-login">Entrer</button></form>')
+    def login_form(page, *args):
+        page.goto(login)
+        return False
+    monkeypatch.setattr(Route,"continue_",local_only)
+    monkeypatch.setattr(runner,"open_workspace_or_login",login_form)
+    monkeypatch.setattr(runner,"GmailCodes",lambda *args: pytest.fail("mailbox should not be opened"))
+    with sync_playwright() as pw:
+        try:
+            browser = pw.chromium.launch(executable_path=os.environ.get("EDOF_TEST_CHROMIUM"),headless=True)
+        except Exception as exc:
+            if "Executable doesn't exist" in str(exc):
+                pytest.skip("Chromium absent")
+            raise
+        for mode in ("directory","declare","reconcile","proposal_read","proposal_send","proposal_check"):
+            spec = {"owner":"fixture","mode":mode,"day_session":mode=="directory","shared_job":True,
+                    "manual_until":dt.datetime.now(PARIS).timestamp()+120,"intent":{"action":"entry_training"}}
+            outcome = runner.run_browser(spec,live={"pw":pw,"browser":browser})
+            assert outcome["code"]=="day_login_used" and not outcome["gmail_code_used"]
+        assert vault.get("efp-login-day")["count"]==1
+        browser.close()
+
+
+def test_throttled_directory_does_not_retry_the_portal(tmp_path,monkeypatch):
+    from unittest.mock import Mock
+    import edof_server_browser as runner
+    from edof_day_session import DayWorker
+    witness = Mock(method="GET",url=f"https://{runner.EDOF_HOST}{runner.API_PREFIX}pad")
+    witness.all_headers.return_value={}
+    reply = Mock(status=429, headers={"retry-after":"7200"})
+    ctx = Mock()
+    ctx.request.get.return_value = reply
+    with pytest.raises(runner.directory.PortalThrottled) as stopped:
+        runner.read_recent_directory(ctx,witness,"all",lambda:None,{})
+    assert stopped.value.delay == 7200 and ctx.request.get.call_count == 1
+    assert runner.directory.PortalThrottled(None).delay == 3600
+    key = connector_key("test"*12)
+    vault = Vault(tmp_path,key)
+    vault.put("edof-throttled",True,ttl=7200)
+    monkeypatch.setattr("edof_day_session.subprocess.Popen",Mock(side_effect=AssertionError("unexpected browser")))
+    outcome = DayWorker().read({"mode":"directory","owner":"fixture","manual_until":dt.datetime.now(PARIS).timestamp()+60},
+                               {"EDOF_CONNECTOR_DIRECTORY":str(tmp_path),"EDOF_CONNECTOR_KEY":key},30)
+    assert outcome["code"]=="portal_throttled"
+
+
+def test_efp_form_posts_are_single_use_and_allow_the_normal_otp_step(tmp_path,monkeypatch):
+    from playwright.sync_api import Route,sync_playwright
+    import edof_server_browser as runner
+    key = connector_key("local-otp-fixture"*4)
+    for name,value in {"RENDER_SERVICE_ID":runner.TEST_SERVICE_ID, "EDOF_CONNECTOR_KEY":key,
+                       "EDOF_CONNECTOR_DIRECTORY":str(tmp_path),"EDOF_EFP_USERNAME":"fixture@example.invalid",
+                       "EDOF_EFP_PASSWORD":"fixture-only"}.items():
+        monkeypatch.setenv(name,value)
+    root = f"https://{runner.EFP_HOST}/auth/realms/efp/login-actions/authenticate"
+    calls = []
+    def offline(route,**_):
+        request=route.request
+        if request.method=="GET":
+            html=f'<form method="post" action="{root}?step=password"><input name="username"><input type="password" name="password"><button id="kc-login">Entrer</button></form>'
+        else:
+            calls.append(request.url)
+            if request.url.endswith("step=password"):
+                html=f'<form method="post" action="{root}?step=otp"><input name="otp" autocomplete="one-time-code"></form><script>fetch("{root}?step=resend",{{method:"POST"}}).catch(()=>{{}})</script>'
+            else:
+                html="Account is disabled"
+        route.fulfill(content_type="text/html; charset=utf-8",body=html)
+    def open_login(page,*args):
+        page.goto(root)
+        return False
+    class Mailbox:
+        def __init__(self,*args): pass
+        def wait_for_code(self,requested_at,tick): return "123456"  # entirely local fixture
+    monkeypatch.setattr(Route,"continue_",offline)
+    monkeypatch.setattr(runner,"GmailCodes",Mailbox)
+    monkeypatch.setattr(runner,"open_workspace_or_login",open_login)
+    with sync_playwright() as pw:
+        try:
+            browser=pw.chromium.launch(executable_path=os.environ.get("EDOF_TEST_CHROMIUM"),headless=True)
+        except Exception as exc:
+            if "Executable doesn't exist" in str(exc): pytest.skip("Chromium absent")
+            raise
+        outcome=runner.run_browser({"mode":"directory","owner":"fixture","day_session":True,
+                  "manual_until":dt.datetime.now(PARIS).timestamp()+60},live={"pw":pw,"browser":browser})
+        assert outcome["code"]=="account_unavailable" and outcome["gmail_code_used"], outcome
+        assert calls==[root+"?step=password",root+"?step=otp"]
+        assert Vault(tmp_path,key).get("efp-login-day")["count"]==1
+        browser.close()

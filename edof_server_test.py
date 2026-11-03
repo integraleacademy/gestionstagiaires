@@ -26,8 +26,7 @@ from flask import flash, Blueprint, abort, jsonify, redirect, request, send_file
 
 from cpf_provider import ProviderStore, acquire_provider, provider_operation
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
-from edof_server_browser import stalled_before_login
-from edof_day_session import DayWorker, POLL_SECONDS, PARIS, working_hours, awaiting_edof_return, renewal_time
+from edof_day_session import DayWorker, OPEN_HOUR, POLL_SECONDS, PARIS, working_hours, awaiting_edof_return
 import edof_directory as directory
 import edof_proposal_jobs as proposals
 import edof_declarations as declarations
@@ -41,8 +40,9 @@ PROPOSAL_MODES = {"proposal_read", "proposal_send", "proposal_check"}
 AUTH_MODES = PROPOSAL_MODES | {"read", "directory", "declare", "reconcile", "inspect_forms"}
 MESSAGES = {
     **declarations.REASONS,
-    "day_login_used": "EFP demande une authentification. Sans nouvelle session vérifiée, une reprise manuelle est nécessaire pour réessayer aujourd’hui.",
-    "day_closed": "La veille est ouverte tous les jours de 8 h à 19 h, heure de Paris.",
+    "day_login_used": "EFP demande une nouvelle authentification. L’envoi automatique de codes est en pause pour aujourd’hui. Un administrateur peut autoriser un nouveau code.",
+    "portal_throttled": "EDOF ou EFP limite les requêtes. La veille respecte le délai du portail, avec une pause minimale d’une heure.",
+    "day_closed": "La veille est ouverte tous les jours de 7 h à 19 h, heure de Paris.",
     "declaration_confirmed": "Le statut et les valeurs de la déclaration ont été relus sur EDOF.",
     "declaration_inspected": "Contrôle des commandes disponibles sur EDOF terminé en lecture seule.",
     "requests_ready": "Les dossiers À traiter ont été relus dans l’onglet officiel EDOF.",
@@ -226,8 +226,8 @@ class ServerTestStore:
         try:
             row = db.execute(
                 "SELECT finished, json_extract(result, '$.code') AS code, "
-                "json_extract(result, '$.diagnostics.edof_screen') AS screen "
-                "FROM jobs WHERE owner = ? AND mode IN ('read', 'directory') AND finished IS NOT NULL "
+                "json_extract(result, '$.diagnostics.edof_screen') AS screen, json_extract(result,'$.session_saved') AS session_saved "
+                "FROM jobs WHERE owner = ? AND (mode IN ('read', 'directory') OR json_extract(result,'$.session_saved')=1) AND finished IS NOT NULL "
                 "ORDER BY finished DESC, id DESC LIMIT 1", (owner,),
             ).fetchone()
         finally:
@@ -239,14 +239,13 @@ class ServerTestStore:
         if row and row["screen"] == "session_expired":
             state, label = "expired", "Session expirée au dernier contrôle"
         elif row and row["code"] == "day_login_used":
-            renewal = self.next_renewal(owner, dt.datetime.now(PARIS))
-            state, label = ("renewing", "Reconnexion automatique programmée") if renewal is not None else ("day_paused", "Veille en pause · EFP redemande un code")
+            state, label = "day_paused", "Veille en pause · EFP redemande un code"
         elif row and row["code"] in {"credentials_rejected", "account_unavailable", "verification_code",
                                     "otp_rejected", "account_action_required", "sign_in_error"}:
             state, label = "reconnect", "Reconnexion nécessaire"
         elif not saved_session:
             state, label = "missing", "Aucune session réutilisable"
-        elif row and row["code"] in {"directory_ready", "requests_ready", "read_success"}:
+        elif row and (row["code"] in {"directory_ready", "requests_ready", "read_success"} or row["session_saved"]):
             state, label = "confirmed", "Active au dernier contrôle"
         else:
             state, label = "unknown", "État à confirmer"
@@ -453,6 +452,8 @@ class ServerTestStore:
                 FROM jobs WHERE owner=? AND mode='directory' ORDER BY created DESC LIMIT 1""", (owner,)).fetchone()
             last = db.execute("""SELECT finished,json_extract(result,'$.code') code FROM jobs
                 WHERE owner=? AND mode='directory' AND finished IS NOT NULL ORDER BY finished DESC LIMIT 1""", (owner,)).fetchone()
+            last_private = db.execute("""SELECT MAX(finished) FROM jobs WHERE owner=? AND json_extract(result,'$.session_saved')=1""",
+                                      (owner,)).fetchone()[0] or 0
             successes = dict(db.execute("""SELECT json_extract(result,'$.code') code, MAX(finished)
                 FROM jobs WHERE owner=? AND mode='directory' AND finished IS NOT NULL
                 AND json_extract(result,'$.code') IN ('directory_ready','requests_ready') GROUP BY code""", (owner,)))
@@ -464,7 +465,7 @@ class ServerTestStore:
                 "scope":"Demandes à traiter" if pending_sync > full else "Liste générale",
                 "full_stamp":full, "full_label":directory.stamp({"checked":full}) if full else ""}
         stamp = last["finished"] if last else 0
-        earliest = now.astimezone(PARIS).replace(hour=8, minute=0, second=0, microsecond=0).timestamp()
+        earliest = now.astimezone(PARIS).replace(hour=OPEN_HOUR, minute=0, second=0, microsecond=0).timestamp()
         if manual:
             earliest = min(earliest, manual - 3600) if watch_open and watch_enabled else manual - 3600
         verified = bool(stamp >= earliest and open_now and saved_session and last and last["code"] in {"directory_ready","requests_ready"} and
@@ -477,25 +478,24 @@ class ServerTestStore:
                 and phase.get("private_status") == 200 and (private_at >= stamp or last and last["code"] in {"requests_ready","directory_ready"})):
             verified = True
         pending = bool(open_now and (queued or row and row["finished"] is None))
-        checked = dt.datetime.fromtimestamp(stamp, PARIS).strftime("%d/%m à %H h %M") if stamp else ""
-        if private_at >= earliest and private_at > stamp and phase.get("private_status") == 200:
+        if open_now and last_private >= earliest and last_private >= stamp and 0 <= now.timestamp()-last_private < POLL_SECONDS*3:
+            verified = True
+        latest_check = max(stamp,last_private)
+        checked = dt.datetime.fromtimestamp(latest_check, PARIS).strftime("%d/%m à %H h %M") if latest_check else ""
+        if private_at >= earliest and private_at > latest_check and phase.get("private_status") == 200:
             checked = dt.datetime.fromtimestamp(private_at, PARIS).strftime("%d/%m à %H h %M")
         labels = {"opening_workspace":"Ouverture du portail EDOF", "efp_form":"Connexion à EFP",
                   "otp_submitted":"Retour d’EFP vers EDOF", "selecting_organisation":"Ouverture de l’établissement",
                   "reading_directory":"Lecture de la liste", "reading_pending_tab":"Lecture des dossiers À traiter",
                   "reading_all_folders":"Synchronisation de tous les dossiers", "pending_verified":"Demandes vérifiées"}
-        blocked = open_now and stamp >= earliest and last and last["code"] == "day_login_used"
-        renewal = self.next_renewal(owner, now) if blocked else None
-        error = MESSAGES.get(last["code"], "") if open_now and stamp >= earliest and last and last["code"] not in {"directory_ready","requests_ready"} else ""
-        if renewal is not None:
-            error = ("Reconnexion automatique en attente du connecteur." if renewal <= now.timestamp() else
-                     "Reconnexion automatique prévue à " + dt.datetime.fromtimestamp(renewal, PARIS).strftime("%H h %M") + ".")
-        schedule = ("Veille programmée de 8 h à 19 h (Paris)" if watch_open else "Hors plage de veille (8 h à 19 h, Paris)") if watch_enabled else "Veille automatique suspendue"
+        blocked = open_now and not verified and stamp >= earliest and last and last["code"] == "day_login_used"
+        error = MESSAGES.get(last["code"], "") if open_now and not verified and stamp >= earliest and last and last["code"] not in {"directory_ready","requests_ready"} else ""
+        schedule = ("Veille programmée de 7 h à 19 h (Paris)" if watch_open else "Hors plage de veille (7 h à 19 h, Paris)") if watch_enabled else "Veille automatique suspendue"
         return {"active": verified, "pending": pending, "checked": checked, "sync": sync, "schedule": schedule, "manual_sync": self.full_sync_status(owner),
                 "phase": labels.get(phase.get("phase"), "") if private_at >= earliest and pending else "",
                 "stamp": stamp, "manual": bool(manual),
                 "until": dt.datetime.fromtimestamp(manual, PARIS).strftime("%H h %M") if manual else "",
-                "paused": bool(blocked and renewal is None), "error": error}
+                "paused": bool(blocked), "error": error}
 
     def manual_until(self, owner):
         with closing(self.connect()) as db:
@@ -516,31 +516,17 @@ class ServerTestStore:
             db.execute("INSERT OR IGNORE INTO directory_requested VALUES (?)", (owner,))
             return True
 
-    def verified_watch_at(self, owner, now):
-        midnight = now.astimezone(PARIS).replace(hour=0, minute=0, second=0, microsecond=0)
-        with closing(self.connect()) as db:
-            row = db.execute("""SELECT finished, json_extract(result,'$.code') AS code FROM jobs
-                WHERE owner=? AND finished>=? AND (mode='directory' AND code IN ('directory_ready','requests_ready')
-                  OR code IN ('human_verification','credentials_rejected','account_unavailable','account_action_required',
-                              'otp_rejected','sign_in_error','verification_code','gmail_reconnect_required')
-                  OR json_extract(result,'$.gmail_code_used')=1)
-                ORDER BY finished DESC, id DESC LIMIT 1""", (owner,midnight.timestamp())).fetchone()
-        return row["finished"] if row and row["code"] in {"directory_ready","requests_ready"} else None
-
-    def next_renewal(self, owner, now):
-        if not self.connector_key:
-            return None
-        budget = Vault(self.directory,self.connector_key).get("efp-login-day")
-        return renewal_time(budget, self.verified_watch_at(owner,now), now)
-
-    def day_owners(self, now, *, daily=False):
+    def day_owners(self, now, *, daily=True):
         """A new workday restarts enabled accounts, including after a weekend or failed login."""
-        start = now.astimezone(PARIS).replace(hour=8, minute=0, second=0, microsecond=0).timestamp()
+        start = now.astimezone(PARIS).replace(hour=OPEN_HOUR, minute=0, second=0, microsecond=0).timestamp()
         db = self.connect()
         try:
             rows = db.execute("""
                 SELECT a.owner,m.started AS manual_start,j.created,j.finished,j.result,json_extract(j.result,'$.code') AS code,
-                       EXISTS(SELECT 1 FROM directory_requested r WHERE r.owner=a.owner) AS requested
+                       (EXISTS(SELECT 1 FROM directory_requested r WHERE r.owner=a.owner)
+                        OR (json_extract(j.result,'$.code')='day_login_used' AND EXISTS
+                            (SELECT 1 FROM jobs newer WHERE newer.owner=a.owner AND newer.finished>j.finished
+                             AND json_extract(newer.result,'$.session_saved')=1))) AS requested
                 FROM (SELECT owner,max(seen) AS seen FROM (SELECT owner,seen FROM directory_activity WHERE ?
                       UNION ALL SELECT owner,started AS seen FROM manual_sessions WHERE until>?) GROUP BY owner) a
                 LEFT JOIN manual_sessions m ON m.owner=a.owner AND m.until>?
@@ -555,9 +541,8 @@ class ServerTestStore:
                     due.append(row["owner"])
                 elif row["finished"] and row["requested"] and row["code"] in {"day_login_used", "directory_ready","requests_ready","browser_error","timeout","directory_unavailable","directory_incomplete","authentication_unconfirmed"}:
                     due.append(row["owner"])
-                elif row["finished"] and row["code"] == "day_login_used":
-                    renewal = self.next_renewal(row["owner"], now)
-                    if renewal is not None and renewal <= now.timestamp() and row["finished"] + 20 <= now.timestamp():
+                elif row["finished"] and row["code"] == "portal_throttled":
+                    if self.connector_key and not Vault(self.directory,self.connector_key).get("edof-throttled"):
                         due.append(row["owner"])
                 elif row["finished"] and row["code"] in ("directory_ready","requests_ready","directory_incomplete","directory_unavailable","timeout","browser_error","interrupted"):
                     result = json.loads(row["result"])
@@ -642,7 +627,8 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
                 if key in os.environ:
                     child_env[key] = os.environ[key]
         if day_worker is not None:
-            parsed = day_worker.read(spec, child_env, DIRECTORY_TIMEOUT)
+            timeout = DIRECTORY_TIMEOUT if spec["mode"] == "directory" else DECLARATION_TIMEOUT
+            parsed = day_worker.read(spec, child_env, timeout, lock_fds=(lock_fd, provider_fd))
         else:
             process = subprocess.Popen([sys.executable, str(Path(__file__).with_name("edof_server_browser.py"))],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
@@ -698,10 +684,10 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
                 declarations.complete(store.directory, spec, result["code"], result.get("confirmed_state"))
                 if result["code"] == "declaration_confirmed":
                     store.request_directory(spec["owner"])
-            if day_worker is not None:
+            if day_worker is not None and spec["mode"] == "directory":
                 result["day_session"] = True
             store.finish(job_id, result)
-            if day_worker is not None:
+            if day_worker is not None and spec["mode"] == "directory":
                 # Operational proof without account, dossier, cookie or code values.
                 report = (result.get("diagnostics") or {}).get("directory") or {}
                 print(f"EDOF_DAY status={result['code']} fresh={result.get('fresh_session')} "
@@ -717,37 +703,19 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
                 os.close(provider_fd)
 
 
-def last_read_stalled_at_login(jobs):
-    # A failed lookup after a successful fresh login has not saved a new
-    # browser, so it must not hide the preceding failed cookie restore.
-    last = next((job for job in jobs if not (
-        job.get("code") in {"timeout", "search_unconfirmed"} and job.get("stage") in {"search", "dossier"}
-        and job.get("fresh_session") is True and job.get("gmail_code_used") is True and not job.get("session_saved")
-    )), {})
-    return (last.get("finished") is True and last.get("mode") == "read"
-            and last.get("stage") == "login_page" and last.get("code") == "authentication_unconfirmed"
-            and last.get("gmail_code_used") is False
-            and stalled_before_login(last.get("diagnostics") or {}))
-
-
 def start_job(store, owner, spec, *, day_worker=None):
     store.directory.mkdir(parents=True, exist_ok=True)
     lock_fd = os.open(store.directory / "edof_server_test.lock", os.O_CREAT | os.O_RDWR, 0o600)
     provider_fd = None
     try:
-        # A form inspection is a read-only job; it cannot construct a business-write gate.
+        # Only the scheduler can dispatch a state-changing job to the shared session.
+        spec = {**spec, "owner":owner}
         if day_worker is not None:
-            now = dt.datetime.now(PARIS)
             until = max(store.manual_until(owner), spec.get("full_sync_until", 0))
-            if spec["mode"] != "directory" or not (until or working_hours(now, daily=True) and store.directory_enabled(owner)):
+            if not (until or working_hours()):
                 raise ValueError("Veille indisponible.")
-            prior = None
-            if until:
-                with closing(store.connect()) as db:
-                    prior = db.execute("""SELECT result FROM jobs WHERE owner=? AND mode='directory' AND created>=?
-                        AND json_extract(result,'$.gmail_code_used')=1 ORDER BY created DESC LIMIT 1""",
-                        (owner, until-3600)).fetchone()
-            spec = {**spec, "manual_until": until, "verified_at":store.verified_watch_at(owner,now), "recover_return": bool(prior and awaiting_edof_return(json.loads(prior[0])))}
+            spec = {**spec, "manual_until":until}
+        if day_worker is not None and spec["mode"] in {"directory","proposal_read","proposal_check"}:
             provider_fd = acquire_provider(spec["provider"])
         elif spec["mode"] == "read" and spec.get("import_session"):
             provider_fd = acquire_provider(ProviderStore(store.directory).state()["provider"])
@@ -762,16 +730,12 @@ def start_job(store, owner, spec, *, day_worker=None):
             fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise ValueError("Un navigateur d’essai fonctionne déjà sur ce serveur.") from None
-        # A new, explicitly started read can use standard sign-in if the last
-        # run never reached an EFP form or the private workspace.
-        if spec["mode"] in {"read", "directory", "proposal_read"} and last_read_stalled_at_login(store.latest(owner)):
-            spec = {**spec, "fresh_login": True}
         if spec["mode"] in {"declare", "reconcile"}:
             if spec["mode"] == "declare" and ProviderStore(store.directory).state()["revision"] != spec["revision"]:
                 raise ValueError("Le choix de système a changé.")
             if not declarations.check_before_job(store, spec):
                 raise ValueError("Cette déclaration est à vérifier dans la fiche.")
-        job_id = store.reserve(owner, spec["mode"], day_session=day_worker is not None, full_sync=bool(spec.get("full_sync_until")))
+        job_id = store.reserve(owner, spec["mode"], day_session=day_worker is not None and spec["mode"]=="directory", full_sync=bool(spec.get("full_sync_until")))
         if spec["mode"] == "proposal_read" and not proposals.reading(store.directory,spec):
             store.finish(job_id,{"code":"interrupted"})
             raise ValueError("Une autre lecture est déjà programmée.")
@@ -818,12 +782,9 @@ def register_edof_server_test(legacy):
                         full_sync = store.next_full_sync()
                         if not (full_sync and full_sync["catchup"]):
                             pending = proposals.next_job(store.directory,active) or declarations.next_job(store, active["revision"], provider=active["provider"])
-                            if pending:
-                                start_job(store, pending["owner"], pending)
-                                continue
                             # Re-evaluate deadlines even when no new export was needed this minute.
                             tick = (active["revision"], int(now.timestamp()) // 300)
-                            if daily and inspected != tick and store.connector_key:
+                            if not pending and daily and working_hours(now) and inspected != tick and store.connector_key:
                                 inspected = tick
                                 with closing(store.connect()) as db:
                                     owners = [r[0] for r in db.execute("SELECT owner FROM directory_activity")]
@@ -834,9 +795,15 @@ def register_edof_server_test(legacy):
                                         from integrale_edof_dashboard import apply_confirmed_entries
                                         declarations.discover(store, owner, apply_confirmed_entries(snap, store.directory, owner))
                                 pending = declarations.next_job(store, active["revision"])
-                                if pending:
-                                    start_job(store, pending["owner"], pending)
-                                    continue
+                            if pending:
+                                open_now = working_hours(now) or store.manual_until(pending["owner"])
+                                if open_now or pending["mode"] in PROPOSAL_MODES:
+                                    try:
+                                        start_job(store,pending["owner"],{**pending,"provider":active["provider"]},
+                                                  day_worker=worker if open_now else None)
+                                        continue
+                                    except JobCooldown:
+                                        pass  # Keep the watch running between dossier jobs.
                         if full_sync:
                             user = full_sync["owner"]
                             start_job(store, user, {"mode":"directory", "owner":user, "provider":active["provider"],
@@ -1080,11 +1047,7 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
             flash("Connectez EFP et Gmail dans les paramètres pour activer la connexion.", "error")
             return redirect(target, code=303)
         def activate():
-            if store.activate_manual(user):
-                budget = vault().get("efp-login-day")
-                if isinstance(budget, dict) and budget.get("date") == dt.datetime.now(PARIS).date().isoformat() and budget.get("count", 0) >= 2:
-                    return
-                vault().put("day-login-override:" + user, dt.datetime.now(PARIS).date().isoformat(), ttl=600)
+            store.activate_manual(user)
         response = edit_connection(activate)
         if response.location.endswith("gmail=busy"):
             flash("Une lecture EDOF est déjà en cours. Réessayez après sa fin.", "warning")
@@ -1095,6 +1058,8 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
     def resume_day():
         user = results_owner()
         check_csrf()
+        if session.get("admin_role") == "viewer":
+            abort(403)
         if not store.manual_until(user) and (not working_hours(daily=True) or not store.directory_enabled(user)):
             return jsonify(ok=False, error="La veille doit être ouverte."), 409
         def permit():

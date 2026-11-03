@@ -161,7 +161,7 @@ def complete(directory, spec, code, confirmed_state=None):
                        AND action='service_done' AND json_extract(intent,'$.exit_confirmed') IS NULL""",
                        (uuid.uuid4().hex, code, time.time(), spec["operation"]))
             return
-        if row["status"] == "queued" and code in {"timeout","browser_error","saved_session_unavailable","authentication_unconfirmed","day_login_used"}:
+        if row["status"] == "queued" and code in {"timeout","browser_error","saved_session_unavailable","authentication_unconfirmed","day_login_used","day_closed","portal_throttled"}:
             # No official write crossed the send fence. Retry after the sign-in cooldown.
             db.execute("UPDATE cpf_declarations SET detail=?,changed=? WHERE token=?", (code,time.time()+900,spec["operation"]))
             return

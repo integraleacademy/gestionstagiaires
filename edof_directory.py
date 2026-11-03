@@ -1,5 +1,6 @@
 """Minimal, account-scoped directory from the official EDOF dossier list."""
 from datetime import datetime
+from email.utils import parsedate_to_datetime
 import hmac
 import time
 import unicodedata
@@ -16,6 +17,26 @@ FIRST_SESSION = "2026-01-01"
 
 class IncompleteDirectory(ValueError):
     pass
+
+
+class PortalThrottled(Exception):
+    code = "portal_throttled"
+
+    def __init__(self, retry_after):
+        super().__init__(self.code)
+        try:
+            delay = int(retry_after)
+        except (TypeError, ValueError):
+            try:
+                delay = parsedate_to_datetime(retry_after).timestamp() - time.time()
+            except (ValueError, TypeError, OverflowError):
+                delay = 0
+        self.delay = max(3600, delay)
+
+
+def check_throttling(reply):
+    if reply.status == 429:
+        raise PortalThrottled(reply.headers.get("retry-after"))
 
 
 def normalized(value):

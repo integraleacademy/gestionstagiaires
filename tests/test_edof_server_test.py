@@ -144,20 +144,7 @@ def test_completed_siret_confirmation_requires_the_official_dashboard_and_worksp
     assert not browser.confirmed_dashboard(url, {"chooser_action": "confirm", "workspace_status": 403})
 
 
-def test_new_read_uses_normal_signin_only_after_an_unconfirmed_workspace():
-    diag = {"location": "edof_folder_list", "edof_screen": "other", "error_banner_visible": False,
-            "password_form_visible": False, "blocked_edof_posts": 0}
-    last = {"finished": True, "mode": "read", "stage": "login_page", "code": "authentication_unconfirmed",
-            "gmail_code_used": False, "diagnostics": diag}
-    assert server.last_read_stalled_at_login([last])
-    lookup_timeout = {"stage": "search", "code": "timeout", "fresh_session": True, "gmail_code_used": True}
-    assert server.last_read_stalled_at_login([lookup_timeout, last])
-    assert not server.last_read_stalled_at_login([{"code": "read_success", "session_saved": True}, last])
-    assert not server.last_read_stalled_at_login([])
-    for changed in ({"code": "human_verification"}, {"stage": "authentication"}, {"gmail_code_used": True},
-                    {"diagnostics": dict(diag, workspace_denied=True)}, {"diagnostics": dict(diag, edof_screen="terms")},
-                    {"diagnostics": dict(diag, login_post_status=302)}, {"diagnostics": dict(diag, error_banner_visible=True)}):
-        assert not server.last_read_stalled_at_login([{**last, **changed}])
+def test_client_cannot_force_a_new_login():
     with pytest.raises(ValueError):
         server.validate_spec({"mode": "read", "folder_id": "123456789", "fresh_login": True})
 
