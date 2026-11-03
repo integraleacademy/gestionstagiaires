@@ -29,7 +29,7 @@ def exact(pattern):
 
 
 def button(page, pattern):
-    name = exact(pattern)
+    name = exact(r"(?:(?:save|arrow_forward|edit)\s+)?(?:" + pattern + r")(?:\s+(?:save|arrow_forward|edit))?")
     return page.get_by_role("button", name=name).or_(page.get_by_role("link", name=name))
 
 
@@ -116,6 +116,20 @@ class SingleWrite:
         self.request_key = None
         self.response_status = None
 
+    def allows_simulation(self, request):
+        if (self.spec["mode"] != "declare" or self.spec["intent"]["action"] != "service_done"
+                or self.sent or request.method != "POST" or request.resource_type not in {"xhr","fetch"}
+                or request.url != f"https://{self.origin}{self.prefix}{self.spec['folder_id']}/simulation"):
+            return False
+        if not request.frame.url.startswith(f"https://{self.origin}/espace-prive/"):
+            return False
+        try:
+            body = request.post_data_json
+            return (isinstance(body, dict) and set(body) == {"tauxRealisationOF","motifFinFormation"}
+                    and int(body["tauxRealisationOF"]) == self.spec["intent"]["rate"])
+        except (TypeError, ValueError, KeyError):
+            return False
+
     def allows(self, request):
         if not self.armed or self.sent or self.spec["mode"] != "declare":
             return False
@@ -142,7 +156,8 @@ class SingleWrite:
         if self.spec["intent"].get("pilot_ticket") and not status_entry:
             self.rejected = True
             return False
-        if suffix and words not in allowed and not status_entry:
+        status_exit = not entry and suffix == "status"
+        if suffix and words not in allowed and not (status_entry or status_exit):
             self.rejected = True
             return False
         try:
@@ -156,7 +171,18 @@ class SingleWrite:
                 "state": "IN_TRAINING", "date": dt.date.fromisoformat(date).strftime("%d/%m/%Y")}):
             self.rejected = True
             return False
-        if not any(isinstance(v, str) and (v == date or v == dt.date.fromisoformat(date).strftime("%d/%m/%Y")
+        service_only = status_exit and self.spec["intent"].get("exit_confirmed") is True
+        if status_exit:
+            if (request.method != "PUT" or not isinstance(body, dict)
+                    or body.get("state") not in {"TERMINATED", "SERVICE_DONE_DECLARED"}
+                    or (service_only and body.get("state") != "SERVICE_DONE_DECLARED")
+                    or (not service_only or "terminatedDate" in body) and body.get("terminatedDate") != dt.date.fromisoformat(date).strftime("%d/%m/%Y")
+                    or type(body.get("achievementRate")) is not int or body["achievementRate"] != self.spec["intent"]["rate"]
+                    or body.get("completed") is not (self.spec["intent"]["rate"] == 100)
+                    or (body["completed"] and (str(body.get("terminatedReason")) != "8" or body.get("forceMajeureAbsence") is not False))):
+                self.rejected = True
+                return False
+        if not service_only and not any(isinstance(v, str) and (v == date or v == dt.date.fromisoformat(date).strftime("%d/%m/%Y")
                    or re.fullmatch(re.escape(date)+r"T00:00:00(?:\.0+)?(?:Z|[+]00:00)?", v)) for v in values):
             self.rejected = True
             return False
@@ -170,7 +196,7 @@ class SingleWrite:
         if not entry:
             # Check any completion percentage the portal puts on the wire, including partial cases.
             rates = binding_values(body, {"trainingcompletionrate", "completionrate",
-                                   "realizationrate", "realisationrate", "rate"})
+                                   "realizationrate", "realisationrate", "achievementrate", "rate"})
             try:
                 if any(Decimal(str(value)) != Decimal(self.spec["intent"]["rate"]) for value in rates):
                     self.rejected = True
@@ -214,14 +240,19 @@ def transmit(page, spec, fields, gate, reload_fields):
         return result("declaration_changed")
     if is_recorded(fields, intent):
         return result("declaration_confirmed", fields)
+    def verified_exit_only(observed):
+        return (intent["action"] == "service_done" and not intent.get("exit_confirmed")
+                and observed and verify_identity(observed, spec)
+                and normalized(observed.get("state") or "") in {"terminated","sortie declaree"}
+                and observed.get("end_date") == intent["actual_date"])
     if spec["mode"] == "reconcile":
-        return result("declaration_unverified")
+        return result("declaration_exit_confirmed" if verified_exit_only(fields) else "declaration_unverified")
     entry = intent["action"] == "entry_training"
-    if normalized(fields.get("state") or "") not in ({"accepted", "accepte"} if entry else {"intraining", "en formation", "entree declaree"}):
+    if normalized(fields.get("state") or "") not in ({"accepted", "accepte"} if entry else {"intraining", "en formation", "entree declaree", "terminated", "sortie declaree"}):
         return result("declaration_changed")
     if not entry and (not fields.get("start_date") or intent["actual_date"] < fields["start_date"]):
         return result("declaration_changed")
-    if not entry and intent.get("source") == "production":
+    if not entry and intent.get("source") in {"production", "local"}:
         try:
             actual = Decimal(intent["actual_hours"])
             contracted = Decimal(fields["duration_hours"])
@@ -230,24 +261,41 @@ def transmit(page, spec, fields, gate, reload_fields):
         except (InvalidOperation, KeyError, TypeError):
             return result("declaration_evidence_changed")
     try:
-        use(button(page, ENTRY if entry else EXIT))
+        already_out = not entry and normalized(fields.get("state") or "") in {"terminated", "sortie declaree"}
+        if already_out and fields.get("end_date") != intent["actual_date"]:
+            return result("declaration_changed")
+        if intent.get("exit_confirmed") and not already_out:
+            return result("declaration_changed")
+        if already_out:
+            intent["exit_confirmed"] = True
+        else:
+            use(button(page, ENTRY if entry else EXIT))
         if entry:
             confirm = button(page, r"oui,? continuer")
             if not confirm.count() and not page.locator('input.mat-datepicker-input:visible,input[type="date"]:visible').count():
                 confirm.wait_for(state="visible", timeout=4000)
             if confirm.count() and confirm.is_visible():
                 use(confirm)
-        date_field(page, intent, entry)
+        if not already_out:
+            date_field(page, intent, entry)
         if not entry:
-            use(button(page, r"suivant"))
-            use(button(page, SERVICE))
-            use(option(page, r"suivi int[ée]gralement" if intent["rate"] == 100 else r"suivi partiellement"))
+            if not already_out:
+                use(button(page, r"suivant"))
+                dialog_next = page.get_by_role("dialog").get_by_role("button", name=exact(r"(?:arrow_forward )?suivant"))
+                if dialog_next.count() == 1 and dialog_next.is_visible():
+                    use(dialog_next)
+            choice = option(page, r"suivi int[ée]gralement" if intent["rate"] == 100 else r"suivi partiellement")
+            service = button(page, SERVICE)
+            choice.or_(service).first.wait_for(state="visible", timeout=5000)
+            if not choice.is_visible():
+                use(service)
+            use(choice)
             if intent["rate"] != 100:
                 partial(page, intent)
         # The form itself constructs the transaction. The request fence is closed for every other click.
         gate.armed = True
         save = page.locator("sl7-registration-folder-set-in-training-form button#confirm-button:visible") if entry else None
-        use(save if save is not None and save.count() == 1 else button(page, "enregistrer"))
+        use(save if save is not None and save.count() == 1 else button(page, r"enregistrer(?: (?:le service fait|la déclaration))?"))
         if not gate.sent:
             dlg = page.get_by_role("dialog")
             confirm = dlg.get_by_role("button", name=exact(r"oui,? (?:enregistrer|confirmer|valider)"))
@@ -258,7 +306,7 @@ def transmit(page, spec, fields, gate, reload_fields):
                 if confirm.count() == 1 and confirm.is_visible():
                     if not entry:
                         summary = normalized((dlg if dlg.count() == 1 else page.locator("body")).inner_text())
-                        if not re.search(r"(?<!\d)"+str(intent["rate"])+r"(?!\d)", summary):
+                        if not (re.search(r"(?<!\d)"+str(intent["rate"])+r"(?!\d)", summary) or intent["rate"] == 100 and "integralement" in summary):
                             raise FormChanged()
                     use(confirm)
                     break
@@ -282,6 +330,8 @@ def transmit(page, spec, fields, gate, reload_fields):
     fresh = reload_fields()
     if fresh and verify_identity(fresh, spec) and is_recorded(fresh, intent):
         return result("declaration_confirmed", fresh)
+    if verified_exit_only(fresh):
+        return result("declaration_exit_confirmed")
     if gate.response_status in {400, 401, 403, 404, 422} and fresh and verify_identity(fresh, spec) and fresh.get("state") == fields.get("state"):
         return result("declaration_refused")
     return result("declaration_unverified")

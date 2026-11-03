@@ -435,57 +435,87 @@ def read_official_pending(page, checkpoint, timeout_error):
         with page.expect_response(lambda r: r.request.method == "GET" and r.status == 200
                                   and directory_list_url(r.url), timeout=9000) as response:
             badge.click(timeout=3000)
-        snapshot = directory.from_pages(directory_pages(page, response.value, checkpoint))
+        first = response.value.json()
+        if isinstance(first.get("items"), list) and first.get("numberOfItems") == len(first["items"]):
+            snapshot = directory.from_pages([first])
+            official_count = len(snapshot["rows"])
+        else:
+            report = {}
+            snapshot = read_recent_directory(page.context, response.value.request, "notProcessed", checkpoint, report)
+            official_count = report["total"]
+
     except (timeout_error, ValueError, TypeError, AttributeError):
         return None
-    if len(snapshot["rows"]) != count or any(directory.normalized(r["state"]) not in
+    if official_count != count or any(directory.normalized(r["state"]) not in
             {"notprocessed", "not processed", "tobeprocessed", "to be processed", "a traiter", "non traite",
              "dossier non traite", "received", "demande recue", "demande d inscription"}
             for r in snapshot["rows"].values()):
         return None
-    return snapshot
+    return directory.dated_snapshot(snapshot)
 
 
-def read_pending_with_private_session(context, witness):
-    """Read only the pending rows for an establishment already verified by its portal."""
-    from playwright.sync_api import Error as BrowserError
-    if witness is None:
-        return None
+def read_recent_directory(context, witness, state, checkpoint, progress):
+    """Use the portal's session-date descending order and stop at the first archival page."""
+    if witness is None or witness.method != "GET":
+        raise directory.IncompleteDirectory()
     origin = urlsplit(witness.url)
     if ((origin.scheme, origin.netloc) != ("https", EDOF_HOST)
-            or not origin.path.startswith(WORKSPACE_API_PREFIX) or witness.method != "GET"):
-        return None
+            or not origin.path.startswith(WORKSPACE_API_PREFIX)):
+        raise directory.IncompleteDirectory()
     headers = {k:v for k,v in witness.all_headers().items()
                if k.lower() in {"accept","authorization","x-xsrf-token","x-csrf-token","x-requested-with"}}
     target = f"https://{EDOF_HOST}{API_PREFIX}pad"
-    # Use only this fixed same-establishment read. Never follow a redirect or
-    # forward an authenticated request to another destination.
-    def pages():
-        for page_index in range(100):
-            reply = context.request.get(target, params={"page":page_index, "size":100, "state":"notProcessed"},
-                                        headers=headers, max_redirects=0, timeout=12000)
-            try:
-                if reply.status != 200 or not directory_list_url(reply.url):
-                    raise directory.IncompleteDirectory()
-                body = reply.body()
-                if len(body) > 8_000_000:
-                    raise directory.IncompleteDirectory()
-                data = json.loads(body)
-                rows = data.get("items") if isinstance(data, dict) else None
-                if not isinstance(rows, list) or not rows or any(
-                    not isinstance(r, dict) or directory.normalized(r.get("currentState") or "") not in
-                    {"notprocessed","not processed","a traiter","non traite"} for r in rows):
-                    raise directory.IncompleteDirectory()
-                yield data
-            finally:
-                reply.dispose()
-    iterator = pages()
+    rows, seen = {}, set()
+    total = previous = None
+    for index in range(directory.MAX_ROWS):
+        checkpoint()
+        reply = context.request.get(target, params={"page":index, "max":100, "state":state,
+                                    "sort":"DATE_DEBUT_SESSION", "order":"DESC"},
+                                    headers=headers, max_redirects=0, timeout=12000)
+        try:
+            if reply.status != 200 or not directory_list_url(reply.url):
+                raise directory.IncompleteDirectory()
+            body = reply.body()
+            if len(body) > 8_000_000:
+                raise directory.IncompleteDirectory()
+            data = json.loads(body)
+        finally:
+            reply.dispose()
+        count, items = data.get("numberOfItems"), data.get("items")
+        if (type(count) is not int or count < 0 or total not in (None, count)
+                or not isinstance(items, list) or (not items and len(seen) != count)):
+            raise directory.IncompleteDirectory()
+        total = count
+        boundary = False
+        for item in items:
+            row = directory.project(item)
+            folder, day = row["folder_id"], row["session_start_date"]
+            if folder in seen or (day and previous and day > previous):
+                raise directory.IncompleteDirectory()
+            seen.add(folder)
+            if day:
+                previous = day
+                if day < directory.FIRST_SESSION:
+                    boundary = True
+                else:
+                    if state == "notProcessed" and directory.normalized(row["state"]) not in {
+                            "notprocessed","not processed","a traiter","non traite"}:
+                        raise directory.IncompleteDirectory()
+                    rows[folder] = row
+        if len(seen) > total or len(seen) > directory.MAX_ROWS:
+            raise directory.IncompleteDirectory()
+        progress.update(method="session_desc", pages=index+1, seen=len(rows), total=total)
+        if boundary or len(seen) == total:
+            return {"rows":rows, "checked":time.time(), "scope":"all" if state == "all" else "pending"}
+    raise directory.IncompleteDirectory()
+
+
+def read_pending_with_private_session(context, witness, checkpoint=lambda: None):
+    from playwright.sync_api import Error as BrowserError
     try:
-        return directory.from_pages(iterator)
+        return read_recent_directory(context, witness, "notProcessed", checkpoint, {})
     except (ValueError, TypeError, AttributeError, OSError, BrowserError):
         return None
-    finally:
-        iterator.close()
 
 
 def exported_directory(page, source, checkpoint, progress, timeout_error, target_url=LIST_URL):
@@ -775,12 +805,26 @@ def identity(value):
     return " ".join(re.sub(r"[^a-z0-9]+", " ", "".join(c for c in value if not unicodedata.combining(c)).lower()).split())
 
 
-def project_folder(raw):
+def project_folder(raw, *, registration=False):
     """Discard all unneeded PII before normalization or output."""
     folder = {key: raw.get(key) for key in TOP_FIELDS}
     folder["attendee"] = {key: (raw.get("attendee") or {}).get(key) for key in ATTENDEE_FIELDS}
     folder["trainingActionInfo"] = {key: (raw.get("trainingActionInfo") or {}).get(key) for key in INFO_FIELDS}
-    return normalize_observation({"siret": SIRET, "folder": folder}, raw["id"])
+    fields = normalize_observation({"siret": SIRET, "folder": folder}, raw["id"])
+    if registration:
+        attendee = raw.get("attendee") or {}
+        address = attendee.get("address")
+        location = address if isinstance(address, dict) else {}
+        street = address if isinstance(address, str) else location.get("fullAddress")
+        if not street:
+            street = " ".join(directory.text_field(location.get(k),120) for k in
+                              ("number","roadTypeLabel","roadName","additionalAddress")).strip()
+        fields.update(phone=directory.text_field(attendee.get("phoneNumber") or attendee.get("phoneFixed"),80),
+                      birth_date=directory.session_date(attendee.get("birthDate")),
+                      birth_city=directory.text_field(attendee.get("birthPlace"),140),
+                      address=directory.text_field(street or attendee.get("completeAdress"),500),
+                      zip_code=directory.text_field(location.get("zipCode"),20), city=directory.text_field(location.get("city"),120))
+    return fields
 
 
 def classify_text(text):
@@ -1062,7 +1106,7 @@ def select_establishment(page, step, signals):
 def run_browser(spec, *, live=None):
     if os.environ.get("RENDER_SERVICE_ID") != TEST_SERVICE_ID:
         return {"code": "wrong_environment"}
-    from playwright.sync_api import sync_playwright, TimeoutError as BrowserTimeout
+    from playwright.sync_api import sync_playwright, Error as BrowserError, TimeoutError as BrowserTimeout
 
     stage = "browser"
     blocked = 0
@@ -1115,7 +1159,7 @@ def run_browser(spec, *, live=None):
             except Exception:
                 pass  # Unknown initiator: the identity POST stays blocked.
         if (permitted_request(request.url, request.method, edof_identity=allow_identity, frame_url=frame_url)
-                or (gate and gate.allows(request))):
+                or (gate and (gate.allows_simulation(request) or gate.allows(request)))):
             route.continue_()
         else:
             blocked += 1
@@ -1187,7 +1231,7 @@ def run_browser(spec, *, live=None):
                 # Keep only the specifically requested dossier, or a shortlisted
                 # result subsequently opened by this runner.
                 if tail == spec.get("folder_id") or tail == spec.get("selected_id"):
-                    details[tail] = project_folder(raw)
+                    details[tail] = project_folder(raw, registration=bool(spec.get("import_session")))
         except Exception:
             invalid_response = True
 
@@ -1356,7 +1400,7 @@ def run_browser(spec, *, live=None):
                 page.locator('input[name="password"]').fill(password)
                 from edof_day_session import allow_login
                 if not allow_login(vault, automatic=bool(spec.get("day_session")),
-                                   manual_until=spec.get("manual_until", 0), recover_return=bool(spec.get("recover_return")),
+                                   daily=spec.get("provider") == "integrale", manual_until=spec.get("manual_until", 0), recover_return=bool(spec.get("recover_return")),
                                    owner=spec.get("owner"), verified_tab=bool(warm and live.get("verified"))):
                     raise StopRun("day_login_used")
                 requested_at = time.time()
@@ -1498,7 +1542,7 @@ def run_browser(spec, *, live=None):
                         # response from the configured establishment.
                         vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                     progress("reading_pending_tab")
-                    pending = read_pending_with_private_session(context, private_witness)
+                    pending = read_pending_with_private_session(context, private_witness, checkpoint)
                     if pending is None:
                         try:
                             pending = read_official_pending(page, checkpoint, BrowserTimeout)
@@ -1516,45 +1560,19 @@ def run_browser(spec, *, live=None):
                     # Never replace a complete saved directory with a partial result.
                     if pending_result or prior_pending:
                         bulk_deadline = time.monotonic() + 35
-                    directory_responses.clear()
-                    page.goto(LIST_URL, wait_until="commit", timeout=18000)
-                    page.reload(wait_until="domcontentloaded", timeout=30000)
                     vault.put("edof-full-attempt:"+spec["owner"], time.time(), ttl=900)
-                    progress("reading_all_folders")
-                if not is_directory_view(page.url):
-                    directory_responses.clear()
-                open_folder_view(page, LIST_URL, lambda: bool(directory_responses), BrowserTimeout)
-                full_list = all_dossiers_link(page)
-                if not full_list and spec.get("manual_until"):
-                    # The official “Tous les dossiers” page also works when the responsive menu is collapsed.
-                    full_list = LIST_URL.rsplit("/", 1)[0] + "/tous"
-                if full_list:
-                    target_directory = full_list
-                    directory_responses.clear()
-                    open_folder_view(page, target_directory, lambda: bool(directory_responses), BrowserTimeout)
-                deadline = time.monotonic() + 18
-                while not directory_responses and time.monotonic() < deadline:
-                    checkpoint()
-                    page.wait_for_timeout(200)
-                if not directory_responses or not vault:
-                    raise StopRun("directory_unavailable")
-                checkpoint()
+                if private_witness is None:
+                    open_folder_view(page, LIST_URL, lambda: private_witness is not None, BrowserTimeout)
+                    deadline = time.monotonic() + 10
+                    while private_witness is None and time.monotonic() < deadline:
+                        checkpoint()
+                        page.wait_for_timeout(200)
+                signals["directory"] = {}
+                progress("reading_all_folders")
                 try:
-                    signals["directory"] = {"seen": 0, "pages": 0}
-                    source = directory_responses[-1]
-                    initial = source.json()
-                    if isinstance(initial, dict) and type(initial.get("numberOfItems")) is int and isinstance(initial.get("items"), list):
-                        # A verified private list already proves an authenticated
-                        # session, independent of the later export/pagination.
-                        vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
-                    progress("exporting_directory")
-                    snapshot = exported_directory(page, source, checkpoint, signals["directory"], BrowserTimeout, target_directory)
-                    if snapshot is None:
-                        progress("paginating_directory")
-                        snapshot = directory.from_pages(directory_pages(page, source, checkpoint, signals["directory"]), signals["directory"])
-                except (ValueError, KeyError, TypeError):
+                    snapshot = read_recent_directory(context, private_witness, "all", checkpoint, signals["directory"])
+                except (ValueError, KeyError, TypeError, BrowserError):
                     raise StopRun("directory_incomplete") from None
-                snapshot["scope"] = "all" if target_directory != LIST_URL else "open"
                 progress("saving_directory")
                 vault.put(directory.record_key(spec["owner"]), snapshot, ttl=directory.TTL)
                 vault.put("browser", session_cookies(context.storage_state()), ttl=86400)

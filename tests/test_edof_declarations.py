@@ -205,3 +205,49 @@ def test_new_receipt_updates_old_directory_view_only_for_same_enrolment(site):
     assert "entry_confirmed_on" not in present(stale)
     advanced = {**current,"rows":{folder:{**row,"state":"Annulé par le titulaire"}}}
     assert present(advanced)["state"] == "Annulé par le titulaire"
+
+
+def test_provider_off_and_paris_cutoffs_for_weekend_and_dst(tmp_path, monkeypatch):
+    import cpf_provider
+    from integrale_edof_dashboard import simulate, PARIS
+    from edof_day_session import working_hours
+    from unittest.mock import Mock
+    monkeypatch.setattr(cpf_provider,"on_test_service",lambda:True)
+    proofs = Mock(side_effect=AssertionError("provider is inactive"))
+    monkeypatch.setattr(ledger,"authoritative_proofs",proofs)
+    ledger.discover(NS(directory=tmp_path),"owner",{"rows":{FOLDER:{**ROW,"state":"accepted"}}})
+    proofs.assert_not_called()
+    for day in (dt.date(2026,3,29),dt.date(2026,10,25)):
+        for kind,hour in (("accepted",8),("entry",18)):
+            at = dt.datetime.combine(day,dt.time(hour),PARIS)
+            assert working_hours(at,daily=True)
+            assert simulate(kind,day.isoformat(),None,None,at-dt.timedelta(seconds=1)) == "planned"
+            assert simulate(kind,day.isoformat(),None,None,at) == "unconfirmed"
+
+
+def test_official_exit_status_payload_must_match_date_and_actual_rate(tmp_path):
+    draft = {**EXIT,"rate":100}
+    spec = prepare(tmp_path,draft)
+    gate = form.SingleWrite(spec,EDOF_HOST, API_PREFIX,tmp_path)
+    gate.armed = True
+    body = {"state":"TERMINATED","terminatedDate":"29/01/2026","achievementRate":100,
+            "completed":True,"terminatedReason":"8","forceMajeureAbsence":False}
+    for change in ({"state":"CANCELED"},{"terminatedDate":"30/01/2026"},{"achievementRate":99},{"terminatedReason":"31"}):
+        assert not gate.allows(request(PREFIX+"/status",{**body,**change}))
+    assert gate.allows(request(PREFIX+"/status",body))
+
+
+def test_verified_exit_only_requeues_once_for_remaining_service(tmp_path):
+    spec = prepare(tmp_path, EXIT)
+    assert ledger.begin_send(tmp_path,spec)
+    fields = {**ROW,"state":"terminated","end_date":EXIT["actual_date"]}
+    result = form.transmit(None,{**spec,"mode":"reconcile"},fields,None,None)
+    assert result["code"] == "declaration_exit_confirmed"
+    ledger.complete(tmp_path,spec,result["code"])
+    follow = ledger.next_job(NS(directory=tmp_path),1)
+    assert follow["operation"] != spec["operation"] and follow["intent"]["exit_confirmed"] is True
+    assert ledger.begin_send(tmp_path,follow)
+    result = form.transmit(None,{**follow,"mode":"reconcile"},fields,None,None)
+    assert result["code"] == "declaration_unverified"
+    ledger.complete(tmp_path,follow,result["code"])
+    assert ledger.records(tmp_path)[0]["status"] == "uncertain"

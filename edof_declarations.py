@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 from cpf_provider import ProviderStore
 
-from edof_directory import normalized
+from edof_directory import FIRST_SESSION, dated_snapshot, normalized
 from edof_readonly_test import ID_RE
 
 MOTIFS = {
@@ -40,7 +40,25 @@ def database(directory):
         revision INTEGER NOT NULL, actor TEXT NOT NULL, intent TEXT NOT NULL, status TEXT NOT NULL,
         created REAL NOT NULL, changed REAL NOT NULL, detail TEXT NOT NULL DEFAULT '',
         checks INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(folder,action))""")
+    db.execute("CREATE TABLE IF NOT EXISTS edof_folder_holds(folder TEXT PRIMARY KEY)")
     return db
+
+
+def hold_folder(directory, folder, held):
+    with closing(database(directory)) as db, db:
+        db.execute("BEGIN IMMEDIATE")
+        if held:
+            if db.execute("SELECT 1 FROM cpf_declarations WHERE folder=? AND status IN ('sending','uncertain')", (folder,)).fetchone():
+                raise ValueError("Un envoi est déjà parti. Vérifiez sa réception dans cette fiche.")
+            db.execute("INSERT OR IGNORE INTO edof_folder_holds VALUES(?)", (folder,))
+            db.execute("UPDATE cpf_declarations SET status='paused', detail='declaration_blocked' WHERE folder=? AND status='queued'", (folder,))
+        else:
+            db.execute("DELETE FROM edof_folder_holds WHERE folder=?", (folder,))
+
+
+def folder_holds(directory):
+    with closing(database(directory)) as db:
+        return {r[0] for r in db.execute("SELECT folder FROM edof_folder_holds")}
 
 
 def records(directory, folder=None):
@@ -56,6 +74,8 @@ def enqueue(directory, owner, revision, row, draft, actor, *, automatic=False):
         raise ValueError("Opération EDOF inconnue.")
     if not all(row.get(k) for k in ("first_name", "last_name", "session_start_date", "session_end_date")):
         raise ValueError("L’identité et les deux dates de session doivent être connues.")
+    if row["session_start_date"] < FIRST_SESSION:
+        raise ValueError("La session est antérieure au 1er janvier 2026.")
     date = dt.date.fromisoformat(draft["actual_date"])
     if not row["session_start_date"] <= date.isoformat() <= row["session_end_date"] or date > dt.datetime.now(ZoneInfo("Europe/Paris")).date():
         raise ValueError("Vérifiez la date de la déclaration.")
@@ -66,6 +86,10 @@ def enqueue(directory, owner, revision, row, draft, actor, *, automatic=False):
                  for k in ("first_name", "last_name", "session_start_date", "session_end_date")}, **draft}
     with closing(database(directory)) as db, db:
         db.execute("BEGIN IMMEDIATE")
+        if db.execute("SELECT 1 FROM edof_folder_holds WHERE folder=?", (folder,)).fetchone():
+            if automatic:
+                return "paused"
+            raise ValueError("L’automatisation est bloquée sur ce dossier.")
         old = db.execute("SELECT * FROM cpf_declarations WHERE folder=? AND action=?",
                          (folder, action)).fetchone()
         if old and (old["status"] in {"sending", "uncertain", "confirmed"} or (old["status"] == "queued" and old["revision"] == revision)
@@ -83,13 +107,16 @@ def next_job(store, revision, *, provider="integrale"):
     with closing(database(store.directory)) as db, db:
         db.execute("UPDATE cpf_declarations SET status='paused',changed=? WHERE status='queued' AND revision!=?",
                    (time.time(), revision))
+        db.execute("""UPDATE cpf_declarations SET status='paused',changed=?
+                   WHERE status='queued' AND COALESCE(json_extract(intent,'$.session_start_date'),'') < ?""",
+                   (time.time(), FIRST_SESSION))
         row = db.execute("""SELECT * FROM cpf_declarations WHERE
-            (status='queued' AND revision=? AND
+            (status='queued' AND revision=? AND changed<=? AND
              (json_extract(intent,'$.pilot_ticket') IS NOT NULL) = ?) OR
             (status IN ('sending','uncertain') AND checks < 3 AND changed < ?
              AND (? = 'integrale' OR json_extract(intent,'$.pilot_ticket') IS NOT NULL))
             ORDER BY CASE WHEN status='queued' THEN 1 ELSE 0 END,changed LIMIT 1""",
-                         (revision, provider == "wedof", time.time()-120, provider)).fetchone()
+                         (revision, time.time(), provider == "wedof", time.time()-120, provider)).fetchone()
         if not row:
             return None
         intent = json.loads(row["intent"])
@@ -109,10 +136,16 @@ def begin_send(directory, spec):
             return False
         if selected["provider"] != ("wedof" if ticket else "integrale") or selected["pending"] or selected["revision"] != spec["revision"]:
             return False
+        if spec["intent"]["session_start_date"] < FIRST_SESSION or db.execute(
+                "SELECT 1 FROM edof_folder_holds WHERE folder=?", (spec["folder_id"],)).fetchone():
+            return False
         row = db.execute("""UPDATE cpf_declarations SET status='sending', changed=?
             WHERE token=? AND folder=? AND revision=? AND status='queued' AND action=?
             AND COALESCE(json_extract(intent,'$.pilot_ticket'),'')=?""",
                          (time.time(), spec["operation"], spec["folder_id"], spec["revision"], spec["intent"]["action"], ticket))
+        if row.rowcount and spec["intent"].get("exit_confirmed"):
+            db.execute("UPDATE cpf_declarations SET intent=json_set(intent,'$.exit_confirmed',json('true')) WHERE token=?",
+                       (spec["operation"],))
         return row.rowcount == 1
 
 
@@ -120,6 +153,17 @@ def complete(directory, spec, code, confirmed_state=None):
     with closing(database(directory)) as db, db:
         row = db.execute("SELECT status FROM cpf_declarations WHERE token=?", (spec["operation"],)).fetchone()
         if not row or row["status"] in {"confirmed", "paused"}:
+            return
+        if code == "declaration_exit_confirmed" and row["status"] in {"sending","uncertain"}:
+            # EDOF confirms only the exit. A new token may submit only the remaining service fait.
+            db.execute("""UPDATE cpf_declarations SET status='queued', token=?,checks=0, detail=?,
+                       intent=json_set(intent,'$.exit_confirmed',json('true')),changed=? WHERE token=?
+                       AND action='service_done' AND json_extract(intent,'$.exit_confirmed') IS NULL""",
+                       (uuid.uuid4().hex, code, time.time(), spec["operation"]))
+            return
+        if row["status"] == "queued" and code in {"timeout","browser_error","saved_session_unavailable","authentication_unconfirmed","day_login_used"}:
+            # No official write crossed the send fence. Retry after the sign-in cooldown.
+            db.execute("UPDATE cpf_declarations SET detail=?,changed=? WHERE token=?", (code,time.time()+900,spec["operation"]))
             return
         state = ("confirmed" if code == "declaration_confirmed" else
                  "uncertain" if row["status"] in {"sending", "uncertain"} and code != "declaration_refused" else "review")
@@ -147,10 +191,10 @@ def verify_identity(fields, spec):
 
 def is_recorded(fields, intent):
     state = normalized(fields.get("state") or "")
-    completed = {"servicedonedeclared", "servicedonevalidated", "service fait declare", "service fait valide",
+    completed = {"servicedonedeclared", "servicedonedeclaredrevised", "servicedonevalidated", "servicedonevalidatedrevisionvsf", "service fait declare", "service fait valide",
                  "billed", "invoiced", "paid", "facture", "paye"}
     if intent["action"] == "entry_training":
-        return state in completed | {"intraining", "entree declaree", "en formation", "outoftraining", "sortie declaree"} and fields.get("start_date") == intent["actual_date"]
+        return state in completed | {"intraining", "entree declaree", "en formation", "outoftraining", "terminated", "sortie declaree"} and fields.get("start_date") == intent["actual_date"]
     if state not in completed or fields.get("end_date") != intent["actual_date"]:
         return False
     try:
@@ -188,31 +232,65 @@ def same_enrolment(row, proof):
                ("first_name", "last_name", "session_start_date", "session_end_date"))
 
 
+def local_proofs(store, folders):
+    from types import SimpleNamespace
+    from cpf_production_evidence import read_evidence
+    path = getattr(store, "data_file", None)
+    if not path or not folders:
+        return {}
+    try:
+        with open(path, encoding="utf-8") as source:
+            data = json.load(source)
+    except FileNotFoundError:
+        return {}
+    return read_evidence(SimpleNamespace(DATA_FILE=path), folders, data=data)
+
+
 def discover(store, owner, snapshot):
-    from integrale_edof_dashboard import ACTIONS, category, simulate
+    from integrale_edof_dashboard import ACTIONS, category, local_operations, simulate
     from cpf_provider import on_test_service
     if not on_test_service():
         return
-    revision = ProviderStore(store.directory).state()["revision"]
+    selection = ProviderStore(store.directory).state()
+    if selection["pending"] or selection["provider"] != "integrale":
+        return
+    revision = selection["revision"]
+    held = folder_holds(store.directory)
+    existing = {(r["folder"], r["action"]) for r in records(store.directory)
+                if r["status"] in {"confirmed","sending","uncertain","review"} or r["status"] == "queued" and r["revision"] == revision}
+
     now = dt.datetime.now(ZoneInfo("Europe/Paris"))
     due = {}
-    for folder, row in snapshot["rows"].items():
+    for folder, row in dated_snapshot(snapshot)["rows"].items():
         kind = category(row)
-        if kind not in ACTIONS:
+        if kind not in ACTIONS or folder in held or (folder, ACTIONS[kind]) in existing:
             continue
         date = row.get("session_start_date" if kind == "accepted" else "session_end_date")
         if simulate(kind, date, False, None, now) == "unconfirmed":
             due[folder] = (row, ACTIONS[kind])
     ids = list(due)
+    local = local_proofs(store, ids)
+    drafts = local_operations(ProviderStore(store.directory)) if ids else {}
     for i in range(0, len(ids), 100):
         batch = ids[i:i+100]
         proofs = authoritative_proofs(batch)
         for folder in batch:
             row, action = due[folder]
             proof = proofs[folder]
-            draft = proof.get(action)
-            if draft and not {action, "both"}.intersection(proof.get("blocks", [])) and same_enrolment(row, proof):
-                enqueue(store.directory, owner, revision, row, draft, "Gestion Stagiaires", automatic=True)
+            local_proof = local.get(folder, {})
+            if {action, "both"}.intersection([*proof.get("blocks", []), *local_proof.get("blocks", [])]):
+                continue
+            if proof.get(action) and same_enrolment(row, proof):
+                draft = proof[action]
+            elif not proof.get("first_name") and local_proof.get(action) and same_enrolment(row, local_proof):
+                draft = {**local_proof[action], "source":"local"}
+            else:
+                draft = drafts.get(folder, {}).get("draft") or {}
+                if (draft.get("source") != "admin" or draft.get("action") != action or not same_enrolment(row,draft)
+                        or proof.get("first_name") and not same_enrolment(row, proof)
+                        or draft.get("rate", 100) < 100 and draft.get("motif") not in MOTIFS):
+                    continue
+            enqueue(store.directory, owner, revision, row, draft, "Gestion Stagiaires", automatic=True)
 
 
 def check_before_job(store, spec):
@@ -250,8 +328,23 @@ def check_before_job(store, spec):
         if {action, "both"}.intersection(proof.get("blocks", [])):
             complete(store.directory, spec, "declaration_blocked")
             return False
-        if spec["intent"].get("source") == "production":
+        source = spec["intent"].get("source")
+        if source == "admin":
+            from integrale_edof_dashboard import local_operations
+            current = local_operations(ProviderStore(store.directory)).get(folder, {}).get("draft") or {}
+            if (not same_enrolment(spec["intent"],current) or any(spec["intent"].get(k) != v for k,v in current.items())
+                    or proof.get("first_name") and not same_enrolment(spec["intent"],proof)):
+                complete(store.directory, spec, "declaration_evidence_changed")
+                return False
+        if source in {"production", "local"}:
+            if source == "local":
+                if proof.get("first_name"):
+                    complete(store.directory, spec, "declaration_evidence_changed")
+                    return False
+                proof = local_proofs(store, [folder]).get(folder, {})
             current = proof.get(action, {})
+            if current and source == "local":
+                current = {**current, "source":"local"}
             if not same_enrolment(spec["intent"], proof) or not current or any(spec["intent"].get(k) != v for k, v in current.items()):
                 complete(store.directory, spec, "declaration_evidence_changed")
                 return False

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-{% if section == "state" and tab == "request" and not detail and not query and page == 1 %}<meta http-equiv="refresh" content="45">{% endif %}
+{% if section in ["state","requests"] and tab == "request" and not detail and not query and page == 1 %}<meta http-equiv="refresh" content="45">{% endif %}
 <title>Intégrale EDOF · Pilotage CPF</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css') }}"></head>
@@ -39,9 +39,9 @@
 {% if changed %}<small>Dernière bascule le {{ changed }}.</small>{% endif %}
 </header>
 <section class="wedof-hero"><div class="wedof-hero-copy"><span class="wedof-eyebrow">CPF · INTÉGRALE EDOF</span><h2>Tableau de bord Intégrale EDOF</h2>
-<p>Dossiers lus dans l’espace EDOF de l’établissement. Dernière synchronisation de la liste complète {{ full_checked or 'à réaliser' }}.</p>
+<p>Dossiers dont la session EDOF commence le 1er janvier 2026 ou après. Dernière synchronisation de la liste complète {{ full_checked or 'à réaliser' }}.</p>
 <div class="wedof-hero-meta"><span class="wedof-status-pill">{{ snapshot_count }} dossiers synchronisés</span><span class="wedof-status-pill">{{ efp.label }}</span>
-<span class="wedof-status-pill">{{ 'Veille programmée · lun.–ven. 8 h–19 h (Paris)' if directory_enabled else 'Veille suspendue' }}</span></div></div>
+<span class="wedof-status-pill">{{ ('Veille programmée · 8 h–19 h (Paris)' if active else 'Veille programmée · lun.–ven. 8 h–19 h (Paris)') if directory_enabled else 'Veille suspendue' }}</span></div></div>
 <div class="wedof-hero-actions"><a class="btn" href="{{ url_for('integrale_edof.index', section='state', matching=1, _anchor='matching') }}">Réanalyser les dossiers</a>
 {% if active %}<form method="post" action="{{ url_for('integrale_edof.associate_reliable') }}">{{ token() }}{{ btn('Enregistrer les associations fiables') }}</form>{% endif %}
 <a class="btn" href="{{ url_for('integrale_edof.index',section='state',simulation=1, _anchor='simulation') }}">Tester les automatisations</a></div></section>
@@ -49,7 +49,7 @@
 
 {% if section == 'technical' %}<section class="wedof-panel"><span class="wedof-eyebrow">CONNEXION</span><h2>Connexion et paramètres techniques</h2>
 <dl><dt>Connexion EFP Connect</dt><dd><strong>{{ efp.label }}</strong>{% if efp.checked_at %} · Vérifiée le {{ efp.checked_at }}{% endif %}</dd>
-<dt>Veille des demandes CPF</dt><dd>Du lundi au vendredi de 8 h à 19 h, heure de Paris. La veille réutilise la session ouverte. Si EFP impose une nouvelle connexion après une lecture réussie dans cet onglet, une seule reprise automatique supplémentaire est permise dans la journée. La liste est vérifiée environ toutes les deux minutes.
+<dt>Veille des demandes CPF</dt><dd>{{ "Tous les jours" if active else "Du lundi au vendredi" }} de 8 h à 19 h, heure de Paris. La veille réutilise la session ouverte. Si EFP impose une nouvelle connexion après une lecture réussie dans cet onglet, une seule reprise automatique supplémentaire est permise dans la journée. La liste est vérifiée environ toutes les deux minutes.
 {% if day_open and directory_enabled and efp.state == 'day_paused' %}<form method="post" action="{{ url_for('edof_server_test.resume_day') }}">{{ token() }}{{ btn('Autoriser un nouveau code pour reprendre la veille') }}</form>{% endif %}
 {% if not directory_enabled %}<form method="post" action="{{ url_for('edof_server_test.schedule_directory') }}">{{ token() }}{{ btn('Activer la veille de 8 h à 19 h') }}</form>{% endif %}</dd>
 <dt>Compte Gmail pour les codes EFP</dt><dd>{{ 'Connecté' if gmail.connected else 'À connecter' }}</dd>
@@ -75,14 +75,15 @@
 <a class="btn btn-outline" href="{{ url_for('integrale_edof.index', section='consumption') }}">Actualiser les compteurs</a></section>
 {% else %}
 {% if previewing %}<section class="wedof-panel" id="matching"><span class="wedof-eyebrow">ASSOCIATIONS LOCALES</span><h2>Prévisualisation des correspondances</h2><p>{{ matches|length }} dossier(s) en cours d’entrée ou de sortie · {{ match_counts['exact_match'] or 0 }} correspondance(s) fiable(s). Une association fiable requiert des dates concordantes et un contact vérifié.</p></section>{% endif %}
-{% if testing %}<section class="wedof-panel" id="simulation"><span class="wedof-eyebrow">SIMULATION SUR LA LISTE SYNCHRONISÉE</span><h2>Résultat du test des automatisations</h2><p>Échéances en heure de Paris · entrée à 18 h et service fait à 23 h. Le test vérifie le statut, la date, les blocages et le justificatif de chaque dossier. Il ne transmet aucune déclaration.</p><div class="metrics">
+{% if testing %}<section class="wedof-panel" id="simulation"><span class="wedof-eyebrow">SIMULATION SUR LA LISTE SYNCHRONISÉE</span><h2>Résultat du test des automatisations</h2><p>Échéances en heure de Paris · entrée à 8 h et sortie avec service fait à 18 h. Le test vérifie le statut, la date, les blocages et le justificatif de chaque dossier. Il ne transmet aucune déclaration.</p><div class="metrics">
 {% for key,label in simulation_labels.items() %}<div><strong>{{ simulation[key] or 0 }}</strong>{{ label }}</div>{% endfor %}</div></section>{% endif %}
-{% if section == 'state' %}<section class="wedof-panel"><span class="wedof-eyebrow">SUIVI CPF</span><h2>État des dossiers</h2>
-<nav class="metrics state-tabs" aria-label="Filtres d’état">{% for key,label in tabs.items() %}<a href="{{ link('state', key) }}" {{ 'aria-current=page' if tab == key }}><strong>{{ counts[key] or 0 }}</strong><span>{{ label }}</span></a>{% endfor %}</nav>
+{% if section in ['state','requests','automations'] %}<section class="wedof-panel"><span class="wedof-eyebrow">SUIVI CPF</span><h2>{{ sections[section] }}</h2>
+<nav class="metrics state-tabs" aria-label="Filtres d’état">{% for key,label in tabs.items() %}<a href="{{ link(section, key) }}" {{ 'aria-current=page' if tab == key }}><strong>{{ counts[key] or 0 }}</strong><span>{{ label }}</span></a>{% endfor %}</nav>
 {% if tab == 'request' %}<p>Dossiers « À traiter » dans EDOF lors de la dernière synchronisation. Le suivi local ne change pas ce compteur.</p>{% endif %}
 {% if tab == 'due' %}<p>Ces dossiers ont une échéance d’entrée ou de sortie. Les justificatifs vérifiés de production déclenchent l’envoi. Si une information manque, ouvrez le dossier pour compléter la déclaration ici.</p>{% endif %}</section>{% endif %}
-<section class="wedof-panel"><span class="wedof-eyebrow">INTÉGRALE EDOF</span><h2>{{ {'state':'Dossiers CPF','requests':'Demandes entrantes','cancellations':'Annulations'}[section] }}</h2>
-{% if section == 'requests' %}<p>Demandes à traiter identifiées dans la liste EDOF synchronisée.</p>{% elif section == 'cancellations' %}<p>Dossiers dont l’état dans la liste synchronisée indique une annulation.{% if scope != 'all' %} La dernière lecture couvre les dossiers en cours. Les annulations archivées peuvent être absentes de cet export.{% endif %}</p>{% endif %}
+<section class="wedof-panel"><span class="wedof-eyebrow">INTÉGRALE EDOF</span><h2>{{ tabs[tab] if section in ['requests','automations'] else ('Dossiers CPF' if section=='state' else 'Annulations') }}</h2>
+{% if section == 'automations' %}<p>Heure de Paris · entrée à 8 h le premier jour, sortie et service fait à 18 h le dernier jour. La validation du service fait dans EDOF ouvre la rubrique « À facturer ».</p>
+{% if not active %}<p class="warning">L’envoi automatique des déclarations nécessite l’activation d’Intégrale EDOF.</p>{% endif %}{% elif section == 'cancellations' %}<p>Dossiers dont l’état dans la liste synchronisée indique une annulation.{% if scope != 'all' %} La dernière lecture couvre les dossiers en cours. Les annulations archivées peuvent être absentes de cet export.{% endif %}</p>{% endif %}
 <form class="filter" method="get"><input type="hidden" name="section" value="{{ section }}"><input type="hidden" name="tab" value="{{ tab }}">
 <label>Rechercher un dossier<input type="search" name="q" value="{{ query }}" placeholder="Numéro CPF, nom ou formation" maxlength="140"></label>{{ btn('Rechercher') }}</form>
 {% if not checked %}<p>La liste EDOF de votre compte n’est pas disponible. <a href="{{ url_for('edof_server_test.index', _anchor='directory-status') }}">Ouvrir la synchronisation</a>.</p>
@@ -90,12 +91,12 @@
 {% if rows %}<div class="table-wrap"><table><thead><tr><th>Dossier CPF</th><th>Stagiaire et formation</th><th>Session</th><th>État EDOF</th><th>Suivi et actions</th></tr></thead>
 <tbody>{% for r in rows %}<tr><td><a href="{{ url_for('integrale_edof.index', section=section, tab=tab, folder=r.folder_id, page=page, q=query, _anchor='dossier') }}">{{ r.folder_id }}</a></td>
 <td><strong>{{ r.first_name }} {{ r.last_name }}</strong><br>{{ r.title or 'Formation non renseignée' }}</td><td>{{ date_fr(r.session_start_date) }}<br>{{ date_fr(r.session_end_date) }}</td>
-<td>{{ r.label }}{% if r.entry_confirmed_on %}<br><small>Entrée confirmée le {{ date_fr(r.entry_confirmed_on) }}</small>{% endif %}{% if previewing %}<br><strong>{{ 'Correspondance fiable' if matches[r.folder_id].status == 'exact_match' else 'À vérifier' }}</strong>{% if matches[r.folder_id].status == 'exact_match' %}<br>{{ matches[r.folder_id].session }} · {{ matches[r.folder_id].trainee }}{% endif %}{% endif %}{% if testing and r.evaluation %}<br><strong>{{ simulation_labels[r.evaluation] }}</strong>{% endif %}{% if r.block %}<br><span class="warning">Bloqué · {{ block_reasons.get(r.block.reason_code, 'À vérifier') }}</span>{% endif %}</td>
+<td>{{ r.label }}{% if r.entry_confirmed_on %}<br><small>Entrée confirmée le {{ date_fr(r.entry_confirmed_on) }}</small>{% endif %}{% if previewing %}<br><strong>{{ 'Correspondance fiable' if matches[r.folder_id].status == 'exact_match' else 'À vérifier' }}</strong>{% if matches[r.folder_id].status == 'exact_match' %}<br>{{ matches[r.folder_id].session }} · {{ matches[r.folder_id].trainee }}{% endif %}{% endif %}{% if (testing or section == "automations") and r.evaluation %}<br><strong>{{ simulation_labels[r.evaluation] }}</strong>{% endif %}{% if r.block %}<br><span class="warning">Bloqué · {{ block_reasons.get(r.block.reason_code, 'À vérifier') }}</span>{% endif %}</td>
 <td><a href="{{ url_for('integrale_edof.index', section=section, tab=tab, folder=r.folder_id, page=page, q=query, _anchor='dossier') }}">{{ 'Voir l’association' if r.link else 'Consulter / associer' }}</a>
-{% if r.action and active %}<details><summary>Automatisation</summary><form method="post" action="{{ url_for('integrale_edof.block', folder=r.folder_id) }}">{{ token() }}
-<input type="hidden" name="action" value="{{ r.block.action if r.block else r.action }}">{% if r.block %}<input type="hidden" name="release" value="yes">{{ btn('Lever le blocage') }}
-{% else %}<label>Motif du blocage<select name="reason">{% for key,label in block_reasons.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>{{ btn('Bloquer cette action') }}{% endif %}</form></details>{% endif %}
-{% if section == 'requests' or (section == 'state' and tab == 'request') %}<small>{{ 'Archivée localement' if r.archived else ('Traitée localement' if r.handled else 'À traiter') }}</small>{% if active %}<form class="actions" method="post" action="{{ url_for('integrale_edof.follow_up',folder=r.folder_id) }}">{{ token() }}
+{% if r.kind == "accepted" and not r.link %}<a class="btn" href="{{ url_for('integrale_edof.index', section='requests', tab='accepted', folder=r.folder_id, _anchor='creer-stagiaire') }}">Créer le stagiaire</a>{% endif %}
+{% if r.action and active and r.block and r.block.action != "both" %}<form method="post" action="{{ url_for('integrale_edof.block', folder=r.folder_id) }}">{{ token() }}
+<input type="hidden" name="action" value="{{ r.block.action }}"><input type="hidden" name="release" value="yes">{{ btn('Lever le blocage de cette action') }}</form>{% endif %}
+{% if r.kind == 'request' %}<small>{{ 'Archivée localement' if r.archived else ('Traitée localement' if r.handled else 'À traiter') }}</small>{% if active %}<form class="actions" method="post" action="{{ url_for('integrale_edof.follow_up',folder=r.folder_id) }}">{{ token() }}
 <button class="btn" name="change" value="{{ 'reopen' if r.handled else 'handled' }}">{{ 'Rouvrir' if r.handled else 'Marquer traitée' }}</button><button class="btn btn-outline" name="change" value="archived">Archiver</button></form>{% endif %}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
 <nav class="pagination" aria-label="Pagination">{% if page > 1 %}<a href="{{ link(section,tab,page-1) }}">← Précédent</a>{% endif %}<span>Page {{ page }} sur {{ pages }}</span>{% if page < pages %}<a href="{{ link(section,tab,page+1) }}">Suivant →</a>{% endif %}</nav>
 {% elif checked %}<p>Aucun dossier dans cette sélection.</p>{% endif %}</section>
@@ -105,12 +106,23 @@
 <div class="actions"><a class="btn" href="{{ url_for('edof_server_test.index', fiche=detail.key, _anchor='dossier-lu') }}">Détail synchronisé</a>
 {% if active %}<form method="post" action="{{ url_for('integrale_edof.read_folder', folder=f.folder_id) }}">{{ token() }}{{ btn('Relire la fiche sur EDOF') }}</form>{% endif %}
 <a class="btn btn-outline" href="{{ detail.official }}" target="_blank" rel="noreferrer">Ouvrir le dossier dans EDOF</a></div>
+{% if session.get("admin_role") != "viewer" %}<form method="post" action="{{ url_for('integrale_edof.dossier_hold',folder=f.folder_id) }}">{{ token() }}
+<input type="hidden" name="section" value="{{ section }}"><input type="hidden" name="tab" value="{{ tab }}">
+<label><input type="checkbox" name="hold" value="yes" {% if detail.held %}checked{% endif %}> Bloquer automatisation sur le dossier</label>
+{{ btn('Enregistrer le choix') }}</form>{% endif %}
 {% if detail.request %}<h3>Transmettre la demande</h3>
 <p>Le transfert utilise les coordonnées de la fiche détaillée EDOF, la formation et le numéro du dossier.</p>
 {% for key,label in [('crm','CRM'),('salesforce','Salesforce')] %}{% set delivered=detail.transfers.get(key) %}
 {% if delivered=='sent' %}<p>{{ label }} · Réception confirmée.</p>{% elif delivered in ['uncertain','processing'] %}<p>{{ label }} · Vérifier la réception avant tout nouvel envoi.</p>
 {% elif active %}<form class="actions" method="post" action="{{ url_for('integrale_edof.send_request',folder=f.folder_id,target=key) }}">{{ token() }}
 <label><input type="checkbox" name="verified" value="yes" required> J’ai vérifié que {{ label }} n’a pas déjà reçu cette demande.</label>{{ btn('Transmettre à ' ~ label) }}</form>{% endif %}{% endfor %}{% endif %}
+{% if detail.accepted %}<section id="creer-stagiaire"><h3>Créer le stagiaire</h3>
+{% if detail.link %}<p>Ce dossier est déjà associé à une inscription. <a href="{{ url_for('admin_trainee_page',session_id=detail.link.session_id,trainee_id=detail.link.trainee_id) }}">Ouvrir la fiche stagiaire</a></p>
+{% else %}{% if detail.import_error %}<p class="warning">{{ detail.import_error }}</p>{% endif %}
+<form method="post" action="{{ url_for('integrale_edof.create_trainee',folder=f.folder_id) }}">{{ token() }}
+<label>Session de formation<select name="session_id" required><option value="">Choisir une session</option>
+{% for group in detail.sessions %}<option value="{{ group.id }}">{{ group.name }} · {{ group.date_start or group.date_debut }} au {{ group.date_end or group.date_fin }}</option>{% endfor %}</select></label>
+<p>L’identité, les coordonnées disponibles et les informations CPF sont reprises de la fiche EDOF.</p>{{ btn('Créer le stagiaire dans cette session') }}</form>{% endif %}</section>{% endif %}
 <h3>Association à Gestion Stagiaires</h3>
 <form class="filter" method="get" action="{{ url_for('integrale_edof.index', _anchor='dossier') }}"><input type="hidden" name="section" value="{{ section }}"><input type="hidden" name="folder" value="{{ f.folder_id }}"><label>Rechercher une inscription locale<input name="inscription" type="search" value="{{ detail.query }}" minlength="3" maxlength="120" placeholder="Stagiaire, e-mail ou session"></label>{{ btn('Rechercher une inscription') }}</form>
 {% for c in detail.comparison.candidates %}<div class="association"><strong>{{ c.first_name }} {{ c.last_name }} · {{ c.session_name }}</strong><p>{{ c.checks|map(attribute='label')|join(' · ') }}</p>

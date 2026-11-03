@@ -11,6 +11,7 @@ TTL = 86400
 REFRESH_INTERVAL = 15 * 60
 IDLE_REFRESH_INTERVAL = 6 * 3600
 MAX_ROWS = 30000
+FIRST_SESSION = "2026-01-01"
 
 
 class IncompleteDirectory(ValueError):
@@ -49,7 +50,8 @@ def canonical_dates(row):
 def dated_snapshot(snapshot):
     if not snapshot:
         return snapshot
-    return {**snapshot, "rows": {folder: canonical_dates(row) for folder, row in snapshot["rows"].items()}}
+    rows = (canonical_dates(row) for row in snapshot["rows"].values())
+    return {**snapshot, "rows": {r["folder_id"]: r for r in rows if r["session_start_date"] >= FIRST_SESSION}}
 
 
 def project(row):
@@ -62,7 +64,11 @@ def project(row):
     for ref in (row.get("trainingId"), row.get("trainingActionId"), info.get("sessionId")):
         if ref and (not isinstance(ref, str) or not ref.startswith(SIRET + "_")):
             raise IncompleteDirectory()
-    return {**({"billing_state": text_field(row["currentBillingState"], 80)} if row.get("currentBillingState") else {}),
+    solicitations = info.get("solicitations") or []
+    ft_pending = any(isinstance(item, dict) and str(item.get("fundingType")) == "9"
+                     and item.get("status") == "inProgress" for item in solicitations)
+    return {"ft_pending": ft_pending, "service_done_validated": info.get("validatedServiceDone") is True,
+            "payment_state": text_field(row.get("paymentState"), 80), **({"billing_state": text_field(row["currentBillingState"], 80)} if row.get("currentBillingState") else {}),
             "folder_id": str(row["id"]), "first_name": text_field(attendee.get("firstName"), 120),
             "last_name": text_field(attendee.get("lastName"), 120),
             "state": text_field(row.get("currentState"), 80),
@@ -111,6 +117,7 @@ def pending_key(owner):
 
 
 def with_pending(full, pending):
+    full, pending = dated_snapshot(full), dated_snapshot(pending)
     if not pending or full and pending["checked"] <= full["checked"]:
         return full
     combined = dict(full or {"checked":0, "rows":{}, "scope":"pending"})

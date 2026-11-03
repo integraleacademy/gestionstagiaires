@@ -762,7 +762,7 @@ def test_unseen_name_local_lookup_is_isolated_and_never_starts_a_browser(web, mo
     headers = {"X-CSRF-Token": csrf}
     assert client.post(path, json=payload).status_code == 403
     assert "première synchronisation" in client.post(path, json=payload, headers=headers).json["message"]
-    item = {"id": "123456", "attendee": {"firstName": "André", "lastName": "Le-Test"}, "currentState": "accepted"}
+    item = {"id": "123456", "beginDate":"01/01/2026", "attendee": {"firstName": "André", "lastName": "Le-Test"}, "currentState": "accepted"}
     def seed(items):
         snapshot = directory.from_pages([{"numberOfItems": len(items), "items": items}])
         vault.put(directory.record_key(user), snapshot, ttl=86400)

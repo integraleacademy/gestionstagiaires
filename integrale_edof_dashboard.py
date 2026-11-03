@@ -19,6 +19,7 @@ from cpf_provider_bridge import coordinated_switch, production_request
 from edof_matching import build_comparison, manual_options
 from edof_readonly_test import ID_RE
 from edof_server_browser import DETAIL_PREFIX
+from integrale_edof_registration import create_registration, eligible_sessions
 from integrale_edof_sync import event_tables
 from integrale_edof_transfers import TARGETS, receipt, transfer
 from wedof_links import save_manual_wedof_link, sync_exact_wedof_links
@@ -26,7 +27,7 @@ from wedof_matching import match_folder
 
 PARIS = ZoneInfo("Europe/Paris")
 SECTIONS = {"consumption": "Consommation Intégrale EDOF", "state": "État des dossiers",
-            "technical": "Connexion et paramètres techniques", "requests": "Demandes entrantes", "cancellations": "Annulations"}
+            "technical": "Connexion et paramètres techniques", "requests": "Traitement des demandes", "automations": "Traitement des automatisations", "cancellations": "Annulations"}
 TABS = {"all": "Tous", "due": "Automatisations prévues", "request": "Nouvelle demande", "accepted": "Acceptés", "training": "En formation",
         "service": "Services faits", "invoiced": "Facturés", "unlinked": "À associer", "anomaly": "Anomalies"}
 LABELS = {"accepted": "Accepté", "training": "En formation", "service": "Service fait",
@@ -44,19 +45,45 @@ STATE_KEYS = {
     "out": {"outtraining", "outoftraining", "sortie declaree"},
     "refused": {"refused", "refusedbyattendee", "refusedbyorganism", "rejected", "refuse", "refusee"},
 }
+REQUEST_TABS = {"request":"À traiter", "waiting":"En attente de validation du titulaire",
+                "ft":"Demande de financement FT en cours", "accepted":"Accepté", "refused":"Refusé", "canceled":"Annulé"}
+AUTOMATION_TABS = {"due":"Automatisations prévues", "training":"En formation", "entry":"Entrée déclarée",
+                   "out":"Sortie déclarée", "declared":"Service fait déclaré", "billable":"À facturer (service fait validé)",
+                   "invoiced":"Facturé", "paid":"Payé"}
+SECTION_TABS = {"requests": REQUEST_TABS, "automations": AUTOMATION_TABS}
+LABELS.update({**REQUEST_TABS, **AUTOMATION_TABS})
+STATE_KEYS.update({
+    "entry":{"intraining", "entree declaree", "entree en formation declaree"},
+    "declared":{"servicedonedeclared", "servicedonedeclaredrevised", "service fait declare", "service fait declare revise"},
+    "billable":{"servicedonevalidated", "servicedonevalidatedrevisionvsf", "service fait valide"},
+    "paid":{"paid", "paye", "payee"},
+    "ft":{"demande de financement ft en cours", "demande de financement france travail en cours"},
+})
+STATE_KEYS["waiting"].add("en attente de validation du titulaire")
+STATE_KEYS["out"].add("terminated")
+STATE_KEYS["canceled"].update({"canceledbycdc", "abandonnedbyattendeeatstepvalidated"})
+STATE_KEYS["refused"].update({"rejectedwithouttitulairesuite", "rejectedwithoutcdcsuite", "rejectedwithoutofsuite"})
 STATES = {raw: key for key, aliases in STATE_KEYS.items() for raw in aliases}
 SIMULATION = {"planned": "Échéance à venir", "ready": "Justificatif disponible",
               "unconfirmed": "Justificatif à renseigner", "blocked": "Blocage administrateur", "missing": "Date à vérifier"}
-ACTIONS = {"accepted": "entry_training", "training": "service_done"}
+ACTIONS = {"accepted": "entry_training", "training": "service_done", "entry": "service_done", "out": "service_done"}
 ACTION_LABELS = {"entry_training": "Entrée en formation", "service_done": "Sortie et service fait", "both": "Entrée et sortie"}
 BLOCK_REASONS = {"no_show": "Absence", "postponed": "Report", "abandonment": "Abandon",
                  "partial_completion": "Parcours partiel", "administrative_issue": "Vérification administrative", "other": "Autre motif"}
 
 
 def category(row):
-    if directory.normalized(row.get("billing_state") or "") in STATE_KEYS["invoiced"]:
-        return "invoiced"
     raw = directory.normalized(row.get("state") or "")
+    billing = directory.normalized(row.get("billing_state") or "")
+    payment = directory.normalized(row.get("payment_state") or "")
+    if raw in STATE_KEYS["paid"] or billing in STATE_KEYS["paid"] or payment in STATE_KEYS["paid"] | {"issued"}:
+        return "paid"
+    if billing in STATE_KEYS["invoiced"]:
+        return "invoiced"
+    if raw in STATE_KEYS["billable"] or row.get("service_done_validated") is True:
+        return "billable"
+    if row.get("ft_pending") and raw in STATE_KEYS["waiting"] | STATE_KEYS["request"]:
+        return "ft"
     if raw.startswith(("annule par ", "annulee par ", "annulation par ")):
         return "canceled"
     return STATES.get(raw, "unknown")
@@ -83,7 +110,7 @@ def apply_confirmed_entries(snapshot, directory_path, owner):
 def folder_for_matching(row):
     return {"external_id": row["folder_id"], "type": "cpf", "first_name": row.get("first_name"),
             "last_name": row.get("last_name"), "email": row.get("email"), "training_title": row.get("title"),
-            "state": {"accepted": "accepted", "training": "inTraining"}.get(category(row), row.get("state")),
+            "state": {"accepted": "accepted", "training": "inTraining", "entry":"inTraining"}.get(category(row), row.get("state")),
             "start_date": row.get("session_start_date"), "end_date": row.get("session_end_date")}
 
 
@@ -98,7 +125,7 @@ def simulate(kind, date, block, draft, now):
     if block:
         return "blocked"
     try:
-        scheduled = dt.datetime.combine(dt.date.fromisoformat(date), dt.time(18 if kind == "accepted" else 23), PARIS)
+        scheduled = dt.datetime.combine(dt.date.fromisoformat(date), dt.time(8 if kind == "accepted" else 18), PARIS)
     except (TypeError, ValueError):
         return "missing"
     if scheduled > now:
@@ -122,6 +149,10 @@ def dashboard_rows(snapshot, data, operations, now):
         evaluation = simulate(kind, date, block, flags.get("draft"), now)
         due = evaluation in {"unconfirmed","ready"}
         tags = {kind, "all"}
+        if kind == "entry":
+            tags.add("training")
+        if kind in {"declared", "billable"}:
+            tags.add("service")
         if kind == "request" and "pending_ids" in snapshot and folder not in snapshot["pending_ids"]:
             tags.discard("request")
         if evaluation in {"planned", "unconfirmed", "ready"}:
@@ -239,7 +270,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             if not isinstance(group,dict):
                 continue
             summary = {key:group[key] for key in ("id", "name", "training_type", "date_start", "date_end",
-                  "date_debut", "date_fin", "archived", "is_archived", "status") if key in group}
+                  "date_debut", "date_fin", "partner_id", "archived", "is_archived", "status") if key in group}
             summary["trainees"] = [{key:t[key] for key in ("id","first_name","last_name","prenom","nom","email","mail")
                                     if key in t} for t in (group.get("trainees") or group.get("stagiaires") or []) if isinstance(t,dict)]
             sessions.append(summary)
@@ -301,18 +332,26 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         owner = results_owner()
         g.edof_nonce = secrets.token_urlsafe(24)
         csrf = session.setdefault("edof_server_csrf", secrets.token_urlsafe(32))
-        section = request.args.get("section", "state")
+        legacy_view = any(k in request.args for k in ("tab","matching","simulation","folder","q"))
+        section = request.args.get("section", "state" if legacy_view else "requests")
         if section not in SECTIONS:
             abort(404)
-        tab = request.args.get("tab", "all")
-        if tab not in TABS:
-            tab = "all"
+        tabs = SECTION_TABS.get(section, TABS)
+        default_tab = next(iter(tabs))
+        tab = request.args.get("tab", default_tab)
+        if tab not in tabs:
+            tab = default_tab
         snap = snapshot(owner)
         if snap:
             store.use_directory(owner)
         now = dt.datetime.now(PARIS)
         today = now.date().isoformat()
-        data = local_data() if snap and section in {"state", "requests", "cancellations"} else {}
+        data = local_data() if snap and section in {"state", "requests", "automations", "cancellations"} else {}
+        data = dict(data)
+        held = declarations.folder_holds(store.directory)
+        if held:
+            data["wedof_automation_blocks"] = [*data.get("wedof_automation_blocks", []),
+                *({"external_id":f,"action":"both","active":True,"reason_code":"administrative_issue"} for f in held)]
         rows, counts = dashboard_rows(snap, data, local_operations(selection), now)
         previewing = section == "state" and request.args.get("matching") == "1"
         matches = matching_rows(owner, snap, data) if previewing else {}
@@ -323,9 +362,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         if testing:
             rows = [r for r in rows if r["evaluation"]]
         q = directory.normalized(request.args.get("q", "")[:140])
-        if section in {"requests", "cancellations"}:
-            kind = "request" if section == "requests" else "canceled"
-            rows = [row for row in rows if kind in row["tags"] and not row["archived"]]
+        if section == "cancellations":
+            rows = [row for row in rows if "canceled" in row["tags"] and not row["archived"]]
         else:
             rows = [row for row in rows if tab in row["tags"]]
         if q:
@@ -351,8 +389,19 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             detail["draft"] = local_operations(selection).get(folder, {}).get("draft")
             detail["action"] = ACTIONS.get(category(record))
             detail["request"] = category(record) == "request"
+            detail["held"] = folder in held
             detail["transfers"] = {target:receipt(selection, folder, target) for target in TARGETS} if detail["request"] else {}
             detail["official"] = DETAIL_PREFIX + folder
+            detail["accepted"] = category(record) == "accepted"
+            if detail["accepted"]:
+                job = store.successful_read(owner, spec={"folder_id":folder,"first_name":"","last_name":""})
+                detail["import_error"] = job and job.get("import_error")
+                options = eligible_sessions(data, getattr(legacy, "INTEGRALE_PARTNER_ID", "integrale"))
+                def session_order(group):
+                    day = directory.session_date(group.get("date_start") or group.get("date_debut"))
+                    return (day != record.get("session_start_date"), day, group.get("name") or "")
+                detail["sessions"] = sorted(options, key=session_order)
+                detail["link"] = next((r for r in data.get("wedof_links", []) if r.get("active") and str(r.get("external_id")) == folder), None)
         with closing(store.connect()) as db:
             metrics = dict(db.execute("SELECT mode, COUNT(*) FROM jobs WHERE owner=? GROUP BY mode", (owner,)))
         with closing(selection.connect()) as db:
@@ -393,15 +442,15 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             except (ValueError, ProviderUnavailable) as exc:
                 detail["pilot_error"] = str(exc)
         return app.jinja_env.get_template("integrale_edof.html").render(
-            selection=selected, production=production, bridge_error=bridge_error, aligned=aligned, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=TABS, tab=tab,
+            selection=selected, production=production, bridge_error=bridge_error, aligned=aligned, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=tabs, tab=tab,
             dispatch_labels=declarations.LABELS, dispatch_reasons=MESSAGES, motifs=declarations.MOTIFS,
             inspection=check, dispatches=dispatches, csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
             match_counts=Counter(m["status"] for m in matches.values()), total=len(rows), counts=counts,
             rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
-            detail=detail, events=events, full_checked=directory.stamp(snap) if snap and snap.get("checked") else None, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=(directory.stamp({"checked":snap["pending_checked"]}) if snap and snap.get("pending_checked") and (tab=="request" or section=="requests") else directory.stamp(snap) if snap and snap.get("checked") else None), today=today, metrics=metrics,
+            detail=detail, events=events, full_checked=directory.stamp(snap) if snap and snap.get("checked") else None, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=(directory.stamp({"checked":snap["pending_checked"]}) if snap and snap.get("pending_checked") and tab=="request" else directory.stamp(snap) if snap and snap.get("checked") else None), today=today, metrics=metrics,
             live=store.live_connection(owner, gmail["saved_session"]), nonce=g.edof_nonce, jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
             scope=(snap or {}).get("scope", "open"), day_open=working_hours(now), directory_enabled=store.directory_enabled(owner), snapshot_count=len((snap or {}).get("rows", {})),
-            block_reasons=BLOCK_REASONS, action_labels=ACTION_LABELS,
+            held=held, block_reasons=BLOCK_REASONS, action_labels=ACTION_LABELS,
             changed=dt.datetime.fromtimestamp(selected["changed"], PARIS).strftime("%d/%m/%Y à %H h %M") if selected["changed"] else None)
 
     @bp.post("/provider")
@@ -475,6 +524,48 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         legacy._atomic_update_data(apply)
         flash("Association locale enregistrée." if outcome == ["created"] else "Association déjà enregistrée.", "success")
         return back(folder=folder)
+
+    @bp.post("/dossiers/<folder>/create-trainee")
+    @admin_required
+    def create_trainee(folder):
+        from edof_server_test import start_job
+        owner = results_owner()
+        if session.get("admin_role") == "viewer":
+            abort(403)
+        check_csrf()
+        try:
+            row = folder_record(owner, folder)
+            sid = request.form.get("session_id", "")
+            if category(row) != "accepted" or not any(str(s["id"]) == sid for s in
+                    eligible_sessions(local_data(), getattr(legacy, "INTEGRALE_PARTNER_ID", "integrale"))):
+                raise ValueError("Choisissez une session disponible pour ce dossier accepté.")
+            job = store.successful_read(owner, spec={"folder_id":folder, "first_name":"", "last_name":""})
+            if job and "birth_date" in job["fields"] and declarations.same_enrolment(row, job["fields"]) and category(job["fields"]) == "accepted":
+                create_registration(legacy, folder, sid, job["fields"])
+                flash("Stagiaire enregistré et associé au dossier EDOF.", "success")
+            else:
+                start_job(store, owner, {"mode":"read", "folder_id":folder, "owner":owner, "first_name":row["first_name"],
+                                         "last_name":row["last_name"], "import_session":sid})
+                flash("Lecture de la fiche complète lancée. Le stagiaire sera créé dans la session choisie dès la lecture confirmée. Actualisez cette fiche pour vérifier le résultat.", "success")
+        except (ValueError, ProviderUnavailable) as exc:
+            flash(str(exc), "error")
+        return back("requests", tab="accepted", folder=folder, _anchor="dossier")
+
+    @bp.post("/dossiers/<folder>/hold")
+    @admin_required
+    def dossier_hold(folder):
+        owner = results_owner()
+        if session.get("admin_role") == "viewer":
+            abort(403)
+        check_csrf()
+        folder_record(owner, folder)
+        held = request.form.get("hold") == "yes"
+        try:
+            declarations.hold_folder(store.directory, folder, held)
+            flash("Automatisations du dossier bloquées." if held else "Automatisations du dossier autorisées.", "success")
+        except ValueError as exc:
+            flash(str(exc), "warning")
+        return back(request.form.get("section"), tab=request.form.get("tab"), folder=folder, _anchor="dossier")
 
     @bp.post("/dossiers/<folder>/block")
     @native_action
@@ -655,6 +746,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         if (folder, action) in blocks or (folder, "both") in blocks:
             raise ValueError("Le dossier est bloqué. Vérifiez le motif avant de préparer sa déclaration.")
         draft = declaration_draft(row, request.form)
+        draft.update(source="admin", **{k:row[k] for k in ("first_name","last_name","session_start_date","session_end_date")})
         record_work(selection, folder, session.get("admin_username") or owner, draft=json.dumps(draft, ensure_ascii=False))
         flash("Déclaration préparée. Vous pouvez la transmettre depuis cette fiche.", "success")
         return back(folder=folder)
