@@ -577,6 +577,7 @@ def directory_pages(page, response, checkpoint, progress=None):
         headers = {k: v for k, v in response.request.all_headers().items()
                    if k.lower() in {"accept", "authorization", "x-xsrf-token", "x-csrf-token", "x-requested-with"}}
         def get_batch(index, page_size=None):
+            checkpoint()
             values = {key: str(index)}
             if page_size:
                 values[sizes[0]] = str(page_size)
@@ -589,8 +590,9 @@ def directory_pages(page, response, checkpoint, progress=None):
                     retry = reply.headers.get("retry-after", "60")
                     if not retry.isdigit() or int(retry) > 90:
                         raise directory.IncompleteDirectory()
-                    page.wait_for_timeout(max(1, int(retry)) * 1000)
-                    checkpoint()
+                    for _ in range(max(1, int(retry))):
+                        page.wait_for_timeout(1000)
+                        checkpoint()
                     reply.dispose()
                     reply = page.context.request.get(url, headers=headers, max_redirects=0, timeout=12000)
                 if page_size and reply.status in {400, 422}:
@@ -1092,6 +1094,9 @@ def run_browser(spec, *, live=None):
         except Exception:
             return {"code": "private_storage_unavailable"}
 
+    pending_result = None
+    bulk_deadline = None
+
     def progress(phase):
         if vault and spec.get("day_session"):
             vault.put("edof-phase:" + spec["owner"], {"phase":phase, "at":time.time(),
@@ -1292,6 +1297,8 @@ def run_browser(spec, *, live=None):
                     return workspace_screen(text)
 
             def checkpoint(allow_otp=True):
+                if bulk_deadline is not None and time.monotonic() >= bulk_deadline:
+                    raise StopRun("bulk_deferred")
                 try:
                     return check_document(allow_otp)
                 except Exception as exc:
@@ -1490,23 +1497,28 @@ def run_browser(spec, *, live=None):
                         # Preserve only official secure cookies after a private
                         # response from the configured establishment.
                         vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
-                    if not bulk_due:
-                        progress("reading_pending_tab")
-                        pending = read_pending_with_private_session(context, private_witness)
-                        if pending is None:
-                            try:
-                                pending = read_official_pending(page, checkpoint, BrowserTimeout)
-                            except BrowserTimeout:
-                                pending = None
-                        if pending is not None:
-                            vault.put(directory.pending_key(spec["owner"]), pending, ttl=directory.TTL)
-                            vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
-                            progress("pending_verified")
-                            return {"code":"requests_ready","stage":"directory","candidate_count":len(pending["rows"]),
-                                    "fresh_session":not reused,"session_saved":True,"gmail_code_used":gmail_code_used}
-                        directory_responses.clear()
-                        page.goto(LIST_URL, wait_until="commit", timeout=18000)
-                        page.reload(wait_until="domcontentloaded", timeout=45000)
+                    progress("reading_pending_tab")
+                    pending = read_pending_with_private_session(context, private_witness)
+                    if pending is None:
+                        try:
+                            pending = read_official_pending(page, checkpoint, BrowserTimeout)
+                        except BrowserTimeout:
+                            pending = None
+                    if pending is not None:
+                        vault.put(directory.pending_key(spec["owner"]), pending, ttl=directory.TTL)
+                        vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
+                        progress("pending_verified")
+                        pending_result = {"code":"requests_ready","stage":"directory","candidate_count":len(pending["rows"]),
+                                          "fresh_session":not reused,"session_saved":True,"gmail_code_used":gmail_code_used}
+                        if not bulk_due:
+                            return pending_result
+                    # Give the optional full scan a bounded share of the polling interval.
+                    # Never replace a complete saved directory with a partial result.
+                    if pending_result or prior_pending:
+                        bulk_deadline = time.monotonic() + 35
+                    directory_responses.clear()
+                    page.goto(LIST_URL, wait_until="commit", timeout=18000)
+                    page.reload(wait_until="domcontentloaded", timeout=30000)
                     vault.put("edof-full-attempt:"+spec["owner"], time.time(), ttl=900)
                     progress("reading_all_folders")
                 if not is_directory_view(page.url):
@@ -1615,10 +1627,16 @@ def run_browser(spec, *, live=None):
         except GmailError as exc:
             return {"code": exc.code, "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "diagnostics": exc.diagnostics}
         except StopRun as exc:
+            if exc.code in {"directory_unavailable","directory_incomplete","bulk_deferred"} and pending_result:
+                return pending_result
+            if exc.code == "bulk_deferred":
+                return {"code":"directory_incomplete","stage":stage,"fresh_session":not reused,"gmail_code_used":gmail_code_used}
             if vault and exc.code in {"credentials_rejected", "account_unavailable", "otp_rejected", "verification_code", "sign_in_error"}:
                 vault.delete("browser")
             return {"code": exc.code, "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "blocked_writes": blocked, "diagnostics": diagnostics()}
         except BrowserTimeout as exc:
+            if pending_result is not None:
+                return pending_result
             # Keep only a fixed cause. Playwright messages can contain private values.
             reason = str(exc).lower()
             signals["timeout_cause"] = next((cause for needle, cause in (
