@@ -462,8 +462,7 @@ def read_recent_directory(context, witness, state, checkpoint, progress):
     if ((origin.scheme, origin.netloc) != ("https", EDOF_HOST)
             or not origin.path.startswith(WORKSPACE_API_PREFIX)):
         raise directory.IncompleteDirectory()
-    headers = {k:v for k,v in witness.all_headers().items()
-               if k.lower() in {"accept","authorization","x-xsrf-token","x-csrf-token","x-requested-with"}}
+    headers = directory.private_headers(witness)
     target = f"https://{EDOF_HOST}{API_PREFIX}pad"
     rows, seen = {}, set()
     total = previous = None
@@ -495,13 +494,13 @@ def read_recent_directory(context, witness, state, checkpoint, progress):
             seen.add(folder)
             if day:
                 previous = day
-                if day < directory.FIRST_SESSION:
+                if day < directory.FIRST_SESSION and state != "notProcessed":
                     boundary = True
-                else:
-                    if state == "notProcessed" and directory.normalized(row["state"]) not in {
-                            "notprocessed","not processed","a traiter","non traite"}:
-                        raise directory.IncompleteDirectory()
-                    rows[folder] = row
+            if directory.in_scope(row):
+                if state == "notProcessed" and directory.normalized(row["state"]) not in {
+                        "notprocessed","not processed","a traiter","non traite"}:
+                    raise directory.IncompleteDirectory()
+                rows[folder] = row
         if len(seen) > total or len(seen) > directory.MAX_ROWS:
             raise directory.IncompleteDirectory()
         progress.update(method="session_desc", pages=index+1, seen=len(rows), total=total)
@@ -1125,7 +1124,9 @@ def run_browser(spec, *, live=None):
     mailbox = None
     requested_at = None
     business_modes = {"declare", "reconcile"}
-    authenticated = spec["mode"] in {"read", "directory", "inspect_forms"} | business_modes
+    proposal_mode = spec["mode"] in {"proposal_read","proposal_send","proposal_check"}
+    proposal_witness = None
+    authenticated = proposal_mode or spec["mode"] in {"read", "directory", "inspect_forms"} | business_modes
     gate = None
     if authenticated and os.environ.get("EDOF_CONNECTOR_KEY"):
         try:
@@ -1176,7 +1177,7 @@ def run_browser(spec, *, live=None):
     private_witness = None
 
     def observe(response):
-        nonlocal invalid_response, private_witness
+        nonlocal invalid_response, private_witness, proposal_witness
         if gate:
             gate.observe(response)
         parsed = urlsplit(response.url)
@@ -1231,7 +1232,11 @@ def run_browser(spec, *, live=None):
                 # Keep only the specifically requested dossier, or a shortlisted
                 # result subsequently opened by this runner.
                 if tail == spec.get("folder_id") or tail == spec.get("selected_id"):
-                    details[tail] = project_folder(raw, registration=bool(spec.get("import_session")))
+                    if proposal_mode and response.url == f"https://{EDOF_HOST}{API_PREFIX}{tail}":
+                        proposal_witness = response.request
+                        details[tail] = directory.project(raw)
+                    else:
+                        details[tail] = project_folder(raw, registration=bool(spec.get("import_session")))
         except Exception:
             invalid_response = True
 
@@ -1625,6 +1630,18 @@ def run_browser(spec, *, live=None):
                 # save an incomplete/OTP/challenge session or local storage.
                 vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                 session_saved = True
+            if proposal_mode:
+                if not vault:
+                    raise StopRun("private_storage_unavailable")
+                from edof_proposal_jobs import perform
+                try:
+                    return perform(context, proposal_witness, spec, os.environ["EDOF_CONNECTOR_DIRECTORY"], vault, API_PREFIX, EDOF_HOST)
+                except ValueError as exc:
+                    # Only form validation messages may be presented to the operator.
+                    from edof_proposal import InvalidTerms
+                    if isinstance(exc,InvalidTerms):
+                        return {"code":"proposal_refused","proposal_message":str(exc)[:350]}
+                    return {"code":"read_unconfirmed"}
             if spec["mode"] in business_modes:
                 from edof_declaration_form import transmit
 

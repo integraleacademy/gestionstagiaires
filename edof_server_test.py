@@ -29,6 +29,7 @@ from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
 from edof_server_browser import stalled_before_login
 from edof_day_session import DayWorker, POLL_SECONDS, PARIS, working_hours, awaiting_edof_return
 import edof_directory as directory
+import edof_proposal_jobs as proposals
 import edof_declarations as declarations
 from edof_gmail import Vault, GmailError, connector_key, oauth_configured, authorization_url, finish_authorization
 
@@ -36,7 +37,8 @@ JOB_TIMEOUT = 210
 DIRECTORY_TIMEOUT = 420
 DECLARATION_TIMEOUT = 360
 RETENTION = 86400
-AUTH_MODES = {"read", "directory", "declare", "reconcile", "inspect_forms"}
+PROPOSAL_MODES = {"proposal_read", "proposal_send", "proposal_check"}
+AUTH_MODES = PROPOSAL_MODES | {"read", "directory", "declare", "reconcile", "inspect_forms"}
 MESSAGES = {
     **declarations.REASONS,
     "day_login_used": "EFP demande encore une authentification. La veille est en pause. Autorisez une reprise dans les paramètres ou attendez le prochain jour ouvré.",
@@ -125,6 +127,9 @@ class JobCooldown(ValueError):
         super().__init__(f"Le délai entre deux essais est commun au serveur. Nouvel essai possible dans {remaining} s.")
 
 
+MESSAGES.update(proposals.MESSAGES)
+
+
 class ServerTestStore:
     def __init__(self, directory):
         self.directory = Path(directory)
@@ -146,7 +151,7 @@ class ServerTestStore:
         db.execute("CREATE TABLE IF NOT EXISTS directory_requested (owner TEXT PRIMARY KEY)")
         db.execute("DELETE FROM jobs WHERE created < ?", (time.time() - RETENTION,))
         db.execute("UPDATE jobs SET finished = ?, result = ? WHERE finished IS NULL "
-                   "AND created < ? - CASE WHEN mode = 'directory' THEN ? WHEN mode IN ('declare','reconcile') THEN ? ELSE ? END",
+                   "AND created < ? - CASE WHEN mode = 'directory' THEN ? WHEN mode IN ('declare','reconcile','proposal_read','proposal_send','proposal_check') THEN ? ELSE ? END",
                    (time.time(), json.dumps({"code": "interrupted"}), time.time() - 30, DIRECTORY_TIMEOUT, DECLARATION_TIMEOUT, JOB_TIMEOUT))
         db.commit()
         return db
@@ -165,7 +170,12 @@ class ServerTestStore:
                                     ",".join("?" for _ in group)+")", group).fetchone()
                 delay = 300 if auth else 30
                 remaining = math.ceil(recent["created"] + delay - time.time()) if recent["created"] is not None else 0
-                if remaining > 0 and not day_session:
+                reuse = mode in PROPOSAL_MODES and self.connector_key and db.execute(
+                    """SELECT 1 FROM jobs WHERE owner=? AND finished>=? AND json_extract(result,'$.code')='proposal_loaded'
+                       AND NOT EXISTS(SELECT 1 FROM jobs j2 WHERE j2.created>jobs.created AND j2.owner=jobs.owner
+                       AND json_extract(j2.result,'$.code') NOT IN ('proposal_loaded','directory_ready','requests_ready','read_success'))
+                       LIMIT 1""", (owner, time.time()-300)).fetchone() and Vault(self.directory,self.connector_key).get("browser")
+                if remaining > 0 and not (day_session or reuse):
                     raise JobCooldown(remaining)
                 if mode == "directory":
                     db.execute("DELETE FROM directory_requested WHERE owner=?", (owner,))
@@ -453,12 +463,12 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
             process = subprocess.Popen([sys.executable, str(Path(__file__).with_name("edof_server_browser.py"))],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                 text=True, env=child_env, start_new_session=True, pass_fds=(lock_fd,) if provider_fd is None else (lock_fd, provider_fd))
-            timeout = {"directory": DIRECTORY_TIMEOUT, "declare": DECLARATION_TIMEOUT, "reconcile": DECLARATION_TIMEOUT}
+            timeout = {"directory": DIRECTORY_TIMEOUT, **dict.fromkeys({"declare","reconcile"} | PROPOSAL_MODES, DECLARATION_TIMEOUT)}
             output, _ = process.communicate(json.dumps(spec), timeout=timeout.get(spec["mode"], JOB_TIMEOUT))
             parsed = json.loads(output) if process.returncode == 0 and len(output) < 32768 else {}
         if isinstance(parsed, dict) and parsed.get("code") in MESSAGES:
             # The runner emits only the explicitly normalized dossier schema.
-            result = {key: parsed[key] for key in ("code", "stage", "fields", "confirmed_state", "fresh_session", "gmail_code_used", "session_saved", "candidate_count", "blocked_writes", "diagnostics") if key in parsed}
+            result = {key: parsed[key] for key in ("code", "stage", "fields", "confirmed_state", "fresh_session", "gmail_code_used", "session_saved", "candidate_count", "blocked_writes", "diagnostics", "proposal_receipt", "proposal_message") if key in parsed}
     except subprocess.TimeoutExpired:
         result = {"code": "timeout"}
     except Exception:
@@ -494,6 +504,12 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
                     # Keep the verified source snapshot. The next full sync
                     # can retry local analysis without replaying external work.
                     result.setdefault("diagnostics", {})["local_analysis_pending"] = True
+            if spec["mode"] == "proposal_read":
+                proposals.finish_read(store.directory,spec,MESSAGES.get(result["code"],"Vérifiez la connexion EDOF."))
+            if spec["mode"] in {"proposal_send","proposal_check"}:
+                proposals.complete(store.directory, spec, result, result.get("proposal_message") or MESSAGES.get(result["code"],"Vérifiez la connexion EDOF."))
+                if result["code"] == "proposal_confirmed":
+                    store.request_directory(spec["owner"])
             if spec["mode"] in {"declare", "reconcile"}:
                 declarations.complete(store.directory, spec, result["code"], result.get("confirmed_state"))
                 if result["code"] == "declaration_confirmed":
@@ -549,7 +565,7 @@ def start_job(store, owner, spec, *, day_worker=None):
         elif spec["mode"] == "read" and spec.get("import_session"):
             from cpf_provider import ProviderStore
             provider_fd = acquire_provider(ProviderStore(store.directory).state()["provider"])
-        elif spec["mode"] != "inspect_forms":
+        elif spec["mode"] not in {"inspect_forms","proposal_read","proposal_check"}:
             ticket = (spec.get("intent") or {}).get("pilot_ticket")
             if ticket and spec["mode"] in {"declare", "reconcile"}:
                 from cpf_provider import ProviderStore
@@ -563,7 +579,7 @@ def start_job(store, owner, spec, *, day_worker=None):
             raise ValueError("Un navigateur d’essai fonctionne déjà sur ce serveur.") from None
         # A new, explicitly started read can use standard sign-in if the last
         # run never reached an EFP form or the private workspace.
-        if spec["mode"] in {"read", "directory"} and last_read_stalled_at_login(store.latest(owner)):
+        if spec["mode"] in {"read", "directory", "proposal_read"} and last_read_stalled_at_login(store.latest(owner)):
             spec = {**spec, "fresh_login": True}
         if spec["mode"] in {"declare", "reconcile"}:
             from cpf_provider import ProviderStore
@@ -572,6 +588,9 @@ def start_job(store, owner, spec, *, day_worker=None):
             if not declarations.check_before_job(store, spec):
                 raise ValueError("Cette déclaration est à vérifier dans la fiche.")
         job_id = store.reserve(owner, spec["mode"], day_session=day_worker is not None)
+        if spec["mode"] == "proposal_read" and not proposals.reading(store.directory,spec):
+            store.finish(job_id,{"code":"interrupted"})
+            raise ValueError("Une autre lecture est déjà programmée.")
         thread = threading.Thread(target=execute_job, args=(store, job_id, spec, lock_fd, provider_fd, day_worker), daemon=True)
         thread.start()
         return job_id
@@ -611,7 +630,7 @@ def register_edof_server_test(legacy):
                             worker.close()
                         if active["pending"]:
                             continue
-                        pending = declarations.next_job(store, active["revision"], provider=active["provider"])
+                        pending = proposals.next_job(store.directory,active) or declarations.next_job(store, active["revision"], provider=active["provider"])
                         if pending:
                             start_job(store, pending["owner"], pending)
                             continue

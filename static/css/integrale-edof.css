@@ -223,3 +223,15 @@
     max-height: none;
   }
 }
+
+.edof-proposal .edof-proposal-form { display: grid; gap: 14px; margin: 16px 0; }
+.edof-proposal-form fieldset { min-width: 0; margin: 0; border: 1px solid var(--wedof-border); border-radius: 14px; padding: 14px; }
+.edof-proposal-form legend { color: var(--wedof-navy); font-weight: 750; padding: 0 6px; }
+.edof-field-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit,minmax(min(100%,205px),1fr)); }
+.edof-proposal-form label:not(.edof-confirm) { display: grid; gap: 4px; font-size: 13px; }
+.edof-proposal-form :is(input:not([type=checkbox]), select, textarea) { width: 100%; }
+.edof-proposal-form textarea { font: inherit; resize: vertical; padding: 8px; border: 1px solid var(--wedof-border); border-radius: 8px; }
+.edof-proposal-form details, .edof-pace { margin-top: 12px; }
+.edof-pace { display: flex; flex-wrap: wrap; gap: 12px; }
+.edof-proposal-form .edof-pace label { display: inline-flex; align-items: center; }
+.edof-proposal-form > button { justify-self: start; }

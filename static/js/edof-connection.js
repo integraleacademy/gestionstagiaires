@@ -30,3 +30,6 @@
   }
   setTimeout(refresh, 3000);
 })();
+
+// Only a deliberate click on an À traiter dossier requests its official offer.
+document.querySelector("#edof-proposal-load[data-autoload]")?.requestSubmit();

@@ -24,6 +24,13 @@ def normalized(value):
                             if not unicodedata.combining(c)).split())
 
 
+def private_headers(witness):
+    """Forward portal auth only from a verified same-SIRET request to a fixed EDOF endpoint."""
+    allowed = {"accept","authorization","x-xsrf-token","x-csrf-token","x-requested-with",
+               "x-icdc-dgefp-token","x-icdc-origine","x-sessionid"}
+    return {k:v for k,v in witness.all_headers().items() if k.lower() in allowed}
+
+
 def text_field(value, limit):
     if isinstance(value, str):
         return " ".join(value.split())[:limit]
@@ -47,11 +54,19 @@ def canonical_dates(row):
             "session_end_date": session_date(row.get("session_end_date"))}
 
 
+def in_scope(row):
+    day = row.get("session_start_date")
+    if day:
+        return day >= FIRST_SESSION
+    # An undated application still needs a proposal. Use the date of its official pending state.
+    return normalized(row.get("state") or "") in {"notprocessed","not processed","a traiter","non traite","received","tobeprocessed"} and (row.get("request_date") or "") >= FIRST_SESSION
+
+
 def dated_snapshot(snapshot):
     if not snapshot:
         return snapshot
     rows = (canonical_dates(row) for row in snapshot["rows"].values())
-    return {**snapshot, "rows": {r["folder_id"]: r for r in rows if r["session_start_date"] >= FIRST_SESSION}}
+    return {**snapshot, "rows": {r["folder_id"]: r for r in rows if in_scope(r)}}
 
 
 def project(row):
@@ -67,7 +82,12 @@ def project(row):
     solicitations = info.get("solicitations") or []
     ft_pending = any(isinstance(item, dict) and str(item.get("fundingType")) == "9"
                      and item.get("status") == "inProgress" for item in solicitations)
-    return {"ft_pending": ft_pending, "service_done_validated": info.get("validatedServiceDone") is True,
+    summary = {}
+    if normalized(text_field(row.get("currentState"),80)) in {"notprocessed","not processed","non traite","a traiter","received","tobeprocessed"}:
+        for key in ("indicativeDuration","weeklyDuration","hoursInCenter","hoursInCompany","totalIncl"):
+            if isinstance(info.get(key), (str,int,float)) and not isinstance(info[key],bool):
+                summary["priceTotal" if key=="totalIncl" else key] = str(info[key])[:25]
+    return {**({"offer_summary":summary} if summary else {}), "request_date":session_date(row.get("changingStateDate")), "ft_pending": ft_pending, "service_done_validated": info.get("validatedServiceDone") is True,
             "payment_state": text_field(row.get("paymentState"), 80), **({"billing_state": text_field(row["currentBillingState"], 80)} if row.get("currentBillingState") else {}),
             "folder_id": str(row["id"]), "first_name": text_field(attendee.get("firstName"), 120),
             "last_name": text_field(attendee.get("lastName"), 120),
@@ -118,8 +138,11 @@ def pending_key(owner):
 
 def with_pending(full, pending):
     full, pending = dated_snapshot(full), dated_snapshot(pending)
-    if not pending or full and pending["checked"] <= full["checked"]:
+    if not pending:
         return full
+    if full and pending["checked"] <= full["checked"]:
+        undated = {k:r for k,r in pending["rows"].items() if not r["session_start_date"] and k not in full["rows"]}
+        return {**full, "rows":{**full["rows"],**undated}} if undated else full
     combined = dict(full or {"checked":0, "rows":{}, "scope":"pending"})
     combined["rows"] = {**combined["rows"], **pending["rows"]}
     combined["pending_ids"] = set(pending["rows"])
