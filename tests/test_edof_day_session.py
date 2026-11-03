@@ -145,3 +145,22 @@ def test_manual_window_on_weekend_expires_without_enabling_weekday_schedule(tmp_
     assert not allow_login(vault, automatic=True, manual_until=until, now=saturday+dt.timedelta(hours=1))
     store.pause_directory("owner")
     assert not store.manual_until("owner")
+
+
+def test_delayed_official_return_recovers_only_during_manual_hour(tmp_path):
+    from edof_day_session import awaiting_edof_return
+    from edof_server_browser import returning_shell, EDOF_HOST
+    result = {"code":"timeout","stage":"authentication","gmail_code_used":True,
+              "diagnostics":{"callback_status":200,"location":"edof_initialisation"}}
+    assert awaiting_edof_return(result)
+    assert not awaiting_edof_return({**result,"gmail_code_used":False})
+    assert not awaiting_edof_return({**result,"diagnostics":{"callback_status":401,"location":"edof_initialisation"}})
+    assert returning_shell(f"https://{EDOF_HOST}/espace-prive/html/", result["diagnostics"])
+    assert not returning_shell("https://example.invalid/espace-prive/html/", result["diagnostics"])
+    vault = Vault(tmp_path, connector_key("test" * 12))
+    instant = dt.datetime(2026,11,3,6,30,tzinfo=PARIS)
+    until = instant.timestamp()+3600
+    assert allow_login(vault, automatic=True, manual_until=until, now=instant)
+    assert not allow_login(vault, automatic=True, manual_until=until, now=instant)
+    assert allow_login(vault, automatic=True, manual_until=until, now=instant, recover_return=True)
+    assert not allow_login(vault, automatic=True, manual_until=until, now=instant, recover_return=True)
