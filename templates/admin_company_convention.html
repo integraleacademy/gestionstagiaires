@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="card" style="max-width:760px;margin:2rem auto;padding:clamp(18px,4vw,42px)">
+  <a href="{{ back }}">← Fiche stagiaire</a>
+  <h1>Convention de formation entreprise</h1>
+  <p>Formation de {{ trainee.first_name }} {{ trainee.last_name }}. Vérifiez l’identité de l’entreprise acheteuse et les conditions convenues avant de générer le document.</p>
+  {% if error %}<p role="alert" style="color:#a21c27">{{ error }}</p>{% endif %}
+  <form method="post" style="display:grid;gap:1rem">
+    {% for key,label in [('name','Raison sociale'),('address','Adresse complète de l’entreprise'),('representative','Nom et fonction du représentant'),('price','Prix de la formation pour ce salarié (€)'),('remote_rate','Part de la formation à distance (%)'),('payment','Modalités de règlement')] %}
+      <label style="display:grid;gap:.25rem">{{ label }}
+        <input name="{{ key }}" required maxlength="500" {% if key in ['price','remote_rate'] %}inputmode="decimal"{% endif %} value="{{ company.get(key, '') }}">
+      </label>
+    {% endfor %}
+    {% if signed %}<p>La fiche contient déjà une convention signée. Vous pouvez générer un PDF entreprise séparé en conservant le document signé.</p>
+    {% elif pending %}<label><input type="checkbox" name="replace_pending" value="1"> Annuler la demande Yousign individuelle en cours lors du remplacement.</label>{% endif %}
+    <div class="actions">
+      <button class="btn btn-outline" type="submit" name="action" value="preview" formtarget="_blank">Aperçu PDF</button>
+      <button class="btn btn-primary" type="submit" name="action" value="generate">{{ "Enregistrer le PDF entreprise sur la fiche" if signed else "Utiliser cette convention pour le dossier" }}</button>
+    </div>
+  </form>
+  {% if trainee.company_convention and not signed %}
+  <form method="post" style="margin-top:1rem">
+    <button class="btn btn-outline" name="action" value="individual">Revenir au contrat individuel</button>
+  </form>
+  {% endif %}
+</main>
+{% endblock %}

@@ -1,6 +1,7 @@
 import os
 import json
 import uuid
+import company_convention
 import re
 import zlib
 import hashlib
@@ -36638,6 +36639,8 @@ def _auto_send_convention_signature_if_needed(
     """Create the Yousign convention and email it once when business rules allow it."""
     if _trainee_registration_is_cancelled(trainee):
         return False
+    if trainee.get("company_convention"):
+        return False
     if "VAE" in str(_session_get(session_obj, "training_type", "") or "").upper():
         return False
     state = _yousign_state(trainee)
@@ -36714,6 +36717,7 @@ AUTOMATION_TRAINEE_FIELDS = (
     "convention_signature",
     "convocation_signature",
     "convention_signature_history",
+    "company_convention",
     "convention_status",
     "convention_aps_status",
     "convention_aps_generated_at",
@@ -36796,6 +36800,8 @@ def _reset_trainee_automations(trainee: Dict[str, Any]) -> None:
 def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str, force_new: bool = False) -> Dict[str, Any]:
     if _trainee_registration_is_cancelled(trainee):
         raise RuntimeError(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE)
+    if trainee.get("company_convention"):
+        raise ValueError("Ce dossier utilise une convention entreprise à signer par son représentant.")
     existing_state = _yousign_state(trainee)
     has_existing_request = bool(existing_state.get("signature_request_id"))
     has_active_link = bool(existing_state.get("signature_link"))
@@ -37204,7 +37210,7 @@ def _existing_yousign_signed_convention_pdf(
     if stored_path:
         stored_name = os.path.basename(stored_path)
         candidates.extend(os.path.join(root, stored_name) for root in roots)
-    if trainee_id:
+    if trainee_id and not state.get("company"):
         expected_name = f"convention_formation_aps_{_safe_filename_part(trainee_id)}_signee.pdf"
         candidates.extend(os.path.join(root, expected_name) for root in roots)
 
@@ -40599,6 +40605,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
         brevo_no_credit_notice=brevo_no_credit_notice,
+        company_convention_available=_automation_document_config(s).get("slug") in company_convention.COURSES,
         automation_status=_build_trainee_automation_status(s, t, session_id, trainee_id) if _automation_document_config(s).get("enabled") else None,
         automation_module_locked=bool(_automation_document_config(s).get("enabled")) and not _automation_partner_module_enabled(),
         automation_disabled_by_cancellation=t["registration_cancelled"],
@@ -50110,6 +50117,119 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
 
 
 
+@app.route("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/entreprise", methods=["GET", "POST"])
+@admin_login_required
+@admin_write_required
+def admin_company_convention(session_id, trainee_id):
+    data = load_data(run_background_tasks=False)
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+    slug = _automation_document_config(s).get("slug")
+    if not _automation_is_enabled(s, t) or slug not in company_convention.COURSES:
+        abort(403)
+    back = url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, _anchor="automationHub")
+    state = _yousign_state(t)
+    original_state = dict(state)
+    signed = _trainee_convention_is_signed(t)
+    pending = bool(state.get("signature_request_id") and _is_yousign_signature_pending(state))
+    values = _aps_convention_replacements(s, t)
+    lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
+    company = dict(t.get("company_convention") or t.get("company_convention_copy") or {})
+    company.setdefault("name", _certificate_realization_employer(t, lines))
+    billing = next((line for line in lines if company["name"] and line.get("companyName") == company["name"]), {})
+    company.setdefault("address", ", ".join(str(billing[key]) for key in ("clientAddress", "clientZipCode", "clientCity") if billing.get(key)))
+    company.setdefault("price", values["montant_formation"])
+    company.setdefault("payment", "L’entreprise règle par virement à réception de la facture.")
+    company.setdefault("remote_rate", {"aps": "35,43", "desp_paris": "71,43", "desp_puget": "71,43",
+                                       "a3p": "0", "ssiap": "0"}.get(slug, ""))
+    def form(error=""):
+        return render_template("admin_company_convention.html", company=company, trainee=t, back=back,
+                               pending=pending, signed=signed, error=error)
+    if request.method == "GET":
+        return form()
+    if request.form.get("action") == "individual":
+        if signed or not state.get("company"):
+            abort(409)
+        _archive_yousign_convention_state(t, "return_to_individual_contract")
+        t["company_convention_copy_path"] = state["unsigned_pdf_path"]
+        t["company_convention_copy"] = t.pop("company_convention")
+        state.clear()
+        for key in ("convention_aps_pdf_path", "convention_aps_docx_path", "convention_aps_generated_at", "convention_aps_status"):
+            t.pop(key, None)
+        t["convention_status"] = "soon"
+        t["updated_at"] = _now_iso()
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return redirect(back)
+    for key in ("name", "address", "representative", "price", "remote_rate", "payment"):
+        company[key] = request.form.get(key, "").strip()
+        if not company[key] or len(company[key]) > 500:
+            return form("Complétez chaque champ, dans la limite de 500 caractères."), 400
+    price = company["price"].replace(" ", "").replace(",", ".")
+    rate = company["remote_rate"].replace(",", ".")
+    if not re.fullmatch(r"\d{1,7}(\.\d{1,2})?", price) or not re.fullmatch(r"\d{1,3}(\.\d{1,2})?", rate) or float(rate) > 100:
+        return form("Vérifiez le prix et le pourcentage de formation à distance (0 à 100)."), 400
+    preview = request.form.get("action") == "preview"
+    if not preview and pending and (not request.form.get("replace_pending") or not _yousign_is_configured()):
+        return form("La demande de signature en cours doit pouvoir être annulée pour remplacer le contrat."), 409
+    values["montant_formation_eur"] = _format_euro_amount(price)
+    if values["h_elearning"] in ("", "0"):
+        values["h_elearning"] = {"aps": "62", "desp_paris": "175", "desp_puget": "175"}.get(slug, values["h_elearning"])
+    pdf = BytesIO()
+    try:
+        template = _ssiap_document_template(s, t, "convention", _aps_convention_template_path)
+        company_convention.render(template, company, values, _replace_docx_xml_placeholders,
+                                  _assert_docx_has_no_unresolved_variables, _find_libreoffice_binary(), pdf)
+    except Exception:
+        app.logger.exception("Convention entreprise : génération impossible pour %s", trainee_id)
+        return form("La conversion du modèle en PDF a échoué. Vous pouvez réessayer."), 500
+    pdf.seek(0)
+    filename = f"Convention-entreprise-{_safe_filename_part(trainee_id)}.pdf"
+    if preview:
+        return send_file(pdf, mimetype="application/pdf", download_name=filename)
+    # Reload after conversion so an intervening signature cannot be replaced.
+    data = load_data(run_background_tasks=False)
+    s, trainees, current = _find_session_trainee(data, session_id, trainee_id)
+    if (not s or not current or not _automation_is_enabled(s, current)
+            or _yousign_state(current) != original_state or _trainee_convention_is_signed(current) != signed
+            or current.get("updated_at") != t.get("updated_at")):
+        return form("Le dossier a changé pendant la génération. Rechargez la fiche avant de recommencer."), 409
+    state = _yousign_state(current)
+    os.makedirs(YOUSIGN_CONVENTION_DIR, exist_ok=True)
+    path = os.path.join(YOUSIGN_CONVENTION_DIR, f"entreprise-{uuid.uuid4().hex}-{filename}")
+    with open(path, "xb") as out:
+        out.write(pdf.getbuffer())
+    if signed:
+        current["company_convention_copy"] = company
+        current["company_convention_copy_path"] = path
+        append_trainee_history_event(current, "Copie entreprise générée", company["name"], "action", _now_iso())
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return redirect(url_for("admin_view_original_convention", session_id=session_id, trainee_id=trainee_id, company_copy=1))
+    try:
+        if pending:
+            _cancel_yousign_convention_signature(current)
+        else:
+            _archive_yousign_convention_state(current, "company_convention")
+    except Exception:
+        os.remove(path)
+        return form("La demande Yousign n’a pas pu être annulée. Le contrat individuel est toujours actif."), 409
+    now = _now_iso()
+    state.clear()
+    state.update(status="generated", unsigned_pdf_path=path, created_at=now, company=True)
+    current.update(company_convention=company, convention_aps_pdf_path=path, convention_aps_docx_path="",
+                   convention_status="signing", convention_aps_status="generated", convention_aps_generated_at=now,
+                   updated_at=now)
+    append_trainee_history_event(current, "Convention entreprise générée", company["name"], "action", now)
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+    return redirect(url_for("admin_view_original_convention", session_id=session_id, trainee_id=trainee_id))
+
+
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/preview")
 @admin_login_required
 def admin_preview_convention(session_id: str, trainee_id: str):
@@ -50121,6 +50241,8 @@ def admin_preview_convention(session_id: str, trainee_id: str):
         return make_response(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, 409)
     if not _automation_is_enabled(s, t):
         abort(403)
+    if t.get("company_convention"):
+        return redirect(url_for("admin_view_original_convention", session_id=session_id, trainee_id=trainee_id))
     try:
         _, pdf_path = _generate_aps_convention_files(s, t, session_id, trainee_id)
     except Exception as exc:
@@ -50174,6 +50296,8 @@ def api_create_convention_signature(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if t.get("company_convention"):
+        return jsonify({"ok": False, "error": "Une convention entreprise est active sur ce dossier."}), 409
     if _trainee_registration_is_cancelled(t):
         return _cancelled_registration_automation_response()
     if not _automation_is_enabled(s, t):
@@ -50265,6 +50389,8 @@ def admin_create_convention_signature(session_id: str, trainee_id: str):
     if not s or not t:
         flash("Stagiaire introuvable.", "error")
         abort(404)
+    if t.get("company_convention"):
+        return redirect(url_for("admin_company_convention", session_id=session_id, trainee_id=trainee_id))
     if _trainee_registration_is_cancelled(t):
         flash(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, "error")
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
@@ -51418,6 +51544,9 @@ def _serve_signed_convention(data, s, trainees, t, unavailable_url, *, public=Fa
 
     state = _yousign_state(t)
     abs_path = _existing_yousign_signed_convention_pdf(state, trainee_id)
+    if not abs_path and t.get("company_convention"):
+        notify("Le PDF signé par l’entreprise doit être importé sur la fiche stagiaire.", "error")
+        return redirect(unavailable_url)
     if not abs_path:
         if not _yousign_is_configured():
             app.logger.error(
@@ -51530,7 +51659,10 @@ def admin_upload_signed_convention(session_id: str, trainee_id: str):
         trainee_id=trainee_id,
         _anchor="automationHub",
     )
-    if not _trainee_convention_is_signed(t):
+    company = bool(t.get("company_convention"))
+    if company and not _automation_is_enabled(s, t):
+        abort(403)
+    if not company and not _trainee_convention_is_signed(t):
         flash("La convention doit être marquée comme signée avant d’importer son PDF.", "error")
         return redirect(redirect_url)
     incoming_file = request.files.get("signed_pdf")
@@ -51545,7 +51677,7 @@ def admin_upload_signed_convention(session_id: str, trainee_id: str):
         flash("Le PDF signé dépasse la taille maximale de 30 Mo.", "error")
         return redirect(redirect_url)
     try:
-        signed_path = _store_signed_convention_pdf_bytes(pdf_bytes, trainee_id)
+        signed_path = _store_signed_convention_pdf_bytes(pdf_bytes, f"entreprise-{trainee_id}" if company else trainee_id)
     except RuntimeError as exc:
         flash(str(exc), "error")
         return redirect(redirect_url)
@@ -51575,6 +51707,8 @@ def admin_upload_signed_convention(session_id: str, trainee_id: str):
         "action",
         now,
     )
+    if company:
+        _schedule_convocation_after_convention_signed(s, t, session_id, trainee_id)
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
@@ -51591,6 +51725,8 @@ def admin_view_original_convention(session_id: str, trainee_id: str):
         abort(404)
     state = _yousign_state(t)
     pdf_path = str(state.get("unsigned_pdf_path") or t.get("convention_aps_pdf_path") or "")
+    if request.args.get("company_copy") == "1":
+        pdf_path = str(t.get("company_convention_copy_path") or "")
     abs_path = os.path.abspath(pdf_path) if pdf_path else ""
     root = os.path.abspath(YOUSIGN_CONVENTION_DIR)
     if not abs_path or not abs_path.startswith(root + os.sep) or not os.path.exists(abs_path):
