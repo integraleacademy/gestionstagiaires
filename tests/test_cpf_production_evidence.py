@@ -34,3 +34,20 @@ def test_explicit_start_date_takes_precedence_over_tracking(tmp_path):
             "wedof_links":[{"active":True,"external_id":FOLDER,"session_id":"s","trainee_id":"t"}]}
     legacy = NS(DATA_FILE=tmp_path/"data.json",load_data=lambda:data)
     assert evidence.read_evidence(legacy,[FOLDER])[FOLDER]["entry_training"]["actual_date"] == "2026-01-03"
+
+def test_session_end_is_used_for_completed_training_without_duplicate_date_entry(tmp_path):
+    t = {"id":"t","first_name":"Marie","last_name":"Essai"}
+    group = {"id":"s","date_start":"2026-01-01","date_end":"2026-01-30","trainees":[t]}
+    data = {"sessions":[group],"wedof_links":[{"active":True,"external_id":FOLDER,"session_id":"s","trainee_id":"t"}]}
+    legacy = NS(DATA_FILE=tmp_path/"data.json",load_data=lambda:data)
+    proof = lambda:evidence.read_evidence(legacy,[FOLDER])[FOLDER]
+    assert "service_done" not in proof()
+    t["deliverables"] = {"attestation_fin_formation":"signed-file"}
+    assert "service_done" not in proof()
+    t["realized_training_hours"] = "12"
+    assert proof()["service_done"]["actual_date"] == group["date_end"]
+    t["vtc_real_training_dates"] = "02/01/2026 au 24/01/2026"
+    assert proof()["entry_training"]["actual_date"] == "2026-01-02"
+    assert proof()["service_done"]["actual_date"] == "2026-01-24"
+    t["actual_training_end_date"] = "non renseignée"
+    assert "service_done" not in proof()

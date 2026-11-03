@@ -682,7 +682,7 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
                     snapshot = Vault(store.directory, store.connector_key).get(directory.record_key(spec["owner"]))
                     if snapshot:
                         snapshot = directory.dated_snapshot(snapshot)
-                        process_directory(store, snapshot, store.data_file)
+                        process_directory(store, snapshot)
 
                 except (OSError, ValueError, sqlite3.Error):
                     # Keep the verified source snapshot. The next full sync

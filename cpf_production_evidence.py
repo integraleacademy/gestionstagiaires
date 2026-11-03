@@ -2,6 +2,7 @@
 import datetime as dt
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+import re
 import sqlite3
 from zoneinfo import ZoneInfo
 
@@ -73,8 +74,13 @@ def read_evidence(legacy, requested, *, data=None):
                         session_start_date=start, session_end_date=end)
             if not start or not end or start > today:
                 continue
+            vtc_period = re.fullmatch(r"(?:du\s+)?(\d{1,2}/\d{1,2}/\d{4})\s+au\s+(\d{1,2}/\d{1,2}/\d{4})",
+                                      str(t.get("vtc_real_training_dates") or "").strip(), re.I)
+            vtc_start, vtc_end = (iso(d) for d in vtc_period.groups()) if vtc_period else ("","")
+            if not (start <= vtc_start <= vtc_end <= end):
+                vtc_start = vtc_end = ""
             day = iso(t.get("actual_training_start_date") or t.get("real_training_start_date")
-                      or t.get("certificate_realization_start_date"))
+                      or t.get("certificate_realization_start_date")) or vtc_start
             proof = "Date d’entrée effective renseignée dans la fiche de production"
             if not day and has_tracking:
                 after = (dt.date.fromisoformat(start)-dt.timedelta(days=1)).isoformat()
@@ -86,18 +92,21 @@ def read_evidence(legacy, requested, *, data=None):
                         actual = stamp.astimezone(paris).date().isoformat() if stamp.tzinfo else ""
                     except (TypeError, ValueError):
                         continue
-                    if start <= actual <= min(today, end):
-                        if not day or actual < day:
-                            day, proof = actual, f"Activité pédagogique enregistrée en production, événement {key}"
+                    if actual == start:
+                        day, proof = start, f"Activité pédagogique enregistrée en production, événement {key}"
                         break
             if start <= day <= min(today, end):
                 item["entry_training"] = {"action": "entry_training",
                                           "actual_date": day, "evidence": proof, "source": "production"}
-            actual_end = iso(t.get("actual_training_end_date") or t.get(
-                "real_training_end_date") or t.get("certificate_realization_end_date"))
+            end_record = t.get("actual_training_end_date") or t.get("real_training_end_date") or t.get("certificate_realization_end_date")
+            actual_end = iso(end_record) if end_record else vtc_end
             certificate = (t.get("deliverables") or {}).get("attestation_fin_formation")
             done = hours(t.get("realized_training_hours") or t.get("realised_training_hours")
                          or t.get("hours_completed") or t.get("certificate_realization_hours"))
+            if not end_record and not actual_end and not t.get("vtc_real_training_dates") and certificate and done:
+                # The completion certificate and recorded hours support using the
+                # course end date. The browser verifies those hours before sending.
+                actual_end = end
             if start <= actual_end <= min(today, end) and certificate and done:
                 # The consumer compares these actual hours with the contracted duration from the official detail.
                 item["service_done"] = {"action": "service_done", "actual_date": actual_end, "evidence": "Attestation de fin et heures réalisées dans la fiche de production",

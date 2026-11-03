@@ -162,27 +162,21 @@ def test_partner_and_viewer_cannot_switch(site):
         assert result.status_code == 403 and site.gate.state()["revision"] == 0
 
 
-def test_native_sync_prepares_entries_from_real_activity_and_never_replays_history(site, tmp_path):
-    import sqlite3
+def test_sync_preserves_history_and_ignores_old_exercise_dates(site):
     from integrale_edof_sync import process_directory
-    record = {"folder_id":"100000", "state":"accepted","session_start_date":"2026-02-02","session_end_date":"2026-02-06"}
-    data = json.loads(site.local.read_text())
-    data["wedof_links"] = [{"external_id":"100000","session_id":"s1","trainee_id":"t1","active":True}]
-    site.local.write_text(json.dumps(data))
-    (tmp_path/"native_elearning").mkdir()
-    with sqlite3.connect(tmp_path/"native_elearning"/"tracking.sqlite3") as db:
-        db.execute("CREATE TABLE tracking_events(id INTEGER, session_id TEXT, trainee_id TEXT,event_type TEXT,activity_id TEXT,event_at TEXT)")
-        db.executemany("INSERT INTO tracking_events VALUES(?, 's1', 't1',?, 'unit',?)",
-                       [(1,"session_opened","2026-02-02T10:00:00Z"),(2,"content_completed","2026-02-03T10:00:00Z")])
-    snap = {"checked":100, "rows":{"100000":record}}
-    process_directory(site.store,snap,site.local)
-    draft=dashboard.local_operations(site.gate)["100000"]["draft"]
-    assert draft["actual_date"] == "2026-02-03" and draft["source"] == "lms"
-    process_directory(site.store,{"checked":101,"rows":{"100000":{**record,"state":"inTraining"}}},site.local)
-    process_directory(site.store,snap,site.local)
+    snap = {"checked":100,"rows":{"100000":{"folder_id":"100000","state":"accepted"}}}
+    from integrale_edof_dashboard import record_work
+    record_work(site.gate, "100000", "LMS", draft=json.dumps({
+        "action":"entry_training","source":"lms","actual_date":"2026-02-03","evidence":"Premier exercice"}))
+    process_directory(site.store,snap)
+    process_directory(site.store,{"checked":101,"rows":{"100000":{"folder_id":"100000","state":"inTraining"}}})
+    process_directory(site.store,snap)
     with site.gate.connect() as db:
         assert list(map(tuple,db.execute("SELECT previous,state FROM directory_events"))) == [("accepted","entry")]
-    assert dashboard.local_operations(site.gate)["100000"]["draft"] == draft
+    assert not dashboard.local_operations(site.gate)["100000"]["draft"]
+    site.gate.switch("integrale",0,"admin")
+    html = site.client.get("/admin/edof-test?folder=100000").text
+    assert 'name="actual_date" value="2026-02-02"' in html and "Premier exercice" not in html
 
 
 def test_activation_after_weeks_schedules_one_refresh_and_stops_after_auth_error(tmp_path):

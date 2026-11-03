@@ -232,6 +232,16 @@ def same_enrolment(row, proof):
                ("first_name", "last_name", "session_start_date", "session_end_date"))
 
 
+def training_proof(row, proof, action):
+    draft = proof.get(action) or {}
+    # Older versions of the production bridge return the first completed exercise
+    # as a start date. It can corroborate day one but cannot move the course date.
+    if (action == "entry_training" and draft.get("actual_date") != row.get("session_start_date")
+            and (draft.get("evidence") or "").startswith("Activité pédagogique enregistrée en production,")):
+        return {}
+    return draft
+
+
 def local_proofs(store, folders):
     from types import SimpleNamespace
     from cpf_production_evidence import read_evidence
@@ -296,18 +306,23 @@ def discover(store, owner, snapshot, *, outcomes=None):
             if {action, "both"}.intersection([*proof.get("blocks", []), *local_proof.get("blocks", [])]):
                 record(folder, action, "blocked", "blocked")
                 continue
-            if proof.get(action) and same_enrolment(row, proof):
-                draft = proof[action]
-            elif (not proof.get(action) and (not proof.get("first_name") or same_enrolment(row, proof))
-                  and local_proof.get(action) and same_enrolment(row, local_proof)):
-                draft = {**local_proof[action], "source":"local"}
-            else:
-                draft = drafts.get(folder, {}).get("draft") or {}
-                if (draft.get("source") != "admin" or draft.get("action") != action or not same_enrolment(row,draft)
-                        or proof.get("first_name") and not same_enrolment(row, proof)
-                        or draft.get("rate", 100) < 100 and draft.get("motif") not in MOTIFS):
-                    record(folder, action, "missing", "missing")
+            remote_draft = training_proof(row, proof, action)
+            local_draft = training_proof(row, local_proof, action)
+            saved = drafts.get(folder, {}).get("draft") or {}
+            if saved.get("source") == "admin" and saved.get("action") == action:
+                if (not same_enrolment(row, saved) or (proof.get("first_name") and not same_enrolment(row, proof))
+                        or (saved.get("rate", 100) < 100 and saved.get("motif") not in MOTIFS)):
+                    record(folder, action, "review", "review")
                     continue
+                draft = saved
+            elif remote_draft and same_enrolment(row, proof):
+                draft = remote_draft
+            elif (not remote_draft and (not proof.get("first_name") or same_enrolment(row, proof))
+                  and local_draft and same_enrolment(row, local_proof)):
+                draft = {**local_draft, "source":"local"}
+            else:
+                record(folder, action, "missing", "missing")
+                continue
             try:
                 status = enqueue(store.directory, owner, revision, row, draft, "Gestion Stagiaires", automatic=True)
             except ValueError:
@@ -370,11 +385,11 @@ def check_before_job(store, spec):
                 return False
         if source in {"production", "local"}:
             if source == "local":
-                if proof.get(action) or (proof.get("first_name") and not same_enrolment(spec["intent"],proof)):
+                if training_proof(spec["intent"],proof,action) or (proof.get("first_name") and not same_enrolment(spec["intent"],proof)):
                     complete(store.directory, spec, "declaration_evidence_changed")
                     return False
                 proof = local_proofs(store, [folder]).get(folder, {})
-            current = proof.get(action, {})
+            current = training_proof(spec["intent"], proof, action)
             if current and source == "local":
                 current = {**current, "source":"local"}
             if not same_enrolment(spec["intent"], proof) or not current or any(spec["intent"].get(k) != v for k, v in current.items()):
