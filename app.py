@@ -50150,8 +50150,8 @@ def admin_company_signature(session_id, trainee_id):
                 if not row:
                     if not is_copy and _trainee_convention_is_signed(t):
                         raise ValueError("Cette convention a déjà été signée.")
-                    person = company_signature.contact(host, request.form)
                     company = t["company_convention_copy" if is_copy else "company_convention"]
+                    person = company_signature.contact(host, company.get("signer") or request.form)
                     row = rows[key] = company_signature.new_row(host, path, company["name"], person)
                     save()
                 if row.get("status") == "draft":
@@ -50207,7 +50207,8 @@ def _company_convention_form(session_id, trainee_id):
     pending = bool(state.get("signature_request_id") and _is_yousign_signature_pending(state))
     values = _aps_convention_replacements(s, t)
     lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
-    company = dict(t.get("company_convention") or t.get("company_convention_copy") or {})
+    pdf_path, is_copy = company_signature.document(t)
+    company = dict(t.get("company_convention_copy" if is_copy else "company_convention") or {})
     company.setdefault("name", _certificate_realization_employer(t, lines))
     billing = next((line for line in lines if company["name"] and line.get("companyName") == company["name"]), {})
     company.setdefault("address", ", ".join(str(billing[key]) for key in ("clientAddress", "clientZipCode", "clientCity") if billing.get(key)))
@@ -50215,13 +50216,15 @@ def _company_convention_form(session_id, trainee_id):
     company.setdefault("payment", "L’entreprise règle par virement à réception de la facture.")
     company.setdefault("remote_rate", {"aps": "35,43", "desp_paris": "71,43", "desp_puget": "71,43",
                                        "a3p": "0", "ssiap": "0"}.get(slug, ""))
-    pdf_path, is_copy = company_signature.document(t)
     version = company_signature.version(pdf_path)
     row = (t.get("company_signature_requests") or {}).get(version, {})
+    signer = dict(company.get("signer") or row.get("contact") or {})
     def form(error=""):
+        editing = (not pdf_path or request.args.get("modifier") == "1" or bool(error)
+                   or not (row or company.get("signer")))
         return render_template("admin_company_convention.html", company=company, trainee=t, back=back,
                                pending=pending, signed=signed, error=error, pdf_path=pdf_path, is_copy=is_copy, signature=row,
-                               version=version,
+                               version=version, editing=editing, signer=signer,
                                active_signature=row.get("status") in company_signature.ACTIVE)
     if request.method == "GET":
         return form()
@@ -50242,10 +50245,16 @@ def _company_convention_form(session_id, trainee_id):
         s.pop("stagiaires", None)
         save_data(data)
         return redirect(back)
-    for key in ("name", "address", "representative", "price", "remote_rate", "payment"):
-        company[key] = request.form.get(key, "").strip()
-        if not company[key] or len(company[key]) > 500:
-            return form("Complétez chaque champ, dans la limite de 500 caractères."), 400
+    fields = ("name", "address", "role", "price", "remote_rate", "payment")
+    company.update({key: request.form.get(key, "").strip() for key in fields})
+    signer = {key: request.form.get(key, "").strip() for key in ("first_name", "last_name", "email", "phone")}
+    try:
+        company["signer"] = company_signature.contact(sys.modules[__name__], signer)
+    except ValueError as exc:
+        return form(str(exc)), 400
+    if any(not company[key] or len(company[key]) > 500 for key in fields):
+        return form("Complétez les informations de l’entreprise, du signataire et de la formation."), 400
+    company["representative"] = f"{signer['first_name']} {signer['last_name']}, {company['role']}"
     price = company["price"].replace(" ", "").replace(",", ".")
     rate = company["remote_rate"].replace(",", ".")
     if not re.fullmatch(r"\d{1,7}(\.\d{1,2})?", price) or not re.fullmatch(r"\d{1,3}(\.\d{1,2})?", rate) or float(rate) > 100:

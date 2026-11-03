@@ -10,6 +10,7 @@ from docx import Document
 
 ROOT = Path(__file__).resolve().parents[1]
 FIELDS = dict(name="Société Exemple", address="1 rue du Centre, 83480 Puget-sur-Argens",
+              first_name="Anne", last_name="Martin", role="gérante", email="anne@example.org", phone="0611223344",
               representative="Anne Martin, gérante", payment="Virement à réception.", price="1700", remote_rate="35,43")
 
 
@@ -59,6 +60,28 @@ class EmployerAgreementTests(unittest.TestCase):
             self.assertEqual(result.status_code, 302)
             self.assertEqual(self.data["sessions"][0]["trainees"][0]["convention_status"], "signed")
             schedule.assert_called_once()
+
+    def test_single_form_collects_the_signer_before_creating_the_pdf(self):
+        html = self.client.get(self.url).get_data(as_text=True)
+        self.assertEqual(html.count('<form method="post"'), 1)
+        for key in ("first_name", "last_name", "role", "email", "phone"):
+            self.assertLess(html.index(f'name="{key}"'), html.index('>Générer le PDF'))
+        for bad in ({"email": "invalid"}, {"phone": ""}, {"first_name": ""}):
+            response = self.client.post(self.url, data=dict(FIELDS, action="prepare") | bad)
+            self.assertEqual(response.status_code, 400)
+            self.assertIn("Société Exemple", response.get_data(as_text=True))
+        gestion.company_convention.render.assert_not_called()
+        self.save.assert_not_called()
+        response = self.client.post(self.url, data=dict(FIELDS, action="prepare"))
+        receipt = self.client.get(response.location).get_data(as_text=True)
+        self.assertIn("Envoyer à l’entreprise pour signature", receipt)
+        self.assertNotIn('name="email"', receipt)
+        self.assertIn(FIELDS["email"], receipt)
+        company = self.data["sessions"][0]["trainees"][0]["company_convention"]
+        self.assertEqual(company["representative"], "Anne Martin, gérante")
+        self.assertEqual(company["signer"]["phone"], "+33611223344")
+        edit = self.client.get(self.url + "?modifier=1").get_data(as_text=True)
+        self.assertIn('value="anne@example.org"', edit)
 
     def test_signed_record_keeps_original_and_stores_separate_pdf(self):
         self.trainee["convention_legacy_signed"] = True
