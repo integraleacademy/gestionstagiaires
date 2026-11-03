@@ -127,16 +127,17 @@ def test_lookup_failure_preserves_existing_booking(hosting_case, monkeypatch, fa
     "/admin/sessions/S-HOSTING/trainees",
     "/admin/sessions/S-HOSTING/stagiaires/T-HOSTING",
 ])
-def test_admin_pages_also_persist_confirmed_cancellation(hosting_case, monkeypatch, path):
+def test_admin_pages_use_persisted_status_until_external_refresh(hosting_case, monkeypatch, path):
     client, _, trainee, saved = hosting_case
-    mock_lookup(monkeypatch, {"ok": True, "reserved": False})
+    lookup = mock_lookup(monkeypatch, {"ok": True, "reserved": False})
     monkeypatch.setattr(gestion_app, "render_template", lambda *args, **kwargs: "ok")
 
     response = client.get(path)
 
     assert response.status_code == 200
-    assert trainee["hosting_status"] == "unknown"
-    assert saved[-1]["sessions"][0]["trainees"][0]["hosting_status"] == "unknown"
+    assert trainee["hosting_status"] == "reserved"
+    assert saved == []
+    lookup.assert_not_called()
 
 
 def test_external_refresh_api_persists_cancellation_and_does_not_repeat_save(hosting_case, monkeypatch):

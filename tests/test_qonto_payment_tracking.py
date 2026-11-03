@@ -1,3 +1,4 @@
+from sheet_assets import with_sheet_assets
 import hashlib, hmac, json, os, time, unittest
 from unittest.mock import patch
 import app as gestion_app
@@ -367,7 +368,7 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         self.assertIn('<option value="paid">Payée</option>', template)
         self.assertNotIn('badge yellow">En attente</span>', template)
         self.assertNotEqual(partial['payment_status'], 'paid')
-        trainee_template = open('templates/admin_trainee.html', encoding='utf-8').read()
+        trainee_template = with_sheet_assets(open('templates/admin_trainee.html', encoding='utf-8').read())
         self.assertIn("installmentDate(i)>=today", trainee_template)
 
     def test_billing_payment_progress_unpaid_and_paid_cases(self):
@@ -414,7 +415,7 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         self.assertEqual(summary["qonto_payment_entries"],[])
 
     def test_admin_template_uses_canonical_payment_rendering(self):
-        html=open("templates/admin_trainee.html",encoding="utf-8").read()
+        html= with_sheet_assets(open("templates/admin_trainee.html",encoding="utf-8").read())
         self.assertIn("canonicalInvoiceEntry",html)
         self.assertIn("lineRemaining(l)>0?fmtMoney(lineRemaining(l))",html)
         self.assertIn("Partiellement payé",html)

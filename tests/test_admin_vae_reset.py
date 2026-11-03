@@ -1,3 +1,4 @@
+from sheet_assets import with_sheet_assets
 import os
 import tempfile
 import unittest
@@ -83,7 +84,7 @@ class AdminVaeResetTests(unittest.TestCase):
         response = self.client.get("/admin/sessions/S-VAE/stagiaires/T-VAE")
 
         self.assertEqual(response.status_code, 200)
-        html = response.get_data(as_text=True)
+        html = with_sheet_assets(response.get_data(as_text=True))
         self.assertIn("Réinitialiser le livret 1", html)
         self.assertIn("Confirmez-vous la réinitialisation du livret 1", html)
         self.assertIn("/admin/sessions/S-VAE/stagiaires/T-VAE/vae-dossier/D-VAE/reset", html)

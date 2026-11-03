@@ -1,91 +1,101 @@
-"""Automatic, targeted WEDOF refresh for the admin trainee page."""
+"""Refresh stale internal CPF links outside the HTTP request that displays them."""
+import datetime
+import threading
+import time
+from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 
-from functools import wraps
-from typing import Any
+from cpf_provider import ProviderUnavailable, provider_operation
 
-from flask import session
-
-
-_SYNC_ERROR = "Synchronisation momentanément indisponible"
-
-
-def _refresh_associated_cpf(legacy_app: Any, session_id: str, trainee_id: str) -> bool:
-    """Refresh the one WEDOF folder linked to the requested trainee.
-
-    The page must remain available when WEDOF or the internal quota governor is
-    unavailable. In that case the last snapshot is kept and clearly marked as
-    stale by the existing CPF view.
-    """
-    data = legacy_app.load_data(run_background_tasks=False)
-    local_session, trainee = legacy_app._cpf_local_registration(
-        data, session_id, trainee_id,
-    )
-    if not local_session or not trainee:
-        return False
-
-    link = legacy_app._cpf_active_link(
-        data, session_id=session_id, trainee_id=trainee_id,
-    )
-    if not link:
-        return False
-
-    try:
-        # This is one read-only GET for the already-associated folder. It does
-        # not list or scan WEDOF folders and remains protected by the governor.
-        legacy_app._refresh_cpf_link_from_wedof(data, link)
-    except (legacy_app.WedofApiError, legacy_app.WedofConfigurationError) as exc:
-        link["cpf_sync_error"] = _SYNC_ERROR
-        legacy_app.app.logger.info(
-            "[WEDOF] automatic trainee refresh unavailable "
-            "session_id=%s trainee_id=%s external_id=%s error_code=%s",
-            session_id,
-            trainee_id,
-            link.get("external_id") or "",
-            getattr(exc, "code", exc.__class__.__name__),
-        )
-    except Exception:
-        # A remote-data edge case must never make an administrator lose access
-        # to the trainee sheet. Keep the cached snapshot and log the traceback.
-        link["cpf_sync_error"] = _SYNC_ERROR
-        legacy_app.app.logger.exception(
-            "[WEDOF] unexpected automatic trainee refresh failure "
-            "session_id=%s trainee_id=%s external_id=%s",
-            session_id,
-            trainee_id,
-            link.get("external_id") or "",
-        )
-
-    legacy_app.save_data(data)
-    return True
+_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="cpf-snapshot")
+_lock = threading.Lock()
+_pending = set()
+_recent_attempts = OrderedDict()
+MAX_PENDING = 16
+DAY = 86400
 
 
-def register_admin_trainee_wedof_refresh(legacy_app: Any) -> None:
-    """Wrap the existing admin view so its linked WEDOF folder is fresh first."""
-    flask_app = legacy_app.app
-    endpoint = "admin_trainee_page"
-    current_view = flask_app.view_functions.get(endpoint)
-    if current_view is None or getattr(current_view, "_wedof_auto_refresh", False):
+class LinkChanged(Exception):
+    """Another operation superseded this snapshot while the provider was replying."""
+
+
+def refresh_link(host, session_id, trainee_id, link):
+    external_id = str(link["external_id"])
+    previous = (link.get("last_seen_at"), link.get("cpf_snapshot"), link.get("wedof_state"))
+    # Keep the selected provider stable through the targeted commit.
+    def commit(folder=None, remote=None):
+        def merge(current):
+            active = host._cpf_active_link(current, session_id=session_id, trainee_id=trainee_id)
+            training = host.find_session(current, session_id)
+            if (not training or (training.get("partner_id") or host.INTEGRALE_PARTNER_ID) != host.INTEGRALE_PARTNER_ID
+                    or not active or str(active.get("external_id")) != external_id
+                    or previous != (active.get("last_seen_at"), active.get("cpf_snapshot"), active.get("wedof_state"))):
+                raise LinkChanged()
+            if folder is None:
+                message = "Synchronisation momentanément indisponible"
+                if active.get("cpf_sync_error") == message:
+                    raise LinkChanged()
+                active["cpf_sync_error"] = message
+            else:
+                active["cpf_snapshot"] = host._cpf_public_snapshot(remote)
+                active["wedof_state"] = remote.get("state") or active.get("wedof_state")
+                active["last_seen_at"] = host._now_iso()
+                active.pop("cpf_sync_error", None)
+                host._upsert_wedof_folder_cache(current, folder)
+                host.sync_folder_automation_status(current, folder)
+            return {}
+        try:
+            host._atomic_update_data(merge)
+        except LinkChanged:
+            return False
+        return True
+
+    with provider_operation("wedof"):
+        try:
+            folder = host.WedofClient().get_registration_folder_interactive(
+                external_id, operation="cpf_invoice_manual_refresh",
+            )
+            remote = host.extract_folder(folder)
+            if str(remote.get("external_id") or "") != external_id or str(remote.get("type") or "").casefold() != "cpf":
+                raise host.WedofApiError("Le dossier retourné ne correspond pas au lien CPF.")
+        except (host.WedofApiError, host.WedofConfigurationError):
+            commit()
+            raise
+        return commit(folder, remote)
+
+
+def schedule_refresh(host, session_id, trainee_id, link):
+    if not link or not link.get("external_id"):
         return
+    stamp = host._parse_iso_datetime(link.get("last_seen_at") or (link.get("cpf_snapshot") or {}).get("synced_at"))
+    if stamp and datetime.datetime.utcnow() - stamp < datetime.timedelta(days=1):
+        return
+    key = (session_id, trainee_id, str(link["external_id"]))
+    now = time.monotonic()
+    with _lock:
+        if key in _pending or len(_pending) >= MAX_PENDING or now - _recent_attempts.get(key, -DAY) < DAY:
+            return
+        _pending.add(key)
+        _recent_attempts[key] = now
+        _recent_attempts.move_to_end(key)
+        if len(_recent_attempts) > 1024:
+            _recent_attempts.popitem(last=False)
 
-    @wraps(current_view)
-    def refreshed_view(session_id: str, trainee_id: str, *args: Any, **kwargs: Any):
-        # The central before-request guard has already validated the session.
-        # Retaining this explicit check also keeps the wrapper safe in tests and
-        # in any alternate WSGI setup that omits that guard.
-        if session.get("admin_logged_in"):
-            try:
-                _refresh_associated_cpf(legacy_app, session_id, trainee_id)
-            except Exception:
-                # Loading or saving the local store can fail independently of
-                # WEDOF. Let the original page handle its normal fallback path.
-                flask_app.logger.exception(
-                    "[WEDOF] automatic trainee refresh could not be persisted "
-                    "session_id=%s trainee_id=%s",
-                    session_id,
-                    trainee_id,
-                )
-        return current_view(session_id, trainee_id, *args, **kwargs)
-
-    refreshed_view._wedof_auto_refresh = True
-    flask_app.view_functions[endpoint] = refreshed_view
-
+    def run():
+        try:
+            refresh_link(host, session_id, trainee_id, link)
+        except ProviderUnavailable:
+            pass
+        except (host.WedofApiError, host.WedofConfigurationError) as exc:
+            host.app.logger.info("CPF background refresh unavailable code=%s", getattr(exc, "code", type(exc).__name__))
+        except Exception:
+            host.app.logger.exception("CPF background refresh failed")
+        finally:
+            with _lock:
+                _pending.discard(key)
+    try:
+        _pool.submit(run)
+    except RuntimeError:  # Worker shutting down. The next process may retry.
+        with _lock:
+            _pending.discard(key)
+            _recent_attempts.pop(key, None)

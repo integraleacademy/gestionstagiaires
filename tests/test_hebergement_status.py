@@ -455,7 +455,7 @@ class AdminTraineesPageHostingTests(unittest.TestCase):
         gestion_app.fetch_hebergement_status = self.original_hebergement_lookup
         gestion_app.render_template = self.original_render_template
 
-    def test_admin_trainees_refreshes_hosting_on_render_for_a3p(self):
+    def test_admin_roster_renders_last_hosting_status_without_refresh(self):
         data = {
             "sessions": [
                 {
@@ -505,13 +505,9 @@ class AdminTraineesPageHostingTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(rendered["template_name"], "admin_trainees.html")
-        self.assertEqual(saved["count"], 1)
-        self.assertEqual(seen["email"], "charles.debouvry@gmail.com")
-        self.assertEqual(seen["kwargs"]["last_name"], "DEBOUVRY")
-        self.assertEqual(seen["kwargs"]["first_name"], "Charles")
-        self.assertEqual(seen["kwargs"]["session_name"], "A3P MARS 2026")
-        self.assertEqual(data["sessions"][0]["trainees"][0]["hosting_status"], "reserved")
-        self.assertEqual(rendered["context"]["trainees"][0]["hosting_status"], "reserved")
+        self.assertEqual(saved["count"], 0)
+        self.assertEqual(seen, {})
+        self.assertEqual(rendered["context"]["trainees"][0]["hosting_status"], "unknown")
 
     def test_admin_trainees_marks_dossier_incomplete_for_afc_when_ssiap_medical_is_missing(self):
         data = {

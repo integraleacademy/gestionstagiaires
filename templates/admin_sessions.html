@@ -2871,9 +2871,7 @@
     setTimeout(()=>document.getElementById("sessionSearchInput")?.focus(), 80);
   });
 
-  // charge le compteur dès l'ouverture
   window.addEventListener("load", ()=>{
-    loadDocsToControl();
     const params = new URLSearchParams(window.location.search);
     if(params.get("openDocsToControl") === "1") document.getElementById("btnOpenDocsToControl")?.click();
     if(params.get("openTraineeSearch") === "1") document.getElementById("btnOpenTraineeSearch")?.click();

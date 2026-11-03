@@ -1,3 +1,4 @@
+from sheet_assets import with_sheet_assets
 import os
 import unittest
 from unittest.mock import patch
@@ -96,6 +97,6 @@ class QontoPdfFetchTests(unittest.TestCase):
     def test_interface_uses_internal_invoice_route_not_legacy_pdf_url(self):
         for path in ["templates/admin_sessions_billing.html", "templates/admin_trainee.html", "templates/admin_direct_debits.html"]:
             with open(path, encoding="utf-8") as fh:
-                source = fh.read()
+                source = with_sheet_assets(fh.read())
             self.assertIn("/admin/qonto/invoices/", source)
             self.assertNotIn("invoicePdfUrl", source)

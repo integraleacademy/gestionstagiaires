@@ -1,3 +1,4 @@
+from sheet_assets import with_sheet_assets
 import json
 import shutil
 import subprocess
@@ -162,10 +163,10 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         auto_send.assert_called_once()
 
     def test_admin_trainee_finance_widget_syncs_validated_status(self):
-        template = gestion_app.app.jinja_loader.get_source(
+        template = with_sheet_assets(gestion_app.app.jinja_loader.get_source(
             gestion_app.app.jinja_env,
             "admin_trainee.html",
-        )[0]
+        )[0])
 
         self.assertIn("function syncFinancementStatusIfValidated(state)", template)
         self.assertIn("updateTrainee({financement_status:'validated'})", template)
@@ -190,10 +191,10 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         self.assertIn("badge(otherFundingFact[0],otherFundingFact[1])", template)
 
     def test_finance_kpis_distinguish_funding_sources_and_payment_statuses(self):
-        template = gestion_app.app.jinja_loader.get_source(
+        template = with_sheet_assets(gestion_app.app.jinja_loader.get_source(
             gestion_app.app.jinja_env,
             "admin_trainee.html",
-        )[0]
+        )[0])
 
         self.assertIn('id="financeSummaryCards" class="finance-kpi-groups"', template)
         self.assertIn("finance-kpi-group--funding", template)
@@ -216,10 +217,10 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         if not node:
             self.skipTest("Node.js is required to execute the cash financing KPI rule")
 
-        template = gestion_app.app.jinja_loader.get_source(
+        template = with_sheet_assets(gestion_app.app.jinja_loader.get_source(
             gestion_app.app.jinja_env,
             "admin_trainee.html",
-        )[0]
+        )[0])
         start = template.index("  function cashCoversEntirePersonalFunding(c){")
         end = template.index("\n  function renderSummary(c){", start)
         helper = template[start:end]
@@ -254,10 +255,10 @@ process.stdout.write(JSON.stringify(states));
         if not node:
             self.skipTest("Node.js is required to execute the financing validation rule")
 
-        template = gestion_app.app.jinja_loader.get_source(
+        template = with_sheet_assets(gestion_app.app.jinja_loader.get_source(
             gestion_app.app.jinja_env,
             "admin_trainee.html",
-        )[0]
+        )[0])
         start = template.index("  function financingValidationFrom(c, lines){")
         end = template.index("\n  function syncFinancementStatusIfValidated", start)
         validation_function = template[start:end]
@@ -292,10 +293,10 @@ process.stdout.write(JSON.stringify({{paid, unpaid}}));
         self.assertEqual(states["unpaid"]["tone"], "gray")
 
     def test_invoiced_card_identifies_qonto_and_external_invoice_origins(self):
-        template = gestion_app.app.jinja_loader.get_source(
+        template = with_sheet_assets(gestion_app.app.jinja_loader.get_source(
             gestion_app.app.jinja_env,
             "admin_trainee.html",
-        )[0]
+        )[0])
 
         self.assertIn("function invoiceOriginBadges(lines)", template)
         self.assertIn("badge('QONTO','black')", template)
@@ -306,19 +307,19 @@ process.stdout.write(JSON.stringify({{paid, unpaid}}));
         self.assertIn("invoiceOriginBadges(otherFundingLines)", template)
 
     def test_completed_invoice_generation_is_not_a_notification(self):
-        template = gestion_app.app.jinja_loader.get_source(
+        template = with_sheet_assets(gestion_app.app.jinja_loader.get_source(
             gestion_app.app.jinja_env,
             "admin_trainee.html",
-        )[0]
+        )[0])
 
         self.assertIn("function renderAlerts(lines,c)", template)
         self.assertNotIn("Toutes les factures à gérer ici sont générées.", template)
 
     def test_quick_invoice_action_does_not_report_completion_with_an_amount_remaining(self):
-        template = gestion_app.app.jinja_loader.get_source(
+        template = with_sheet_assets(gestion_app.app.jinja_loader.get_source(
             gestion_app.app.jinja_env,
             "admin_trainee.html",
-        )[0]
+        )[0])
 
         self.assertIn("const remainingToInvoice=Number(computeFinance(currentLines).resteAFacturer||0);", template)
         self.assertIn("const hasUnrepresentedInvoice=remainingToInvoice>0.01;", template)

@@ -1,3 +1,4 @@
+from sheet_assets import with_sheet_assets
 import hashlib
 import hmac
 import json
@@ -184,7 +185,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(trainee["qonto_mandate_status"], "pending")
 
     def test_invoice_confirmation_displays_mandate_rum_and_updates_settings(self):
-        template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
+        template = with_sheet_assets(Path("templates/admin_trainee.html").read_text(encoding="utf-8"))
 
         self.assertIn("Facture et mandat créés avec succès", template)
         self.assertIn("Numéro RUM du mandat", template)
@@ -193,7 +194,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("Le RUM généré par Qonto s’ajoute automatiquement", template)
 
     def test_financial_reset_button_requires_preview_then_confirmation(self):
-        template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
+        template = with_sheet_assets(Path("templates/admin_trainee.html").read_text(encoding="utf-8"))
 
         self.assertIn('id="btnResetFinancialTracking"', template)
         self.assertIn("/api/billing/reset-financial-tracking", template)
@@ -236,7 +237,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
             )
 
     def test_trainee_dashboard_supports_legacy_due_date_and_scheduled_mandates(self):
-        template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
+        template = with_sheet_assets(Path("templates/admin_trainee.html").read_text(encoding="utf-8"))
 
         self.assertIn("function installmentDate(installment)", template)
         self.assertIn("installment?.date||installment?.due_date", template)
@@ -255,7 +256,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("installmentStatusLabel(it)", template)
 
     def test_trainee_dashboard_hides_schedule_until_mandate_is_validated(self):
-        template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
+        template = with_sheet_assets(Path("templates/admin_trainee.html").read_text(encoding="utf-8"))
 
         self.assertIn("function lineHasValidatedMandate(line)", template)
         self.assertIn(

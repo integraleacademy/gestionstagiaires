@@ -2,7 +2,6 @@
 
 import app as legacy_app
 
-from admin_trainee_wedof_refresh import register_admin_trainee_wedof_refresh
 from bts_workspace import register_bts_workspace
 from cnaps_notification_recovery import register_cnaps_notification_recovery
 from crm_cnaps_tracking_api import register_crm_cnaps_tracking_api
@@ -15,7 +14,6 @@ from cpf_provider_bridge import register_production_control
 
 app = legacy_app.app
 register_native_elearning(legacy_app)
-register_admin_trainee_wedof_refresh(legacy_app)
 register_wedof_invoice_reconciliation(legacy_app)
 register_bts_workspace(legacy_app)
 register_cnaps_notification_recovery(legacy_app)

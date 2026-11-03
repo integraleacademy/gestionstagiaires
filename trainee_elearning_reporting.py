@@ -5,7 +5,7 @@ and exports as purchased access. Viewing a report never activates learner access
 """
 from pathlib import Path
 
-from flask import Response, abort, url_for
+from flask import Response, abort, url_for, render_template
 from werkzeug.utils import secure_filename
 
 import elearning_orders as learning
@@ -37,20 +37,16 @@ def source_for(training, person):
     return source, {**effective, 'aps_native_modules': modules}
 
 
-def summary(host, training, person):
-    if not is_vtc(training) and not is_native_aps_session(training):
-        return None
-    link = url_for('manuals_shop.trainee_elearning_progress', session_id=training['id'], trainee_id=person['id'])
-    try:
-        resolved = source_for(training, person)
-        if resolved is None:
-            return None
-        source, effective = resolved
-        report = ProgressReader(host).report(source, person, detailed=False, session_obj=effective)
-    except CourseImportError:
-        return {'url': link, 'available': False}
-    return {key: report[key] for key in ('available', 'progress_percent', 'active_time_label',
-            'required_time_label', 'completed_modules', 'total_modules', 'status_label')} | {'url': link}
+def has_summary(training, person):
+    """Determine whether to offer the report without resolving course versions."""
+    if is_native_aps_session(training):
+        return True
+    if not is_vtc(training):
+        return False
+    activation = person.get(STATE_KEY)
+    if isinstance(activation, dict):
+        return bool(activation.get("modules"))
+    return bool(assigned_modules(training))
 
 
 def register_routes(host, bp, *, page):
@@ -90,6 +86,13 @@ def register_routes(host, bp, *, page):
             'Content-Disposition': f'inline; filename="{secure_filename(filename)}"'})
 
     base = '/admin/sessions/<session_id>/stagiaires/<trainee_id>/e-learning/suivi'
+
+    @bp.get(base + '/resume')
+    @host.admin_login_required
+    def trainee_elearning_summary(session_id, trainee_id):
+        _, source, person, effective = context(session_id, trainee_id)
+        report = ProgressReader(host).report(source, person, detailed=False, session_obj=effective)
+        return render_template('_trainee_elearning_followup.html', native_elearning_followup=report)
 
     @bp.get(base)
     @host.admin_login_required

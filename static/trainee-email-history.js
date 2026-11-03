@@ -39,6 +39,6 @@
     window.openModal("emailHtmlPreviewModal");
   });
   document.addEventListener("manual-docs-reminder-updated", (event) => {
-    if (event.detail.traineeId === content.dataset.traineeId) window.refreshTraineeEmailHistory();
+    if (event.detail.traineeId === content.dataset.traineeId && document.getElementById("historyModal")?.getAttribute("aria-hidden") === "false") window.refreshTraineeEmailHistory();
   });
 })();

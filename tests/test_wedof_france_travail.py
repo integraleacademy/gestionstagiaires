@@ -168,9 +168,15 @@ def test_trainee_page_renders_the_corresponding_badge_and_valid_javascript(monke
         assert f'data-france-travail-status="{status}"' in html
     else:
         assert 'data-france-travail-status="' not in html
-    scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, re.S)
+    from pathlib import Path
+    blocks = re.findall(r"<script([^>]*)>(.*?)</script>", html, re.S)
+    scripts = [body for attrs, body in blocks if 'type="application/json"' not in attrs]
+    scripts.append(Path("static/js/trainee-sheet.js").read_text())
     # Parse all inline JavaScript after Jinja rendering (no network, no execution).
     import json
+    for attrs, body in blocks:
+        if 'type="application/json"' in attrs:
+            json.loads(body)
     check = tmp_path / "parse.cjs"
     check.write_text("const scripts = " + json.dumps(scripts) + "; scripts.forEach(s => new Function(s));")
     subprocess.run(["node", str(check)], check=True, capture_output=True, text=True)

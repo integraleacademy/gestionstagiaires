@@ -17,8 +17,8 @@ class CpuLoadGuardTests(unittest.TestCase):
                  patch.object(gestion_app, "_load_wedof_webhooks") as load_wedof_webhooks, \
                  patch.object(
                      gestion_app,
-                     "_build_sales_tracking_metrics",
-                     return_value={"today_inscriptions": 2},
+                     "_sales_today_count",
+                     return_value=2,
                  ) as build_sales_metrics, \
                  patch.object(
                      gestion_app,
@@ -28,7 +28,7 @@ class CpuLoadGuardTests(unittest.TestCase):
                 context = gestion_app.inject_read_only()
 
         load_data.assert_called_once_with()
-        build_sales_metrics.assert_called_once_with(data, gestion_app.datetime.date.today().year)
+        build_sales_metrics.assert_called_once_with(data)
         build_notifications.assert_called_once_with(data)
         load_wedof_webhooks.assert_not_called()
         self.assertEqual(context["wedof_new_requests_count"], 0)
@@ -69,7 +69,7 @@ class CpuLoadGuardTests(unittest.TestCase):
 
     def test_browser_polling_uses_the_reduced_frequencies(self):
         project_root = Path(__file__).resolve().parents[1]
-        trainee_page = (project_root / "templates" / "admin_trainee.html").read_text(encoding="utf-8")
+        trainee_page = (project_root / "static" / "js" / "trainee-sheet.js").read_text(encoding="utf-8")
         billing_page = (project_root / "templates" / "admin_sessions_billing.html").read_text(encoding="utf-8")
         trainees_page = (project_root / "templates" / "admin_trainees.html").read_text(encoding="utf-8")
 
@@ -84,7 +84,7 @@ const vm = require('node:vm');
 const timers = new Map();
 let nextId = 0, reads = 0;
 const context = vm.createContext({
-  document: {hidden: true},
+  document: {hidden: true}, billingSection: {open: false},
   clearTimeout: id => timers.delete(id),
   setTimeout: (callback, delay) => { timers.set(++nextId, {callback, delay}); return nextId; },
   load: async () => { reads++; }
@@ -94,6 +94,10 @@ context.scheduleLocalTraineePoll(true);
 assert.equal(reads, 0);
 assert.equal(timers.size, 0);
 context.document.hidden = false;
+context.scheduleLocalTraineePoll(true);
+assert.equal(reads, 0);
+assert.equal(timers.size, 0);
+context.billingSection.open = true;
 context.scheduleLocalTraineePoll(true);
 assert.equal(reads, 1);
 assert.equal(timers.size, 1);
