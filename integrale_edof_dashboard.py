@@ -367,7 +367,10 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
     def connection_badge():
         owner = results_owner()
         saved = gmail_status()["saved_session"]
-        return jsonify(store.live_connection(owner, saved))
+        state = store.live_connection(owner, saved)
+        if request.args.get("catchup") == "1":
+            state["catchup"] = store.catchup_status(owner)
+        return jsonify(state)
 
     @bp.get("")
     @admin_required
@@ -514,6 +517,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             inspection=check, dispatches=dispatches, csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
             match_counts=Counter(m["status"] for m in matches.values()), total=len(rows), counts=counts,
             rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
+            catchup=store.catchup_status(owner) if section == "automations" and not detail else None,
             detail=detail, events=events, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=(directory.stamp({"checked":snap["pending_checked"]}) if snap and snap.get("pending_checked") and tab=="request" else directory.stamp({"checked":snap["accepted_checked"]}) if snap and snap.get("accepted_checked") and tab=="accepted" else directory.stamp(snap) if snap and snap.get("checked") else directory.stamp({"checked":snap["receipt_checked"]}) if snap and snap.get("receipt_checked") and tab!="request" else None), today=today, metrics=metrics,
             live=store.live_connection(owner, gmail["saved_session"], snapshot=snap), nonce=g.edof_nonce, jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
             scope=(snap or {}).get("scope", "open"), directory_enabled=store.directory_enabled(owner), snapshot_count=len((snap or {}).get("rows", {})),
@@ -555,6 +559,17 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             store.request_directory(owner)
         flash(f"{PROVIDERS[target]} est actif pour votre établissement. Bascule confirmée.", "success")
         return back("technical")
+
+    @bp.post("/automatisations/rattraper")
+    @native_action
+    def catch_up(owner):
+        selected = selection.state()
+        if selected["revision"] != request.form.get("revision", type=int):
+            raise ValueError("Le système CPF a changé. Actualisez la page avant de relancer.")
+        if not store.connector_key or not gmail_status()["connected"]:
+            raise ValueError("Connectez EFP et Gmail avant de lancer le rattrapage.")
+        store.queue_full_sync(owner, catchup_revision=selected["revision"])
+        return back("automations", tab="due", _anchor="rattrapage")
 
     @bp.post("/associate-reliable")
     @native_action

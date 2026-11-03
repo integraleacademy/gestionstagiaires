@@ -344,3 +344,11 @@ body.admin-sidebar-active .main-content:has(.edof-workspace) { max-width: none; 
   .edof-case-form .step-session .edof-field-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
   .edof-course-hero h1 { max-width: 48em; }
 }
+
+.edof-catchup { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 20px; scroll-margin-top: 80px; }
+.edof-catchup > div { flex: 1 1 340px; }
+.edof-catchup h2 { margin: 4px 0; font-size: 20px; color: var(--wedof-navy); }
+.edof-catchup p { margin: 5px 0 0; color: var(--wedof-muted); }
+.edof-catchup #edof-catchup-result { flex-basis: 100%; margin: 0; font-weight: 650; }
+#edof-catchup-result:empty { display: none; }
+.edof-catchup button:disabled { cursor: not-allowed; }

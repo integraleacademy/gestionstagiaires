@@ -35,6 +35,12 @@
         const response = await fetch(box.dataset.statusUrl, {cache: "no-store"});
         if (!response.ok) throw Error();
         const state = await response.json();
+        const catchup = document.getElementById("edof-catchup-result");
+        if (catchup && state.catchup) {
+          catchup.textContent = state.catchup.message;
+          const button = document.querySelector("[data-catchup-button]");
+          if (button) button.disabled = button.dataset.active !== "1" || state.catchup.busy;
+        }
         const latest = document.getElementById("edof-sync");
         const full = document.getElementById("edof-full-sync");
         if (state.sync.stamp && state.sync.stamp >= Number(latest.dataset.stamp)) {
