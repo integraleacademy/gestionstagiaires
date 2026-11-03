@@ -347,3 +347,40 @@ def test_enabled_weekend_watch_stops_at_19_and_respects_pause(tmp_path, monkeypa
     assert not store.day_owners(saturday.replace(hour=19), daily=True)
     store.pause_directory("A")
     assert not store.day_owners(saturday, daily=True)
+
+
+def test_session_sort_disorder_does_not_hide_a_recent_dossier_on_a_later_page():
+    import json
+    from unittest.mock import Mock
+    import edof_server_browser as reader
+    witness = Mock(method="GET", url="https://"+reader.EDOF_HOST+reader.API_PREFIX+"pad")
+    witness.all_headers.return_value = {}
+    batches = [
+        [("100001","2026-01-01"),("100002","2026-08-01")],
+        [("100003","2025-01-01")],
+        [("100004","2026-04-01")]
+    ]
+    def reply(url, *,params,**kwargs):
+        assert params["filter"] == "tous"
+        items = [{"id":key,"currentState":"accepted","beginDate":date} for key,date in batches[params["page"]]]
+        result = Mock(status=200, url=url)
+        result.body.return_value = json.dumps({"numberOfItems":4,"items":items}).encode()
+        return result
+    context = Mock()
+    context.request.get.side_effect = reply
+    snap = reader.read_recent_directory(context,witness,"all",lambda:None,{})
+    assert set(snap["rows"]) == {"100001","100002","100004"}
+
+
+def test_recent_accepted_tab_reconciles_without_certifying_a_complete_list():
+    import edof_directory as directory
+    def row(key,state):
+        return {"folder_id":key, "session_start_date":"2026-11-16","state":state}
+    full = {"checked":1,"rows":{"100001":row("100001","validated"),"100002":row("100002","accepted")}}
+    accepted = {"checked":3,"rows":{"100001":row("100001","accepted")}}
+    result = directory.with_accepted(full, accepted)
+    assert set(result["rows"]) == {"100001"} and result["rows"]["100001"]["state"] == "accepted"
+    assert result["checked"] == 1 and result["accepted_checked"] == 3
+    pending = {"checked":4,"rows":{"100001":row("100001","notProcessed")}}
+    assert directory.with_accepted(directory.with_pending(full,pending),accepted)["rows"]["100001"]["state"] == "notProcessed"
+    assert directory.with_accepted({**full,"checked":5},accepted)["rows"] == full["rows"]

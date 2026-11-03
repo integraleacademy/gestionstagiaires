@@ -150,6 +150,29 @@ def with_pending(full, pending):
     return combined
 
 
+def accepted_key(owner):
+    return "edof-accepted-v1-" + owner
+
+
+def with_accepted(snapshot, accepted):
+    """Apply a complete accepted tab without moving the general-list timestamp."""
+    accepted = dated_snapshot(accepted)
+    if not accepted or accepted["checked"] <= (snapshot or {}).get("checked", 0):
+        return snapshot
+    combined = dict(snapshot or {"checked":0, "rows":{}, "scope":"accepted"})
+    rows = {k:r for k,r in combined["rows"].items() if normalized(r.get("state") or "") not in
+            {"accepted","accepte","dossier accepte","accepte par le titulaire"} or k in accepted["rows"]}
+    pending = set(combined.get("pending_ids", ()))
+    for key,row in accepted["rows"].items():
+        if key in pending and combined.get("pending_checked",0) > accepted["checked"]:
+            continue
+        pending.discard(key)
+        rows[key] = row
+    if "pending_ids" in combined:
+        combined["pending_ids"] = pending
+    return {**combined, "rows":rows, "accepted_checked":accepted["checked"]}
+
+
 def stamp(snapshot):
     return datetime.fromtimestamp(snapshot["checked"], ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y à %H h %M")
 

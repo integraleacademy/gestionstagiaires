@@ -454,7 +454,7 @@ def read_official_pending(page, checkpoint, timeout_error):
     return directory.dated_snapshot(snapshot)
 
 
-def read_recent_directory(context, witness, state, checkpoint, progress):
+def read_recent_directory(context, witness, state, checkpoint, progress, *, size=100):
     """Use the portal's session-date descending order and stop at the first archival page."""
     if witness is None or witness.method != "GET":
         raise directory.IncompleteDirectory()
@@ -465,48 +465,64 @@ def read_recent_directory(context, witness, state, checkpoint, progress):
     headers = directory.private_headers(witness)
     target = f"https://{EDOF_HOST}{API_PREFIX}pad"
     rows, seen = {}, set()
-    total = previous = None
-    for index in range(directory.MAX_ROWS):
+    total = None
+    ordered, previous = True, None
+    index = 0
+    while len(seen) <= directory.MAX_ROWS:
+        progress.update(method="session_desc", page=index+1, seen=len(rows))
         checkpoint()
-        reply = context.request.get(target, params={"page":index, "max":100, "state":state,
-                                    "sort":"DATE_DEBUT_SESSION", "order":"DESC"},
-                                    headers=headers, max_redirects=0, timeout=12000)
+        params = {"page":index, "max":size, "state":state, "filter":"tous",
+                  "sort":"DATE_DEBUT_SESSION", "order":"DESC"}
+        reply = context.request.get(target, params=params, headers=headers, max_redirects=0, timeout=20000)
         try:
+            progress["http"] = reply.status
+            if index == 0 and size > 10 and reply.status in {400, 422}:
+                size = 10  # The official list's default page size.
+                continue
             if reply.status != 200 or not directory_list_url(reply.url):
-                raise directory.IncompleteDirectory()
+                raise directory.IncompleteDirectory("http")
             body = reply.body()
             if len(body) > 8_000_000:
-                raise directory.IncompleteDirectory()
+                raise directory.IncompleteDirectory("size")
             data = json.loads(body)
         finally:
             reply.dispose()
         count, items = data.get("numberOfItems"), data.get("items")
-        if (type(count) is not int or count < 0 or total not in (None, count)
-                or not isinstance(items, list) or (not items and len(seen) != count)):
-            raise directory.IncompleteDirectory()
-        total = count
-        boundary = False
+        if type(count) is not int or count < 0 or total not in (None, count) or not isinstance(items, list):
+            raise directory.IncompleteDirectory("count")
+        if not items and len(seen) != count:
+            raise directory.IncompleteDirectory("empty_page")
+        total = progress["total"] = count
+        archive_only = bool(items)
         for item in items:
-            row = directory.project(item)
-            folder, day = row["folder_id"], row["session_start_date"]
-            if folder in seen or (day and previous and day > previous):
-                raise directory.IncompleteDirectory()
+            info = item.get("trainingActionInfo") or {}
+            folder = str(item.get("id") or "")
+            if not directory.ID_RE.fullmatch(folder) or folder in seen:
+                raise directory.IncompleteDirectory("page_overlap")
             seen.add(folder)
+            # The portal sorts the planned session; beginDate may be an actual entry.
+            day = directory.session_date(info.get("sessionStartDate") or item.get("beginDate"))
             if day:
+                if previous and day > previous:
+                    ordered = False
                 previous = day
-                if day < directory.FIRST_SESSION and state != "notProcessed":
-                    boundary = True
+            if day and day < directory.FIRST_SESSION:
+                continue
+            archive_only = False
+            row = directory.project(item)
             if directory.in_scope(row):
                 if state == "notProcessed" and directory.normalized(row["state"]) not in {
                         "notprocessed","not processed","a traiter","non traite"}:
-                    raise directory.IncompleteDirectory()
+                    raise directory.IncompleteDirectory("scope")
                 rows[folder] = row
         if len(seen) > total or len(seen) > directory.MAX_ROWS:
-            raise directory.IncompleteDirectory()
-        progress.update(method="session_desc", pages=index+1, seen=len(rows), total=total)
-        if boundary or len(seen) == total:
-            return {"rows":rows, "checked":time.time(), "scope":"all" if state == "all" else "pending"}
-    raise directory.IncompleteDirectory()
+            raise directory.IncompleteDirectory("count")
+        progress.update(pages=index+1, seen=len(rows))
+        # An older item among recent ones does not finish the catalogue. Read the next page.
+        if len(seen) == total or (ordered and archive_only and state != "notProcessed"):
+            return {"rows":rows, "checked":time.time(), "scope":{"all":"all", "accepted":"accepted"}.get(state,"pending")}
+        index += 1
+    raise directory.IncompleteDirectory("limit")
 
 
 def read_pending_with_private_session(context, witness, checkpoint=lambda: None):
@@ -1572,11 +1588,29 @@ def run_browser(spec, *, live=None):
                     while private_witness is None and time.monotonic() < deadline:
                         checkpoint()
                         page.wait_for_timeout(200)
+                if spec.get("day_session") and private_witness is not None:
+                    try:
+                        accepted = read_recent_directory(context, private_witness, "accepted", checkpoint, {})
+                        if all(directory.normalized(r["state"]) in {"accepted","accepte"} for r in accepted["rows"].values()):
+                            vault.put(directory.accepted_key(spec["owner"]), accepted, ttl=directory.TTL)
+                    except (ValueError, TypeError, KeyError, BrowserError):
+                        pass  # The general list can still succeed independently.
                 signals["directory"] = {}
                 progress("reading_all_folders")
                 try:
-                    snapshot = read_recent_directory(context, private_witness, "all", checkpoint, signals["directory"])
-                except (ValueError, KeyError, TypeError, BrowserError):
+                    try:
+                        snapshot = read_recent_directory(context, private_witness, "all", checkpoint, signals["directory"])
+                    except directory.IncompleteDirectory as exc:
+                        if exc.args != ("page_overlap",):
+                            raise
+                        # Equal session dates can move between pages. Retry with a wider page.
+                        snapshot = read_recent_directory(context, private_witness, "all", checkpoint, signals["directory"], size=500)
+                except (ValueError, KeyError, TypeError, BrowserError) as exc:
+                    detail = signals["directory"]
+                    reason = str(exc) if isinstance(exc, directory.IncompleteDirectory) and exc.args else "unreadable"
+                    detail["failure"] = reason if reason in {"http","size","count","empty_page","page_overlap","scope","limit"} else "unreadable"
+                    if pending_result:
+                        pending_result["diagnostics"] = {"directory":detail}
                     raise StopRun("directory_incomplete") from None
                 progress("saving_directory")
                 vault.put(directory.record_key(spec["owner"]), snapshot, ttl=directory.TTL)

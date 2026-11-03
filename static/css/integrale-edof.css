@@ -239,7 +239,8 @@
 .native-cpf .wedof-hero-meta [hidden] { display: none; }
 
 /* Dossier CPF */
-.edof-workspace { max-width: 1260px; margin-inline: auto; gap: 18px; scroll-margin-top: 70px; }
+body.admin-sidebar-active .main-content:has(.edof-workspace) { max-width: none; }
+.edof-workspace { width: 100%; max-width: none; margin-inline: 0; gap: 18px; scroll-margin-top: 70px; }
 .edof-file-toolbar, .edof-course-top, .edof-course-meta, .edof-back, .edof-sync-button,
 .edof-step > summary, .edof-save-actions, .edof-offer-strip { display: flex; align-items: center; }
 .edof-file-toolbar { justify-content: space-between; gap: 20px; padding: 6px 0; }
@@ -267,7 +268,7 @@
 .edof-course-meta div { display: grid; gap: 3px; }
 .edof-course-meta span { color: #cbd7ec; font-size: 12px; }
 .edof-course-meta strong { color: #fff; font-size: 15px; }
-.edof-case-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(230px,295px); gap: 18px; align-items: start; }
+.edof-case-layout { display: grid; grid-template-columns: minmax(0,1fr) clamp(245px,23%,390px); gap: 18px; align-items: start; }
 .edof-case-side:only-child { grid-column: 1 / -1; }
 .edof-case-side > h2 { margin: 0; padding: 18px 18px 0; color: #172554; font-size: 18px; }
 .edof-case-side .edof-panel-body { padding: 14px 18px 20px; }
@@ -338,3 +339,8 @@
 .edof-required-note { font-size: 12px; }
 .edof-case-form input::placeholder { color: #718096; font-weight: 400; }
 .edof-case-side:only-child .edof-summary { grid-template-columns: repeat(auto-fit,minmax(min(100%,160px),1fr)); }
+
+@media (min-width: 1440px) {
+  .edof-case-form .step-session .edof-field-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .edof-course-hero h1 { max-width: 48em; }
+}
