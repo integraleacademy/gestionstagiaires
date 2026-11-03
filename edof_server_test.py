@@ -45,6 +45,7 @@ MESSAGES = {
     "day_closed": "La veille est ouverte tous les jours de 7 h à 19 h, heure de Paris.",
     "declaration_confirmed": "Le statut et les valeurs de la déclaration ont été relus sur EDOF.",
     "declaration_inspected": "Contrôle des commandes disponibles sur EDOF terminé en lecture seule.",
+    "pending_unavailable": "EDOF n’a pas renvoyé la liste des nouveaux dossiers à traiter. La dernière lecture vérifiée est conservée.",
     "requests_ready": "Les dossiers À traiter ont été relus dans l’onglet officiel EDOF.",
     "declaration_exit_confirmed": "Sortie confirmée dans EDOF. Le service fait reste à transmettre.",
     "directory_ready": "La liste EDOF de l’établissement est disponible pour la recherche.",
@@ -149,7 +150,14 @@ class ServerTestStore:
         db.execute("CREATE TABLE IF NOT EXISTS directory_activity (owner TEXT PRIMARY KEY, seen REAL NOT NULL)")
         db.execute("CREATE TABLE IF NOT EXISTS manual_sessions (owner TEXT PRIMARY KEY, started REAL NOT NULL, until REAL NOT NULL)")
         db.execute("CREATE TABLE IF NOT EXISTS directory_requested (owner TEXT PRIMARY KEY)")
-        db.execute("CREATE TABLE IF NOT EXISTS manual_directory (owner TEXT PRIMARY KEY, requested REAL NOT NULL, job_id TEXT)")
+        db.execute("""CREATE TABLE IF NOT EXISTS directory_sync_requests (owner TEXT NOT NULL,
+                    scope TEXT NOT NULL CHECK(scope IN ('new','all')), requested REAL NOT NULL, job_id TEXT,
+                    PRIMARY KEY(owner,scope))""")
+        if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='manual_directory'").fetchone():
+            db.execute("BEGIN IMMEDIATE")
+            if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='manual_directory'").fetchone():
+                db.execute("INSERT OR IGNORE INTO directory_sync_requests SELECT owner,'all',requested,job_id FROM manual_directory")
+                db.execute("DROP TABLE manual_directory")
         db.execute("""CREATE TABLE IF NOT EXISTS automation_catchups (owner TEXT PRIMARY KEY, revision INTEGER NOT NULL,
                    requested REAL NOT NULL, message TEXT NOT NULL DEFAULT '')""")
         db.execute("DELETE FROM jobs WHERE created < ?", (time.time() - RETENTION,))
@@ -159,7 +167,7 @@ class ServerTestStore:
         db.commit()
         return db
 
-    def reserve(self, owner, mode, *, day_session=False, full_sync=False):
+    def reserve(self, owner, mode, *, day_session=False, sync_scope=None):
         db = self.connect()
         try:
             with db:
@@ -185,10 +193,10 @@ class ServerTestStore:
                 job_id = secrets.token_hex(16)
                 db.execute("INSERT INTO jobs (id, owner, created, mode, result) VALUES (?, ?, ?, ?, ?)",
                            (job_id, owner, time.time(), mode, json.dumps({"code": "running", "day_session": day_session})))
-                if full_sync:
-                    claimed = db.execute("""UPDATE manual_directory SET job_id=? WHERE owner=? AND requested>=?
+                if sync_scope:
+                    claimed = db.execute("""UPDATE directory_sync_requests SET job_id=? WHERE owner=? AND scope=? AND requested>=?
                         AND (job_id IS NULL OR job_id IN (SELECT id FROM jobs WHERE json_extract(result,'$.code')='interrupted'))""",
-                        (job_id, owner, time.time()-3600)).rowcount
+                        (job_id, owner, sync_scope, time.time()-3600)).rowcount
                     if not claimed:
                         raise ValueError("Synchronisation déjà prise en charge.")
             return job_id
@@ -283,17 +291,17 @@ class ServerTestStore:
                     WHERE mode='directory' AND finished IS NULL""",
                     (time.time(), json.dumps({"code":"interrupted", "restart":True, "day_session":True})))
 
-    def queue_full_sync(self, owner, *, catchup_revision=None):
+    def queue_sync(self, owner, scope, *, catchup_revision=None):
         now = time.time()
         with closing(self.connect()) as db, db:
             db.execute("BEGIN IMMEDIATE")
             if catchup_revision is not None and db.execute("""SELECT 1 FROM automation_catchups WHERE owner=?
                     AND revision=? AND message='' AND requested>=?""", (owner,catchup_revision,now-3600)).fetchone():
                 return
-            db.execute("""INSERT INTO manual_directory VALUES (?,?,NULL)
-                ON CONFLICT(owner) DO UPDATE SET requested=excluded.requested, job_id=NULL
-                WHERE manual_directory.requested < ? OR job_id IN
-                      (SELECT id FROM jobs WHERE finished IS NOT NULL)""", (owner,now,now-3600))
+            db.execute("""INSERT INTO directory_sync_requests (owner,scope,requested,job_id) VALUES (?,?,?,NULL)
+                ON CONFLICT(owner,scope) DO UPDATE SET requested=excluded.requested, job_id=NULL
+                WHERE directory_sync_requests.requested < ? OR job_id IN
+                      (SELECT id FROM jobs WHERE finished IS NOT NULL)""", (owner,scope,now,now-3600))
             if catchup_revision is not None:
                 db.execute("INSERT OR REPLACE INTO automation_catchups VALUES (?,?,?,'')", (owner,catchup_revision,now))
 
@@ -337,7 +345,7 @@ class ServerTestStore:
         from integrale_edof_dashboard import apply_confirmed_entries
         with closing(self.connect()) as db:
             runs = db.execute("""SELECT c.*,m.requested AS sync_start,j.created,j.finished,json_extract(j.result,'$.code') code
-                FROM automation_catchups c LEFT JOIN manual_directory m ON m.owner=c.owner
+                FROM automation_catchups c LEFT JOIN directory_sync_requests m ON m.owner=c.owner AND m.scope='all'
                 LEFT JOIN jobs j ON j.id=m.job_id WHERE c.message=''""").fetchall()
         for run in runs:
             if selection["provider"] != "integrale" or selection["pending"] or run["revision"] != selection["revision"]:
@@ -375,19 +383,19 @@ class ServerTestStore:
                 db.execute("""UPDATE automation_catchups SET message=? WHERE owner=? AND requested=? AND message=''""",
                            (message,run["owner"],run["requested"]))
 
-    def next_full_sync(self):
+    def next_manual_sync(self):
         with closing(self.connect()) as db:
-            return db.execute("""SELECT m.owner,m.requested,(c.owner IS NOT NULL) AS catchup
-                FROM manual_directory m LEFT JOIN jobs j ON j.id=m.job_id
-                LEFT JOIN automation_catchups c ON c.owner=m.owner AND c.message=''
+            return db.execute("""SELECT m.owner,m.scope,m.requested,(c.owner IS NOT NULL) AS catchup
+                FROM directory_sync_requests m LEFT JOIN jobs j ON j.id=m.job_id
+                LEFT JOIN automation_catchups c ON c.owner=m.owner AND m.scope='all' AND c.message=''
                 WHERE m.requested>=? AND (m.job_id IS NULL OR json_extract(j.result,'$.code')='interrupted')
                 ORDER BY catchup DESC,m.requested LIMIT 1""", (time.time()-3600,)).fetchone()
 
-    def full_sync_status(self, owner):
+    def manual_sync_status(self, owner, scope):
         with closing(self.connect()) as db:
             item = db.execute("""SELECT m.requested,j.finished,json_extract(j.result,'$.code') code
-                FROM manual_directory m LEFT JOIN jobs j ON j.id=m.job_id WHERE m.owner=? AND m.requested>=?""",
-                (owner,time.time()-RETENTION)).fetchone()
+                FROM directory_sync_requests m LEFT JOIN jobs j ON j.id=m.job_id WHERE m.owner=? AND m.scope=? AND m.requested>=?""",
+                (owner,scope,time.time()-RETENTION)).fetchone()
         if not item:
             return None
         if not item["finished"] or item["code"] == "interrupted":
@@ -395,7 +403,9 @@ class ServerTestStore:
                 return {"busy":False, "message":"La demande de synchronisation a expiré. Relancez-la."}
             return {"busy":True, "message":"Synchronisation en cours en arrière-plan. Vous pouvez quitter la page."}
         when = dt.datetime.fromtimestamp(item["finished"], PARIS).strftime("%H h %M")
-        if item["code"] == "directory_ready":
+        if scope == "new" and item["code"] == "requests_ready":
+            message = "Nouveaux dossiers à traiter synchronisés à " + when + "."
+        elif item["code"] == "directory_ready":
             message = "Liste des dossiers synchronisée à " + when + "."
         elif item["code"] == "requests_ready":
             message = "Demandes à traiter actualisées à " + when + ". La liste générale n’a pas pu être actualisée."
@@ -418,12 +428,12 @@ class ServerTestStore:
                     db.execute("DELETE FROM directory_requested")
                     db.execute("DELETE FROM directory_activity")
                     db.execute("DELETE FROM manual_sessions")
-                    db.execute("DELETE FROM manual_directory")
+                    db.execute("DELETE FROM directory_sync_requests")
                 else:
                     db.execute("DELETE FROM directory_requested WHERE owner = ?", (owner,))
                     db.execute("DELETE FROM directory_activity WHERE owner = ?", (owner,))
                     db.execute("DELETE FROM manual_sessions WHERE owner=?", (owner,))
-                    db.execute("DELETE FROM manual_directory WHERE owner=?", (owner,))
+                    db.execute("DELETE FROM directory_sync_requests WHERE owner=?", (owner,))
         finally:
             db.close()
 
@@ -491,7 +501,8 @@ class ServerTestStore:
         blocked = open_now and not verified and stamp >= earliest and last and last["code"] == "day_login_used"
         error = MESSAGES.get(last["code"], "") if open_now and not verified and stamp >= earliest and last and last["code"] not in {"directory_ready","requests_ready"} else ""
         schedule = ("Veille programmée de 7 h à 19 h (Paris)" if watch_open else "Hors plage de veille (7 h à 19 h, Paris)") if watch_enabled else "Veille automatique suspendue"
-        return {"active": verified, "pending": pending, "checked": checked, "sync": sync, "schedule": schedule, "manual_sync": self.full_sync_status(owner),
+        return {"active": verified, "pending": pending, "checked": checked, "sync": sync, "schedule": schedule, "manual_sync": self.manual_sync_status(owner, "all"),
+                "new_sync": self.manual_sync_status(owner, "new"),
                 "phase": labels.get(phase.get("phase"), "") if private_at >= earliest and pending else "",
                 "stamp": stamp, "manual": bool(manual),
                 "until": dt.datetime.fromtimestamp(manual, PARIS).strftime("%H h %M") if manual else "",
@@ -539,17 +550,17 @@ class ServerTestStore:
             for row in rows:
                 if row["created"] is None:
                     due.append(row["owner"])
-                elif row["finished"] and row["requested"] and row["code"] in {"day_login_used", "directory_ready","requests_ready","browser_error","timeout","directory_unavailable","directory_incomplete","authentication_unconfirmed"}:
+                elif row["finished"] and row["requested"] and row["code"] in {"day_login_used", "directory_ready","requests_ready","browser_error","timeout","directory_unavailable","directory_incomplete","pending_unavailable","authentication_unconfirmed"}:
                     due.append(row["owner"])
                 elif row["finished"] and row["code"] == "portal_throttled":
                     if self.connector_key and not Vault(self.directory,self.connector_key).get("edof-throttled"):
                         due.append(row["owner"])
-                elif row["finished"] and row["code"] in ("directory_ready","requests_ready","directory_incomplete","directory_unavailable","timeout","browser_error","interrupted"):
+                elif row["finished"] and row["code"] in ("directory_ready","requests_ready","directory_incomplete","directory_unavailable","pending_unavailable","timeout","browser_error","interrupted"):
                     result = json.loads(row["result"])
                     if row["code"] == "interrupted" and result.get("restart"):
                         due.append(row["owner"])
                         continue
-                    delay = POLL_SECONDS if row["code"] in {"directory_ready","requests_ready"} or awaiting_edof_return(result) else 900
+                    delay = POLL_SECONDS if row["code"] in {"directory_ready","requests_ready","pending_unavailable"} or awaiting_edof_return(result) else 900
                     if (delay == 900 and row["manual_start"] and row["code"] == "browser_error"
                             and result.get("stage") == "login_page" and not result.get("gmail_code_used")
                             and not (result.get("diagnostics") or {}).get("login_post_status")):
@@ -711,7 +722,7 @@ def start_job(store, owner, spec, *, day_worker=None):
         # Only the scheduler can dispatch a state-changing job to the shared session.
         spec = {**spec, "owner":owner}
         if day_worker is not None:
-            until = max(store.manual_until(owner), spec.get("full_sync_until", 0))
+            until = max(store.manual_until(owner), spec.get("sync_until", 0))
             if not (until or working_hours()):
                 raise ValueError("Veille indisponible.")
             spec = {**spec, "manual_until":until}
@@ -735,7 +746,7 @@ def start_job(store, owner, spec, *, day_worker=None):
                 raise ValueError("Le choix de système a changé.")
             if not declarations.check_before_job(store, spec):
                 raise ValueError("Cette déclaration est à vérifier dans la fiche.")
-        job_id = store.reserve(owner, spec["mode"], day_session=day_worker is not None and spec["mode"]=="directory", full_sync=bool(spec.get("full_sync_until")))
+        job_id = store.reserve(owner, spec["mode"], day_session=day_worker is not None and spec["mode"]=="directory", sync_scope=spec.get("sync_scope"))
         if spec["mode"] == "proposal_read" and not proposals.reading(store.directory,spec):
             store.finish(job_id,{"code":"interrupted"})
             raise ValueError("Une autre lecture est déjà programmée.")
@@ -779,8 +790,8 @@ def register_edof_server_test(legacy):
                         store.process_catchups(active)
                         if active["pending"]:
                             continue
-                        full_sync = store.next_full_sync()
-                        if not (full_sync and full_sync["catchup"]):
+                        manual_sync = store.next_manual_sync()
+                        if not manual_sync:
                             pending = proposals.next_job(store.directory,active) or declarations.next_job(store, active["revision"], provider=active["provider"])
                             # Re-evaluate deadlines even when no new export was needed this minute.
                             tick = (active["revision"], int(now.timestamp()) // 300)
@@ -790,7 +801,7 @@ def register_edof_server_test(legacy):
                                     owners = [r[0] for r in db.execute("SELECT owner FROM directory_activity")]
                                 vault = Vault(store.directory, store.connector_key)
                                 for owner in owners:
-                                    snap = directory.dated_snapshot(vault.get(directory.record_key(owner)))
+                                    snap = directory.dated_snapshot(vault.get(directory.record_key(owner), keep=True))
                                     if snap:
                                         from integrale_edof_dashboard import apply_confirmed_entries
                                         declarations.discover(store, owner, apply_confirmed_entries(snap, store.directory, owner))
@@ -804,10 +815,10 @@ def register_edof_server_test(legacy):
                                         continue
                                     except JobCooldown:
                                         pass  # Keep the watch running between dossier jobs.
-                        if full_sync:
-                            user = full_sync["owner"]
+                        if manual_sync:
+                            user = manual_sync["owner"]
                             start_job(store, user, {"mode":"directory", "owner":user, "provider":active["provider"],
-                                      "full_sync_until":full_sync["requested"] + 3600}, day_worker=worker)
+                                      "sync_scope":manual_sync["scope"], "sync_until":manual_sync["requested"] + 3600}, day_worker=worker)
                             continue
                         for user in store.day_owners(now, daily=True):
                             if not store.connector_key or not Vault(store.directory, store.connector_key).get("gmail"):
@@ -1014,9 +1025,13 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
         if session.get("admin_role") == "viewer":
             abort(403)
         ready = configuration()["credentials_configured"] and gmail_status()["connected"] and store.connector_key
+        scope = request.form.get("scope", "all")
+        if scope not in {"new", "all"}:
+            abort(400)
         if ready:
-            store.queue_full_sync(user)
-            message = "Synchronisation demandée. Vous pouvez quitter la page."
+            store.queue_sync(user, scope)
+            target = "des nouveaux dossiers à traiter" if scope == "new" else "de tous les dossiers"
+            message = f"Synchronisation {target} demandée. Vous pouvez quitter la page."
         else:
             message = "Connectez EFP et Gmail dans les paramètres pour synchroniser les dossiers."
         if request.accept_mimetypes.best == "application/json":
@@ -1116,7 +1131,7 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
             return jsonify(ok=True, message=f"Aucun dossier correspondant dans la liste EDOF du {directory.stamp(snapshot)}. "
                            "Utilisez « Relire sur EDOF » pour vérifier en direct.")
         return jsonify(ok=True, needs_sync=True, message="La première synchronisation de la liste EDOF reste à terminer. "
-                       "Cliquez sur « Synchroniser la liste EDOF » pour la préparer.")
+                       "Cliquez sur « Synchro manuelle tous les dossiers » pour la préparer.")
 
     @bp.post("/admin/edof-test/server/run")
     @admin_required

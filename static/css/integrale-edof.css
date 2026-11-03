@@ -254,6 +254,10 @@ body.admin-sidebar-active .main-content:has(.edof-workspace) { max-width: none; 
   border-radius: 12px; color: white; background: #394ab0; font: inherit; font-weight: 750; cursor: pointer; }
 .edof-sync-button:hover { background: #273790; }
 .edof-sync-button:disabled { opacity: .65; cursor: wait; }
+.edof-sync-control { display: grid; gap: 7px; }
+.edof-sync-control button { width: 100%; }
+.edof-sync-control form[data-manual-sync="all"] button { color: #293b76; border: 1px solid #c2cce2; background: #fff; }
+.edof-sync-control form[data-manual-sync="all"] button:hover { background: #eef2fb; }
 .edof-sync-control small { display: block; max-width: 28em; color: #435477; margin-top: 6px; }
 .edof-sync-control small:empty { display: none; }
 .edof-course-hero { padding: clamp(19px, 2.4vw, 32px); border-radius: 20px; color: #fff;

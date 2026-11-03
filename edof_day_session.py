@@ -14,7 +14,7 @@ import threading
 from zoneinfo import ZoneInfo
 
 PARIS = ZoneInfo("Europe/Paris")
-POLL_SECONDS = 5 * 60
+POLL_SECONDS = 120
 OPEN_HOUR = 7
 CLOSE_HOUR = 19
 SHARED_JOB_MODES = frozenset({"declare","reconcile","proposal_read","proposal_check","proposal_send"})
@@ -109,7 +109,7 @@ class DayWorker:
                 self.owner, self.provider = spec["owner"], spec.get("provider")
             try:
                 started = datetime.now(PARIS).timestamp()
-                command = {**spec, "full_sync":bool(spec.get("full_sync_until"))}
+                command = {**spec, "full_sync":spec.get("sync_scope") == "all"}
                 # Both locks must cover the child's work even if the scheduler is killed.
                 socket.send_fds(self.channel, [json.dumps(command).encode()], list(lock_fds))
                 now = datetime.now(PARIS)
@@ -125,7 +125,7 @@ class DayWorker:
                             "diagnostics":{"callback_status":checkpoint.get("callback"), "workspace_status":checkpoint.get("private_status")}}
                 result = json.loads(self.process.stdout.readline(32768))
                 if ((spec["mode"] == "directory" and result.get("code") not in
-                     {"directory_ready","requests_ready","directory_incomplete","directory_unavailable"} and not awaiting_edof_return(result))
+                     {"directory_ready","requests_ready","directory_incomplete","directory_unavailable","pending_unavailable"} and not awaiting_edof_return(result))
                     or result.get("code") in {"browser_error","day_login_used","otp_rejected","human_verification","account_unavailable"}):
                     self.close()
                 return result

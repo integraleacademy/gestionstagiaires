@@ -39,6 +39,17 @@ def test_encrypted_vault_expiry_account_binding_and_single_use(vault, monkeypatc
     assert gmail.connector_key("dev-secret-change-me") is None
 
 
+def test_last_complete_directory_survives_legacy_expiry_but_auth_cookies_expire(vault, monkeypatch):
+    stamp = time.time()
+    vault.put("edof-directory-v1-school", {"checked":stamp}, ttl=86400)
+    vault.put("browser", {"cookies":[]}, ttl=86400)
+    assert vault.get("edof-directory-v1-school", keep=True) == {"checked":stamp}
+    monkeypatch.setattr(gmail.time, "time", lambda: stamp + 86401)
+    assert vault.get("browser") is None
+    assert vault.get("edof-directory-v1-school") == {"checked":stamp}
+    vault.clear()
+    assert vault.get("edof-directory-v1-school") is None
+
 def test_oauth_requests_only_readonly_offline_scope_with_pkce(monkeypatch):
     monkeypatch.setenv("EDOF_GOOGLE_CLIENT_ID", "synthetic-client-id")
     url = gmail.authorization_url("synthetic-state", "synthetic-verifier")
