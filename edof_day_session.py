@@ -21,13 +21,21 @@ def working_hours(now=None):
     return now.weekday() < 5 and 8 <= now.hour < 19
 
 
-def allow_login(vault, *, automatic, now=None):
+def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None):
     """Called under the shared job lock before the password POST can issue a code."""
     now = (now or datetime.now(PARIS)).astimezone(PARIS)
     today = now.date().isoformat()
-    if automatic and (not working_hours(now) or vault.get("efp-login-day") == today):
-        return False
-    vault.put("efp-login-day", today, ttl=2 * 86400)
+    previous = vault.get("efp-login-day")
+    count = int(previous == today)  # Compatible with the original date-only entry.
+    if isinstance(previous, dict) and previous.get("date") == today:
+        count = previous["count"]
+    if automatic:
+        if not working_hours(now):
+            return False
+        override = bool(owner) and vault.get("day-login-override:" + owner, consume=True) == today
+        if count and not (verified_tab and count == 1) and not override:
+            return False
+    vault.put("efp-login-day", {"date": today, "count": count + 1}, ttl=2 * 86400)
     return True
 
 
@@ -89,6 +97,8 @@ def serve():
                     break
                 owner = json.loads(line)["owner"]
                 result = run_browser({"mode": "directory", "owner": owner, "day_session": True}, live=live)
+                if result["code"] == "directory_ready":
+                    live["verified"] = True
                 print(json.dumps(result), flush=True)
         finally:
             live["browser"].close()

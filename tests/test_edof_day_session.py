@@ -113,3 +113,16 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
         assert vault.get(directory.record_key("fixture"))["rows"]["100088"]["state"] == "notProcessed"
         assert len(browser.contexts) == len(browser.contexts[0].pages) == 1
         browser.close()
+
+
+def test_only_a_verified_tab_can_automatically_renew_once(tmp_path):
+    vault = Vault(tmp_path, connector_key("test" * 12))
+    day = dt.datetime(2026, 11, 3, 8, tzinfo=PARIS)
+    assert allow_login(vault, automatic=True, owner="A", now=day)
+    assert not allow_login(vault, automatic=True, owner="A", now=day.replace(hour=9))
+    assert allow_login(vault, automatic=True, owner="A", verified_tab=True, now=day.replace(hour=11))
+    assert not allow_login(vault, automatic=True, owner="A", verified_tab=True, now=day.replace(hour=16))
+    vault.put("day-login-override:A", day.date().isoformat(), ttl=600)
+    assert not allow_login(vault, automatic=True, owner="B", now=day.replace(hour=17))
+    assert allow_login(vault, automatic=True, owner="A", now=day.replace(hour=17))
+    assert not allow_login(vault, automatic=True, owner="A", now=day.replace(hour=18))
