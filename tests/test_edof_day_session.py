@@ -95,6 +95,9 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
             route.fulfill(content_type="text/html", body='<a href="#/dossiers/en-cours">Dossiers</a><script>fetch('+json.dumps(runner.API_PREFIX+"pad")+')</script>')
         else:
             route.fulfill(status=404, body="")
+    from playwright.sync_api import APIRequestContext
+    from unittest.mock import Mock
+    monkeypatch.setattr(APIRequestContext, "get", lambda *_a, **_kw: Mock(status=409))
     monkeypatch.setattr(Route, "continue_", local_reply)
     with sync_playwright() as pw:
         try:
@@ -208,3 +211,42 @@ def test_pending_filter_reads_four_private_rows_and_preserves_other_dossiers(mon
         assert merged["checked"]==1 and merged["pending_checked"]==pending["checked"]
         assert directory.with_pending({**full,"checked":pending["checked"]+1},pending)["rows"]==full["rows"]
         browser.close()
+
+
+def test_private_list_fallback_requires_complete_matching_rows():
+    import json
+    from unittest.mock import Mock
+    from edof_server_browser import EDOF_HOST, API_PREFIX, read_pending_with_private_session
+    base = "https://"+EDOF_HOST+API_PREFIX
+    source = Mock(method="GET", url=base+"pad")
+    source.all_headers.return_value={"accept":"application/json", "irrelevant":"discard"}
+    context = Mock()
+    raw=[{"id":str(200000+i),"attendee":{"firstName":"Test","lastName":"Exemple"},"currentState":"notProcessed"} for i in range(4)]
+    response=Mock(status=200,url=base+"pad?page=0&size=100&state=notProcessed")
+    response.body.return_value=json.dumps({"items":raw,"numberOfItems":4}).encode()
+    context.request.get.return_value=response
+    assert len(read_pending_with_private_session(context,source)["rows"])==4
+    assert context.request.get.call_args.kwargs["headers"]=={"accept":"application/json"}
+    assert context.request.get.call_args.kwargs["max_redirects"]==0
+    raw[1]["currentState"]="accepted"
+    response.body.return_value=json.dumps({"items":raw,"numberOfItems":4}).encode()
+    assert read_pending_with_private_session(context,source) is None
+    context.reset_mock()
+    source.url="https://unrelated.invalid"+API_PREFIX+"pad"
+    assert read_pending_with_private_session(context,source) is None
+    context.request.get.assert_not_called()
+
+
+def test_no_cold_browser_without_existing_session_or_login_budget(tmp_path, monkeypatch):
+    from edof_day_session import DayWorker
+    from unittest.mock import Mock
+    now=dt.datetime.now(PARIS)
+    key=connector_key("test"*12)
+    vault=Vault(tmp_path,key)
+    vault.put("efp-login-day", {"date":now.date().isoformat(), "count":3})
+    launch=Mock(side_effect=AssertionError("unexpected browser"))
+    monkeypatch.setattr("edof_day_session.subprocess.Popen",launch)
+    outcome=DayWorker().read({"owner":"example", "manual_until":now.timestamp()+3600},
+                              {"EDOF_CONNECTOR_DIRECTORY":str(tmp_path), "EDOF_CONNECTOR_KEY":key},30)
+    assert outcome["code"]=="day_login_used" and not outcome["gmail_code_used"]
+    launch.assert_not_called()
