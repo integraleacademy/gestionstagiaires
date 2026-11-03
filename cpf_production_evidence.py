@@ -73,9 +73,10 @@ def read_evidence(legacy, requested, *, data=None):
                         session_start_date=start, session_end_date=end)
             if not start or not end or start > today:
                 continue
-            day = iso(t.get("actual_training_start_date") or t.get("real_training_start_date"))
+            day = iso(t.get("actual_training_start_date") or t.get("real_training_start_date")
+                      or t.get("certificate_realization_start_date"))
             proof = "Date d’entrée effective renseignée dans la fiche de production"
-            if has_tracking:
+            if not day and has_tracking:
                 after = (dt.date.fromisoformat(start)-dt.timedelta(days=1)).isoformat()
                 for key, at in db.execute("""SELECT id,event_at FROM tracking_events WHERE session_id=? AND trainee_id=?
                     AND event_type IN ('content_completed','answer_submitted') AND activity_id!='' AND event_at>=?

@@ -65,8 +65,8 @@ STATE_KEYS["out"].add("terminated")
 STATE_KEYS["canceled"].update({"canceledbycdc", "abandonnedbyattendeeatstepvalidated"})
 STATE_KEYS["refused"].update({"rejectedwithouttitulairesuite", "rejectedwithoutcdcsuite", "rejectedwithoutofsuite"})
 STATES = {raw: key for key, aliases in STATE_KEYS.items() for raw in aliases}
-SIMULATION = {"planned": "Échéance à venir", "ready": "Justificatif disponible",
-              "unconfirmed": "Justificatif à renseigner", "blocked": "Blocage administrateur", "missing": "Date à vérifier"}
+SIMULATION = {"planned": "Échéance à venir", "ready": "Déclaration préparée",
+              "unconfirmed": "Déclaration à compléter", "blocked": "Blocage administrateur", "missing": "Date à vérifier"}
 ACTIONS = {"accepted": "entry_training", "training": "service_done", "entry": "service_done", "out": "service_done"}
 ACTION_LABELS = {"entry_training": "Entrée en formation", "service_done": "Sortie et service fait", "both": "Entrée et sortie"}
 BLOCK_REASONS = {"no_show": "Absence", "postponed": "Report", "abandonment": "Abandon",
@@ -139,7 +139,7 @@ def simulate(kind, date, block, draft, now):
         return "missing"
     if scheduled > now:
         return "planned"
-    if draft and draft.get("action") == ACTIONS[kind] and draft.get("actual_date") and draft.get("evidence"):
+    if draft and draft.get("action") == ACTIONS[kind] and draft.get("actual_date") and (draft.get("operator_confirmed") or draft.get("evidence")):
         return "ready"
     return "unconfirmed"
 
@@ -223,10 +223,10 @@ def record_work(store, folder, actor, **changes):
                    (*updates.values(), folder))
 
 
-def declaration_draft(row, fields):
+def declaration_draft(row, fields, *, require_reference=False):
     action = ACTIONS.get(category(row))
     if not action or fields.get("action") != action or fields.get("attested") != "yes":
-        raise ValueError("Vérifiez le statut du dossier et confirmez le justificatif.")
+        raise ValueError("Le dossier doit être déclarable et sa réalisation effective confirmée.")
     try:
         date = dt.date.fromisoformat(fields.get("actual_date", ""))
     except (TypeError, ValueError):
@@ -238,9 +238,9 @@ def declaration_draft(row, fields):
     if row.get("session_end_date") and date.isoformat() > row["session_end_date"]:
         raise ValueError("La date effective dépasse la fin de la session EDOF.")
     evidence = fields.get("evidence", "").strip()
-    if not 3 <= len(evidence) <= 250:
+    if (evidence or require_reference) and not 3 <= len(evidence) <= 250:
         raise ValueError("Indiquez la référence du justificatif (3 à 250 caractères).")
-    result = {"action": action, "actual_date": date.isoformat(), "evidence": evidence}
+    result = {"action": action, "actual_date": date.isoformat(), "evidence": evidence, "operator_confirmed": True}
     if action == "service_done":
         try:
             rate = int(fields.get("rate", ""))
@@ -253,6 +253,12 @@ def declaration_draft(row, fields):
         if fields.get("motif") in declarations.MOTIFS and rate < 100:
             result["motif"] = fields["motif"]
     return result
+
+
+def entry_choice(row):
+    # Bind the selection to the person and session dates shown on the page.
+    return json.dumps([row.get(k) for k in ("folder_id","first_name","last_name","session_start_date","session_end_date")],
+                      ensure_ascii=False, separators=(",",":"))
 
 
 def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status, admin_required, check_csrf):
@@ -495,6 +501,9 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 action, outcome = outcomes.get(row["folder_id"], (None,None))
                 row["dispatch_status"] = by_action.get((row["folder_id"],row["action"]))
                 row["catchup_outcome"] = outcome if action == row["action"] else None
+                if (row["kind"] == "accepted" and row["due"] and not row["block"] and not row["dispatch_status"]
+                        and row["evaluation"] == "unconfirmed" and row["catchup_outcome"] not in {"blocked","review"}):
+                    row["entry_choice"] = entry_choice(row)
         if detail:
             detail["dispatches"] = [d for d in dispatches if d["folder"] == folder]
         with closing(store.connect()) as db:
@@ -580,6 +589,36 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             raise ValueError("Connectez EFP et Gmail avant de lancer le rattrapage.")
         store.queue_full_sync(owner, catchup_revision=selected["revision"])
         return back("automations", tab="due", _anchor="rattrapage")
+
+    @bp.post("/automatisations/entrees-effectives")
+    @native_action
+    def confirm_entries(owner):
+        revision = selection.state()["revision"]
+        if request.form.get("revision", type=int) != revision:
+            raise ValueError("Le système CPF a changé. Actualisez la liste.")
+        choices = set(request.form.getlist("entry"))
+        if request.form.get("attested") != "yes" or not 1 <= len(choices) <= 25:
+            raise ValueError("Sélectionnez les stagiaires ayant commencé à la date affichée.")
+        snap = snapshot(owner) or {}
+        blocks = active_blocks(local_data())
+        now = dt.datetime.now(PARIS)
+        actor = session.get("admin_username") or owner
+        pending = 0
+        for row in snap.get("rows", {}).values():
+            if entry_choice(row) not in choices or category(row) != "accepted":
+                continue
+            folder, start = row["folder_id"], row.get("session_start_date")
+            blocked = blocks.get((folder,"both")) or blocks.get((folder,"entry_training"))
+            if simulate("accepted",start,blocked,None,now) != "unconfirmed":
+                continue
+            try:
+                draft = declaration_draft(row, {"action":"entry_training","actual_date":start,"attested":"yes"})
+                status = declarations.enqueue(store.directory,owner,revision,row,draft,actor,automatic=True)
+            except ValueError:
+                continue
+            pending += status == "queued"
+        flash(f"Entrées en file de transmission : {pending}. Déjà traitées, bloquées ou à revoir : {len(choices)-pending}.", "success")
+        return back("automations", tab="due", page=request.form.get("page", 1, type=int), q=request.form.get("q","")[:140])
 
     @bp.post("/associate-reliable")
     @native_action
@@ -891,7 +930,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                     action = "entry_training"
                     if any((folder, k) in active_blocks(local_data()) for k in (action, "both")):
                         raise ValueError("Une suspension est en cours sur ce dossier.")
-                    draft = declaration_draft(row, request.form)
+                    draft = declaration_draft(row, request.form, require_reference=True)
                     proof = state.get("proof") or {}
                     automatic = proof.get(action)
                     if automatic and declarations.same_enrolment(row, proof):

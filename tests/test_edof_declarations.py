@@ -309,11 +309,11 @@ def test_manual_catchup_runs_only_when_active_and_reuses_the_durable_ledger(site
     def table_row(folder):
         return page.split(f'<tr data-edof-folder="{folder}">',1)[1].split("</tr>",1)[0]
     assert "En attente de transmission" in table_row("100005")
-    assert "Vérifier le justificatif" not in table_row("100005")
-    assert "Justificatif manquant au dernier rattrapage" in table_row("100004")
+    assert "Déclarer la date d’entrée" not in table_row("100005")
+    assert "Déclarer la date d’entrée" in table_row("100004")
     assert "#declaration-edof" in table_row("100004")
     assert "entrées en formation · 1, sorties avec service fait · 1" in state["message"]
-    assert "Bloquées : 2" in state["message"] and "correspondant : 1" in state["message"]
+    assert "Bloquées : 2" in state["message"] and "à préciser : 1" in state["message"]
     assert "en cours : 1" in state["message"]
     jobs = ledger.records(site.store.directory)
     assert {(r["folder"],r["action"]) for r in jobs} == {
@@ -356,3 +356,70 @@ def test_manual_catchup_rejects_partial_reads_and_provider_switches(site):
     store.process_catchups(site.gate.state())
     assert "système de traitement CPF a changé" in store.catchup_status(site.owner)["message"]
     assert not ledger.records(store.directory)
+
+def test_date_based_entries_only_queue_the_selected_effective_starts(site):
+    import edof_directory
+    import integrale_edof_dashboard as dashboard
+
+    site.gate.switch("integrale",0,"admin")
+    key = edof_directory.record_key(site.owner)
+    snap = site.vault.get(key)
+    rows = snap["rows"]
+    base = rows["100000"]
+    choices = []
+    for folder, updates in (("100000",{}), ("200001",{}), ("200002",{}), ("200003",{"session_start_date":"2099-11-03","session_end_date":"2099-11-30"})):
+        rows[folder] = {**base, "folder_id":folder, **updates}
+        choices.append(dashboard.entry_choice(rows[folder]))
+    rows["200002"]["first_name"] = "Autre titulaire"
+    site.vault.put(key,snap)
+    ledger.hold_folder(site.store.directory,"200001",True)
+    url = "/admin/edof-test/automatisations/entrees-effectives"
+    data = {"entry":choices,"revision":"1","csrf":site.csrf,"attested":"yes"}
+    assert site.client.post(url,data={**data,"csrf":""}).status_code == 403
+    site.client.post(url,data={**data,"attested":""})
+    site.client.post(url,data={**data,"revision":"0"})
+    assert not ledger.records(site.store.directory)
+    site.client.post(url,data=data)
+    site.client.post(url,data=data)
+    jobs = ledger.records(site.store.directory)
+    assert len(jobs) == 1 and jobs[0]["folder"] == "100000"
+    assert jobs[0]["intent"]["operator_confirmed"] and jobs[0]["intent"]["evidence"] == ""
+    assert jobs[0]["intent"]["actual_date"] == base["session_start_date"]
+
+
+def test_prefilled_date_is_editable_and_never_sets_a_completion_rate(site):
+    import re
+    site.gate.switch("integrale",0,"admin")
+    for folder,date in (("100000","2026-02-02"),("100001","2026-02-06")):
+        html = site.client.get("/admin/edof-test?folder="+folder).text
+        form = html.split('<form class="draft"',1)[1].split("</form>",1)[0]
+        assert f'name="actual_date" value="{date}"' in form
+        assert 'name="evidence"' not in form
+        assert re.search(r'<button[^>]*name="attested" value="yes"',form)
+        if folder == "100001":
+            assert 'name="rate" value=""' in form
+    site.client.post("/admin/edof-test/dossiers/100001/submit", data={"csrf":site.csrf,"attested":"yes",
+                     "action":"service_done","actual_date":"2026-02-05","rate":"65","motif":"trainee_absent"})
+    receipt = ledger.records(site.store.directory)[0]["intent"]
+    assert receipt["actual_date"] == "2026-02-05" and receipt["rate"] == 65 and receipt["operator_confirmed"]
+
+def test_native_catchup_uses_linked_local_effective_date_if_production_only_knows_the_session(site, monkeypatch):
+    import json
+
+    site.gate.switch("integrale",0,"admin")
+    monkeypatch.setattr(providers,"on_test_service",lambda:True)
+    row = {**ROW,"state":"accepted"}
+    remote = {FOLDER:{**row,"blocks":[]}}
+    monkeypatch.setattr(ledger,"authoritative_proofs",lambda ids:remote)
+    data = {"sessions":[{"id":"s","date_start":row["session_start_date"],"date_end":row["session_end_date"],
+              "trainees":[{"id":"t","first_name":row["first_name"],"last_name":row["last_name"],"actual_training_start_date":"2026-01-03"}]}],
+            "wedof_links":[{"active":True,"external_id":FOLDER,"session_id":"s","trainee_id":"t"}]}
+    site.local.write_text(json.dumps(data))
+    site.store.data_file = site.local
+    report = ledger.discover(site.store,site.owner,{"rows":{FOLDER:row}})
+    assert report["entry_training"] == 1
+    spec = ledger.next_job(site.store,1)
+    assert spec["intent"]["actual_date"] == "2026-01-03" and spec["intent"]["source"] == "local"
+    assert ledger.check_before_job(site.store,spec)
+    remote[FOLDER]["first_name"] = "Autre"
+    assert not ledger.check_before_job(site.store,spec)

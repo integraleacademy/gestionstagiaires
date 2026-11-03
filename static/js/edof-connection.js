@@ -51,6 +51,10 @@
       submitting = false;
     }
   });
+  function preserveSelection() {
+    return document.activeElement.matches("input, textarea, select") ||
+      document.querySelector('input[form="edof-effective-entries"]:checked');
+  }
   async function refresh() {
     if (!document.hidden) {
       try {
@@ -81,14 +85,14 @@
           feedback.textContent = state.manual_sync.message;
           if (state.manual_sync.busy) awaitingList = true;
           else if (awaitingList && state.manual_sync.updated && box.dataset.detail === "0") {
-            if (!document.activeElement.matches("input, textarea, select")) {
+            if (!preserveSelection()) {
               location.reload();
               return;
             }
           } else awaitingList = false;
         }
         if (["scan","send"].includes(priorPhase) && state.catchup?.phase !== priorPhase && !leavingForCatchup
-            && !document.activeElement.matches("input, textarea, select")) {
+            && !preserveSelection()) {
           location.reload();
           return;
         }
@@ -102,7 +106,7 @@
           state.until && "Activation manuelle jusqu’à " + state.until,
           state.checked && "Dernier contrôle le " + state.checked].filter(Boolean).join(" · ");
         if (state.active && box.dataset.list === "1" && state.stamp > Number(box.dataset.stamp)
-            && !document.activeElement.matches("input, textarea, select")) location.reload();
+            && !preserveSelection()) location.reload();
       } catch {
         lamp.classList.remove("on");
         lamp.textContent = "Connexion EDOF inactive";
@@ -212,4 +216,16 @@
   });
   const form = section.querySelector("#edof-proposal-load");
   if (section.dataset.pollUrl || form?.hasAttribute("data-autoload")) load(form, section.dataset.pollUrl);
+})();
+
+(() => {
+  const form = document.getElementById("edof-effective-entries");
+  if (!form) return;
+  const update = () => {
+    const count = document.querySelectorAll('input[form="edof-effective-entries"]:checked').length;
+    form.querySelector("button").disabled = !count;
+    form.querySelector("[data-entry-count]").textContent = count ? `${count} entrée${count === 1 ? "" : "s"}` : "les entrées sélectionnées";
+  };
+  document.addEventListener("change", event => { if (event.target.form === form) update(); });
+  update();
 })();

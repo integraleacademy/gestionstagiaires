@@ -369,3 +369,9 @@ body.admin-sidebar-active .main-content:has(.edof-workspace) { max-width: none; 
 .edof-catchup #edof-catchup-result { margin-top: 4px; font-weight: 500; }
 .edof-evidence-link { color: #804300; text-underline-offset: 3px; }
 #declaration-edof { scroll-margin-top: 80px; }
+
+.edof-entries-bar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;
+  padding:14px 20px; background:#edf3ff; color:#182d52; }
+.edof-entries-bar p { margin:4px 0 0; }
+.edof-entry-choice { display:inline-flex; align-items:center; gap:6px; color:#263e77; font-weight:650; }
+.edof-entries-bar button:disabled { opacity:.55; }

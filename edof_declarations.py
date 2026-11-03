@@ -79,8 +79,8 @@ def enqueue(directory, owner, revision, row, draft, actor, *, automatic=False):
     date = dt.date.fromisoformat(draft["actual_date"])
     if not row["session_start_date"] <= date.isoformat() <= row["session_end_date"] or date > dt.datetime.now(ZoneInfo("Europe/Paris")).date():
         raise ValueError("Vérifiez la date de la déclaration.")
-    if not draft.get("evidence") or (action == "service_done" and (type(draft.get("rate")) is not int or not 0 <= draft["rate"] <= 100 or (draft["rate"] < 100 and draft.get("motif") not in MOTIFS))):
-        raise ValueError("Vérifiez le justificatif, le taux et le motif de sortie.")
+    if not (draft.get("evidence") or draft.get("operator_confirmed") is True) or (action == "service_done" and (type(draft.get("rate")) is not int or not 0 <= draft["rate"] <= 100 or (draft["rate"] < 100 and draft.get("motif") not in MOTIFS))):
+        raise ValueError("Confirmez la réalisation et, pour une sortie, le taux et le motif éventuel.")
     stamp = time.time()
     intent = {**{k: row[k]
                  for k in ("first_name", "last_name", "session_start_date", "session_end_date")}, **draft}
@@ -298,7 +298,8 @@ def discover(store, owner, snapshot, *, outcomes=None):
                 continue
             if proof.get(action) and same_enrolment(row, proof):
                 draft = proof[action]
-            elif not proof.get("first_name") and local_proof.get(action) and same_enrolment(row, local_proof):
+            elif (not proof.get(action) and (not proof.get("first_name") or same_enrolment(row, proof))
+                  and local_proof.get(action) and same_enrolment(row, local_proof)):
                 draft = {**local_proof[action], "source":"local"}
             else:
                 draft = drafts.get(folder, {}).get("draft") or {}
@@ -357,6 +358,9 @@ def check_before_job(store, spec):
             complete(store.directory, spec, "declaration_blocked")
             return False
         source = spec["intent"].get("source")
+        if spec["intent"].get("operator_confirmed") and proof.get("first_name") and not same_enrolment(spec["intent"],proof):
+            complete(store.directory,spec,"declaration_changed")
+            return False
         if source == "admin":
             from integrale_edof_dashboard import local_operations
             current = local_operations(ProviderStore(store.directory)).get(folder, {}).get("draft") or {}
@@ -366,7 +370,7 @@ def check_before_job(store, spec):
                 return False
         if source in {"production", "local"}:
             if source == "local":
-                if proof.get("first_name"):
+                if proof.get(action) or (proof.get("first_name") and not same_enrolment(spec["intent"],proof)):
                     complete(store.directory, spec, "declaration_evidence_changed")
                     return False
                 proof = local_proofs(store, [folder]).get(folder, {})

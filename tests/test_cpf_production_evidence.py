@@ -21,3 +21,16 @@ def test_production_evidence_never_turns_planned_dates_or_hours_into_attendance(
     assert proof()["service_done"]["actual_hours"] == "12"
     data["wedof_links"] *= 2
     assert "service_done" not in proof()
+
+def test_explicit_start_date_takes_precedence_over_tracking(tmp_path):
+    import sqlite3
+    path = tmp_path/"native_elearning"
+    path.mkdir()
+    with sqlite3.connect(path/"tracking.sqlite3") as db:
+        db.execute("CREATE TABLE tracking_events(id,session_id,trainee_id,event_type,activity_id,event_at)")
+        db.execute("INSERT INTO tracking_events VALUES (1,'s','t','answer_submitted','lesson','2026-01-01T08:30:00Z')")
+    person = {"id":"t","first_name":"Marie","last_name":"Essai","actual_training_start_date":"2026-01-03"}
+    data = {"sessions":[{"id":"s","date_start":"2026-01-01","date_end":"2026-01-30","trainees":[person]}],
+            "wedof_links":[{"active":True,"external_id":FOLDER,"session_id":"s","trainee_id":"t"}]}
+    legacy = NS(DATA_FILE=tmp_path/"data.json",load_data=lambda:data)
+    assert evidence.read_evidence(legacy,[FOLDER])[FOLDER]["entry_training"]["actual_date"] == "2026-01-03"

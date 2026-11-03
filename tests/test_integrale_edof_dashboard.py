@@ -266,7 +266,7 @@ def test_legacy_french_dates_work_in_live_simulation_and_declarations_without_re
     response=site.client.get("/admin/edof-test?simulation=1")
     assert response.status_code == 200
     row = response.text.split('<tr data-edof-folder="100000">',1)[1].split("</tr>",1)[0]
-    assert "02/02/2026" in row and "Justificatif à renseigner" in row
+    assert "02/02/2026" in row and "Déclaration à compléter" in row
     assert "Date à vérifier" not in row
     site.gate.switch("integrale",0,"admin")
     result=site.client.post("/admin/edof-test/dossiers/100000/prepare", data={

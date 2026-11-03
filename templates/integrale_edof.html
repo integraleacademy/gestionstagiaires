@@ -5,7 +5,7 @@
   {% endif %}
   {% if detail and detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'] %}<meta http-equiv="refresh" content="10">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-suivi-edof') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-dates-effectives') }}">
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
@@ -117,7 +117,7 @@
 <a class="btn btn-outline" href="{{ url_for('integrale_edof.index', section='consumption') }}">Actualiser les compteurs</a></div></section>
 {% else %}
 {% if previewing %}<section class="wedof-panel edof-panel-body" id="matching"><span class="wedof-section-label">ASSOCIATIONS LOCALES</span><h2>Prévisualisation des correspondances</h2><p>{{ matches|length }} dossier(s) en cours d’entrée ou de sortie · {{ match_counts['exact_match'] or 0 }} correspondance(s) fiable(s). Une association fiable requiert des dates concordantes et un contact vérifié.</p></section>{% endif %}
-{% if testing %}<section class="wedof-panel edof-panel-body" id="simulation"><span class="wedof-section-label">SIMULATION SUR LA LISTE SYNCHRONISÉE</span><h2>Résultat du test des automatisations</h2><p>Échéances en heure de Paris · entrée à 8 h et sortie avec service fait à 18 h. Le test vérifie le statut, la date, les blocages et le justificatif de chaque dossier. Il ne transmet aucune déclaration.</p><div class="metrics">
+{% if testing %}<section class="wedof-panel edof-panel-body" id="simulation"><span class="wedof-section-label">SIMULATION SUR LA LISTE SYNCHRONISÉE</span><h2>Résultat du test des automatisations</h2><p>Échéances en heure de Paris · entrée à 8 h et sortie avec service fait à 18 h. Le test indique quelles échéances sont passées, préparées ou bloquées. Il ne transmet aucune déclaration.</p><div class="metrics">
 {% for key,label in simulation_labels.items() %}<div><strong>{{ simulation[key] or 0 }}</strong>{{ label }}</div>{% endfor %}</div></section>{% endif %}
 {% if section == 'automations' %}
 <section class="wedof-panel edof-catchup" id="rattrapage" data-phase="{{ catchup.phase if catchup else 'idle' }}">
@@ -168,6 +168,13 @@
     <label>Rechercher un dossier<input type="search" name="q" value="{{ query }}" placeholder="Numéro CPF, nom ou formation" maxlength="140"></label>
     {{ btn('Rechercher') }}{% if query %}<a href="{{ url_for('integrale_edof.index',section=section,tab=tab) }}">Effacer</a>{% endif %}
   </form>
+  {% set batch_entries = section=='automations' and tab=='due' and active and session.get('admin_role')!='viewer' and rows|selectattr('entry_choice','defined')|list %}
+  {% if batch_entries %}<form id="edof-effective-entries" class="edof-entries-bar" method="post" action="{{ url_for('integrale_edof.confirm_entries') }}">{{ token() }}
+    <input type="hidden" name="revision" value="{{ selection.revision }}"><input type="hidden" name="section" value="automations">
+    <input type="hidden" name="page" value="{{ page }}"><input type="hidden" name="q" value="{{ query }}">
+    <div><strong>Déclarer plusieurs entrées</strong><p>Cochez les stagiaires qui ont commencé à la date indiquée sur leur ligne. Si la date diffère, modifiez-la dans la fiche.</p></div>
+    <button class="btn btn-blue" name="attested" value="yes" type="submit">Confirmer et transmettre <span data-entry-count>les entrées sélectionnées</span></button>
+  </form>{% endif %}
   {% if section == 'automations' and not active %}<div class="wedof-notice is-warning">L’envoi automatique des déclarations nécessite l’activation d’Intégrale EDOF.</div>{% endif %}
   {% if not checked %}<div class="wedof-notice is-info">La liste EDOF de votre compte n’est pas disponible. <a href="{{ url_for('edof_server_test.index', _anchor='directory-status') }}">Ouvrir la synchronisation</a></div>{% endif %}
   {% if rows %}
@@ -190,7 +197,7 @@
           {% if r.due and not r.dispatch_status %}
             {% if r.catchup_outcome=='blocked' %}<small>Rattrapage bloqué pour ce dossier</small>
             {% elif r.catchup_outcome=='review' %}<small>Déclaration à vérifier</small>
-            {% elif section=='automations' and active and (r.catchup_outcome=='missing' or r.evaluation=='unconfirmed') %}<a class="edof-evidence-link" href="{{ href.split('#')[0] }}#declaration-edof">{{ 'Justificatif manquant au dernier rattrapage' if r.catchup_outcome=='missing' else 'Vérifier le justificatif' }}</a>
+            {% elif section=='automations' and active and (r.catchup_outcome=='missing' or r.evaluation=='unconfirmed') %}<a class="edof-evidence-link" href="{{ href.split('#')[0] }}#declaration-edof">{{ 'Déclarer la date d’entrée' if r.action=='entry_training' else 'Déclarer la sortie et le taux réalisé' }}</a>
             {% else %}<small>{{ simulation_labels[r.evaluation] }}</small>{% endif %}
           {% endif %}
           {% if r.entry_confirmed_on %}<small>Entrée confirmée le {{ date_fr(r.entry_confirmed_on) }}</small>{% endif %}
@@ -199,7 +206,7 @@
           <span class="wedof-badge {{ 'is-success' if r.link else 'is-neutral' }}">{{ 'Associé' if r.link else 'Non associé' }}</span>
           {% if previewing %}<small>{{ 'Correspondance fiable' if matches[r.folder_id].status == 'exact_match' else 'À vérifier' }}</small>{% if matches[r.folder_id].status == 'exact_match' %}<small>{{ matches[r.folder_id].session }} · {{ matches[r.folder_id].trainee }}</small>{% endif %}{% endif %}
         </div></td>
-        <td data-label="Actions"><div class="edof-row-actions"><a class="btn btn-outline" href="{{ href }}">Ouvrir le dossier</a>
+        <td data-label="Actions"><div class="edof-row-actions">{% if batch_entries and r.entry_choice %}<label class="edof-entry-choice"><input form="edof-effective-entries" type="checkbox" name="entry" value="{{ r.entry_choice }}"> Entrée le {{ date_fr(r.session_start_date) }}</label>{% endif %}<a class="btn btn-outline" href="{{ href }}">Ouvrir le dossier</a>
           {% if r.kind == "accepted" and not r.link %}<a class="btn btn-blue" href="{{ url_for('integrale_edof.index', section='requests', tab='accepted', folder=r.folder_id, _anchor='creer-stagiaire') }}">Créer le stagiaire</a>{% endif %}
 {% if r.action and active and r.block and r.block.action != "both" %}<form method="post" action="{{ url_for('integrale_edof.block', folder=r.folder_id) }}">{{ token() }}
 <input type="hidden" name="action" value="{{ r.block.action }}"><input type="hidden" name="release" value="yes">{{ btn('Lever le blocage de cette action') }}</form>{% endif %}
@@ -264,7 +271,7 @@
 </div></section></details>
 <details class="edof-extra wedof-panel" id="declaration-edof" {% if not detail.request %}open{% endif %}><summary>Historique et déclarations EDOF</summary>
 <section class="edof-detail"><div class="wedof-panel-header"><div><span class="wedof-section-label">Historique EDOF</span><h2>Suivi des déclarations</h2></div></div><div class="edof-panel-body">
-{% for d in detail.dispatches %}<p class="notice"><strong>{{ action_labels[d.action] }} · {{ dispatch_labels[d.status] }}</strong><br>{{ date_fr(d.intent.actual_date) }}{% if d.intent.rate is defined %} · {{ d.intent.rate }} %{% endif %} · {{ d.intent.evidence }}
+{% for d in detail.dispatches %}<p class="notice"><strong>{{ action_labels[d.action] }} · {{ dispatch_labels[d.status] }}</strong><br>{{ date_fr(d.intent.actual_date) }}{% if d.intent.rate is defined %} · {{ d.intent.rate }} %{% endif %}{% if d.intent.evidence %} · {{ d.intent.evidence }}{% elif d.intent.operator_confirmed %} · Déclaration de l’organisme{% endif %}
 {% if d.detail %}<br>{{ dispatch_reasons.get(d.detail, 'Consultez le contrôle de connexion.') }}{% endif %}</p>
 {% if (active or (detail.pilot.reserved if detail.pilot else false) and d.intent.pilot_ticket) and d.status in ['sending','uncertain'] %}<form method="post" action="{{ url_for('integrale_edof.recheck' if active else 'integrale_edof.pilot_entry',folder=f.folder_id) }}">{{ token() }}{% if not active %}<input type="hidden" name="mode" value="recheck">{% endif %}<input type="hidden" name="action" value="{{ d.action }}">{{ btn('Vérifier la réception dans EDOF') }}</form>{% endif %}
 {% else %}<p>Aucun envoi enregistré par Intégrale EDOF pour ce dossier.</p>{% endfor %}
@@ -276,17 +283,20 @@
 {% elif detail.pilot_ready %}<p>Entrée programmée par WeDoF{% if pilot.hour %} à {{ pilot.hour }}{% endif %}.</p><form method="post" action="{{ url_for('integrale_edof.pilot_entry',folder=f.folder_id) }}">{{ token() }}<input type="hidden" name="mode" value="reserve">{{ btn('Réserver uniquement cette entrée à Intégrale EDOF') }}</form>
 {% else %}<p>État ou dates à vérifier dans Gestion Stagiaires.</p>{% endif %}
 {% if detail.pilot_proof %}<p>Justificatif de production · {{ detail.pilot_proof.evidence }} · {{ date_fr(detail.pilot_proof.actual_date) }}.</p>{% endif %}{% endif %}
-{% if detail.action %}<h3>{{ action_labels[detail.action] }}</h3>{% if detail.draft and detail.draft.action == detail.action %}<p class="notice">Préparation enregistrée pour le {{ date_fr(detail.draft.actual_date) }}{% if detail.draft.rate is defined %}, taux de réalisation {{ detail.draft.rate }} %{% endif %}. Justificatif · {{ detail.draft.evidence }}.{% if detail.draft.source == 'lms' %} Préparation automatique à partir d’une activité pédagogique enregistrée.{% endif %} Vous pouvez transmettre cette déclaration depuis cette fiche.</p>{% endif %}
+{% if detail.action %}<h3>{{ action_labels[detail.action] }}</h3>{% if detail.draft and detail.draft.action == detail.action %}<p class="notice">Préparation enregistrée pour le {{ date_fr(detail.draft.actual_date) }}{% if detail.draft.rate is defined %}, taux de réalisation {{ detail.draft.rate }} %{% endif %}.{% if detail.draft.evidence %} {{ detail.draft.evidence }}.{% endif %}{% if detail.draft.source == 'lms' %} Préparation automatique à partir d’une activité pédagogique enregistrée.{% endif %} Vous pouvez transmettre cette déclaration depuis cette fiche.</p>{% endif %}
 {% set pilot_send = pilot and detail.pilot_ready and pilot.reserved and detail.action == 'entry_training' %}
 {% if active or pilot_send %}{% set entry_draft = detail.pilot_proof if pilot_send else detail.draft %}<form class="draft" method="post" action="{{ url_for('integrale_edof.pilot_entry' if pilot_send else 'integrale_edof.submit',folder=f.folder_id) }}">{{ token() }}{% if pilot_send %}<input type="hidden" name="mode" value="submit">{% endif %}<input type="hidden" name="action" value="{{ detail.action }}">
-<label>Date effective<input type="date" name="actual_date" value="{{ entry_draft.actual_date if entry_draft and entry_draft.action==detail.action else '' }}" min="{{ f.session_start_date or '' }}" max="{{ today }}" required></label>
-<label>Référence du justificatif<input type="text" name="evidence" value="{{ entry_draft.evidence if entry_draft and entry_draft.action==detail.action else '' }}" maxlength="250" placeholder="Feuille de présence ou activité pédagogique" required></label>
+{% set planned = f.session_start_date if detail.action=='entry_training' else f.session_end_date %}
+{% set saved_date = entry_draft.actual_date if entry_draft and entry_draft.action==detail.action else none %}
+{% if not saved_date and planned and planned <= today %}<p>La date de session est préremplie. Modifiez-la si la date effective est différente.</p>{% endif %}
+<label>{{ 'Date effective d’entrée' if detail.action=='entry_training' else 'Date effective de sortie' }}<input type="date" name="actual_date" value="{{ saved_date or (planned if planned and planned<=today else '') }}" min="{{ f.session_start_date or '' }}" max="{{ [today, f.session_end_date]|min if f.session_end_date else today }}" required></label>
+{% if pilot_send %}<label>Référence du justificatif<input type="text" name="evidence" value="{{ entry_draft.evidence if entry_draft else '' }}" maxlength="250" required></label>{% endif %}
 {% if detail.action == 'service_done' %}<label>Taux réalisé (%)<input type="number" name="rate" value="{{ detail.draft.rate if detail.draft and detail.draft.action==detail.action and detail.draft.rate is defined else '' }}" min="0" max="100" required></label><label>Motif en cas de réalisation partielle<select name="motif"><option value="">Parcours intégral ou motif à choisir</option>{% for key,label in motifs.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>{% endif %}
-<label><input type="checkbox" name="attested" value="yes" required> J’ai vérifié la réalisation effective de la formation.</label><button class="btn btn-blue" type="submit">{{ 'Transmettre l’entrée à EDOF' if detail.action=='entry_training' else 'Transmettre la sortie et le service fait à EDOF' }}</button></form>{% endif %}{% endif %}
+<button class="btn btn-blue" type="submit" name="attested" value="yes">{{ 'Confirmer l’entrée effective et transmettre à EDOF' if detail.action=='entry_training' else 'Confirmer la sortie et le service fait à EDOF' }}</button></form>{% endif %}{% endif %}
   </div></section></details>
 {% endif %}
 </div>
 {% endblock %}
 {% block scripts %}
-  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261103-suivi-edof') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261103-dates-effectives') }}" defer></script>
 {% endblock %}
