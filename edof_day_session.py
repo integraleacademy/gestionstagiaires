@@ -63,7 +63,7 @@ def allow_login(vault, *, owner=None, now=None, manual_until=0):
 class DayWorker:
     """One isolated child controlled by a private socket pair, with no network listener."""
     def __init__(self):
-        self.process = self.temp = self.owner = self.provider = self.channel = None
+        self.process = self.temp = self.owner = self.provider = self.channel = self.vault = None
         self.mutex = threading.RLock()
 
     def close(self):
@@ -73,7 +73,10 @@ class DayWorker:
                     os.killpg(self.process.pid, signal.SIGKILL)
                 self.process.wait()
                 self.process.stdout.close()
-                self.process = self.owner = self.provider = None
+                if self.vault and self.owner:
+                    from edof_session_clock import record
+                    record(self.vault, self.owner, "interrupted")
+                self.process = self.owner = self.provider = self.vault = None
             if self.channel is not None:
                 self.channel.close()
                 self.channel = None
@@ -106,7 +109,7 @@ class DayWorker:
                     self.process = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), str(child.fileno())],
                         stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, pass_fds=(child.fileno(),),
                         env={**env, "TMPDIR":self.temp.name}, text=True, start_new_session=True)
-                self.owner, self.provider = spec["owner"], spec.get("provider")
+                self.owner, self.provider, self.vault = spec["owner"], spec.get("provider"), vault
             try:
                 started = datetime.now(PARIS).timestamp()
                 command = {**spec, "full_sync":spec.get("sync_scope") == "all"}
