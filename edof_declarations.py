@@ -246,7 +246,7 @@ def local_proofs(store, folders):
     return read_evidence(SimpleNamespace(DATA_FILE=path), folders, data=data)
 
 
-def discover(store, owner, snapshot):
+def discover(store, owner, snapshot, *, outcomes=None):
     from integrale_edof_dashboard import ACTIONS, category, local_operations, simulate
     from cpf_provider import on_test_service
     if not on_test_service():
@@ -260,6 +260,12 @@ def discover(store, owner, snapshot):
                 if r["status"] in {"confirmed","sending","uncertain","review"} or r["status"] == "queued" and r["revision"] == revision}
 
     report = dict(entry_training=0, service_done=0, existing=0, blocked=0, missing=0, review=0)
+
+    def record(folder, action, bucket, outcome):
+        report[bucket] += 1
+        if outcomes is not None:
+            outcomes[folder] = (action, outcome)
+
     now = dt.datetime.now(ZoneInfo("Europe/Paris"))
     due = {}
     for folder, row in dated_snapshot(snapshot)["rows"].items():
@@ -272,9 +278,9 @@ def discover(store, owner, snapshot):
         action = ACTIONS[kind]
         status = existing.get((folder, action))
         if folder in held:
-            report["blocked"] += 1
+            record(folder, action, "blocked", "blocked")
         elif status:
-            report["review" if status in {"review","uncertain"} else "existing"] += 1
+            record(folder, action, "review" if status in {"review","uncertain"} else "existing", status)
         else:
             due[folder] = (row, action)
     ids = list(due)
@@ -288,7 +294,7 @@ def discover(store, owner, snapshot):
             proof = proofs[folder]
             local_proof = local.get(folder, {})
             if {action, "both"}.intersection([*proof.get("blocks", []), *local_proof.get("blocks", [])]):
-                report["blocked"] += 1
+                record(folder, action, "blocked", "blocked")
                 continue
             if proof.get(action) and same_enrolment(row, proof):
                 draft = proof[action]
@@ -299,19 +305,19 @@ def discover(store, owner, snapshot):
                 if (draft.get("source") != "admin" or draft.get("action") != action or not same_enrolment(row,draft)
                         or proof.get("first_name") and not same_enrolment(row, proof)
                         or draft.get("rate", 100) < 100 and draft.get("motif") not in MOTIFS):
-                    report["missing"] += 1
+                    record(folder, action, "missing", "missing")
                     continue
             try:
                 status = enqueue(store.directory, owner, revision, row, draft, "Gestion Stagiaires", automatic=True)
             except ValueError:
-                report["review"] += 1
+                record(folder, action, "review", "review")
                 continue
             if status == "queued":
-                report[action] += 1
+                record(folder, action, action, status)
             elif status == "paused":
-                report["blocked"] += 1
+                record(folder, action, "blocked", "blocked")
             else:
-                report["review" if status in {"review","uncertain"} else "existing"] += 1
+                record(folder, action, "review" if status in {"review","uncertain"} else "existing", status)
     return report
 
 

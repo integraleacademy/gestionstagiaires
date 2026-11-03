@@ -302,7 +302,16 @@ def test_manual_catchup_runs_only_when_active_and_reuses_the_durable_ledger(site
     site.store.finish(job,{"code":"directory_ready"})
     site.store.process_catchups(site.gate.state())
     state = site.store.catchup_status(site.owner)
-    assert not state["busy"]
+    assert state["busy"] and state["phase"] == "send"
+    assert "en attente : 3" in state["message"]
+    assert "outcomes" not in state
+    page = site.client.get("/admin/edof-test?section=automations&tab=due").text
+    def table_row(folder):
+        return page.split(f'<tr data-edof-folder="{folder}">',1)[1].split("</tr>",1)[0]
+    assert "En attente de transmission" in table_row("100005")
+    assert "Vérifier le justificatif" not in table_row("100005")
+    assert "Justificatif manquant au dernier rattrapage" in table_row("100004")
+    assert "#declaration-edof" in table_row("100004")
     assert "entrées en formation · 1, sorties avec service fait · 1" in state["message"]
     assert "Bloquées : 2" in state["message"] and "correspondant : 1" in state["message"]
     assert "en cours : 1" in state["message"]
@@ -326,6 +335,13 @@ def test_manual_catchup_runs_only_when_active_and_reuses_the_durable_ledger(site
     ledger.discover(site.store, site.owner, projected)
     stages = {(r["action"], r["status"]) for r in ledger.records(site.store.directory, entry["folder"])}
     assert stages == {("entry_training","confirmed"), ("service_done","queued")}
+    for pending in (r for r in jobs if r["folder"] != entry["folder"]):
+        ledger.complete(site.store.directory, {"operation":pending["token"],"mode":"declare"}, "declaration_blocked")
+    state = site.store.catchup_status(site.owner)
+    assert state["phase"] == "done" and not state["busy"]
+    assert "confirmés par EDOF : 1" in state["message"] and "à vérifier : 2" in state["message"]
+    # The next-stage exit is its own declaration, outside this run's original batch.
+
 
 
 def test_manual_catchup_rejects_partial_reads_and_provider_switches(site):

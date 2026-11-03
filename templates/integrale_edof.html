@@ -5,21 +5,24 @@
   {% endif %}
   {% if detail and detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'] %}<meta http-equiv="refresh" content="10">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-rattrapage') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-suivi-edof') }}">
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
 {% macro token() %}<input type="hidden" name="csrf" value="{{ csrf }}">{% endmacro %}
 {% macro btn(label) %}<button class="btn btn-outline" type="submit">{{ label }}</button>{% endmacro %}
 {% macro link(section, tab='all', page=1) %}{{ url_for('integrale_edof.index', section=section, tab=tab, page=page, q=query, simulation=(1 if testing else none), matching=(1 if previewing else none)) }}{% endmacro %}
+{% macro activity_label(idle, running) %}
+  <span class="edof-idle">{{ idle }}</span><span class="edof-running"><i class="edof-spinner" aria-hidden="true"></i>{{ running }}</span>
+{% endmacro %}
 {% macro sync_button() %}
   {% if session.get('admin_role') != 'viewer' %}<div class="edof-sync-control">
     <form method="post" action="{{ url_for('edof_server_test.sync_now') }}" data-manual-sync>
       {{ token() }}<input type="hidden" name="section" value="{{ section }}"><input type="hidden" name="tab" value="{{ tab }}">
       {% if detail %}<input type="hidden" name="folder" value="{{ detail.record.folder_id }}">{% endif %}
-      <button class="edof-sync-button" type="submit" {% if live.manual_sync and live.manual_sync.busy %}disabled{% endif %}>
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 8a8 8 0 0 0-14-2L3 9m0-5v5h5M4 16a8 8 0 0 0 14 2l3-3m0 5v-5h-5"/></svg>
-        Synchroniser les dossiers</button>
+      <button class="edof-sync-button" type="submit" aria-busy="{{ 'true' if live.manual_sync and live.manual_sync.busy else 'false' }}" {% if live.manual_sync and live.manual_sync.busy %}disabled{% endif %}>
+        <svg class="edof-idle" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 8a8 8 0 0 0-14-2L3 9m0-5v5h5M4 16a8 8 0 0 0 14 2l3-3m0 5v-5h-5"/></svg>
+        {{ activity_label('Synchroniser les dossiers', 'Synchronisation en cours…') }}</button>
     </form>
     <small data-sync-feedback role="status">{{ live.manual_sync.message if live.manual_sync else '' }}</small>
   </div>{% endif %}
@@ -42,6 +45,7 @@
         <span id="edof-sync" class="wedof-status-pill is-sync" data-stamp="{{ live.sync.stamp }}">Dernière synchronisation · {{ (live.sync.label ~ ' · ' ~ live.sync.scope) if live.sync.stamp else 'Aucune lecture récente' }}</span>
         <span id="edof-full-sync" class="wedof-status-pill" data-stamp="{{ live.sync.full_stamp }}" {% if not live.sync.full_stamp or live.sync.stamp <= live.sync.full_stamp %}hidden{% endif %}>Liste générale · {{ live.sync.full_label }}</span>
         {% if not detail %}<span class="wedof-status-pill">{{ snapshot_count }} dossiers synchronisés</span>{% endif %}
+        <span id="edof-reading" class="wedof-status-pill" role="status" {% if not live.pending %}hidden{% endif %}><i class="edof-spinner" aria-hidden="true"></i>Synchronisation EDOF en cours…</span>
       </div>
       <small id="edof-connection-note">{{ live.schedule }}{% if live.pending %} · {{ live.phase or 'Lecture en cours…' }}{% elif live.error %} · {{ live.error }}{% endif %}{% if live.until %} · Activation manuelle jusqu’à {{ live.until }}{% endif %}{% if live.checked %} · Dernier contrôle le {{ live.checked }}{% endif %}</small>
     </div>
@@ -116,7 +120,7 @@
 {% if testing %}<section class="wedof-panel edof-panel-body" id="simulation"><span class="wedof-section-label">SIMULATION SUR LA LISTE SYNCHRONISÉE</span><h2>Résultat du test des automatisations</h2><p>Échéances en heure de Paris · entrée à 8 h et sortie avec service fait à 18 h. Le test vérifie le statut, la date, les blocages et le justificatif de chaque dossier. Il ne transmet aucune déclaration.</p><div class="metrics">
 {% for key,label in simulation_labels.items() %}<div><strong>{{ simulation[key] or 0 }}</strong>{{ label }}</div>{% endfor %}</div></section>{% endif %}
 {% if section == 'automations' %}
-<section class="wedof-panel edof-catchup" id="rattrapage">
+<section class="wedof-panel edof-catchup" id="rattrapage" data-phase="{{ catchup.phase if catchup else 'idle' }}">
   <div><span class="wedof-section-label">Rattrapage</span><h2>Déclarations en retard</h2>
     <p>La plateforme relit les dossiers EDOF et prépare les entrées, sorties et services faits dont l’échéance est passée. Le traitement continue si vous quittez la page.</p>
     {% if not active %}<p>Disponible lorsque <a href="{{ url_for('integrale_edof.index', section='technical') }}">Intégrale EDOF est actif</a>.</p>{% endif %}
@@ -125,10 +129,14 @@
     <form method="post" action="{{ url_for('integrale_edof.catch_up') }}">{{ token() }}
       <input type="hidden" name="revision" value="{{ selection.revision }}"><input type="hidden" name="section" value="automations">
       <button class="edof-sync-button" type="submit" data-catchup-button data-active="{{ '1' if active else '0' }}"
-              {% if not active or (catchup and catchup.busy) %}disabled{% endif %}>Rattraper les automatisations</button>
+              aria-busy="{{ 'true' if catchup and catchup.busy else 'false' }}" {% if not active or (catchup and catchup.busy) %}disabled{% endif %}>
+        {{ activity_label('Rattraper les automatisations', 'Rattrapage des automatisations en cours…') }}</button>
     </form>
   {% endif %}
-  <p id="edof-catchup-result" role="status">{{ catchup.message if catchup else '' }}</p>
+  <div class="edof-report" {% if not catchup %}hidden{% endif %}>
+    <strong data-stage-title>{{ {'scan':'Lecture des dossiers EDOF en cours…','send':'Transmission des déclarations en cours…','done':'Dernier bilan'}.get(catchup.phase if catchup else '', '') }}</strong>
+    <p id="edof-catchup-result" role="status">{{ catchup.message if catchup else '' }}</p>
+  </div>
 </section>
 {% endif %}
 {% if section in ['state','requests','automations'] %}
@@ -174,11 +182,17 @@
         <td data-label="Période"><div class="wedof-date-range"><span>Du {{ date_fr(r.session_start_date) }}</span><span>au {{ date_fr(r.session_end_date) }}</span></div></td>
         <td data-label="Automatisation"><div class="wedof-badges">
           {% if r.block %}<span class="wedof-badge is-danger">Bloqué · {{ block_reasons.get(r.block.reason_code, 'À vérifier') }}</span>
+          {% elif r.due and r.dispatch_status %}<span class="wedof-badge {{ 'is-success' if r.dispatch_status=='confirmed' else ('is-info' if r.dispatch_status in ['queued','sending'] else 'is-warning') }}">{{ dispatch_labels[r.dispatch_status] }}</span>
           {% elif r.scheduled %}<span class="wedof-badge {{ 'is-warning' if r.due else 'is-info' }}">{{ 'Échéance dépassée' if r.due else ('Aujourd’hui' if r.scheduled.date().isoformat() == today else 'À venir') }}</span>
           {% elif r.action %}<span class="wedof-badge is-warning">Date à vérifier</span>
           {% else %}<span class="wedof-badge is-neutral">Aucune action prévue</span>{% endif %}
           {% if r.scheduled %}<small>{{ action_labels[r.action] }}<br><time datetime="{{ r.scheduled.isoformat() }}">{{ r.scheduled.strftime('%d/%m/%Y à %H h %M') }}</time></small>{% endif %}
-          {% if r.due %}<small>{{ simulation_labels[r.evaluation] }}</small>{% endif %}
+          {% if r.due and not r.dispatch_status %}
+            {% if r.catchup_outcome=='blocked' %}<small>Rattrapage bloqué pour ce dossier</small>
+            {% elif r.catchup_outcome=='review' %}<small>Déclaration à vérifier</small>
+            {% elif section=='automations' and active and (r.catchup_outcome=='missing' or r.evaluation=='unconfirmed') %}<a class="edof-evidence-link" href="{{ href.split('#')[0] }}#declaration-edof">{{ 'Justificatif manquant au dernier rattrapage' if r.catchup_outcome=='missing' else 'Vérifier le justificatif' }}</a>
+            {% else %}<small>{{ simulation_labels[r.evaluation] }}</small>{% endif %}
+          {% endif %}
           {% if r.entry_confirmed_on %}<small>Entrée confirmée le {{ date_fr(r.entry_confirmed_on) }}</small>{% endif %}
         </div></td>
         <td data-label="Rattachement local"><div class="wedof-link-cell">
@@ -248,7 +262,7 @@
 {% elif active and not c.issues %}<form method="post" action="{{ url_for('integrale_edof.associate',folder=f.folder_id) }}">{{ token() }}<input type="hidden" name="session_id" value="{{ c.session_id }}"><input type="hidden" name="trainee_id" value="{{ c.trainee_id }}"><label><input type="checkbox" name="verified" value="yes" required> J’ai vérifié l’identité et la session.</label>{{ btn('Associer ce stagiaire') }}</form>{% endif %}</div>
 {% else %}<p>Aucune inscription locale correspondante.</p>{% endfor %}
 </div></section></details>
-<details class="edof-extra wedof-panel" {% if not detail.request %}open{% endif %}><summary>Historique et déclarations EDOF</summary>
+<details class="edof-extra wedof-panel" id="declaration-edof" {% if not detail.request %}open{% endif %}><summary>Historique et déclarations EDOF</summary>
 <section class="edof-detail"><div class="wedof-panel-header"><div><span class="wedof-section-label">Historique EDOF</span><h2>Suivi des déclarations</h2></div></div><div class="edof-panel-body">
 {% for d in detail.dispatches %}<p class="notice"><strong>{{ action_labels[d.action] }} · {{ dispatch_labels[d.status] }}</strong><br>{{ date_fr(d.intent.actual_date) }}{% if d.intent.rate is defined %} · {{ d.intent.rate }} %{% endif %} · {{ d.intent.evidence }}
 {% if d.detail %}<br>{{ dispatch_reasons.get(d.detail, 'Consultez le contrôle de connexion.') }}{% endif %}</p>
@@ -274,5 +288,5 @@
 </div>
 {% endblock %}
 {% block scripts %}
-  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261103-rattrapage') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261103-suivi-edof') }}" defer></script>
 {% endblock %}
