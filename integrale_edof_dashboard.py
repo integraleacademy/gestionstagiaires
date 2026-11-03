@@ -14,6 +14,8 @@ from flask import g, jsonify, Blueprint, abort, flash, get_flashed_messages, red
 from edof_day_session import working_hours
 import edof_directory as directory
 import edof_declarations as declarations
+import edof_proposal as proposal_form
+import edof_proposal_jobs as proposals
 from cpf_provider import PROVIDERS, ProviderStore, ProviderUnavailable, on_test_service, provider_operation
 from cpf_provider_bridge import coordinated_switch, production_request
 from edof_matching import build_comparison, manual_options
@@ -281,7 +283,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         # Previously synchronized dossiers also contain French display dates.
         pending = vault().get(directory.pending_key(owner)) if store.connector_key else None
         full = apply_confirmed_entries(directory.dated_snapshot(saved), store.directory, owner)
-        return directory.with_pending(full, pending)
+        return proposals.with_receipts(store.directory, owner, directory.with_pending(full, pending))
 
     def folder_record(owner, folder):
         if not ID_RE.fullmatch(folder):
@@ -420,6 +422,25 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             detail["draft"] = local_operations(selection).get(folder, {}).get("draft")
             detail["action"] = ACTIONS.get(category(record))
             detail["request"] = category(record) == "request"
+            detail["proposal_job"] = proposals.record(store.directory,folder,owner)
+            if detail["request"] and store.connector_key:
+                private = vault()
+                source = private.get(proposals.source_key(owner,folder))
+                detail["proposal_source"] = source
+                detail["proposal_options"] = private.get(proposals.option_key(owner)) or {}
+                stored = private.get("proposal-draft:"+owner+":"+folder) or {}
+                values = proposal_form.displayed(source,record)
+                if not stored.get("signature") or source and stored["signature"] == source["signature"]:
+                    values.update(stored.get("values",{}))
+                detail["proposal_values"] = values
+                read_job = request.args.get("proposal_read", "")
+                if read_job:
+                    read = proposals.read_ticket(store.directory,owner,folder,read_job)
+                    if read:
+                        detail["proposal_reading"] = read["status"] in {"queued","reading"}
+                        detail["proposal_read_note"] = read["message"] or "Lecture des conditions de l’offre en attente du connecteur EDOF."
+                detail["proposal_auto_load"] = request.args.get("prepare")=="1" and not read_job and not source
+
             detail["held"] = folder in held
             detail["transfers"] = {target:receipt(selection, folder, target) for target in TARGETS} if detail["request"] else {}
             detail["official"] = DETAIL_PREFIX + folder
@@ -472,13 +493,13 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                     detail["pilot_proof"] = proof["entry_training"]
             except (ValueError, ProviderUnavailable) as exc:
                 detail["pilot_error"] = str(exc)
-        return render_template("integrale_edof.html", title="Intégrale EDOF · Pilotage CPF",
+        return render_template("integrale_edof.html", proposal_fields=proposal_form, proposal_status=proposals.LABELS, title="Intégrale EDOF · Pilotage CPF",
             selection=selected, production=production, bridge_error=bridge_error, aligned=aligned, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=tabs, tab=tab,
             dispatch_labels=declarations.LABELS, dispatch_reasons=MESSAGES, motifs=declarations.MOTIFS,
             inspection=check, dispatches=dispatches, csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
             match_counts=Counter(m["status"] for m in matches.values()), total=len(rows), counts=counts,
             rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
-            detail=detail, events=events, full_checked=directory.stamp(snap) if snap and snap.get("checked") else None, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=(directory.stamp({"checked":snap["pending_checked"]}) if snap and snap.get("pending_checked") and tab=="request" else directory.stamp(snap) if snap and snap.get("checked") else None), today=today, metrics=metrics,
+            detail=detail, events=events, full_checked=directory.stamp(snap) if snap and snap.get("checked") else None, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=(directory.stamp({"checked":snap["pending_checked"]}) if snap and snap.get("pending_checked") and tab=="request" else directory.stamp(snap) if snap and snap.get("checked") else directory.stamp({"checked":snap["receipt_checked"]}) if snap and snap.get("receipt_checked") and tab!="request" else None), today=today, metrics=metrics,
             live=store.live_connection(owner, gmail["saved_session"]), nonce=g.edof_nonce, jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
             scope=(snap or {}).get("scope", "open"), day_open=working_hours(now), directory_enabled=store.directory_enabled(owner), snapshot_count=len((snap or {}).get("rows", {})),
             held=held, block_reasons=BLOCK_REASONS, action_labels=ACTION_LABELS,
@@ -555,6 +576,88 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         legacy._atomic_update_data(apply)
         flash("Association locale enregistrée." if outcome == ["created"] else "Association déjà enregistrée.", "success")
         return back(folder=folder)
+
+    def proposal_back(folder, **extra):
+        return back("requests",tab="request",folder=folder,_anchor="proposition-edof", **extra)
+
+    @bp.post("/dossiers/<folder>/proposal/read")
+    @admin_required
+    def load_proposal(folder):
+        owner = results_owner()
+        if session.get("admin_role") == "viewer":
+            abort(403)
+        check_csrf()
+        try:
+            row = folder_record(owner,folder)
+            if category(row) != "request" or not store.connector_key:
+                raise ValueError("Cette proposition ne peut pas être chargée.")
+            jid = proposals.request_read(store.directory,owner,row)
+            return proposal_back(folder, proposal_read=jid)
+        except (ValueError,ProviderUnavailable) as exc:
+            flash(str(exc),"error")
+        return proposal_back(folder)
+
+    @bp.post("/dossiers/<folder>/proposal/draft")
+    @admin_required
+    def save_proposal_draft(folder):
+        if request.content_length and request.content_length > 192000:
+            abort(413)
+        owner = results_owner()
+        if session.get("admin_role") == "viewer":
+            abort(403)
+        check_csrf()
+        row = folder_record(owner,folder)
+        if category(row) != "request" or not store.connector_key:
+            abort(409)
+        private = vault()
+        source = private.get(proposals.source_key(owner,folder))
+        signature = request.form.get("signature") or ""
+        if signature and (not source or signature!=source["signature"]):
+            flash("Les conditions ont changé. Rechargez la proposition EDOF.","error")
+        else:
+            values = proposal_form.form_values(request.form)
+            original = proposal_form.displayed(source if signature else None,row)
+            changes = {k:v for k,v in values.items() if v!=original.get(k)}
+            if any(isinstance(v,str) and len(v)>16000 for v in changes.values()):
+                abort(400)
+            private.put("proposal-draft:"+owner+":"+folder,{"signature":signature,"values":changes},ttl=86400)
+            flash("Brouillon enregistré dans la plateforme.","success")
+        return proposal_back(folder)
+
+    @bp.post("/dossiers/<folder>/proposal/submit")
+    @native_action
+    def send_proposal(owner, folder):
+        if request.content_length and request.content_length > 192000:
+            abort(413)
+        row = folder_record(owner,folder)
+        private = vault()
+        source = private.get(proposals.source_key(owner,folder))
+        try:
+            if category(row) != "request":
+                raise ValueError("Ce dossier n’est plus à traiter.")
+            if not source or request.form.get("signature") != source["signature"]:
+                raise ValueError("Rechargez la proposition officielle. Les données ont changé ou ont expiré.")
+            values = proposal_form.form_values(request.form)
+            private.put("proposal-draft:"+owner+":"+folder,{"signature":source["signature"],"values":values},ttl=86400)
+            terms = proposal_form.validate(values,source,private.get(proposals.option_key(owner)) or {})
+            if request.form.get("confirm") != "yes":
+                raise ValueError("Vérifiez puis confirmez l’envoi de ces conditions au titulaire.")
+            state = proposals.enqueue(store.directory,owner,selection.state()["revision"],row,source,terms)
+            flash(proposals.LABELS[state],"success")
+        except ValueError as exc:
+            flash(str(exc),"error")
+        return proposal_back(folder)
+
+    @bp.post("/dossiers/<folder>/proposal/recheck")
+    @admin_required
+    def recheck_proposal(folder):
+        owner = results_owner()
+        if session.get("admin_role") == "viewer":
+            abort(403)
+        check_csrf()
+        folder_record(owner,folder)
+        proposals.recheck(store.directory,folder,owner)
+        return proposal_back(folder)
 
     @bp.post("/dossiers/<folder>/create-trainee")
     @admin_required
