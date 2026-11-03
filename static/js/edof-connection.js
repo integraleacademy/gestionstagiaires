@@ -9,6 +9,8 @@
         const response = await fetch(box.dataset.statusUrl, {cache: "no-store"});
         if (!response.ok) throw Error();
         const state = await response.json();
+        document.getElementById("edof-activate").hidden = state.manual;
+        document.getElementById("edof-resume").hidden = !state.paused;
         lamp.classList.toggle("on", state.active);
         lamp.textContent = state.active ? "Connexion EDOF active" : "Connexion EDOF inactive";
         note.textContent = [state.pending ? "Lecture en cours…" : state.error,

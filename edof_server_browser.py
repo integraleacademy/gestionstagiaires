@@ -268,6 +268,11 @@ def returned_to_organisation(url, signals):
             and signals.get("callback_status") == 200 and signals.get("edof_token_status") == 200)
 
 
+def returning_shell(url, signals):
+    return (location_category(url) == "edof_initialisation" and urlsplit(url).scheme == "https"
+            and signals.get("callback_status") == 200 and not signals.get("workspace_denied"))
+
+
 def restored_workspace(page, signals):
     if not private_page(page.url):
         return False
@@ -989,7 +994,7 @@ def run_browser(spec, *, live=None):
         nonlocal blocked
         request = route.request
         returned = 200 <= signals.get("callback_status", 0) < 400
-        allow_identity = authenticated and (returned or bool(saved))
+        allow_identity = authenticated and (returned or bool(saved) or bool(live and (live.get("verified") or live.get("return_pending"))))
         frame_url = ""
         if allow_identity and request.method == "POST" and urlsplit(request.url).netloc == EDOF_HOST:
             try:
@@ -1122,13 +1127,12 @@ def run_browser(spec, *, live=None):
                 nonlocal otp_attempted, gmail_code_used
                 # Only derive categorical signals; never return the page body,
                 # which could contain identity information or an auth code.
-                if stage in {"organism", "search", "dossier", "directory"}:
-                    bodies = page.locator("body").all_inner_texts()
-                    if not bodies:
-                        return "loading"
-                    text = bodies[0]
-                else:
-                    text = page.locator("body").inner_text(timeout=3000)
+                # During the redirects the old document can disappear before a
+                # body exists on the new one. Keep polling inside the deadline.
+                bodies = page.locator("body").all_inner_texts()
+                if not bodies:
+                    return "loading"
+                text = bodies[0]
                 code = classify_text(text)
                 if code and code != "verification_code":
                     raise StopRun(code)
@@ -1175,7 +1179,7 @@ def run_browser(spec, *, live=None):
                 # Refresh this tab with its original session storage and current cookies.
                 page.reload(wait_until="domcontentloaded", timeout=45000)
             try:
-                reused = open_workspace_or_login(page, context, saved, signals, checkpoint)
+                reused = open_workspace_or_login(page, context, saved or (warm and live.get("return_pending")), signals, checkpoint)
             except StopRun as exc:
                 if not saved or not can_restart_saved_login(exc.code, page, diagnostics, checkpoint):
                     raise
@@ -1217,22 +1221,33 @@ def run_browser(spec, *, live=None):
                 page.locator('input[name="password"]').fill(password)
                 from edof_day_session import allow_login
                 if not allow_login(vault, automatic=bool(spec.get("day_session")),
-                                   manual_until=spec.get("manual_until", 0), owner=spec.get("owner"), verified_tab=bool(warm and live.get("verified"))):
+                                   manual_until=spec.get("manual_until", 0), recover_return=bool(spec.get("recover_return")),
+                                   owner=spec.get("owner"), verified_tab=bool(warm and live.get("verified"))):
                     raise StopRun("day_login_used")
                 requested_at = time.time()
                 page.locator("#kc-login").click()
                 username = password = None
-                deadline = time.monotonic() + 70
+                deadline = time.monotonic() + 160
+                shell_since = None
+                recovered_shell = False
                 while time.monotonic() < deadline:
                     try:
                         checkpoint()
                     except BrowserTimeout:
-                        # The old EFP document can vanish while the MFA checkpoint
-                        # reads it. Continue only after both official callbacks.
-                        # The organisation checkpoint still checks the new screen.
-                        if not returned_to_organisation(page.url, signals):
+                        # The callback can arrive while the SPA has no body. An
+                        # intermediate shell is not evidence of private access.
+                        if not (returned_to_organisation(page.url, signals) or
+                                gmail_code_used and returning_shell(page.url, signals)):
                             raise
-                    if private_page(page.url):
+                    if returning_shell(page.url, signals):
+                        shell_since = shell_since or time.monotonic()
+                        if not recovered_shell and time.monotonic()-shell_since > 25 and inactive_saved_view(page, signals):
+                            recovered_shell = True
+                            # Load the official dossier list in this same signed-in
+                            # tab. The subsequent organisation and private GET
+                            # checks remain mandatory; no password is resubmitted.
+                            page.goto(LIST_URL, wait_until="commit", timeout=30000)
+                    elif private_page(page.url):
                         break
                     page.wait_for_timeout(500)
                 else:

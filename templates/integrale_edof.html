@@ -18,8 +18,8 @@
 <style>#edof-live{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;margin:1rem 0}#edof-live .lamp{display:inline-block;padding:.55rem .9rem;border-radius:1.2rem;background:#a1232c;color:white;font-weight:700}#edof-live .lamp.on{background:#17643d}#edof-live form{margin:0}</style>
 <span role="status" class="lamp {{ 'on' if live.active else '' }}" id="edof-lamp">Connexion EDOF {{ 'active' if live.active else 'inactive' }}</span>
 <span id="edof-connection-note">{{ 'Connexion en cours…' if live.pending else ('Activation manuelle jusqu’à ' ~ live.until if live.manual else ('Dernier contrôle le ' ~ live.checked if live.checked else 'En attente du premier contrôle')) }}</span>
-{% if not live.manual %}<form method="post" action="{{ url_for('edof_server_test.activate_manual') }}">{{ token() }}<button class="btn btn-outline" type="submit">Activer la connexion pour 1 heure</button></form>{% endif %}
-{% if live.paused %}<form method="post" action="{{ url_for('edof_server_test.resume_day') }}">{{ token() }}{{ btn('Autoriser un nouveau code') }}</form>{% endif %}
+<form id="edof-activate" {% if live.manual %}hidden{% endif %} method="post" action="{{ url_for('edof_server_test.activate_manual') }}">{{ token() }}<button class="btn btn-outline" type="submit">Activer la connexion pour 1 heure</button></form>
+<form id="edof-resume" {% if not live.paused %}hidden{% endif %} method="post" action="{{ url_for('edof_server_test.resume_day') }}">{{ token() }}{{ btn('Autoriser un nouveau code') }}</form>
 </section><script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js') }}" defer></script>
 <p>Ce choix s’applique à Test V2 et aux traitements WeDoF de Gestion Stagiaires en production pour Intégrale Academy.</p>
 {% if production %}<p><strong>Production vérifiée · {{ providers[production.provider] }}</strong></p>{% endif %}

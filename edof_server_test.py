@@ -27,7 +27,7 @@ from flask import flash, Blueprint, abort, jsonify, redirect, request, send_file
 from cpf_provider import acquire_provider
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
 from edof_server_browser import stalled_before_login
-from edof_day_session import DayWorker, POLL_SECONDS, PARIS, working_hours
+from edof_day_session import DayWorker, POLL_SECONDS, PARIS, working_hours, awaiting_edof_return
 import edof_directory as directory
 import edof_declarations as declarations
 from edof_gmail import Vault, GmailError, connector_key, oauth_configured, authorization_url, finish_authorization
@@ -290,6 +290,7 @@ class ServerTestStore:
         manual = self.manual_until(owner)
         open_now = bool(manual or working_hours(now) and self.directory_enabled(owner))
         with closing(self.connect()) as db:
+            queued = bool(db.execute("SELECT 1 FROM directory_requested WHERE owner=?", (owner,)).fetchone())
             row = db.execute("""SELECT finished,created,json_extract(result,'$.code') code
                 FROM jobs WHERE owner=? AND mode='directory' ORDER BY created DESC LIMIT 1""", (owner,)).fetchone()
             last = db.execute("""SELECT finished,json_extract(result,'$.code') code FROM jobs
@@ -300,13 +301,13 @@ class ServerTestStore:
             earliest = min(earliest, manual - 3600) if working_hours(now) and self.directory_enabled(owner) else manual - 3600
         verified = bool(stamp >= earliest and open_now and saved_session and last and last["code"] == "directory_ready" and
                         0 <= now.timestamp() - stamp < POLL_SECONDS * 3)
-        pending = bool(open_now and row and row["finished"] is None)
+        pending = bool(open_now and (queued or row and row["finished"] is None))
         checked = dt.datetime.fromtimestamp(stamp, PARIS).strftime("%d/%m à %H h %M") if stamp else ""
         return {"active": verified, "pending": pending, "checked": checked,
                 "stamp": stamp, "manual": bool(manual),
                 "until": dt.datetime.fromtimestamp(manual, PARIS).strftime("%H h %M") if manual else "",
-                "paused": bool(open_now and last and last["code"] == "day_login_used"),
-                "error": MESSAGES.get(last["code"], "") if open_now and last and last["code"] != "directory_ready" else ""}
+                "paused": bool(open_now and stamp >= earliest and last and last["code"] == "day_login_used"),
+                "error": MESSAGES.get(last["code"], "") if open_now and stamp >= earliest and last and last["code"] != "directory_ready" else ""}
 
     def manual_until(self, owner):
         with closing(self.connect()) as db:
@@ -330,7 +331,7 @@ class ServerTestStore:
         db = self.connect()
         try:
             rows = db.execute("""
-                SELECT a.owner,j.created,j.finished,json_extract(j.result,'$.code') AS code,
+                SELECT a.owner,j.created,j.finished,j.result,json_extract(j.result,'$.code') AS code,
                        EXISTS(SELECT 1 FROM directory_requested r WHERE r.owner=a.owner) AS requested
                 FROM (SELECT owner,max(seen) AS seen FROM (SELECT owner,seen FROM directory_activity WHERE ?
                       UNION ALL SELECT owner,started AS seen FROM manual_sessions WHERE until>?) GROUP BY owner) a
@@ -347,7 +348,7 @@ class ServerTestStore:
                 elif row["finished"] and row["requested"] and row["code"] in {"day_login_used", "directory_ready"}:
                     due.append(row["owner"])
                 elif row["finished"] and row["code"] in ("directory_ready","directory_incomplete","directory_unavailable","timeout","browser_error","interrupted"):
-                    delay = POLL_SECONDS if row["code"] == "directory_ready" else 900
+                    delay = POLL_SECONDS if row["code"] == "directory_ready" or awaiting_edof_return(json.loads(row["result"])) else 900
                     if row["created"] + delay <= now.timestamp() and row["finished"] + 20 <= now.timestamp():
                         due.append(row["owner"])
             return due
@@ -496,7 +497,8 @@ def start_job(store, owner, spec, *, day_worker=None):
             until = store.manual_until(owner)
             if spec["mode"] != "directory" or not (until or working_hours(now) and store.directory_enabled(owner)):
                 raise ValueError("Veille indisponible.")
-            spec = {**spec, "manual_until": until}
+            last_directory = next((job for job in store.latest(owner) if job["mode"] == "directory"), {})
+            spec = {**spec, "manual_until": until, "recover_return": bool(until and awaiting_edof_return(last_directory))}
             provider_fd = acquire_provider(spec["provider"])
         elif spec["mode"] != "inspect_forms":
             ticket = (spec.get("intent") or {}).get("pilot_ticket")

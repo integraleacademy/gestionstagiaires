@@ -26,7 +26,14 @@ def session_deadline(now, manual_until=0):
     return max(scheduled, manual_until)
 
 
-def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None, manual_until=0):
+def awaiting_edof_return(result):
+    diag = result.get("diagnostics") or {}
+    return (result.get("code") == "timeout" and result.get("stage") == "authentication"
+            and result.get("gmail_code_used") is True and diag.get("callback_status") == 200
+            and diag.get("location") == "edof_initialisation" and not diag.get("workspace_denied"))
+
+
+def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None, manual_until=0, recover_return=False):
     """Called under the shared job lock before the password POST can issue a code."""
     now = (now or datetime.now(PARIS)).astimezone(PARIS)
     today = now.date().isoformat()
@@ -38,7 +45,7 @@ def allow_login(vault, *, automatic, verified_tab=False, owner=None, now=None, m
         if session_deadline(now, manual_until) <= now.timestamp():
             return False
         override = bool(owner) and vault.get("day-login-override:" + owner, consume=True) == today
-        if count and not (verified_tab and count == 1) and not override:
+        if count and not (count == 1 and (verified_tab or manual_until > now.timestamp() and recover_return)) and not override:
             return False
     vault.put("efp-login-day", {"date": today, "count": count + 1}, ttl=2 * 86400)
     return True
@@ -77,7 +84,7 @@ class DayWorker:
                     env={**env, "TMPDIR": self.temp.name}, text=True, start_new_session=True)
                 self.owner = spec["owner"]
             try:
-                self.process.stdin.write(json.dumps({"owner": self.owner, "manual_until": spec.get("manual_until", 0)}) + "\n")
+                self.process.stdin.write(json.dumps({"owner": self.owner, "manual_until": spec.get("manual_until", 0), "recover_return": spec.get("recover_return", False)}) + "\n")
                 self.process.stdin.flush()
                 now = datetime.now(PARIS)
                 remaining = deadline - now.timestamp()
@@ -85,7 +92,7 @@ class DayWorker:
                     self.close()
                     return {"code": "timeout" if datetime.now(PARIS).timestamp() < deadline else "day_closed"}
                 result = json.loads(self.process.stdout.readline(32768))
-                if result.get("code") not in {"directory_ready", "directory_incomplete", "directory_unavailable"}:
+                if result.get("code") not in {"directory_ready", "directory_incomplete", "directory_unavailable"} and not awaiting_edof_return(result):
                     self.close()
                 return result
             except (OSError, ValueError):
@@ -106,7 +113,9 @@ def serve():
                 if session_deadline(now, manual_until) <= now.timestamp():
                     break
                 owner = command["owner"]
-                result = run_browser({"mode": "directory", "owner": owner, "day_session": True, "manual_until": manual_until}, live=live)
+                result = run_browser({"mode": "directory", "owner": owner, "day_session": True,
+                                      "manual_until": manual_until, "recover_return": command.get("recover_return", False)}, live=live)
+                live["return_pending"] = awaiting_edof_return(result)
                 if result["code"] == "directory_ready":
                     live["verified"] = True
                 print(json.dumps(result), flush=True)
