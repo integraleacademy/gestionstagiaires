@@ -65,6 +65,7 @@ def test_release_on_remote_start_and_remains_available(case, monkeypatch):
             html = render_template('aps_kickoff_card.html', aps_kickoff=state, token_safe='trainee-one')
         assert ('Consulter le diaporama' in html) == (expected == 200)
         assert ('Télécharger le PDF' in html) == (expected == 200)
+        assert (f'src="{PUBLIC}#view=FitH"' in html) == (expected == 200)
 
 
 def test_authentication_and_token_ownership(case):
@@ -107,15 +108,45 @@ def test_other_courses_and_partner_sessions_are_excluded(case, change):
 
 
 @pytest.mark.parametrize('change', [dict(exam_date=''), dict(aps_remote_end='bad-date'),
-    dict(aps_in_person_start='2026-11-05'), dict(exam_date='2026-11-01')])
+    dict(aps_in_person_start='2026-11-05'), dict(aps_in_person_start='2026-11-16'),
+    dict(exam_date='2026-11-01')])
 def test_missing_or_inconsistent_dates_never_create_a_wrong_pdf(case, change):
     _, client, services, training, trainee = case
     training.update(change)
-    assert not kickoff.view(services, training, trainee)['ready']
-    assert client.get(PUBLIC).status_code == 403
+    state = kickoff.view(services, training, trainee)
+    assert state['available'] and not state['ready']
+    response = client.get(PUBLIC)
+    assert response.status_code == 200 and response.mimetype == 'application/pdf'
+    with pymupdf.open(stream=response.data, filetype='pdf') as document:
+        assert len(document) == 41
+        assert '3 novembre 2026' in document[0].get_text()
+        assert 'Calendrier en cours de confirmation' in document[7].get_text()
+        assert 'Date à confirmer' in document[34].get_text()
+    training.update(aps_in_person_start='2026-11-17', aps_remote_end='2026-11-16', exam_date='2026-12-09')
+    with pymupdf.open(stream=client.get(PUBLIC).data, filetype='pdf') as document:
+        assert '9 décembre' in document[34].get_text()
+    training.update(change)
     with client.session_transaction() as cookie:
         cookie['admin_logged_in'] = True
     assert client.get(ADMIN).status_code == 409
+
+
+def test_release_uses_the_first_training_day_and_keeps_remote_dates(case, monkeypatch):
+    _, client, services, training, trainee = case
+    training['date_start'] = '2026-11-02'
+    monkeypatch.setattr(kickoff, 'today', lambda: date(2026, 11, 2))
+    assert client.get(PUBLIC).status_code == 200
+    with pymupdf.open(stream=client.get(PUBLIC).data, filetype='pdf') as document:
+        assert '3 au 16 novembre' in document[8].get_text()
+    training['date_start'] = '2026-11-17'
+    assert not kickoff.view(services, training, trainee)['available']
+    monkeypatch.setattr(kickoff, 'today', lambda: date(2026, 11, 3))
+    assert client.get(PUBLIC).status_code == 200
+    training.update(date_start='', aps_remote_start='')
+    assert client.get(PUBLIC).status_code == 403
+    training.update(date_start='2026-11-03', exam_date='')
+    trainee['registration_cancelled'] = True
+    assert client.get(PUBLIC).status_code == 403
 
 
 def test_pdf_updates_all_dates_without_mutating_session(case):

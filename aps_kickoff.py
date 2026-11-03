@@ -49,11 +49,17 @@ def _date(raw):
         return None
 
 
+def _first_training_day(services, training):
+    # Older records can use the global start for the first onsite day.
+    starts = (_date(services._session_get(training, key, ''))
+              for key in ('date_start', 'aps_remote_start'))
+    return min((day for day in starts if day is not None), default=None)
+
+
 def schedule(services, training):
     """Reuse saved session dates; do not infer missing exam/phase dates."""
     values = {key: _date(services._session_get(training, key, '')) for key in DATE_FIELDS}
-    # An explicitly recorded remote start is the start of this hybrid course.
-    values['date_start'] = values['aps_remote_start'] or values['date_start']
+    values['date_start'] = _first_training_day(services, training)
     values['date_end'] = values['aps_in_person_end'] or values['date_end']
     if not all(values.values()):
         raise ValueError('Complétez les dates du e-learning, du présentiel et de l’examen dans « Modifier la session ».')
@@ -61,7 +67,7 @@ def schedule(services, training):
     onsite, end, exam = (values[k] for k in ('aps_in_person_start', 'aps_in_person_end', 'exam_date'))
     if not start <= remote_end < onsite <= end <= exam:
         raise ValueError('Vérifiez l’ordre des dates : e-learning, présentiel, puis examen.')
-    if (exam - start).days > 366:
+    if (exam - values['date_start']).days > 366:
         raise ValueError('Vérifiez les dates de la session APS : la période dépasse un an.')
     return values
 
@@ -69,13 +75,24 @@ def schedule(services, training):
 def view(services, training, trainee=None):
     if not supported(services, training):
         return None
+    # The launch meeting uses the overall training start, including remote learning.
+    start = _first_training_day(services, training)
+    start_label = start.strftime('%d/%m/%Y') if start else ''
+    if trainee and services._trainee_registration_is_cancelled(trainee):
+        message = 'Votre inscription à cette session est annulée.'
+    elif not start:
+        message = 'La date de début de votre formation reste à confirmer.'
+    elif today() < start:
+        message = f'Le diaporama sera disponible le {start_label}, au début de votre formation.'
+    else:
+        message = ''
     try:
-        dates = schedule(services, training)
+        schedule(services, training)
+        calendar_error = ''
     except ValueError as error:
-        return dict(available=False, ready=False, error=str(error), start_label='')
-    cancelled = bool(trainee and services._trainee_registration_is_cancelled(trainee))
-    return dict(available=today() >= dates['date_start'] and not cancelled,
-                ready=True, error='', start_label=dates['date_start'].strftime('%d/%m/%Y'))
+        calendar_error = str(error)
+    return dict(available=not message, ready=not calendar_error, error=calendar_error,
+                message=message, start=start, start_label=start_label)
 
 
 def french(day, year=True, weekday=False):
@@ -186,44 +203,72 @@ def _calendar(page, dates, city):
         _text(page, detail, x, 455, 15, MUTED, width=width)
 
 
-@lru_cache(maxsize=8)
-def _build_pdf(key):
-    import pymupdf as fitz
-    payload = json.loads(key)
-    dates = {k: date.fromisoformat(v) for k, v in payload['dates'].items()}
+def _dated_labels(dates, month_label, city, address):
     start, end, exam = (dates[k] for k in ('date_start', 'date_end', 'exam_date'))
-    remote_end, onsite = dates['aps_remote_end'], dates['aps_in_person_start']
-    month_label = f'{MONTHS[start.month]} {start.year}'
-    values = {
+    remote_start, remote_end = dates['aps_remote_start'], dates['aps_remote_end']
+    onsite = dates['aps_in_person_start']
+    return {
         (1, 'cover-subtitle'): f'Réunion de lancement\nSession de {month_label}',
         (1, 'cover-dates'): f'{period(start, end)}\nExamen le {french(exam)}',
-        (9, 'remote-table-period'): 'Du '+period(start, remote_end),
-        (27, 'section'): ('Du '+period(start, remote_end)).upper(),
+        (9, 'remote-table-period'): 'Du '+period(remote_start, remote_end),
+        (27, 'section'): ('Du '+period(remote_start, remote_end)).upper(),
         (30, 'title'): 'Le point avant le '+french(remote_end),
         (30, 'takeaway'): 'Rendez-vous au centre de formation à partir du '+french(onsite, weekday=True)+'.',
-        (31, 'title'): 'Votre accueil à '+payload['city'],
+        (31, 'title'): 'Votre accueil à '+city,
         (31, 'item-title-0'): 'Du '+period(onsite, end),
-        (31, 'item-body-1'): payload['address'],
+        (31, 'item-body-1'): address,
         (35, 'title'): 'L’examen du '+french(exam),
         (35, 'big-value'): french(exam, year=False),
         (35, 'big-label'): f'{exam.year}, selon votre convocation',
         (41, 'item-body-2'): f'Présentiel dès le {french(onsite)}. Examen le {french(exam)}.',
     }
+
+
+@lru_cache(maxsize=8)
+def _build_pdf(key):
+    import pymupdf as fitz
+    payload = json.loads(key)
+    dates = {k: date.fromisoformat(v) for k, v in payload['dates'].items()}
+    start = date.fromisoformat(payload['start'])
+    month_label = f'{MONTHS[start.month]} {start.year}'
+    if dates:
+        values = _dated_labels(dates, month_label, payload['city'], payload['address'])
+    else:
+        values = {
+            (1, 'cover-subtitle'): 'Réunion de lancement',
+            (1, 'cover-dates'): 'Début de formation le '+french(start),
+            (9, 'remote-table-period'): 'Période à confirmer',
+            (27, 'section'): 'VOTRE FORMATION À DISTANCE',
+            (30, 'title'): 'Le point avant le présentiel',
+            (30, 'takeaway'): 'Les dates du présentiel seront précisées par le centre de formation.',
+            (31, 'title'): 'Votre accueil à '+payload['city'],
+            (31, 'item-title-0'): 'Formation en présentiel',
+            (31, 'item-body-1'): payload['address'],
+            (35, 'title'): 'Votre examen',
+            (35, 'big-value'): 'Date à confirmer',
+            (35, 'big-label'): 'Consultez votre convocation',
+            (41, 'item-body-2'): 'Consultez votre convocation pour les dates du présentiel et de l’examen.',
+        }
     with fitz.open(ASSETS / 'template.pdf') as document:
         for spec in json.loads((ASSETS / 'layout.json').read_text()):
             text = ('INTÉGRALE ACADEMY   /   APS '+month_label.upper() if spec['name'] == 'footer'
                     else values[(spec['page'], spec['name'])])
             _block(document[spec['page']-1], spec, text)
-        _calendar(document[7], dates, payload['city'])
+        if dates:
+            _calendar(document[7], dates, payload['city'])
+        else:
+            _text(document[7], 'Calendrier en cours de confirmation', 45, 140, 24, NAVY)
         document.set_metadata({'title': 'Réunion de lancement APS — '+month_label,
-                               'author': 'Intégrale Academy', 'subject': 'Session du '+period(start, end)})
+                               'author': 'Intégrale Academy', 'subject': 'Session du '+french(start)})
         document.subset_fonts()
         return document.tobytes(garbage=4, deflate=True)
 
 
-def pdf(services, training):
-    dates = schedule(services, training)
-    payload = dict(version=VERSION, dates={k: v.isoformat() for k, v in dates.items()},
+def pdf(services, training, *, presentation_start=None):
+    # The admin preview remains strict so the team can correct the schedule.
+    dates = schedule(services, training) if presentation_start is None else {}
+    start = presentation_start or dates['date_start']
+    payload = dict(version=VERSION, start=start.isoformat(), dates={k: v.isoformat() for k, v in dates.items()},
                    city=services.APS_CONVOCATION_CENTER_CITY,
                    address=f'{services.APS_CONVOCATION_CENTER_ADDRESS}\n'
                            f'{services.APS_CONVOCATION_CENTER_ZIP} {services.APS_CONVOCATION_CENTER_CITY}')
@@ -236,12 +281,12 @@ def register(app, services):
     # Expose the same eligibility predicate to both administration templates.
     app.jinja_env.globals['aps_kickoff_supported'] = lambda training: supported(services, training)
 
-    def response(training):
+    def response(training, presentation_start=None):
         try:
-            content = pdf(services, training)
+            content = pdf(services, training, presentation_start=presentation_start)
         except ValueError as error:
             abort(409, description=str(error))
-        start = schedule(services, training)['date_start'].isoformat()
+        start = presentation_start or schedule(services, training)['date_start']
         result = send_file(BytesIO(content), mimetype='application/pdf',
                            as_attachment=request.args.get('download') == '1',
                            download_name=f'Diaporama_APS_{start}.pdf', max_age=0)
@@ -259,7 +304,11 @@ def register(app, services):
             abort(404)
         state = view(services, training, trainee)
         if not state['available']:
-            abort(403, description='Le diaporama est accessible à partir du premier jour de formation.')
+            abort(403, description=state['message'])
+        if not state['ready']:
+            app.logger.info('APS kickoff calendar pending session=%s reason=%s',
+                            training.get('id'), state['error'])
+            return response(training, presentation_start=state['start'])
         return response(training)
 
     @app.get('/admin/sessions/<session_id>/diaporama-aps.pdf')

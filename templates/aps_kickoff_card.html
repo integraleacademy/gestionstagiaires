@@ -1,13 +1,21 @@
-{% if aps_kickoff and aps_kickoff.available %}
-<section class="trainee-overview-card documents-card" aria-labelledby="apsKickoffTitle">
+{% if aps_kickoff %}
+<section class="trainee-overview-card documents-card" style="min-height:auto;margin:12px 0 18px" aria-labelledby="apsKickoffTitle">
   <div>
-    <p class="card-kicker">Votre formation APS</p>
-    <h2 id="apsKickoffTitle" class="card-title">Votre réunion de lancement APS</h2>
+    <p class="card-kicker">Réunion de lancement APS</p>
+    <h2 id="apsKickoffTitle" class="card-title">Diaporama de présentation</h2>
   </div>
-  <p style="color:var(--muted);line-height:1.6;margin:12px 0 16px;">Retrouvez le diaporama de votre session : le calendrier, les 14 UV, le fonctionnement du e-learning et votre accueil au centre de formation.</p>
-  <div style="display:flex;flex-wrap:wrap;gap:10px;">
-    <a class="btn" href="{{ url_for('public_aps_kickoff_pdf', token=token_safe) }}" target="_blank" rel="noopener">Consulter le diaporama</a>
+  {% if aps_kickoff.available %}
+  <p>Retrouvez les 14 UV, les étapes du e-learning et les informations pour votre accueil au centre de formation.</p>
+  {% if not aps_kickoff.ready %}<p>Le calendrier de la session est en cours de confirmation.</p>{% endif %}
+  {% set pdf_url = url_for('public_aps_kickoff_pdf', token=token_safe) %}
+  <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+    <a class="btn" href="{{ pdf_url }}" target="_blank" rel="noopener">Consulter le diaporama</a>
     <a class="btn outline" href="{{ url_for('public_aps_kickoff_pdf', token=token_safe, download=1) }}">Télécharger le PDF</a>
   </div>
+  <iframe title="Diaporama de présentation APS" src="{{ pdf_url }}#view=FitH" loading="lazy"
+          style="width:100%;height:clamp(280px,56vw,600px);border:0;border-radius:12px"></iframe>
+  {% else %}
+  <p>{{ aps_kickoff.message }}</p>
+  {% endif %}
 </section>
 {% endif %}
