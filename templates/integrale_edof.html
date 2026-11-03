@@ -5,7 +5,7 @@
   {% endif %}
   {% if detail and detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'] %}<meta http-equiv="refresh" content="10">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-liste-complete') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-rattrapage') }}">
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
@@ -30,7 +30,7 @@
   {% if flashes %}<div class="wedof-flash-stack" aria-live="polite">
     {% for type, msg in flashes %}<p role="status" class="wedof-flash is-{{ type }}">{{ msg }}</p>{% endfor %}
   </div>{% endif %}
-  <header class="{{ 'edof-file-toolbar' if detail else 'wedof-hero' }}" id="edof-live" data-detail="{{ '1' if detail else '0' }}" data-status-url="{{ url_for('integrale_edof.connection_badge') }}" data-stamp="{{ live.stamp }}"
+  <header class="{{ 'edof-file-toolbar' if detail else 'wedof-hero' }}" id="edof-live" data-detail="{{ '1' if detail else '0' }}" data-status-url="{{ url_for('integrale_edof.connection_badge', catchup=(1 if section == 'automations' and not detail else none)) }}" data-stamp="{{ live.stamp }}"
           data-list="{{ '1' if section in ['state','requests'] and tab == 'request' and not detail and not query and page == 1 else '0' }}">
     <div class="wedof-hero-copy">
       {% if detail %}<a class="edof-back" href="{{ link(section,tab,page) }}">← Retour aux dossiers</a>{% else %}
@@ -115,6 +115,22 @@
 {% if previewing %}<section class="wedof-panel edof-panel-body" id="matching"><span class="wedof-section-label">ASSOCIATIONS LOCALES</span><h2>Prévisualisation des correspondances</h2><p>{{ matches|length }} dossier(s) en cours d’entrée ou de sortie · {{ match_counts['exact_match'] or 0 }} correspondance(s) fiable(s). Une association fiable requiert des dates concordantes et un contact vérifié.</p></section>{% endif %}
 {% if testing %}<section class="wedof-panel edof-panel-body" id="simulation"><span class="wedof-section-label">SIMULATION SUR LA LISTE SYNCHRONISÉE</span><h2>Résultat du test des automatisations</h2><p>Échéances en heure de Paris · entrée à 8 h et sortie avec service fait à 18 h. Le test vérifie le statut, la date, les blocages et le justificatif de chaque dossier. Il ne transmet aucune déclaration.</p><div class="metrics">
 {% for key,label in simulation_labels.items() %}<div><strong>{{ simulation[key] or 0 }}</strong>{{ label }}</div>{% endfor %}</div></section>{% endif %}
+{% if section == 'automations' %}
+<section class="wedof-panel edof-catchup" id="rattrapage">
+  <div><span class="wedof-section-label">Rattrapage</span><h2>Déclarations en retard</h2>
+    <p>La plateforme relit les dossiers EDOF et prépare les entrées, sorties et services faits dont l’échéance est passée. Le traitement continue si vous quittez la page.</p>
+    {% if not active %}<p>Disponible lorsque <a href="{{ url_for('integrale_edof.index', section='technical') }}">Intégrale EDOF est actif</a>.</p>{% endif %}
+  </div>
+  {% if session.get('admin_role') != 'viewer' %}
+    <form method="post" action="{{ url_for('integrale_edof.catch_up') }}">{{ token() }}
+      <input type="hidden" name="revision" value="{{ selection.revision }}"><input type="hidden" name="section" value="automations">
+      <button class="edof-sync-button" type="submit" data-catchup-button data-active="{{ '1' if active else '0' }}"
+              {% if not active or (catchup and catchup.busy) %}disabled{% endif %}>Rattraper les automatisations</button>
+    </form>
+  {% endif %}
+  <p id="edof-catchup-result" role="status">{{ catchup.message if catchup else '' }}</p>
+</section>
+{% endif %}
 {% if section in ['state','requests','automations'] %}
 <section class="wedof-panel">
   <div class="wedof-panel-header"><div>
@@ -258,5 +274,5 @@
 </div>
 {% endblock %}
 {% block scripts %}
-  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261103-fiche-formation') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261103-rattrapage') }}" defer></script>
 {% endblock %}

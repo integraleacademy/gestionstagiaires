@@ -251,3 +251,92 @@ def test_verified_exit_only_requeues_once_for_remaining_service(tmp_path):
     assert result["code"] == "declaration_unverified"
     ledger.complete(tmp_path,follow,result["code"])
     assert ledger.records(tmp_path)[0]["status"] == "uncertain"
+
+
+def test_manual_catchup_runs_only_when_active_and_reuses_the_durable_ledger(site, monkeypatch):
+    import cpf_provider
+    import edof_directory
+    import time
+
+    url = "/admin/edof-test/automatisations/rattraper"
+    form = {"csrf":site.csrf,"revision":"1","section":"automations"}
+    site.vault.put("gmail",{"fixture":True})
+    assert site.client.post(url,data=form,follow_redirects=True).status_code == 200
+    assert not site.store.catchup_status(site.owner)
+    site.gate.switch("integrale",0,"fixture")
+    assert site.client.post(url,data={**form,"csrf":""}).status_code == 403
+    assert site.client.post(url,data={**form,"revision":"0"},follow_redirects=True).status_code == 200
+    assert not site.store.catchup_status(site.owner)
+    with site.client.session_transaction() as sess:
+        sess["admin_role"]="viewer"
+    assert site.client.post(url,data=form).status_code == 403
+    with site.client.session_transaction() as sess:
+        sess["admin_role"]="admin"
+    assert site.client.post(url,data=form).status_code == 303
+    first = site.store.next_full_sync()
+    assert first["catchup"] and site.store.catchup_status(site.owner)["busy"]
+    assert site.client.post(url,data=form).status_code == 303
+    assert first["requested"] == site.store.next_full_sync()["requested"]
+    assert "Relancez" not in site.store.catchup_status(site.owner)["message"]
+    monkeypatch.setattr(cpf_provider,"on_test_service",lambda:True)
+    monkeypatch.setattr("cpf_provider_bridge.production_request", lambda:{"provider":"integrale"})
+
+    def row(folder,state,**updates):
+        return {**ROW,"folder_id":folder,"state":state,**updates}
+    rows = {r["folder_id"]:r for r in [
+        row("100001","accepted"),row("100002","inTraining"),row("100003","accepted"),row("100004","accepted"),
+        row("100005","accepted"),row("100006","inTraining"),row("100007","accepted",session_start_date="2099-10-01"),
+        row("100008","serviceDoneValidated"),row("100009","accepted",session_start_date="2025-12-31")]}
+    proofs = {f:{**r,"blocks":[],"entry_training":{**ENTRY,"source":"production"},
+                 "service_done":{**EXIT,"source":"production"}} for f,r in rows.items()}
+    del proofs["100004"]["entry_training"]
+    proofs["100006"]["blocks"]=["both"]
+    monkeypatch.setattr(ledger,"authoritative_proofs",lambda ids:{f:proofs[f] for f in ids})
+    ledger.hold_folder(site.store.directory,"100003",True)
+    ledger.enqueue(site.store.directory,site.owner,1,rows["100005"],ENTRY,"admin")
+    old = next(r for r in ledger.records(site.store.directory) if r["folder"]=="100005")
+    job = site.store.reserve(site.owner,"directory",day_session=True,full_sync=True)
+    site.store.process_catchups(site.gate.state())
+    assert site.store.catchup_status(site.owner)["busy"]
+    site.vault.put(edof_directory.record_key(site.owner),{"scope":"all","rows":rows,"checked":time.time()})
+    site.store.finish(job,{"code":"directory_ready"})
+    site.store.process_catchups(site.gate.state())
+    state = site.store.catchup_status(site.owner)
+    assert not state["busy"]
+    assert "entrées en formation · 1, sorties avec service fait · 1" in state["message"]
+    assert "Bloquées : 2" in state["message"] and "correspondant : 1" in state["message"]
+    assert "en cours : 1" in state["message"]
+    jobs = ledger.records(site.store.directory)
+    assert {(r["folder"],r["action"]) for r in jobs} == {
+        ("100001","entry_training"),("100002","service_done"),("100005","entry_training")}
+    assert old["token"] == next(r["token"] for r in jobs if r["folder"]=="100005")
+    site.store.process_catchups(site.gate.state())
+    assert jobs == ledger.records(site.store.directory)
+
+    # For a finished session, the next scheduler pass can catch up the exit
+    # once EDOF has acknowledged the entry, without a second operator click.
+    from integrale_edof_dashboard import apply_confirmed_entries
+    entry = next(r for r in jobs if r["folder"] == "100001")
+    spec = {"mode":"declare","operation":entry["token"],"folder_id":entry["folder"],
+            "intent":entry["intent"],"revision":entry["revision"]}
+    assert ledger.begin_send(site.store.directory, spec)
+    ledger.complete(site.store.directory, spec, "declaration_confirmed", "inTraining")
+    projected = apply_confirmed_entries(site.vault.get(edof_directory.record_key(site.owner)), site.store.directory, site.owner)
+    assert projected["rows"][entry["folder"]]["state"] == "inTraining"
+    ledger.discover(site.store, site.owner, projected)
+    stages = {(r["action"], r["status"]) for r in ledger.records(site.store.directory, entry["folder"])}
+    assert stages == {("entry_training","confirmed"), ("service_done","queued")}
+
+
+def test_manual_catchup_rejects_partial_reads_and_provider_switches(site):
+    store = site.store
+    site.gate.switch("integrale",0,"admin")
+    store.queue_full_sync(site.owner,catchup_revision=1)
+    store.finish(store.reserve(site.owner,"directory",day_session=True,full_sync=True), {"code":"requests_ready"})
+    store.process_catchups(site.gate.state())
+    assert "liste générale EDOF n’a pas été actualisée" in store.catchup_status(site.owner)["message"]
+    store.queue_full_sync(site.owner,catchup_revision=1)
+    site.gate.switch("wedof",1,"admin")
+    store.process_catchups(site.gate.state())
+    assert "système de traitement CPF a changé" in store.catchup_status(site.owner)["message"]
+    assert not ledger.records(store.directory)

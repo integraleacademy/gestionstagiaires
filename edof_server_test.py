@@ -24,7 +24,7 @@ from zoneinfo import ZoneInfo
 from contextlib import closing
 from flask import flash, Blueprint, abort, jsonify, redirect, request, send_file, session, url_for
 
-from cpf_provider import acquire_provider
+from cpf_provider import ProviderStore, acquire_provider, provider_operation
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
 from edof_server_browser import stalled_before_login
 from edof_day_session import DayWorker, POLL_SECONDS, PARIS, working_hours, awaiting_edof_return, renewal_time
@@ -150,6 +150,8 @@ class ServerTestStore:
         db.execute("CREATE TABLE IF NOT EXISTS manual_sessions (owner TEXT PRIMARY KEY, started REAL NOT NULL, until REAL NOT NULL)")
         db.execute("CREATE TABLE IF NOT EXISTS directory_requested (owner TEXT PRIMARY KEY)")
         db.execute("CREATE TABLE IF NOT EXISTS manual_directory (owner TEXT PRIMARY KEY, requested REAL NOT NULL, job_id TEXT)")
+        db.execute("""CREATE TABLE IF NOT EXISTS automation_catchups (owner TEXT PRIMARY KEY, revision INTEGER NOT NULL,
+                   requested REAL NOT NULL, message TEXT NOT NULL DEFAULT '')""")
         db.execute("DELETE FROM jobs WHERE created < ?", (time.time() - RETENTION,))
         db.execute("UPDATE jobs SET finished = ?, result = ? WHERE finished IS NULL "
                    "AND created < ? - CASE WHEN mode = 'directory' THEN ? WHEN mode IN ('declare','reconcile','proposal_read','proposal_send','proposal_check') THEN ? ELSE ? END",
@@ -282,19 +284,77 @@ class ServerTestStore:
                     WHERE mode='directory' AND finished IS NULL""",
                     (time.time(), json.dumps({"code":"interrupted", "restart":True, "day_session":True})))
 
-    def queue_full_sync(self, owner):
+    def queue_full_sync(self, owner, *, catchup_revision=None):
+        now = time.time()
         with closing(self.connect()) as db, db:
+            db.execute("BEGIN IMMEDIATE")
+            if catchup_revision is not None and db.execute("""SELECT 1 FROM automation_catchups WHERE owner=?
+                    AND revision=? AND message='' AND requested>=?""", (owner,catchup_revision,now-3600)).fetchone():
+                return
             db.execute("""INSERT INTO manual_directory VALUES (?,?,NULL)
                 ON CONFLICT(owner) DO UPDATE SET requested=excluded.requested, job_id=NULL
                 WHERE manual_directory.requested < ? OR job_id IN
-                      (SELECT id FROM jobs WHERE finished IS NOT NULL)""",
-                (owner, time.time(), time.time()-3600))
+                      (SELECT id FROM jobs WHERE finished IS NOT NULL)""", (owner,now,now-3600))
+            if catchup_revision is not None:
+                db.execute("INSERT OR REPLACE INTO automation_catchups VALUES (?,?,?,'')", (owner,catchup_revision,now))
+
+    def catchup_status(self, owner):
+        with closing(self.connect()) as db:
+            row = db.execute("SELECT requested,message FROM automation_catchups WHERE owner=?", (owner,)).fetchone()
+        if not row:
+            return None
+        message = row["message"]
+        if not message and row["requested"] < time.time()-3600:
+            message = "Le délai de rattrapage a expiré. Relancez-le pour actualiser la liste."
+        return {"busy":not message, "message":message or "Rattrapage en cours. La liste des dossiers est relue dans EDOF."}
+
+    def process_catchups(self, selection):
+        from integrale_edof_dashboard import apply_confirmed_entries
+        with closing(self.connect()) as db:
+            runs = db.execute("""SELECT c.*,m.requested AS sync_start,j.created,j.finished,json_extract(j.result,'$.code') code
+                FROM automation_catchups c LEFT JOIN manual_directory m ON m.owner=c.owner
+                LEFT JOIN jobs j ON j.id=m.job_id WHERE c.message=''""").fetchall()
+        for run in runs:
+            if selection["provider"] != "integrale" or selection["pending"] or run["revision"] != selection["revision"]:
+                message = "Rattrapage arrêté. Le système de traitement CPF a changé."
+            elif not run["sync_start"] or run["requested"] < time.time()-3600:
+                message = "Rattrapage interrompu. Relancez-le pour actualiser la liste."
+            elif not run["finished"] or run["code"] == "interrupted":
+                continue
+            elif run["code"] != "directory_ready":
+                message = "La liste générale EDOF n’a pas été actualisée. Relancez le rattrapage après la reprise de la connexion."
+            else:
+                try:
+                    with provider_operation("integrale"):
+                        snap = Vault(self.directory,self.connector_key).get(directory.record_key(run["owner"]))
+                        if not snap or (snap.get("checked") or 0) < max(run["created"],run["requested"]) or snap.get("scope") != "all":
+                            raise ValueError("La liste complète est indisponible.")
+                        if ProviderStore(self.directory).state()["revision"] != run["revision"]:
+                            raise ValueError("Le choix du système CPF a changé.")
+                        report = declarations.discover(self, run["owner"], apply_confirmed_entries(snap,self.directory,run["owner"]))
+                        if report is None:
+                            raise ValueError("Intégrale EDOF doit être actif.")
+                    when = dt.datetime.now(PARIS).strftime("%d/%m à %H h %M")
+                    message = (f"Liste vérifiée le {when}. En file de transmission : entrées en formation · {report['entry_training']}, "
+                               f"sorties avec service fait · {report['service_done']}. Déjà traitées ou en cours : {report['existing']}. "
+                               f"Bloquées : {report['blocked']}. Sans justificatif correspondant : {report['missing']}. "
+                               f"À vérifier : {report['review']}.")
+                    if not any(report.values()):
+                        message = f"Liste vérifiée le {when}. Aucune automatisation en retard."
+                except (OSError, ValueError) as exc:
+                    message = ("Analyse interrompue. " + str(exc) if isinstance(exc, ValueError) else
+                               "Analyse interrompue. Les données sont momentanément indisponibles.")
+            with closing(self.connect()) as db, db:
+                db.execute("""UPDATE automation_catchups SET message=? WHERE owner=? AND requested=? AND message=''""",
+                           (message,run["owner"],run["requested"]))
 
     def next_full_sync(self):
         with closing(self.connect()) as db:
-            return db.execute("""SELECT m.owner,m.requested FROM manual_directory m LEFT JOIN jobs j ON j.id=m.job_id
+            return db.execute("""SELECT m.owner,m.requested,(c.owner IS NOT NULL) AS catchup
+                FROM manual_directory m LEFT JOIN jobs j ON j.id=m.job_id
+                LEFT JOIN automation_catchups c ON c.owner=m.owner AND c.message=''
                 WHERE m.requested>=? AND (m.job_id IS NULL OR json_extract(j.result,'$.code')='interrupted')
-                ORDER BY m.requested LIMIT 1""", (time.time()-3600,)).fetchone()
+                ORDER BY catchup DESC,m.requested LIMIT 1""", (time.time()-3600,)).fetchone()
 
     def full_sync_status(self, owner):
         with closing(self.connect()) as db:
@@ -662,12 +722,10 @@ def start_job(store, owner, spec, *, day_worker=None):
             spec = {**spec, "manual_until": until, "verified_at":store.verified_watch_at(owner,now), "recover_return": bool(prior and awaiting_edof_return(json.loads(prior[0])))}
             provider_fd = acquire_provider(spec["provider"])
         elif spec["mode"] == "read" and spec.get("import_session"):
-            from cpf_provider import ProviderStore
             provider_fd = acquire_provider(ProviderStore(store.directory).state()["provider"])
         elif spec["mode"] not in {"inspect_forms","proposal_read","proposal_check"}:
             ticket = (spec.get("intent") or {}).get("pilot_ticket")
             if ticket and spec["mode"] in {"declare", "reconcile"}:
-                from cpf_provider import ProviderStore
                 active = ProviderStore(store.directory).state()["provider"] if spec["mode"] == "reconcile" else "wedof"
                 provider_fd = acquire_provider(active)
             else:
@@ -681,7 +739,6 @@ def start_job(store, owner, spec, *, day_worker=None):
         if spec["mode"] in {"read", "directory", "proposal_read"} and last_read_stalled_at_login(store.latest(owner)):
             spec = {**spec, "fresh_login": True}
         if spec["mode"] in {"declare", "reconcile"}:
-            from cpf_provider import ProviderStore
             if spec["mode"] == "declare" and ProviderStore(store.directory).state()["revision"] != spec["revision"]:
                 raise ValueError("Le choix de système a changé.")
             if not declarations.check_before_job(store, spec):
@@ -723,34 +780,35 @@ def register_edof_server_test(legacy):
                     time.sleep(20)
                     try:
                         now = dt.datetime.now(PARIS)
-                        from cpf_provider import ProviderStore
                         active = ProviderStore(store.directory).state()
                         daily = active["provider"] == "integrale"
                         if worker.owner and not (store.manual_until(worker.owner) or working_hours(now, daily=True) and store.directory_enabled(worker.owner)):
                             worker.close()
+                        store.process_catchups(active)
                         if active["pending"]:
                             continue
-                        pending = proposals.next_job(store.directory,active) or declarations.next_job(store, active["revision"], provider=active["provider"])
-                        if pending:
-                            start_job(store, pending["owner"], pending)
-                            continue
-                        # Re-evaluate deadlines even when no new export was needed this minute.
-                        tick = (active["revision"], int(now.timestamp()) // 300)
-                        if daily and inspected != tick and store.connector_key:
-                            inspected = tick
-                            with closing(store.connect()) as db:
-                                owners = [r[0] for r in db.execute("SELECT owner FROM directory_activity")]
-                            vault = Vault(store.directory, store.connector_key)
-                            for owner in owners:
-                                snap = directory.dated_snapshot(vault.get(directory.record_key(owner)))
-                                if snap:
-                                    from integrale_edof_dashboard import apply_confirmed_entries
-                                    declarations.discover(store, owner, apply_confirmed_entries(snap, store.directory, owner))
-                            pending = declarations.next_job(store, active["revision"])
+                        full_sync = store.next_full_sync()
+                        if not (full_sync and full_sync["catchup"]):
+                            pending = proposals.next_job(store.directory,active) or declarations.next_job(store, active["revision"], provider=active["provider"])
                             if pending:
                                 start_job(store, pending["owner"], pending)
                                 continue
-                        full_sync = store.next_full_sync()
+                            # Re-evaluate deadlines even when no new export was needed this minute.
+                            tick = (active["revision"], int(now.timestamp()) // 300)
+                            if daily and inspected != tick and store.connector_key:
+                                inspected = tick
+                                with closing(store.connect()) as db:
+                                    owners = [r[0] for r in db.execute("SELECT owner FROM directory_activity")]
+                                vault = Vault(store.directory, store.connector_key)
+                                for owner in owners:
+                                    snap = directory.dated_snapshot(vault.get(directory.record_key(owner)))
+                                    if snap:
+                                        from integrale_edof_dashboard import apply_confirmed_entries
+                                        declarations.discover(store, owner, apply_confirmed_entries(snap, store.directory, owner))
+                                pending = declarations.next_job(store, active["revision"])
+                                if pending:
+                                    start_job(store, pending["owner"], pending)
+                                    continue
                         if full_sync:
                             user = full_sync["owner"]
                             start_job(store, user, {"mode":"directory", "owner":user, "provider":active["provider"],
