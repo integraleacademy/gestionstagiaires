@@ -4,7 +4,9 @@
   <a href="{{ back }}">← Fiche stagiaire</a>
   <h1>Convention de formation entreprise</h1>
   <p>Formation de {{ trainee.first_name }} {{ trainee.last_name }}. Vérifiez l’identité de l’entreprise acheteuse et les conditions convenues avant de générer le document.</p>
+  {% if pdf_path and not active_signature %}<p><a href="#signature">Accéder à la signature du PDF enregistré ↓</a></p>{% endif %}
   {% if error %}<p role="alert" style="color:#a21c27">{{ error }}</p>{% endif %}
+  {% if not active_signature %}
   <form method="post" style="display:grid;gap:1rem">
     {% for key,label in [('name','Raison sociale'),('address','Adresse complète de l’entreprise'),('representative','Nom et fonction du représentant'),('price','Prix de la formation pour ce salarié (€)'),('remote_rate','Part de la formation à distance (%)'),('payment','Modalités de règlement')] %}
       <label style="display:grid;gap:.25rem">{{ label }}
@@ -15,13 +17,48 @@
     {% elif pending %}<label><input type="checkbox" name="replace_pending" value="1"> Annuler la demande Yousign individuelle en cours lors du remplacement.</label>{% endif %}
     <div class="actions">
       <button class="btn btn-outline" type="submit" name="action" value="preview" formtarget="_blank">Aperçu PDF</button>
-      <button class="btn btn-primary" type="submit" name="action" value="generate">{{ "Enregistrer le PDF entreprise sur la fiche" if signed else "Utiliser cette convention pour le dossier" }}</button>
+      <button class="btn btn-primary" type="submit" name="action" value="prepare">Générer le PDF et passer à la signature</button>
     </div>
   </form>
-  {% if trainee.company_convention and not signed %}
+  {% endif %}
+  {% if trainee.company_convention and not signed and not active_signature %}
   <form method="post" style="margin-top:1rem">
     <button class="btn btn-outline" name="action" value="individual">Revenir au contrat individuel</button>
   </form>
   {% endif %}
+  {% if pdf_path %}
+  <section id="signature" style="border-top:1px solid #dbe2ea;margin-top:2rem;padding-top:1.25rem">
+    <h2>Signature électronique de l’entreprise</h2>
+    <a href="{{ url_for('admin_view_original_convention', session_id=request.view_args.session_id, trainee_id=trainee.id, company_copy=1 if is_copy else none) }}" target="_blank" rel="noopener">Vérifier le PDF à signer</a>
+    {% set post_url = url_for('admin_company_signature', session_id=request.view_args.session_id, trainee_id=trainee.id) %}
+    {% if signature %}
+      <p><strong>{{ signature.company }}</strong> · {{ signature.contact.first_name }} {{ signature.contact.last_name }} · {{ signature.contact.email }}</p>
+      {% if signature.signed_pdf %}
+        <p>La convention a été signée par le représentant de l’entreprise.</p>
+        <a class="btn btn-primary" href="{{ url_for('admin_company_signature_pdf', session_id=request.view_args.session_id, trainee_id=trainee.id, version=version) }}">Télécharger le PDF signé</a>
+      {% elif active_signature %}
+        <p>{{ "Demande préparée. Reprenez l’envoi pour transmettre l’invitation." if signature.status == "draft" else "Invitation envoyée. Signature en attente." }}</p>
+        <form method="post" action="{{ post_url }}" class="actions">
+          <input type="hidden" name="version" value="{{ version }}">
+          {% if signature.status == "draft" %}<button class="btn btn-primary" name="action" value="send">Reprendre l’envoi</button>{% endif %}
+          <button class="btn btn-outline" name="action" value="refresh">Actualiser le statut</button>
+          <button class="btn btn-outline" name="action" value="cancel">Annuler la demande de signature</button>
+        </form>
+      {% else %}<p>Demande clôturée. Générez un nouveau PDF pour préparer un autre envoi.</p>{% endif %}
+    {% elif is_copy or not signed %}
+      <p>Le représentant reçoit le lien par e-mail et confirme sa signature avec un code SMS. Vérifiez que ses coordonnées correspondent à la personne désignée dans le PDF.</p>
+      <form method="post" action="{{ post_url }}" style="display:grid;gap:1rem">
+        <input type="hidden" name="version" value="{{ version }}">
+        {% for key,label,type in [('first_name','Prénom du signataire','text'),('last_name','Nom du signataire','text'),('email','E-mail du signataire','email'),('phone','Mobile du signataire (code SMS)','tel')] %}
+        <label style="display:grid;gap:.25rem">{{ label }}<input type="{{ type }}" name="{{ key }}" required maxlength="{{ 254 if key == 'email' else 100 }}" {% if key == 'phone' %}placeholder="06 00 00 00 00"{% endif %}></label>
+        {% endfor %}
+        <button class="btn btn-primary" name="action" value="send">Envoyer à l’entreprise pour signature</button>
+      </form>
+    {% else %}<p>Cette convention est déjà signée.</p>{% endif %}
+  </section>
+  {% endif %}
+  {% for key,previous in (trainee.company_signature_requests|default({})).items() if previous.signed_pdf and key != version %}
+    <p><a href="{{ url_for('admin_company_signature_pdf', session_id=request.view_args.session_id, trainee_id=trainee.id, version=key) }}">Convention de {{ previous.company }} signée le {{ previous.signed_at|frdatetime }}</a></p>
+  {% endfor %}
 </main>
 {% endblock %}
