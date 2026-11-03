@@ -235,3 +235,95 @@ def test_duplicate_validation_of_unchanged_offer_sends_only_the_status(conn):
     jobs.enqueue(conn.path,"owner",1,directory.project(conn.portal.raw),src,values)
     assert run(conn,jobs.next_job(conn.path,conn.gate.state()))["code"]=="proposal_confirmed"
     assert conn.portal.writes==[URL+"/status"]
+
+
+def test_form_visible_during_offer_read_and_on_failure(site):
+    path = f"/admin/edof-test/dossiers/{FOLDER}/proposal/read"
+    row = site.vault.get(directory.record_key(site.owner))["rows"][FOLDER]
+    site.vault.put(directory.pending_key(site.owner), {"checked":20000, "rows":{
+        FOLDER:{**row, "offer_summary":{"indicativeDuration":"35", "priceTotal":"1525.50"}}}})
+    ticket = site.client.post(path, data={"csrf":site.csrf}, headers={"Accept":"application/json"}).json["poll_url"]
+    pending = site.client.get(ticket)
+    assert pending.json["status"] == "queued" and pending.headers["Cache-Control"] == "no-store"
+    detail = pending.json["detail_url"]
+    for status in ("queued", "reading", "finished"):
+        html = site.client.get(detail).text
+        assert '<meta http-equiv="refresh"' not in html
+        assert 'name="sessionStartDate" value="2026-02-02"' in html
+        assert 'name="sessionEndDate" value="2026-02-06"' in html
+        assert 'name="indicativeDuration" value="35"' in html
+        assert 'name="priceTotal" value="1525.50"' in html
+        assert "Enregistrer le brouillon" in html
+        assert "disabled>Valider et envoyer" in html
+        if status == "queued":
+            spec = jobs.next_job(site.store.directory, site.gate.state())
+            assert jobs.reading(site.store.directory, spec)
+        elif status == "reading":
+            jobs.finish_read(site.store.directory, spec, "Connexion à EDOF indisponible.")
+        else:
+            assert "Connexion à EDOF indisponible." in html
+    assert site.client.get(ticket.replace(FOLDER,"100000")).status_code == 404
+    with site.client.session_transaction() as session:
+        session["admin_username"] = "second"
+    assert site.client.get(ticket).status_code == 404
+
+
+def test_offer_uses_known_values_without_inventing_a_price(site):
+    url = f"/admin/edof-test?section=requests&tab=request&folder={FOLDER}"
+    html = site.client.get(url).text
+    assert 'name="priceTotal" value=""' in html and 'tarif TTC n’a pas été récupéré' in html
+    jid = site.store.reserve(site.owner,"read")
+    fields = {"folder_id":FOLDER, "first_name":"Anne","last_name":"Exemple","session_start_date":"2026-02-02",
+              "total_incl":"1820.50", "duration_hours":"42", "center_hours":"30"}
+    site.store.finish(jid, {"code":"read_success","fields":fields})
+    raw = official()
+    for k in ("vat","totalIncl"):
+        raw["trainingActionInfo"].pop(k)
+    site.vault.put(jobs.source_key(site.owner,FOLDER),offer.project(raw))
+    html = site.client.get(url).text
+    assert 'name="priceTotal" value="1820.50"' in html
+    assert 'name="indicativeDuration" value="42"' in html
+    assert 'name="sessionStartDate" value="2026-02-02"' in html
+    for mismatch in ({"last_name":"Autre"}, {"session_start_date":"2027-06-15"}):
+        site.store.finish(jid, {"code":"read_success","fields":{**fields, **mismatch}})
+        assert 'name="priceTotal" value=""' in site.client.get(url).text
+
+
+def test_background_offer_preserves_input_and_focus_in_chromium(site):
+    import os
+    from pathlib import Path
+    from urllib.parse import urlsplit
+    pw = pytest.importorskip("playwright.sync_api")
+    site.client.application.static_folder = str(Path(__file__).resolve().parents[1] / "static")
+    with pw.sync_playwright() as runner:
+        executable = os.environ.get("EDOF_TEST_CHROMIUM")
+        if not executable and not Path(runner.chromium.executable_path).exists():
+            pytest.skip("Chromium is not installed")
+        browser = runner.chromium.launch(executable_path=executable, args=["--no-sandbox"])
+        page = browser.new_page()
+        def local(route):
+            req = route.request
+            url = urlsplit(req.url)
+            if url.hostname != "fixture.local":
+                return route.abort()
+            response = site.client.open(url.path, query_string=url.query, method=req.method,
+                                        data=req.post_data_buffer, content_type=req.headers.get("content-type"),
+                                        headers={"Accept":req.headers.get("accept","")})
+            route.fulfill(status=response.status_code, headers=dict(response.headers), body=response.data)
+        page.route("**/*", local)
+        page.goto("http://fixture.local/admin/edof-test?section=requests&tab=request")
+        with page.expect_response(lambda r:r.request.method=="POST" and r.url.endswith("/proposal/read")):
+            page.get_by_role("link",name="Ouvrir le dossier").click()
+        price = page.locator("[name=priceTotal]")
+        assert page.locator("[name=sessionStartDate]").input_value() == "2026-02-02"
+        assert price.is_visible()
+        price.fill("1875.25")
+        ticket = jobs.next_job(site.store.directory, site.gate.state())
+        site.vault.put(jobs.source_key(site.owner,FOLDER),offer.project(official()))
+        site.vault.put(jobs.option_key(site.owner),OPTIONS)
+        jobs.finish_read(site.store.directory,ticket,"Conditions chargées.")
+        page.get_by_text("Conditions chargées.",exact=True).wait_for()
+        assert price.input_value() == "1875.25" and price.evaluate("(el) => el === document.activeElement")
+        assert page.locator("[name=trainingGoal]").input_value() == "Objectifs du parcours"
+        assert "proposal_read=" not in page.url
+        browser.close()

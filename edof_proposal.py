@@ -90,10 +90,15 @@ def initial(row):
 
 
 def displayed(source, row):
-    if not source:
-        return initial(row)
-    total = source.get("total") or number_string(sum(Decimal(source["values"][k] or "0") for k in ("vat","vatInclTax5","vatInclTax20")))
-    return dict(source["values"], priceTotal=total)
+    values = initial(row)
+    if source:
+        values.update({k:v for k,v in source["values"].items() if v != ""})
+        amounts = [source["values"].get(k) for k in ("vat","vatInclTax5","vatInclTax20")]
+        if source.get("total"):
+            values["priceTotal"] = source["total"]
+        elif any(v not in ("", None) for v in amounts):
+            values["priceTotal"] = number_string(sum(Decimal(v or "0") for v in amounts))
+    return values
 
 
 def form_values(form):

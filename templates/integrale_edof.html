@@ -3,9 +3,9 @@
   {% if section in ["state", "requests"] and tab == "request" and not detail and not query and page == 1 %}
     <meta http-equiv="refresh" content="45">
   {% endif %}
-  {% if detail and (detail.proposal_reading or (detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'])) %}<meta http-equiv="refresh" content="10">{% endif %}
+  {% if detail and detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'] %}<meta http-equiv="refresh" content="10">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-propositions') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261103-fiche-sync') }}">
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
@@ -26,7 +26,8 @@
       <p>Suivez les demandes, les entrées en formation, les services faits et la facturation des sessions commençant à partir du 1er janvier 2026.</p>
       <div class="wedof-hero-meta">
         <span id="edof-lamp" class="wedof-status-pill lamp {{ 'on' if live.active else '' }}" role="status">Connexion EDOF {{ 'active' if live.active else 'inactive' }}</span>
-        <span class="wedof-status-pill is-sync">Dernière synchronisation · {{ full_checked or 'à réaliser' }}</span>
+        <span id="edof-sync" class="wedof-status-pill is-sync" data-stamp="{{ live.sync.stamp }}">Dernière synchronisation · {{ (live.sync.label ~ ' · ' ~ live.sync.scope) if live.sync.stamp else 'Aucune lecture récente' }}</span>
+        <span id="edof-full-sync" class="wedof-status-pill" data-stamp="{{ live.sync.full_stamp }}" {% if not live.sync.full_stamp or live.sync.stamp <= live.sync.full_stamp %}hidden{% endif %}>Liste générale · {{ live.sync.full_label }}</span>
         <span class="wedof-status-pill">{{ snapshot_count }} dossiers synchronisés</span>
       </div>
       <small id="edof-connection-note">{{ 'Connexion en cours…' if live.pending else ('Activation manuelle jusqu’à ' ~ live.until if live.manual else ('Dernier contrôle le ' ~ live.checked if live.checked else 'En attente du premier contrôle')) }}</small>
@@ -178,6 +179,7 @@
       </div>
       <div><span>Rattachement local</span><strong>{{ 'Associé' if detail.display.link else 'Non associé' }}</strong></div>
     </div>
+{% if detail.request or detail.proposal_job %}{% include "_edof_proposal.html" %}{% endif %}
 <div class="actions"><a class="btn" href="{{ url_for('edof_server_test.index', fiche=detail.key, _anchor='dossier-lu') }}">Détail synchronisé</a>
 {% if active %}<form method="post" action="{{ url_for('integrale_edof.read_folder', folder=f.folder_id) }}">{{ token() }}{{ btn('Relire la fiche sur EDOF') }}</form>{% endif %}
 <a class="btn btn-outline" href="{{ detail.official }}" target="_blank" rel="noreferrer">Ouvrir le dossier dans EDOF</a></div>
@@ -185,7 +187,6 @@
 <input type="hidden" name="section" value="{{ section }}"><input type="hidden" name="tab" value="{{ tab }}">
 <label><input type="checkbox" name="hold" value="yes" {% if detail.held %}checked{% endif %}> Bloquer automatisation sur le dossier</label>
 {{ btn('Enregistrer le choix') }}</form>{% endif %}
-{% if detail.request or detail.proposal_job %}{% include "_edof_proposal.html" %}{% endif %}
 {% if detail.request %}<h3>Transmettre la demande</h3>
 <p>Le transfert utilise les coordonnées de la fiche détaillée EDOF, la formation et le numéro du dossier.</p>
 {% for key,label in [('crm','CRM'),('salesforce','Salesforce')] %}{% set delivered=detail.transfers.get(key) %}
@@ -233,5 +234,5 @@
 </div>
 {% endblock %}
 {% block scripts %}
-  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261103-propositions') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261103-fiche-sync') }}" defer></script>
 {% endblock %}

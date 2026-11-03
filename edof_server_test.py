@@ -297,7 +297,7 @@ class ServerTestStore:
         finally:
             db.close()
 
-    def live_connection(self, owner, saved_session):
+    def live_connection(self, owner, saved_session, *, snapshot=None):
         now = dt.datetime.now(PARIS)
         manual = self.manual_until(owner)
         from cpf_provider import ProviderStore
@@ -309,6 +309,16 @@ class ServerTestStore:
                 FROM jobs WHERE owner=? AND mode='directory' ORDER BY created DESC LIMIT 1""", (owner,)).fetchone()
             last = db.execute("""SELECT finished,json_extract(result,'$.code') code FROM jobs
                 WHERE owner=? AND mode='directory' AND finished IS NOT NULL ORDER BY finished DESC LIMIT 1""", (owner,)).fetchone()
+            successes = dict(db.execute("""SELECT json_extract(result,'$.code') code, MAX(finished)
+                FROM jobs WHERE owner=? AND mode='directory' AND finished IS NOT NULL
+                AND json_extract(result,'$.code') IN ('directory_ready','requests_ready') GROUP BY code""", (owner,)))
+        snapshot = snapshot or {}
+        full = max(snapshot.get("checked") or 0, successes.get("directory_ready", 0))
+        pending_sync = max(snapshot.get("pending_checked") or 0, successes.get("requests_ready", 0))
+        synced = max(full, pending_sync)
+        sync = {"stamp":synced, "label":directory.stamp({"checked":synced}) if synced else "",
+                "scope":"Demandes à traiter" if pending_sync > full else "Liste générale",
+                "full_stamp":full, "full_label":directory.stamp({"checked":full}) if full else ""}
         stamp = last["finished"] if last else 0
         earliest = now.astimezone(PARIS).replace(hour=8, minute=0, second=0, microsecond=0).timestamp()
         if manual:
@@ -330,7 +340,7 @@ class ServerTestStore:
                   "otp_submitted":"Retour d’EFP vers EDOF", "selecting_organisation":"Ouverture de l’établissement",
                   "reading_directory":"Lecture de la liste", "reading_pending_tab":"Lecture des dossiers À traiter",
                   "reading_all_folders":"Synchronisation de tous les dossiers", "pending_verified":"Demandes vérifiées"}
-        return {"active": verified, "pending": pending, "checked": checked,
+        return {"active": verified, "pending": pending, "checked": checked, "sync": sync,
                 "phase": labels.get(phase.get("phase"), "") if private_at >= earliest and pending else "",
                 "stamp": stamp, "manual": bool(manual),
                 "until": dt.datetime.fromtimestamp(manual, PARIS).strftime("%H h %M") if manual else "",

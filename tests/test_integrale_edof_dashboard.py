@@ -445,3 +445,35 @@ def test_due_pages_filter_and_sort_before_paginating(site, section):
         return re.findall(r'<tr data-edof-folder="(\d+)">', response.text)
     assert ids(1) == ["900000", *[str(910000+i) for i in range(24)]]
     assert ids(2) == [str(910000+i) for i in range(24,29)]
+
+
+def test_sync_badge_distinguishes_general_list_requests_and_later_login(site):
+    from contextlib import closing
+    import time
+    stamp = time.time() - 1200
+    full_time = stamp - 86400
+    snapshot = site.vault.get(edof_directory.record_key(site.owner))
+    site.vault.put(edof_directory.record_key(site.owner), {**snapshot, "checked":full_time})
+    site.vault.put(edof_directory.pending_key(site.owner), {"rows":{}, "checked":stamp})
+    label = edof_directory.stamp({"checked":stamp})
+    general = edof_directory.stamp({"checked":full_time})
+    html = site.client.get("/admin/edof-test").text
+    assert f"Dernière synchronisation · {label} · Demandes à traiter" in html
+    assert f"Liste générale · {general}" in html
+    with closing(site.store.connect()) as db, db:
+        for jid, owner, mode, offset, code in (
+            ("full",site.owner,"directory",-86400,"directory_ready"),
+            ("requests",site.owner,"directory",0,"requests_ready"),
+            ("later-login",site.owner,"directory",180,"day_login_used"),
+            ("other-mode",site.owner,"read",240,"read_success"),
+            ("another-owner","other","directory",360,"directory_ready")
+        ):
+            db.execute("INSERT INTO jobs VALUES(?,?,?,?,?,?)",
+                       (jid,owner,stamp,stamp+offset,mode,json.dumps({"code":code})))
+    badge = site.client.get("/admin/edof-test/connection-status").json
+    assert badge["stamp"] == stamp+180 and badge["active"] is False
+    assert badge["sync"] == {"stamp":stamp,"label":label,"scope":"Demandes à traiter",
+                             "full_stamp":full_time,"full_label":general}
+    with closing(site.store.connect()) as db, db:
+        db.execute("UPDATE jobs SET finished=? WHERE id='full'", (stamp+400,))
+    assert site.client.get("/admin/edof-test/connection-status").json["sync"]["scope"] == "Liste générale"
