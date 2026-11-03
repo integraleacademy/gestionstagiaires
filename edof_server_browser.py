@@ -420,7 +420,11 @@ def read_official_pending(page, checkpoint, timeout_error):
     """Read the dashboard's À traiter tab, requiring the displayed count and matching private rows."""
     target = LIST_URL.rsplit("/", 1)[0] + "/tous"
     if not is_directory_view(page.url, target):
-        page.goto(target, wait_until="commit", timeout=18000)
+        link = page.get_by_role("link", name=re.compile(r"^Tous les dossiers$", re.I)).filter(visible=True)
+        if all_dossiers_link(page) == target and link.count() == 1:
+            link.click(timeout=4500, no_wait_after=True)
+        else:
+            page.goto(target, wait_until="commit", timeout=18000)
     badge = page.get_by_text(re.compile(r"^[àa]\s+traiter\s*\d+$", re.I)).filter(visible=True)
     try:
         badge.first.wait_for(state="visible", timeout=9000)
@@ -440,6 +444,47 @@ def read_official_pending(page, checkpoint, timeout_error):
             for r in snapshot["rows"].values()):
         return None
     return snapshot
+
+
+def read_pending_with_private_session(context, witness):
+    """Fallback when the portal has authenticated the SIRET but its list view has not rendered."""
+    if witness is None:
+        return None
+    origin = urlsplit(witness.url)
+    if ((origin.scheme, origin.netloc) != ("https", EDOF_HOST)
+            or not origin.path.startswith(WORKSPACE_API_PREFIX) or witness.method != "GET"):
+        return None
+    headers = {k:v for k,v in witness.all_headers().items()
+               if k.lower() in {"accept","authorization","x-xsrf-token","x-csrf-token","x-requested-with"}}
+    target = f"https://{EDOF_HOST}{API_PREFIX}pad"
+    # Use only this fixed same-establishment read. Never follow a redirect or
+    # forward an authenticated request to another destination.
+    def pages():
+        for page_index in range(100):
+            reply = context.request.get(target, params={"page":page_index, "size":100, "state":"notProcessed"},
+                                        headers=headers, max_redirects=0, timeout=12000)
+            try:
+                if reply.status != 200 or not directory_list_url(reply.url):
+                    raise directory.IncompleteDirectory()
+                body = reply.body()
+                if len(body) > 8_000_000:
+                    raise directory.IncompleteDirectory()
+                data = json.loads(body)
+                rows = data.get("items") if isinstance(data, dict) else None
+                if not isinstance(rows, list) or not rows or any(
+                    not isinstance(r, dict) or directory.normalized(r.get("currentState") or "") not in
+                    {"notprocessed","not processed","a traiter","non traite"} for r in rows):
+                    raise directory.IncompleteDirectory()
+                yield data
+            finally:
+                reply.dispose()
+    iterator = pages()
+    try:
+        return directory.from_pages(iterator)
+    except (ValueError, TypeError, AttributeError):
+        return None
+    finally:
+        iterator.close()
 
 
 def exported_directory(page, source, checkpoint, progress, timeout_error, target_url=LIST_URL):
@@ -1078,8 +1123,10 @@ def run_browser(spec, *, live=None):
                     routes.append(shape)
             route.abort()
 
+    private_witness = None
+
     def observe(response):
-        nonlocal invalid_response
+        nonlocal invalid_response, private_witness
         if gate:
             gate.observe(response)
         parsed = urlsplit(response.url)
@@ -1095,6 +1142,8 @@ def run_browser(spec, *, live=None):
             signals["workspace_denied"] = True
         if 200 <= response.status < 300:
             signals["workspace_status"] = response.status
+            if response.status == 200 and parsed.scheme == "https" and parsed.netloc == EDOF_HOST:
+                private_witness = response.request
         if not parsed.path.startswith(API_PREFIX):
             return
         tail = parsed.path[len(API_PREFIX):]
@@ -1365,9 +1414,10 @@ def run_browser(spec, *, live=None):
                             continue
                     if screen in {"access_denied", "session_expired", "terms", "error"}:
                         raise StopRun("organism_selection_required")
-                    if signals.get("workspace_status") or dossier_menu.count():
-                        break
                     chooser = location_category(page.url) == "edof_select_siret" or screen == "select_organisation"
+                    if not chooser and (signals.get("workspace_status") == 200 or
+                                        dossier_menu.filter(visible=True).count() == 1):
+                        break
                     if chooser:
                         signals["establishment_step"] = establishment_step
                         try:
@@ -1435,9 +1485,18 @@ def run_browser(spec, *, live=None):
                     last_attempt = vault.get("edof-full-attempt:"+spec["owner"]) or 0
                     bulk_due = bool(prior_pending and time.time()-prior_pending["checked"] < 300 and
                                     time.time()-max(full.get("checked", 0), last_attempt) >= 900)
+                    if private_witness is not None:
+                        # Preserve only official secure cookies after a private
+                        # response from the configured establishment.
+                        vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                     if not bulk_due:
                         progress("reading_pending_tab")
-                        pending = read_official_pending(page, checkpoint, BrowserTimeout)
+                        try:
+                            pending = read_official_pending(page, checkpoint, BrowserTimeout)
+                        except BrowserTimeout:
+                            pending = None
+                        if pending is None and private_witness is not None:
+                            pending = read_pending_with_private_session(context, private_witness)
                         if pending is not None:
                             vault.put(directory.pending_key(spec["owner"]), pending, ttl=directory.TTL)
                             vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
