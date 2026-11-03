@@ -108,7 +108,7 @@ def test_other_courses_and_partner_sessions_are_excluded(case, change):
 
 
 @pytest.mark.parametrize('change', [dict(exam_date=''), dict(aps_remote_end='bad-date'),
-    dict(aps_in_person_start='2026-11-05'), dict(aps_in_person_start='2026-11-16'),
+    dict(aps_in_person_start='2026-11-05'),
     dict(exam_date='2026-11-01')])
 def test_missing_or_inconsistent_dates_never_create_a_wrong_pdf(case, change):
     _, client, services, training, trainee = case
@@ -129,6 +129,23 @@ def test_missing_or_inconsistent_dates_never_create_a_wrong_pdf(case, change):
     with client.session_transaction() as cookie:
         cookie['admin_logged_in'] = True
     assert client.get(ADMIN).status_code == 409
+
+
+def test_shared_last_remote_and_first_onsite_day_keeps_the_session_calendar(case):
+    _, client, services, training, trainee = case
+    training['aps_in_person_start'] = '2026-11-16'
+    state = kickoff.view(services, training, trainee)
+    assert state['available'] and state['ready']
+    result = client.get(PUBLIC)
+    assert result.status_code == 200
+    with pymupdf.open(stream=result.data, filetype='pdf') as document:
+        assert len(document) == 41
+        assert '16 novembre 2026 marque la fin du distanciel et le début du présentiel' in document[7].get_text()
+        assert 'lundi 16 novembre 2026' in document[29].get_text()
+        assert '9 décembre' in document[34].get_text()
+    with client.session_transaction() as cookie:
+        cookie['admin_logged_in'] = True
+    assert client.get(ADMIN).data == result.data
 
 
 def test_release_uses_the_first_training_day_and_keeps_remote_dates(case, monkeypatch):
