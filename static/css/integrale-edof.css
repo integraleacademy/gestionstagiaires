@@ -10,6 +10,7 @@ body {
 }
 
 .native-cpf {
+  grid-template-columns: minmax(0, 1fr);
   max-width: 1500px;
   margin: 0 auto;
   padding: 20px clamp(12px,3vw,45px) 60px;

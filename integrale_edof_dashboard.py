@@ -57,9 +57,9 @@ STATE_KEYS.update({
     "declared":{"servicedonedeclared", "servicedonedeclaredrevised", "service fait declare", "service fait declare revise"},
     "billable":{"servicedonevalidated", "servicedonevalidatedrevisionvsf", "service fait valide"},
     "paid":{"paid", "paye", "payee"},
-    "ft":{"demande de financement ft en cours", "demande de financement france travail en cours"},
+    "ft":{"waitingforfrancetravailvalidation", "pendingfrancetravail", "demande de financement ft en cours", "demande de financement france travail en cours"},
 })
-STATE_KEYS["waiting"].add("en attente de validation du titulaire")
+STATE_KEYS["waiting"].update({"waitingforattendeevalidation", "en attente de validation du titulaire"})
 STATE_KEYS["out"].add("terminated")
 STATE_KEYS["canceled"].update({"canceledbycdc", "abandonnedbyattendeeatstepvalidated"})
 STATE_KEYS["refused"].update({"rejectedwithouttitulairesuite", "rejectedwithoutcdcsuite", "rejectedwithoutofsuite"})

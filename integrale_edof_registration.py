@@ -35,6 +35,7 @@ def create_registration(legacy, folder, session_id, fields):
             if same_name or same_email:
                 raise ValueError("Une inscription existe déjà dans cette session. Utilisez « Associer ce stagiaire ».")
         trainee = legacy._new_session_trainee(group, row)
+        trainee["financing_type"] = "CPF"
         if row.get("total_incl") is not None:
             trainee["training_price"] = row["total_incl"]
         # The official total can include co-financing. Do not assign it all to CPF.

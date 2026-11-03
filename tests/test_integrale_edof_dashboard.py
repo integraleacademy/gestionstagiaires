@@ -394,5 +394,7 @@ def test_trainee_import_requires_verified_detail_and_is_idempotent(site, monkeyp
     saved = json.loads(site.local.read_text())
     assert len(saved["sessions"][0]["trainees"]) == len(saved["wedof_links"]) == 1
     trainee = saved["sessions"][0]["trainees"][0]
+    from cpf_tracking import has_cpf_financing
+    assert has_cpf_financing(trainee) and not trainee.get("cpf_amount")
     assert trainee["birth_date"] == fields["birth_date"] and trainee["phone"] == fields["phone"]
     assert trainee["edof_registration"]["folder_id"] == "100000" and trainee["training_price"] == "1250.00"
