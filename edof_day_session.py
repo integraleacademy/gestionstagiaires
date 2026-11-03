@@ -84,6 +84,7 @@ class DayWorker:
                     env={**env, "TMPDIR": self.temp.name}, text=True, start_new_session=True)
                 self.owner = spec["owner"]
             try:
+                started = datetime.now(PARIS).timestamp()
                 self.process.stdin.write(json.dumps({"owner": self.owner, "manual_until": spec.get("manual_until", 0), "recover_return": spec.get("recover_return", False)}) + "\n")
                 self.process.stdin.flush()
                 now = datetime.now(PARIS)
@@ -92,6 +93,8 @@ class DayWorker:
                     self.close()
                     from edof_gmail import Vault
                     checkpoint = Vault(env["EDOF_CONNECTOR_DIRECTORY"], env["EDOF_CONNECTOR_KEY"]).get("edof-phase:"+spec["owner"]) or {}
+                    if checkpoint.get("at", 0) < started:
+                        checkpoint = {"phase": "browser_start"}
                     return {"code": "timeout" if datetime.now(PARIS).timestamp() < deadline else "day_closed",
                             "stage": checkpoint.get("phase"), "gmail_code_used": checkpoint.get("mail_used"),
                             "diagnostics":{"callback_status":checkpoint.get("callback"), "workspace_status":checkpoint.get("private_status")}}
