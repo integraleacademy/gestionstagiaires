@@ -9,7 +9,7 @@ from pathlib import Path
 import secrets
 from zoneinfo import ZoneInfo
 
-from flask import g, jsonify, Blueprint, abort, flash, get_flashed_messages, redirect, request, session, url_for
+from flask import g, jsonify, Blueprint, abort, flash, get_flashed_messages, redirect, render_template, request, session, url_for
 
 from edof_day_session import working_hours
 import edof_directory as directory
@@ -119,14 +119,22 @@ def active_blocks(data):
             if isinstance(x, dict) and x.get("active")}
 
 
+def scheduled_time(kind, date):
+    if kind not in ACTIONS:
+        return None
+    try:
+        return dt.datetime.combine(dt.date.fromisoformat(date), dt.time(8 if kind == "accepted" else 18), PARIS)
+    except (TypeError, ValueError):
+        return None
+
+
 def simulate(kind, date, block, draft, now):
     if kind not in ACTIONS:
         return None
     if block:
         return "blocked"
-    try:
-        scheduled = dt.datetime.combine(dt.date.fromisoformat(date), dt.time(8 if kind == "accepted" else 18), PARIS)
-    except (TypeError, ValueError):
+    scheduled = scheduled_time(kind, date)
+    if scheduled is None:
         return "missing"
     if scheduled > now:
         return "planned"
@@ -163,10 +171,32 @@ def dashboard_rows(snapshot, data, operations, now):
             tags.add("anomaly")
         counts.update(tags)
         rows.append({**record, "kind": kind, "label": LABELS[kind] if kind != "unknown" else record.get("state") or LABELS[kind],
-                     "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": links.get(folder),
+                     "scheduled": scheduled_time(kind, date), "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": links.get(folder),
                      "handled": bool(flags.get("handled")), "archived": bool(flags.get("archived")),
                      "draft": flags.get("draft"), "official_url": DETAIL_PREFIX + folder})
     return rows, counts
+
+
+def prioritize_rows(rows, now):
+    """Sort pending declarations by their Paris deadline before slicing a page."""
+    instant = now.timestamp()
+
+    def deadline_order(row):
+        scheduled = row["scheduled"]
+        if scheduled is not None and not row["block"]:
+            timestamp = scheduled.timestamp()
+            return (0, abs(timestamp - instant), timestamp, row["folder_id"])
+
+        waiting = row["kind"] in {"request", "waiting", "ft"}
+        date = row.get("session_start_date") if waiting else row.get("session_end_date") or row.get("session_start_date")
+        if date:
+            day = dt.date.fromisoformat(date)
+            if waiting:
+                return (1, abs((day - now.date()).days), day.toordinal(), row["folder_id"])
+            return (2, -day.toordinal(), 0, row["folder_id"])
+        return (3, 0, 0, row["folder_id"])
+
+    rows.sort(key=deadline_order)
 
 
 def operations_db(store):
@@ -353,6 +383,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             data["wedof_automation_blocks"] = [*data.get("wedof_automation_blocks", []),
                 *({"external_id":f,"action":"both","active":True,"reason_code":"administrative_issue"} for f in held)]
         rows, counts = dashboard_rows(snap, data, local_operations(selection), now)
+        folder = request.args.get("folder", "")
+        selected_row = next((r for r in rows if r["folder_id"] == folder), None) if folder else None
         previewing = section == "state" and request.args.get("matching") == "1"
         matches = matching_rows(owner, snap, data) if previewing else {}
         if previewing:
@@ -369,18 +401,17 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         if q:
             rows = [r for r in rows if q in directory.normalized(" ".join(str(r.get(k) or "") for k in
                     ("folder_id", "first_name", "last_name", "last_name", "first_name", "title", "label")))]
-        rows.sort(key=lambda r: (r.get("session_start_date") or "", r["folder_id"]), reverse=True)
+        prioritize_rows(rows, now)
         pages = max(1, math.ceil(len(rows) / 25))
         page = max(1, min(request.args.get("page", 1, type=int) or 1, pages))
         detail = None
-        folder = request.args.get("folder", "")
         if folder:
-            if not ID_RE.fullmatch(folder) or folder not in (snap or {}).get("rows", {}):
+            if not ID_RE.fullmatch(folder) or not selected_row:
                 abort(404)
-            record = folder_record(owner, folder)
+            record = snap["rows"][folder]
             if not data:
                 data = local_data()
-            detail = {"record": record, "comparison": build_comparison(data, enrich(owner, record))}
+            detail = {"record": record, "display": selected_row, "comparison": build_comparison(data, enrich(owner, record))}
             detail["query"] = request.args.get("inscription","")[:120].strip()
             if detail["query"]:
                 detail["comparison"] = {**detail["comparison"], "status":"manual_search",
@@ -441,7 +472,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                     detail["pilot_proof"] = proof["entry_training"]
             except (ValueError, ProviderUnavailable) as exc:
                 detail["pilot_error"] = str(exc)
-        return app.jinja_env.get_template("integrale_edof.html").render(
+        return render_template("integrale_edof.html", title="Intégrale EDOF · Pilotage CPF",
             selection=selected, production=production, bridge_error=bridge_error, aligned=aligned, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=tabs, tab=tab,
             dispatch_labels=declarations.LABELS, dispatch_reasons=MESSAGES, motifs=declarations.MOTIFS,
             inspection=check, dispatches=dispatches, csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
@@ -481,13 +512,13 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                                         remote=check_production if on_test_service() else None)
         except ProviderUnavailable as exc:
             flash(str(exc), "warning")
-            return back()
+            return back("technical")
         # Exactly one initial refresh per deliberate activation, including
         # after several weeks away. A failed sign-in cannot reschedule itself.
         if target == "integrale" and result["revision"] != revision:
             store.request_directory(owner)
         flash(f"{PROVIDERS[target]} est actif pour votre établissement. Bascule confirmée.", "success")
-        return back()
+        return back("technical")
 
     @bp.post("/associate-reliable")
     @native_action

@@ -46,7 +46,7 @@
   </aside>
 </div>
 
-<script>
+<script{% if g.edof_nonce %} nonce="{{ g.edof_nonce }}"{% endif %}>
 (function initGlobalDocsAndCnapsModals(){
   if(window.__globalDocsAndCnapsModalsInitialized) return;
   window.__globalDocsAndCnapsModalsInitialized = true;
