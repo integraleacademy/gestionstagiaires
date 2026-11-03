@@ -3,8 +3,8 @@
    duplicating imports across individual templates. #}
 <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css', v=static_version|default('20260823-responsive-platform-v2')) }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='responsive-v2.css', v=static_version|default('20260823-responsive-platform-v2')) }}">
-<script src="{{ url_for('static', filename='responsive.js', v=static_version|default('20260823-responsive-platform-v2')) }}"></script>
-<script src="{{ url_for('static', filename='responsive-v2.js', v=static_version|default('20260823-responsive-platform-v2')) }}"></script>
+<script{% if g.edof_nonce %} nonce="{{ g.edof_nonce }}"{% endif %} src="{{ url_for('static', filename='responsive.js', v=static_version|default('20260823-responsive-platform-v2')) }}"></script>
+<script{% if g.edof_nonce %} nonce="{{ g.edof_nonce }}"{% endif %} src="{{ url_for('static', filename='responsive-v2.js', v=static_version|default('20260823-responsive-platform-v2')) }}"></script>
 
 <div id="globalMailSentBadge" class="global-mail-sent-badge" role="status" aria-live="polite">Mail envoyé</div>
 <style>
@@ -30,7 +30,7 @@
     transform:translateX(-50%) translateY(0);
   }
 </style>
-<script>
+<script{% if g.edof_nonce %} nonce="{{ g.edof_nonce }}"{% endif %}>
   (() => {
     const badge = document.getElementById('globalMailSentBadge');
     if (!badge) return;

@@ -1,6 +1,7 @@
 import datetime as dt
 import json
 import os
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -73,6 +74,11 @@ def site(tmp_path, monkeypatch):
     monkeypatch.setattr(server, "start_job", lambda *a: pytest.fail("Viewing or switching must not start a browser"))
     root = Path(__file__).resolve().parents[1]
     app = Flask(__name__, template_folder=str(root/"templates"))
+    # Stand in only for navigation routes outside this isolated EDOF app.
+    app.url_build_error_handlers.append(lambda error, endpoint, values:
+        None if endpoint.startswith(("integrale_edof.","edof_server_test.","edof_test.")) else "/navigation/"+endpoint)
+    app.context_processor(lambda: dict(is_admin_logged_in=True, is_super_admin=True, partner_has_module=lambda _:True,
+                                       sales_today_notification_count=0, admin_unresolved_total=0, admin_notifications=[]))
     app.add_url_rule("/session/<session_id>/stagiaire/<trainee_id>", "admin_trainee_page", lambda **kwargs: "stagiaire")
     app.secret_key = "synthetic-only-key-for-isolated-dashboard-tests"
     datafile = tmp_path / "data.json"
@@ -106,7 +112,9 @@ def test_tabs_render_native_data_and_read_only_efp(site):
     for section in dashboard.SECTIONS:
         reply = site.client.get("/admin/edof-test", query_string={"section":section})
         assert reply.status_code == 200 and "Pilotage des dossiers CPF" in reply.text
-        assert "Activer Intégrale EDOF" in reply.text
+        assert "wedof-hero" in reply.text and "app-shell" in reply.text
+        if section == "technical":
+            assert "Activer Intégrale EDOF" in reply.text
     assert "100002" in site.client.get("/admin/edof-test?section=requests").text
     assert "100003" in site.client.get("/admin/edof-test?section=cancellations").text
     assert "100001" in site.client.get("/admin/edof-test?tab=training").text
@@ -257,7 +265,7 @@ def test_legacy_french_dates_work_in_live_simulation_and_declarations_without_re
     site.vault.put(key,snapshot)
     response=site.client.get("/admin/edof-test?simulation=1")
     assert response.status_code == 200
-    row = next(part.split("</tr>", 1)[0] for part in response.text.split("<tr>") if ">100000</a>" in part)
+    row = response.text.split('<tr data-edof-folder="100000">',1)[1].split("</tr>",1)[0]
     assert "02/02/2026" in row and "Justificatif à renseigner" in row
     assert "Date à vérifier" not in row
     site.gate.switch("integrale",0,"admin")
@@ -398,3 +406,42 @@ def test_trainee_import_requires_verified_detail_and_is_idempotent(site, monkeyp
     assert has_cpf_financing(trainee) and not trainee.get("cpf_amount")
     assert trainee["birth_date"] == fields["birth_date"] and trainee["phone"] == fields["phone"]
     assert trainee["edof_registration"]["folder_id"] == "100000" and trainee["training_price"] == "1250.00"
+
+
+def test_deadlines_use_the_action_date_and_hour_and_sort_by_distance():
+    now = dt.datetime(2026, 11, 3, 14, tzinfo=dashboard.PARIS)
+    def row(folder, state, start, end):
+        return {"folder_id":folder,"state":state,"session_start_date":start,"session_end_date":end}
+    records = [
+        row("100001","accepted","2026-11-04","2026-11-28"),
+        row("100002","inTraining","2026-01-01","2026-11-03"),
+        row("100003","accepted","2026-11-03","2026-11-26"),
+        row("100004","accepted","2026-11-03","2026-12-14"),
+        row("100005","inTraining","2026-02-02",""),
+        row("100006","accepted","2026-11-03","2026-11-20"),
+    ]
+    blocks = {"wedof_automation_blocks":[{"external_id":"100006","active":True,"action":"both"}]}
+    rows, _ = dashboard.dashboard_rows({"rows":{r["folder_id"]:r for r in records}}, blocks, {}, now)
+    dashboard.prioritize_rows(rows, now)
+    assert [r["folder_id"] for r in rows[:4]] == ["100002","100003","100004","100001"]
+    assert rows[0]["scheduled"].hour == 18 and rows[1]["scheduled"].hour == 8
+    assert rows[1]["due"] and rows[0]["evaluation"] == "planned"
+    assert {r["evaluation"] for r in rows[4:]} == {"missing","blocked"}
+
+
+@pytest.mark.parametrize("section", ["state","automations"])
+def test_due_pages_filter_and_sort_before_paginating(site, section):
+    today = dt.datetime.now(dashboard.PARIS).date()
+    base = site.vault.get(edof_directory.record_key(site.owner))["rows"]["100000"]
+    records = {}
+    for i in reversed(range(29)):
+        number = str(910000+i)
+        records[number] = {**base, "folder_id":number, "session_start_date":(today+dt.timedelta(days=8+i)).isoformat()}
+    records["900000"] = {**base,"folder_id":"900000","state":"inTraining","session_end_date":today.isoformat()}
+    site.vault.put(edof_directory.record_key(site.owner), {"checked":10000,"rows":records})
+    def ids(page):
+        response = site.client.get("/admin/edof-test",query_string={"section":section,"tab":"due","page":page,"q":"Exemple"})
+        assert response.status_code == 200
+        return re.findall(r'<tr data-edof-folder="(\d+)">', response.text)
+    assert ids(1) == ["900000", *[str(910000+i) for i in range(24)]]
+    assert ids(2) == [str(910000+i) for i in range(24,29)]

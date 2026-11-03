@@ -3195,9 +3195,9 @@ def inject_read_only():
     admin_logged_in = bool(session.get("admin_logged_in"))
     can_view_notifications = admin_logged_in and _admin_can_view_notifications()
     ctx_data: Optional[Dict[str, Any]] = None
-    # The BTS area is intentionally independent from the historical data.json
-    # payload. Its navigation badges stay neutral instead of loading that file.
-    if admin_logged_in and request.endpoint != "admin_bts":
+    # These dashboards use their own data sources. Keep navigation badges neutral
+    # instead of reloading the full trainee store for every filter or page change.
+    if admin_logged_in and request.endpoint not in {"admin_bts", "integrale_edof.index"}:
         try:
             ctx_data = load_data()
         except Exception:
