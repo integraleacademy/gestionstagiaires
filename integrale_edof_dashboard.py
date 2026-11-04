@@ -286,6 +286,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 with provider_operation("integrale"):
                     return view(owner, *args, **kwargs)
             except (ProviderUnavailable, ValueError) as exc:
+                if request.accept_mimetypes.best == "application/json":
+                    return jsonify(message=str(exc)), 409
                 flash(str(exc), "error")
                 return back(request.form.get("section") or "state")
         return admin_required(guarded)
@@ -608,6 +610,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         if not store.connector_key or not gmail_status()["connected"]:
             raise ValueError("Connectez EFP et Gmail avant de lancer le rattrapage.")
         store.queue_sync(owner, "all", catchup_revision=selected["revision"])
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify(requested=store.catchup_status(owner)["requested"], message="Rattrapage demandé. La liste EDOF sera vérifiée avant les déclarations."), 202
         return back("automations", tab="overdue", _anchor="rattrapage")
 
     @bp.post("/automatisations/entrees-effectives")

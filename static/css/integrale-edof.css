@@ -539,3 +539,57 @@ body.admin-sidebar-active .main-content:has(.edof-workspace) { max-width: none; 
   .edof-history-table td:first-child small { display:none; }
   .edof-history-footnote { padding-inline:16px; }
 }
+
+/* User-initiated operations only; scheduled polling never opens a dialog. */
+dialog.edof-action-dialog { width:min(580px,calc(100vw - 32px)); max-width:calc(100vw - 32px); max-height:90dvh; margin:auto; padding:0; border:1px solid #dbe4f2; border-radius:24px; background:#fff; color:#223754; box-shadow:0 32px 100px #12294b55; overflow:auto; }
+.edof-action-dialog:not([open]), .edof-action-dialog [hidden], .edof-action-resume[hidden] { display:none !important; }
+.edof-action-dialog::backdrop { background:#10203d99; backdrop-filter:blur(6px); }
+.edof-action-hero { position:relative; text-align:center; padding:28px 34px 26px; background:radial-gradient(ellipse at top right,#dce8ff,#f1f5ff 50%,#fafcff); border-bottom:1px solid #e2e9f4; }
+.edof-action-eyebrow { display:block; font-size:10px; font-weight:800; letter-spacing:.15em; color:#5a7097; padding-inline:20px; }
+.edof-action-close { position:absolute; right:14px; top:12px; width:34px; height:34px; padding:0; border:0; border-radius:50%; background:#ffffffa6; color:#526784; cursor:pointer; font-size:25px; line-height:1; }
+.edof-action-symbol { display:grid; place-items:center; width:70px; height:70px; margin:25px auto 20px; border:1px solid #d5e2ff; border-radius:21px; background:linear-gradient(145deg,#fff,#e1eaff); color:#3863bf; box-shadow:0 10px 24px #7999d828; }
+.edof-action-symbol svg { width:32px; height:32px; }
+.edof-action-symbol .action-check, .edof-action-symbol .action-warning { display:none; }
+.edof-action-dialog[data-state="request"] .edof-action-symbol svg, .edof-action-dialog[data-state="running"] .edof-action-symbol svg { animation:edof-turn 2.4s linear infinite; }
+.edof-action-hero h2 { margin:0 auto 10px; max-width:21em; color:#19345d; font-size:25px; font-weight:750; letter-spacing:-.03em; line-height:1.25; }
+.edof-action-hero p { margin:0; color:#607696; font-size:13px; line-height:1.6; }
+.edof-action-body { padding:26px 30px 24px; }
+.edof-action-steps { display:flex; justify-content:space-between; padding:0; margin:0 0 25px; list-style:none; gap:12px; }
+.edof-action-steps li { display:flex; align-items:center; gap:8px; font-size:12px; color:#8794a8; font-weight:650; }
+.edof-action-steps li span { display:grid; place-items:center; width:25px; height:25px; background:#f0f3f8; border-radius:50%; font-size:11px; }
+.edof-action-steps .is-current { color:#2d58a8; }
+.edof-action-steps .is-current span { background:#305fbe; color:#fff; box-shadow:0 0 0 4px #edf2ff; }
+.edof-action-steps .is-done { color:#365d85; }
+.edof-action-status { padding:18px; background:#f7f9fd; border:1px solid #e5ebf5; border-radius:13px; }
+.edof-action-status strong { font-size:14px; color:#294874; }
+.edof-action-status p { margin:8px 0 0; font-size:13px; line-height:1.65; color:#546985; overflow-wrap:anywhere; }
+.edof-action-track { height:4px; border-radius:4px; background:#e7eefb; overflow:hidden; margin:18px 0; }
+.edof-action-track span { display:block; width:35%; height:100%; border-radius:4px; background:#3f6fd3; animation:edof-action-progress 1.8s ease-in-out infinite; }
+@keyframes edof-action-progress { from { transform:translateX(-100%); } to { transform:translateX(390%); } }
+.edof-action-reassurance { font-size:12px; line-height:1.6; color:#71819b; margin:18px 0 24px; }
+.edof-action-footer { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; border-top:1px solid #edf1f7; padding-top:18px; }
+.edof-action-footer > span { font-size:11px; color:#7b8ba2; font-variant-numeric:tabular-nums; }
+.edof-action-footer > div { display:flex; flex-wrap:wrap; gap:9px; }
+.edof-action-footer .btn { font-size:12px; padding:10px 14px; }
+.edof-action-dialog[data-state="success"] .edof-action-hero { background:radial-gradient(ellipse at top right,#d9f3e8,#f4fcf8 65%); }
+.edof-action-dialog[data-state="success"] .edof-action-symbol { background:#e3f6ed; border-color:#b7e1cd; color:#218459; }
+.edof-action-dialog[data-state="success"] .action-sync, .edof-action-dialog[data-state="warning"] .action-sync, .edof-action-dialog[data-state="error"] .action-sync { display:none; }
+.edof-action-dialog[data-state="success"] .action-check, .edof-action-dialog[data-state="warning"] .action-warning, .edof-action-dialog[data-state="error"] .action-warning { display:block; }
+.edof-action-dialog[data-state="warning"] .edof-action-symbol, .edof-action-dialog[data-state="error"] .edof-action-symbol { background:#fff1e6; border-color:#efcbb0; color:#b55f29; }
+.edof-action-dialog[data-state="error"] .edof-action-status { border-color:#f1cbd0; background:#fff6f7; }
+.edof-action-dialog[data-state="success"] .edof-action-track, .edof-action-dialog[data-state="warning"] .edof-action-track, .edof-action-dialog[data-state="error"] .edof-action-track { display:none; }
+.edof-action-resume { position:fixed; z-index:1000; right:24px; bottom:24px; max-width:calc(100vw - 32px); display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:14px 18px; border:1px solid #bdd0f2; border-radius:14px; background:#fff; box-shadow:0 10px 35px #17356733; color:#2c4b7e; cursor:pointer; font-size:12px; }
+.edof-action-resume strong { color:#3265bd; font-size:11px; }
+.edof-action-dot { width:8px; height:8px; border-radius:50%; background:#4875ce; }
+.edof-action-resume[data-state="success"] .edof-action-dot { background:#218459; }
+.edof-action-resume[data-state="error"] .edof-action-dot, .edof-action-resume[data-state="warning"] .edof-action-dot { background:#c86336; }
+.edof-action-dialog button:focus-visible, .edof-action-resume:focus-visible { outline:3px solid #719ce6; outline-offset:3px; }
+@media (max-width:600px) {
+  .edof-action-hero { padding:24px 20px; }
+  .edof-action-hero h2 { font-size:23px; }
+  .edof-action-body { padding:22px 18px; }
+  .edof-action-steps { gap:8px; }
+  .edof-action-steps li { font-size:11px; gap:5px; }
+  .edof-action-resume { right:16px; bottom:16px; }
+}
+@media (prefers-reduced-motion:reduce) { .edof-action-dialog .edof-action-symbol svg, .edof-action-track span { animation:none !important; } }

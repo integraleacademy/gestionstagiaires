@@ -14,6 +14,32 @@
     submitting:false, submittedAt:0, awaiting:form.querySelector("button").disabled,
     statusKey:form.dataset.manualSync === "new" ? "new_sync" : "manual_sync"
   }));
+  const feedback = window.edofFeedback;
+  let refreshTimer;
+  function scheduleRefresh(delay) {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refresh, delay);
+  }
+  let catchupRequest = null;
+  const connectionControls = Array.from(document.querySelectorAll('#edof-activate, form[action$="/directory/resume"]'), form => ({
+    form, button:form.querySelector('button'), kind:form.id === 'edof-activate' ? 'connect' : 'reconnect', awaiting:false
+  }));
+  async function postAction(form) {
+    const abort = new AbortController();
+    const timeout = setTimeout(() => abort.abort(), 20000);
+    try {
+      const response = await fetch(form.action, {method:'POST', body:new FormData(form),
+        headers:{Accept:'application/json'}, cache:'no-store', signal:abort.signal});
+      if (!response.headers.get('content-type')?.includes('application/json')) throw Error('La demande n’a pas pu être confirmée. Actualisez la page et vérifiez le suivi avant de relancer.');
+      const result = await response.json();
+      if (!response.ok) throw Error(result.message || result.error || 'La demande n’a pas pu être prise en compte.');
+      return result;
+    } finally { clearTimeout(timeout); }
+  }
+  function requestError(error) {
+    return error.name === 'AbortError' || error instanceof TypeError ?
+      'La réponse du serveur n’a pas été reçue. Le traitement a peut-être démarré : vérifiez le suivi avant de relancer.' : error.message;
+  }
   const clock = document.getElementById("edof-session-clock");
   let tickTimer;
   function animateClock(elapsed, seconds, confirmed) {
@@ -61,49 +87,109 @@
     catchupPanel.querySelector("[role=status]").textContent = message;
     busy(catchupButton, phase !== "done", catchupButton?.dataset.active !== "1");
   }
-  // Keep the regular form navigation and CSRF checks; show activity immediately.
-  catchupButton?.form.addEventListener("submit", () => {
-    leavingForCatchup = true;
+  catchupButton?.form.addEventListener("submit", async event => {
+    if (!feedback) { leavingForCatchup = true; return; }
+    event.preventDefault();
+    if (catchupButton.disabled) return;
+    const control = {token:feedback.begin('catchup', 'Lecture des dossiers puis préparation des déclarations en retard.', catchupButton), awaiting:true, submitting:true};
+    catchupRequest = control;
     showCatchup("scan", "Demande de rattrapage en cours…");
+    try {
+      const result = await postAction(catchupButton.form);
+      control.requested = result.requested;
+      feedback.update(control.token, result.message, 'Demande de rattrapage reçue');
+    } catch (error) {
+      control.awaiting = false;
+      showCatchup('done', requestError(error));
+      feedback.finish(control.token, 'error', requestError(error));
+    } finally { control.submitting = false; control.submittedAt = Date.now(); scheduleRefresh(500); }
+  });
+  for (const control of connectionControls) control.form.addEventListener('submit', async event => {
+    if (!feedback) return;
+    event.preventDefault();
+    if (control.awaiting || control.button.disabled) return;
+    control.token = feedback.begin(control.kind, control.kind === 'reconnect' ?
+      'Une nouvelle authentification EFP va être tentée. La connexion sera confirmée après une lecture EDOF.' :
+      'Le serveur vérifie la session puis ouvre votre espace EDOF.', control.button);
+    control.awaiting = control.submitting = true;
+    busy(control.button, true);
+    try {
+      const result = await postAction(control.form);
+      control.requested = result.requested;
+      if (result.active) {
+        control.awaiting = false;
+        feedback.finish(control.token, 'success', result.message);
+        busy(control.button, false);
+      } else feedback.update(control.token, result.message, 'Demande de connexion reçue');
+    } catch (error) {
+      control.awaiting = false;
+      busy(control.button, false);
+      feedback.finish(control.token, 'error', requestError(error));
+    } finally { control.submitting = false; control.submittedAt = Date.now(); scheduleRefresh(500); }
   });
   for (const control of syncControls) {
     control.form.addEventListener("submit", async event => {
       event.preventDefault();
       if (control.submitting || control.button.disabled) return;
       control.submitting = true;
+      control.token = feedback?.begin('sync', control.form.dataset.manualSync === 'new' ?
+        'Actualisation des nouveaux dossiers à traiter.' : 'Actualisation de tous les dossiers et de leurs statuts.', control.button);
       busy(control.button, true);
       control.feedback.textContent = "Demande de synchronisation en cours…";
       try {
-        const response = await fetch(control.form.action, {method:"POST", body:new FormData(control.form),
-          headers:{Accept:"application/json"}, cache:"no-store"});
-        const result = await response.json();
+        const result = await postAction(control.form);
         control.feedback.textContent = result.message;
-        control.awaiting = response.ok;
-        if (!response.ok) busy(control.button, false);
-      } catch {
-        control.feedback.textContent = "La demande n’a pas pu être confirmée. Vérifiez la connexion et réessayez.";
+        control.requested = result.requested;
+        control.awaiting = true;
+        feedback?.update(control.token, result.message, 'Demande de synchronisation reçue');
+      } catch (error) {
+        control.awaiting = false;
+        control.feedback.textContent = requestError(error);
+        feedback?.finish(control.token, 'error', requestError(error));
         busy(control.button, false);
       } finally {
         control.submittedAt = Date.now();
         control.submitting = false;
+        scheduleRefresh(500);
       }
     });
   }
   function preserveSelection() {
-    return document.activeElement.matches("input, textarea, select") ||
+    return feedback?.blockingReload || document.activeElement.matches("input, textarea, select") ||
       document.querySelector('input[form="edof-effective-entries"]:checked');
   }
   async function refresh() {
     if (!document.hidden) {
       try {
         const started = Date.now();
-        const response = await fetch(box.dataset.statusUrl, {cache: "no-store"});
+        const response = await fetch(box.dataset.statusUrl, {cache: "no-store", signal:AbortSignal.timeout(12000)});
         if (!response.ok) throw Error();
         const state = await response.json();
+        for (const control of connectionControls) {
+          if (!control.awaiting || control.submitting || started <= control.submittedAt) continue;
+          const read = state.last_read;
+          if (read?.finished >= control.requested) {
+            control.awaiting = false;
+            busy(control.button, false);
+            const success = ['directory_ready','requests_ready'].includes(read.code) && state.active;
+            feedback.finish(control.token, success ? 'success' : 'warning', success ?
+              'L’accès à EDOF a été vérifié. La connexion est active.' : state.error || 'La connexion n’a pas été confirmée. Consultez les paramètres de connexion.');
+          } else feedback.update(control.token, state.phase || 'Le serveur attend son tour puis vérifie l’accès à EDOF.', state.phase || 'Connexion en cours…');
+        }
         updateClock(state.clock);
         const priorPhase = catchupPanel?.dataset.phase;
-        if (catchupPanel && state.catchup && !leavingForCatchup) {
+        if (catchupPanel && state.catchup && !leavingForCatchup && !catchupRequest?.submitting &&
+            (!catchupRequest?.awaiting || started > catchupRequest.submittedAt && state.catchup.requested === catchupRequest.requested)) {
           showCatchup(state.catchup.phase, state.catchup.message);
+          const control = catchupRequest;
+          if (control?.awaiting && !control.submitting && started > control.submittedAt && state.catchup.requested === control.requested) {
+            if (state.catchup.busy) feedback.update(control.token, state.catchup.message,
+              state.catchup.phase === 'send' ? 'Transmission et vérification des déclarations…' : 'Lecture des dossiers EDOF…');
+            else {
+              control.awaiting = false;
+              feedback.finish(control.token, state.catchup.result || 'warning', state.catchup.message, true);
+            }
+          }
         }
         const reading = document.getElementById("edof-reading");
         if (reading) reading.hidden = !state.pending;
@@ -122,8 +208,19 @@
         for (const control of syncControls) {
           const status = state[control.statusKey];
           if (control.submitting || started <= control.submittedAt || !status) continue;
+          if (control.awaiting && control.requested && status.requested !== control.requested) continue;
           busy(control.button, status.busy);
           control.feedback.textContent = status.message;
+          if (control.awaiting && control.token) {
+            if (status.busy) feedback.update(control.token, status.message, state.phase || 'Synchronisation en cours…');
+            else {
+              feedback.finish(control.token, status.complete ? 'success' : status.updated ? 'warning' : 'error',
+                status.message, Boolean(status.updated) && box.dataset.detail === '0');
+              control.awaiting = false;
+              control.token = null;
+              control.requested = null;
+            }
+          }
           if (control.awaiting && !status.busy && status.updated && box.dataset.detail === "0") {
             if (preserveSelection()) continue;
             location.reload();
@@ -131,7 +228,7 @@
           }
           control.awaiting = status.busy;
         }
-        if (["scan","send"].includes(priorPhase) && state.catchup?.phase !== priorPhase && !leavingForCatchup
+        if (["scan","send"].includes(priorPhase) && state.catchup?.phase !== priorPhase && !leavingForCatchup && !catchupRequest
             && !preserveSelection()) {
           location.reload();
           return;
@@ -151,6 +248,10 @@
         lamp.classList.remove("on");
         lamp.textContent = "Connexion EDOF inactive";
         note.textContent = "Le serveur n’a pas pu confirmer la connexion.";
+        for (const control of [...syncControls, ...connectionControls, catchupRequest].filter(Boolean)) {
+          if (control.awaiting && !control.submitting) feedback?.update(control.token,
+            'Le suivi est momentanément indisponible. Le traitement peut continuer sur le serveur ; aucune nouvelle demande n’est envoyée.', 'Vérification en attente…');
+        }
         clearInterval(tickTimer);
         if (clock && clock.dataset.confirmed !== "—") {
           clock.querySelector("[data-clock-value]").textContent = clock.dataset.confirmed;
@@ -158,10 +259,10 @@
         }
       }
     }
-    const active = syncControls.some(control => control.awaiting) || ["scan","send"].includes(catchupPanel?.dataset.phase);
-    setTimeout(refresh, active ? 3000 : 15000);
+    const active = [...syncControls,...connectionControls].some(control => control.awaiting) || catchupRequest?.awaiting || ["scan","send"].includes(catchupPanel?.dataset.phase);
+    scheduleRefresh(active ? 3000 : 15000);
   }
-  setTimeout(refresh, 3000);
+  scheduleRefresh(3000);
 })();
 
 // Read the official offer in the background while the locally available form remains editable.

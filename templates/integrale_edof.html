@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block extra_head %}
   {% if section in ["state", "requests"] and tab == "request" and not detail and not query and page == 1 %}
-    <meta http-equiv="refresh" content="45">
+    <noscript><meta http-equiv="refresh" content="45"></noscript>
   {% endif %}
   {% if detail and detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'] %}<meta http-equiv="refresh" content="10">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261104-history') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261104-feedback') }}">
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
@@ -304,5 +304,7 @@
 </div>
 {% endblock %}
 {% block scripts %}
-  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261104-history') }}" defer></script>
+  {% include '_edof_feedback.html' %}
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-feedback.js',v='20261104-feedback') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261104-feedback') }}" defer></script>
 {% endblock %}
