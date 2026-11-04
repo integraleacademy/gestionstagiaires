@@ -18699,21 +18699,10 @@ def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any
         formation_display_label = formation_label(training_type)
         for trainee_index, trainee in enumerate(_registered_trainees(sess)):
             trainee_id = str(trainee.get("id") or f"trainee-{trainee_index + 1}")
+            if not _convention_needs_printing(sess, trainee):
+                continue
             state = _yousign_state(trainee)
-            signed_at = str(state.get("signed_at") or trainee.get("convention_aps_signed_at") or "").strip()
-            is_signed = (
-                _is_yousign_signature_done(state)
-                or bool(signed_at)
-            )
-            if not is_signed:
-                continue
-            # Keep the sidebar badge on the exact same tracking perimeter as the
-            # "À imprimer" KPI.  A recently created convention can belong to a
-            # long-running session whose start date predates tracking.
-            if not _convention_created_on_or_after_tracking_start(trainee):
-                continue
-            if bool(trainee.get("printed")):
-                continue
+            signed_at = str(state.get("signed_at") or trainee.get("convention_aps_signed_at") or trainee.get("convention_legacy_signed_at") or "").strip()
             items.append({
                 "session_id": session_id,
                 "session_name": _session_get(sess, "name", ""),
@@ -18762,6 +18751,40 @@ def _convention_created_on_or_after_tracking_start(trainee: Dict[str, Any]) -> b
     created_at = state.get("created_at") or trainee.get("convention_aps_generated_at") or ""
     created_datetime = _parse_iso_datetime(created_at)
     return bool(created_datetime and created_datetime.date() >= CONVENTIONS_SIGNED_TRACKING_START_DATE)
+
+
+def _convention_vae_is_trackable(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> bool:
+    """Use the same VAE financing threshold for the board and sidebar."""
+    if "VAE" not in str(_session_get(session_obj, "training_type", "") or "").upper():
+        return True
+    vae_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
+    inferred_key = _infer_vae_status_from_action_dates(trainee.get("vae_action_dates"))
+    if inferred_key and VAE_STATUS_RANK.get(inferred_key, -1) > VAE_STATUS_RANK.get(vae_key, -1):
+        vae_key = inferred_key
+    return VAE_STATUS_RANK.get(vae_key, -1) >= VAE_STATUS_RANK.get("financement_validated", 0)
+
+
+def _convention_needs_printing(session_obj: Dict[str, Any], trainee: Dict[str, Any], status_key: Optional[str] = None) -> bool:
+    """Read-only eligibility shared by the print queue, KPI and sidebar badge."""
+    if (
+        bool(session_obj.get("archived"))
+        or _is_wedof_leads_session(session_obj)
+        or _trainee_registration_is_cancelled(trainee)
+        or bool(trainee.get("printed"))
+        or not _convention_created_on_or_after_tracking_start(trainee)
+        or not _convention_vae_is_trackable(session_obj, trainee)
+    ):
+        return False
+    if status_key is None:
+        status_key = _convention_automation_status_key(trainee)
+        state = _yousign_state(trainee)
+        if not state.get("signature_request_id") and not state.get("unsigned_pdf_path") and not trainee.get("convention_aps_pdf_path"):
+            legacy_status = (trainee.get("convention_status") or "").strip().lower()
+            if legacy_status == "signing":
+                status_key = "waiting_signature"
+            elif legacy_status == "signed" and _has_legacy_signed_convention(trainee):
+                status_key = "signed"
+    return status_key == "signed"
 
 
 @app.get("/admin/sessions/conventions")
@@ -18823,14 +18846,8 @@ def admin_sessions_conventions():
                 and not _convention_created_on_or_after_tracking_start(trainee)
             ):
                 continue
-            is_vae_convention_row = "VAE" in str(training_type or "").upper()
-            if is_vae_convention_row:
-                vae_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
-                inferred_vae_key = _infer_vae_status_from_action_dates(trainee.get("vae_action_dates"))
-                if inferred_vae_key and VAE_STATUS_RANK.get(inferred_vae_key, -1) > VAE_STATUS_RANK.get(vae_key, -1):
-                    vae_key = inferred_vae_key
-                if not registration_cancelled and VAE_STATUS_RANK.get(vae_key, -1) < VAE_STATUS_RANK.get("financement_validated", 0):
-                    continue
+            if not registration_cancelled and not _convention_vae_is_trackable(sess, trainee):
+                continue
             state = _yousign_state(trainee)
             full_name = f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
             searchable = " ".join([
@@ -18865,12 +18882,7 @@ def admin_sessions_conventions():
             )
             original_pdf = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
             row_needs_action = not registration_cancelled and status_key in {"not_generated", "generated", "expired", "refused"}
-            row_needs_printing = (
-                not registration_cancelled
-                and status_key == "signed"
-                and _convention_created_on_or_after_tracking_start(trainee)
-                and not bool(trainee.get("printed"))
-            )
+            row_needs_printing = _convention_needs_printing(sess, trainee, status_key)
             is_problem = status_key in {"error", "expired", "refused"}
 
             # Les compteurs décrivent la formation et la recherche courantes,
@@ -40200,10 +40212,26 @@ def _has_generated_yousign_convention(trainee: Dict[str, Any]) -> bool:
     )
 
 
+def _convention_automation_status_key(trainee: Dict[str, Any]) -> str:
+    """Resolve document status without constructing the full automation UI."""
+    state = _yousign_state(trainee)
+    raw_status = _normalize_yousign_status(state.get("status"))
+    if raw_status in {"error", "download_error"}:
+        return "error"
+    if raw_status in {"declined", "refused"}:
+        return "refused"
+    if raw_status in {"expired", "canceled", "cancelled"} or _yousign_signature_link_is_expired(state):
+        return "expired"
+    if _trainee_convention_is_signed(trainee):
+        return "signed"
+    if state.get("signature_request_id"):
+        return "waiting_signature" if _is_yousign_signature_pending(state) else "sent"
+    return "generated" if _has_generated_yousign_convention(trainee) else "not_generated"
+
+
 def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
     """Centralise l'état des documents automatisés affiché sur la fiche stagiaire."""
     state = _yousign_state(trainee)
-    raw_status = _normalize_yousign_status(state.get("status"))
     generated_at_raw = state.get("created_at") or trainee.get("convention_aps_generated_at") or ""
     sent_at_raw = state.get("signature_email_sent_at") or state.get("activated_at") or ""
     signed_at_raw = state.get("signed_at") or trainee.get("convention_aps_signed_at") or trainee.get("convention_legacy_signed_at") or ""
@@ -40215,22 +40243,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     convention_error = state.get("signed_pdf_recovery_error") or state.get("last_error") or state.get("signature_email_last_error") or state.get("last_email_error") or state.get("last_status_sync_error") or ""
     if "son PDF n’est pas présent dans Yousign" in convention_error:
         convention_error = _signed_convention_recovery_message(trainee)
-    if raw_status in {"error", "download_error"}:
-        convention_status = "error"
-    elif raw_status in {"declined", "refused"}:
-        convention_status = "refused"
-    elif raw_status in {"expired", "canceled", "cancelled"} or _yousign_signature_link_is_expired(state):
-        convention_status = "expired"
-    elif _trainee_convention_is_signed(trainee):
-        convention_status = "signed"
-    elif has_signature_request and _is_yousign_signature_pending(state):
-        convention_status = "waiting_signature"
-    elif has_signature_request:
-        convention_status = "sent"
-    elif has_generated_convention:
-        convention_status = "generated"
-    else:
-        convention_status = "not_generated"
+    convention_status = _convention_automation_status_key(trainee)
 
     convention_signed = convention_status == "signed"
     convention_sent = convention_status in {"sent", "waiting_signature", "signed"}
