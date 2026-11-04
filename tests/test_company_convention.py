@@ -67,7 +67,7 @@ class EmployerAgreementTests(unittest.TestCase):
         self.enterContext(patch.object(gestion, "YOUSIGN_CONVENTION_DIR", directory.name))
         self.enterContext(patch.object(gestion, "_find_libreoffice_binary", return_value="soffice"))
         self.enterContext(patch.object(gestion.company_convention, "render",
-                                       side_effect=lambda *args: args[-1].write(b"%PDF-preview")))
+                                       side_effect=lambda *args, **kwargs: args[-1].write(b"%PDF-preview")))
         self.enterContext(patch.object(gestion, "load_data", side_effect=lambda **kw: copy.deepcopy(self.data)))
         self.save = self.enterContext(patch.object(gestion, "save_data", side_effect=self.data.update))
 

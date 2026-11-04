@@ -4,6 +4,10 @@ Applied after business fields have been filled, before PDF conversion. Source
 models and already issued/signed PDFs are deliberately not part of this API.
 """
 import re
+import hashlib
+import json
+import math
+from pathlib import Path
 from copy import deepcopy
 
 from docx import Document
@@ -33,6 +37,19 @@ ACCENTS = {"DC2626": "B42318", "B42318": "B42318", "16A34A": GREEN,
            "6D28D9": PURPLE, "1D4ED8": "2563EB"}
 WIDTH = 17.4
 ANCHOR = re.compile(r"\{\{s\d+\||BTSMARK_")
+ARTICLE = re.compile(r"^Article\s+\d", re.I)
+LOGO = Path(__file__).parent / "static/parcours-alternance/logo.png"
+# Registration numbers already present in the Academy's approved source models.
+REGISTRATION_LINES = (
+    "CNAPS n° FOR-083-2027-02-08-20200755135 · SSIAP n° 8323 · NDA n° 93830600283",
+    "ADEF APS n° 8320032701 · ADEF A3P n° 8320111201 · QUALIOPI n° 03169",
+)
+
+
+def document_reference(kind, *identity):
+    """Stable on regeneration, distinct for each learner/session and agreement kind."""
+    payload = json.dumps([kind, *identity], ensure_ascii=False, sort_keys=True, default=str)
+    return ("CTR" if kind == "contrat" else "CONV") + "-" + hashlib.sha256(payload.encode()).hexdigest()[:12].upper()
 
 
 def _remove(parent, *tags):
@@ -107,10 +124,6 @@ def _paragraph(paragraph):
         _font(paragraph, 11.5, NAVY, True)
         border = _property(paragraph._p.get_or_add_pPr(), "w:pBdr")
         _property(border, "w:bottom", val="single", sz=6, color=GOLD, space=5)
-        if "dispositions financières" in text.lower():
-            fmt.space_before = Pt(0)
-            fmt.space_after = Pt(16)
-            _font(paragraph, 20, NAVY, True)
         for run in paragraph.runs:
             run.underline = False
     elif text.startswith("SECTION "):
@@ -141,6 +154,7 @@ def _paragraph(paragraph):
 def _title(paragraph, *, secondary=False):
     paragraph.style = "Title"
     fmt = paragraph.paragraph_format
+    fmt.alignment = WD_ALIGN_PARAGRAPH.CENTER
     fmt.left_indent = Cm(0)
     fmt.first_line_indent = Cm(0)
     fmt.space_before = Pt(6)
@@ -271,7 +285,7 @@ def _organism_panel(document):
     """Arrange the two existing issuer blocks in reading order, without rewriting."""
     nodes = list(document.element.body)
     start = next((i for i, n in enumerate(nodes) if n.tag == qn("w:p")
-                  and Paragraph(n, document).text.startswith("Entre l’organisme de formation")), None)
+                  and Paragraph(n, document).text.startswith(("Entre l’organisme de formation", "Entre l'organisme"))), None)
     if start is None:
         return
     stop = next((i for i in range(start + 1, len(nodes)) if nodes[i].tag == qn("w:tbl")), None)
@@ -309,137 +323,184 @@ def _organism_panel(document):
             fmt.line_spacing = 1.3
             fmt.space_after = Pt(5)
             fmt.keep_with_next = False
-            if p.text.lstrip().startswith("-"):
+            if p.text.lstrip().startswith("-") or p._p.xpath("./w:pPr/w:numPr"):
                 fmt.left_indent = Cm(.35)
                 fmt.first_line_indent = Cm(-.35)
                 fmt.tab_stops.clear_all()
                 fmt.tab_stops.add_tab_stop(Cm(.35))
 
 
-def _header_footer(document):
+def _clear(container):
+    for node in list(container._element):
+        container._element.remove(node)
+
+
+def _header_footer(document, reference, kind):
+    """The retake invitation's navy/gold banner, with native Word text and fields."""
+    from docx.enum.table import WD_ROW_HEIGHT_RULE
+    from docx.enum.text import WD_TAB_ALIGNMENT
     visited = set()
     for section in document.sections:
         section.page_width, section.page_height = Cm(21), Cm(29.7)
         section.left_margin = section.right_margin = Cm(1.8)
-        section.top_margin, section.bottom_margin = Cm(4), Cm(2.3)
-        section.header_distance, section.footer_distance = Cm(.65), Cm(.8)
-        for container in (section.header, section.first_page_header, section.even_page_header,
-                          section.footer, section.first_page_footer, section.even_page_footer):
-            if container.is_linked_to_previous or id(container._element) in visited:
+        section.top_margin, section.bottom_margin = Pt(125), Cm(2.8)
+        section.header_distance, section.footer_distance = Pt(0), Cm(.7)
+        section.different_first_page_header_footer = False
+        for container in (section.header, section.even_page_header, section.footer, section.even_page_footer):
+            if container._element in visited:
                 continue
-            visited.add(id(container._element))
-            is_footer = container._element.tag == qn("w:ftr")
-            if not is_footer:
-                # Legacy header grids are only positioning devices. Remove their
-                # empty rows and columns so the navy banner has no white seams.
-                for table in list(container.tables):
-                    for node in list(table._tbl.xpath(".//w:p")):
-                        table._tbl.addprevious(node)
-                    table._tbl.getparent().remove(table._tbl)
-                for node in list(container._element.xpath("./w:p")):
-                    if not node.xpath(".//w:t | .//w:drawing | .//w:pict | .//w:fldChar | .//w:bookmarkStart | .//w:bookmarkEnd"):
-                        node.getparent().remove(node)
-            for table in container.tables:
-                table.alignment = WD_TABLE_ALIGNMENT.LEFT
-                table.autofit = False
-                _remove(table._tbl.tblPr, "w:tblInd", "w:tblpPr", "w:tblBorders")
-                _property(table._tbl.tblPr, "w:tblW", w=round(WIDTH / 2.54 * 1440), type="dxa")
-                for col in table.columns:
-                    col.width = Cm(WIDTH / len(table.columns))
-                for row in table.rows:
-                    for cell in row.cells:
-                        cell.width = Cm(WIDTH / len(table.columns))
-                        cp = cell._tc.get_or_add_tcPr()
-                        _remove(cp, "w:tcBorders", "w:shd")
-                        borders = _property(cp, "w:tcBorders")
-                        for side in ("top", "bottom", "left", "right"):
-                            _property(borders, "w:" + side, val="nil")
-                        margins = _property(cp, "w:tcMar")
-                        for side in ("top", "bottom", "left", "right"):
-                            _property(margins, "w:" + side, w=0, type="dxa")
-            for node in container._element.xpath(".//w:p"):
-                p = Paragraph(node, container)
+            visited.add(container._element)
+            _clear(container)
+            if container._element.tag == qn("w:ftr"):
+                lines = (
+                    "Intégrale Academy – Intégrale Sécurité Formations · SIRET 840 899 884 00026 · NAF 8559A",
+                    "54 chemin du Carreou · 83480 Puget-sur-Argens · 04 22 47 07 68 · ecole@integraleacademy.com",
+                    *REGISTRATION_LINES,
+                )
+                for i, line in enumerate(lines):
+                    p = container.add_paragraph(line)
+                    p.paragraph_format.space_before = Pt(0)
+                    p.paragraph_format.space_after = Pt(0)
+                    p.paragraph_format.line_spacing = Pt(10)
+                    _font(p, 6.8, MUTED)
+                    if i == 0:
+                        border = _property(p._p.get_or_add_pPr(), "w:pBdr")
+                        _property(border, "w:top", val="single", sz=4, color="D5DFE9", space=6)
+                p = container.add_paragraph("RCS Fréjus · UAI 0831774C\tPage ")
+                p.paragraph_format.tab_stops.add_tab_stop(Cm(WIDTH), WD_TAB_ALIGNMENT.RIGHT)
+                for instruction in ("PAGE", "NUMPAGES"):
+                    if instruction == "NUMPAGES":
+                        p.add_run(" / ")
+                    for field_type in ("begin", "instruction", "separate", "value", "end"):
+                        run = p.add_run()
+                        if field_type == "instruction":
+                            field = OxmlElement("w:instrText"); field.text = instruction
+                        elif field_type == "value":
+                            field = OxmlElement("w:t"); field.text = "1"
+                        else:
+                            field = OxmlElement("w:fldChar"); field.set(qn("w:fldCharType"), field_type)
+                        run._r.append(field)
                 p.paragraph_format.space_before = Pt(0)
                 p.paragraph_format.space_after = Pt(0)
-                p.paragraph_format.line_spacing = 1
-                p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                _remove(p._p.get_or_add_pPr(), "w:pBdr", "w:shd")
-                _font(p, 7 if is_footer else 8, MUTED if is_footer else NAVY)
-            if is_footer:
-                if container.paragraphs:
-                    border = _property(container.paragraphs[0]._p.get_or_add_pPr(), "w:pBdr")
-                    _property(border, "w:top", val="single", sz=4, color="D5DFE9", space=6)
+                p.paragraph_format.line_spacing = Pt(10)
+                _font(p, 6.8, MUTED)
                 continue
-            # Use the existing artwork. Inline placement eliminates page-edge
-            # floating images and overlap; both image extents retain their ratio.
-            for anchor in list(container._element.xpath(".//wp:anchor")):
-                inline = OxmlElement("wp:inline")
-                for tag in ("wp:extent", "wp:effectExtent", "wp:docPr", "wp:cNvGraphicFramePr", "a:graphic"):
-                    child = anchor.find(qn(tag))
-                    if child is not None:
-                        inline.append(child)
-                anchor.getparent().replace(anchor, inline)
-            for inline in container._element.xpath(".//wp:inline"):
-                extent = inline.find(qn("wp:extent"))
-                if extent is None:
-                    continue
-                old_width = int(extent.get("cx"))
-                if old_width <= Cm(8.5):
-                    continue
-                ratio = Cm(8.5) / old_width
-                for node in [extent, *inline.xpath(".//a:xfrm/a:ext")]:
-                    for key in ("cx", "cy"):
-                        node.set(key, str(round(int(node.get(key)) * ratio)))
-            # A navy and gold frame echoes the retake convention while keeping
-            # the original header artwork and every embedded legal detail.
-            paragraphs = list(container._element.xpath(".//w:p"))
-            if paragraphs:
-                first = _property(paragraphs[0].get_or_add_pPr(), "w:pBdr")
-                _property(first, "w:top", val="single", sz=72, color=NAVY, space=0)
-                last = _property(paragraphs[-1].get_or_add_pPr(), "w:pBdr")
-                _property(last, "w:bottom", val="single", sz=18, color=GOLD, space=6)
-                for node in paragraphs:
-                    _property(node.get_or_add_pPr(), "w:shd", val="clear", fill=NAVY)
-                    _font(Paragraph(node, container), 8, "FFFFFF")
-                    if node.xpath(".//w:drawing | .//w:pict"):
-                        Paragraph(node, container).alignment = WD_ALIGN_PARAGRAPH.CENTER
+            table = container.add_table(rows=1, cols=2, width=Cm(21))
+            table.alignment = WD_TABLE_ALIGNMENT.LEFT
+            table.autofit = False
+            props = table._tbl.tblPr
+            _property(props, "w:tblW", w=11906, type="dxa")
+            _property(props, "w:tblInd", w=-1021, type="dxa")
+            borders = _property(props, "w:tblBorders")
+            for side in ("top", "left", "right", "insideH", "insideV"):
+                _property(borders, "w:" + side, val="nil")
+            _property(borders, "w:bottom", val="single", sz=24, color=GOLD)
+            row = table.rows[0]
+            row.height, row.height_rule = Pt(100), WD_ROW_HEIGHT_RULE.EXACTLY
+            for i, (cell, width) in enumerate(zip(row.cells, (11, 10))):
+                table.columns[i].width = cell.width = Cm(width)
+                cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+                cp = cell._tc.get_or_add_tcPr()
+                _property(cp, "w:shd", val="clear", fill=NAVY)
+                cell_borders = _property(cp, "w:tcBorders")
+                for side in ("top", "left", "right"):
+                    _property(cell_borders, "w:" + side, val="single", sz=4, color=NAVY)
+                margins = _property(cp, "w:tcMar")
+                for side, value in (("top", 0), ("bottom", 0), ("left", 1021 if i == 0 else 0), ("right", 1021 if i == 1 else 0)):
+                    _property(margins, "w:" + side, w=value, type="dxa")
+                p = cell.paragraphs[0]
+                p.paragraph_format.space_after = Pt(0)
+                p.paragraph_format.space_before = Pt(0)
+                p.paragraph_format.line_spacing = 1
+                if i == 0:
+                    p.add_run().add_picture(str(LOGO), width=Pt(215))
+                else:
+                    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                    p.add_run("VOTRE CONTRAT" if kind == "contrat" else "VOTRE CONVENTION")
+                    _font(p, 9, GOLD, True)
+                    p.paragraph_format.space_after = Pt(10)
+                    p = cell.add_paragraph(("Contrat" if kind == "contrat" else "Convention") + " n° " + reference)
+                    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                    p.paragraph_format.space_after = Pt(0)
+                    p.paragraph_format.line_spacing = 1
+                    _font(p, 8, "FFFFFF")
+            p = container.add_paragraph()
+            p.paragraph_format.space_after = Pt(0)
+            p.paragraph_format.line_spacing = Pt(1)
+            _font(p, 1)
 
 
 def _content(document):
-    """Exact text nodes, fields and picture references in document order."""
+    """Exact contractual body, links, fields and picture references in reading order.
+
+    The explicitly requested new banner, reference and registrations live only
+    in the header/footer, outside this immutable contractual content.
+    """
     elements = [document.element]
-    elements.extend(part.element for part in document.part.related_parts.values()
-                    if hasattr(part, "element") and part.element.tag in {qn("w:hdr"), qn("w:ftr")})
-    tags = {qn(tag) for tag in ("w:t", "w:instrText", "w:fldChar", "a:blip")}
+    tags = {qn(tag) for tag in ("w:t", "w:instrText", "w:fldChar", "w:hyperlink", "a:blip")}
     tags.add("{urn:schemas-microsoft-com:vml}imagedata")
     return [tuple((node.tag, node.text, tuple(sorted(node.attrib.items())))
                   for node in element.iter() if node.tag in tags)
             for element in elements]
 
 
-def _keep_financial_sections(document):
-    """Keep each compact financial summary together without a near-empty page before it."""
+def _article_flow(document):
+    """Keep articles that fit a page together; long articles break between paragraphs."""
     children = list(document.element.body)
+    first_article = True
     for i, node in enumerate(children):
-        if node.tag != qn("w:p") or "dispositions financières" not in Paragraph(node, document).text.lower():
+        if node.tag != qn("w:p") or not ARTICLE.match(Paragraph(node, document).text):
             continue
-        if not re.match(r"^Article\s+\d", Paragraph(node, document).text, re.I):
-            continue
+        if first_article:
+            Paragraph(node, document).paragraph_format.page_break_before = True
+            first_article = False
         paragraphs = []
+        estimated_height = 0
         for child in children[i:]:
-            if child is not node and child.tag == qn("w:p") and re.match(
-                r"^(Article\s+\d|Signature )", Paragraph(child, document).text, re.I
-            ):
+            if child is not node and child.tag == qn("w:p"):
+                text = Paragraph(child, document).text.strip()
+                if ARTICLE.match(text) or text.startswith(("Signature ", "SECTION ", "RÈGLEMENT", "Annexe ")):
+                    break
+            if child.tag not in (qn("w:p"), qn("w:tbl")):
                 break
-            paragraphs.extend([child] if child.tag == qn("w:p") else child.xpath(".//w:p"))
+            group = [child] if child.tag == qn("w:p") else child.xpath(".//w:p")
+            paragraphs.extend(group)
+            if child.tag == qn("w:p"):
+                p = Paragraph(child, document)
+                lines = sum(max(1, math.ceil(len(line) / 92)) for line in p.text.split("\n"))
+                estimated_height += lines * 14 + 9
+            else:
+                # Conservative estimate, including cell padding and wrapped lines.
+                for row in child.xpath("./w:tr"):
+                    heights = []
+                    cells = row.xpath("./w:tc")
+                    for cell in cells:
+                        heights.append(sum((max(1, math.ceil(len(Paragraph(p, document).text) / (92 / len(cells))))) * 15 + 5
+                                           for p in cell.xpath(".//w:p")) + 18)
+                    estimated_height += max(heights, default=0)
+        financial = "dispositions financières" in Paragraph(node, document).text.lower()
+        if financial:
+            Paragraph(node, document).paragraph_format.page_break_before = True
+        compact = estimated_height <= 560 or financial
         for p in paragraphs:
-            Paragraph(p, document).paragraph_format.keep_with_next = True
-        if paragraphs:
+            fmt = Paragraph(p, document).paragraph_format
+            fmt.keep_together = True
+            # Fit a compact course description alongside Article 1, instead of
+            # stranding the short object clause alone on an almost empty page.
+            if compact and re.match(r"^Article\s+2\s*[-–]", Paragraph(node, document).text, re.I) and p is not node:
+                fmt.line_spacing = 1.25
+                fmt.space_after = Pt(5)
+            if compact:
+                fmt.keep_with_next = True
+        if paragraphs and compact:
             Paragraph(paragraphs[-1], document).paragraph_format.keep_with_next = False
 
 
-def style_document(document):
+def style_document(document, *, reference_key=None):
     before = _content(document)
+    text = " ".join(document.element.xpath(".//w:t/text()"))
+    kind = "contrat" if "Contrat de formation professionnelle" in text[:400] else "convention"
+    reference = document_reference(kind, reference_key if reference_key is not None else before)
     # Some source models put the next article in the footnote's paragraph.
     # Move the existing runs into their own paragraph, never recreate their text.
     for p in list(document.paragraphs):
@@ -461,7 +522,7 @@ def style_document(document):
         style.font.color.rgb = RGBColor.from_string(INK)
         if style._element.pPr is not None:
             _remove(style._element.pPr, "w:pBdr", "w:shd")
-    _header_footer(document)
+    _header_footer(document, reference, kind)
     for p in document.paragraphs:
         _paragraph(p)
         if p.text.startswith(("Convention d’accompagnement", "Convention de formation")):
@@ -477,7 +538,7 @@ def style_document(document):
         text = table.cell(0, 0).text.strip()
         if text.startswith(("Et le ", "Entreprise acheteuse")):
             next_node = table._tbl.getnext()
-            if next_node is not None and next_node.tag == qn("w:p") and Paragraph(next_node, document).text.startswith("(ci-après"):
+            if next_node is not None and next_node.tag == qn("w:p") and Paragraph(next_node, document).text.strip().startswith("(ci-après"):
                 table.cell(0, 0)._tc.append(next_node)
             _panel(table, PALE, NAVY, prominent=True)
             continue
@@ -497,6 +558,7 @@ def style_document(document):
                     p.paragraph_format.page_break_before = text.startswith("RÈGLEMENT")
                 else:
                     _font(p, 8, MUTED, False)
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     p.paragraph_format.space_after = Pt(14)
                     p.paragraph_format.keep_with_next = True
             table._tbl.addprevious(p._p)
@@ -508,12 +570,23 @@ def style_document(document):
     for p in list(document.paragraphs):
         if not p._p.xpath(".//w:t | .//w:br | .//w:drawing | .//w:pict | .//w:fldChar | .//w:bookmarkStart | .//w:bookmarkEnd") and p._p.find(".//" + qn("w:sectPr")) is None:
             p._p.getparent().remove(p._p)
-    _keep_financial_sections(document)
+    # Real spacing between adjacent coloured cards: Word joins adjacent tables
+    # without a separating paragraph, ignoring paragraph margins inside cells.
+    for table in document.tables:
+        if table._tbl.getprevious() is not None and table._tbl.getprevious().tag == qn("w:tbl"):
+            spacer = OxmlElement("w:p")
+            table._tbl.addprevious(spacer)
+            p = Paragraph(spacer, document)
+            p.paragraph_format.line_spacing = Pt(12)
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.space_after = Pt(0)
+            p.paragraph_format.keep_with_next = True
+    _article_flow(document)
     if _content(document) != before:
         raise ValueError("La mise en page ne doit modifier aucun texte, champ ou visuel de la convention.")
     return document
 
 
-def restyle_file(path):
-    document = style_document(Document(path))
+def restyle_file(path, *, reference_key=None):
+    document = style_document(Document(path), reference_key=reference_key)
     document.save(path)

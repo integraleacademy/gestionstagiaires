@@ -4,6 +4,7 @@ from io import BytesIO
 from pathlib import Path
 
 from exam_retakes import date_label, discount_label, financial_totals, line_items, money
+from convention_design import REGISTRATION_LINES
 
 
 def retake_font():
@@ -31,9 +32,13 @@ def retake_page_frame(font, document_label, ref):
         canvas.setFillColor(gold);canvas.setFont(font+'-Bold',9);canvas.drawRightString(547,A4[1]-42,'VOTRE RATTRAPAGE')
         canvas.setFillColor(colors.white);canvas.setFont(font,8);canvas.drawRightString(547,A4[1]-61,document_label+' '+ref)
         canvas.setFillColor(gold);canvas.rect(0,A4[1]-103,A4[0],3,stroke=0,fill=1)
-        canvas.setStrokeColor(colors.HexColor('#D5DFE9'));canvas.line(48,42,547,42)
+        canvas.setStrokeColor(colors.HexColor('#D5DFE9'));canvas.line(48,66 if document_label == 'CONVENTION' else 42,547,66 if document_label == 'CONVENTION' else 42)
         canvas.setFont(font,7);canvas.setFillColor(muted)
-        canvas.drawString(48,29,'Intégrale Academy - 04 22 47 07 68 - ecole@integraleacademy.com')
+        canvas.drawString(48,53 if document_label == 'CONVENTION' else 29,'Intégrale Academy - 04 22 47 07 68 - ecole@integraleacademy.com')
+        if document_label == 'CONVENTION':
+            canvas.setFont(font,6.8)
+            for y, line in zip((42, 31), REGISTRATION_LINES):
+                canvas.drawString(48,y,line)
         canvas.drawRightString(547,29,'Page '+str(doc.page));canvas.restoreState()
     return frame
 
@@ -133,7 +138,7 @@ def build_convention(row, destination):
     story += [Spacer(1,8),signature]
     frame = retake_page_frame(font, "CONVENTION", ref)
     temporary=str(destination)+'.tmp'
-    SimpleDocTemplate(temporary,pagesize=A4,rightMargin=48,leftMargin=48,topMargin=118,bottomMargin=58,
+    SimpleDocTemplate(temporary,pagesize=A4,rightMargin=48,leftMargin=48,topMargin=118,bottomMargin=82,
                       title='Convention de rattrapage - '+full_name,author='Intégrale Academy').build(story,onFirstPage=frame,onLaterPages=frame)
     Path(temporary).replace(destination)
     return signature_field

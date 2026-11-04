@@ -40022,7 +40022,11 @@ def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[st
     app.logger.info("Variables convention APS remplacées : %s", sorted([key for key in APS_CONVENTION_VARIABLES if replacements.get(key)]))
     app.logger.info("Variables convention APS sans valeur : %s", sorted([key for key in APS_CONVENTION_VARIABLES if not replacements.get(key)]))
     _replace_docx_xml_placeholders(final_docx_path, replacements)
-    convention_design.restyle_file(final_docx_path)
+    convention_design.restyle_file(final_docx_path, reference_key=(
+        session_id or session_obj.get("id") or (session_obj.get("name"), session_obj.get("date_start")),
+        trainee_id or trainee.get("id") or (trainee.get("first_name"), trainee.get("last_name"), trainee.get("zip_code")),
+        template_name,
+    ))
     remaining_variables, detected_anchors = _assert_aps_convention_has_no_business_placeholders(final_docx_path)
     app.logger.info("Variables restantes après remplacement : %s", remaining_variables)
     app.logger.info("Ancres Yousign détectées : %s", detected_anchors)
@@ -50296,7 +50300,8 @@ def _company_convention_form(session_id, trainee_id):
     try:
         template = _ssiap_document_template(s, t, "convention", _aps_convention_template_path)
         company_convention.render(template, company, values, _replace_docx_xml_placeholders,
-                                  _assert_docx_has_no_unresolved_variables, _find_libreoffice_binary(), pdf)
+                                  _assert_docx_has_no_unresolved_variables, _find_libreoffice_binary(), pdf,
+                                  reference_key=(session_id, trainee_id, slug, "entreprise"))
     except Exception:
         app.logger.exception("Convention entreprise : génération impossible pour %s", trainee_id)
         return form("La conversion du modèle en PDF a échoué. Vous pouvez réessayer."), 500
