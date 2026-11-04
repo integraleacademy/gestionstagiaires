@@ -1212,7 +1212,7 @@ def run_browser(spec, *, live=None):
             pause = directory.PortalThrottled(response.headers.get("retry-after"))
             signals["throttled"] = pause
             if vault:
-                vault.put("edof-throttled", True, ttl=pause.delay)
+                pause.remember(vault)
             return
         if response.request.method == "POST" and parsed.hostname == EFP_HOST and parsed.path == "/auth/realms/efp/login-actions/authenticate":
             signals["login_post_status"] = response.status
@@ -1267,6 +1267,8 @@ def run_browser(spec, *, live=None):
                 if tail == spec.get("folder_id") or tail == spec.get("selected_id"):
                     if proposal_mode and response.url == f"https://{EDOF_HOST}{API_PREFIX}{tail}":
                         proposal_witness = response.request
+                        if live is not None:
+                            live["proposal_witness"] = (spec["owner"],tail,proposal_witness)
                         details[tail] = directory.project(raw)
                     else:
                         details[tail] = project_folder(raw, registration=bool(spec.get("import_session")))
@@ -1288,6 +1290,7 @@ def run_browser(spec, *, live=None):
                         session_clock.record(vault, spec["owner"], "interrupted")
                     live["timing_observed"] = False
                     live.pop("pending_witness", None)
+                    live.pop("proposal_witness", None)
                     # With no active read policy, the idle page cannot send requests.
                     context.route("**/*", lambda route: route.abort())
                 page = context.new_page()
@@ -1418,6 +1421,31 @@ def run_browser(spec, *, live=None):
                 progress("pending_verified")
                 return {"code":"requests_ready","stage":"directory","candidate_count":len(snapshot["rows"]),
                         "fresh_session":not reused,"session_saved":True,"gmail_code_used":gmail_code_used}
+
+            def run_proposal(witness, reused):
+                from edof_proposal_jobs import perform
+                from edof_proposal import InvalidTerms
+                try:
+                    # perform always reads the exact dossier again and checks identity,
+                    # state and conditions before any fenced write. Only auth is reused.
+                    result = perform(context,witness,spec,os.environ["EDOF_CONNECTOR_DIRECTORY"],vault,API_PREFIX,EDOF_HOST)
+                except InvalidTerms as exc:
+                    return {"code":"proposal_refused","proposal_message":str(exc)[:350]}
+                except ValueError:
+                    return {"code":"read_unconfirmed"}
+                if result["code"] != "identity_mismatch":
+                    vault.put("browser",session_cookies(context.storage_state()),ttl=86400)
+                    clock_event("verified",fresh=not reused)
+                    if live is not None:
+                        live["proposal_witness"] = (spec["owner"],spec["folder_id"],witness)
+                return {**result,"fresh_session":not reused,"gmail_code_used":gmail_code_used,
+                        "session_saved":result["code"] != "identity_mismatch"}
+
+            if warm and proposal_mode and vault and private_page(page.url):
+                previous = live.pop("proposal_witness", None)
+                if previous and previous[:2] == (spec["owner"],spec.get("folder_id")):
+                    stage = "dossier"
+                    return run_proposal(previous[2], True)
 
             # A verified open tab can read just the filtered endpoint. Its prior request
             # stays in this browser's memory; only a fresh successful response counts.
@@ -1716,16 +1744,7 @@ def run_browser(spec, *, live=None):
             if proposal_mode:
                 if not vault:
                     raise StopRun("private_storage_unavailable")
-                from edof_proposal_jobs import perform
-                try:
-                    result = perform(context, proposal_witness, spec, os.environ["EDOF_CONNECTOR_DIRECTORY"], vault, API_PREFIX, EDOF_HOST)
-                    return {**result,"fresh_session":not reused,"gmail_code_used":gmail_code_used,"session_saved":session_saved}
-                except ValueError as exc:
-                    # Only form validation messages may be presented to the operator.
-                    from edof_proposal import InvalidTerms
-                    if isinstance(exc,InvalidTerms):
-                        return {"code":"proposal_refused","proposal_message":str(exc)[:350]}
-                    return {"code":"read_unconfirmed"}
+                return run_proposal(proposal_witness, reused)
             if spec["mode"] in business_modes:
                 from edof_declaration_form import transmit
 
@@ -1748,7 +1767,7 @@ def run_browser(spec, *, live=None):
             return {"code": exc.code, "stage": stage, "fresh_session": not reused, "gmail_code_used": gmail_code_used, "diagnostics": exc.diagnostics}
         except (StopRun, directory.PortalThrottled) as exc:
             if vault and isinstance(exc, directory.PortalThrottled):
-                vault.put("edof-throttled", True, ttl=exc.delay)
+                exc.remember(vault)
             if exc.code in {"directory_unavailable","directory_incomplete"} and pending_result:
                 return pending_result
             if vault and exc.code in {"credentials_rejected", "account_unavailable", "otp_rejected", "verification_code", "sign_in_error"}:

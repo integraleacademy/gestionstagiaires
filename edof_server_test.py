@@ -30,6 +30,7 @@ from edof_day_session import DayWorker, OPEN_HOUR, POLL_SECONDS, PARIS, working_
 import edof_recovery as recovery
 import edof_dispatch as dispatch
 import edof_directory as directory
+import edof_throttle as throttle
 import edof_session_clock as session_clock
 import edof_proposal_jobs as proposals
 import edof_declarations as declarations
@@ -46,7 +47,7 @@ MESSAGES = {
     **declarations.REASONS,
     "day_login_used": "Le quota de codes EFP autorisé est atteint. La reconnexion automatique est en pause. Un administrateur peut autoriser une tentative supplémentaire.",
     "day_login_wait": "Une authentification EFP a été tentée récemment. La reconnexion reprendra automatiquement après le délai de 15 minutes.",
-    "portal_throttled": "EDOF ou EFP limite les requêtes. La veille respecte le délai du portail, avec une pause minimale d’une heure.",
+    "portal_throttled": "EDOF ou EFP limite temporairement les requêtes. Le délai du portail est respecté ; sans délai indiqué, une pause progressive est appliquée.",
     "day_closed": "La veille est ouverte tous les jours de 7 h à 19 h, heure de Paris.",
     "declaration_confirmed": "Le statut et les valeurs de la déclaration ont été relus sur EDOF.",
     "declaration_inspected": "Contrôle des commandes disponibles sur EDOF terminé en lecture seule.",
@@ -255,7 +256,10 @@ class ServerTestStore:
         checked_at = None
         if row:
             checked_at = dt.datetime.fromtimestamp(row["finished"], ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y à %H h %M")
-        if row and row["screen"] == "session_expired":
+        paused = self.connector_key and throttle.status(Vault(self.directory,self.connector_key))
+        if paused:
+            state, label = "day_wait", throttle.message(Vault(self.directory,self.connector_key))
+        elif row and row["screen"] == "session_expired":
             state, label = "expired", "Session expirée au dernier contrôle"
         elif row and row["code"] in {"day_login_used","day_login_wait"}:
             budget = login_policy(Vault(self.directory,self.connector_key), owner=owner, manual_until=self.manual_until(owner)) if self.connector_key else None
@@ -541,6 +545,10 @@ class ServerTestStore:
         error = MESSAGES.get(last["code"], "") if open_now and not verified and stamp >= earliest and last and last["code"] not in {"directory_ready","requests_ready"} else ""
         if error and last["code"] in {"day_login_used","day_login_wait"} and budget:
             error = MESSAGES.get(budget["code"], "Reconnexion automatique programmée dans la limite des quatre codes quotidiens.")
+        if self.connector_key and throttle.status(Vault(self.directory,self.connector_key)):
+            # A request limit is not an invitation to request another login code.
+            verified, pending, blocked = False, False, False
+            error = throttle.message(Vault(self.directory,self.connector_key))
         schedule = ("Veille programmée de 7 h à 19 h (Paris)" if watch_open else "Hors plage de veille (7 h à 19 h, Paris)") if watch_enabled else "Veille automatique suspendue"
         clock = session_clock.clock_view(timing, now.timestamp(), open_now=open_now, verified=verified)
         return {"clock":clock, "active": verified, "pending": pending, "checked": checked, "sync": sync, "schedule": schedule, "manual_sync": self.manual_sync_status(owner, "all"),
@@ -714,6 +722,8 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
             process.communicate()
         try:
             temporary.cleanup()
+            if result.get("code") == "portal_throttled" and store.connector_key:
+                result["proposal_message"] = throttle.message(Vault(store.directory,store.connector_key))
             if spec.get("import_session") and result.get("code") == "read_success":
                 from integrale_edof_registration import create_registration
                 try:
@@ -736,7 +746,7 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
                     # can retry local analysis without replaying external work.
                     result.setdefault("diagnostics", {})["local_analysis_pending"] = True
             if spec["mode"] == "proposal_read":
-                proposals.finish_read(store.directory,spec,MESSAGES.get(result["code"],"Vérifiez la connexion EDOF."))
+                proposals.finish_read(store.directory,spec,result.get("proposal_message") or MESSAGES.get(result["code"],"Vérifiez la connexion EDOF."))
             if spec["mode"] in {"proposal_send","proposal_check"}:
                 proposals.complete(store.directory, spec, result, result.get("proposal_message") or MESSAGES.get(result["code"],"Vérifiez la connexion EDOF."))
                 if result["code"] == "proposal_confirmed":
@@ -748,6 +758,9 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
             if day_worker is not None and spec["mode"] == "directory":
                 result["day_session"] = True
             store.finish(job_id, result)
+            if result["code"] == "portal_throttled" and store.connector_key:
+                pause = throttle.status(Vault(store.directory,store.connector_key)) or {}
+                print(f"EDOF_THROTTLE mode={spec['mode']} source={pause.get('source')} retry_at={pause.get('until')} remaining={pause.get('remaining')}", flush=True)
             if day_worker is not None and spec["mode"] == "directory":
                 # Operational proof without account, dossier, cookie or code values.
                 report = (result.get("diagnostics") or {}).get("directory") or {}
