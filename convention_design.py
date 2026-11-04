@@ -4,6 +4,7 @@ Applied after business fields have been filled, before PDF conversion. Source
 models and already issued/signed PDFs are deliberately not part of this API.
 """
 import re
+from copy import deepcopy
 
 from docx import Document
 from docx.enum.style import WD_STYLE_TYPE
@@ -16,10 +17,20 @@ from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 
 
-INK = "263238"
-NAVY = "243746"
-PALE = "F3F5F6"
-GOLD = "FFF3D6"
+INK = NAVY = "14283F"
+PALE = "F1F5FA"
+GOLD = "F3C65F"
+CREAM = "FFF5DA"
+GREEN = "176344"
+MINT = "E8F5EE"
+PURPLE = "6D28D9"
+LILAC = "F3EEFC"
+MUTED = "596A7D"
+FONT = "DejaVu Sans"
+# Keep the original financial emphasis instead of flattening every run to black.
+ACCENTS = {"DC2626": "B42318", "B42318": "B42318", "16A34A": GREEN,
+           "15803D": GREEN, "047857": GREEN, GREEN: GREEN,
+           "6D28D9": PURPLE, "1D4ED8": "2563EB"}
 WIDTH = 17.4
 ANCHOR = re.compile(r"\{\{s\d+\||BTSMARK_")
 
@@ -40,13 +51,14 @@ def _property(parent, tag, **attributes):
     return element
 
 
-def _font(paragraph, size=10.5, color=INK, bold=None):
+def _font(paragraph, size=9, color=INK, bold=None):
     # Include hyperlink runs without changing their targets or text nodes.
     for node in paragraph._p.xpath(".//w:r"):
         run = Run(node, paragraph)
-        run.font.name = "Calibri"
+        original_color = str(run.font.color.rgb or "")
+        run.font.name = FONT
         run.font.size = Pt(size)
-        run.font.color.rgb = RGBColor.from_string(color)
+        run.font.color.rgb = RGBColor.from_string(ACCENTS.get(original_color, color) if color == INK else color)
         run.font.highlight_color = None
         run.font.all_caps = False
         if bold is not None:
@@ -61,8 +73,8 @@ def _paragraph(paragraph):
     signature_space = fmt.space_after
     fmt.alignment = WD_ALIGN_PARAGRAPH.LEFT
     fmt.space_before = Pt(0)
-    fmt.space_after = Pt(5)
-    fmt.line_spacing = 1.12
+    fmt.space_after = Pt(7)
+    fmt.line_spacing = 1.4
     fmt.keep_with_next = False
     fmt.keep_together = False
     fmt.widow_control = True
@@ -87,12 +99,18 @@ def _paragraph(paragraph):
     elif re.match(r"^Article\s+\d", text, re.I) or text.startswith("Signature "):
         paragraph.style = "Heading 2"
         fmt.space_before = Pt(13)
-        fmt.space_after = Pt(6)
+        fmt.space_after = Pt(8)
         fmt.keep_with_next = True
         fmt.keep_together = True
         fmt.left_indent = Cm(0)
         fmt.first_line_indent = Cm(0)
-        _font(paragraph, 12, "000000", True)
+        _font(paragraph, 11.5, NAVY, True)
+        border = _property(paragraph._p.get_or_add_pPr(), "w:pBdr")
+        _property(border, "w:bottom", val="single", sz=6, color=GOLD, space=5)
+        if "dispositions financières" in text.lower():
+            fmt.space_before = Pt(0)
+            fmt.space_after = Pt(16)
+            _font(paragraph, 20, NAVY, True)
         for run in paragraph.runs:
             run.underline = False
     elif text.startswith("SECTION "):
@@ -100,12 +118,21 @@ def _paragraph(paragraph):
         fmt.space_before = Pt(18)
         fmt.space_after = Pt(8)
         fmt.keep_with_next = True
-        _font(paragraph, 13, "000000", True)
+        _font(paragraph, 12, NAVY, True)
     elif text.startswith(("Durée", "Date", "Période", "Lieu de la formation", "Lieu de formation", "Horaires", "Fait ")):
-        _font(paragraph, 10.5, INK, True)
+        _font(paragraph, 9, INK, True)
         fmt.keep_together = True
         if text.startswith("Fait "):
             fmt.keep_with_next = True
+    elif text.startswith(("** ", "*Aucune", "* Aucune")):
+        _font(paragraph, 8, MUTED)
+        fmt.space_before = Pt(7)
+        fmt.space_after = Pt(9)
+    elif text.startswith("Tableau de prise en charge"):
+        _font(paragraph, 10, NAVY, True)
+        fmt.space_before = Pt(10)
+        fmt.space_after = Pt(8)
+        fmt.keep_with_next = True
     elif len(text) < 140 and (text.endswith(":") or all(r.bold for r in paragraph.runs if r.text.strip())):
         fmt.keep_with_next = True
         fmt.keep_together = True
@@ -120,14 +147,15 @@ def _title(paragraph, *, secondary=False):
     fmt.space_after = Pt(8)
     fmt.keep_with_next = True
     fmt.keep_together = True
-    _font(paragraph, 19 if secondary else 22, "000000", True)
+    fmt.line_spacing = 1.2
+    _font(paragraph, 20 if secondary else 23, NAVY, True)
     legal_subtitle = False
     for run in paragraph.runs:
         legal_subtitle = legal_subtitle or run.text.lstrip().startswith("(Articles")
         if legal_subtitle:
-            run.font.size = Pt(9.5)
+            run.font.size = Pt(8)
             run.bold = False
-            run.font.color.rgb = RGBColor.from_string("59646C")
+            run.font.color.rgb = RGBColor.from_string(MUTED)
 
 
 def _table(table):
@@ -162,17 +190,17 @@ def _table(table):
             _remove(cp, "w:tcBorders", "w:shd")
             borders = _property(cp, "w:tcBorders")
             for side in ("top", "left", "bottom", "right"):
-                _property(borders, "w:" + side, val="single", sz=4, color="D9D9D9")
+                _property(borders, "w:" + side, val="single", sz=4, color="D5DFE9")
             margins = _property(cp, "w:tcMar")
-            for side, value in (("top", 110), ("bottom", 110), ("left", 140), ("right", 140)):
+            for side, value in (("top", 160), ("bottom", 140), ("left", 180), ("right", 180)):
                 _property(margins, "w:" + side, w=value, type="dxa")
             fill = "FFFFFF"
             if prices:
-                fill = NAVY if ci == 2 else PALE
+                fill = (PALE, "F8FAFC", MINT)[ci]
             elif financing:
-                fill = GOLD if ri == 2 else (PALE if ri == 0 else "FFFFFF")
+                fill = (MINT, LILAC, CREAM)[min(ri, 2)]
             elif ri == 0:
-                fill = NAVY
+                fill = PALE
             elif ri % 2:
                 fill = PALE
             _property(cp, "w:shd", val="clear", fill=fill)
@@ -190,13 +218,21 @@ def _table(table):
                     continue
                 if not paragraph.text.strip():
                     continue
-                color = "FFFFFF" if fill == NAVY else INK
-                size = 10 if financing else 10.5
+                color = INK
+                size = 8.5 if financing else 9
+                if financing and ci < 2:
+                    color = (GREEN, PURPLE, "B45309")[min(ri, 2)]
+                if prices and ci == 2:
+                    color = GREEN
                 if prices and pi > 0 and ci != 1:
-                    size = 16
+                    size = 18
+                elif financing and ci == 1:
+                    size = 12
                 _font(paragraph, size, color, True if (prices or ri == 0 or (financing and ci == 1)) else None)
                 if prices or (financing and ci == 1):
                     fmt.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            if ri == 0 and not financing:
+                _property(borders, "w:bottom", val="single", sz=8, color=GOLD)
             if signature and ri == len(table.rows) - 1:
                 # Minimum, never exact: longer names and signature images can grow.
                 row.height = Cm(3.5)
@@ -204,19 +240,105 @@ def _table(table):
                 row.height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST
 
 
+def _panel(table, fill, accent=GOLD, *, prominent=False):
+    """Keep the original information blocks as coloured cards, with all runs intact."""
+    emphasis = [(node, Run(node, table.cell(0, 0).paragraphs[0]).bold)
+                for node in table._tbl.xpath(".//w:r")]
+    _table(table)
+    for node, bold in emphasis:
+        Run(node, table.cell(0, 0).paragraphs[0]).bold = bold
+    row = table.rows[0]
+    for cell in row.cells:
+        cp = cell._tc.get_or_add_tcPr()
+        _property(cp, "w:shd", val="clear", fill=fill)
+        borders = _property(cp, "w:tcBorders")
+        for side in ("top", "right", "bottom"):
+            _property(borders, "w:" + side, val="single", sz=4, color=fill)
+        _property(borders, "w:left", val="single", sz=18, color=accent)
+        for index, p in enumerate(cell.paragraphs):
+            _font(p, 10 if prominent else 9, NAVY, True if prominent or (index == 0 and p.text.startswith("Engagement")) else None)
+            p.paragraph_format.space_after = Pt(5 if index < len(cell.paragraphs) - 1 else 0)
+            p.paragraph_format.line_spacing = 1.4
+            if p.text.startswith("(ci-après"):
+                _font(p, 8, MUTED, False)
+    # Keep short cards with the next section, but not a complete financial block.
+    if prominent:
+        for p in row.cells[0].paragraphs:
+            p.paragraph_format.keep_with_next = True
+
+
+def _organism_panel(document):
+    """Arrange the two existing issuer blocks in reading order, without rewriting."""
+    nodes = list(document.element.body)
+    start = next((i for i, n in enumerate(nodes) if n.tag == qn("w:p")
+                  and Paragraph(n, document).text.startswith("Entre l’organisme de formation")), None)
+    if start is None:
+        return
+    stop = next((i for i in range(start + 1, len(nodes)) if nodes[i].tag == qn("w:tbl")), None)
+    if stop is None:
+        return
+    paragraphs = [Paragraph(n, document) for n in nodes[start:stop] if n.tag == qn("w:p")]
+    split = next((i for i, p in enumerate(paragraphs) if "centre de formation agréé" in p.text.lower()), None)
+    if not split or not paragraphs[split + 1:]:
+        return
+    table = document.add_table(rows=1, cols=2)
+    nodes[start].addprevious(table._tbl)
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.autofit = False
+    _property(table._tbl.tblPr, "w:tblW", w=round(WIDTH / 2.54 * 1440), type="dxa")
+    _property(table.rows[0]._tr.get_or_add_trPr(), "w:cantSplit")
+    for col, cell, group, width in zip(table.columns, table.rows[0].cells,
+                                      (paragraphs[:split], paragraphs[split:]), (8.2, 9.2)):
+        col.width = cell.width = Cm(width)
+        cell._tc.remove(cell.paragraphs[0]._p)
+        cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
+        cp = cell._tc.get_or_add_tcPr()
+        _property(cp, "w:shd", val="clear", fill=PALE)
+        margins = _property(cp, "w:tcMar")
+        for side in ("top", "bottom", "left", "right"):
+            _property(margins, "w:" + side, w=180, type="dxa")
+        borders = _property(cp, "w:tcBorders")
+        for side in ("left", "right"):
+            _property(borders, "w:" + side, val="single", sz=16, color="FFFFFF")
+        for p in group:
+            cell._tc.append(p._p)
+            _font(p, 8, NAVY)
+            fmt = p.paragraph_format
+            fmt.left_indent = Cm(0)
+            fmt.first_line_indent = Cm(0)
+            fmt.line_spacing = 1.3
+            fmt.space_after = Pt(5)
+            fmt.keep_with_next = False
+            if p.text.lstrip().startswith("-"):
+                fmt.left_indent = Cm(.35)
+                fmt.first_line_indent = Cm(-.35)
+                fmt.tab_stops.clear_all()
+                fmt.tab_stops.add_tab_stop(Cm(.35))
+
+
 def _header_footer(document):
     visited = set()
     for section in document.sections:
         section.page_width, section.page_height = Cm(21), Cm(29.7)
         section.left_margin = section.right_margin = Cm(1.8)
-        section.top_margin, section.bottom_margin = Cm(4.5), Cm(2.4)
-        section.header_distance, section.footer_distance = Cm(1), Cm(.8)
+        section.top_margin, section.bottom_margin = Cm(4), Cm(2.3)
+        section.header_distance, section.footer_distance = Cm(.65), Cm(.8)
         for container in (section.header, section.first_page_header, section.even_page_header,
                           section.footer, section.first_page_footer, section.even_page_footer):
             if container.is_linked_to_previous or id(container._element) in visited:
                 continue
             visited.add(id(container._element))
             is_footer = container._element.tag == qn("w:ftr")
+            if not is_footer:
+                # Legacy header grids are only positioning devices. Remove their
+                # empty rows and columns so the navy banner has no white seams.
+                for table in list(container.tables):
+                    for node in list(table._tbl.xpath(".//w:p")):
+                        table._tbl.addprevious(node)
+                    table._tbl.getparent().remove(table._tbl)
+                for node in list(container._element.xpath("./w:p")):
+                    if not node.xpath(".//w:t | .//w:drawing | .//w:pict | .//w:fldChar | .//w:bookmarkStart | .//w:bookmarkEnd"):
+                        node.getparent().remove(node)
             for table in container.tables:
                 table.alignment = WD_TABLE_ALIGNMENT.LEFT
                 table.autofit = False
@@ -242,8 +364,11 @@ def _header_footer(document):
                 p.paragraph_format.line_spacing = 1
                 p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
                 _remove(p._p.get_or_add_pPr(), "w:pBdr", "w:shd")
-                _font(p, 7.5 if is_footer else 9, "59646C" if is_footer else "000000")
+                _font(p, 7 if is_footer else 8, MUTED if is_footer else NAVY)
             if is_footer:
+                if container.paragraphs:
+                    border = _property(container.paragraphs[0]._p.get_or_add_pPr(), "w:pBdr")
+                    _property(border, "w:top", val="single", sz=4, color="D5DFE9", space=6)
                 continue
             # Use the existing artwork. Inline placement eliminates page-edge
             # floating images and overlap; both image extents retain their ratio.
@@ -259,12 +384,25 @@ def _header_footer(document):
                 if extent is None:
                     continue
                 old_width = int(extent.get("cx"))
-                if old_width <= Cm(10.5):
+                if old_width <= Cm(8.5):
                     continue
-                ratio = Cm(10.5) / old_width
+                ratio = Cm(8.5) / old_width
                 for node in [extent, *inline.xpath(".//a:xfrm/a:ext")]:
                     for key in ("cx", "cy"):
                         node.set(key, str(round(int(node.get(key)) * ratio)))
+            # A navy and gold frame echoes the retake convention while keeping
+            # the original header artwork and every embedded legal detail.
+            paragraphs = list(container._element.xpath(".//w:p"))
+            if paragraphs:
+                first = _property(paragraphs[0].get_or_add_pPr(), "w:pBdr")
+                _property(first, "w:top", val="single", sz=72, color=NAVY, space=0)
+                last = _property(paragraphs[-1].get_or_add_pPr(), "w:pBdr")
+                _property(last, "w:bottom", val="single", sz=18, color=GOLD, space=6)
+                for node in paragraphs:
+                    _property(node.get_or_add_pPr(), "w:shd", val="clear", fill=NAVY)
+                    _font(Paragraph(node, container), 8, "FFFFFF")
+                    if node.xpath(".//w:drawing | .//w:pict"):
+                        Paragraph(node, container).alignment = WD_ALIGN_PARAGRAPH.CENTER
 
 
 def _content(document):
@@ -279,12 +417,48 @@ def _content(document):
             for element in elements]
 
 
+def _keep_financial_sections(document):
+    """Keep each compact financial summary together without a near-empty page before it."""
+    children = list(document.element.body)
+    for i, node in enumerate(children):
+        if node.tag != qn("w:p") or "dispositions financières" not in Paragraph(node, document).text.lower():
+            continue
+        if not re.match(r"^Article\s+\d", Paragraph(node, document).text, re.I):
+            continue
+        paragraphs = []
+        for child in children[i:]:
+            if child is not node and child.tag == qn("w:p") and re.match(
+                r"^(Article\s+\d|Signature )", Paragraph(child, document).text, re.I
+            ):
+                break
+            paragraphs.extend([child] if child.tag == qn("w:p") else child.xpath(".//w:p"))
+        for p in paragraphs:
+            Paragraph(p, document).paragraph_format.keep_with_next = True
+        if paragraphs:
+            Paragraph(paragraphs[-1], document).paragraph_format.keep_with_next = False
+
+
 def style_document(document):
     before = _content(document)
+    # Some source models put the next article in the footnote's paragraph.
+    # Move the existing runs into their own paragraph, never recreate their text.
+    for p in list(document.paragraphs):
+        if not p.text.startswith("*"):
+            continue
+        for run in p.runs:
+            if re.match(r"^Article\s+\d+\s*[-–]", run.text):
+                heading = OxmlElement("w:p")
+                if p._p.pPr is not None:
+                    heading.append(deepcopy(p._p.pPr))
+                p._p.addnext(heading)
+                children = list(p._p)
+                for node in children[children.index(run._r):]:
+                    heading.append(node)
+                break
     for name in ("Normal", "Title", "Heading 1", "Heading 2"):
         style = document.styles[name] if name in document.styles else document.styles.add_style(name, WD_STYLE_TYPE.PARAGRAPH)
-        style.font.name = "Calibri"
-        style.font.color.rgb = RGBColor.from_string("000000" if name != "Normal" else INK)
+        style.font.name = FONT
+        style.font.color.rgb = RGBColor.from_string(INK)
         if style._element.pPr is not None:
             _remove(style._element.pPr, "w:pBdr", "w:shd")
     _header_footer(document)
@@ -301,6 +475,18 @@ def style_document(document):
             continue
         # Narrative blocks become regular paragraphs; data remain true tables.
         text = table.cell(0, 0).text.strip()
+        if text.startswith(("Et le ", "Entreprise acheteuse")):
+            next_node = table._tbl.getnext()
+            if next_node is not None and next_node.tag == qn("w:p") and Paragraph(next_node, document).text.startswith("(ci-après"):
+                table.cell(0, 0)._tc.append(next_node)
+            _panel(table, PALE, NAVY, prominent=True)
+            continue
+        if text.startswith(("Le prix ", "Engagement du stagiaire")):
+            _panel(table, PALE if text.startswith("Le prix ") else CREAM)
+            continue
+        if len(text) < 240 and len(table.cell(0, 0).paragraphs) == 1 and not text.startswith(("Contrat de formation", "Convention de formation", "RÈGLEMENT")):
+            _panel(table, CREAM, GOLD, prominent=True)
+            continue
         for index, p in enumerate(table.cell(0, 0).paragraphs):
             _paragraph(p)
             p.paragraph_format.left_indent = Cm(0)
@@ -310,31 +496,19 @@ def style_document(document):
                     _title(p, secondary=text.startswith("RÈGLEMENT"))
                     p.paragraph_format.page_break_before = text.startswith("RÈGLEMENT")
                 else:
-                    _font(p, 9.5, "59646C", False)
+                    _font(p, 8, MUTED, False)
                     p.paragraph_format.space_after = Pt(14)
                     p.paragraph_format.keep_with_next = True
-            elif text.startswith(("Et le ", "Entreprise acheteuse")):
-                _font(p, 11, INK, True)
-                p.paragraph_format.space_before = Pt(10)
-                p.paragraph_format.space_after = Pt(10)
-                p.paragraph_format.keep_with_next = True
-            elif text.startswith("Engagement du stagiaire") and index == 0:
-                _font(p, 11, "000000", True)
-                p.paragraph_format.space_before = Pt(9)
-                p.paragraph_format.keep_with_next = True
-            elif len(text) < 240 and len(table.cell(0, 0).paragraphs) == 1 and not text.startswith(("Le prix ", "Engagement ")):
-                _font(p, 13, "000000", True)
-                p.paragraph_format.space_before = Pt(5)
-                p.paragraph_format.space_after = Pt(10)
-                p.paragraph_format.keep_with_next = True
             table._tbl.addprevious(p._p)
         table._tbl.getparent().remove(table._tbl)
+    _organism_panel(document)
     # The old models use empty paragraphs as fixed spacers. After reflow these
     # can spill onto a blank page immediately before an annex page break.
     # Remove only empty body paragraphs, never text, fields, bookmarks or images.
     for p in list(document.paragraphs):
         if not p._p.xpath(".//w:t | .//w:br | .//w:drawing | .//w:pict | .//w:fldChar | .//w:bookmarkStart | .//w:bookmarkEnd") and p._p.find(".//" + qn("w:sectPr")) is None:
             p._p.getparent().remove(p._p)
+    _keep_financial_sections(document)
     if _content(document) != before:
         raise ValueError("La mise en page ne doit modifier aucun texte, champ ou visuel de la convention.")
     return document

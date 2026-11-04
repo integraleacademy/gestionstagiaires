@@ -9,6 +9,7 @@ import pytest
 from docx import Document
 
 from convention_design import style_document
+from docx.oxml.ns import qn
 import company_convention
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,3 +71,17 @@ def test_apprenticeship_text_financial_values_and_signature_markers_are_unchange
         before = bts.fill_convention('formation', values, settings(values), assets())
     after = bts.fill_convention('formation', values, settings(values), assets())
     assert content_snapshot(after) == content_snapshot(before)
+
+
+def test_financial_colours_and_separate_article_survive_layout():
+    doc = style_document(Document(ROOT / 'templates_word/conventionaps.docx'))
+    financing = next(t for t in doc.tables if t.cell(0, 0).text.startswith('CPF mobilisé'))
+    fills = [row.cells[0]._tc.get_or_add_tcPr().find(qn('w:shd')).get(qn('w:fill'))
+             for row in financing.rows]
+    assert fills == ['E8F5EE', 'F3EEFC', 'FFF5DA']
+    assert any(p.text == 'Article 9 - Interruption de stage' for p in doc.paragraphs)
+    assert not any(p.text.startswith('*') and 'Article 9 -' in p.text for p in doc.paragraphs)
+    engagement = next(t for t in doc.tables if t.cell(0, 0).text.startswith('Engagement du stagiaire'))
+    assert engagement.cell(0, 0)._tc.get_or_add_tcPr().find(qn('w:shd')).get(qn('w:fill')) == 'FFF5DA'
+    assert any(str(r.font.color.rgb) == 'B42318' and '5 jours' in r.text
+               for p in engagement.cell(0, 0).paragraphs for r in p.runs)
