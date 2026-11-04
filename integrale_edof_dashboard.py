@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 
 from flask import g, jsonify, Blueprint, abort, flash, get_flashed_messages, redirect, render_template, request, session, url_for
 
+import integrale_edof_views as views
 import edof_directory as directory
 import edof_declarations as declarations
 import edof_proposal as proposal_form
@@ -27,8 +28,8 @@ from wedof_links import save_manual_wedof_link, sync_exact_wedof_links
 from wedof_matching import match_folder
 
 PARIS = ZoneInfo("Europe/Paris")
-SECTIONS = {"consumption": "Consommation Intégrale EDOF", "state": "État des dossiers",
-            "technical": "Connexion et paramètres techniques", "requests": "Traitement des demandes", "automations": "Traitement des automatisations", "cancellations": "Annulations"}
+SECTIONS = {"state": "Dossiers CPF", "automations": "Automatisations",
+            "consumption": "Consommation Intégrale EDOF", "technical": "Connexion et paramètres techniques"}
 TABS = {"all": "Tous", "due": "Automatisations prévues", "request": "Nouvelle demande", "accepted": "Acceptés", "training": "En formation",
         "service": "Services faits", "invoiced": "Facturés", "unlinked": "À associer", "anomaly": "Anomalies"}
 LABELS = {"accepted": "Accepté", "training": "En formation", "service": "Service fait",
@@ -53,6 +54,8 @@ AUTOMATION_TABS = {"due":"Automatisations prévues", "training":"En formation", 
                    "invoiced":"Facturé", "paid":"Payé"}
 SECTION_TABS = {"requests": REQUEST_TABS, "automations": AUTOMATION_TABS}
 LABELS.update({**REQUEST_TABS, **AUTOMATION_TABS})
+LABELS.update({"accepted": "Accepté / À démarrer", "entry": "En formation",
+               "invoiced": "Facturé · En attente de paiement"})
 STATE_KEYS.update({
     "entry":{"intraining", "entree declaree", "entree en formation declaree"},
     "declared":{"servicedonedeclared", "servicedonedeclaredrevised", "service fait declare", "service fait declare revise"},
@@ -285,7 +288,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         return admin_required(guarded)
 
     def back(section="state", **kwargs):
-        return redirect(url_for("integrale_edof.index", section=section if section in SECTIONS else "state", **kwargs), code=303)
+        return redirect(url_for("integrale_edof.index", section=section if section in {*SECTIONS, "requests", "cancellations"} else "state", **kwargs), code=303)
 
     def snapshot(owner):
         saved = vault().get(directory.record_key(owner), keep=True) if store.connector_key else None
@@ -388,21 +391,15 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         owner = results_owner()
         g.edof_nonce = secrets.token_urlsafe(24)
         csrf = session.setdefault("edof_server_csrf", secrets.token_urlsafe(32))
-        legacy_view = any(k in request.args for k in ("tab","matching","simulation","folder","q"))
-        section = request.args.get("section", "state" if legacy_view else "requests")
+        section, group, tabs, tab = views.navigation(request.args)
         if section not in SECTIONS:
             abort(404)
-        tabs = SECTION_TABS.get(section, TABS)
-        default_tab = next(iter(tabs))
-        tab = request.args.get("tab", default_tab)
-        if tab not in tabs:
-            tab = default_tab
         snap = snapshot(owner)
         if snap:
             store.use_directory(owner)
         now = dt.datetime.now(PARIS)
         today = now.date().isoformat()
-        data = local_data() if snap and section in {"state", "requests", "automations", "cancellations"} else {}
+        data = local_data() if snap and section in {"state", "automations"} else {}
         data = dict(data)
         held = declarations.folder_holds(store.directory)
         if held:
@@ -420,16 +417,22 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         if testing:
             rows = [r for r in rows if r["evaluation"]]
         q = directory.normalized(request.args.get("q", "")[:140])
-        if section == "cancellations":
-            rows = [row for row in rows if "canceled" in row["tags"] and not row["archived"]]
-        else:
-            rows = [row for row in rows if tab in row["tags"]]
+        course = request.args.get("course", "")[:500]
+        period = request.args.get("period", "")[:40]
+        courses = sorted({r.get("title") or "" for r in rows if r.get("title")})
+        periods = sorted({views.period_key(r) for r in rows if (not course or r.get("title") == course)
+                          and (r.get("session_start_date") or r.get("session_end_date"))}, reverse=True)
+        rows = [r for r in rows if (not course or r.get("title") == course)
+                and (not period or views.period_key(r) == period)]
         if q:
             rows = [r for r in rows if q in directory.normalized(" ".join(str(r.get(k) or "") for k in
                     ("folder_id", "first_name", "last_name", "last_name", "first_name", "title", "label")))]
-        prioritize_rows(rows, now)
-        pages = max(1, math.ceil(len(rows) / 25))
-        page = max(1, min(request.args.get("page", 1, type=int) or 1, pages))
+        groups_count = views.group_counts(rows)
+        # Dossier counts describe dossiers. Operation counts are computed from the ledger below.
+        if section == "state":
+            rows = [r for r in rows if views.in_group(r, group)]
+            counts = Counter(tag for r in rows for tag in r["tags"])
+            rows = [r for r in rows if tab in r["tags"]]
         detail = None
         if folder:
             if not ID_RE.fullmatch(folder) or not selected_row:
@@ -498,16 +501,23 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         catchup = None
         if section == "automations" and not detail:
             catchup = store.catchup_status(owner, include_outcomes=True)
-            outcomes = (catchup or {}).get("outcomes", {})
-            by_action = {(d["folder"], d["action"]):d["status"] for d in dispatches
-                         if d["revision"] == selected["revision"] or d["status"] in {"confirmed","sending","uncertain","review"}}
+            rows = views.operation_rows(rows, dispatches, now, selected["revision"], (catchup or {}).get("outcomes"))
+            counts = Counter(r["operation_bucket"] for r in rows)
+            if tab == "due":
+                rows = [r for r in rows if "due" in r["tags"] and r["operation_bucket"] != "history"]
+                prioritize_rows(rows, now)  # Preserve the scope/order of old bookmarked links.
+            else:
+                rows = [r for r in rows if r["operation_bucket"] == tab]
+                views.sort_operations(rows)
             for row in rows:
-                action, outcome = outcomes.get(row["folder_id"], (None,None))
-                row["dispatch_status"] = by_action.get((row["folder_id"],row["action"]))
-                row["catchup_outcome"] = outcome if action == row["action"] else None
-                if (row["kind"] == "accepted" and row["due"] and not row["block"] and not row["dispatch_status"]
-                        and row["evaluation"] == "unconfirmed" and row["catchup_outcome"] not in {"blocked","review"}):
+                if (row["kind"] == "accepted" and row["action"] == "entry_training"
+                        and row["operation_bucket"] == "overdue" and not row["dispatch_status"]
+                        and row["evaluation"] == "unconfirmed" and row["catchup_outcome"] not in {"blocked", "review"}):
                     row["entry_choice"] = entry_choice(row)
+        elif not detail:
+            prioritize_rows(rows, now)
+        pages = max(1, math.ceil(len(rows) / 25))
+        page = max(1, min(request.args.get("page", 1, type=int) or 1, pages))
         if detail:
             detail["dispatches"] = [d for d in dispatches if d["folder"] == folder]
         with closing(store.connect()) as db:
@@ -536,6 +546,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 detail["pilot_error"] = str(exc)
         return render_template("integrale_edof.html", proposal_fields=proposal_form, proposal_status=proposals.LABELS, title="Intégrale EDOF · Pilotage CPF",
             selection=selected, production=production, bridge_error=bridge_error, aligned=aligned, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=tabs, tab=tab,
+            groups=views.GROUPS, group=group, group_counts=groups_count, course=course, courses=courses,
+            period=period, periods=periods, operation_tabs=views.AUTOMATION_TABS,
             dispatch_labels=declarations.LABELS, dispatch_reasons=MESSAGES, motifs=declarations.MOTIFS,
             inspection=check, dispatches=dispatches, csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
             match_counts=Counter(m["status"] for m in matches.values()), total=len(rows), counts=counts,
@@ -592,7 +604,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         if not store.connector_key or not gmail_status()["connected"]:
             raise ValueError("Connectez EFP et Gmail avant de lancer le rattrapage.")
         store.queue_sync(owner, "all", catchup_revision=selected["revision"])
-        return back("automations", tab="due", _anchor="rattrapage")
+        return back("automations", tab="overdue", _anchor="rattrapage")
 
     @bp.post("/automatisations/entrees-effectives")
     @native_action
@@ -622,7 +634,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 continue
             pending += status == "queued"
         flash(f"Entrées en file de transmission : {pending}. Déjà traitées, bloquées ou à revoir : {len(choices)-pending}.", "success")
-        return back("automations", tab="due", page=request.form.get("page", 1, type=int), q=request.form.get("q","")[:140])
+        return back("automations", tab="overdue", page=request.form.get("page", 1, type=int), q=request.form.get("q","")[:140])
 
     @bp.post("/associate-reliable")
     @native_action

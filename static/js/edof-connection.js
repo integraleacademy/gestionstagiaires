@@ -1,4 +1,10 @@
 (() => {
+  const courseFilter = document.querySelector('.edof-search select[name="course"]');
+  courseFilter?.addEventListener("change", () => {
+    const periodFilter = courseFilter.form.querySelector('select[name="period"]');
+    if (periodFilter) periodFilter.value = "";
+    courseFilter.form.requestSubmit();
+  });
   const box = document.getElementById("edof-live");
   const lamp = document.getElementById("edof-lamp");
   const note = document.getElementById("edof-connection-note");
