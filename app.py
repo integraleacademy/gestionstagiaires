@@ -38,6 +38,7 @@ import uv_questionnaires
 import aps_kickoff
 import desp_kickoff
 import desp_jury_projects
+import desp_scotia
 import a3p_documents
 import exam_retakes
 import training_convocations
@@ -35869,6 +35870,41 @@ def _prepare_yousign_pdf_and_fields(pdf_path: str, signer_index: int = 1) -> Tup
     if not anchors:
         return pdf_path, []
     clean_path = _clean_yousign_pdf_anchors(pdf_path, anchors)
+    # Convention markers sit *inside* the blank signature cell, below its
+    # "Signature" label. The legacy detector places the field a full height
+    # above the marker, which overlaps the label and the preceding identity row.
+    # Keep that detector unchanged for FOAD and other historical callers.
+    pages = PdfReader(pdf_path).pages
+    import fitz
+    with fitz.open(pdf_path) as source:
+        for anchor in anchors:
+            if anchor.get("type") != "signature":
+                continue
+            page = source[anchor["page"] - 1]
+            point = fitz.Point(anchor["x"] + 1, anchor["marker_y"] + 2)
+            cells = [drawing["rect"] for drawing in page.get_drawings()
+                     if drawing["type"] == "f" and drawing["rect"].contains(point)
+                     and drawing["rect"].width > anchor["width"] + 10
+                     and drawing["rect"].height >= 90]
+            if cells:
+                cell = min(cells, key=lambda rect: rect.width * rect.height)
+                labels = [fitz.Rect(word[:4]) for word in page.get_text("words")
+                          if word[4].casefold() == "signature" and cell.contains(fitz.Rect(word[:4]))]
+                if labels:
+                    # Anchor fonts vary between models (notably VAE). Position
+                    # below the printed label, with room for the full 80pt seal.
+                    anchor["field_y"] = int(max(rect.y1 for rect in labels) + 10.5)
+                    if anchor["field_y"] + max(80, anchor["height"]) > cell.y1 - 4:
+                        raise ValueError("Le cadre de signature est trop petit. Vérifiez le modèle de convention.")
+    for anchor in anchors:
+        if anchor.get("type") != "signature":
+            continue
+        anchor["y"] = anchor.pop("field_y", anchor["marker_y"])
+        anchor["height"] = max(80, int(anchor["height"]))
+        page = pages[anchor["page"] - 1]
+        if (anchor["x"] + anchor["width"] > float(page.mediabox.width)
+                or anchor["y"] + anchor["height"] > float(page.mediabox.height)):
+            raise ValueError("La zone de signature dépasse la page. Vérifiez le modèle de convention.")
     return clean_path, anchors
 
 
@@ -57013,6 +57049,7 @@ uv_questionnaires.register(app, sys.modules[__name__])
 aps_kickoff.register(app, sys.modules[__name__])
 desp_kickoff.register(app, sys.modules[__name__])
 desp_jury_projects.register(app, sys.modules[__name__])
+desp_scotia.register(app, sys.modules[__name__])
 a3p_documents.register(app, sys.modules[__name__])
 afc_documents.register(app, sys.modules[__name__])
 exam_retakes.register(app, sys.modules[__name__])

@@ -7,7 +7,7 @@
   const status = form.querySelector('[role="status"]');
   const button = form.querySelector('button[type="submit"]');
   const maxBytes = Number(form.dataset.maxBytes);
-  const allowed = new Set(['pdf', 'doc', 'docx', 'ppt', 'pptx', 'odt', 'odp']);
+  const allowed = new Set(['pdf']);
   const validate = () => {
     let bytes = 0, count = 0, error = '';
     form.querySelectorAll('[data-project-slot]').forEach(slot => {
@@ -17,7 +17,7 @@
       if (file) {
         bytes += file.size;
         count += 1;
-        if (!allowed.has(file.name.split('.').pop().toLowerCase())) error = 'Choisissez un document PDF, Word, PowerPoint ou OpenDocument.';
+        if (!allowed.has(file.name.split('.').pop().toLowerCase())) error = 'Choisissez un document au format PDF uniquement.';
         if (!file.size) error = 'Un document est vide. Choisissez un fichier contenant votre projet.';
       } else if (!remove?.checked && Number(slot.dataset.existingBytes)) {
         bytes += Number(slot.dataset.existingBytes);

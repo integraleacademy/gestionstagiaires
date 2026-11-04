@@ -6,6 +6,8 @@ from pathlib import Path
 from urllib.parse import unquote
 import zipfile
 
+from reportlab.pdfgen.canvas import Canvas
+
 from lxml import html
 import pytest
 from werkzeug.datastructures import MultiDict
@@ -17,6 +19,7 @@ import desp_jury_projects as projects
 @pytest.fixture
 def portal(monkeypatch, tmp_path):
     data_file = tmp_path / "data.json"
+    (tmp_path / "backups").mkdir()
     person = {"id": "T1", "first_name": "élodie", "last_name": "dupré", "public_token": "PUB-T1",
               "documents": [], "public_has_logged_in": True}
     training = {"id": "S1", "name": "DESP initial Paris", "training_type": "DIRIGEANT initial",
@@ -44,10 +47,19 @@ def person(portal):
     return json.loads(portal[1].read_text())["sessions"][0]["trainees"][0]
 
 
+def pdf(content=b"project"):
+    stream = BytesIO()
+    canvas = Canvas(stream, invariant=1)
+    canvas.drawString(50, 700, content[:60].decode("utf-8", errors="replace"))
+    canvas.save()
+    raw = stream.getvalue()
+    return raw + b" " * max(0, len(content) - len(raw))
+
+
 def upload(portal, files=None, **fields):
     data = {"document_check_token": "csrf-test", "revision": str(projects.state(person(portal)).get("revision", 0)), **fields}
     for slot, content in (files or {}).items():
-        data[f"file_{slot}"] = (BytesIO(content), f"dossier{slot}.pdf")
+        data[f"file_{slot}"] = (BytesIO(pdf(content)), f"dossier{slot}.pdf")
     return portal[0].post("/espace/PUB-T1/projet-cadrage", data=data, content_type="multipart/form-data")
 
 
@@ -70,9 +82,9 @@ def test_only_initial_desp(portal, kind, allowed):
 def test_one_file_and_unicode_download_name(portal):
     assert upload(portal, {1: b"jury contents"}).status_code == 302
     row = projects.documents(person(portal))[0]
-    assert row["size"] == 13
+    assert row["size"] == len(pdf(b"jury contents"))
     response = portal[0].get("/espace/PUB-T1/projet-cadrage/download")
-    assert response.status_code == 200 and response.data == b"jury contents"
+    assert response.status_code == 200 and response.data == pdf(b"jury contents")
     assert "Projet de cadrage Élodie DUPRÉ.pdf" in unquote(response.headers["Content-Disposition"])
     assert response.headers["Cache-Control"] == "private, no-store"
     assert "jury contents" not in portal[1].read_text()
@@ -158,7 +170,7 @@ def test_stale_submission_and_unrelated_save_keep_latest_documents(portal):
     with host.app.test_request_context():
         host.save_data(stale)
     assert len(projects.documents(person(portal))) == 1
-    assert projects.documents(person(portal))[0]["size"] == 3
+    assert projects.documents(person(portal))[0]["size"] == len(pdf(b"new"))
     before_delete = json.loads(portal[1].read_text())
     upload(portal, remove_1="1")
     with host.app.test_request_context():
@@ -194,7 +206,7 @@ def test_missing_file_can_be_replaced(portal):
     Path(host._detokenize_path(projects.documents(person(portal))[0]["file"])).unlink()
     upload(portal, {1: b"new file"})
     response = portal[0].get("/espace/PUB-T1/projet-cadrage/download")
-    assert response.status_code == 200 and response.data == b"new file"
+    assert response.status_code == 200 and response.data == pdf(b"new file")
 
 
 def test_real_public_and_admin_pages_and_download(portal):
@@ -218,7 +230,7 @@ def test_real_public_and_admin_pages_and_download(portal):
     assert "Projet de cadrage Élodie DUPRÉ.pdf" in section.text_content()
     assert not section.xpath('.//input[@type="file"]')
     response = portal[0].get(section.xpath('.//a')[0].get('href'))
-    assert response.status_code == 200 and response.data == b"jury"
+    assert response.status_code == 200 and response.data == pdf(b"jury")
 
 
 @pytest.mark.parametrize("elapsed,visible", [(-1, False), (0, False), (6, False), (7, True), (8, True)])
@@ -255,4 +267,4 @@ def test_postponed_onsite_date_closes_public_access_but_keeps_admin_download(por
     with portal[0].session_transaction() as session:
         session.update(admin_logged_in=True, admin_role="admin")
     response = portal[0].get("/admin/sessions/S1/stagiaires/T1/projet-cadrage/download")
-    assert response.status_code == 200 and response.data == b"saved project"
+    assert response.status_code == 200 and response.data == pdf(b"saved project")
