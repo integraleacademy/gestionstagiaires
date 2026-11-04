@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 from flask import g, jsonify, Blueprint, abort, flash, get_flashed_messages, redirect, render_template, request, session, url_for
 
 import integrale_edof_views as views
+import integrale_edof_history as history_view
 import edof_directory as directory
 import edof_declarations as declarations
 import edof_proposal as proposal_form
@@ -22,14 +23,13 @@ from edof_matching import build_comparison, manual_options
 from edof_readonly_test import ID_RE
 from edof_server_browser import DETAIL_PREFIX
 from integrale_edof_registration import create_registration, eligible_sessions
-from integrale_edof_sync import event_tables
 from integrale_edof_transfers import TARGETS, receipt, transfer
 from wedof_links import save_manual_wedof_link, sync_exact_wedof_links
 from wedof_matching import match_folder
 
 PARIS = ZoneInfo("Europe/Paris")
 SECTIONS = {"state": "Dossiers CPF", "automations": "Automatisations",
-            "consumption": "Consommation Intégrale EDOF", "technical": "Connexion et paramètres techniques"}
+            "consumption": "Historique des automatisations", "technical": "Connexion et paramètres techniques"}
 TABS = {"all": "Tous", "due": "Automatisations prévues", "request": "Nouvelle demande", "accepted": "Acceptés", "training": "En formation",
         "service": "Services faits", "invoiced": "Facturés", "unlinked": "À associer", "anomaly": "Anomalies"}
 LABELS = {"accepted": "Accepté", "training": "En formation", "service": "Service fait",
@@ -48,7 +48,7 @@ STATE_KEYS = {
     "refused": {"refused", "refusedbyattendee", "refusedbyorganism", "rejected", "refuse", "refusee"},
 }
 REQUEST_TABS = {"request":"À traiter", "waiting":"En attente de validation du titulaire",
-                "ft":"Demande de financement FT en cours", "accepted":"Accepté", "refused":"Refusé", "canceled":"Annulé"}
+                "ft":"Financement FT en cours", "ft_refused":"Financement FT refusé", "accepted":"Accepté", "refused":"Refusé", "canceled":"Annulé"}
 AUTOMATION_TABS = {"due":"Automatisations prévues", "training":"En formation", "entry":"Entrée déclarée",
                    "out":"Sortie déclarée", "declared":"Service fait déclaré", "billable":"À facturer (service fait validé)",
                    "invoiced":"Facturé", "paid":"Payé"}
@@ -82,12 +82,15 @@ def category(row):
     payment = directory.normalized(row.get("payment_state") or "")
     if raw in STATE_KEYS["paid"] or billing in STATE_KEYS["paid"] or payment in STATE_KEYS["paid"] | {"issued"}:
         return "paid"
-    if billing in STATE_KEYS["invoiced"]:
+    if raw in STATE_KEYS["invoiced"] or billing in STATE_KEYS["invoiced"]:
         return "invoiced"
     if raw in STATE_KEYS["billable"] or row.get("service_done_validated") is True:
         return "billable"
-    if row.get("ft_pending") and raw in STATE_KEYS["waiting"] | STATE_KEYS["request"]:
-        return "ft"
+    if raw in STATE_KEYS["waiting"] | STATE_KEYS["request"] | STATE_KEYS["ft"]:
+        if row.get("ft_pending"):
+            return "ft"
+        if row.get("ft_refused"):
+            return "ft_refused"
     if raw.startswith(("annule par ", "annulee par ", "annulation par ")):
         return "canceled"
     return STATES.get(raw, "unknown")
@@ -399,13 +402,14 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             store.use_directory(owner)
         now = dt.datetime.now(PARIS)
         today = now.date().isoformat()
-        data = local_data() if snap and section in {"state", "automations"} else {}
+        data = local_data() if snap and section in {"state", "automations", "consumption"} else {}
         data = dict(data)
         held = declarations.folder_holds(store.directory)
         if held:
             data["wedof_automation_blocks"] = [*data.get("wedof_automation_blocks", []),
                 *({"external_id":f,"action":"both","active":True,"reason_code":"administrative_issue"} for f in held)]
         rows, counts = dashboard_rows(snap, data, local_operations(selection), now)
+        all_rows = rows
         folder = request.args.get("folder", "")
         selected_row = next((r for r in rows if r["folder_id"] == folder), None) if folder else None
         previewing = section == "state" and request.args.get("matching") == "1"
@@ -485,13 +489,6 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                     return (day != record.get("session_start_date"), day, group.get("name") or "")
                 detail["sessions"] = sorted(options, key=session_order)
                 detail["link"] = next((r for r in data.get("wedof_links", []) if r.get("active") and str(r.get("external_id")) == folder), None)
-        with closing(store.connect()) as db:
-            metrics = dict(db.execute("SELECT mode, COUNT(*) FROM jobs WHERE owner=? GROUP BY mode", (owner,)))
-        with closing(selection.connect()) as db:
-            event_tables(db)
-            cursor = db.execute("SELECT checked FROM directory_cursor WHERE id=1").fetchone()
-            events = [dict(x) for x in db.execute("SELECT * FROM directory_events ORDER BY id DESC LIMIT 12")
-                      if x["folder"] in (snap or {}).get("rows", {})]
         gmail = gmail_status()
         selected = selection.state()
         from edof_server_test import MESSAGES
@@ -499,6 +496,13 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         visible_folders = (snap or {}).get("rows", {})
         dispatches = [d for d in dispatches if d["folder"] in visible_folders]
         catchup = None
+        history, history_alerts = None, Counter()
+        if section == "consumption" and not detail:
+            history = history_view.page(store, owner, snap, request.args)
+            catchup = store.catchup_status(owner, include_outcomes=True)
+            operations = views.operation_rows(all_rows, dispatches, now, selected["revision"], (catchup or {}).get("outcomes"))
+            history_alerts = Counter(r["operation_bucket"] for r in operations
+                                     if r["operation_bucket"] in {"overdue", "attention", "blocked"})
         if section == "automations" and not detail:
             catchup = store.catchup_status(owner, include_outcomes=True)
             rows = views.operation_rows(rows, dispatches, now, selected["revision"], (catchup or {}).get("outcomes"))
@@ -552,8 +556,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             inspection=check, dispatches=dispatches, csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
             match_counts=Counter(m["status"] for m in matches.values()), total=len(rows), counts=counts,
             rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
-            catchup=catchup,
-            detail=detail, events=events, analysis_checked=directory.stamp({"checked":cursor[0]}) if cursor else None, labels=LABELS, checked=(directory.stamp({"checked":snap["pending_checked"]}) if snap and snap.get("pending_checked") and tab=="request" else directory.stamp({"checked":snap["accepted_checked"]}) if snap and snap.get("accepted_checked") and tab=="accepted" else directory.stamp(snap) if snap and snap.get("checked") else directory.stamp({"checked":snap["receipt_checked"]}) if snap and snap.get("receipt_checked") and tab!="request" else None), today=today, metrics=metrics,
+            catchup=catchup, history=history, history_alerts=history_alerts,
+            detail=detail, labels=LABELS, checked=(directory.stamp({"checked":snap["pending_checked"]}) if snap and snap.get("pending_checked") and tab=="request" else directory.stamp({"checked":snap["accepted_checked"]}) if snap and snap.get("accepted_checked") and tab=="accepted" else directory.stamp(snap) if snap and snap.get("checked") else directory.stamp({"checked":snap["receipt_checked"]}) if snap and snap.get("receipt_checked") and tab!="request" else None), today=today,
             live=store.live_connection(owner, gmail["saved_session"], snapshot=snap), nonce=g.edof_nonce, jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
             scope=(snap or {}).get("scope", "open"), directory_enabled=store.directory_enabled(owner), snapshot_count=len((snap or {}).get("rows", {})),
             held=held, block_reasons=BLOCK_REASONS, action_labels=ACTION_LABELS,

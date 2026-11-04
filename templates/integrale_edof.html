@@ -5,7 +5,7 @@
   {% endif %}
   {% if detail and detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'] %}<meta http-equiv="refresh" content="10">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261104-dossiers-actions') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261104-history') }}">
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
@@ -121,15 +121,7 @@
 <div class="actions"><a class="btn" href="{{ url_for('edof_server_test.index', _anchor='connexion-efp') }}">Gérer la connexion EFP Connect</a>
 <a class="btn btn-outline" href="{{ url_for('edof_server_test.index', _anchor='directory-status') }}">Synchroniser la liste EDOF</a>
 <a class="btn btn-outline" href="{{ url_for('edof_test.index') }}">Lecture manuelle avec le module Chrome</a></div></div></section>
-{% elif section == 'consumption' %}<section class="wedof-panel"><div class="wedof-panel-header"><div><span class="wedof-section-label">Activité du connecteur</span><h2>Consommation Intégrale EDOF</h2></div></div><div class="edof-panel-body">
-<p>Activité de votre compte au cours des dernières 24 heures.</p><div class="metrics">
-{% for label,value in [('Synchronisations',metrics.get('directory',0)),('Lectures de dossier',metrics.get('read',0)),('Dossiers de la dernière liste',snapshot_count)] %}<div><strong>{{ value }}</strong><span>{{ label }}</span></div>{% endfor %}</div>
-<h3>Changements de dossier détectés automatiquement</h3><p>Dernière analyse de la liste · {{ analysis_checked or 'en attente de la première synchronisation active' }}.</p>
-{% for e in events %}<p>Dossier {{ e.folder }} · {{ labels.get(e.previous,'Nouveau dossier') }} → {{ labels.get(e.state,e.state) }}</p>{% else %}<p>Aucun changement détecté depuis la première analyse.</p>{% endfor %}
-<h3>Déclarations transmises depuis Gestion Stagiaires</h3>
-{% for d in dispatches[:25] %}<p><a href="{{ url_for('integrale_edof.index',folder=d.folder,_anchor='dossier') }}">{{ d.folder }}</a> · {{ action_labels[d.action] }} · {{ dispatch_labels[d.status] }}</p>{% else %}<p>Aucun envoi enregistré par Intégrale EDOF.</p>{% endfor %}
-<h3>Dernières opérations</h3>{% for job in jobs %}<p>{{ job.created_at[:16]|replace('T',' ') }} UTC · {{ job.message }}</p>{% else %}<p>Aucune opération enregistrée dans les dernières 24 heures.</p>{% endfor %}
-<a class="btn btn-outline" href="{{ url_for('integrale_edof.index', section='consumption') }}">Actualiser les compteurs</a></div></section>
+{% elif section == 'consumption' %}{% include '_edof_history.html' %}
 {% else %}
 {% if previewing %}<section class="wedof-panel edof-panel-body" id="matching"><span class="wedof-section-label">ASSOCIATIONS LOCALES</span><h2>Prévisualisation des correspondances</h2><p>{{ matches|length }} dossier(s) en cours d’entrée ou de sortie · {{ match_counts['exact_match'] or 0 }} correspondance(s) fiable(s). Une association fiable requiert des dates concordantes et un contact vérifié.</p></section>{% endif %}
 {% if testing %}<section class="wedof-panel edof-panel-body" id="simulation"><span class="wedof-section-label">SIMULATION SUR LA LISTE SYNCHRONISÉE</span><h2>Résultat du test des automatisations</h2><p>Échéances en heure de Paris · entrée à 8 h et sortie avec service fait à 18 h. Le test indique quelles échéances sont passées, préparées ou bloquées. Il ne transmet aucune déclaration.</p><div class="metrics">
@@ -167,7 +159,7 @@
     </a>{% endfor %}
   </nav>
   {% endif %}
-  {% set colors = {'overdue':'anomaly', 'attention':'planned', 'blocked':'anomaly', 'running':'training', 'planned':'accepted', 'history':'service', 'due':'planned', 'entry':'training', 'out':'training', 'declared':'service', 'billable':'invoiced', 'paid':'service', 'unlinked':'to_associate', 'request':'planned', 'waiting':'accepted', 'ft':'invoiced', 'refused':'anomaly', 'canceled':'anomaly'} %}
+  {% set colors = {'overdue':'anomaly', 'attention':'planned', 'blocked':'anomaly', 'running':'training', 'planned':'accepted', 'history':'service', 'due':'planned', 'entry':'training', 'out':'training', 'declared':'service', 'billable':'invoiced', 'paid':'service', 'unlinked':'to_associate', 'request':'planned', 'waiting':'accepted', 'ft':'invoiced', 'ft_refused':'anomaly', 'refused':'anomaly', 'canceled':'anomaly'} %}
   <nav class="wedof-counters state-tabs {{ 'edof-operation-counters' if section=='automations' else '' }}" aria-label="{{ 'Filtres des actions' if section=='automations' else 'Filtres des dossiers' }}">{% for key,label in tabs.items() %}
     <a class="wedof-counter {{ 'is-active' if tab == key else '' }}" data-wedof-counter="{{ colors.get(key,key) }}" href="{{ link(section, key) }}" {% if tab == key %}aria-current="page"{% endif %}>
       <strong>{{ (counts[key] or 0) if checked else '—' }}</strong><span>{{ label }}</span>
@@ -183,7 +175,7 @@
     {% elif tab in ['training','entry','out','accepted','unlinked','anomaly','all'] %}
       <p>Les dossiers sont classés par proximité des dates de formation. Ouvrez une fiche pour consulter ses déclarations.</p>
     {% elif section == 'cancellations' and scope != 'all' %}<p>La dernière lecture couvre les dossiers en cours.</p>
-    {% elif tab in ['request','waiting','ft'] %}<p>Les demandes sont classées par proximité de la date de début de session.</p>{% endif %}
+    {% elif tab in ['request','waiting','ft','ft_refused'] %}<p>Les demandes sont classées par proximité de la date de début de session.</p>{% endif %}
   </div>{% if checked %}<span class="wedof-result-summary">{{ total }} {{ 'action' if section=='automations' else 'dossier' }}{{ 's' if total != 1 }}</span>{% endif %}</div>
   <form class="edof-search" method="get">
     <input type="hidden" name="group" value="{{ group }}">
@@ -312,5 +304,5 @@
 </div>
 {% endblock %}
 {% block scripts %}
-  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261104-dossiers-actions') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261104-history') }}" defer></script>
 {% endblock %}

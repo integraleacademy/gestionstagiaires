@@ -6,6 +6,7 @@ import time
 import uuid
 
 from cpf_provider import ProviderStore
+import edof_automation_audit as audit
 import edof_directory as directory
 import edof_proposal as form
 
@@ -36,6 +37,7 @@ def database(path):
     db.execute("""CREATE TABLE IF NOT EXISTS proposal_reads (
         owner TEXT NOT NULL, folder TEXT NOT NULL, token TEXT NOT NULL, first_name TEXT NOT NULL, last_name TEXT NOT NULL,
         status TEXT NOT NULL, updated REAL NOT NULL, message TEXT NOT NULL DEFAULT '', PRIMARY KEY(owner,folder))""")
+    audit.install_proposals(db)
     return db
 
 

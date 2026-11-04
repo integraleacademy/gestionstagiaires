@@ -8,6 +8,7 @@ import uuid
 from zoneinfo import ZoneInfo
 
 from cpf_provider import ProviderStore
+import edof_automation_audit as audit
 
 from edof_directory import FIRST_SESSION, dated_snapshot, normalized
 from edof_readonly_test import ID_RE
@@ -41,6 +42,7 @@ def database(directory):
         created REAL NOT NULL, changed REAL NOT NULL, detail TEXT NOT NULL DEFAULT '',
         checks INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(folder,action))""")
     db.execute("CREATE TABLE IF NOT EXISTS edof_folder_holds(folder TEXT PRIMARY KEY)")
+    audit.install_declarations(db)
     return db
 
 
@@ -83,7 +85,8 @@ def enqueue(directory, owner, revision, row, draft, actor, *, automatic=False):
         raise ValueError("Confirmez la réalisation et, pour une sortie, le taux et le motif éventuel.")
     stamp = time.time()
     intent = {**{k: row[k]
-                 for k in ("first_name", "last_name", "session_start_date", "session_end_date")}, **draft}
+                 for k in ("first_name", "last_name", "session_start_date", "session_end_date")},
+              "title": row.get("title", ""), **draft}
     with closing(database(directory)) as db, db:
         db.execute("BEGIN IMMEDIATE")
         if db.execute("SELECT 1 FROM edof_folder_holds WHERE folder=?", (folder,)).fetchone():
@@ -275,6 +278,8 @@ def discover(store, owner, snapshot, *, outcomes=None):
         report[bucket] += 1
         if outcomes is not None:
             outcomes[folder] = (action, outcome)
+        if outcome in {"blocked", "missing", "review"}:
+            audit.decision(store.directory, owner, snapshot["rows"][folder], action, outcome)
 
     now = dt.datetime.now(ZoneInfo("Europe/Paris"))
     due = {}
