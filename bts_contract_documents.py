@@ -27,6 +27,7 @@ from bts_cerfa import readiness
 from bts_cerfa_pdf import generate_pdf
 from bts_workspace_store import WorkspaceError, now, money_cents, date_fr
 from bts_npec import resolve as resolve_financing
+from convention_design import style_document
 
 ROOT = Path(__file__).resolve().parent
 TEMPLATES = ROOT / "templates_word" / "bts"
@@ -404,6 +405,8 @@ def fill_convention(kind, values, settings, assets):
     for p in paragraphs(doc):
         if re.search(r"«[A-Z_0-9]+»|\[/?sc_", p.text):
             raise WorkspaceError("Une variable du modèle n’a pas été remplie.")
+    if kind == "formation":
+        style_document(doc)
     output = io.BytesIO(); doc.save(output)
     return output.getvalue()
 

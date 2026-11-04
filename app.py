@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import company_convention
+import convention_design
 import company_signature
 import admin_trainee_wedof_refresh
 import re
@@ -39882,10 +39883,9 @@ def _session_period_replacements(session_obj: Dict[str, Any]) -> Dict[str, str]:
 def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
     """Return values allowed for APS convention ``{{ variable }}`` placeholders.
 
-    The APS convention is immutable outside of explicit ``{{ nom_variable }}``
-    placeholders.  In particular, fixed legal text, article titles, tables,
-    styles, colours, images, headers and footers must never be rebuilt or
-    rewritten by application code.
+    Fixed legal text and field values stay independent of presentation. The
+    generated copy receives its layout from convention_design after replacement;
+    source templates and previously issued documents are never restyled.
     """
     first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
     last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
@@ -40021,6 +40021,7 @@ def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[st
     app.logger.info("Variables convention APS remplacées : %s", sorted([key for key in APS_CONVENTION_VARIABLES if replacements.get(key)]))
     app.logger.info("Variables convention APS sans valeur : %s", sorted([key for key in APS_CONVENTION_VARIABLES if not replacements.get(key)]))
     _replace_docx_xml_placeholders(final_docx_path, replacements)
+    convention_design.restyle_file(final_docx_path)
     remaining_variables, detected_anchors = _assert_aps_convention_has_no_business_placeholders(final_docx_path)
     app.logger.info("Variables restantes après remplacement : %s", remaining_variables)
     app.logger.info("Ancres Yousign détectées : %s", detected_anchors)
