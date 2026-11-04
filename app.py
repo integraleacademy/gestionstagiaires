@@ -20939,14 +20939,25 @@ def _sales_trainee_display_name(trainee: Dict[str, Any]) -> str:
     return "Stagiaire"
 
 
-def _sales_trainee_item(trainee: Dict[str, Any], session_id: str) -> Dict[str, str]:
+def _sales_trainee_item(trainee: Dict[str, Any], session_id: str, training=None) -> Dict[str, str]:
     trainee_id = str(trainee.get("id") or "").strip()
     trainee_url = ""
     if session_id and trainee_id:
         trainee_url = url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id)
+    training = training or {}
+    label = _sales_training_label(_session_get(training, "training_type", ""))
+    display_label = {"DIRIGEANT INITIAL": "DESP INITIAL", "DIRIGEANT VAE": "VAE",
+                     "VTC": "CHAUFFEUR VTC"}.get(label, label)
+    tone = ("blue" if label == "APS" else "green" if label == "A3P" else
+            "violet" if "VAE" in label or "BTS" in label else
+            "orange" if "DIRIGEANT" in label or "DESP" in label else
+            "red" if "SSIAP" in label else "cyan" if "VTC" in label else "slate")
     return {
         "name": _sales_trainee_display_name(trainee),
         "url": trainee_url,
+        "training_label": display_label,
+        "training_tone": tone,
+        "session_name": str(_session_get(training, "name", "") or "Session à préciser"),
     }
 
 
@@ -21047,7 +21058,7 @@ def _build_sales_tracking_metrics(
             training_price = _sales_trainee_price(trainee, training_type_raw, training_label)
             trainee_ref = str(trainee.get("id") or trainee.get("email") or trainee.get("nom") or trainee.get("name") or "")
             sale_markers.append(f"{session_id}|{trainee_ref}|{anchor_date.isoformat()}|{training_price}")
-            trainee_item = _sales_trainee_item(trainee, session_id) if include_trainee_details else None
+            trainee_item = _sales_trainee_item(trainee, session_id, session) if include_trainee_details else None
 
             if anchor_date == today:
                 today_revenue += training_price
@@ -25838,6 +25849,7 @@ def admin_trainees(session_id: str):
         is_vtc=is_vtc,
         is_aps=is_aps,
         is_aps_training=is_aps_training,
+        is_native_aps=aps_enrolments.is_native_aps_session(s),
         aps_attendance_by_id=aps_attendance_by_id,
         is_dirigeant=is_dirigeant,
         is_desp_initial=_is_desp_initial_session(s),
@@ -27638,6 +27650,7 @@ def api_create_trainee(session_id: str):
         "personal_amount": t.get("personal_amount", ""),
         "other_amount": t.get("other_amount", ""),
         "automation_enabled": automation_enabled,
+        "company_convention_url": url_for("admin_company_convention", session_id=session_id, trainee_id=trainee_id) if automation_enabled and _automation_document_config(s).get("slug") in company_convention.COURSES else "",
         "convention_preview_url": url_for("admin_preview_convention", session_id=session_id, trainee_id=trainee_id) if automation_enabled else "",
         "convention_financing_url": url_for("api_update_convention_financing", session_id=session_id, trainee_id=trainee_id) if automation_enabled else "",
         "convention_signature_url": url_for("api_create_convention_signature", session_id=session_id, trainee_id=trainee_id) if automation_enabled else ""
@@ -56978,6 +56991,8 @@ a3p_documents.register(app, sys.modules[__name__])
 afc_documents.register(app, sys.modules[__name__])
 exam_retakes.register(app, sys.modules[__name__])
 
+import aps_learning_followup
+aps_learning_followup.register(sys.modules[__name__])
 manuals_shop.register(sys.modules[__name__])
 import parcours_alternance
 parcours_alternance.register(sys.modules[__name__])

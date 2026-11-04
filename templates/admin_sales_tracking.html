@@ -107,8 +107,13 @@
 .sales-names-dialog{width:min(520px,94vw);max-height:80vh;overflow:auto;background:#fff;border-radius:18px;padding:16px;border:1px solid #cbd5e1;box-shadow:0 20px 40px rgba(2,6,23,.35);}
 .sales-names-title{margin:0;color:#0f172a;font-size:20px;font-weight:900;}
 .sales-names-sub{margin-top:4px;font-size:13px;color:#475569;}
-.sales-names-list{margin:12px 0 0;padding-left:18px;color:#0f172a;}
-.sales-names-list li{margin-bottom:5px;}
+.sales-names-dialog{width:min(720px,94vw);padding:24px;}
+.sales-names-list{margin:20px 0 0;padding:0;color:#0f172a;list-style:none;display:grid;gap:10px;}
+.sales-names-list li{margin:0;padding:15px 17px;border:1px solid #e2e8f0;border-radius:16px;background:linear-gradient(120deg,#fff,#f8fafc);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.sales-names-list li>a,.sales-names-list li>strong{font-weight:800;font-size:15px;overflow-wrap:anywhere;}
+.sales-course-badge{display:inline-flex;padding:5px 9px;border-radius:8px;font-size:11px;font-weight:900;letter-spacing:.035em;background:#f1f5f9;color:#475569;}
+.sales-course-badge--blue{background:#dbeafe;color:#1d4ed8;}.sales-course-badge--green{background:#dcfce7;color:#15803d;}.sales-course-badge--violet{background:#ede9fe;color:#6d28d9;}.sales-course-badge--orange{background:#ffedd5;color:#c2410c;}.sales-course-badge--red{background:#fee2e2;color:#b91c1c;}.sales-course-badge--cyan{background:#cffafe;color:#0e7490;}
+.sales-session-name{flex-basis:100%;color:#64748b;font-size:12px;line-height:1.5;overflow-wrap:anywhere;}
 .sales-names-close{margin-top:14px;border:1px solid #cbd5e1;background:#f8fafc;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;}
 .daily-preview-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.72);z-index:1100;padding:18px;}
 .daily-preview-modal.is-visible{display:flex;}.daily-preview-dialog{display:flex;flex-direction:column;width:min(900px,96vw);height:min(880px,92vh);overflow:hidden;background:#f8fafc;border-radius:22px;border:1px solid #cbd5e1;box-shadow:0 28px 80px rgba(2,6,23,.45);}
@@ -591,8 +596,19 @@
         link.textContent = safeName;
         li.appendChild(link);
       } else {
-        li.textContent = safeName;
+        const name = document.createElement('strong');
+        name.textContent = safeName;
+        li.appendChild(name);
       }
+      const badge = document.createElement('span');
+      const tones = ['blue','green','violet','orange','red','cyan','slate'];
+      badge.className = 'sales-course-badge sales-course-badge--' + (tones.includes(entry?.training_tone) ? entry.training_tone : 'slate');
+      badge.textContent = String(entry?.training_label || 'Formation');
+      li.appendChild(badge);
+      const sessionName = document.createElement('span');
+      sessionName.className = 'sales-session-name';
+      sessionName.textContent = String(entry?.session_name || 'Session à préciser');
+      li.appendChild(sessionName);
       salesNamesList.appendChild(li);
     });
     salesNamesModal.classList.add('is-visible');

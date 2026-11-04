@@ -29,10 +29,16 @@ def run_documents():
     subprocess.run([sys.executable, str(Path(__file__).with_name("run_document_reminders.py"))], check=True)
 
 
+def run_aps():
+    subprocess.run([sys.executable, str(Path(__file__).with_name("run_aps_daily_followup.py"))], check=True)
+
+
 def main():
     failed = False
-    with ThreadPoolExecutor(max_workers=3) as executor:
+    with ThreadPoolExecutor(max_workers=4) as executor:
         tasks = {executor.submit(run_wedof): "WEDOF"}
+        if os.environ.get("WEDOF_AUTOMATION_URL", "").strip():
+            tasks[executor.submit(run_aps)] = "APS daily follow-up"
         if os.environ.get("QONTO_SYNC_URL", "").strip():
             tasks[executor.submit(run_qonto)] = "Qonto"
         if os.environ.get("WEDOF_AUTOMATION_URL", "").strip() or os.environ.get("DOCUMENT_REMINDERS_URL", "").strip():

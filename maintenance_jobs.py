@@ -102,6 +102,7 @@ def register_maintenance_jobs(legacy):
         "internal_cron_cash_payment_reminders": "cron",
         "internal_cron_a3p_hosting_reminders": "cron",
         "internal_cron_daily_recap": "cron",
+        "internal_cron_aps_daily_followup": "cron",
     }
 
     def register(endpoint, secret_kind):

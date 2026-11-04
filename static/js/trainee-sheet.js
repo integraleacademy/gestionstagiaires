@@ -99,6 +99,7 @@ document.querySelectorAll(".automation-loading-form").forEach((form)=>{
       event.preventDefault();
       const conventionPayload = await requestVaeConventionTransmission();
       if(!conventionPayload) return;
+      if(conventionPayload.company_convention_url){ window.location.href = conventionPayload.company_convention_url; return; }
       if(conventionPayload.send_convention === false){
         try{ await saveVaeConventionFinancing(conventionPayload); }catch(error){ alert(error.message || "Impossible de sauvegarder les montants de financement."); }
         return;
@@ -1308,6 +1309,7 @@ function updateDocsRelanceState(status, plannedDateIso){
     return send ? {send_convention:true} : null;
     }
     return await window.openConventionTransmission?.({
+      companyUrl: sheetContext.companyConventionUrl || "",
       defaults: vaeConventionConfig.defaults,
       trainingType: vaeConventionConfig.trainingType,
       previewUrl: vaeConventionConfig.previewUrl,

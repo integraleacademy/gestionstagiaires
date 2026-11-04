@@ -23,7 +23,7 @@ from tests import test_native_elearning_web as web_tests
 
 
 @pytest.mark.parametrize('changes,eligible', [
-    ({}, True), ({'date_start': '2026-11-02'}, False),
+    ({}, True), ({'date_start': '2026-11-01'}, True), ({'date_start': '2026-11-02'}, True), ({'date_start': '2026-10-31'}, False),
     ({'date_start': '2027-01-01'}, True), ({'aps_elearning_enabled': False}, False),
     ({'date_start': ''}, False), ({'date_start': 'invalid'}, False),
     ({'training_type': 'A3P'}, False), ({'training_type': 'VTC'}, False),

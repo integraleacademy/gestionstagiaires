@@ -2563,6 +2563,7 @@
   "financingUrl": url_for('api_update_convention_financing', session_id=session.id, trainee_id=trainee.id),
   "signatureUrl": url_for('api_create_convention_signature', session_id=session.id, trainee_id=trainee.id),
   "conventionPreviewUrl": url_for('admin_preview_convention', session_id=session.id, trainee_id=trainee.id),
+  "companyConventionUrl": url_for('admin_company_convention', session_id=session.id, trainee_id=trainee.id) if company_convention_available else '',
   "isVae": ('VAE' in (session.training_type or '')|upper),
   "trainingType": (session.training_type or ''),
   "pathway": (trainee.ssiap_pathway or ("ssiap" if session.ssiap_pathways else "")),
@@ -2603,7 +2604,7 @@
   "afcEnabled": session.afc_enabled or false
 }|tojson }}
 </script>
-<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261104') }}"></script>
+<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261104-contract-type') }}"></script>
   
 
 <!-- ===================== -->

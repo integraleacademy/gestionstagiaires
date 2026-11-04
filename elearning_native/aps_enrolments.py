@@ -12,7 +12,7 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
-CUTOFF = dt.date(2026, 11, 3)
+CUTOFF = dt.date(2026, 11, 1)
 
 
 def is_native_aps_session(training):

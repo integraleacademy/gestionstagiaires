@@ -353,7 +353,23 @@
     </div>
   </div>
 
-  <div class="modal-backdrop ypareo-modal-backdrop" id="conventionTransmissionModal" aria-hidden="true">
+  <div class="modal-backdrop ypareo-modal-backdrop" id="conventionTypeModal" data-static-backdrop aria-hidden="true">
+    <div class="modal ypareo-modal convention-modal" role="dialog" aria-modal="true" aria-labelledby="conventionTypeTitle" style="max-width:660px;">
+      <div class="ypareo-modal-accent convention-modal-accent"></div>
+      <div class="modal-body" style="padding:28px;">
+        <p class="convention-kicker">DOCUMENT DE FORMATION · ÉTAPE 1</p>
+        <h2 id="conventionTypeTitle" style="margin:8px 0;">Pour qui souhaitez-vous générer le document ?</h2>
+        <p class="muted">Choisissez le cocontractant avant de préparer le financement et la signature.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:24px;">
+          <button type="button" id="conventionTypeIndividual" class="btn" style="white-space:normal;text-align:left;padding:22px;background:#eff6ff;border:2px solid #bfdbfe;border-radius:18px;color:#1e3a8a;display:block;"><span style="display:block;font-size:26px;margin-bottom:14px;" aria-hidden="true">👤</span><strong style="display:block;font-size:20px;">Particulier</strong><span style="display:block;margin-top:7px;font-weight:400;">Contrat de formation<br>Signé par le stagiaire</span></button>
+          <button type="button" id="conventionTypeCompany" class="btn" style="white-space:normal;text-align:left;padding:22px;background:#f5f3ff;border:2px solid #ddd6fe;border-radius:18px;color:#5b21b6;display:block;"><span style="display:block;font-size:26px;margin-bottom:14px;" aria-hidden="true">🏢</span><strong style="display:block;font-size:20px;">Entreprise</strong><span style="display:block;margin-top:7px;font-weight:400;">Convention de formation<br>Signée par l’entreprise</span></button>
+        </div>
+      </div>
+      <div class="modal-foot"><button type="button" id="conventionTypeCancel" class="btn">Annuler</button></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop ypareo-modal-backdrop" id="conventionTransmissionModal" data-static-backdrop aria-hidden="true">
     <div class="modal ypareo-modal convention-modal" role="dialog" aria-modal="true" aria-labelledby="conventionTransmissionTitle">
       <div class="ypareo-modal-accent convention-modal-accent"></div>
       <div class="modal-body ypareo-modal-body convention-modal-body">
@@ -361,9 +377,9 @@
           <span class="ypareo-icon-cloud">✍</span>
         </div>
         <div class="ypareo-state-copy convention-state-copy">
-          <div class="ypareo-kicker convention-kicker">Convention de formation</div>
-          <h2 id="conventionTransmissionTitle">Souhaitez-vous envoyer la convention maintenant&nbsp;?</h2>
-          <p>Le stagiaire a bien été enregistré. Vérifiez les montants puis lancez l’envoi de la convention de formation pour signature électronique.</p>
+          <div class="ypareo-kicker convention-kicker">Particulier · Contrat de formation</div>
+          <h2 id="conventionTransmissionTitle">Souhaitez-vous envoyer le contrat maintenant&nbsp;?</h2>
+          <p>Vérifiez les montants puis lancez l’envoi du contrat de formation au stagiaire pour signature électronique.</p>
           <div class="convention-finance-grid" aria-label="Montants de financement">
             <label class="convention-finance-field convention-finance-field--formation">Montant formation<input id="conventionTrainingPrice" type="number" step="0.01" min="0" inputmode="decimal"></label>
             <label class="convention-finance-field convention-finance-field--cpf">CPF<input id="conventionCpfAmount" type="number" step="0.01" min="0" inputmode="decimal"></label>
@@ -375,8 +391,8 @@
       </div>
       <div class="modal-foot ypareo-modal-actions" id="conventionTransmissionConfirmActions">
         <button class="btn ypareo-btn-secondary" id="conventionTransmissionNo" type="button">Non, plus tard</button>
-        <button class="btn btn-outline" id="conventionTransmissionPreview" type="button">Prévisualiser la convention</button>
-        <button class="btn btn-primary ypareo-btn-primary" id="conventionTransmissionYes" type="button">Envoyer la convention</button>
+        <button class="btn btn-outline" id="conventionTransmissionPreview" type="button">Prévisualiser le contrat</button>
+        <button class="btn btn-primary ypareo-btn-primary" id="conventionTransmissionYes" type="button">Envoyer le contrat</button>
       </div>
     </div>
   </div>
@@ -607,7 +623,39 @@
   }
 
 
-  function openConventionTransmission({defaults, trainingType, previewUrl, onPreview} = {}){
+  function chooseConventionType(){
+    return new Promise((resolve)=>{
+      const modal = document.getElementById('conventionTypeModal');
+      const previousFocus = document.activeElement;
+      const finish = (type)=>{
+        closeModal('conventionTypeModal');
+        modal.removeEventListener('keydown', onKey);
+        previousFocus?.focus();
+        resolve(type);
+      };
+      const onKey = (event)=>{
+        if(event.key === 'Escape'){ event.preventDefault(); finish(null); }
+        if(event.key === 'Tab'){
+          const buttons = [...modal.querySelectorAll('button')];
+          if(event.shiftKey && document.activeElement === buttons[0]){ event.preventDefault(); buttons.at(-1).focus(); }
+          else if(!event.shiftKey && document.activeElement === buttons.at(-1)){ event.preventDefault(); buttons[0].focus(); }
+        }
+      };
+      document.getElementById('conventionTypeIndividual').onclick = ()=>finish('individual');
+      document.getElementById('conventionTypeCompany').onclick = ()=>finish('company');
+      document.getElementById('conventionTypeCancel').onclick = ()=>finish(null);
+      modal.addEventListener('keydown', onKey);
+      openModal('conventionTypeModal');
+      document.getElementById('conventionTypeIndividual').focus();
+    });
+  }
+
+  async function openConventionTransmission({defaults, trainingType, previewUrl, onPreview, companyUrl} = {}){
+    if(companyUrl){
+      const type = await chooseConventionType();
+      if(!type) return null;
+      if(type === 'company') return {company_convention_url: companyUrl};
+    }
     return new Promise(async (resolve)=>{
       const modal = document.getElementById("conventionTransmissionModal");
       const yesButton = document.getElementById("conventionTransmissionYes");
