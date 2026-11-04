@@ -11,7 +11,8 @@ GROUPS = {
 }
 GROUP_TABS = {
     "requests": {"all": "Toutes les demandes", "request": "À traiter",
-                 "waiting": "Validation du titulaire", "ft": "Financement France Travail"},
+                 "waiting": "Validation du titulaire", "ft": "Financement FT en cours",
+                 "ft_refused": "Financement FT refusé"},
     "training": {"all": "Toutes les formations", "accepted": "Accepté / À démarrer",
                  "training": "En formation", "out": "Sortie déclarée"},
     "billing": {"all": "Toute la facturation", "declared": "Service fait déclaré",
@@ -23,9 +24,9 @@ GROUP_TABS = {
 AUTOMATION_TABS = {
     "overdue": "En retard", "attention": "À compléter / À vérifier",
     "blocked": "Bloquées / En erreur", "running": "En cours",
-    "planned": "À venir", "history": "Historique",
+    "planned": "À venir",
 }
-KIND_GROUP = {"request": "requests", "waiting": "requests", "ft": "requests",
+KIND_GROUP = {"request": "requests", "waiting": "requests", "ft": "requests", "ft_refused": "requests",
               "accepted": "training", "training": "training", "entry": "training", "out": "training",
               "service": "billing", "declared": "billing", "billable": "billing", "invoiced": "billing",
               "paid": "billing", "refused": "closed", "canceled": "closed"}
@@ -44,6 +45,8 @@ def navigation(args):
         tab = tab or "request"
     elif section == "automations" and tab in KIND_GROUP:
         section, group = "state", KIND_GROUP[tab]
+    elif section == "automations" and tab == "history":
+        section = "consumption"
     elif section == "state" and tab == "due":
         section = "automations"
     if section == "automations":
@@ -103,6 +106,8 @@ def operation_rows(rows, dispatches, now, revision, outcomes=None):
         changed = dt.datetime.fromtimestamp(dispatch["changed"], now.tzinfo) if dispatch and dispatch.get("changed") else None
         if status == "confirmed":
             bucket, note = "history", "Réception vérifiée dans EDOF"
+        elif status == "queued" and dispatch.get("detail") not in {None, "", "declaration_exit_confirmed"}:
+            bucket, note = "blocked", "Transmission différée après un problème de connexion"
         elif status == "sending" or (status == "queued" and dispatch["revision"] == revision and not block):
             bucket, note = "running", "En attente de transmission" if status == "queued" else "Envoi effectué ou en cours de vérification"
         elif status == "uncertain":

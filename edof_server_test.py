@@ -31,6 +31,7 @@ import edof_directory as directory
 import edof_session_clock as session_clock
 import edof_proposal_jobs as proposals
 import edof_declarations as declarations
+import edof_automation_audit as automation_audit
 from edof_gmail import Vault, GmailError, connector_key, oauth_configured, authorization_url, finish_authorization
 
 JOB_TIMEOUT = 210
@@ -161,10 +162,11 @@ class ServerTestStore:
                 db.execute("DROP TABLE manual_directory")
         db.execute("""CREATE TABLE IF NOT EXISTS automation_catchups (owner TEXT PRIMARY KEY, revision INTEGER NOT NULL,
                    requested REAL NOT NULL, message TEXT NOT NULL DEFAULT '')""")
-        db.execute("DELETE FROM jobs WHERE created < ?", (time.time() - RETENTION,))
+        automation_audit.install_jobs(db)
         db.execute("UPDATE jobs SET finished = ?, result = ? WHERE finished IS NULL "
                    "AND created < ? - CASE WHEN mode = 'directory' THEN ? WHEN mode IN ('declare','reconcile','proposal_read','proposal_send','proposal_check') THEN ? ELSE ? END",
                    (time.time(), json.dumps({"code": "interrupted"}), time.time() - 30, DIRECTORY_TIMEOUT, DECLARATION_TIMEOUT, JOB_TIMEOUT))
+        db.execute("DELETE FROM jobs WHERE created < ?", (time.time() - RETENTION,))
         db.commit()
         return db
 
@@ -689,7 +691,7 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
                     snapshot = Vault(store.directory, store.connector_key).get(directory.record_key(spec["owner"]))
                     if snapshot:
                         snapshot = directory.dated_snapshot(snapshot)
-                        process_directory(store, snapshot)
+                        process_directory(store, snapshot, owner=spec["owner"])
 
                 except (OSError, ValueError, sqlite3.Error):
                     # Keep the verified source snapshot. The next full sync

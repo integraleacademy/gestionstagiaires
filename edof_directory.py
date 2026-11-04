@@ -101,14 +101,19 @@ def project(row):
         if ref and (not isinstance(ref, str) or not ref.startswith(SIRET + "_")):
             raise IncompleteDirectory()
     solicitations = info.get("solicitations") or []
-    ft_pending = any(isinstance(item, dict) and str(item.get("fundingType")) == "9"
-                     and item.get("status") == "inProgress" for item in solicitations)
+    ft_statuses = {normalized(text_field(item.get("status"), 80)) for item in solicitations
+                   if isinstance(item, dict) and str(item.get("fundingType")) == "9"}
+    ft_pending = "inprogress" in ft_statuses
+    # A refused top-up is not a refusal of the CPF dossier itself. A new pending
+    # or accepted solicitation takes precedence over an older refused one.
+    ft_refused = bool(ft_statuses & {"refused", "rejected", "denied", "refuse", "refusee"}) and not (
+        ft_pending or ft_statuses & {"accepted", "approved", "validated", "granted"})
     summary = {}
     if normalized(text_field(row.get("currentState"),80)) in {"notprocessed","not processed","non traite","a traiter","received","tobeprocessed"}:
         for key in ("indicativeDuration","weeklyDuration","hoursInCenter","hoursInCompany","totalIncl"):
             if isinstance(info.get(key), (str,int,float)) and not isinstance(info[key],bool):
                 summary["priceTotal" if key=="totalIncl" else key] = str(info[key])[:25]
-    return {**({"offer_summary":summary} if summary else {}), "request_date":session_date(row.get("changingStateDate")), "ft_pending": ft_pending, "service_done_validated": info.get("validatedServiceDone") is True,
+    return {**({"offer_summary":summary} if summary else {}), "request_date":session_date(row.get("changingStateDate")), "ft_pending": ft_pending, "ft_refused": ft_refused, "service_done_validated": info.get("validatedServiceDone") is True,
             "payment_state": text_field(row.get("paymentState"), 80), **({"billing_state": text_field(row["currentBillingState"], 80)} if row.get("currentBillingState") else {}),
             "folder_id": str(row["id"]), "first_name": text_field(attendee.get("firstName"), 120),
             "last_name": text_field(attendee.get("lastName"), 120),
