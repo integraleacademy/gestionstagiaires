@@ -1511,6 +1511,9 @@ def _run_browser(spec, *, live=None, traffic=None):
                 except (ValueError,KeyError,TypeError,BrowserError) as exc:
                     if cursor:
                         cursor.clear()
+                    if live is not None and signals["directory"].get("http") in {401,403}:
+                        # An expired witness must not trap subsequent reads on the fast path.
+                        live.pop("pending_witness",None)
                     reason = str(exc) if isinstance(exc,directory.IncompleteDirectory) and exc.args else "unreadable"
                     signals["directory"]["failure"] = reason if reason in {"http","size","count","empty_page","page_overlap","scope","limit"} else "unreadable"
                     if pending_result:

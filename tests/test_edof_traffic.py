@@ -227,4 +227,8 @@ def test_warm_batches_yield_to_manual_proposal_and_keep_two_minute_poll(conn,mon
         assert len(vault.get(directory.record_key('owner'))['rows'])==5
         assert not any(isinstance(c,tuple) and c[0]=='accepted' for c in calls)
         assert 'efp_auth' not in json.dumps(calls)
+        # A rejected session leaves the fast path, so a later job can restore normally.
+        monkeypatch.setattr(APIRequestContext,'get',lambda *a,**kw:Mock(status=401,url=URL))
+        assert runner.run_browser(full,live=live)['code']=='directory_incomplete'
+        assert 'pending_witness' not in live
         browser.close()
