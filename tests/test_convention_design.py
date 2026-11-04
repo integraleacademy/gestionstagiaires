@@ -57,9 +57,16 @@ def test_all_individual_models_keep_exact_text_fields_links_and_artwork(model):
     footer = '\n'.join(p.text for p in section.footer.paragraphs)
     for line in REGISTRATION_LINES:
         assert line in footer
+    if model.stem == 'conventiondespparis':
+        assert '840 899 884 00034' in footer
+        assert '142 rue de Rivoli' in footer
+        assert '840 899 884 00026' not in footer
     headings = [p for p in doc.paragraphs if p.text.startswith('Article ')]
     assert headings[0].paragraph_format.page_break_before
     assert {r.font.size.pt for p in headings for r in p.runs if r.text.strip()} == {11.5}
+    for p in headings:
+        if 'Garanties disciplinaires' in p.text:
+            assert p.paragraph_format.keep_with_next  # Parent heading stays with Article 13.1.
     for p in doc.paragraphs:
         if p.text.startswith(('(Articles', 'RÈGLEMENT INTÉRIEUR')):
             assert p.alignment == 1  # Centred, including the legal subtitle.

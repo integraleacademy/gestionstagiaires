@@ -91,7 +91,7 @@ def _paragraph(paragraph):
     fmt.alignment = WD_ALIGN_PARAGRAPH.LEFT
     fmt.space_before = Pt(0)
     fmt.space_after = Pt(7)
-    fmt.line_spacing = 1.4
+    fmt.line_spacing = 1.25
     fmt.keep_with_next = False
     fmt.keep_together = False
     fmt.widow_control = True
@@ -339,8 +339,17 @@ def _header_footer(document, reference, kind):
     """The retake invitation's navy/gold banner, with native Word text and fields."""
     from docx.enum.table import WD_ROW_HEIGHT_RULE
     from docx.enum.text import WD_TAB_ALIGNMENT
+    modes = document.settings.element.xpath('./w:compat/w:compatSetting[@w:name="compatibilityMode"]/@w:val')
+    # Word 2010 positions a table relative to its first cell's text; newer
+    # models position its border. Compensate without changing body pagination.
+    banner_indent = -1021 if modes and int(modes[0]) >= 15 else 0
     visited = set()
     for section in document.sections:
+        old_footer = " ".join(section.footer._element.xpath(".//w:t/text()"))
+        paris = "84089988400034" in re.sub(r"\D", "", old_footer)
+        siret = "840 899 884 00034" if paris else "840 899 884 00026"
+        address = "142 rue de Rivoli · 75001 Paris" if paris else "54 chemin du Carreou · 83480 Puget-sur-Argens"
+        extra_identity = "RCS Fréjus · UAI 0831774C" if "UAI 0831774C" in old_footer else ""
         section.page_width, section.page_height = Cm(21), Cm(29.7)
         section.left_margin = section.right_margin = Cm(1.8)
         section.top_margin, section.bottom_margin = Pt(125), Cm(2.8)
@@ -353,8 +362,8 @@ def _header_footer(document, reference, kind):
             _clear(container)
             if container._element.tag == qn("w:ftr"):
                 lines = (
-                    "Intégrale Academy – Intégrale Sécurité Formations · SIRET 840 899 884 00026 · NAF 8559A",
-                    "54 chemin du Carreou · 83480 Puget-sur-Argens · 04 22 47 07 68 · ecole@integraleacademy.com",
+                    "Intégrale Academy – Intégrale Sécurité Formations · SIRET " + siret + " · NAF 8559A",
+                    address + " · 04 22 47 07 68 · ecole@integraleacademy.com",
                     *REGISTRATION_LINES,
                 )
                 for i, line in enumerate(lines):
@@ -366,7 +375,7 @@ def _header_footer(document, reference, kind):
                     if i == 0:
                         border = _property(p._p.get_or_add_pPr(), "w:pBdr")
                         _property(border, "w:top", val="single", sz=4, color="D5DFE9", space=6)
-                p = container.add_paragraph("RCS Fréjus · UAI 0831774C\tPage ")
+                p = container.add_paragraph(extra_identity + "\tPage ")
                 p.paragraph_format.tab_stops.add_tab_stop(Cm(WIDTH), WD_TAB_ALIGNMENT.RIGHT)
                 for instruction in ("PAGE", "NUMPAGES"):
                     if instruction == "NUMPAGES":
@@ -390,7 +399,7 @@ def _header_footer(document, reference, kind):
             table.autofit = False
             props = table._tbl.tblPr
             _property(props, "w:tblW", w=11906, type="dxa")
-            _property(props, "w:tblInd", w=-1021, type="dxa")
+            _property(props, "w:tblInd", w=banner_indent, type="dxa")
             borders = _property(props, "w:tblBorders")
             for side in ("top", "left", "right", "insideH", "insideV"):
                 _property(borders, "w:" + side, val="nil")
@@ -492,7 +501,7 @@ def _article_flow(document):
                 fmt.space_after = Pt(5)
             if compact:
                 fmt.keep_with_next = True
-        if paragraphs and compact:
+        if len(paragraphs) > 1 and compact:
             Paragraph(paragraphs[-1], document).paragraph_format.keep_with_next = False
 
 
