@@ -140,13 +140,14 @@ def build_vae_document(doc, company, values):
     return doc
 
 
-def render(template, company, values, replace_placeholders, validate, office, destination):
+def render(template, company, values, replace_placeholders, validate, office, destination, *, reference_key=None):
     with tempfile.TemporaryDirectory(prefix="convention-entreprise-") as directory:
         root = Path(directory)
         source = root / "convention-entreprise.docx"
         build_document(template, company, values).save(source)
         replace_placeholders(str(source), values)
-        restyle_file(source)
+        restyle_file(source, reference_key=reference_key or (
+            Path(template).stem, company.get("name"), values.get("nom_complet"), values.get("periode_formation")))
         validate(str(source))
         subprocess.run([office, "-env:UserInstallation=" + (root / "profile").as_uri(),
                         "--headless", "--convert-to", "pdf", "--outdir", directory, str(source)],

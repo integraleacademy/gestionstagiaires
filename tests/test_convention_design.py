@@ -8,7 +8,7 @@ from lxml import etree
 import pytest
 from docx import Document
 
-from convention_design import style_document
+from convention_design import style_document, document_reference, REGISTRATION_LINES
 from docx.oxml.ns import qn
 import company_convention
 
@@ -20,13 +20,22 @@ def content_snapshot(data):
     with ZipFile(BytesIO(data)) as package:
         result = {}
         for name in package.namelist():
-            if name.startswith('word/media/'):
-                result[name] = package.read(name)
-            elif name.startswith('word/') and name.endswith('.xml') and ('document' in name or 'header' in name or 'footer' in name):
+            if name == 'word/document.xml':
                 root = etree.fromstring(package.read(name))
                 result[name] = [(etree.QName(n).localname, n.text, sorted(n.attrib.items()))
                                 for n in root.iter() if etree.QName(n).localname in
                                 {'t', 'instrText', 'fldChar', 'blip', 'imagedata', 'hyperlink'}]
+        # Only the banner is replaced; every picture used by the contractual
+        # body (including the Academy's signature) must remain byte-identical.
+        root = etree.fromstring(package.read('word/document.xml'))
+        ids = set(root.xpath('//@r:embed | //@r:id', namespaces={'r': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'}))
+        rels = etree.fromstring(package.read('word/_rels/document.xml.rels'))
+        for rel in rels:
+            if rel.get('Id') in ids and not rel.get('Type').endswith(('/header', '/footer')):
+                target = rel.get('Target')
+                result['relationship:' + rel.get('Id')] = target
+                if target.startswith('media/'):
+                    result[target] = package.read('word/' + target)
         return result
 
 
@@ -45,6 +54,15 @@ def test_all_individual_models_keep_exact_text_fields_links_and_artwork(model):
     section = doc.sections[0]
     assert round(section.page_width.cm, 1) == 21
     assert round(section.page_height.cm, 1) == 29.7
+    footer = '\n'.join(p.text for p in section.footer.paragraphs)
+    for line in REGISTRATION_LINES:
+        assert line in footer
+    headings = [p for p in doc.paragraphs if p.text.startswith('Article ')]
+    assert headings[0].paragraph_format.page_break_before
+    assert {r.font.size.pt for p in headings for r in p.runs if r.text.strip()} == {11.5}
+    for p in doc.paragraphs:
+        if p.text.startswith(('(Articles', 'RÈGLEMENT INTÉRIEUR')):
+            assert p.alignment == 1  # Centred, including the legal subtitle.
     available = section.page_width - section.left_margin - section.right_margin
     for table in doc.tables:
         assert sum(c.width for c in table.columns) <= available + 10000
@@ -85,3 +103,18 @@ def test_financial_colours_and_separate_article_survive_layout():
     assert engagement.cell(0, 0)._tc.get_or_add_tcPr().find(qn('w:shd')).get(qn('w:fill')) == 'FFF5DA'
     assert any(str(r.font.color.rgb) == 'B42318' and '5 jours' in r.text
                for p in engagement.cell(0, 0).paragraphs for r in p.runs)
+
+
+def test_reference_survives_regeneration_and_distinguishes_contracts():
+    def header(key, new_date):
+        doc = Document(ROOT / 'templates_word/conventionssiap.docx')
+        doc.add_paragraph(new_date)
+        style_document(doc, reference_key=key)
+        return '\n'.join(doc.sections[0].header._element.xpath('.//w:t/text()'))
+    key = ('session-1', 'stagiaire-1', 'conventionssiap.docx')
+    ref = document_reference('contrat', key)
+    assert ref in header(key, '04/11/2026')
+    assert ref in header(key, '05/11/2026')
+    assert ref not in header(('session-2', *key[1:]), '04/11/2026')
+    assert ref not in header((key[0], 'stagiaire-2', key[2]), '04/11/2026')
+    assert document_reference('convention', key) != ref

@@ -406,7 +406,9 @@ def fill_convention(kind, values, settings, assets):
         if re.search(r"«[A-Z_0-9]+»|\[/?sc_", p.text):
             raise WorkspaceError("Une variable du modèle n’a pas été remplie.")
     if kind == "formation":
-        style_document(doc)
+        style_document(doc, reference_key=tuple(values.get(key, "") for key in (
+            "employer_siret", "apprentice_last_name", "apprentice_first_name", "apprentice_birth_date",
+            "rncp", "training_start", "contract_start")))
     output = io.BytesIO(); doc.save(output)
     return output.getvalue()
 
