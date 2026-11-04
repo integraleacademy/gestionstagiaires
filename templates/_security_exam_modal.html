@@ -10,11 +10,16 @@
   </header>
   <nav class="exam-tabs" aria-label="Rubriques du dossier examen">
     <button type="button" data-security-tab="candidates" aria-pressed="true">Dossiers candidats</button>
+    {% if is_native_aps %}<button type="button" data-security-tab="learning-certificates" aria-pressed="false">Attestations e-learning</button>{% endif %}
+    {% if uv_exam_documents %}<button type="button" data-security-tab="uv-questionnaires" aria-pressed="false">Questionnaires de fin d’UV</button>{% endif %}
     {% if security_jury_supported %}<button type="button" data-security-tab="organization" aria-pressed="false">Organisation et jury</button>{% endif %}
     <button type="button" data-security-tab="calendar" aria-pressed="false">Calendrier</button>
   </nav>
   <div id="securityExamStatus" class="exam-status" role="status" aria-live="polite"></div>
   <div class="exam-content">
+    {% if is_native_aps or uv_exam_documents %}
+    {% include '_learning_exam_documents.html' %}
+    {% endif %}
     <section data-security-panel="candidates">
       <div class="exam-summary"><div><h3 id="securityExamCount">Dossiers candidats</h3><p class="exam-muted">Consultez ou téléchargez le dossier de chaque candidat.</p></div><button type="button" class="btn btn-outline" data-security-refresh data-lock>Actualiser les dossiers</button></div>
       <div id="securityExamCalendarNote" class="exam-note" hidden></div>
@@ -46,6 +51,7 @@
   </div>
 </dialog>
 <script src="{{ url_for('static', filename='js/security-exam.js', v='20261023-afc-1') }}" defer></script>
+{% if is_native_aps or uv_exam_documents %}<script src="{{ url_for('static', filename='js/learning-exam-documents.js', v='20261104-1') }}" defer></script>{% endif %}
 {% if security_jury_supported %}
 {% include '_exam_jury_mail_dialog.html' %}
 <script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261026-without-pv-1') }}" defer></script>

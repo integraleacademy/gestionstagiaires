@@ -111,6 +111,7 @@ def register_routes(host, bp, *, page):
                 'sent_at': receipt['sent_at'] if receipt else ''}
         return page('elearning_progress.html', partner=partner, order=source, person=person,
                     daily_preview=daily_preview,
+                    roster_url=url_for('admin_trainees', session_id=session_id),
                     group=None, report=report, course=learning.COURSES[source['course_code']], staff=True,
                     back_url=url_for('admin_trainee_page', session_id=session_id, trainee_id=trainee_id)
                         + ('#apsElearningFollowup' if source['course_code'] == 'aps' else '#vtcElearningFollowup'),

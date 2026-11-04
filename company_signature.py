@@ -49,10 +49,10 @@ def contact(host, form):
     return person
 
 
-def signature_field(path):
+def signature_field(path, label="Date et signature"):
     with fitz.open(path) as doc:
         for i in reversed(range(len(doc))):
-            marks = doc[i].search_for("Date et signature")
+            marks = doc[i].search_for(label)
             if marks:
                 mark = marks[-1]
                 return dict(page=i + 1, x=int(mark.x0), y=int(mark.y1 + 2), width=180, height=55)
@@ -66,7 +66,8 @@ def send(host, row, save):
     source = Path(row["pdf"])
     if not source.is_file() or host._sha256_file(str(source)) != row["sha256"]:
         raise ValueError("Le PDF a changé. Vérifiez la convention avant de l’envoyer.")
-    field = signature_field(source)
+    field = signature_field(source, "Signature de l’entreprise" if row.get('beneficiary') else "Date et signature")
+    beneficiary_field = signature_field(source, 'Signature du bénéficiaire') if row.get('beneficiary') else None
 
     def create(step, base, recover, **kwargs):
         if row.get("pending") == step:
@@ -109,7 +110,18 @@ def send(host, row, save):
                     "info": {"first_name": person["first_name"], "last_name": person["last_name"],
                              "email": person["email"], "phone_number": person["phone"], "locale": "fr"},
                     "signature_level": "electronic_signature", "signature_authentication_mode": "otp_sms",
-                    "fields": [{"document_id": row["document_id"], "type": "signature", **field}]})
+                    "fields": [{"document_id": row["document_id"], "type": "signature", **field}] +
+                        ([{"document_id": row["document_id"], "type": "signature", **beneficiary_field}]
+                         if beneficiary_field and row['beneficiary']['email'].casefold() == person['email'].casefold() else [])})
+        beneficiary = row.get('beneficiary')
+        if beneficiary and beneficiary['email'].casefold() != person['email'].casefold() and not row.get('beneficiary_signer_id'):
+            create('beneficiary_signer_id', base + '/signers', lambda: [
+                item for item in host._yousign_signature_request_items(host._yousign_json('GET', base + '/signers'))
+                if item.get('info', {}).get('email', '').casefold() == beneficiary['email'].casefold()], json={
+                    'info': {'first_name': beneficiary['first_name'], 'last_name': beneficiary['last_name'],
+                             'email': beneficiary['email'], 'phone_number': beneficiary['phone'], 'locale': 'fr'},
+                    'signature_level': 'electronic_signature', 'signature_authentication_mode': 'otp_sms',
+                    'fields': [{'document_id': row['document_id'], 'type': 'signature', **beneficiary_field}]})
         remote = host._yousign_json("POST", base + "/activate", json={})
     status = remote.get("status")
     if status not in ACTIVE | STOPPED | {"done", "completed"}:

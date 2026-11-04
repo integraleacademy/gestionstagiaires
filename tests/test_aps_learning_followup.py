@@ -46,9 +46,12 @@ def test_roster_uses_native_only_from_november_and_keeps_legacy(learner):
     with patch.object(host, '_hydrate_missing_trainee_nubs_from_cnaps_tracking'), patch.object(host, 'compute_stats', return_value={}):
         page = case.client.get('/admin/sessions/session-aps/trainees')
         assert page.status_code == 200 and 'data-aps-roster-trainee="trainee-1"' in page.text
+        assert 'id="btnImportDigiforma"' not in page.text
+        assert 'Attestations e-learning' in page.text and 'Questionnaires de fin d’UV' in page.text
         training['date_start'] = '2026-10-31'
         page = case.client.get('/admin/sessions/session-aps/trainees')
         assert page.status_code == 200 and 'data-aps-roster-trainee=' not in page.text
+        assert 'id="btnImportDigiforma"' in page.text
 
 
 def test_only_completed_activity_and_required_time_get_the_blue_validation():
@@ -158,6 +161,11 @@ def test_readonly_preview_never_sends_or_creates_a_delivery(learner):
         page = case.client.get(case.report_url)
     assert response.status_code == 200 and 'Bonjour Alice' in response.text
     assert 'Prévisualiser le mail du jour' in page.text and '09h00' in page.text
+    assert 'Retour à tous les stagiaires' in page.text
+    assert '/admin/sessions/session-aps/trainees' in page.text
+    assert 'Votre formation agent de prévention et de sécurité (APS)' in response.text
+    assert '/static/images/email/cassandre-signature.png' in response.text
+    assert '04 87 83 06 16' in response.text and '07 43 58 22 64' in response.text
     assert not daily.ledger_path(host).exists()
     send.assert_not_called()
     anonymous = host.app.test_client()
@@ -212,3 +220,35 @@ def test_cron_requires_secret_even_if_not_configured(learner, monkeypatch):
     with patch.object(daily,'run',return_value={'ok':True,'sent':0}) as run:
         assert case.client.post('/internal/cron/aps-daily-followup',headers={'X-Cron-Secret':'test-secret'}).status_code == 200
         run.assert_called_once()
+
+
+def test_yesterday_delta_praises_time_even_without_completed_activity_and_prompts_restart(learner):
+    _, training, person = learner
+    report = daily.read_summary(host, training, person)
+    with patch.object(host, 'brevo_send_email', return_value={'ok': True}):
+        daily.run(host, now=NOW)
+    day = NOW.date() + dt.timedelta(days=1)
+    advanced = daily.message(host, training, person, {**report, 'active_seconds': 3600}, day)
+    assert '01 h 00 min 00 s de suivi' in advanced['html']
+    assert any(word in advanced['html'] for word in ('Bravo pour', 'Félicitations,', 'Belle avancée'))
+    idle = daily.message(host, training, person, report, day)
+    assert 'depuis' in idle['html'] and any(word in idle['html'] for word in ('reprenez', 'Reprenons', 'reprendre'))
+    assert daily.progress_since_yesterday(host, training, person, report, day)['advanced'] is False
+    assert daily.progress_since_yesterday(host, training, person, report, day + dt.timedelta(days=1)) is None
+    assert daily.progress_since_yesterday(host, training, person, {**report, 'versions':['changed']}, day) is None
+
+
+def test_existing_ledger_migration_preserves_receipts(learner):
+    _, training, person = learner
+    path = daily.ledger_path(host)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(path) as db:
+        db.execute('CREATE TABLE deliveries(session_id TEXT, trainee_id TEXT, day TEXT, status TEXT, recipient TEXT, subject TEXT, html TEXT, text TEXT, attempted_at TEXT, sent_at TEXT, message_id TEXT, attempts INTEGER, PRIMARY KEY(session_id,trainee_id,day))')
+        db.execute('INSERT INTO deliveries VALUES(?,?,?,?,?,?,?,?,?,?,?,?)', (training['id'],person['id'],NOW.date().isoformat(),'sent','test@example.org','Old','<p>Old</p>','Old','','','msg',1))
+    assert daily.progress_since_yesterday(host, training, person, daily.read_summary(host,training,person), NOW.date()+dt.timedelta(days=1)) is None
+    with daily.connect_ledger(host):
+        pass
+    assert daily.delivery(host, training['id'], person['id'], NOW.date())['html'] == '<p>Old</p>'
+    with patch.object(host, 'brevo_send_email') as send:
+        assert daily.run(host, now=NOW)['sent'] == 0
+        send.assert_not_called()

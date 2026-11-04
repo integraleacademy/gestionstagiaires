@@ -25851,6 +25851,7 @@ def admin_trainees(session_id: str):
         is_aps=is_aps,
         is_aps_training=is_aps_training,
         is_native_aps=aps_enrolments.is_native_aps_session(s),
+        uv_exam_documents=uv_questionnaires.eligible(s),
         aps_attendance_by_id=aps_attendance_by_id,
         is_dirigeant=is_dirigeant,
         is_desp_initial=_is_desp_initial_session(s),
@@ -50159,7 +50160,17 @@ def admin_company_signature(session_id, trainee_id):
                         raise ValueError("Cette convention a déjà été signée.")
                     company = t["company_convention_copy" if is_copy else "company_convention"]
                     person = company_signature.contact(host, company.get("signer") or request.form)
+                    beneficiary = None
+                    if company.get('kind') == 'vae':
+                        if not company.get('receivability_date'):
+                            raise ValueError('Renseignez la date du document de recevabilité avant la signature de la convention VAE.')
+                        beneficiary = company_signature.contact(host, {k: str(t.get(k) or '') for k in ('first_name', 'last_name', 'email', 'phone')})
+                        if beneficiary['email'].casefold() == person['email'].casefold() and any(
+                                beneficiary[k].casefold() != person[k].casefold() for k in ('first_name', 'last_name')):
+                            raise ValueError('Le bénéficiaire et le représentant sont deux personnes différentes : renseignez des adresses e-mail distinctes.')
                     row = rows[key] = company_signature.new_row(host, path, company["name"], person)
+                    if beneficiary:
+                        row['beneficiary'] = beneficiary
                     save()
                 if row.get("status") == "draft":
                     company_signature.send(host, row, save)
@@ -50230,6 +50241,7 @@ def _company_convention_form(session_id, trainee_id):
         editing = (not pdf_path or request.args.get("modifier") == "1" or bool(error)
                    or not (row or company.get("signer")))
         return render_template("admin_company_convention.html", company=company, trainee=t, back=back,
+                               is_vae=slug == 'vae',
                                pending=pending, signed=signed, error=error, pdf_path=pdf_path, is_copy=is_copy, signature=row,
                                version=version, editing=editing, signer=signer,
                                active_signature=row.get("status") in company_signature.ACTIVE)
@@ -50254,6 +50266,14 @@ def _company_convention_form(session_id, trainee_id):
         return redirect(back)
     fields = ("name", "address", "role", "price", "remote_rate", "payment")
     company.update({key: request.form.get(key, "").strip() for key in fields})
+    if slug == 'vae':
+        company['kind'] = 'vae'
+        company['receivability_date'] = request.form.get('receivability_date', '').strip()
+        if company['receivability_date']:
+            try:
+                datetime.date.fromisoformat(company['receivability_date'])
+            except ValueError:
+                return form('Vérifiez la date du document de recevabilité.'), 400
     signer = {key: request.form.get(key, "").strip() for key in ("first_name", "last_name", "email", "phone")}
     try:
         company["signer"] = company_signature.contact(sys.modules[__name__], signer)
@@ -56994,6 +57014,8 @@ exam_retakes.register(app, sys.modules[__name__])
 
 import aps_learning_followup
 aps_learning_followup.register(sys.modules[__name__])
+import admin_learning_documents
+admin_learning_documents.register(sys.modules[__name__])
 manuals_shop.register(sys.modules[__name__])
 import parcours_alternance
 parcours_alternance.register(sys.modules[__name__])
