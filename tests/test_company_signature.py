@@ -68,6 +68,7 @@ class EmployerSigningTests(unittest.TestCase):
         self.assertNotIn("signature_link", self.trainee["convention_signature"])
         self.client.post(self.url, data=self.payload)
         self.assertEqual(sum(c.args[0] == "POST" and c.args[1].endswith("/activate") for c in self.api.call_args_list), 1)
+
         self.status = "done"
         for _ in range(2):
             response = self.client.post("/webhooks/yousign", json={"event_name":"signature_request.done",
@@ -77,6 +78,24 @@ class EmployerSigningTests(unittest.TestCase):
         self.download.assert_called_once()
         self.schedule.assert_called_once()
         self.student_mail.assert_not_called()
+
+    def test_vae_invites_both_parties_and_waits_for_complete_request(self):
+        self.data['sessions'][0]['training_type'] = 'DIRIGEANT VAE'
+        self.trainee['last_name'] = 'Dupont'
+        self.trainee['company_convention'].update(kind='vae',receivability_date='2026-11-01')
+        with patch.object(signature, 'signature_field', return_value=dict(page=1,x=60,y=350,width=180,height=55)):
+            self.assertEqual(self.client.post(self.url,data=self.payload).status_code,302)
+        signers = [c.kwargs['json'] for c in self.api.call_args_list if c.args[0] == 'POST' and c.args[1].endswith('/signers')]
+        self.assertEqual({s['info']['email'] for s in signers}, {'signature@example.org','student@example.org'})
+        self.assertEqual(len(signers),2)
+        self.assertNotEqual(self.trainee.get('convention_status'), 'signed')
+        self.schedule.assert_not_called()
+
+    def test_vae_without_receivability_does_not_send(self):
+        self.data['sessions'][0]['training_type'] = 'DIRIGEANT VAE'
+        self.trainee['company_convention']['kind'] = 'vae'
+        self.client.post(self.url,data=self.payload)
+        self.api.assert_not_called()
 
     def test_send_uses_contact_saved_with_the_pdf(self):
         person = dict(first_name="Anne", last_name="Martin", email="anne@example.org", phone="+33612345678")

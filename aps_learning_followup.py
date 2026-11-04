@@ -5,6 +5,7 @@ import datetime as dt
 from contextlib import closing, contextmanager
 import hashlib
 import hmac
+import json
 import math
 import os
 from pathlib import Path
@@ -116,7 +117,13 @@ def connect_ledger(host):
         status TEXT NOT NULL, recipient TEXT NOT NULL, subject TEXT NOT NULL, html TEXT NOT NULL,
         text TEXT NOT NULL, attempted_at TEXT NOT NULL, sent_at TEXT NOT NULL DEFAULT '',
         message_id TEXT NOT NULL DEFAULT '', attempts INTEGER NOT NULL DEFAULT 1,
+        progress_json TEXT NOT NULL DEFAULT '{}',
         PRIMARY KEY(session_id, trainee_id, day))''')
+    # Preserve all existing send receipts while adding tomorrow's comparison.
+    with db:
+        db.execute('BEGIN IMMEDIATE')
+        if 'progress_json' not in {row[1] for row in db.execute('PRAGMA table_info(deliveries)')}:
+            db.execute("ALTER TABLE deliveries ADD COLUMN progress_json TEXT NOT NULL DEFAULT '{}'")
     try:
         with db:
             yield db
@@ -139,7 +146,33 @@ def claim(host, training, person, day, content, now):
         else:
             db.execute('''INSERT INTO deliveries(session_id,trainee_id,day,status,recipient,subject,html,text,attempted_at)
                 VALUES(?,?,?,'sending',?,?,?,?,?)''', key + values)
+        db.execute('UPDATE deliveries SET progress_json=? WHERE session_id=? AND trainee_id=? AND day=?',
+                   (json.dumps(content.get('progress', {})),) + key)
     return True
+
+
+def progress_snapshot(report):
+    return {key: report.get(key) for key in ('active_seconds', 'completed_activities',
+            'total_activities', 'required_seconds', 'overall_percent', 'versions')}
+
+
+def progress_since_yesterday(host, training, person, report, day):
+    receipt = delivery(host, training['id'], person['id'], day - dt.timedelta(days=1))
+    if not receipt or receipt['status'] != 'sent':
+        return None
+    try:
+        before = json.loads(receipt.get('progress_json') or '{}')
+        current = progress_snapshot(report)
+        if any(current[k] != before.get(k) for k in ('total_activities', 'required_seconds', 'versions')):
+            return None
+        seconds = current['active_seconds'] - before['active_seconds']
+        activities = current['completed_activities'] - before['completed_activities']
+        if seconds < 0 or activities < 0:
+            return None  # A correction or curriculum change is not inactivity.
+        return {'advanced': seconds > 0 or activities > 0, 'seconds': seconds,
+                'time_label': time_label(seconds), 'activities': activities}
+    except (ValueError, KeyError, TypeError):
+        return None
 
 
 TITLES = ('Votre prochain pas vers le présentiel', 'Un nouveau jour pour avancer',
@@ -163,6 +196,7 @@ def message(host, training, person, report, day):
     expected = elapsed / max(1, (onsite - start).days) * 100 if onsite and start else 0
     daily_seconds = math.ceil(remaining / days / 60) * 60
     complete = report['complete']
+    delta = progress_since_yesterday(host, training, person, report, day)
     if complete:
         tone, headline = 'complete', 'Bravo, votre parcours est terminé !'
         encouragement = 'Vous avez validé les activités et les temps de suivi requis. Félicitations pour votre engagement ! Profitez des jours à venir pour revoir les notions qui vous seront utiles en présentiel.'
@@ -176,27 +210,45 @@ def message(host, training, person, report, day):
         tone, headline = 'advanced', 'Belle progression, gardez cet élan !'
         encouragement = 'Vous avez déjà accompli une grande partie du parcours. Bravo pour votre travail ! Continuez avec la même régularité et prenez le temps de finaliser les dernières activités et les objectifs de chaque module.'
     else:
-        tone, headline = 'steady', 'Vous avancez, continuez comme ça !'
+        tone, headline = 'steady', 'Gardez un rendez-vous quotidien avec votre formation'
         encouragement = 'Les séquences réalisées construisent vos compétences pour le métier d’agent de prévention et de sécurité. Votre travail compte : gardez ce rythme et faites aujourd’hui un pas de plus vers la fin du parcours.'
     offset = int(hashlib.sha256(str(person['id']).encode()).hexdigest()[:8], 16)
     ordinal = day.toordinal() + offset
+    daily_note = ''
+    if delta and not complete:
+        if delta['advanced']:
+            praise = ('Bravo pour le travail accompli depuis hier ! Chaque effort vous rapproche de votre objectif.',
+                      'Félicitations, votre travail depuis hier porte ses fruits ! Continuez à avancer avec régularité.',
+                      'Belle avancée depuis notre dernier point ! Vous construisez vos compétences, étape après étape.')
+            daily_note = praise[ordinal % len(praise)]
+        else:
+            restart = ('Aucune nouvelle activité ni durée de suivi n’a été enregistrée depuis le point d’hier. Reprenons aujourd’hui : choisissez un créneau au calme et relancez votre prochaine séquence. Je suis là pour vous aider si quelque chose vous bloque.',
+                       'Votre suivi n’a pas évolué depuis le point d’hier. C’est le bon moment pour reprendre : un créneau réservé aujourd’hui vous aidera à retrouver votre rythme. Contactez-moi si vous rencontrez une difficulté.',
+                       'Nous n’avons pas enregistré de nouvelle avancée depuis hier. Ne laissez pas les séquences s’accumuler : reprenez votre parcours dès aujourd’hui, puis prévoyez un temps de travail chaque jour. Nous pouvons faire le point ensemble.')
+            daily_note = restart[ordinal % len(restart)]
+            if tone not in ('urgent', 'behind'):
+                headline = 'Retrouvons votre rythme, une étape à la fois'
+                encouragement = 'Vous avez déjà construit des acquis. Reprenez votre parcours aujourd’hui pour les consolider et poursuivre jusqu’à la validation complète avant le présentiel.'
     title = TITLES[ordinal % len(TITLES)]
     tip = TIPS[(ordinal + ordinal // len(TITLES)) % len(TIPS)]
     origin = host.PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')
     access_url = origin + '/espace/' + quote(str(person.get('public_token') or ''), safe='') + '/elearning'
-    subject = f"Votre point APS du {day:%d/%m} · {headline}"
+    training_label = 'Votre formation agent de prévention et de sécurité (APS)'
+    subject = f"{training_label} · Votre point du {day:%d/%m}"
     context = dict(first_name=str(person.get('first_name') or person.get('prenom') or '').strip(),
                    session_name=training.get('name') or training.get('nom') or 'Formation APS',
                    day_label=day.strftime('%d/%m/%Y'), onsite_label=onsite.strftime('%d/%m/%Y') if onsite else 'à confirmer',
                    title=title, headline=headline, encouragement=encouragement, tip=tip, tone=tone,
+                   training_label=training_label, delta=delta, daily_note=daily_note,
                    report=report, remaining_label=time_label(remaining), daily_label=time_label(daily_seconds),
                    days=days, access_url=access_url, complete=complete,
                    daily_feasible=daily_seconds <= 8 * 3600)
     fragment = host.app.jinja_env.get_template('emails/aps_daily_followup.html').render(**context)
-    html = render_email(fragment, title=title, eyebrow=f'VOTRE RENDEZ-VOUS APS · {day:%d/%m/%Y}',
+    html = render_email(fragment, title=title, eyebrow=training_label,
                         subtitle=headline, signature='cassandre', preheader=f"Votre progression : {percent:g} %. Présentiel le {context['onsite_label']}.")
-    text = (f"Bonjour {context['first_name']},\n\n{headline}\n{encouragement}\n\n"
-            f"{context['session_name']} — Point du {context['day_label']}\n"
+    text = (f"Bonjour {context['first_name']},\n\n{training_label}\n{headline}\n{daily_note}\n{encouragement}\n\n"
+            + (f"Depuis le point d’hier : {delta['time_label']} de suivi supplémentaire, {delta['activities']} activité(s) terminée(s).\n" if delta and delta['advanced'] else '')
+            + f"{context['session_name']} — Point du {context['day_label']}\n"
             f"Progression : {percent:g} %\nTemps suivi : {report['active_time_label']}\n"
             f"Temps restant requis : {context['remaining_label']}\n"
             f"Le e-learning doit être terminé avant le début du présentiel le {context['onsite_label']}.\n"
@@ -205,8 +257,11 @@ def message(host, training, person, report, day):
             + f"\n{tip}\nReprendre mon parcours : {access_url}\n\n"
             "À la moindre difficulté, contactez-nous au 04 22 47 07 68. "
             "Signaler un problème technique : ecole@integraleacademy.com\n\n"
-            "Cassandre MENARD\nIntégrale Academy\ncassandre@integraleacademy.com")
-    return {'subject': subject, 'html': html, 'text': text, 'tone': tone}
+            "Cassandre MENARD\nResponsable commerciale · Intégrale Academy\n"
+            "Ligne directe : 04 87 83 06 16\nPortable : 07 43 58 22 64\n"
+            "cassandre@integraleacademy.com\n54 chemin du Carreou, 83480 Puget-sur-Argens")
+    return {'subject': subject, 'html': html, 'text': text, 'tone': tone,
+            'progress': progress_snapshot(report)}
 
 
 def run(host, *, now=None):

@@ -200,7 +200,7 @@
     {% endif %}
     {% if is_desp_initial and security_jury_supported %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Organisation et jury</button>{% endif %}
     {% if ssiap_exam_supported and not session.afc_enabled %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Examen</button>{% endif %}
-    {% if is_aps_training and session.aps_elearning_enabled and not is_read_only %}
+    {% if is_aps_training and session.aps_elearning_enabled and not is_native_aps and not is_read_only %}
     <button class="btn btn-outline" id="btnImportDigiforma" type="button">Importer les relevés Digiforma</button>
     {% endif %}
     {% if not is_read_only and not is_all_vtc %}
@@ -448,7 +448,7 @@
 <div class="ssiap-banner"><strong>Parcours de la session</strong><a class="btn btn-outline" href="{{ url_for('admin_ssiap_pathways',session_id=session.id) }}">Paramétrer SSIAP / SST</a><a class="btn btn-primary" href="{{ url_for('admin_ssiap_convocations',session_id=session.id) }}">Convocations du groupe</a><label>Afficher <select id="ssiapPathwayFilter"><option value="all">Tous</option><option value="ssiap">SSIAP seul</option><option value="ssiap_sst">SSIAP + SST</option></select></label></div>
 {% endif %}
 <div class="table-wrap full-bleed">
-  <table class="table trainees-table {% if is_all_vtc %}trainees-table--all-vtc{% endif %}" id="traineesTable"
+  <table class="table trainees-table {% if is_native_aps %}trainees-table--native-aps{% endif %} {% if is_all_vtc %}trainees-table--all-vtc{% endif %}" id="traineesTable"
          data-session-id="{{ session.id }}"
          data-show-hosting="{{ '1' if show_hosting else '0' }}"
          data-show-vae="{{ '1' if show_vae else '0' }}">
@@ -1321,6 +1321,18 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 .aps-followup-bar::-webkit-progress-value{background:var(--followup-color);border-radius:999px;}
 .aps-followup-bar::-moz-progress-bar{background:var(--followup-color);border-radius:999px;}
 .aps-followup-empty{font-size:12px;color:#64748b;line-height:1.4;}
+/* Native tracking: two compact rows plus a slim progress bar. */
+.aps-followup.aps-followup--compact{display:grid;grid-template-columns:1fr auto;gap:4px 8px;padding:0;align-items:center;}
+.aps-followup--compact .aps-followup-heading{grid-column:1;grid-row:1;justify-content:flex-start;gap:5px;min-height:20px;}
+.aps-followup--compact .aps-followup-rate{font-size:14px;line-height:20px;}
+.aps-followup--compact .aps-followup-badge{width:20px;height:20px;flex-basis:20px;}
+.aps-followup--compact .aps-live-status{grid-column:2;grid-row:1;margin:0;white-space:nowrap;font-size:9px;letter-spacing:0;}
+.aps-followup--compact .aps-followup-bar{grid-column:1/-1;grid-row:2;height:5px;margin:0;}
+.aps-followup--compact .aps-followup-time{grid-column:1/-1;grid-row:3;margin:0;font-size:11px;line-height:16px;font-variant-numeric:tabular-nums;}
+.aps-followup--compact small{grid-column:1/-1;margin:0;line-height:1.2;}
+#traineesTable.trainees-table--native-aps .col-aps-attendance{min-width:165px;width:180px;padding-top:8px;padding-bottom:8px;}
+#traineesTable.trainees-table--native-aps td{vertical-align:middle;}
+
 
 #traineesTable .col-card-pro-followup{
   width:210px;
@@ -4461,7 +4473,7 @@ applyRowFilters();
 </style>
 
 {% include '_manual_docs_reminder.html' %}
-{% if is_aps_training and session.aps_elearning_enabled and not is_read_only %}
+{% if is_aps_training and session.aps_elearning_enabled and not is_native_aps and not is_read_only %}
 {% include '_aps_digiforma_bulk_import.html' %}
 {% endif %}
 {% if ssiap_exam_supported %}{% include '_ssiap_exam_modal.html' %}{% endif %}

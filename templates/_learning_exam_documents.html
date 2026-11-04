@@ -1,0 +1,18 @@
+{% for kind, panel, label in [('attestations', 'learning-certificates', 'Attestations e-learning'), ('questionnaires', 'uv-questionnaires', 'Questionnaires de fin d’UV')] %}
+{% if (kind == 'attestations' and is_native_aps) or (kind == 'questionnaires' and uv_exam_documents) %}
+<section data-security-panel="{{ panel }}" data-learning-documents="{{ kind }}" data-source="{{ url_for('admin_learning_documents', session_id=session.id) }}" hidden>
+  <div class="exam-summary"><div><h3>{{ label }}</h3><p class="exam-muted">{% if kind == 'attestations' %}Les mêmes attestations que dans le suivi individuel, avec les heures réelles et la mention de suivi partiel si le parcours est en cours.{% else %}Les questionnaires de fin d’UV réalisés en présentiel : exemplaires vierges, corrigés ou copies remises par les stagiaires.{% endif %}</p></div></div>
+  <form action="{{ url_for('admin_learning_documents_pdf', session_id=session.id, kind=kind) }}" method="get" target="_blank" data-learning-form>
+    {% if kind == 'questionnaires' %}
+    <div class="exam-grid" style="margin-bottom:16px;">
+      <label class="exam-field">Documents à imprimer<select name="mode"><option value="blank">Questionnaires vierges</option><option value="answers">Réponses des stagiaires · copies remises uniquement</option><option value="correction">Corrigés formateur</option></select></label>
+      <label class="exam-field">Unité de valeur<select name="uv" data-learning-units><option value="">Toutes les UV</option></select></label>
+    </div>
+    {% endif %}
+    <div class="exam-actions" style="margin-bottom:16px;"><button type="button" class="btn btn-outline" data-learning-toggle disabled>Tout désélectionner</button><span class="exam-muted" data-learning-count></span><button type="submit" class="btn btn-primary" data-learning-print disabled>Ouvrir le PDF groupé pour impression ↗</button></div>
+    <p class="exam-muted" data-learning-status role="status">Chargement…</p>
+    <div data-learning-people></div>
+  </form>
+</section>
+{% endif %}
+{% endfor %}

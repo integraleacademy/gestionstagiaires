@@ -15,6 +15,32 @@ FIELDS = dict(name="Société Exemple", address="1 rue du Centre, 83480 Puget-su
 
 
 class EmployerAgreementTests(unittest.TestCase):
+    def test_vae_keeps_its_programme_and_adds_company_and_beneficiary(self):
+        path = ROOT / 'templates_word/conventionvae.docx'
+        original = path.read_bytes()
+        doc = gestion.company_convention.build_document(path, dict(FIELDS, receivability_date='2026-11-01'), {
+            'nom_complet':'MEDDAHI Tarik', 'date_jour':'04/11/2026', 'lieu_formation':'Puget'})
+        content = '\n'.join(p.text for p in gestion._iter_docx_paragraphs(doc))
+        for text in ('Société Exemple', 'MEDDAHI Tarik', 'Phase 5', 'Article 9',
+                     'Signature du bénéficiaire', 'Signature de l’entreprise', '2026-11-01'):
+            self.assertIn(text, content)
+        for text in ('{{s1|', 'rétractation', 'Reste à charge personnel', 'Engagement du stagiaire'):
+            self.assertNotIn(text, content)
+        self.assertEqual(path.read_bytes(), original)
+
+    def test_vae_company_route_and_preparation_accept_specific_model(self):
+        self.data['sessions'][0]['training_type'] = 'DIRIGEANT VAE'
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+        self.assertIn('bénéficiaire', self.client.get(self.url).text)
+        self.assertEqual(self.client.post(self.url, data=dict(FIELDS, action='preview',receivability_date='bad')).status_code, 400)
+        response = self.client.post(self.url, data=dict(FIELDS, action='prepare',receivability_date='2026-11-01'))
+        self.assertEqual(response.status_code, 302)
+        company = self.data['sessions'][0]['trainees'][0]['company_convention']
+        self.assertEqual(company['kind'], 'vae')
+        self.assertEqual(company['receivability_date'], '2026-11-01')
+        args = gestion.company_convention.render.call_args.args
+        self.assertEqual(Path(args[0]).name, 'conventionvae.docx')
+
     def test_business_clauses_replace_personal_ones_in_each_model(self):
         for path in (ROOT / "templates_word").glob("convention*.docx"):
             if path.stem in {"conventionvae", "conventionafc"}:
