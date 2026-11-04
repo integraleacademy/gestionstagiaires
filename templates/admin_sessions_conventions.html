@@ -73,7 +73,7 @@
                 <form class="conv-legacy-form" method="post" action="{{ row.legacy_toggle_url }}" title="À cocher si la convention a été faite dans l’ancien logiciel"><input type="checkbox" name="legacy_signed" value="1" {% if row.legacy_signed %}checked{% endif %} onchange="this.form.submit()"><span>Convention signée</span></form>
               {% elif row.printed %}<span class="conv-meta">Imprimé</span>{% endif %}
               <a class="btn btn-outline" href="{{ row.summary_url }}">Fiche</a>
-              {% if row.can_send %}<form method="post" action="{{ row.create_url }}" data-convention-preview-required="true" data-convention-preview-url="{{ row.preview_url }}"{% if row.status_key in ['waiting_signature','sent','signed'] %} data-yousign-force-new="true"{% endif %}>{% if row.status_key in ['waiting_signature','sent','signed'] %}<input type="hidden" name="force_new" value="1">{% endif %}<button class="btn btn-primary" type="submit">{% if row.status_key in ['waiting_signature','sent','signed'] %}Annuler et régénérer{% else %}Créer / renvoyer{% endif %}</button></form>{% endif %}
+              {% if row.can_send %}<a class="btn btn-primary" href="{{ row.trainee_url }}?preparer_convention=1#automationHub">{% if row.status_key in ['waiting_signature','sent','signed'] %}Préparer un nouveau document{% else %}Créer / renvoyer{% endif %}</a>{% endif %}
               {% if row.can_remind %}<form method="post" action="{{ row.reminder_url }}"><button class="btn btn-outline" type="submit">Relancer</button></form>{% endif %}
             </div></td>
           </tr>
@@ -128,40 +128,5 @@ document.addEventListener('click', async event => {
   }
 });
 
-document.addEventListener('submit', async event => {
-  const form = event.target.closest('form[data-convention-preview-required="true"]');
-  if(!form || form.dataset.conventionPreviewConfirmed === '1') return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  const previewUrl = form.dataset.conventionPreviewUrl || '';
-  const wantsPreviewMessage = 'Souhaitez-vous prévisualiser la convention avant l’envoi, ou envoyer directement la convention pour signature électronique ?';
-  const wantsPreview = window.AppModal
-    ? await window.AppModal.confirm({type:'info', title:'Prévisualisation de la convention', message:wantsPreviewMessage, primaryText:'Voir la prévisualisation', secondaryText:'Envoyer directement'})
-    : window.confirm(`${wantsPreviewMessage}\n\nOK : voir la prévisualisation\nAnnuler : envoyer directement`);
-  if(wantsPreview && previewUrl){ await window.openConventionPreview?.(previewUrl); }
-  const message = wantsPreview ? 'La prévisualisation est fermée. Confirmer l’envoi Yousign maintenant ?' : 'Confirmer l’envoi Yousign de la convention maintenant ?';
-  const ok = window.AppModal
-    ? await window.AppModal.confirm({type:'info', title:'Vérifier la convention avant envoi', message, primaryText:'Envoyer maintenant', secondaryText:'Annuler', tertiaryText:'Envoyer plus tard'})
-    : window.confirm(message);
-  if(ok){
-    form.dataset.conventionPreviewConfirmed = '1';
-    form.requestSubmit ? form.requestSubmit() : form.submit();
-  }
-}, true);
-
-document.addEventListener('submit', async event => {
-  const form = event.target.closest('form[data-yousign-force-new="true"]');
-  if(!form || form.dataset.yousignRegenerateConfirmed === '1') return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  const message = 'Annuler la demande Yousign actuelle et générer une nouvelle convention ? L’ancienne signature ne sera plus considérée comme valide.';
-  const ok = window.AppModal
-    ? await window.AppModal.confirm({type:'warning', title:'Annuler et régénérer la convention', message, primaryText:'Annuler et régénérer', secondaryText:'Conserver'})
-    : window.confirm(message);
-  if(ok){
-    form.dataset.yousignRegenerateConfirmed = '1';
-    form.submit();
-  }
-}, true);
 </script>
 {% endblock %}
