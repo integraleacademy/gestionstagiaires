@@ -15,7 +15,7 @@
 <div style="padding:20px 22px;background:{{ '#fff1f2' if tone == 'urgent' else '#fff8e9' }};border-left:4px solid {{ '#e11d48' if tone == 'urgent' else '#f2b84b' }};border-radius:10px;margin:22px 0;">
   <strong style="color:#102c5c;font-size:17px;">Votre rendez-vous en présentiel : {{ onsite_label }}</strong>
   <p style="margin:8px 0 0;">Votre e-learning doit être <strong>terminé à 100 % avant le début des cours en présentiel le {{ onsite_label }}</strong>.</p>
-  {% if not complete %}<p style="margin:10px 0 0;">Il vous reste {{ days }} jour{{ 's' if days > 1 else '' }} avant le présentiel. Pour répartir le temps restant, prévoyez environ <strong>{{ daily_label }} par jour</strong>, puis vérifiez que toutes les activités sont terminées.</p>{% endif %}
+  {% if not complete %}<p style="margin:10px 0 0;">Il vous reste {{ days }} jour{{ 's' if days > 1 else '' }} avant le présentiel. {% if daily_feasible %}Pour répartir le temps restant, prévoyez environ <strong>{{ daily_label }} par jour</strong>, puis vérifiez que toutes les activités sont terminées.{% else %}Le volume restant est important au regard du délai : <strong>contactez-nous dès aujourd’hui</strong> pour faire le point et organiser la suite de votre parcours.{% endif %}</p>{% endif %}
 </div>
 <p><strong>Votre conseil du jour</strong><br>{{ tip }}</p>
 <p style="text-align:center;margin:26px 0;"><a href="{{ access_url }}" style="display:inline-block;background:#285ac8;color:#fff;padding:16px 26px;border-radius:10px;text-decoration:none;font-weight:700;">{{ 'Revoir mon parcours' if complete else 'Reprendre mon e-learning' }} →</a></p>

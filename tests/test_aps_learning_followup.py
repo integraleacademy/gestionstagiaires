@@ -62,6 +62,16 @@ def test_only_completed_activity_and_required_time_get_the_blue_validation():
     assert not daily.summary(report, person, set())['complete']
 
 
+def test_urgent_email_requests_help_instead_of_an_impossible_daily_workload(learner):
+    _, training, person = learner
+    report = daily.read_summary(host, training, person)
+    content = daily.message(host, training, person, report, dt.date(2026, 11, 29))
+    assert content['tone'] == 'urgent'
+    assert '62 h 00 min 00 s par jour' not in content['html']
+    assert 'Objectif indicatif par jour' not in content['text']
+    assert 'contactez-nous dès aujourd’hui' in content['html']
+
+
 def test_live_requires_recent_active_nonended_pinned_connection(learner):
     case, training, person = learner
     reader = ProgressReader(host)
