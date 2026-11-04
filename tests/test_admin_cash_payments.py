@@ -1,3 +1,4 @@
+from sheet_assets import with_sheet_assets
 import unittest
 
 import app as gestion_app
@@ -80,7 +81,7 @@ class AdminCashPaymentsTests(unittest.TestCase):
 
     def test_trainee_finance_summary_highlights_cash_payment_progress(self):
         with open("templates/admin_trainee.html", encoding="utf-8") as template_file:
-            template = template_file.read()
+            template = with_sheet_assets(template_file.read())
 
         self.assertIn("label:'Espèces',icon:'💶'", template)
         self.assertIn("réglés en espèces", template)

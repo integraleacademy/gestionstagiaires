@@ -1,3 +1,4 @@
+from sheet_assets import with_sheet_assets
 import copy
 import datetime
 import sys
@@ -522,7 +523,7 @@ class RegistrationCancellationTests(unittest.TestCase):
         self.assertIn("heures dispensées", response.get_json()["error"])
 
     def test_templates_expose_cancelled_state_and_exclude_it_from_billing_kpis(self):
-        detail = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
+        detail = with_sheet_assets(Path("templates/admin_trainee.html").read_text(encoding="utf-8"))
         listing = Path("templates/admin_trainees.html").read_text(encoding="utf-8")
         billing = Path("templates/admin_sessions_billing.html").read_text(encoding="utf-8")
         direct_debits = Path("templates/admin_direct_debits.html").read_text(encoding="utf-8")

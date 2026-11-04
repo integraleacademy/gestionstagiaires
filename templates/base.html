@@ -173,7 +173,7 @@
     {% set sidebar_tools_children = [
       {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"badge":"","badge_id":"sidebarConventionsSignedBadge","locked":not partner_has_module('automations')},
       {"label":"Automatisations","icon":"tool","href":url_for('admin_sessions_automations'),"endpoints":["admin_sessions_automations"],"locked":not partner_has_module('automations')},
-      {"label":"Suivi des ventes","icon":"chart","href":url_for('admin_sales_tracking'),"endpoints":["admin_sales_tracking"],"badge":sales_today_notification_count if (sales_today_notification_count or 0) > 0 else "","locked":not partner_has_module('sales')},
+      {"label":"Suivi des ventes","icon":"chart","href":url_for('admin_sales_tracking'),"endpoints":["admin_sales_tracking"],"badge_id":"sidebarSalesTodayBadge","badge":sales_today_notification_count if (sales_today_notification_count or 0) > 0 else "","locked":not partner_has_module('sales')},
       {"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing","admin_direct_debits"],"locked":not partner_has_module('billing')},
       {"label":"Suivi annulations","icon":"wallet","href":cancellation_tracking_href,"endpoints":["admin_cancellation_tracking"],"locked":False},
       {"label":"Qonto · connexion dédiée requise","icon":"settings","href":"","endpoints":[],"locked":True},
@@ -1190,118 +1190,9 @@
     });
   })();
 
-  (function initGlobalDocsToControlBadge(){
-    const sidebarBadge = document.getElementById("sidebarDocsToControlBadge");
-    if(!sidebarBadge) return;
-
-    async function refreshSidebarDocsToControlBadge(){
-      if(document.hidden) return;
-      try{
-        const response = await window.adminReadFetch("/api/docs_to_control");
-        const payload = await response.json();
-        if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
-        const totalDocs = (payload.items || []).reduce((sum, item) => sum + (Number(item.pending_count) || 0), 0);
-        sidebarBadge.textContent = String(totalDocs);
-        sidebarBadge.style.display = totalDocs > 0 ? "inline-flex" : "none";
-        sidebarBadge.setAttribute("aria-label", `${totalDocs} document(s) à contrôler`);
-      }catch(_error){
-        sidebarBadge.textContent = "!";
-        sidebarBadge.style.display = "inline-flex";
-        sidebarBadge.setAttribute("aria-label", "Impossible de charger les documents à contrôler");
-      }
-    }
-
-    refreshSidebarDocsToControlBadge();
-    window.addEventListener("focus", refreshSidebarDocsToControlBadge);
-    document.addEventListener("visibilitychange", () => {
-      if(!document.hidden) refreshSidebarDocsToControlBadge();
-    });
-  })();
-
-  (function initGlobalConventionsSignedBadge(){
-    const conventionsBadge = document.getElementById("sidebarConventionsSignedBadge");
-    const toolsBadge = document.getElementById("sidebarToolsConventionsSignedBadge");
-    const salesNotificationsTotal = Number({{ (sales_today_notification_count or 0)|tojson }});
-    if(!conventionsBadge && !toolsBadge) return;
-
-    function updateBadge(sidebarBadge, total, label){
-      if(!sidebarBadge) return;
-      sidebarBadge.textContent = String(total);
-      sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
-      sidebarBadge.setAttribute("aria-label", label);
-    }
-
-    async function refreshSidebarConventionsSignedBadge(){
-      if(document.hidden) return;
-      try{
-        const response = await window.adminReadFetch("/api/conventions_signed_unseen");
-        const payload = await response.json();
-        if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
-        const conventionsTotal = Number(payload.count || 0);
-        const toolsTotal = conventionsTotal + salesNotificationsTotal;
-        updateBadge(conventionsBadge, conventionsTotal, `${conventionsTotal} convention(s) signée(s) à consulter`);
-        updateBadge(toolsBadge, toolsTotal, `${toolsTotal} notification(s) dans les outils`);
-      }catch(_error){
-        [conventionsBadge, toolsBadge].filter(Boolean).forEach((sidebarBadge) => {
-          sidebarBadge.textContent = "!";
-          sidebarBadge.style.display = "inline-flex";
-          sidebarBadge.setAttribute("aria-label", "Impossible de charger les notifications des outils");
-        });
-      }
-    }
-
-    window.refreshSidebarConventionsSignedBadge = refreshSidebarConventionsSignedBadge;
-    refreshSidebarConventionsSignedBadge();
-    window.addEventListener("focus", refreshSidebarConventionsSignedBadge);
-    document.addEventListener("visibilitychange", () => {
-      if(!document.hidden) refreshSidebarConventionsSignedBadge();
-    });
-  })();
-
-  (function initGlobalCnapsTrackingBadge(){
-    const sidebarBadges = [
-      document.getElementById("sidebarCnapsBadge"),
-      document.getElementById("sidebarCnapsTrackingBadge")
-    ].filter(Boolean);
-    if(!sidebarBadges.length) return;
-
-    function setCnapsTrackingBadge(count){
-      const total = Number(count) || 0;
-      sidebarBadges.forEach((sidebarBadge) => {
-        sidebarBadge.textContent = String(total);
-        sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
-        sidebarBadge.setAttribute("aria-label", `${total} changement(s) de statut CNAPS à consulter`);
-      });
-    }
-
-    window.refreshSidebarCnapsTrackingBadge = async function refreshSidebarCnapsTrackingBadge(nextCount){
-      if(nextCount !== undefined && nextCount !== null){
-        setCnapsTrackingBadge(nextCount);
-        return;
-      }
-      if(document.hidden) return;
-      try{
-        const response = await window.adminReadFetch("/api/cnaps_status_changes/pending");
-        const payload = await response.json();
-        if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
-        setCnapsTrackingBadge(payload.count);
-      }catch(_error){
-        sidebarBadges.forEach((sidebarBadge) => {
-          sidebarBadge.textContent = "!";
-          sidebarBadge.style.display = "inline-flex";
-          sidebarBadge.setAttribute("aria-label", "Impossible de charger les changements de statut CNAPS");
-        });
-      }
-    };
-
-    window.refreshSidebarCnapsTrackingBadge();
-    window.addEventListener("focus", () => window.refreshSidebarCnapsTrackingBadge());
-    document.addEventListener("visibilitychange", () => {
-      if(!document.hidden) window.refreshSidebarCnapsTrackingBadge();
-    });
-  })();
 
 </script>
+  {% if is_admin_logged_in %}<script src="{{ url_for('static', filename='js/navigation-counts.js', v='20261104') }}" defer></script>{% endif %}
   <script src="{{ url_for('static', filename='app.js') }}"></script>
   {% block scripts %}{% endblock %}
   {% include "_mail_sent_badge.html" %}

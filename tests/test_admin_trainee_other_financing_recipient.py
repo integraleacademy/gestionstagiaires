@@ -1,3 +1,4 @@
+from sheet_assets import with_sheet_assets
 import unittest
 
 import app
@@ -220,7 +221,7 @@ class OtherFinancingInvoiceRecipientTests(unittest.TestCase):
 
     def test_admin_trainee_modal_collects_company_and_invoice_notes(self):
         with open("templates/admin_trainee.html", encoding="utf-8") as template_file:
-            template = template_file.read()
+            template = with_sheet_assets(template_file.read())
         self.assertIn("Entreprise à facturer", template)
         self.assertIn('id="invoiceCompanyEmail"', template)
         self.assertIn('id="invoiceCompanySiret" inputmode="numeric" required', template)

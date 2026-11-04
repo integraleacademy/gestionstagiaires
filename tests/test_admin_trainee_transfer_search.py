@@ -1,3 +1,4 @@
+from sheet_assets import with_sheet_assets
 from pathlib import Path
 import unittest
 
@@ -5,7 +6,7 @@ import unittest
 class AdminTraineeTransferSearchTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
+        cls.template = with_sheet_assets(Path("templates/admin_trainee.html").read_text(encoding="utf-8"))
 
     def test_matching_sessions_are_rendered_as_direct_suggestions(self):
         self.assertIn('id="transferSessionResults" role="listbox"', self.template)

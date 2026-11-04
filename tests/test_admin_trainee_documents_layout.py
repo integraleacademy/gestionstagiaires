@@ -1,8 +1,9 @@
+from sheet_assets import with_sheet_assets
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TEMPLATE = (ROOT / "templates" / "admin_trainee.html").read_text(encoding="utf-8")
+TEMPLATE = with_sheet_assets((ROOT / "templates" / "admin_trainee.html").read_text(encoding="utf-8"))
 
 
 def test_documents_toolbar_gives_every_action_its_own_grid_cell():

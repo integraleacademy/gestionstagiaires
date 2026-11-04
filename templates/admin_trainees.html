@@ -2900,10 +2900,13 @@ body.vae-analysis-filter-active #traineesTable .mini-btn{
 
   // Laisse le chargement initial respirer, puis vérifie automatiquement les
   // statuts externes toutes les 15 minutes. Le bouton individuel reste immédiat.
+  {% if not is_read_only %}
+  if (new URLSearchParams(location.search).get("refresh_external") === "1") autoRefreshExternalStatuses();
   setTimeout(() => {
     autoRefreshExternalStatuses();
     setInterval(autoRefreshExternalStatuses, 15 * 60 * 1000);
   }, 60 * 1000);
+  {% endif %}
 
   // Bulk import menu
 const bulkImportDialog = document.getElementById("bulkImportDialog");
@@ -3631,6 +3634,40 @@ document.getElementById("traineeNameSearchClear")?.addEventListener("click", () 
   applyRowFilters();
 });
 
+// Preserve this roster only for a return from one of its trainee sheets.
+const rosterStateKey = `roster-return:${location.pathname}:${location.search}`;
+const rosterFilterIds = ["traineeNameSearch", "vaeNameSearch", "vaeStatusFilter", "ssiapPathwayFilter", "vtcTheoryFilter", "vtcPracticeFilter"];
+document.addEventListener("click", event => {
+  const link = event.target.closest("a[href]");
+  if (!link || link.origin !== location.origin || !/^\/admin\/sessions\/[^/]+\/stagiaires\/[^/]+$/.test(link.pathname)) return;
+  const filters = {};
+  rosterFilterIds.forEach(id => { const el = document.getElementById(id); if (el) filters[id] = el.value; });
+  try {
+    sessionStorage.setItem(rosterStateKey, JSON.stringify({filters, dashboard:activeVaeDashboardFilter,
+      y:window.scrollY, left:document.querySelector(".table-wrap")?.scrollLeft || 0, time:Date.now(), sheet:link.pathname}));
+  } catch {}
+});
+window.addEventListener("pageshow", event => {
+  let saved;
+  try {
+    saved = JSON.parse(sessionStorage.getItem(rosterStateKey));
+    sessionStorage.removeItem(rosterStateKey);
+  } catch { return; }
+  if (!saved || Date.now()-saved.time > 30*60*1000) return;
+  const fromSheet = document.referrer && new URL(document.referrer).origin === location.origin
+    && new URL(document.referrer).pathname === saved.sheet;
+  if (!event.persisted && !fromSheet && performance.getEntriesByType("navigation")[0]?.type !== "back_forward") return;
+  rosterFilterIds.forEach(id => { const el = document.getElementById(id); if (el && id in saved.filters) el.value = saved.filters[id]; });
+  activeVaeDashboardFilter = saved.dashboard || "";
+  applyRowFilters();
+  const clear = document.getElementById("traineeNameSearchClear");
+  if(clear) clear.hidden = !document.getElementById("traineeNameSearch")?.value;
+  requestAnimationFrame(() => {
+    const table = document.querySelector(".table-wrap");
+    if (table) table.scrollLeft = saved.left;
+    window.scrollTo(0, saved.y);
+  });
+});
 bindImmediateRowFilters();
 bindVaeDashboardFilters();
 

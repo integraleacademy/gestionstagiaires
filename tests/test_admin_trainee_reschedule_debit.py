@@ -1,3 +1,4 @@
+from sheet_assets import with_sheet_assets
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -14,7 +15,7 @@ class AdminTraineeRescheduleDebitTests(unittest.TestCase):
             session["admin_role"] = "admin"
 
     def test_finance_card_exposes_action_only_when_a_debit_is_rejected(self):
-        template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
+        template = with_sheet_assets(Path("templates/admin_trainee.html").read_text(encoding="utf-8"))
 
         self.assertIn("rescheduleAction:c.nombreRejets>0", template)
         self.assertIn("Reprogrammer un prélèvement", template)

@@ -64,7 +64,10 @@ def test_pending_report_and_trainee_card_do_not_activate_access_or_create_tracki
     sheet = followup.client.get(followup.report_url.removesuffix('/e-learning/suivi'))
     assert sheet.status_code == 200
     assert 'Consulter le suivi détaillé' in sheet.text and followup.report_url in sheet.text
-    assert 'Modules terminés' in sheet.text and '00 h 00 min 00 s' in sheet.text
+    assert 'Modules terminés' not in sheet.text
+    summary = followup.client.get(followup.report_url + '/resume')
+    assert summary.status_code == 200
+    assert 'Modules terminés' in summary.text and '00 h 00 min 00 s' in summary.text
     assert not followup.data['sessions'][0]['trainees'][0]['vtc_elearning_auto']['activated_at']
     with followup.client.session_transaction() as auth:
         assert not auth.get('public_auth_public-token')

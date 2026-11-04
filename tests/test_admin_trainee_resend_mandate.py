@@ -14,7 +14,7 @@ class AdminTraineeResendMandateTest(unittest.TestCase):
             session["admin_role"] = "admin"
 
     def test_admin_trainee_shows_resend_action_only_for_pending_mandate(self):
-        template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
+        template = Path("static/js/trainee-sheet.js").read_text(encoding="utf-8")
 
         self.assertIn("function lineHasPendingMandate(line)", template)
         self.assertIn("Renvoyer le mandat de prélèvement", template)

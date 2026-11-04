@@ -1,3 +1,4 @@
+from sheet_assets import with_sheet_assets
 import unittest
 
 import app as gestion_app
@@ -207,12 +208,10 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         trainee["last_name"] = "Dupont"
         trainee["first_name"] = "Noa"
         trainee.pop("pre_number", None)
-        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
-            "last_name": "DUPONT",
-            "first_name": "Noa",
-            "nub": "1050370",
-            "cnaps_status": "TRANSMIS",
-        }], None)
+        self.data["cnaps_public_annuaire_statuses"] = {"TRACKING|S1": {
+            "last_name": "DUPONT", "first_name": "Noa", "nub": "1050370",
+        }}
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: self.fail("Unexpected remote CNAPS lookup")
 
         response = self.client.get("/admin/sessions/S-APS/trainees")
         html = response.get_data(as_text=True)
@@ -252,7 +251,7 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('data-trainee-card-pro-followup', html)
         self.assertIn('data-trainee-card-pro-result', html)
         self.assertIn('Chargement CNAPS…', html)
-        self.assertIn('.trainee-cnaps-followup__chip.is-cp,.trainee-cnaps-followup__chip.is-ap{background:#16a34a', html)
+        self.assertIn('.trainee-cnaps-followup__chip.is-cp,.trainee-cnaps-followup__chip.is-ap{background:#16a34a', with_sheet_assets(html))
         self.assertIn('Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}', html)
         self.assertIn('Expire le ${escapeHtml(formatCnapsDateFr(row.date_validite_titre))}', html)
         self.assertNotIn('title="Carte professionnelle - Surveillance humaine ou gardiennage • ACTIF"', html)
@@ -275,12 +274,10 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         trainee["last_name"] = "Dupont"
         trainee["first_name"] = "Noa"
         trainee.pop("pre_number", None)
-        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
-            "last_name": "DUPONT",
-            "first_name": "Noa",
-            "nub": "1050370",
-            "cnaps_status": "TRANSMIS",
-        }], None)
+        self.data["cnaps_public_annuaire_statuses"] = {"TRACKING|S1": {
+            "last_name": "DUPONT", "first_name": "Noa", "nub": "1050370",
+        }}
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: self.fail("Unexpected remote CNAPS lookup")
 
         response = self.client.get("/admin/sessions/S-APS/stagiaires/T-APS")
         html = response.get_data(as_text=True)

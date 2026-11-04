@@ -256,14 +256,16 @@ def test_history_refresh_and_detail_page_show_the_exact_sent_email(context, monk
             if "data-open-email-preview" in values:
                 self.previews.append(values)
 
-    for markup in (response.get_data(as_text=True), client.get("/admin/sessions/S1/stagiaires/T1").get_data(as_text=True)):
-        parser = PreviewParser()
-        parser.feed(markup)
-        assert len(parser.previews) == 1
-        assert parser.previews[0]["data-email-html"] == prepared["eligible"][0]["html"]
-        assert parser.previews[0]["data-email-subject"] == prepared["eligible"][0]["subject"]
-        assert " à " in parser.previews[0]["data-email-date"]
-        assert "Transmission confirmée" in markup
+    sheet = client.get("/admin/sessions/S1/stagiaires/T1").get_data(as_text=True)
+    assert url in sheet and "data-email-html=" not in sheet
+    markup = response.get_data(as_text=True)
+    parser = PreviewParser()
+    parser.feed(markup)
+    assert len(parser.previews) == 1
+    assert parser.previews[0]["data-email-html"] == prepared["eligible"][0]["html"]
+    assert parser.previews[0]["data-email-subject"] == prepared["eligible"][0]["subject"]
+    assert " à " in parser.previews[0]["data-email-date"]
+    assert "Transmission confirmée" in markup
 
     # Retrying the SMS must not add a second mail to either history source.
     monkeypatch.setattr(gestion_app, "brevo_send_sms", lambda *a: True)

@@ -1,3 +1,4 @@
+from sheet_assets import with_sheet_assets
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -518,7 +519,7 @@ class AdminTraineeCpfQontoInvoiceTests(unittest.TestCase):
         self.assertTrue(has_evidence)
 
     def test_template_shows_cpf_invoice_and_keeps_it_read_only(self):
-        template = (Path(__file__).parents[1] / "templates" / "admin_trainee.html").read_text()
+        template = with_sheet_assets((Path(__file__).parents[1] / "templates" / "admin_trainee.html").read_text())
 
         self.assertIn("Visualiser la facture", template)
         self.assertIn("Facturée dans WEDOF", template)

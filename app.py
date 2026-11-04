@@ -3,6 +3,7 @@ import json
 import uuid
 import company_convention
 import company_signature
+import admin_trainee_wedof_refresh
 import re
 import zlib
 import hashlib
@@ -276,6 +277,11 @@ def add_no_store_headers(response):
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
+    elif (request.endpoint == "static" and request.args.get("v") == "20261104"
+          and request.view_args.get("filename") in {
+              "css/trainee-sheet.css", "js/trainee-sheet.js", "js/navigation-counts.js", "trainee-email-history.js",
+          } and response.status_code in {200, 304}):
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     return response
 
 
@@ -3229,7 +3235,7 @@ def protect_sensitive_routes():
 
 @app.context_processor
 def inject_read_only():
-    if request.endpoint == "home" or (request.endpoint or "").startswith("manuals_shop."):
+    if request.endpoint in {"home", "admin_trainee_email_history"} or (request.endpoint or "").startswith("manuals_shop."):
         return {}
     admin_notifications = {"notifications": [], "unresolved_total": 0}
     wedof_new_requests_count = 0
@@ -3246,8 +3252,8 @@ def inject_read_only():
             ctx_data = None
         if ctx_data is not None:
             try:
-                sales_metrics = _build_sales_tracking_metrics(ctx_data, datetime.date.today().year)
-                sales_today_notification_count = max(int(sales_metrics.get("today_inscriptions") or 0), 0)
+                if request.endpoint not in {"admin_trainee_page", "admin_trainees"}:
+                    sales_today_notification_count = _sales_today_count(ctx_data)
             except Exception:
                 sales_today_notification_count = 0
             if can_view_notifications:
@@ -18182,29 +18188,19 @@ def _cnaps_tracking_nub_by_name(rows: List[Dict[str, Any]]) -> Dict[Tuple[str, s
     return nub_by_name
 
 
-def _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees: List[Dict[str, Any]]) -> bool:
-    candidates = [
-        trainee for trainee in trainees
-        if not extract_nub_from_pre_car(str(trainee.get("pre_number") or trainee.get("cnaps_tracking_nub") or ""))
-        and all(_cnaps_tracking_match_key(trainee.get("last_name"), trainee.get("first_name")))
-    ]
-    if not candidates:
-        return False
-
-    rows, error = fetch_cnapsv3_tracking_requests()
-    if error or not rows:
-        return False
-
-    nub_by_name = _cnaps_tracking_nub_by_name(rows)
-    changed = False
-    for trainee in candidates:
-        nub = nub_by_name.get(_cnaps_tracking_match_key(trainee.get("last_name"), trainee.get("first_name")))
-        if not nub:
+def _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees, data):
+    # Use the monitor's durable results and local corrections, even after a restart.
+    statuses = data.get("cnaps_public_annuaire_statuses")
+    rows = statuses.values() if isinstance(statuses, dict) else ()
+    nub_by_name = _cnaps_tracking_nub_by_name(row for row in rows if isinstance(row, dict))
+    manual = _cnaps_tracking_manual_nubs(data)
+    for trainee in trainees:
+        if extract_nub_from_pre_car(trainee.get("pre_number") or trainee.get("cnaps_tracking_nub") or ""):
             continue
-        if str(trainee.get("cnaps_tracking_nub") or "").strip() != nub:
+        key = _cnaps_tracking_match_key(trainee.get("last_name"), trainee.get("first_name"))
+        nub = manual.get("|".join(key)) or nub_by_name.get(key)
+        if nub and all(key):
             trainee["cnaps_tracking_nub"] = nub
-            changed = True
-    return changed
 
 def _cash_amount_value(raw_value: Any) -> float:
     try:
@@ -20983,6 +20979,19 @@ def _sales_trainee_price(trainee: Dict[str, Any], training_type: str, training_l
             continue
         return cents_to_money(price_cents)
     return _sales_training_unit_price(training_type, training_label)
+
+
+def _sales_today_count(data):
+    today = datetime.date.today()
+    total = 0
+    for training in data.get("sessions", []):
+        if training.get("exclude_from_sales_tracking") or _is_wedof_leads_session(training):
+            continue
+        label = _sales_training_label(_session_get(training, "training_type", ""))
+        total += sum(1 for trainee in _registered_trainees(training)
+                     if not trainee.get("exclude_from_sales_tracking")
+                     and _sales_trainee_anchor_date(trainee, label) == today)
+    return total
 
 
 def _build_sales_tracking_metrics(
@@ -25624,7 +25633,9 @@ def admin_tshirt_list(session_id: str):
 @app.get("/admin/sessions/<session_id>/trainees")
 @admin_login_required
 def admin_trainees(session_id: str):
+    started = time.monotonic()
     data = load_data()
+    loaded = time.monotonic()
     s = find_session(data, session_id)
     if not s:
         abort(404)
@@ -25653,7 +25664,6 @@ def admin_trainees(session_id: str):
     trainees = _session_trainees_list(s)
     training_type = session_view["training_type"]
 
-    auto_refresh_external = (request.args.get("refresh_external") or "").strip() == "1"
 
     # normalize trainees (and optionally refresh external statuses)
     for t in trainees:
@@ -25675,34 +25685,13 @@ def admin_trainees(session_id: str):
         t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
         _sync_financement_status_from_manual_validation(t)
 
-        current_cnaps = t.get("cnaps") or ""
-
-        # ✅ si déjà validé manuellement, on ne touche pas
-        if (
-            not t["registration_cancelled"]
-            and _normalize_cnaps_status(current_cnaps) != "CARTE PROFESSIONNELLE OK"
-            and auto_refresh_external
-        ):
-            if ln and fn:
-                cn = fetch_cnaps_status_by_name(ln, fn)
-
-                # ✅ n'écrase jamais avec INCONNU
-                if cn:
-                    cn_u = str(cn).strip().upper()
-                    if cn_u not in ("INCONNU", "UNKNOWN", ""):
-                        if _normalize_cnaps_status(cn_u) != _normalize_cnaps_status(current_cnaps):
-                            t["cnaps"] = cn_u
-                            record_cnaps_status_change(t, cn_u)
-
         # valeur par défaut si vide
         if not (t.get("cnaps") or "").strip():
             t["cnaps"] = "INCONNU"
             record_cnaps_status_change(t, t["cnaps"])
 
         # hosting only for A3P
-        if session_view["training_type"] == "A3P" and not t["registration_cancelled"]:
-            _refresh_trainee_hebergement_status(s, t)
-        elif session_view["training_type"] != "A3P":
+        if session_view["training_type"] != "A3P":
             t.pop("hosting_status", None)
 
     show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
@@ -25757,23 +25746,10 @@ def admin_trainees(session_id: str):
             )
 
     if session_view["training_type"] in {"APS", "A3P"}:
-        _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees)
+        _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees, data)
 
-    if _is_desp_initial_session(s):
-        try:
-            _refresh_yousign_desp_kickoff_status_if_pending(s)
-        except Exception as exc:
-            state = _desp_kickoff_attendance_state(s, create=True)
-            state["last_status_sync_error"] = _sanitize_yousign_error(str(exc))
-            app.logger.exception(
-                "[DESP KICKOFF] impossible de finaliser la feuille signée session_id=%s",
-                session_id,
-            )
-
-    # persist normalized trainees back into storage
+    # Render the normalized in-request view. External refreshes use their own routes.
     s["trainees"] = trainees
-    s.pop("stagiaires", None)
-    save_data(data)
     stats = compute_stats(s)
     show_hosting = (session_view["training_type"] == "A3P")
     is_vtc = ("VTC" in (session_view["training_type"] or "").upper())
@@ -25842,7 +25818,8 @@ def admin_trainees(session_id: str):
         trainees.sort(key=_trainee_alpha_sort_key)
 
     registered = _registered_trainees(trainees)
-    return render_template(
+    prepared = time.monotonic()
+    html_page = render_template(
         "admin_trainees.html",
         exam_retakes=exam_retakes.roster(sys.modules[__name__], session_id),
         afc_training_dates={t.get("id"): _trainee_training_session(s, t) for t in trainees} if afc_schedule.enabled(s) else {},
@@ -25871,6 +25848,7 @@ def admin_trainees(session_id: str):
         enums=ENUMS,
         is_adef=_is_adef_training(session_view["training_type"]),
     )
+    return _timed_trainee_response(html_page, started, loaded, prepared)
 
 
 @app.get("/admin/trainees/vtc")
@@ -29041,8 +29019,17 @@ def api_cnaps_public_annuaire():
 @app.get("/api/cnaps_status_changes/pending")
 @admin_login_required
 def api_cnaps_status_changes_pending():
-    data = load_data()
-    requests_rows, fetch_error = fetch_cnapsv3_tracking_requests()
+    return jsonify(ok=True, count=_visible_cnaps_changes(load_data()))
+
+
+def _visible_cnaps_changes(data, *, cached_only=False):
+    if cached_only:
+        cache = _cnapsv3_tracking_cache
+        if time.time() >= cache.get("expires_at", 0) or cache.get("error"):
+            return _cnaps_pending_status_change_count(data)
+        requests_rows, fetch_error = cache.get("rows", []), None
+    else:
+        requests_rows, fetch_error = fetch_cnapsv3_tracking_requests()
     if fetch_error:
         # Do not clear a visible alert just because CNAPSV3 is temporarily
         # unavailable.  The next successful refresh will remove stale entries.
@@ -29055,7 +29042,7 @@ def api_cnaps_status_changes_pending():
             for row in requests_rows
             if row.get("status_change_notified") and not row.get("status_change_reviewed")
         )
-    return jsonify({"ok": True, "count": count})
+    return count
 
 
 @app.post("/internal/jobs/cnaps-public-annuaire-monitor")
@@ -40419,7 +40406,9 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>")
 @admin_login_required
 def admin_trainee_page(session_id: str, trainee_id: str):
+    started = time.monotonic()
     data = load_data()
+    loaded = time.monotonic()
     s = find_session(data, session_id)
     if not s:
         abort(404)
@@ -40449,7 +40438,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     # badges when the sheet is opened directly (without visiting the roster
     # first).
     if session_view["training_type"] in {"APS", "A3P"}:
-        _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees)
+        _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees, data)
     t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
@@ -40458,9 +40447,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         session_view["vtc_appointment"] = _vtc_practice_appointment(s, t)
 
     t["registration_cancelled"] = _trainee_registration_is_cancelled(t)
-    if not t["registration_cancelled"]:
-        _refresh_trainee_hebergement_status(s, t)
-    else:
+    if t["registration_cancelled"]:
         _disable_trainee_automations_for_cancellation(
             t, str(t.get("registration_cancelled_at") or _now_iso()),
         )
@@ -40538,14 +40525,9 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     t["docs_relance_auto_planned_date"] = "" if dossier_complete or t["registration_cancelled"] else (planned_relance_date.isoformat() if planned_relance_date else "")
     if dossier_complete:
         t["docs_relance_auto_sent_at"] = ""
-    t["updated_at"] = _now_iso()
     ensure_cnaps_history(t)
-    if not t["registration_cancelled"]:
-        _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
     aps_elearning_progress = None
     if _is_aps_elearning_session(s) and not aps_enrolments.is_native_aps_session(s):
-        if not t["registration_cancelled"]:
-            _refresh_yousign_aps_elearning_status_if_pending(data, s, trainees, t)
         aps_tracking = _aps_elearning_tracking(t)
         if aps_tracking.get("file"):
             aps_elearning_progress = aps_elearning_completion(aps_tracking)
@@ -40562,13 +40544,12 @@ def admin_trainee_page(session_id: str, trainee_id: str):
             not aps_signature_issues or aps_force_active
         )
 
-    # ✅ persistance
-    s["trainees"] = trainees
-    s.pop("stagiaires", None)
-    save_data(data)
+    if (not _is_partner_data_scope_session() and _current_session_role() != "viewer"
+            and (s.get("partner_id") or INTEGRALE_PARTNER_ID) == INTEGRALE_PARTNER_ID):
+        link = _cpf_active_link(data, session_id=session_id, trainee_id=trainee_id)
+        admin_trainee_wedof_refresh.schedule_refresh(sys.modules[__name__], session_id, trainee_id, link)
 
     trainee_history = build_trainee_history_entries(t)
-    trainee_email_history = build_trainee_email_history_entries(t)
     transfer_sessions = []
     for sess in data.get("sessions", []):
         sid = str(sess.get("id") or "").strip()
@@ -40585,7 +40566,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     transfer_sessions.sort(key=lambda x: ((x.get("date_start") or "9999-99-99"), (x.get("name") or "").upper()))
     brevo_no_credit_notice = session.pop("brevo_no_credit_notice", None)
 
-    return render_template(
+    prepared = time.monotonic()
+    html_page = render_template(
         "admin_trainee.html",
         desp_project=desp_jury_projects.view(sys.modules[__name__], s, t),
         session={**session_view, "ssiap_pathways": s.get("ssiap_pathways")},
@@ -40603,7 +40585,6 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         deliverables_view=deliverables_view,
         default_training_price=default_price,
         trainee_history=trainee_history,
-        trainee_email_history=trainee_email_history,
         transfer_sessions=transfer_sessions,
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
@@ -40621,9 +40602,23 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         docs_reminder_schedule=_docs_relance_schedule(s, t, activated_on=(data.get("document_reminders_scheduler") or {}).get("activated_on")),
         ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
         aps_elearning_progress=aps_elearning_progress,
-        native_elearning_followup=trainee_elearning_reporting.summary(sys.modules[__name__], s, t),
+        native_elearning_followup=trainee_elearning_reporting.has_summary(s, t),
         uv_questionnaires=uv_questionnaires.view(sys.modules[__name__], s, t),
     )
+    return _timed_trainee_response(html_page, started, loaded, prepared)
+
+
+def _timed_trainee_response(html_page, started, loaded, prepared):
+    response = make_response(html_page)
+    rendered = time.monotonic()
+    response.headers["Server-Timing"] = (
+        f"store;dur={(loaded-started)*1000:.1f}, prepare;dur={(prepared-loaded)*1000:.1f}, "
+        f"render;dur={(rendered-prepared)*1000:.1f}"
+    )
+    if rendered - started >= 1:
+        app.logger.warning("slow_admin_navigation endpoint=%s %s", request.endpoint, response.headers["Server-Timing"])
+    return response
+
 
 
 def _cpf_local_registration(data: Dict[str, Any], session_id: str, trainee_id: str):
@@ -41082,12 +41077,10 @@ def admin_trainee_cpf_refresh(session_id: str, trainee_id: str):
         flash("Aucun dossier CPF n’est associé à ce stagiaire.", "error")
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
     try:
-        _refresh_cpf_link_from_wedof(data, link)
-        save_data(data)
-        flash("Données WEDOF et automatisations actualisées.", "success")
-    except (WedofApiError, WedofConfigurationError):
-        link["cpf_sync_error"] = "Synchronisation momentanément indisponible"
-        save_data(data)  # conserve expressément le dernier instantané
+        updated = admin_trainee_wedof_refresh.refresh_link(sys.modules[__name__], session_id, trainee_id, link)
+        flash("Données WEDOF et automatisations actualisées." if updated else
+              "Le dossier a été actualisé entre-temps. Son dernier état est affiché.", "success")
+    except (WedofApiError, WedofConfigurationError, admin_trainee_wedof_refresh.ProviderUnavailable):
         flash("Synchronisation momentanément indisponible. Les dernières données sont conservées.", "error")
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
 
@@ -52592,7 +52585,11 @@ def api_conventions_signed_unseen():
 @app.get("/api/docs_to_control")
 @admin_login_required
 def api_docs_to_control():
-    data = load_data()
+    out = _docs_to_control_items(load_data())
+    return jsonify({"ok": True, "items": out, "count": len(out)})
+
+
+def _docs_to_control_items(data):
     out = []
 
     for s in data.get("sessions", []):
@@ -52630,7 +52627,37 @@ def api_docs_to_control():
     # tri: plus urgent d'abord (plus de docs à contrôler)
     out.sort(key=lambda x: x.get("pending_count", 0), reverse=True)
 
-    return jsonify({"ok": True, "items": out, "count": len(out)})
+    return out
+
+
+_navigation_counts_cache = OrderedDict()
+_navigation_counts_lock = threading.Lock()
+
+
+@app.get("/api/admin/navigation-counts")
+@admin_login_required
+def admin_navigation_counts():
+    automations, cnaps, sales = (partner_has_module(name) for name in ("automations", "cnaps", "sales"))
+    scope = (automations, cnaps, sales, _current_partner_id(), session.get("assist_partner_id"), _current_session_role(),
+             _is_super_admin_session(), session.get("admin_username"), session.get("admin_email"))
+    stamp = time.monotonic()
+    with _navigation_counts_lock:
+        cached = _navigation_counts_cache.get(scope)
+    if cached and stamp - cached[0] < 10 and not request.args.get("fresh"):
+        return jsonify(ok=True, **cached[1])
+    data = load_data()
+    counts = {
+        "documents": sum(row["pending_count"] for row in _docs_to_control_items(data)),
+        "conventions": len(_signed_conventions_unseen_items(data)) if automations else 0,
+        "cnaps": _visible_cnaps_changes(data, cached_only=True) if cnaps else 0,
+        "sales": _sales_today_count(data) if sales else 0,
+    }
+    with _navigation_counts_lock:
+        _navigation_counts_cache[scope] = (stamp, counts)
+        _navigation_counts_cache.move_to_end(scope)
+        if len(_navigation_counts_cache) > 128:
+            _navigation_counts_cache.popitem(last=False)
+    return jsonify(ok=True, **counts)
 
 
 from flask import make_response

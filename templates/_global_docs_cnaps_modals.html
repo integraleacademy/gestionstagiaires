@@ -161,6 +161,6 @@
     catch(e){ if(status) status.textContent = "Erreur réseau."; }
     finally{ btn.disabled = false; }
   });
-  window.addEventListener("load", ()=>{ loadDocsToControl(); const params = new URLSearchParams(window.location.search); if(params.get("openDocsToControl") === "1") document.getElementById("btnOpenDocsToControl")?.click(); if(params.get("openCnapsImport") === "1") window.setTimeout(openCnapsImportModal, 0); });
+  window.addEventListener("load", ()=>{ const params = new URLSearchParams(window.location.search); if(params.get("openDocsToControl") === "1") document.getElementById("btnOpenDocsToControl")?.click(); if(params.get("openCnapsImport") === "1") window.setTimeout(openCnapsImportModal, 0); });
 })();
 </script>
