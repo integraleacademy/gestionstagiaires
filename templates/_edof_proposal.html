@@ -1,14 +1,15 @@
-<section id="proposition-edof" class="edof-proposal edof-case-form" {% if detail.proposal_reading %}data-poll-url="{{ detail.proposal_poll_url }}"{% endif %}>
+{% set work = detail.proposal_job %}
+<section id="proposition-edof" class="edof-proposal edof-case-form" data-folder="{{ f.folder_id }}" data-holder="{{ f.first_name }} {{ f.last_name }}" {% if work %}data-transmission-url="{{ detail.proposal_status_url }}" data-transmission-state="{{ work.status }}"{% endif %} {% if detail.proposal_reading %}data-poll-url="{{ detail.proposal_poll_url }}"{% endif %}>
   <header class="edof-form-heading"><span class="edof-kicker">Demande d’inscription</span>
     <h2>Proposition de commande EDOF</h2></header>
-  {% set work = detail.proposal_job %}
   {% if work %}
     <div class="wedof-notice {{ 'is-danger' if work.status in ['error','uncertain'] else 'is-info' }}" role="status">
       <strong>{{ proposal_status[work.status] }}</strong>
       {% if work.status == 'confirmed' %}<a href="{{ url_for('integrale_edof.index',section='requests',tab='waiting') }}">Voir les dossiers en attente d’acceptation</a>{% endif %}
       {% if work.message %}<span>{{ work.message }}</span>{% endif %}
+      <button type="button" class="btn btn-outline" data-proposal-follow>{{ 'Voir le problème' if work.status in ['error','uncertain'] else 'Voir le suivi de transmission' }}</button>
       {% if work.status == 'uncertain' and session.get('admin_role') != 'viewer' %}
-        <form method="post" action="{{ url_for('integrale_edof.recheck_proposal', folder=f.folder_id) }}">{{ token() }}{{ btn('Vérifier la réception dans EDOF') }}</form>
+        <form data-proposal-recheck method="post" action="{{ url_for('integrale_edof.recheck_proposal', folder=f.folder_id) }}">{{ token() }}{{ btn('Vérifier la réception dans EDOF') }}</form>
       {% endif %}
     </div>
   {% endif %}

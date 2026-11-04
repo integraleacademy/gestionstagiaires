@@ -6,7 +6,8 @@
     sync: ['Synchronisation manuelle en cours', 'Synchronisation terminée'],
     connect: ['Connexion EDOF en cours', 'Connexion EDOF confirmée'],
     reconnect: ['Reconnexion EDOF en cours', 'Reconnexion EDOF confirmée'],
-    catchup: ['Rattrapage des automatisations en cours', 'Rattrapage terminé']
+    catchup: ['Rattrapage des automatisations en cours', 'Rattrapage terminé'],
+    proposal: ['Dossier en cours de transmission à EDOF', 'Transmission confirmée par EDOF']
   };
   let current, sequence = 0, timer, trigger, suspendedRefresh;
   const title = dialog.querySelector('#edof-action-title');
@@ -15,6 +16,8 @@
   const message = dialog.querySelector('#edof-action-message');
   const help = dialog.querySelector('[data-action-help]');
   const reload = dialog.querySelector('[data-action-reload]');
+  const correct = dialog.querySelector('[data-action-correct]');
+  const issues = dialog.querySelector('[data-action-issues]');
   function timerText() {
     const seconds = Math.floor((Date.now() - current.started) / 1000);
     dialog.querySelector('[data-action-elapsed]').textContent = 'Depuis ' +
@@ -38,6 +41,7 @@
   }
   function hide() {
     dialog.close();
+    banner.hidden = !current || current.dismissed;
     if (trigger?.isConnected && !trigger.disabled) trigger.focus({preventScroll:true});
   }
   function restoreRefresh() {
@@ -58,11 +62,17 @@
   });
   banner.addEventListener('click', show);
   reload.addEventListener('click', () => location.reload());
+  correct.addEventListener('click', () => { current.dismissed = true; hide(); current.correct?.(); });
   window.edofFeedback = {
-    begin(kind, text, button) {
+    begin(kind, text, button, dossier='') {
       clearInterval(timer);
       current = {id: ++sequence, kind, busy:true, started:Date.now(), dismissed:false};
       trigger = button || document.activeElement;
+      dialog.dataset.kind = kind;
+      dialog.querySelector('[data-action-brand]').hidden = kind !== 'proposal';
+      const caseLabel = dialog.querySelector('[data-action-case]');
+      caseLabel.textContent = dossier; caseLabel.hidden = !dossier;
+      correct.hidden = true; issues.replaceChildren(); issues.hidden = true;
       suspendedRefresh = suspendedRefresh || document.querySelector('meta[http-equiv="refresh"]');
       suspendedRefresh?.remove();
       title.textContent = titles[kind][0];
@@ -78,22 +88,29 @@
       if (current?.id !== id || !current.busy) return;
       phase.textContent = label; message.textContent = text; paint('running');
     },
-    finish(id, status, text, refresh=false) {
+    finish(id, status, text, refresh=false, options={}) {
       if (current?.id !== id || !current.busy) return;
       current.busy = false;
       clearInterval(timer);
-      title.textContent = status === 'success' ? titles[current.kind][1] :
-        status === 'warning' ? 'Traitement à vérifier' : 'Traitement non terminé';
+      title.textContent = options.title || (status === 'success' ? titles[current.kind][1] :
+        status === 'warning' ? 'Traitement à vérifier' : current.kind === 'proposal' ? 'Transmission non aboutie' : 'Traitement non terminé');
       subtitle.textContent = status === 'success' ? 'Le serveur a confirmé le résultat.' : 'Le détail ci-dessous indique la suite à donner.';
       phase.textContent = status === 'success' ? 'Confirmation reçue' : status === 'warning' ? 'Une vérification est nécessaire' : 'Une difficulté a été rencontrée';
       message.textContent = text;
       help.textContent = status === 'success' ? 'Vous pouvez fermer cette fenêtre et poursuivre votre travail.' :
         'Consultez le suivi avant de relancer : aucune tentative supplémentaire n’est déclenchée par cette fenêtre.';
       reload.hidden = !refresh;
+      current.correct = options.correct;
+      correct.hidden = !options.correct;
+      for (const detail of options.issues || []) {
+        const item = document.createElement('li'); item.textContent = detail; issues.appendChild(item);
+      }
+      issues.hidden = !issues.childElementCount;
       paint(status);
       if (!dialog.open) banner.hidden = false;
       restoreRefresh();
     },
+    show(id) { if (current?.id === id) show(); },
     get blockingReload() { return Boolean(dialog.open || current?.busy); }
   };
 })();

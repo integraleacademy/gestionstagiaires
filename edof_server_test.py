@@ -28,6 +28,7 @@ from cpf_provider import ProviderStore, acquire_provider, provider_operation
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
 from edof_day_session import DayWorker, OPEN_HOUR, POLL_SECONDS, PARIS, working_hours, awaiting_edof_return, login_policy
 import edof_recovery as recovery
+import edof_dispatch as dispatch
 import edof_directory as directory
 import edof_session_clock as session_clock
 import edof_proposal_jobs as proposals
@@ -173,7 +174,7 @@ class ServerTestStore:
         db.commit()
         return db
 
-    def reserve(self, owner, mode, *, day_session=False, sync_scope=None, recovery_since=None, revision=None):
+    def reserve(self, owner, mode, *, day_session=False, sync_scope=None, recovery_since=None, revision=None, shared_session=False):
         db = self.connect()
         try:
             with db:
@@ -192,7 +193,7 @@ class ServerTestStore:
                        AND NOT EXISTS(SELECT 1 FROM jobs j2 WHERE j2.created>jobs.created AND j2.owner=jobs.owner
                        AND json_extract(j2.result,'$.code') NOT IN ('proposal_loaded','directory_ready','requests_ready','read_success'))
                        LIMIT 1""", (owner, time.time()-300)).fetchone() and Vault(self.directory,self.connector_key).get("browser")
-                if remaining > 0 and not (day_session or reuse):
+                if remaining > 0 and not (day_session or reuse or shared_session and mode in PROPOSAL_MODES):
                     raise JobCooldown(remaining)
                 if mode == "directory":
                     db.execute("DELETE FROM directory_requested WHERE owner=?", (owner,))
@@ -761,6 +762,7 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
             os.close(lock_fd)
             if provider_fd is not None:
                 os.close(provider_fd)
+            dispatch.wake(store.directory)
 
 
 def start_job(store, owner, spec, *, day_worker=None):
@@ -796,7 +798,9 @@ def start_job(store, owner, spec, *, day_worker=None):
             if not declarations.check_before_job(store, spec):
                 raise ValueError("Cette déclaration est à vérifier dans la fiche.")
         job_id = store.reserve(owner, spec["mode"], day_session=day_worker is not None and spec["mode"]=="directory", sync_scope=spec.get("sync_scope"),
-                               recovery_since=spec.get("recovery_since"), revision=spec.get("revision"))
+                               recovery_since=spec.get("recovery_since"), revision=spec.get("revision"),
+                               shared_session=bool(day_worker and day_worker.owner == owner and day_worker.provider == spec.get("provider")
+                                                   and day_worker.process and day_worker.process.poll() is None))
         if spec["mode"] == "proposal_read" and not proposals.reading(store.directory,spec):
             store.finish(job_id,{"code":"interrupted"})
             raise ValueError("Une autre lecture est déjà programmée.")
@@ -828,65 +832,76 @@ def register_edof_server_test(legacy):
         with open(store.directory / "edof_day_leader.lock", "a") as leader:
             try:
                 fcntl.flock(leader, fcntl.LOCK_EX)
-                store.recover_directory_reads()
-                while True:
-                    time.sleep(20)
-                    try:
-                        now = dt.datetime.now(PARIS)
-                        active = ProviderStore(store.directory).state()
-                        daily = active["provider"] == "integrale"
-                        if worker.owner and not (store.manual_until(worker.owner) or working_hours(now, daily=True) and store.directory_enabled(worker.owner)):
-                            worker.close()
-                        store.process_catchups(active)
-                        if active["pending"]:
-                            continue
-                        recovery.prepare(store, active, now)
-                        manual_sync = store.next_manual_sync()
-                        if not manual_sync:
-                            restart = recovery.next_job(store, active, now)
-                            if restart:
-                                start_job(store, restart["owner"], restart, day_worker=worker)
-                                continue
-                            pending = proposals.next_job(store.directory,active) or declarations.next_job(store, active["revision"], provider=active["provider"])
-                            # Re-evaluate deadlines even when no new export was needed this minute.
-                            tick = (active["revision"], int(now.timestamp()) // 300)
-                            if not pending and daily and working_hours(now) and inspected != tick and store.connector_key:
-                                inspected = tick
-                                with closing(store.connect()) as db:
-                                    owners = [r[0] for r in db.execute("SELECT owner FROM directory_activity")]
-                                vault = Vault(store.directory, store.connector_key)
-                                for owner in owners:
-                                    if recovery.pending(store, owner):
-                                        continue
-                                    snap = directory.dated_snapshot(vault.get(directory.record_key(owner), keep=True))
-                                    if snap:
-                                        from integrale_edof_dashboard import apply_confirmed_entries
-                                        declarations.discover(store, owner, apply_confirmed_entries(snap, store.directory, owner))
-                                pending = declarations.next_job(store, active["revision"])
-                            if pending and pending["mode"] == "declare" and recovery.pending(store, pending["owner"]):
-                                pending = None
-                            if pending:
-                                open_now = working_hours(now) or store.manual_until(pending["owner"])
-                                if open_now or pending["mode"] in PROPOSAL_MODES:
-                                    try:
-                                        start_job(store,pending["owner"],{**pending,"provider":active["provider"]},
-                                                  day_worker=worker if open_now else None)
-                                        continue
-                                    except JobCooldown:
-                                        pass  # Keep the watch running between dossier jobs.
-                        if manual_sync:
-                            user = manual_sync["owner"]
-                            start_job(store, user, {"mode":"directory", "owner":user, "provider":active["provider"],
-                                      "sync_scope":manual_sync["scope"], "sync_until":manual_sync["requested"] + 3600}, day_worker=worker)
-                            continue
-                        for user in store.day_owners(now, daily=True):
-                            if not store.connector_key or not Vault(store.directory, store.connector_key).get("gmail"):
+                with dispatch.listen(store.directory) as inbox:
+                    store.recover_directory_reads()
+                    while True:
+                        dispatch.wait(inbox)
+                        try:
+                            now = dt.datetime.now(PARIS)
+                            active = ProviderStore(store.directory).state()
+                            daily = active["provider"] == "integrale"
+                            if worker.owner and not (store.manual_until(worker.owner) or working_hours(now, daily=True) and store.directory_enabled(worker.owner)):
                                 worker.close()
+                            store.process_catchups(active)
+                            if active["pending"]:
+                                continue
+                            recovery.prepare(store, active, now)
+                            # Explicit dossier actions take the next free slot before background reads.
+                            proposal = proposals.next_job(store.directory, active)
+                            if proposal:
+                                open_now = working_hours(now) or store.manual_until(proposal["owner"])
+                                try:
+                                    start_job(store, proposal["owner"], {**proposal,"provider":active["provider"]},
+                                              day_worker=worker if open_now else None)
+                                    continue
+                                except JobCooldown:
+                                    pass
+                            manual_sync = store.next_manual_sync()
+                            if not manual_sync:
+                                restart = recovery.next_job(store, active, now)
+                                if restart:
+                                    start_job(store, restart["owner"], restart, day_worker=worker)
+                                    continue
+                                pending = declarations.next_job(store, active["revision"], provider=active["provider"])
+                                # Re-evaluate deadlines even when no new export was needed this minute.
+                                tick = (active["revision"], int(now.timestamp()) // 300)
+                                if not pending and daily and working_hours(now) and inspected != tick and store.connector_key:
+                                    inspected = tick
+                                    with closing(store.connect()) as db:
+                                        owners = [r[0] for r in db.execute("SELECT owner FROM directory_activity")]
+                                    vault = Vault(store.directory, store.connector_key)
+                                    for owner in owners:
+                                        if recovery.pending(store, owner):
+                                            continue
+                                        snap = directory.dated_snapshot(vault.get(directory.record_key(owner), keep=True))
+                                        if snap:
+                                            from integrale_edof_dashboard import apply_confirmed_entries
+                                            declarations.discover(store, owner, apply_confirmed_entries(snap, store.directory, owner))
+                                    pending = declarations.next_job(store, active["revision"])
+                                if pending and pending["mode"] == "declare" and recovery.pending(store, pending["owner"]):
+                                    pending = None
+                                if pending:
+                                    open_now = working_hours(now) or store.manual_until(pending["owner"])
+                                    if open_now or pending["mode"] in PROPOSAL_MODES:
+                                        try:
+                                            start_job(store,pending["owner"],{**pending,"provider":active["provider"]},
+                                                      day_worker=worker if open_now else None)
+                                            continue
+                                        except JobCooldown:
+                                            pass  # Keep the watch running between dossier jobs.
+                            if manual_sync:
+                                user = manual_sync["owner"]
+                                start_job(store, user, {"mode":"directory", "owner":user, "provider":active["provider"],
+                                          "sync_scope":manual_sync["scope"], "sync_until":manual_sync["requested"] + 3600}, day_worker=worker)
+                                continue
+                            for user in store.day_owners(now, daily=True):
+                                if not store.connector_key or not Vault(store.directory, store.connector_key).get("gmail"):
+                                    worker.close()
+                                    break
+                                start_job(store, user, {"mode": "directory", "owner": user, "provider": active["provider"]}, day_worker=worker)
                                 break
-                            start_job(store, user, {"mode": "directory", "owner": user, "provider": active["provider"]}, day_worker=worker)
-                            break
-                    except (OSError, sqlite3.Error, ValueError):
-                        continue
+                        except (OSError, sqlite3.Error, ValueError):
+                            continue
             finally:
                 worker.close()
 
