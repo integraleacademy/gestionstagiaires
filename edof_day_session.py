@@ -154,7 +154,7 @@ class DayWorker:
                             "diagnostics":{"callback_status":checkpoint.get("callback"), "workspace_status":checkpoint.get("private_status")}}
                 result = json.loads(self.process.stdout.readline(32768))
                 if ((spec["mode"] == "directory" and result.get("code") not in
-                     {"directory_ready","requests_ready","directory_incomplete","directory_unavailable","pending_unavailable","portal_throttled"} and not awaiting_edof_return(result))
+                     {"directory_ready","directory_progress","requests_ready","directory_incomplete","directory_unavailable","pending_unavailable","portal_throttled"} and not awaiting_edof_return(result))
                     or result.get("code") in {"browser_error","day_login_used","otp_rejected","human_verification","account_unavailable"}):
                     self.close()
                 return result
@@ -185,7 +185,7 @@ def serve(channel):
                     else:
                         result = run_browser({**cmd, "day_session":cmd["mode"] == "directory", "shared_job":True}, live=live)
                         live["return_pending"] = awaiting_edof_return(result)
-                        if result["code"] in {"directory_ready","requests_ready"}:
+                        if result["code"] in {"directory_ready","directory_progress","requests_ready"}:
                             live["verified"] = True
                 finally:
                     for fd in locks:

@@ -92,9 +92,10 @@ def install_jobs(db):
                 f"THEN 'confirmed' ELSE 'error' END,{prefix}finished,{code},'connector'")
     scope = "mode NOT IN ('declare','reconcile','proposal_send','proposal_check')"
     db.execute(f"""INSERT OR IGNORE INTO edof_automation_events({columns}) SELECT {values('')} FROM jobs
-        WHERE finished IS NOT NULL AND {scope}""")
-    db.execute(f"""CREATE TRIGGER IF NOT EXISTS edof_job_audit AFTER UPDATE ON jobs
-        WHEN NEW.finished IS NOT NULL AND NEW.{scope} BEGIN
+        WHERE finished IS NOT NULL AND {scope} AND json_extract(result,'$.code')!='directory_progress'""")
+    db.execute("DROP TRIGGER IF EXISTS edof_job_audit")
+    db.execute(f"""CREATE TRIGGER IF NOT EXISTS edof_job_audit_v2 AFTER UPDATE ON jobs
+        WHEN NEW.finished IS NOT NULL AND NEW.{scope} AND json_extract(NEW.result,'$.code')!='directory_progress' BEGIN
         INSERT OR IGNORE INTO edof_automation_events({columns}) VALUES({values('NEW.')}); END""")
 
 

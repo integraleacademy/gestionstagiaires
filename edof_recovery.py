@@ -10,7 +10,7 @@ from edof_gmail import Vault
 import edof_directory as directory
 
 RETRY_SECONDS = 900
-READY = {"directory_ready", "requests_ready"}
+READY = {"directory_ready", "directory_progress", "requests_ready"}
 
 
 def install(db):
@@ -40,6 +40,11 @@ def finished(db, job, result):
     if not job or job["mode"] != "directory":
         return
     code = result.get("code")
+    if code == "directory_progress":
+        db.execute("""UPDATE directory_recovery SET job_id=NULL,revision=NULL,retry_after=0,
+            message='Reprise automatique · synchronisation complète en cours par petits lots.'
+            WHERE job_id=? AND completed IS NULL""", (job["id"],))
+        return
     if code not in READY and code != "day_closed":
         mark(db, job["owner"], code or "interrupted")
         # A new outage after the full read invalidates that read for this recovery.

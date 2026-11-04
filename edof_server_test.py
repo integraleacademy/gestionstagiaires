@@ -55,6 +55,7 @@ MESSAGES = {
     "requests_ready": "Les dossiers À traiter ont été relus dans l’onglet officiel EDOF.",
     "declaration_exit_confirmed": "Sortie confirmée dans EDOF. Le service fait reste à transmettre.",
     "directory_ready": "La liste EDOF de l’établissement est disponible pour la recherche.",
+    "directory_progress": "Synchronisation complète en cours par petits lots. Les actions manuelles restent prioritaires.",
     "directory_unavailable": "EDOF n’a pas renvoyé la liste de l’établissement. Vous pouvez reprendre la synchronisation.",
     "directory_incomplete": "La liste renvoyée par EDOF est incomplète. La dernière liste vérifiée reste consultable.",
     "running": "Essai en cours sur Render. Vous pouvez fermer votre Chrome : l’essai continue sur le serveur.",
@@ -192,7 +193,7 @@ class ServerTestStore:
                 reuse = mode in PROPOSAL_MODES and self.connector_key and db.execute(
                     """SELECT 1 FROM jobs WHERE owner=? AND finished>=? AND json_extract(result,'$.code')='proposal_loaded'
                        AND NOT EXISTS(SELECT 1 FROM jobs j2 WHERE j2.created>jobs.created AND j2.owner=jobs.owner
-                       AND json_extract(j2.result,'$.code') NOT IN ('proposal_loaded','directory_ready','requests_ready','read_success'))
+                       AND json_extract(j2.result,'$.code') NOT IN ('proposal_loaded','directory_ready','directory_progress','requests_ready','read_success'))
                        LIMIT 1""", (owner, time.time()-300)).fetchone() and Vault(self.directory,self.connector_key).get("browser")
                 if remaining > 0 and not (day_session or reuse or shared_session and mode in PROPOSAL_MODES):
                     raise JobCooldown(remaining)
@@ -205,7 +206,7 @@ class ServerTestStore:
                     recovery.claim(db, owner, job_id, recovery_since, revision)
                 if sync_scope:
                     claimed = db.execute("""UPDATE directory_sync_requests SET job_id=? WHERE owner=? AND scope=? AND requested>=?
-                        AND (job_id IS NULL OR job_id IN (SELECT id FROM jobs WHERE json_extract(result,'$.code')='interrupted'))""",
+                        AND (job_id IS NULL OR job_id IN (SELECT id FROM jobs WHERE json_extract(result,'$.code') IN ('interrupted','directory_progress')))""",
                         (job_id, owner, sync_scope, time.time()-3600)).rowcount
                     if not claimed:
                         raise ValueError("Synchronisation déjà prise en charge.")
@@ -331,7 +332,7 @@ class ServerTestStore:
             db.execute("""INSERT INTO directory_sync_requests (owner,scope,requested,job_id) VALUES (?,?,?,NULL)
                 ON CONFLICT(owner,scope) DO UPDATE SET requested=excluded.requested, job_id=NULL
                 WHERE directory_sync_requests.requested < ? OR job_id IN
-                      (SELECT id FROM jobs WHERE finished IS NOT NULL)""", (owner,scope,now,now-3600))
+                      (SELECT id FROM jobs WHERE finished IS NOT NULL AND json_extract(result,'$.code')!='directory_progress')""", (owner,scope,now,now-3600))
             if catchup_revision is not None:
                 db.execute("INSERT OR REPLACE INTO automation_catchups VALUES (?,?,?,'')", (owner,catchup_revision,now))
 
@@ -388,7 +389,7 @@ class ServerTestStore:
                 message = "Rattrapage arrêté. Le système de traitement CPF a changé."
             elif not run["sync_start"] or run["requested"] < time.time()-3600:
                 message = "Rattrapage interrompu. Relancez-le pour actualiser la liste."
-            elif not run["finished"] or run["code"] == "interrupted":
+            elif not run["finished"] or run["code"] in {"interrupted","directory_progress"}:
                 continue
             elif run["code"] != "directory_ready":
                 message = "La liste générale EDOF n’a pas été actualisée. Relancez le rattrapage après la reprise de la connexion."
@@ -424,7 +425,7 @@ class ServerTestStore:
             return db.execute("""SELECT m.owner,m.scope,m.requested,(c.owner IS NOT NULL) AS catchup
                 FROM directory_sync_requests m LEFT JOIN jobs j ON j.id=m.job_id
                 LEFT JOIN automation_catchups c ON c.owner=m.owner AND m.scope='all' AND c.message=''
-                WHERE m.requested>=? AND (m.job_id IS NULL OR json_extract(j.result,'$.code')='interrupted')
+                WHERE m.requested>=? AND (m.job_id IS NULL OR json_extract(j.result,'$.code') IN ('interrupted','directory_progress'))
                 ORDER BY catchup DESC,m.requested LIMIT 1""", (time.time()-3600,)).fetchone()
 
     def manual_sync_status(self, owner, scope):
@@ -435,10 +436,10 @@ class ServerTestStore:
         if not item:
             return None
         timing = {"requested": item["requested"], "finished": item["finished"]}
-        if not item["finished"] or item["code"] == "interrupted":
+        if not item["finished"] or item["code"] in {"interrupted","directory_progress"}:
             if item["requested"] < time.time()-3600:
                 return {**timing, "busy":False, "message":"La demande de synchronisation a expiré. Relancez-la."}
-            return {**timing, "busy":True, "message":"Synchronisation en cours en arrière-plan. Vous pouvez quitter la page."}
+            return {**timing, "busy":True, "message":"Synchronisation en cours par petits lots. Les envois manuels restent prioritaires. Vous pouvez quitter la page."}
         when = dt.datetime.fromtimestamp(item["finished"], PARIS).strftime("%H h %M")
         if scope == "new" and item["code"] == "requests_ready":
             message = "Nouveaux dossiers à traiter synchronisés à " + when + "."
@@ -521,14 +522,14 @@ class ServerTestStore:
         earliest = now.astimezone(PARIS).replace(hour=OPEN_HOUR, minute=0, second=0, microsecond=0).timestamp()
         if manual:
             earliest = min(earliest, manual - 3600) if watch_open and watch_enabled else manual - 3600
-        verified = bool(stamp >= earliest and open_now and saved_session and last and last["code"] in {"directory_ready","requests_ready"} and
+        verified = bool(stamp >= earliest and open_now and saved_session and last and last["code"] in {"directory_ready","directory_progress","requests_ready"} and
                         0 <= now.timestamp() - stamp < POLL_SECONDS * 3)
         phase = {}
         if open_now and self.connector_key:
             phase = Vault(self.directory,self.connector_key).get("edof-phase:"+owner) or {}
         private_at = phase.get("at", 0)
         if (open_now and private_at >= earliest and now.timestamp()-private_at < POLL_SECONDS*3
-                and phase.get("private_status") == 200 and (private_at >= stamp or last and last["code"] in {"requests_ready","directory_ready"})):
+                and phase.get("private_status") == 200 and (private_at >= stamp or last and last["code"] in {"requests_ready","directory_progress","directory_ready"})):
             verified = True
         pending = bool(open_now and (queued or row and row["finished"] is None))
         if open_now and last_private >= earliest and last_private >= stamp and 0 <= now.timestamp()-last_private < POLL_SECONDS*3:
@@ -542,7 +543,7 @@ class ServerTestStore:
                   "reading_directory":"Lecture de la liste", "reading_pending_tab":"Lecture des dossiers À traiter",
                   "reading_all_folders":"Synchronisation de tous les dossiers", "pending_verified":"Demandes vérifiées"}
         blocked = open_now and not verified and stamp >= earliest and last and last["code"] in {"day_login_used","day_login_wait"} and (not budget or budget["code"] == "day_login_used")
-        error = MESSAGES.get(last["code"], "") if open_now and not verified and stamp >= earliest and last and last["code"] not in {"directory_ready","requests_ready"} else ""
+        error = MESSAGES.get(last["code"], "") if open_now and not verified and stamp >= earliest and last and last["code"] not in {"directory_ready","directory_progress","requests_ready"} else ""
         if error and last["code"] in {"day_login_used","day_login_wait"} and budget:
             error = MESSAGES.get(budget["code"], "Reconnexion automatique programmée dans la limite des quatre codes quotidiens.")
         if self.connector_key and throttle.status(Vault(self.directory,self.connector_key)):
@@ -603,7 +604,7 @@ class ServerTestStore:
             for row in rows:
                 if row["created"] is None:
                     due.append(row["owner"])
-                elif row["finished"] and row["requested"] and row["code"] in {"day_login_used", "directory_ready","requests_ready","browser_error","timeout","directory_unavailable","directory_incomplete","pending_unavailable","authentication_unconfirmed"}:
+                elif row["finished"] and row["requested"] and row["code"] in {"day_login_used", "directory_ready","directory_progress","requests_ready","browser_error","timeout","directory_unavailable","directory_incomplete","pending_unavailable","authentication_unconfirmed"}:
                     due.append(row["owner"])
                 elif row["finished"] and row["code"] == "portal_throttled":
                     if self.connector_key and not Vault(self.directory,self.connector_key).get("edof-throttled"):
@@ -613,12 +614,12 @@ class ServerTestStore:
                                           manual_until=self.manual_until(row["owner"]))
                     if budget["allowed"] and row["finished"] + 20 <= now.timestamp():
                         due.append(row["owner"])
-                elif row["finished"] and row["code"] in ("directory_ready","requests_ready","directory_incomplete","directory_unavailable","pending_unavailable","timeout","browser_error","interrupted","authentication_unconfirmed"):
+                elif row["finished"] and row["code"] in ("directory_ready","directory_progress","requests_ready","directory_incomplete","directory_unavailable","pending_unavailable","timeout","browser_error","interrupted","authentication_unconfirmed"):
                     result = json.loads(row["result"])
                     if row["code"] == "interrupted" and result.get("restart"):
                         due.append(row["owner"])
                         continue
-                    delay = POLL_SECONDS if row["code"] in {"directory_ready","requests_ready","pending_unavailable"} or awaiting_edof_return(result) else 900
+                    delay = POLL_SECONDS if row["code"] in {"directory_ready","directory_progress","requests_ready","pending_unavailable"} or awaiting_edof_return(result) else 900
                     if (delay == 900 and row["manual_start"] and row["code"] == "browser_error"
                             and result.get("stage") == "login_page" and not result.get("gmail_code_used")
                             and not (result.get("diagnostics") or {}).get("login_post_status")):
@@ -707,7 +708,7 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
             parsed = json.loads(output) if process.returncode == 0 and len(output) < 32768 else {}
         if isinstance(parsed, dict) and parsed.get("code") in MESSAGES:
             # The runner emits only the explicitly normalized dossier schema.
-            result = {key: parsed[key] for key in ("code", "stage", "fields", "confirmed_state", "fresh_session", "gmail_code_used", "session_saved", "candidate_count", "blocked_writes", "diagnostics", "proposal_receipt", "proposal_message") if key in parsed}
+            result = {key: parsed[key] for key in ("code", "stage", "fields", "confirmed_state", "fresh_session", "gmail_code_used", "session_saved", "candidate_count", "blocked_writes", "diagnostics", "proposal_receipt", "proposal_message", "traffic") if key in parsed}
     except subprocess.TimeoutExpired:
         result = {"code": "timeout"}
     except Exception:
@@ -758,6 +759,8 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
             if day_worker is not None and spec["mode"] == "directory":
                 result["day_session"] = True
             store.finish(job_id, result)
+            if result.get("traffic"):
+                print("EDOF_TRAFFIC " + json.dumps({"mode":spec["mode"], **result["traffic"]},separators=(",",":")),flush=True)
             if result["code"] == "portal_throttled" and store.connector_key:
                 pause = throttle.status(Vault(store.directory,store.connector_key)) or {}
                 print(f"EDOF_THROTTLE mode={spec['mode']} source={pause.get('source')} retry_at={pause.get('until')} remaining={pause.get('remaining')}", flush=True)
@@ -792,6 +795,8 @@ def start_job(store, owner, spec, *, day_worker=None):
             spec = {**spec, "manual_until":until}
         if day_worker is not None and spec["mode"] in {"directory","proposal_read","proposal_check"}:
             provider_fd = acquire_provider(spec["provider"])
+            if spec["mode"] == "directory":
+                spec["revision"] = ProviderStore(store.directory).state()["revision"]
         elif spec["mode"] == "read" and spec.get("import_session"):
             provider_fd = acquire_provider(ProviderStore(store.directory).state()["provider"])
         elif spec["mode"] not in {"inspect_forms","proposal_read","proposal_check"}:
