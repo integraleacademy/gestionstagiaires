@@ -215,6 +215,9 @@ def message(host, training, person, report, day):
     offset = int(hashlib.sha256(str(person['id']).encode()).hexdigest()[:8], 16)
     ordinal = day.toordinal() + offset
     daily_note = ''
+    if delta is None and not complete and report.get('active_seconds', 0) > 0:
+        daily_note = (f"Vous avez déjà consacré {report['active_time_label']} à votre parcours. "
+                      'Bravo pour cet engagement ! Continuez à construire vos compétences, une séquence après l’autre.')
     if delta and not complete:
         if delta['advanced']:
             praise = ('Bravo pour le travail accompli depuis hier ! Chaque effort vous rapproche de votre objectif.',

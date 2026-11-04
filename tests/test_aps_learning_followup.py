@@ -225,6 +225,10 @@ def test_cron_requires_secret_even_if_not_configured(learner, monkeypatch):
 def test_yesterday_delta_praises_time_even_without_completed_activity_and_prompts_restart(learner):
     _, training, person = learner
     report = daily.read_summary(host, training, person)
+    first_point = daily.message(host, training, person, {**report, 'active_seconds': 3600,
+                                'active_time_label': '01 h 00 min 00 s'}, NOW.date())
+    assert 'Bravo pour cet engagement' in first_point['html']
+    assert 'Depuis le point d’hier' not in first_point['html']
     with patch.object(host, 'brevo_send_email', return_value={'ok': True}):
         daily.run(host, now=NOW)
     day = NOW.date() + dt.timedelta(days=1)
