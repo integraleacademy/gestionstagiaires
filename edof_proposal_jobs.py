@@ -35,6 +35,12 @@ def database(path):
         signature TEXT NOT NULL, terms TEXT NOT NULL, first_name TEXT NOT NULL, last_name TEXT NOT NULL,
         status TEXT NOT NULL, phase TEXT NOT NULL DEFAULT '', updated REAL NOT NULL, message TEXT NOT NULL DEFAULT '',
         receipt TEXT)""")
+    if "result_code" not in {r[1] for r in db.execute("PRAGMA table_info(inscription_proposals)")}:
+        with db:
+            db.execute("BEGIN IMMEDIATE")
+            if "result_code" not in {r[1] for r in db.execute("PRAGMA table_info(inscription_proposals)")}:
+                db.execute("ALTER TABLE inscription_proposals ADD COLUMN result_code TEXT NOT NULL DEFAULT ''")
+                db.execute("UPDATE inscription_proposals SET result_code='portal_throttled' WHERE message LIKE 'EDOF ou EFP limite les requêtes.%'")
     db.execute("""CREATE TABLE IF NOT EXISTS proposal_reads (
         owner TEXT NOT NULL, folder TEXT NOT NULL, token TEXT NOT NULL, first_name TEXT NOT NULL, last_name TEXT NOT NULL,
         status TEXT NOT NULL, updated REAL NOT NULL, message TEXT NOT NULL DEFAULT '', PRIMARY KEY(owner,folder))""")
@@ -146,8 +152,8 @@ def complete(path, spec, result, message):
             state = "error"
         else:
             state = "uncertain" if r["phase"] else "error"
-        db.execute("UPDATE inscription_proposals SET status=?,message=?,receipt=?,updated=? WHERE token=?",
-                   (state,message,json.dumps(receipt) if state=="confirmed" else None,time.time(),r["token"]))
+        db.execute("UPDATE inscription_proposals SET status=?,message=?,receipt=?,updated=?,result_code=? WHERE token=?",
+                   (state,message,json.dumps(receipt) if state=="confirmed" else None,time.time(),code,r["token"]))
 
 
 def with_receipts(path, owner, snap):
@@ -184,6 +190,15 @@ def option_key(owner):
 def same_terms(left, right):
     return all(((left.get(k) or "0") == (v or "0")) if k in (*form.HOURS,*form.PRICES) else left.get(k) == v
                for k,v in right.items())
+
+
+def remember_own_edit(vault, owner, folder, source, signature):
+    """Advance the form baseline only after our exact edit was read back from EDOF."""
+    vault.put(source_key(owner,folder), source, ttl=86400)
+    key = "proposal-draft:"+owner+":"+folder
+    draft = vault.get(key)
+    if draft and draft.get("signature") == signature:
+        vault.put(key, {**draft,"signature":source["signature"]}, ttl=86400)
 
 
 def perform(context, witness, spec, path, vault, prefix, origin):
@@ -285,6 +300,7 @@ def perform(context, witness, spec, path, vault, prefix, origin):
         raw,row,source=fresh()
         if directory.normalized(row["state"]) not in PENDING or not same_terms(source["values"],terms):
             return {"code":"proposal_changed"}
+        remember_own_edit(vault,spec["owner"],folder,source,job["signature"])
     if raw.get("ableToValidate") is False:
         return {"code":"proposal_refused","proposal_message":"Le dossier n’est pas validable selon EDOF. Vérifiez les dates et l’éligibilité de l’offre."}
     if not fence(path,spec,"validating"):

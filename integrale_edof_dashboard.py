@@ -15,6 +15,7 @@ from flask import g, jsonify, Blueprint, abort, flash, get_flashed_messages, red
 import integrale_edof_views as views
 import integrale_edof_history as history_view
 import edof_directory as directory
+import edof_throttle as throttle
 import edof_declarations as declarations
 import edof_proposal as proposal_form
 import edof_proposal_jobs as proposals
@@ -457,6 +458,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             detail["action"] = ACTIONS.get(category(record))
             detail["request"] = category(record) == "request"
             detail["proposal_job"] = proposals.record(store.directory,folder,owner)
+            if detail["proposal_job"] and detail["proposal_job"].get("result_code") == "portal_throttled" and store.connector_key:
+                detail["proposal_job"]["message"] = throttle.message(vault())
             if detail["proposal_job"]:
                 detail["proposal_status_url"] = url_for("integrale_edof.proposal_send_status", folder=folder,
                                                        ticket=detail["proposal_job"]["token"])
@@ -698,6 +701,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             "error":"La transmission n’a pas abouti. Vérifiez les informations du dossier.",
             "uncertain":"La réponse n’est pas certaine. Vérifiez la réception avant tout nouvel envoi.",
         }[status]
+        if work.get("result_code") == "portal_throttled":
+            message = throttle.message(vault())
         if status == "queued":
             with closing(store.connect()) as db:
                 active_job = db.execute("SELECT mode FROM jobs WHERE finished IS NULL ORDER BY created DESC LIMIT 1").fetchone()
@@ -730,6 +735,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             row = folder_record(owner,folder)
             if category(row) != "request" or not store.connector_key:
                 raise ValueError("Cette proposition ne peut pas être chargée.")
+            if throttle.status(vault()):
+                raise ValueError(throttle.message(vault()))
             jid = proposals.request_read(store.directory,owner,row)
             from edof_dispatch import wake
             wake(store.directory)
@@ -796,6 +803,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             terms = proposal_form.validate(values,source,private.get(proposals.option_key(owner)) or {})
             if request.form.get("confirm") != "yes":
                 raise ValueError("Vérifiez puis confirmez l’envoi de ces conditions au titulaire.")
+            if throttle.status(private):
+                raise ValueError(throttle.message(private))
             state = proposals.enqueue(store.directory,owner,selection.state()["revision"],row,source,terms)
             if request.accept_mimetypes.best == "application/json":
                 return jsonify(proposal_progress(owner,folder,proposals.record(store.directory,folder,owner))), 202

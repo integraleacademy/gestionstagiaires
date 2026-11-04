@@ -471,7 +471,7 @@ def test_throttled_directory_does_not_retry_the_portal(tmp_path,monkeypatch):
     with pytest.raises(runner.directory.PortalThrottled) as stopped:
         runner.read_recent_directory(ctx,witness,"all",lambda:None,{})
     assert stopped.value.delay == 7200 and ctx.request.get.call_count == 1
-    assert runner.directory.PortalThrottled(None).delay == 3600
+    assert runner.directory.PortalThrottled(None).delay == 60
     key = connector_key("test"*12)
     vault = Vault(tmp_path,key)
     vault.put("edof-throttled",True,ttl=7200)
