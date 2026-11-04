@@ -320,15 +320,18 @@ class ServerTestStore:
             return None
         message = row["message"]
         outcomes = {}
+        valid_report = False
         # Older runs stored just the summary. New reports also retain each decision.
         if message.startswith("{"):
             result = json.loads(message)
             message, outcomes = result["summary"], result["outcomes"]
+            valid_report = True
         active_run = row["requested"] >= time.time() - 3600
         if not message and not active_run:
             message = "Le délai de rattrapage a expiré. Relancez-le pour actualiser la liste."
         phase = "done" if message else "scan"
         targets = {f:action for f,(action,status) in outcomes.items() if status in {"queued","sending"}}
+        waiting = review = 0
         if targets:
             with closing(declarations.database(self.directory)) as db:
                 states = db.execute("""SELECT d.status, COUNT(*) FROM cpf_declarations d
@@ -345,6 +348,9 @@ class ServerTestStore:
                     phase = "send"
         state = {"busy":phase != "done", "phase":phase, "requested":row["requested"],
                  "message":message or "Lecture des dossiers dans EDOF, puis préparation des déclarations arrivées à échéance."}
+        if phase == "done":
+            unresolved = waiting or review or any(status not in {"queued","sending","confirmed"} for _,status in outcomes.values())
+            state["result"] = "error" if not valid_report else "warning" if unresolved else "success"
         if include_outcomes:
             state["outcomes"] = outcomes
         return state
@@ -406,10 +412,11 @@ class ServerTestStore:
                 (owner,scope,time.time()-RETENTION)).fetchone()
         if not item:
             return None
+        timing = {"requested": item["requested"], "finished": item["finished"]}
         if not item["finished"] or item["code"] == "interrupted":
             if item["requested"] < time.time()-3600:
-                return {"busy":False, "message":"La demande de synchronisation a expiré. Relancez-la."}
-            return {"busy":True, "message":"Synchronisation en cours en arrière-plan. Vous pouvez quitter la page."}
+                return {**timing, "busy":False, "message":"La demande de synchronisation a expiré. Relancez-la."}
+            return {**timing, "busy":True, "message":"Synchronisation en cours en arrière-plan. Vous pouvez quitter la page."}
         when = dt.datetime.fromtimestamp(item["finished"], PARIS).strftime("%H h %M")
         if scope == "new" and item["code"] == "requests_ready":
             message = "Nouveaux dossiers à traiter synchronisés à " + when + "."
@@ -419,7 +426,9 @@ class ServerTestStore:
             message = "Demandes à traiter actualisées à " + when + ". La liste générale n’a pas pu être actualisée."
         else:
             message = "Synchronisation non terminée à " + when + ". " + MESSAGES.get(item["code"], "")
-        return {"busy":False, "updated":item["code"] in {"requests_ready","directory_ready"}, "message":message}
+        return {**timing, "busy":False, "code":item["code"],
+                "updated":item["code"] in {"requests_ready","directory_ready"},
+                "complete":item["code"] == ("directory_ready" if scope == "all" else "requests_ready"), "message":message}
 
     def directory_enabled(self, owner):
         db = self.connect()
@@ -514,6 +523,7 @@ class ServerTestStore:
         schedule = ("Veille programmée de 7 h à 19 h (Paris)" if watch_open else "Hors plage de veille (7 h à 19 h, Paris)") if watch_enabled else "Veille automatique suspendue"
         clock = session_clock.clock_view(timing, now.timestamp(), open_now=open_now, verified=verified)
         return {"clock":clock, "active": verified, "pending": pending, "checked": checked, "sync": sync, "schedule": schedule, "manual_sync": self.manual_sync_status(owner, "all"),
+                "last_read": dict(row) if row else None,
                 "new_sync": self.manual_sync_status(owner, "new"),
                 "phase": labels.get(phase.get("phase"), "") if private_at >= earliest and pending else "",
                 "stamp": stamp, "manual": bool(manual),
@@ -1047,7 +1057,8 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
         else:
             message = "Connectez EFP et Gmail dans les paramètres pour synchroniser les dossiers."
         if request.accept_mimetypes.best == "application/json":
-            return jsonify(message=message), 202 if ready else 409
+            state = store.manual_sync_status(user, scope) if ready else None
+            return jsonify(message=message, requested=(state or {}).get("requested")), 202 if ready else 409
         flash(message, "success" if ready else "error")
         return redirect(url_for("integrale_edof.index", section=request.form.get("section") or "requests",
                                 tab=request.form.get("tab"), folder=request.form.get("folder") or None), code=303)
@@ -1071,13 +1082,22 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
             abort(403)
         target = url_for("integrale_edof.index", section="state", tab="request")
         if not configuration()["credentials_configured"] or not gmail_status()["connected"]:
+            if request.accept_mimetypes.best == "application/json":
+                return jsonify(message="Connectez EFP et Gmail dans les paramètres pour activer la connexion."), 409
             flash("Connectez EFP et Gmail dans les paramètres pour activer la connexion.", "error")
             return redirect(target, code=303)
         def activate():
             store.activate_manual(user)
+        requested = time.time()
         response = edit_connection(activate)
         if response.location.endswith("gmail=busy"):
+            if request.accept_mimetypes.best == "application/json":
+                return jsonify(message="Une lecture EDOF est déjà en cours. Attendez sa fin avant de relancer la connexion."), 409
             flash("Une lecture EDOF est déjà en cours. Réessayez après sa fin.", "warning")
+        if request.accept_mimetypes.best == "application/json":
+            live = store.live_connection(user, gmail_status()["saved_session"])
+            return jsonify(requested=requested, active=live["active"],
+                           message="Connexion EDOF déjà active." if live["active"] else "Connexion demandée. Le serveur vérifie l’accès à EDOF."), 202
         return redirect(target, code=303)
 
     @bp.post("/admin/edof-test/server/directory/resume")
@@ -1095,12 +1115,15 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
             vault().put("day-login-override:" + user, dt.datetime.now(PARIS).date().isoformat(), ttl=600)
             with closing(store.connect()) as db, db:
                 db.execute("INSERT OR IGNORE INTO directory_requested VALUES (?)", (user,))
+        requested = time.time()
         try:
             response = edit_connection(permit)
         except ValueError as exc:
             return jsonify(ok=False, error=str(exc)), 409
         if response.location.endswith("gmail=busy"):
             return jsonify(ok=False, error="Une lecture est en cours. Réessayez après sa fin."), 409
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify(requested=requested, message="Reconnexion demandée. Un nouveau code EFP est autorisé pour cette tentative."), 202
         return redirect(url_for("integrale_edof.index", section="technical"), code=303)
 
     @bp.post("/admin/edof-test/server/directory/pause")

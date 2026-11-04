@@ -339,6 +339,7 @@ def test_manual_catchup_runs_only_when_active_and_reuses_the_durable_ledger(site
         ledger.complete(site.store.directory, {"operation":pending["token"],"mode":"declare"}, "declaration_blocked")
     state = site.store.catchup_status(site.owner)
     assert state["phase"] == "done" and not state["busy"]
+    assert state["result"] == "warning"
     assert "confirmés par EDOF : 1" in state["message"] and "à vérifier : 2" in state["message"]
     # The next-stage exit is its own declaration, outside this run's original batch.
 
@@ -351,6 +352,7 @@ def test_manual_catchup_rejects_partial_reads_and_provider_switches(site):
     store.finish(store.reserve(site.owner,"directory",day_session=True,sync_scope="all"), {"code":"requests_ready"})
     store.process_catchups(site.gate.state())
     assert "liste générale EDOF n’a pas été actualisée" in store.catchup_status(site.owner)["message"]
+    assert store.catchup_status(site.owner)["result"] == "error"
     store.queue_sync(site.owner,"all",catchup_revision=1)
     site.gate.switch("wedof",1,"admin")
     store.process_catchups(site.gate.state())
