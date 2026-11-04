@@ -8,6 +8,7 @@ import uuid
 from cpf_provider import ProviderStore
 import edof_automation_audit as audit
 import edof_directory as directory
+import edof_dispatch as dispatch
 import edof_proposal as form
 
 PENDING = {"notprocessed","not processed","tobeprocessed","to be processed","a traiter","received","non traite","dossier non traite"}
@@ -22,7 +23,7 @@ MESSAGES = {
     "proposal_uncertain":"Réception à vérifier. Relisez le dossier avant toute nouvelle transmission.",
     "proposal_resume":"La demande reste à traiter. Vérifiez les conditions relues dans EDOF avant de reprendre la validation.",
 }
-LABELS = {"queued":"En attente d’envoi", "saving":"Enregistrement des conditions dans EDOF",
+LABELS = {"queued":"Préparation de la transmission", "saving":"Enregistrement des conditions dans EDOF",
           "validating":"Envoi de la proposition au titulaire", "checking":"Vérification de la réception",
           "confirmed":"Envoi confirmé par EDOF", "error":"Envoi à reprendre", "uncertain":"Réception à vérifier"}
 
@@ -86,6 +87,7 @@ def enqueue(path, owner, revision, row, source, values):
                    status,updated) VALUES(?,?,?,?,?,?,?,?,'queued',?)""",
                    (row["folder_id"],owner,secrets.token_hex(16),revision,source["signature"],json.dumps(values),
                     row["first_name"],row["last_name"],time.time()))
+    dispatch.wake(path)
     return "queued"
 
 
@@ -93,6 +95,7 @@ def recheck(path, folder, owner):
     with closing(database(path)) as db, db:
         db.execute("""UPDATE inscription_proposals SET status='checking',updated=? WHERE folder=? AND owner=?
                    AND status='uncertain'""", (time.time(),folder,owner))
+    dispatch.wake(path)
 
 
 def next_job(path, selection):

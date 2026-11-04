@@ -4,6 +4,7 @@ from collections import Counter
 from contextlib import closing
 from functools import lru_cache, wraps
 import json
+import hmac
 import math
 from pathlib import Path
 import secrets
@@ -456,6 +457,9 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             detail["action"] = ACTIONS.get(category(record))
             detail["request"] = category(record) == "request"
             detail["proposal_job"] = proposals.record(store.directory,folder,owner)
+            if detail["proposal_job"]:
+                detail["proposal_status_url"] = url_for("integrale_edof.proposal_send_status", folder=folder,
+                                                       ticket=detail["proposal_job"]["token"])
             if detail["request"]:
                 detail["proposal_values"] = proposal_form.initial(record)
                 detail["proposal_connector"] = bool(store.connector_key)
@@ -683,6 +687,38 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
     def proposal_back(folder, **extra):
         return back("requests",tab="request",folder=folder,_anchor="proposition-edof", **extra)
 
+    def proposal_progress(owner, folder, work):
+        status = work["status"]
+        message = work["message"] or {
+            "queued":"La transmission démarre dès que la connexion EDOF est disponible.",
+            "saving":"Les conditions de formation sont en cours d’enregistrement sur EDOF.",
+            "validating":"La proposition est transmise au titulaire. Nous attendons la réponse d’EDOF.",
+            "checking":"La réception est vérifiée sur EDOF, sans renvoyer la proposition.",
+            "confirmed":"La proposition a été envoyée et sa réception confirmée par EDOF.",
+            "error":"La transmission n’a pas abouti. Vérifiez les informations du dossier.",
+            "uncertain":"La réponse n’est pas certaine. Vérifiez la réception avant tout nouvel envoi.",
+        }[status]
+        if status == "queued":
+            with closing(store.connect()) as db:
+                active_job = db.execute("SELECT mode FROM jobs WHERE finished IS NULL ORDER BY created DESC LIMIT 1").fetchone()
+            if active_job:
+                message = ("Connexion et vérification des conditions du dossier sur EDOF." if active_job["mode"] in {"proposal_send","proposal_check"}
+                           else "Une opération EDOF est déjà en cours. Votre dossier sera transmis dès qu’elle se termine.")
+        return dict(status=status, label=proposals.LABELS[status], message=message, updated=work["updated"],
+                    poll_url=url_for("integrale_edof.proposal_send_status",folder=folder,ticket=work["token"]),
+                    detail_url=url_for("integrale_edof.index",section="requests",tab="waiting" if status=="confirmed" else "request",folder=folder))
+
+    @bp.get("/dossiers/<folder>/proposal/status/<ticket>")
+    @admin_required
+    def proposal_send_status(folder, ticket):
+        owner = results_owner()
+        work = proposals.record(store.directory,folder,owner)
+        if not work or not ticket.isascii() or not hmac.compare_digest(work["token"],ticket):
+            abort(404)
+        response = jsonify(proposal_progress(owner,folder,work))
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
     @bp.post("/dossiers/<folder>/proposal/read")
     @admin_required
     def load_proposal(folder):
@@ -695,6 +731,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             if category(row) != "request" or not store.connector_key:
                 raise ValueError("Cette proposition ne peut pas être chargée.")
             jid = proposals.request_read(store.directory,owner,row)
+            from edof_dispatch import wake
+            wake(store.directory)
             if request.accept_mimetypes.best == "application/json":
                 return jsonify(poll_url=url_for("integrale_edof.proposal_read_status", folder=folder, ticket=jid))
             return proposal_back(folder, proposal_read=jid)
@@ -759,8 +797,12 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             if request.form.get("confirm") != "yes":
                 raise ValueError("Vérifiez puis confirmez l’envoi de ces conditions au titulaire.")
             state = proposals.enqueue(store.directory,owner,selection.state()["revision"],row,source,terms)
+            if request.accept_mimetypes.best == "application/json":
+                return jsonify(proposal_progress(owner,folder,proposals.record(store.directory,folder,owner))), 202
             flash(proposals.LABELS[state],"success")
         except ValueError as exc:
+            if request.accept_mimetypes.best == "application/json":
+                return jsonify(message=str(exc)), 409
             flash(str(exc),"error")
         return proposal_back(folder)
 
@@ -773,6 +815,11 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         check_csrf()
         folder_record(owner,folder)
         proposals.recheck(store.directory,folder,owner)
+        if request.accept_mimetypes.best == "application/json":
+            work = proposals.record(store.directory,folder,owner)
+            if not work:
+                abort(404)
+            return jsonify(proposal_progress(owner,folder,work)), 202
         return proposal_back(folder)
 
     @bp.post("/dossiers/<folder>/create-trainee")

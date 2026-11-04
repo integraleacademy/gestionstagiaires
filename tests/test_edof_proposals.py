@@ -191,7 +191,7 @@ def test_dashboard_draft_load_send_auth_and_waiting_tab(site):
     submitted.update({"blocks":"BC01","trainingPaces":"p","csrf":site.csrf,"signature":source["signature"],"confirm":"yes","priceTotal":"1500"})
     assert "désactivé" in client.post(base+"submit",data=submitted,follow_redirects=True).text
     site.gate.switch("integrale",0,"admin")
-    assert "En attente d’envoi" in client.post(base+"submit",data=submitted,follow_redirects=True).text
+    assert "Préparation de la transmission" in client.post(base+"submit",data=submitted,follow_redirects=True).text
     rec=jobs.record(site.store.directory,FOLDER,site.owner)
     updated={**raw,"currentState":"validated","trainingActionInfo":offer.amended(raw,values,OPTIONS)["trainingActionInfo"]}
     jobs.complete(site.store.directory,rec,{"code":"proposal_confirmed","proposal_receipt":directory.project(updated)},"Confirmée")
