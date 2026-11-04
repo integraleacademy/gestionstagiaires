@@ -51,6 +51,7 @@
         <span id="edof-full-sync" class="wedof-status-pill" data-stamp="{{ live.sync.full_stamp }}" {% if not live.sync.full_stamp or live.sync.stamp <= live.sync.full_stamp %}hidden{% endif %}>Liste générale · {{ live.sync.full_label }}</span>
         {% if not detail %}<span class="wedof-status-pill">{{ snapshot_count }} dossiers synchronisés</span>{% endif %}
         <span id="edof-reading" class="wedof-status-pill" role="status" {% if not live.pending %}hidden{% endif %}><i class="edof-spinner" aria-hidden="true"></i>Synchronisation EDOF en cours…</span>
+        <span id="edof-login-budget" class="wedof-status-pill" title="Jusqu’à 4 codes automatiques entre 7h et 19h, heure de Paris. Au moins 15 minutes entre deux tentatives automatiques." {% if not live.login_budget %}hidden{% endif %}>Tentatives EFP · {{ live.login_budget.used if live.login_budget else 0 }}/4 aujourd’hui</span>
       </div>
       <small id="edof-connection-note">{{ live.schedule }}{% if live.pending %} · {{ live.phase or 'Lecture en cours…' }}{% elif live.error %} · {{ live.error }}{% endif %}{% if live.until %} · Activation manuelle jusqu’à {{ live.until }}{% endif %}{% if live.checked %} · Dernier contrôle le {{ live.checked }}{% endif %}</small>
       <p id="edof-recovery" class="edof-recovery" role="status" data-pending="{{ '1' if live.recovery and live.recovery.pending else '0' }}" {% if not live.recovery %}hidden{% endif %}>{{ live.recovery.message if live.recovery else '' }}</p>
@@ -307,5 +308,5 @@
 {% block scripts %}
   {% include '_edof_feedback.html' %}
   <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-feedback.js',v='20261104-feedback') }}" defer></script>
-  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261104-recovery') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261104-login-budget') }}" defer></script>
 {% endblock %}

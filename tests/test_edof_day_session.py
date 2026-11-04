@@ -21,8 +21,9 @@ def test_paris_hours(instant, expected):
 def test_single_automatic_sign_in_survives_restart_and_manual_login(tmp_path):
     key = connector_key("test" * 12)
     now = dt.datetime(2026, 11, 6, 8, tzinfo=PARIS)
-    assert allow_login(Vault(tmp_path, key), now=now)
-    assert not allow_login(Vault(tmp_path, key), now=now.replace(hour=17))
+    for hour in (8,11,14,17):
+        assert allow_login(Vault(tmp_path, key), now=now.replace(hour=hour))
+    assert not allow_login(Vault(tmp_path, key), now=now.replace(hour=18))
     assert allow_login(Vault(tmp_path, key), now=now + dt.timedelta(days=1))
     monday = now + dt.timedelta(days=3)
     assert allow_login(Vault(tmp_path, key), now=monday)
@@ -185,7 +186,7 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
         monkeypatch.setattr(Route, "continue_", expired_portal)
         monkeypatch.setattr(runner, "open_workspace_or_login", require_login)
         monkeypatch.setattr(runner, "read_pending_with_private_session", lambda *a: None)
-        vault.put("efp-login-day", {"date":dt.datetime.now(PARIS).date().isoformat(),"count":1})
+        vault.put("efp-login-day", {"date":dt.datetime.now(PARIS).date().isoformat(),"count":4})
         result = runner.run_browser({"mode":"directory","day_session":True,"owner":"fixture"},live=live)
         assert result["code"] == "day_login_used" and not result["gmail_code_used"]
         measured = runner.session_clock.read_clock(vault, "fixture")
@@ -195,13 +196,13 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
         browser.close()
 
 
-def test_only_an_explicit_single_use_permit_can_request_another_code(tmp_path):
+def test_only_an_explicit_single_use_permit_can_exceed_four_codes(tmp_path):
     vault = Vault(tmp_path, connector_key("test" * 12))
     day = dt.datetime(2026, 11, 3, 8, tzinfo=PARIS)
     assert allow_login(vault, owner="A", now=day)
-    assert not allow_login(vault, owner="A", now=day.replace(hour=9))
-    assert not allow_login(vault, owner="A", now=day.replace(hour=11))
-    assert not allow_login(vault, owner="A", now=day.replace(hour=16))
+    assert allow_login(vault, owner="A", now=day.replace(hour=9))
+    assert allow_login(vault, owner="A", now=day.replace(hour=11))
+    assert allow_login(vault, owner="A", now=day.replace(hour=16))
     vault.put("day-login-override:A", day.date().isoformat(), ttl=600)
     assert not allow_login(vault, owner="B", now=day.replace(hour=17))
     assert allow_login(vault, owner="A", now=day.replace(hour=17))
@@ -222,7 +223,7 @@ def test_manual_window_expires_without_enabling_the_watch(tmp_path, monkeypatch)
     assert store.day_owners(saturday+dt.timedelta(hours=1)) == []
     vault = Vault(tmp_path, connector_key("test" * 12))
     assert allow_login(vault, manual_until=until, now=saturday)
-    assert not allow_login(vault, manual_until=until, now=saturday+dt.timedelta(hours=1))
+    assert not allow_login(vault, manual_until=until, now=saturday+dt.timedelta(minutes=1))
     store.pause_directory("owner")
     assert not store.manual_until("owner")
 
@@ -318,7 +319,7 @@ def test_no_cold_browser_without_existing_session_or_login_budget(tmp_path, monk
     now=dt.datetime.now(PARIS)
     key=connector_key("test"*12)
     vault=Vault(tmp_path,key)
-    vault.put("efp-login-day", {"date":now.date().isoformat(), "count":3})
+    vault.put("efp-login-day", {"date":now.date().isoformat(), "count":4})
     launch=Mock(side_effect=AssertionError("unexpected browser"))
     monkeypatch.setattr("edof_day_session.subprocess.Popen",launch)
     outcome=DayWorker().read({"mode":"directory","owner":"example", "manual_until":now.timestamp()+3600},
@@ -349,7 +350,7 @@ def test_sorted_portal_query_stops_at_cutoff_and_keeps_january_first():
     assert result["rows"]["100001"]["ft_pending"]
 
 
-def test_old_counters_and_verified_reads_do_not_grant_an_extra_login(tmp_path, monkeypatch):
+def test_old_counters_keep_consumed_budget_when_four_codes_are_enabled(tmp_path, monkeypatch):
     now = dt.datetime.now(PARIS).replace(hour=12,minute=15,second=0,microsecond=0)
     monkeypatch.setattr("edof_server_test.time.time",lambda:now.timestamp())
     store = ServerTestStore(tmp_path)
@@ -361,10 +362,12 @@ def test_old_counters_and_verified_reads_do_not_grant_an_extra_login(tmp_path, m
             stamp = now.timestamp()-600+idx*60
             db.execute("INSERT INTO jobs VALUES(?,?,?,?,?,?)",
                        (str(idx),"A",stamp,stamp+2,"directory",'{"code":"'+code+'"}'))
-    for legacy in (now.date().isoformat(), {"date":now.date().isoformat(),"count":3}):
+    for legacy,allowed in ((now.date().isoformat(),True), ({"date":now.date().isoformat(),"count":3},True),
+                           ({"date":now.date().isoformat(),"count":4},False)):
         vault.put("efp-login-day",legacy)
-        assert not store.day_owners(now)
-        assert not allow_login(Vault(tmp_path,key),owner="A",now=now)
+        vault.put("efp-paused-day",now.date().isoformat())
+        assert bool(store.day_owners(now)) is allowed
+        assert allow_login(Vault(tmp_path,key),owner="A",now=now) is allowed
         assert store.day_owners(now+dt.timedelta(days=1)) == ["A"]
 
 
@@ -429,7 +432,7 @@ def test_dossier_login_is_limited_by_the_watch_even_in_a_fresh_browser(tmp_path,
     monkeypatch.setenv("EDOF_CONNECTOR_DIRECTORY",str(tmp_path))
     monkeypatch.setenv("EDOF_EFP_USERNAME","fixture@example.invalid")
     monkeypatch.setenv("EDOF_EFP_PASSWORD","local-browser-fixture")
-    vault.put("efp-login-day", {"date":today,"count":1})
+    vault.put("efp-login-day", {"date":today,"count":4})
     login = f"https://{runner.EFP_HOST}/auth/realms/efp/login-actions/authenticate"
     def local_only(route, **_):
         assert route.request.method == "GET"
@@ -452,7 +455,7 @@ def test_dossier_login_is_limited_by_the_watch_even_in_a_fresh_browser(tmp_path,
                     "manual_until":dt.datetime.now(PARIS).timestamp()+120,"intent":{"action":"entry_training"}}
             outcome = runner.run_browser(spec,live={"pw":pw,"browser":browser})
             assert outcome["code"]=="day_login_used" and not outcome["gmail_code_used"]
-        assert vault.get("efp-login-day")["count"]==1
+        assert vault.get("efp-login-day")["count"]==4
         browser.close()
 
 

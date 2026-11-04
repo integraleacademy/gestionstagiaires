@@ -17,6 +17,8 @@ PARIS = ZoneInfo("Europe/Paris")
 POLL_SECONDS = 120
 OPEN_HOUR = 7
 CLOSE_HOUR = 19
+MAX_DAILY_LOGINS = 4
+LOGIN_RETRY_SECONDS = 15 * 60
 SHARED_JOB_MODES = frozenset({"declare","reconcile","proposal_read","proposal_check","proposal_send"})
 
 
@@ -44,18 +46,41 @@ def login_count(vault, today):
     return int(prior == today)
 
 
+def login_policy(vault, *, owner=None, now=None, manual_until=0):
+    now = (now or datetime.now(PARIS)).astimezone(PARIS)
+    today = now.date().isoformat()
+    count = login_count(vault, today)
+    prior = vault.get("efp-login-day")
+    last = prior.get("at", 0) if isinstance(prior, dict) and prior.get("date") == today else 0
+    override = bool(owner) and vault.get("day-login-override:" + owner) == today
+    # Outside the daily watch, retain the existing explicit one-hour activation.
+    limit = MAX_DAILY_LOGINS if working_hours(now) else 1
+    code = None
+    if session_deadline(now, manual_until) <= now.timestamp():
+        code = "day_closed"
+    elif vault.get("edof-throttled"):
+        code = "portal_throttled"
+    elif count >= limit and not override:
+        code = "day_login_used"
+    elif count and last and now.timestamp() < last + LOGIN_RETRY_SECONDS and not override:
+        code = "day_login_wait"
+    return {"allowed":code is None, "code":code, "used":count, "limit":MAX_DAILY_LOGINS,
+            "remaining":max(0,MAX_DAILY_LOGINS-count), "retry_at":last+LOGIN_RETRY_SECONDS if code == "day_login_wait" else None,
+            "override":override}
+
+
 def allow_login(vault, *, owner=None, now=None, manual_until=0):
     """Reserve the account's attempt before submitting credentials, under the job lock."""
     now = (now or datetime.now(PARIS)).astimezone(PARIS)
-    if session_deadline(now, manual_until) <= now.timestamp():
-        return False
     today = now.date().isoformat()
-    count = login_count(vault, today)
-    override = bool(owner) and vault.get("day-login-override:" + owner, consume=True) == today
-    if count and not override:
-        vault.put("efp-paused-day", today, ttl=86400)
+    policy = login_policy(vault, owner=owner, now=now, manual_until=manual_until)
+    if not policy["allowed"]:
+        if policy["code"] == "day_login_used":
+            vault.put("efp-paused-day", today, ttl=86400)
         return False
-    vault.put("efp-login-day", {"date":today, "count":count+1, "at":now.timestamp()}, ttl=2*86400)
+    if policy["override"]:
+        vault.get("day-login-override:" + owner, consume=True)
+    vault.put("efp-login-day", {"date":today, "count":policy["used"]+1, "at":now.timestamp()}, ttl=2*86400)
     vault.delete("efp-paused-day")
     return True
 
@@ -100,9 +125,10 @@ class DayWorker:
                 if vault.get("edof-throttled"):
                     return {"code":"portal_throttled"}
                 today = now.date().isoformat()
-                if (login_count(vault,today) and vault.get("day-login-override:"+spec["owner"]) != today
+                policy = login_policy(vault, owner=spec["owner"], now=now, manual_until=spec.get("manual_until",0))
+                if (not policy["allowed"]
                         and (vault.get("efp-paused-day") == today or not (vault.get("browser") or {}).get("cookies"))):
-                    return {"code":"day_login_used", "gmail_code_used":False}
+                    return {"code":policy["code"], "gmail_code_used":False}
                 self.temp = tempfile.TemporaryDirectory(prefix="edof-working-day-")
                 self.channel, child = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
                 with child:

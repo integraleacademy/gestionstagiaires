@@ -1476,9 +1476,10 @@ def run_browser(spec, *, live=None):
                 clock_event("interrupted" if signals.get("local_session_reset") else "reauth")
                 # Refresh Google and record pre-existing mail BEFORE requesting
                 # an EFP code. This cannot reuse a code from an earlier run.
-                from edof_day_session import allow_login
+                from edof_day_session import allow_login, login_policy
                 if not allow_login(vault, owner=spec.get("owner"), manual_until=spec.get("manual_until", 0)):
-                    raise StopRun("day_login_used")
+                    policy = login_policy(vault, owner=spec.get("owner"), manual_until=spec.get("manual_until",0))
+                    raise StopRun(policy["code"] or "day_login_used")
                 mailbox = GmailCodes(vault, username)
                 page.locator('input[name="username"]').fill(username)
                 page.locator('input[name="password"]').fill(password)
