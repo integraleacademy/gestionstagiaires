@@ -99,7 +99,18 @@ def register_routes(host, bp, *, page):
     def trainee_elearning_progress(session_id, trainee_id):
         partner, source, person, effective = context(session_id, trainee_id)
         report = ProgressReader(host).report(source, person, session_obj=effective)
+        daily_preview = None
+        if source['course_code'] == 'aps' and partner['id'] == host.INTEGRALE_PARTNER_ID:
+            import aps_learning_followup as daily
+            day = daily.clock().date()
+            receipt = daily.delivery(host, session_id, trainee_id, day)
+            enabled = daily.eligible(host, effective, person, day)
+            daily_preview = {'url': url_for('admin_aps_daily_preview', session_id=session_id, trainee_id=trainee_id),
+                'day': day.strftime('%d/%m/%Y'), 'enabled': enabled,
+                'status': receipt['status'] if receipt else '',
+                'sent_at': receipt['sent_at'] if receipt else ''}
         return page('elearning_progress.html', partner=partner, order=source, person=person,
+                    daily_preview=daily_preview,
                     group=None, report=report, course=learning.COURSES[source['course_code']], staff=True,
                     back_url=url_for('admin_trainee_page', session_id=session_id, trainee_id=trainee_id)
                         + ('#apsElearningFollowup' if source['course_code'] == 'aps' else '#vtcElearningFollowup'),

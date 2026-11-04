@@ -1764,6 +1764,7 @@
     };
     const previewUrl = result.convention_preview_url || "";
     const conventionPayload = await window.openConventionTransmission?.({
+      companyUrl: result.company_convention_url || "",
       trainingType: result.training_type || result.session_training_type || "",
       defaults: {
         ssiap_pathway: result.ssiap_pathway || "",
@@ -1779,6 +1780,7 @@
       }
     });
     if(!conventionPayload){ continueAfterConvention(); return; }
+    if(conventionPayload.company_convention_url){ window.location.href = conventionPayload.company_convention_url; return; }
     try{
       await saveConventionFinancing(conventionPayload);
     }catch(error){

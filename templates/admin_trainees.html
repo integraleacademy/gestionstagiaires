@@ -1,5 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
+{% if is_native_aps %}
+<div data-aps-roster-url="{{ url_for('admin_aps_learning_roster', session_id=session.id) }}" hidden></div>
+<script src="{{ url_for('static', filename='js/aps-learning-roster.js', v='20261104') }}" defer></script>
+<style>
+.aps-followup-time{display:block;font-size:12px;font-weight:750;color:#1d4ed8;text-decoration:none;margin-top:7px;white-space:nowrap;}.aps-followup-time:hover{text-decoration:underline;}
+.aps-live-status{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:.035em;color:#b91c1c;margin-top:6px;}.aps-live-status i{width:7px;height:7px;border-radius:50%;background:#ef4444;}.aps-live-status.is-live{color:#15803d;}.aps-live-status.is-live i{background:#22c55e;box-shadow:0 0 0 3px #dcfce7;}.aps-live-status.is-unknown{color:#64748b;}.aps-live-status.is-unknown i{background:#94a3b8;}.aps-followup small{display:block;font-size:10px;color:#64748b;line-height:1.4;margin-top:5px;}
+</style>
+{% endif %}
 {% set read_only_attr = "disabled" if is_read_only else "" %}
 {% set is_vtc_header = "VTC" in (session.training_type or "")|upper %}
 {% set is_a3p_header = ("A3P" in (session.training_type or "")|upper) or ("A3P" in (session.name or "")|upper) %}
@@ -694,8 +702,11 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         {% set signature = t.aps_elearning_signature if t.aps_elearning_signature is mapping else {} %}
         {% set signature_status = (signature.status or '')|trim|lower %}
         {% set show_completion_badge = attendance and attendance.is_complete and tracking.file and signature_status in ['done', 'signed'] %}
-        <td class="col-aps-attendance">
-          {% if attendance %}
+        <td class="col-aps-attendance"{% if is_native_aps %} data-aps-roster-trainee="{{ t.id }}"{% endif %}>
+          {% if is_native_aps %}
+            <span class="aps-followup-empty">Chargement du suivi…</span>
+            <noscript><a href="{{ url_for('manuals_shop.trainee_elearning_progress', session_id=session.id, trainee_id=t.id) }}">Consulter le suivi détaillé</a></noscript>
+          {% elif attendance %}
             <div class="aps-followup{% if attendance.is_complete %} aps-followup--complete{% endif %}">
               <div class="aps-followup-heading">
                 <strong class="aps-followup-rate">{{ attendance.overall_rate_label }}</strong>
@@ -3773,6 +3784,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     };
     const previewUrl = result.convention_preview_url || "";
     const conventionPayload = await window.openConventionTransmission?.({
+      companyUrl: result.company_convention_url || "",
       trainingType: result.training_type || result.session_training_type || "",
       defaults: {
         ssiap_pathway: result.ssiap_pathway || "",
@@ -3788,6 +3800,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       }
     });
     if(!conventionPayload){ continueAfterConvention(); return; }
+    if(conventionPayload.company_convention_url){ window.location.href = conventionPayload.company_convention_url; return; }
     try{
       await saveConventionFinancing(conventionPayload);
     }catch(error){

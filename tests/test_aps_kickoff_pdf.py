@@ -65,7 +65,8 @@ def test_release_on_remote_start_and_remains_available(case, monkeypatch):
             html = render_template('aps_kickoff_card.html', aps_kickoff=state, token_safe='trainee-one')
         assert ('Consulter le diaporama' in html) == (expected == 200)
         assert ('Télécharger le PDF' in html) == (expected == 200)
-        assert (f'src="{PUBLIC}#view=FitH"' in html) == (expected == 200)
+        assert '<iframe' not in html
+        assert (f'href="{PUBLIC}"' in html) == (expected == 200)
 
 
 def test_authentication_and_token_ownership(case):
