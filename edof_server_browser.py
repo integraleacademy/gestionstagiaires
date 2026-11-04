@@ -10,6 +10,7 @@ from contextlib import nullcontext
 import json
 import os
 import re
+import sqlite3
 import sys
 import time
 import unicodedata
@@ -22,6 +23,8 @@ from edof_readonly_test import (
 from edof_gmail import Vault, GmailCodes, GmailError
 import edof_directory as directory
 import edof_session_clock as session_clock
+from edof_directory_batches import Cursor, BatchPending, PAGES_PER_BATCH
+from edof_traffic import Traffic, PacedContext
 
 EDOF_HOST = "of.moncompteformation.gouv.fr"
 EFP_HOST = "efpconnect.emploi.gouv.fr"
@@ -418,7 +421,7 @@ def all_dossiers_link(page):
     return target
 
 
-def read_official_pending(page, checkpoint, timeout_error):
+def read_official_pending(page, checkpoint, timeout_error, api_context=None):
     """Read the dashboard's À traiter tab, requiring the displayed count and matching private rows."""
     target = LIST_URL.rsplit("/", 1)[0] + "/tous"
     if not is_directory_view(page.url, target):
@@ -443,7 +446,7 @@ def read_official_pending(page, checkpoint, timeout_error):
             official_count = len(snapshot["rows"])
         else:
             report = {}
-            snapshot = read_recent_directory(page.context, response.value.request, "notProcessed", checkpoint, report)
+            snapshot = read_recent_directory(api_context or page.context, response.value.request, "notProcessed", checkpoint, report)
             official_count = report["total"]
 
     except (timeout_error, ValueError, TypeError, AttributeError):
@@ -456,7 +459,7 @@ def read_official_pending(page, checkpoint, timeout_error):
     return directory.dated_snapshot(snapshot)
 
 
-def read_recent_directory(context, witness, state, checkpoint, progress, *, size=100):
+def read_recent_directory(context, witness, state, checkpoint, progress, *, size=100, cursor=None):
     """Use the portal's session-date descending order and stop at the first archival page."""
     if witness is None or witness.method != "GET":
         raise directory.IncompleteDirectory()
@@ -470,6 +473,11 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
     total = None
     ordered, previous = True, None
     index = 0
+    saved = cursor.value if cursor else None
+    if saved:
+        rows, seen, total = saved["rows"], set(saved["seen"]), saved["total"]
+        ordered, previous, index, size = saved["ordered"], saved["previous"], saved["index"], saved["size"]
+    batch_start = index
     while len(seen) <= directory.MAX_ROWS:
         progress.update(method="session_desc", page=index+1, seen=len(rows))
         checkpoint()
@@ -523,8 +531,15 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
         progress.update(pages=index+1, seen=len(rows))
         # An older item among recent ones does not finish the catalogue. Read the next page.
         if len(seen) == total or (ordered and archive_only and state != "notProcessed"):
+            if cursor:
+                cursor.clear()
             return {"rows":rows, "checked":time.time(), "scope":{"all":"all", "accepted":"accepted"}.get(state,"pending")}
         index += 1
+        if cursor:
+            cursor.save({"rows":rows, "seen":list(seen), "total":total, "ordered":ordered,
+                         "previous":previous, "index":index, "size":size})
+            if index-batch_start >= PAGES_PER_BATCH:
+                raise BatchPending()
     raise directory.IncompleteDirectory("limit")
 
 
@@ -1113,6 +1128,20 @@ def select_establishment(page, step, signals):
 
 
 def run_browser(spec, *, live=None):
+    traffic = None
+    if (os.environ.get("RENDER_SERVICE_ID") == TEST_SERVICE_ID
+            and os.environ.get("EDOF_CONNECTOR_KEY") and os.environ.get("EDOF_CONNECTOR_DIRECTORY")):
+        try:
+            traffic = Traffic(Vault(os.environ["EDOF_CONNECTOR_DIRECTORY"], os.environ["EDOF_CONNECTOR_KEY"]))
+        except (OSError, ValueError, sqlite3.Error):
+            return {"code":"private_storage_unavailable"}
+    result = _run_browser(spec, live=live, traffic=traffic)
+    if traffic:
+        result["traffic"] = traffic.report()
+    return result
+
+
+def _run_browser(spec, *, live=None, traffic=None):
     if os.environ.get("RENDER_SERVICE_ID") != TEST_SERVICE_ID:
         return {"code": "wrong_environment"}
     from playwright.sync_api import sync_playwright, Error as BrowserError, TimeoutError as BrowserTimeout
@@ -1147,6 +1176,10 @@ def run_browser(spec, *, live=None):
                 gate = SingleWrite(spec, EDOF_HOST, API_PREFIX, os.environ["EDOF_CONNECTOR_DIRECTORY"])
             if vault.get("edof-throttled"):
                 return {"code":"portal_throttled"}
+            if spec["mode"] in {"proposal_send","declare"}:
+                # A write by any administrator can reorder the shared catalogue.
+                # Jobs already hold the account-wide browser lock.
+                vault.put("directory-generation",time.time_ns())
             saved = vault.get("browser")
         except Exception:
             return {"code": "private_storage_unavailable"}
@@ -1188,6 +1221,13 @@ def run_browser(spec, *, live=None):
             if permit:
                 efp_form_target = None
         if permit or (gate and (gate.allows_simulation(request) or gate.allows(request))):
+            if traffic:
+                try:
+                    traffic.before(request.url, request.method)
+                except directory.PortalThrottled as exc:
+                    signals["throttled"] = exc
+                    route.abort()
+                    return
             route.continue_()
         else:
             blocked += 1
@@ -1209,7 +1249,7 @@ def run_browser(spec, *, live=None):
             gate.observe(response)
         parsed = urlsplit(response.url)
         if response.status == 429 and parsed.netloc in {EDOF_HOST,EFP_HOST}:
-            pause = directory.PortalThrottled(response.headers.get("retry-after"))
+            pause = traffic.after(response, response.request.method) if traffic else directory.PortalThrottled(response.headers.get("retry-after"))
             signals["throttled"] = pause
             if vault:
                 pause.remember(vault)
@@ -1299,7 +1339,7 @@ def run_browser(spec, *, live=None):
             context.route("**/*", route_request)
             page.set_default_timeout(12000)
             page.on("response", observe)
-            return context, page
+            return PacedContext(context, traffic) if traffic else context, page
 
         try:
             warm = live is not None and "page" in live
@@ -1422,6 +1462,11 @@ def run_browser(spec, *, live=None):
                 return {"code":"requests_ready","stage":"directory","candidate_count":len(snapshot["rows"]),
                         "fresh_session":not reused,"session_saved":True,"gmail_code_used":gmail_code_used}
 
+            def poll_pending(witness):
+                if vault:
+                    vault.put("pending-attempt:"+spec["owner"],time.time(),ttl=900)
+                return read_pending_with_private_session(context,witness,checkpoint)
+
             def run_proposal(witness, reused):
                 from edof_proposal_jobs import perform
                 from edof_proposal import InvalidTerms
@@ -1441,6 +1486,59 @@ def run_browser(spec, *, live=None):
                 return {**result,"fresh_session":not reused,"gmail_code_used":gmail_code_used,
                         "session_saved":result["code"] != "identity_mismatch"}
 
+            def run_full(witness, reused):
+                nonlocal stage
+                stage = "directory"
+                cursor = Cursor(vault,spec) if spec.get("day_session") else None
+                signals["directory"] = {}
+                progress("reading_all_folders")
+                try:
+                    try:
+                        snapshot = read_recent_directory(context,witness,"all",checkpoint,signals["directory"],cursor=cursor)
+                    except directory.IncompleteDirectory as exc:
+                        can_widen = not cursor or not cursor.value or cursor.value.get("size",100) < 500
+                        if cursor:
+                            cursor.clear()
+                        if exc.args != ("page_overlap",) or not can_widen:
+                            raise
+                        snapshot = read_recent_directory(context,witness,"all",checkpoint,signals["directory"],size=500,cursor=cursor)
+                except BatchPending:
+                    vault.put("browser",session_cookies(context.storage_state()),ttl=86400)
+                    clock_event("verified",fresh=not reused)
+                    return {"code":"directory_progress", "stage":stage,"session_saved":True,
+                            "fresh_session":not reused,"gmail_code_used":gmail_code_used,
+                            "diagnostics":{"directory":signals["directory"]}}
+                except (ValueError,KeyError,TypeError,BrowserError) as exc:
+                    if cursor:
+                        cursor.clear()
+                    reason = str(exc) if isinstance(exc,directory.IncompleteDirectory) and exc.args else "unreadable"
+                    signals["directory"]["failure"] = reason if reason in {"http","size","count","empty_page","page_overlap","scope","limit"} else "unreadable"
+                    if pending_result:
+                        pending_result["diagnostics"] = {"directory":signals["directory"]}
+                    raise StopRun("directory_incomplete") from None
+                progress("saving_directory")
+                vault.put(directory.record_key(spec["owner"]),snapshot)
+                # The complete list already contains accepted dossiers. A second scan is redundant.
+                vault.put(directory.accepted_key(spec["owner"]),{"checked":snapshot["checked"],"scope":"accepted",
+                          "rows":{k:r for k,r in snapshot["rows"].items() if directory.normalized(r["state"]) in {"accepted","accepte"}}},ttl=directory.TTL)
+                vault.put("browser",session_cookies(context.storage_state()),ttl=86400)
+                clock_event("verified",fresh=not reused)
+                return {"code":"directory_ready","stage":stage,"candidate_count":len(snapshot["rows"]),
+                        "diagnostics":{"directory":signals["directory"]},"fresh_session":not reused,
+                        "gmail_code_used":gmail_code_used,"session_saved":True}
+
+            if warm and spec.get("day_session") and spec.get("full_sync") and vault and private_page(page.url):
+                witness = live.get("pending_witness")
+                if witness is not None:
+                    # Even a long full scan must keep the filtered two-minute watch alive.
+                    last_poll = max((vault.get(directory.pending_key(spec["owner"])) or {}).get("checked",0),
+                                    vault.get("pending-attempt:"+spec["owner"]) or 0)
+                    if time.time()-last_poll >= 120:
+                        pending = poll_pending(witness)
+                        if pending is not None:
+                            pending_result = save_pending(pending,witness,True)
+                    return run_full(witness,True)
+
             if warm and proposal_mode and vault and private_page(page.url):
                 previous = live.pop("proposal_witness", None)
                 if previous and previous[:2] == (spec["owner"],spec.get("folder_id")):
@@ -1454,7 +1552,7 @@ def run_browser(spec, *, live=None):
                 if witness is not None and private_page(page.url):
                     stage = "directory"
                     progress("reading_pending_tab")
-                    pending = read_pending_with_private_session(context, witness, checkpoint)
+                    pending = poll_pending(witness)
                     if pending is not None:
                         return save_pending(pending, witness, True)
 
@@ -1645,10 +1743,10 @@ def run_browser(spec, *, live=None):
                         # response from the configured establishment.
                         vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                     progress("reading_pending_tab")
-                    pending = read_pending_with_private_session(context, private_witness, checkpoint)
+                    pending = poll_pending(private_witness)
                     if pending is None:
                         try:
-                            pending = read_official_pending(page, checkpoint, BrowserTimeout)
+                            pending = read_official_pending(page, checkpoint, BrowserTimeout, context)
                         except BrowserTimeout:
                             pending = None
                     if pending is not None:
@@ -1663,37 +1761,9 @@ def run_browser(spec, *, live=None):
                     while private_witness is None and time.monotonic() < deadline:
                         checkpoint()
                         page.wait_for_timeout(200)
-                if spec.get("day_session") and private_witness is not None:
-                    try:
-                        accepted = read_recent_directory(context, private_witness, "accepted", checkpoint, {})
-                        if all(directory.normalized(r["state"]) in {"accepted","accepte"} for r in accepted["rows"].values()):
-                            vault.put(directory.accepted_key(spec["owner"]), accepted, ttl=directory.TTL)
-                    except (ValueError, TypeError, KeyError, BrowserError):
-                        pass  # The general list can still succeed independently.
-                signals["directory"] = {}
-                progress("reading_all_folders")
-                try:
-                    try:
-                        snapshot = read_recent_directory(context, private_witness, "all", checkpoint, signals["directory"])
-                    except directory.IncompleteDirectory as exc:
-                        if exc.args != ("page_overlap",):
-                            raise
-                        # Equal session dates can move between pages. Retry with a wider page.
-                        snapshot = read_recent_directory(context, private_witness, "all", checkpoint, signals["directory"], size=500)
-                except (ValueError, KeyError, TypeError, BrowserError) as exc:
-                    detail = signals["directory"]
-                    reason = str(exc) if isinstance(exc, directory.IncompleteDirectory) and exc.args else "unreadable"
-                    detail["failure"] = reason if reason in {"http","size","count","empty_page","page_overlap","scope","limit"} else "unreadable"
-                    if pending_result:
-                        pending_result["diagnostics"] = {"directory":detail}
-                    raise StopRun("directory_incomplete") from None
-                progress("saving_directory")
-                vault.put(directory.record_key(spec["owner"]), snapshot)
-                vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
-                clock_event("verified", fresh=not reused)
-                return {"code": "directory_ready", "stage": stage, "candidate_count": len(snapshot["rows"]),
-                        "diagnostics": {"directory": signals["directory"]},
-                        "fresh_session": not reused, "gmail_code_used": gmail_code_used, "session_saved": True}
+                if live is not None and private_witness is not None:
+                    live["pending_witness"] = private_witness
+                return run_full(private_witness,reused)
             if not spec.get("folder_id"):
                 stage = "search"
                 signals["search_step"] = "opening_list"
