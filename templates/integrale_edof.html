@@ -5,7 +5,7 @@
   {% endif %}
   {% if detail and detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'] %}<meta http-equiv="refresh" content="10">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261104-feedback') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261104-recovery') }}">
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
@@ -53,6 +53,7 @@
         <span id="edof-reading" class="wedof-status-pill" role="status" {% if not live.pending %}hidden{% endif %}><i class="edof-spinner" aria-hidden="true"></i>Synchronisation EDOF en cours…</span>
       </div>
       <small id="edof-connection-note">{{ live.schedule }}{% if live.pending %} · {{ live.phase or 'Lecture en cours…' }}{% elif live.error %} · {{ live.error }}{% endif %}{% if live.until %} · Activation manuelle jusqu’à {{ live.until }}{% endif %}{% if live.checked %} · Dernier contrôle le {{ live.checked }}{% endif %}</small>
+      <p id="edof-recovery" class="edof-recovery" role="status" data-pending="{{ '1' if live.recovery and live.recovery.pending else '0' }}" {% if not live.recovery %}hidden{% endif %}>{{ live.recovery.message if live.recovery else '' }}</p>
       <section class="edof-clock" id="edof-session-clock" aria-label="Durée de connexion EFP"
                data-elapsed="{{ live.clock.elapsed }}" data-tick-for="{{ live.clock.tick_for }}" data-confirmed="{{ live.clock.confirmed }}">
         <div class="edof-clock-main">
@@ -306,5 +307,5 @@
 {% block scripts %}
   {% include '_edof_feedback.html' %}
   <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-feedback.js',v='20261104-feedback') }}" defer></script>
-  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261104-feedback') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261104-recovery') }}" defer></script>
 {% endblock %}

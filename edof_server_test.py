@@ -27,6 +27,7 @@ from flask import flash, Blueprint, abort, jsonify, redirect, request, send_file
 from cpf_provider import ProviderStore, acquire_provider, provider_operation
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
 from edof_day_session import DayWorker, OPEN_HOUR, POLL_SECONDS, PARIS, working_hours, awaiting_edof_return
+import edof_recovery as recovery
 import edof_directory as directory
 import edof_session_clock as session_clock
 import edof_proposal_jobs as proposals
@@ -163,6 +164,7 @@ class ServerTestStore:
         db.execute("""CREATE TABLE IF NOT EXISTS automation_catchups (owner TEXT PRIMARY KEY, revision INTEGER NOT NULL,
                    requested REAL NOT NULL, message TEXT NOT NULL DEFAULT '')""")
         automation_audit.install_jobs(db)
+        recovery.install(db)
         db.execute("UPDATE jobs SET finished = ?, result = ? WHERE finished IS NULL "
                    "AND created < ? - CASE WHEN mode = 'directory' THEN ? WHEN mode IN ('declare','reconcile','proposal_read','proposal_send','proposal_check') THEN ? ELSE ? END",
                    (time.time(), json.dumps({"code": "interrupted"}), time.time() - 30, DIRECTORY_TIMEOUT, DECLARATION_TIMEOUT, JOB_TIMEOUT))
@@ -170,7 +172,7 @@ class ServerTestStore:
         db.commit()
         return db
 
-    def reserve(self, owner, mode, *, day_session=False, sync_scope=None):
+    def reserve(self, owner, mode, *, day_session=False, sync_scope=None, recovery_since=None, revision=None):
         db = self.connect()
         try:
             with db:
@@ -196,6 +198,8 @@ class ServerTestStore:
                 job_id = secrets.token_hex(16)
                 db.execute("INSERT INTO jobs (id, owner, created, mode, result) VALUES (?, ?, ?, ?, ?)",
                            (job_id, owner, time.time(), mode, json.dumps({"code": "running", "day_session": day_session})))
+                if recovery_since is not None:
+                    recovery.claim(db, owner, job_id, recovery_since, revision)
                 if sync_scope:
                     claimed = db.execute("""UPDATE directory_sync_requests SET job_id=? WHERE owner=? AND scope=? AND requested>=?
                         AND (job_id IS NULL OR job_id IN (SELECT id FROM jobs WHERE json_extract(result,'$.code')='interrupted'))""",
@@ -210,8 +214,10 @@ class ServerTestStore:
         db = self.connect()
         try:
             with db:
+                job = db.execute("SELECT id,owner,mode FROM jobs WHERE id=?", (job_id,)).fetchone()
                 db.execute("UPDATE jobs SET result = ?, finished = ? WHERE id = ?",
                            (json.dumps(result, ensure_ascii=False), time.time(), job_id))
+                recovery.finished(db, job, result)
         finally:
             db.close()
 
@@ -290,6 +296,8 @@ class ServerTestStore:
             except BlockingIOError:
                 return
             with closing(self.connect()) as db, db:
+                for item in db.execute("SELECT owner FROM directory_activity UNION SELECT owner FROM manual_sessions WHERE until>?", (time.time(),)).fetchall():
+                    recovery.mark(db, item["owner"], "server_restart")
                 if self.connector_key:
                     vault = Vault(self.directory, self.connector_key)
                     owners = db.execute("SELECT owner FROM directory_activity UNION SELECT owner FROM manual_sessions UNION SELECT DISTINCT owner FROM jobs")
@@ -523,6 +531,7 @@ class ServerTestStore:
         schedule = ("Veille programmée de 7 h à 19 h (Paris)" if watch_open else "Hors plage de veille (7 h à 19 h, Paris)") if watch_enabled else "Veille automatique suspendue"
         clock = session_clock.clock_view(timing, now.timestamp(), open_now=open_now, verified=verified)
         return {"clock":clock, "active": verified, "pending": pending, "checked": checked, "sync": sync, "schedule": schedule, "manual_sync": self.manual_sync_status(owner, "all"),
+                "recovery": recovery.status(self, owner),
                 "last_read": dict(row) if row else None,
                 "new_sync": self.manual_sync_status(owner, "new"),
                 "phase": labels.get(phase.get("phase"), "") if private_at >= earliest and pending else "",
@@ -577,7 +586,7 @@ class ServerTestStore:
                 elif row["finished"] and row["code"] == "portal_throttled":
                     if self.connector_key and not Vault(self.directory,self.connector_key).get("edof-throttled"):
                         due.append(row["owner"])
-                elif row["finished"] and row["code"] in ("directory_ready","requests_ready","directory_incomplete","directory_unavailable","pending_unavailable","timeout","browser_error","interrupted"):
+                elif row["finished"] and row["code"] in ("directory_ready","requests_ready","directory_incomplete","directory_unavailable","pending_unavailable","timeout","browser_error","interrupted","authentication_unconfirmed"):
                     result = json.loads(row["result"])
                     if row["code"] == "interrupted" and result.get("restart"):
                         due.append(row["owner"])
@@ -768,7 +777,8 @@ def start_job(store, owner, spec, *, day_worker=None):
                 raise ValueError("Le choix de système a changé.")
             if not declarations.check_before_job(store, spec):
                 raise ValueError("Cette déclaration est à vérifier dans la fiche.")
-        job_id = store.reserve(owner, spec["mode"], day_session=day_worker is not None and spec["mode"]=="directory", sync_scope=spec.get("sync_scope"))
+        job_id = store.reserve(owner, spec["mode"], day_session=day_worker is not None and spec["mode"]=="directory", sync_scope=spec.get("sync_scope"),
+                               recovery_since=spec.get("recovery_since"), revision=spec.get("revision"))
         if spec["mode"] == "proposal_read" and not proposals.reading(store.directory,spec):
             store.finish(job_id,{"code":"interrupted"})
             raise ValueError("Une autre lecture est déjà programmée.")
@@ -812,8 +822,13 @@ def register_edof_server_test(legacy):
                         store.process_catchups(active)
                         if active["pending"]:
                             continue
+                        recovery.prepare(store, active, now)
                         manual_sync = store.next_manual_sync()
                         if not manual_sync:
+                            restart = recovery.next_job(store, active, now)
+                            if restart:
+                                start_job(store, restart["owner"], restart, day_worker=worker)
+                                continue
                             pending = proposals.next_job(store.directory,active) or declarations.next_job(store, active["revision"], provider=active["provider"])
                             # Re-evaluate deadlines even when no new export was needed this minute.
                             tick = (active["revision"], int(now.timestamp()) // 300)
@@ -823,11 +838,15 @@ def register_edof_server_test(legacy):
                                     owners = [r[0] for r in db.execute("SELECT owner FROM directory_activity")]
                                 vault = Vault(store.directory, store.connector_key)
                                 for owner in owners:
+                                    if recovery.pending(store, owner):
+                                        continue
                                     snap = directory.dated_snapshot(vault.get(directory.record_key(owner), keep=True))
                                     if snap:
                                         from integrale_edof_dashboard import apply_confirmed_entries
                                         declarations.discover(store, owner, apply_confirmed_entries(snap, store.directory, owner))
                                 pending = declarations.next_job(store, active["revision"])
+                            if pending and pending["mode"] == "declare" and recovery.pending(store, pending["owner"]):
+                                pending = None
                             if pending:
                                 open_now = working_hours(now) or store.manual_until(pending["owner"])
                                 if open_now or pending["mode"] in PROPOSAL_MODES:

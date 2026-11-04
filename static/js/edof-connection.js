@@ -193,6 +193,12 @@
         }
         const reading = document.getElementById("edof-reading");
         if (reading) reading.hidden = !state.pending;
+        const recovery = document.getElementById('edof-recovery');
+        if (recovery) {
+          recovery.hidden = !state.recovery;
+          recovery.textContent = state.recovery?.message || '';
+          recovery.dataset.pending = state.recovery?.pending ? '1' : '0';
+        }
         const latest = document.getElementById("edof-sync");
         const full = document.getElementById("edof-full-sync");
         if (state.sync.stamp && state.sync.stamp >= Number(latest.dataset.stamp)) {

@@ -112,7 +112,7 @@ class DayWorker:
                 self.owner, self.provider, self.vault = spec["owner"], spec.get("provider"), vault
             try:
                 started = datetime.now(PARIS).timestamp()
-                command = {**spec, "full_sync":spec.get("sync_scope") == "all"}
+                command = {**spec, "full_sync":spec.get("sync_scope") == "all" or spec.get("recovery_since") is not None}
                 # Both locks must cover the child's work even if the scheduler is killed.
                 socket.send_fds(self.channel, [json.dumps(command).encode()], list(lock_fds))
                 now = datetime.now(PARIS)
