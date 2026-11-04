@@ -7,6 +7,7 @@ import tempfile
 
 from docx import Document
 from docx.text.paragraph import Paragraph
+from convention_design import restyle_file
 
 COURSES = {"aps", "a3p", "desp_paris", "desp_puget", "vtc", "ssiap"}
 
@@ -99,6 +100,7 @@ def render(template, company, values, replace_placeholders, validate, office, de
         source = root / "convention-entreprise.docx"
         build_document(template, company, values).save(source)
         replace_placeholders(str(source), values)
+        restyle_file(source)
         validate(str(source))
         subprocess.run([office, "-env:UserInstallation=" + (root / "profile").as_uri(),
                         "--headless", "--convert-to", "pdf", "--outdir", directory, str(source)],
