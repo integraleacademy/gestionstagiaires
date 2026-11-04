@@ -3774,15 +3774,20 @@ document.querySelectorAll("[data-learning-summary]").forEach(section => {
 
 // All convention entry points use the same type, finance and signature flow.
 if(new URLSearchParams(window.location.search).get("preparer_convention") === "1"){
-  const url = new URL(window.location.href);
-  url.searchParams.delete("preparer_convention");
-  window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
-  const form = document.querySelector('form[data-convention-transmission-form="true"]');
-  const submit = form?.querySelector('button[type="submit"]');
-  if(form && submit && !submit.disabled){
-    for(let parent = form.parentElement; parent; parent = parent.parentElement){
-      if(parent.tagName === "DETAILS") parent.open = true;
+  const prepareConvention = ()=>{
+    const url = new URL(window.location.href);
+    url.searchParams.delete("preparer_convention");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+    const form = document.querySelector('form[data-convention-transmission-form="true"]');
+    const submit = form?.querySelector('button[type="submit"]');
+    if(form && submit && !submit.disabled){
+      for(let parent = form.parentElement; parent; parent = parent.parentElement){
+        if(parent.tagName === "DETAILS") parent.open = true;
+      }
+      requestAnimationFrame(()=>form.requestSubmit());
     }
-    requestAnimationFrame(()=>form.requestSubmit());
-  }
+  };
+  // The shared dialogs/functions are rendered later by base.html.
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", prepareConvention, {once:true});
+  else prepareConvention();
 }
