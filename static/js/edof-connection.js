@@ -193,6 +193,11 @@
         }
         const reading = document.getElementById("edof-reading");
         if (reading) reading.hidden = !state.pending;
+        const budget = document.getElementById('edof-login-budget');
+        if (budget) {
+          budget.hidden = !state.login_budget;
+          budget.textContent = state.login_budget ? `Tentatives EFP · ${state.login_budget.used}/${state.login_budget.limit} aujourd’hui` : '';
+        }
         const recovery = document.getElementById('edof-recovery');
         if (recovery) {
           recovery.hidden = !state.recovery;

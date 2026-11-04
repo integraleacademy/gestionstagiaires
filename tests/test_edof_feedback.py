@@ -36,6 +36,8 @@ def test_json_connection_and_catchup_keep_csrf_role_and_provider_guards(site, mo
     assert reply.status_code == 202 and reply.json['requested'] and not reply.json['active']
     job = site.store.reserve(site.owner, 'directory', day_session=True)
     site.store.finish(job, {'code':'day_login_used'})
+    import datetime as dt
+    site.vault.put('efp-login-day',{'date':dt.datetime.now(server.PARIS).date().isoformat(),'count':4})
     last = site.store.live_connection(site.owner, False)['last_read']
     assert last['finished'] >= reply.json['requested'] and last['code'] == 'day_login_used'
     resume = site.client.post('/admin/edof-test/server/directory/resume', data={'csrf':site.csrf}, headers=headers)

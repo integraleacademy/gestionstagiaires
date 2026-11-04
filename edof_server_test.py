@@ -26,7 +26,7 @@ from flask import flash, Blueprint, abort, jsonify, redirect, request, send_file
 
 from cpf_provider import ProviderStore, acquire_provider, provider_operation
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
-from edof_day_session import DayWorker, OPEN_HOUR, POLL_SECONDS, PARIS, working_hours, awaiting_edof_return
+from edof_day_session import DayWorker, OPEN_HOUR, POLL_SECONDS, PARIS, working_hours, awaiting_edof_return, login_policy
 import edof_recovery as recovery
 import edof_directory as directory
 import edof_session_clock as session_clock
@@ -43,7 +43,8 @@ PROPOSAL_MODES = {"proposal_read", "proposal_send", "proposal_check"}
 AUTH_MODES = PROPOSAL_MODES | {"read", "directory", "declare", "reconcile", "inspect_forms"}
 MESSAGES = {
     **declarations.REASONS,
-    "day_login_used": "EFP demande une nouvelle authentification. L’envoi automatique de codes est en pause pour aujourd’hui. Un administrateur peut autoriser un nouveau code.",
+    "day_login_used": "Le quota de codes EFP autorisé est atteint. La reconnexion automatique est en pause. Un administrateur peut autoriser une tentative supplémentaire.",
+    "day_login_wait": "Une authentification EFP a été tentée récemment. La reconnexion reprendra automatiquement après le délai de 15 minutes.",
     "portal_throttled": "EDOF ou EFP limite les requêtes. La veille respecte le délai du portail, avec une pause minimale d’une heure.",
     "day_closed": "La veille est ouverte tous les jours de 7 h à 19 h, heure de Paris.",
     "declaration_confirmed": "Le statut et les valeurs de la déclaration ont été relus sur EDOF.",
@@ -255,8 +256,16 @@ class ServerTestStore:
             checked_at = dt.datetime.fromtimestamp(row["finished"], ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y à %H h %M")
         if row and row["screen"] == "session_expired":
             state, label = "expired", "Session expirée au dernier contrôle"
-        elif row and row["code"] == "day_login_used":
-            state, label = "day_paused", "Veille en pause · EFP redemande un code"
+        elif row and row["code"] in {"day_login_used","day_login_wait"}:
+            budget = login_policy(Vault(self.directory,self.connector_key), owner=owner, manual_until=self.manual_until(owner)) if self.connector_key else None
+            if budget and budget["allowed"]:
+                state, label = "reconnect", "Reconnexion automatique programmée"
+            elif budget and budget["code"] == "day_login_wait":
+                state, label = "day_wait", "Reconnexion automatique après le délai de 15 minutes"
+            elif budget and budget["code"] in {"portal_throttled","day_closed"}:
+                state, label = "day_wait", MESSAGES[budget["code"]]
+            else:
+                state, label = "day_paused", "Veille en pause · quota de codes EFP atteint"
         elif row and row["code"] in {"credentials_rejected", "account_unavailable", "verification_code",
                                     "otp_rejected", "account_action_required", "sign_in_error"}:
             state, label = "reconnect", "Reconnexion nécessaire"
@@ -482,6 +491,7 @@ class ServerTestStore:
         watch_open = working_hours(now, daily=True)
         open_now = bool(manual or watch_open and watch_enabled)
         timing = session_clock.read_clock(Vault(self.directory,self.connector_key), owner) if self.connector_key else {}
+        budget = login_policy(Vault(self.directory,self.connector_key), owner=owner, now=now, manual_until=manual) if self.connector_key else None
         with closing(self.connect()) as db:
             if not timing:
                 timing = session_clock.legacy_observation(db, owner)
@@ -526,12 +536,15 @@ class ServerTestStore:
                   "otp_submitted":"Retour d’EFP vers EDOF", "selecting_organisation":"Ouverture de l’établissement",
                   "reading_directory":"Lecture de la liste", "reading_pending_tab":"Lecture des dossiers À traiter",
                   "reading_all_folders":"Synchronisation de tous les dossiers", "pending_verified":"Demandes vérifiées"}
-        blocked = open_now and not verified and stamp >= earliest and last and last["code"] == "day_login_used"
+        blocked = open_now and not verified and stamp >= earliest and last and last["code"] in {"day_login_used","day_login_wait"} and (not budget or budget["code"] == "day_login_used")
         error = MESSAGES.get(last["code"], "") if open_now and not verified and stamp >= earliest and last and last["code"] not in {"directory_ready","requests_ready"} else ""
+        if error and last["code"] in {"day_login_used","day_login_wait"} and budget:
+            error = MESSAGES.get(budget["code"], "Reconnexion automatique programmée dans la limite des quatre codes quotidiens.")
         schedule = ("Veille programmée de 7 h à 19 h (Paris)" if watch_open else "Hors plage de veille (7 h à 19 h, Paris)") if watch_enabled else "Veille automatique suspendue"
         clock = session_clock.clock_view(timing, now.timestamp(), open_now=open_now, verified=verified)
         return {"clock":clock, "active": verified, "pending": pending, "checked": checked, "sync": sync, "schedule": schedule, "manual_sync": self.manual_sync_status(owner, "all"),
                 "recovery": recovery.status(self, owner),
+                "login_budget": {k:budget[k] for k in ("used","limit","remaining","retry_at")} if budget else None,
                 "last_read": dict(row) if row else None,
                 "new_sync": self.manual_sync_status(owner, "new"),
                 "phase": labels.get(phase.get("phase"), "") if private_at >= earliest and pending else "",
@@ -566,7 +579,7 @@ class ServerTestStore:
             rows = db.execute("""
                 SELECT a.owner,m.started AS manual_start,j.created,j.finished,j.result,json_extract(j.result,'$.code') AS code,
                        (EXISTS(SELECT 1 FROM directory_requested r WHERE r.owner=a.owner)
-                        OR (json_extract(j.result,'$.code')='day_login_used' AND EXISTS
+                        OR (json_extract(j.result,'$.code') IN ('day_login_used','day_login_wait') AND EXISTS
                             (SELECT 1 FROM jobs newer WHERE newer.owner=a.owner AND newer.finished>j.finished
                              AND json_extract(newer.result,'$.session_saved')=1))) AS requested
                 FROM (SELECT owner,max(seen) AS seen FROM (SELECT owner,seen FROM directory_activity WHERE ?
@@ -585,6 +598,11 @@ class ServerTestStore:
                     due.append(row["owner"])
                 elif row["finished"] and row["code"] == "portal_throttled":
                     if self.connector_key and not Vault(self.directory,self.connector_key).get("edof-throttled"):
+                        due.append(row["owner"])
+                elif row["finished"] and row["code"] in {"day_login_used","day_login_wait"} and self.connector_key:
+                    budget = login_policy(Vault(self.directory,self.connector_key), owner=row["owner"], now=now,
+                                          manual_until=self.manual_until(row["owner"]))
+                    if budget["allowed"] and row["finished"] + 20 <= now.timestamp():
                         due.append(row["owner"])
                 elif row["finished"] and row["code"] in ("directory_ready","requests_ready","directory_incomplete","directory_unavailable","pending_unavailable","timeout","browser_error","interrupted","authentication_unconfirmed"):
                     result = json.loads(row["result"])

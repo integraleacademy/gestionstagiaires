@@ -127,6 +127,7 @@ def test_missed_poll_is_remembered_and_unconfirmed_auth_retries_with_cooldown(re
     assert not s.store.day_owners(s.now())
     s.clock[0] += 900
     assert s.owner in s.store.day_owners(s.now())
+    s.vault.put('efp-login-day',{'date':s.now().date().isoformat(),'count':4})
     s.read('day_login_used')
     s.clock[0] += 900
     assert not s.store.day_owners(s.now())

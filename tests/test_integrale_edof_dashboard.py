@@ -302,6 +302,8 @@ def test_admin_resume_requires_a_paused_open_watch(site, monkeypatch):
     assert site.client.post(url, data={"csrf":site.csrf}).status_code == 409
     jid = site.store.reserve(site.owner, "directory", day_session=True)
     site.store.finish(jid, {"code":"day_login_used","day_session":True})
+    site.vault.put("efp-login-day", {"date":dt.datetime.now(dashboard.PARIS).date().isoformat(),"count":4})
+    monkeypatch.setattr('edof_day_session.working_hours',lambda *args,**kwargs:True)
     assert site.client.post(url, data={"csrf":""}).status_code == 403
     assert site.client.post(url, data={"csrf":site.csrf}).status_code == 303
     assert site.vault.get("day-login-override:"+site.owner) == dt.datetime.now(dashboard.PARIS).date().isoformat()
