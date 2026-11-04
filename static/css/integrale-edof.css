@@ -11,6 +11,62 @@
   display: none !important;
 }
 
+.edof-folder-groups {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  padding: 8px 22px 20px;
+}
+
+.edof-folder-group {
+  --group-color: #2153a3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 82px;
+  padding: 16px;
+  border: 1px solid var(--wedof-border);
+  border-top: 3px solid var(--group-color);
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #34445c;
+  text-decoration: none;
+  font-weight: 650;
+  transition: background .15s, box-shadow .15s;
+}
+.edof-folder-group[data-group="training"] { --group-color: #276959; }
+.edof-folder-group[data-group="billing"] { --group-color: #6d4ca5; }
+.edof-folder-group[data-group="closed"] { --group-color: #a44b4f; }
+.edof-folder-group[data-group="all"] { --group-color: #5d6b82; }
+.edof-folder-group strong { font-size: 25px; color: var(--group-color); }
+.edof-folder-group:hover,
+.edof-folder-group.is-active {
+  background: #fff;
+  box-shadow: 0 0 0 2px var(--group-color), 0 5px 15px #102d4b0d;
+}
+.edof-folder-group:focus-visible,
+.native-cpf .wedof-counter:focus-visible { outline: 3px solid #1544a8; outline-offset: 4px; }
+.native-cpf .wedof-counters.edof-operation-counters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.edof-search label { flex: 1 1 200px; min-width: 0; }
+.edof-search select {
+  width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid var(--wedof-border);
+  border-radius: 9px; background: #fff; color: #26374d; font: inherit;
+}
+.edof-operation-time { display: grid; gap: 5px; font-weight: 650; white-space: nowrap; }
+.edof-operation-time small, .edof-operation-date { display: block; margin-top: 5px; color: #667085; font-weight: 400; }
+.edof-operation-table .wedof-person-cell { min-width: 180px; max-width: 320px; }
+.edof-operation-table .wedof-person-cell a { margin-top: 5px; font-size: 12px; }
+.edof-operation-table .wedof-badges { min-width: 170px; max-width: 300px; }
+@media (max-width: 1100px) {
+  .edof-folder-groups { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 650px) {
+  .edof-folder-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0 16px 16px; }
+  .edof-folder-group { padding: 12px; min-height: 75px; font-size: 13px; }
+  .native-cpf .wedof-counters.edof-operation-counters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 #edof-lamp {
   background: #8a263a;
   color: #fff;
@@ -393,3 +449,7 @@ body.admin-sidebar-active .main-content:has(.edof-workspace) { max-width: none; 
 .edof-clock p { margin: 7px 0 0; color: #475b78; }
 .edof-clock-previous { padding-top: 7px; border-top: 1px solid #dae3f0; }
 .edof-clock-previous strong { margin-right: .5em; }
+
+.edof-tools { width: 100%; max-width: 28em; color: #435477; }
+.edof-tools summary { padding: 9px 0; cursor: pointer; font-size: 13px; font-weight: 650; }
+.edof-tools > div { display: grid; gap: 8px; padding: 8px 0; }

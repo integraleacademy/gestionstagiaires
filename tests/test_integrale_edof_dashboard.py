@@ -272,15 +272,15 @@ def test_legacy_french_dates_work_in_live_simulation_and_declarations_without_re
 def test_new_requests_counts_official_state_independently_of_local_notes(site):
     page = site.client.get("/admin/edof-test?section=state&tab=request")
     assert page.status_code == 200
-    assert page.text.index("<span>Nouvelle demande</span>") < page.text.index("<span>Acceptés</span>")
-    assert "<strong>1</strong><span>Nouvelle demande</span>" in page.text
+    assert "<span>À traiter</span>" in page.text and "<span>Acceptés</span>" not in page.text
+    assert "<strong>1</strong><span>À traiter</span>" in page.text
     assert "100002" in page.text and "100001" not in page.text
     dashboard.record_work(site.gate, "100002", "admin", handled=1)
     assert "100002" in site.client.get("/admin/edof-test?section=state&tab=request").text
     assert "100002" in site.client.get("/admin/edof-test?section=requests").text
     dashboard.record_work(site.gate, "100002", "admin", handled=0, archived=1)
     page = site.client.get("/admin/edof-test?section=state&tab=request")
-    assert "<strong>1</strong><span>Nouvelle demande</span>" in page.text and "Archivée localement" in page.text
+    assert "<strong>1</strong><span>À traiter</span>" in page.text and "Archivée localement" in page.text
     assert dashboard.category({"state":"Non traité"}) == "request"
     assert dashboard.category({"state":"Accepté"}) == "accepted"
 
@@ -348,7 +348,7 @@ def test_processing_pages_classify_official_states_and_exclude_legacy_folders(si
     for i, tab in enumerate(cases):
         section = "requests" if tab in dashboard.REQUEST_TABS else "automations"
         page = site.client.get("/admin/edof-test", query_string={"section":section, "tab":tab})
-        assert page.status_code == 200 and dashboard.SECTIONS[section] in page.text
+        assert page.status_code == 200 and dashboard.SECTIONS["state"] in page.text
         assert "900000" not in page.text and str(200000+i) in page.text
         assert all(str(200000+j) not in page.text for j in range(len(cases)) if i != j)
     assert site.client.get("/admin/edof-test?folder=900000").status_code == 404
