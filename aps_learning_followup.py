@@ -190,7 +190,8 @@ def message(host, training, person, report, day):
                    day_label=day.strftime('%d/%m/%Y'), onsite_label=onsite.strftime('%d/%m/%Y') if onsite else 'à confirmer',
                    title=title, headline=headline, encouragement=encouragement, tip=tip, tone=tone,
                    report=report, remaining_label=time_label(remaining), daily_label=time_label(daily_seconds),
-                   days=days, access_url=access_url, complete=complete)
+                   days=days, access_url=access_url, complete=complete,
+                   daily_feasible=daily_seconds <= 8 * 3600)
     fragment = host.app.jinja_env.get_template('emails/aps_daily_followup.html').render(**context)
     html = render_email(fragment, title=title, eyebrow=f'VOTRE RENDEZ-VOUS APS · {day:%d/%m/%Y}',
                         subtitle=headline, signature='cassandre', preheader=f"Votre progression : {percent:g} %. Présentiel le {context['onsite_label']}.")
@@ -199,7 +200,8 @@ def message(host, training, person, report, day):
             f"Progression : {percent:g} %\nTemps suivi : {report['active_time_label']}\n"
             f"Temps restant requis : {context['remaining_label']}\n"
             f"Le e-learning doit être terminé avant le début du présentiel le {context['onsite_label']}.\n"
-            + ('' if complete else f"Objectif indicatif par jour : {context['daily_label']}, sur {days} jour(s).\n")
+            + ('' if complete else f"Objectif indicatif par jour : {context['daily_label']}, sur {days} jour(s).\n"
+               if context['daily_feasible'] else "Le volume restant est important au regard du délai : contactez-nous dès aujourd’hui pour faire le point et organiser la suite de votre parcours.\n")
             + f"\n{tip}\nReprendre mon parcours : {access_url}\n\n"
             "À la moindre difficulté, contactez-nous au 04 22 47 07 68. "
             "Signaler un problème technique : ecole@integraleacademy.com\n\n"
