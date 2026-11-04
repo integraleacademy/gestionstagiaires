@@ -126,6 +126,9 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
         self.assertIn('href="/admin/sessions/S-APS/stagiaires/T-SUMMARY/summary">Fiche</a>', html)
+        self.assertIn('href="/admin/sessions/S-APS/stagiaires/T-SUMMARY?preparer_convention=1#automationHub"', html)
+        self.assertNotIn('action="/admin/sessions/S-APS/stagiaires/T-SUMMARY/convention/yousign"', html)
+        self.assertNotIn('data-convention-preview-required="true"', html)
 
     def test_legacy_signed_convention_is_excluded_when_public_journey_shows_signed(self):
         fake_data = {
