@@ -54,6 +54,8 @@ def page(store, owner, snapshot, args):
         db.create_function("edof_normalized", 1, directory.normalized, deterministic=True)
         # A verified receipt is stronger than a later observation of that same
         # milestone. Retain both in storage but show that milestone only once.
+        # Successful two-minute polling is routine activity, not a journal item.
+        # Filter before counters and pagination, including already archived polls.
         cte = """WITH raw AS (
             SELECT *, 'd:'||id AS uid FROM main.edof_automation_events WHERE owner=?
             UNION ALL SELECT *, 'j:'||id AS uid FROM server_history.edof_automation_events WHERE owner=?
@@ -63,6 +65,7 @@ def page(store, owner, snapshot, args):
                 WHEN status IN ('confirmed','observed') THEN status ELSE 'pending' END AS result
             FROM raw e WHERE NOT (status='observed' AND EXISTS (
                 SELECT 1 FROM raw r WHERE r.folder=e.folder AND r.kind=e.kind AND r.status='confirmed' AND r.occurred<=e.occurred))
+            AND NOT (source='connector' AND status='confirmed' AND detail='requests_ready')
         ) """
         params = [owner, owner]
         where = []
