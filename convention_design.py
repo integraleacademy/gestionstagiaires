@@ -121,6 +121,13 @@ def _title(paragraph, *, secondary=False):
     fmt.keep_with_next = True
     fmt.keep_together = True
     _font(paragraph, 19 if secondary else 22, "000000", True)
+    legal_subtitle = False
+    for run in paragraph.runs:
+        legal_subtitle = legal_subtitle or run.text.lstrip().startswith("(Articles")
+        if legal_subtitle:
+            run.font.size = Pt(9.5)
+            run.bold = False
+            run.font.color.rgb = RGBColor.from_string("59646C")
 
 
 def _table(table):
