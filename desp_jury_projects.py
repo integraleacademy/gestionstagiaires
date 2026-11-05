@@ -10,10 +10,11 @@ from zoneinfo import ZoneInfo
 
 from flask import abort, flash, redirect, request, send_file, session, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
+from document_conversion import _validate_pdf
 
 KEY = "desp_jury_project"
 MAX_BYTES = 15_000_000
-EXTENSIONS = {".pdf", ".doc", ".docx", ".ppt", ".pptx", ".odt", ".odp"}
+EXTENSIONS = {".pdf"}
 SIZE_ERROR = "Le total de vos documents dépasse 15 Mo. Réduisez ou compressez vos fichiers avant de les déposer à nouveau."
 
 
@@ -145,7 +146,7 @@ def register(app, services):
                 filename = re.split(r"[/\\]", upload.filename)[-1][:200]
                 extension = Path(filename).suffix.lower()
                 if extension not in EXTENSIONS:
-                    raise ValueError("Choisissez un document PDF, Word, PowerPoint ou OpenDocument.")
+                    raise ValueError("Choisissez un document au format PDF uniquement.")
                 content = upload.stream.read(MAX_BYTES - total + 1)
                 total += len(content)
                 if total > MAX_BYTES:
@@ -153,6 +154,10 @@ def register(app, services):
                 if not content:
                     raise ValueError("Un document est vide. Choisissez un fichier contenant votre projet.")
                 replacements[int(key[-1])] = (filename, content)
+            # Validate the whole bounded batch before persisting anything. A renamed
+            # Office file, unreadable or password-protected PDF is not a PDF deposit.
+            for _, content in replacements.values():
+                _validate_pdf(content)
             removed = {slot for slot in (1, 2) if request.form.get(f"remove_{slot}") == "1"}
             try:
                 revision = int(request.form.get("revision", ""))

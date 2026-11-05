@@ -1,5 +1,5 @@
 {% if desp_project %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/desp-jury-project.css') }}?v=2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/desp-jury-project.css') }}?v=20261105-pdf">
 {% if desp_project_admin %}
 <section class="desp-project" id="projet-cadrage" aria-labelledby="despProjectTitle">
   <div class="desp-project-heading">
@@ -27,7 +27,7 @@
   <div class="desp-project-limit">
     <strong>1 ou 2 documents · 15 Mo maximum au total</strong>
     <span>Si vos fichiers dépassent 15 Mo au total, réduisez leur taille ou compressez-les avant de les déposer.</span>
-    <span>Formats acceptés : PDF, Word, PowerPoint et OpenDocument.</span>
+    <span>Format accepté : PDF uniquement.</span>
   </div>
   {% if desp_project.documents %}
   <ul class="desp-project-files">
@@ -61,7 +61,7 @@
     <button class="btn desp-project-submit" type="submit">Enregistrer mes documents</button>
     <p class="desp-project-file-hint">Vous pouvez ajouter le deuxième document plus tard ou remplacer vos fichiers. Les changements sont appliqués après enregistrement.</p>
   </form>
-  <script src="{{ url_for('static', filename='js/desp-jury-project.js') }}?v=2" defer></script>
+  <script src="{{ url_for('static', filename='js/desp-jury-project.js') }}?v=20261105-pdf" defer></script>
   {% endif %}
   </div>
 {% if desp_project_admin %}

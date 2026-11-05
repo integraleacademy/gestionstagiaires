@@ -198,7 +198,7 @@
     {% if afc_hours_supported %}
     <a class="btn btn-outline" id="btnAfcHoursExport" href="{{ url_for('admin_afc_hours', session_id=session.id) }}">Export Excel AFC</a>
     {% endif %}
-    {% if is_desp_initial and security_jury_supported %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Organisation et jury</button>{% endif %}
+    {% if is_desp_initial and security_jury_supported %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Examen</button>{% endif %}
     {% if ssiap_exam_supported and not session.afc_enabled %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Examen</button>{% endif %}
     {% if is_aps_training and session.aps_elearning_enabled and not is_native_aps and not is_read_only %}
     <button class="btn btn-outline" id="btnImportDigiforma" type="button">Importer les relevés Digiforma</button>
@@ -965,7 +965,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 {% endif %}
 
 
-{% if is_desp_initial and security_jury_supported %}{% with jury_session=session %}{% include '_security_jury_modal.html' %}{% endwith %}{% endif %}
+{% if is_desp_initial and security_jury_supported %}{% with jury_session=session, desp_scotia_enabled=true %}{% include '_security_jury_modal.html' %}{% endwith %}{% endif %}
 {% if (is_a3p_header or is_aps_header) and (not is_read_only or session.afc_enabled) %}
 {% include '_security_exam_modal.html' %}
 {% endif %}

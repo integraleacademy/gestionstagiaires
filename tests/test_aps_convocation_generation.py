@@ -920,7 +920,8 @@ class ApsConventionGenerationTests(unittest.TestCase):
 
         self.assertEqual(anchors[0]["type"], "signature")
         self.assertEqual(anchors[0]["width"], 160)
-        self.assertEqual(anchors[0]["height"], 60)
+        self.assertEqual(anchors[0]["height"], 80)
+        self.assertEqual(anchors[0]["y"], anchors[0]["marker_y"])
         self.assertNotIn("{{s1|signature|160|60}}", clean_text)
 
     def test_aps_convention_generation_uses_only_production_word_template(self):

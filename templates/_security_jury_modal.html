@@ -1,7 +1,24 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css', v='20261020-1') }}">
 <dialog id="ssiapExamDialog" class="exam-dialog" aria-labelledby="ssiapExamTitle" data-organization-only="true" data-url="{{ url_for('api_security_exam', session_id=jury_session.id) }}">
-  <header class="exam-heading"><div><span class="exam-eyebrow">INTÉGRALE ACADEMY</span><h2 id="ssiapExamTitle">Organisation et jury · DESP initial</h2><p>{{ jury_session.name }}</p></div><button type="button" data-exam-close aria-label="Fermer la modale Examen" class="exam-close">×</button></header>
-  <div class="exam-content">{% include '_security_jury_form.html' %}</div>
+  <header class="exam-heading"><div><span class="exam-eyebrow">INTÉGRALE ACADEMY</span><h2 id="ssiapExamTitle">{{ 'Examen' if desp_scotia_enabled else 'Organisation et jury' }} · DESP initial</h2><p>{{ jury_session.name }}</p></div><button type="button" data-exam-close aria-label="Fermer la modale Examen" class="exam-close">×</button></header>
+  {% if desp_scotia_enabled %}
+  <nav class="exam-tabs" aria-label="Rubriques de l’examen DESP">
+    <button type="button" data-exam-tab="scotia" aria-pressed="true">Dossier SCOTIA</button>
+    <button type="button" data-exam-tab="organization" aria-pressed="false">Organisation et jury</button>
+  </nav>
+  {% endif %}
+  <div class="exam-content">
+    {% if desp_scotia_enabled %}
+    <section data-exam-panel="scotia" data-desp-scotia-url="{{ url_for('api_desp_scotia', session_id=jury_session.id) }}">
+      <div class="exam-summary"><div><h3>Dossier SCOTIA</h3><p class="exam-muted">Un seul PDF par stagiaire : fiche candidat, attestation sur l’honneur, puis tous les PDF du projet de cadrage (1 obligatoire, 2e facultatif).</p></div><button type="button" class="btn btn-outline" data-scotia-refresh>Actualiser les pièces</button></div>
+      <p class="exam-note">Le téléchargement est disponible uniquement lorsque les trois éléments sont présents et lisibles.</p>
+      <p data-scotia-status role="status" aria-live="polite"></p>
+      <div data-scotia-candidates></div>
+    </section>
+    <section data-exam-panel="organization" hidden>{% include '_security_jury_form.html' %}</section>
+    {% else %}{% include '_security_jury_form.html' %}{% endif %}
+  </div>
 </dialog>
 {% include '_exam_jury_mail_dialog.html' %}
 <script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261026-without-pv-1') }}" defer></script>
+{% if desp_scotia_enabled %}<script src="{{ url_for('static', filename='js/desp-scotia.js', v='20261105-1') }}" defer></script>{% endif %}
