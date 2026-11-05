@@ -5,7 +5,7 @@
   {% endif %}
   {% if detail and detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'] %}<noscript><meta http-equiv="refresh" content="10"></noscript>{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261104-proposal') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261105-connexion') }}">
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
@@ -46,7 +46,7 @@
       <h1>Pilotage des dossiers CPF</h1>
       <p>Suivez les demandes, les entrées en formation, les services faits et la facturation des sessions commençant à partir du 1er janvier 2026.</p>{% endif %}
       <div class="wedof-hero-meta">
-        <span id="edof-lamp" class="wedof-status-pill lamp {{ 'on' if live.active else '' }}" role="status">Connexion EDOF {{ 'active' if live.active else 'inactive' }}</span>
+        <span id="edof-lamp" class="wedof-status-pill lamp" data-state="{{ live.connection_state }}" role="status">{{ live.connection_label }}</span>
         <span id="edof-sync" class="wedof-status-pill is-sync" data-stamp="{{ live.sync.stamp }}">Dernière synchronisation · {{ (live.sync.label ~ ' · ' ~ live.sync.scope) if live.sync.stamp else 'Aucune lecture récente' }}</span>
         <span id="edof-full-sync" class="wedof-status-pill" data-stamp="{{ live.sync.full_stamp }}" {% if not live.sync.full_stamp or live.sync.stamp <= live.sync.full_stamp %}hidden{% endif %}>Liste générale · {{ live.sync.full_label }}</span>
         {% if not detail %}<span class="wedof-status-pill">{{ snapshot_count }} dossiers synchronisés</span>{% endif %}
@@ -308,6 +308,6 @@
 {% block scripts %}
   {% include '_edof_feedback.html' %}
   <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-feedback.js',v='20261104-proposal') }}" defer></script>
-  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261104-login-budget') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261105-connexion') }}" defer></script>
   {% if detail %}<script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-proposal-feedback.js',v='20261104-proposal') }}" defer></script>{% endif %}
 {% endblock %}

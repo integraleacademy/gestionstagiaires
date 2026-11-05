@@ -40,6 +40,15 @@ def finished(db, job, result):
     if not job or job["mode"] != "directory":
         return
     code = result.get("code")
+    directory_report = (result.get("diagnostics") or {}).get("directory") or {}
+    if (code in {"directory_incomplete","requests_ready"} and directory_report.get("failure")
+            and directory_report.get("http") == 200):
+        mark(db, job["owner"], "directory_incomplete")
+        db.execute("""UPDATE directory_recovery SET job_id=NULL,revision=NULL,retry_after=?,message=?
+            WHERE owner=? AND completed IS NULL""", (time.time()+RETRY_SECONDS,
+            "Liste générale incomplète. Une nouvelle lecture est programmée. La dernière liste vérifiée reste disponible.",
+            job["owner"]))
+        return
     if code == "directory_progress":
         db.execute("""UPDATE directory_recovery SET job_id=NULL,revision=NULL,retry_after=0,
             message='Reprise automatique · synchronisation complète en cours par petits lots.'

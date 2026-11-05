@@ -392,7 +392,7 @@ class ServerTestStore:
             elif not run["finished"] or run["code"] in {"interrupted","directory_progress"}:
                 continue
             elif run["code"] != "directory_ready":
-                message = "La liste générale EDOF n’a pas été actualisée. Relancez le rattrapage après la reprise de la connexion."
+                message = "La liste générale EDOF n’a pas été actualisée. Relancez le rattrapage quand la liste sera complète."
             else:
                 try:
                     with provider_operation("integrale"):
@@ -504,7 +504,8 @@ class ServerTestStore:
             queued = bool(db.execute("SELECT 1 FROM directory_requested WHERE owner=?", (owner,)).fetchone())
             row = db.execute("""SELECT finished,created,json_extract(result,'$.code') code
                 FROM jobs WHERE owner=? AND mode='directory' ORDER BY created DESC LIMIT 1""", (owner,)).fetchone()
-            last = db.execute("""SELECT finished,json_extract(result,'$.code') code FROM jobs
+            last = db.execute("""SELECT finished,json_extract(result,'$.code') code,
+                json_extract(result,'$.diagnostics.directory.http') AS list_http FROM jobs
                 WHERE owner=? AND mode='directory' AND finished IS NOT NULL ORDER BY finished DESC LIMIT 1""", (owner,)).fetchone()
             last_private = db.execute("""SELECT MAX(finished) FROM jobs WHERE owner=? AND json_extract(result,'$.session_saved')=1""",
                                       (owner,)).fetchone()[0] or 0
@@ -546,13 +547,25 @@ class ServerTestStore:
         error = MESSAGES.get(last["code"], "") if open_now and not verified and stamp >= earliest and last and last["code"] not in {"directory_ready","directory_progress","requests_ready"} else ""
         if error and last["code"] in {"day_login_used","day_login_wait"} and budget:
             error = MESSAGES.get(budget["code"], "Reconnexion automatique programmée dans la limite des quatre codes quotidiens.")
-        if self.connector_key and throttle.status(Vault(self.directory,self.connector_key)):
+        throttled = self.connector_key and throttle.status(Vault(self.directory,self.connector_key))
+        if throttled:
             # A request limit is not an invitation to request another login code.
             verified, pending, blocked = False, False, False
             error = throttle.message(Vault(self.directory,self.connector_key))
         schedule = ("Veille programmée de 7 h à 19 h (Paris)" if watch_open else "Hors plage de veille (7 h à 19 h, Paris)") if watch_enabled else "Veille automatique suspendue"
         clock = session_clock.clock_view(timing, now.timestamp(), open_now=open_now, verified=verified)
-        return {"clock":clock, "active": verified, "pending": pending, "checked": checked, "sync": sync, "schedule": schedule, "manual_sync": self.manual_sync_status(owner, "all"),
+        connection_state = "inactive"
+        connection_label = "Connexion EDOF inactive"
+        if verified:
+            connection_state, connection_label = "active", "Connexion EDOF active"
+        elif throttled:
+            connection_state, connection_label = "waiting", "Accès EDOF temporairement limité"
+        elif open_now and (pending or not last or stamp < earliest or last["code"] in {
+                "directory_ready","directory_progress","requests_ready","pending_unavailable","directory_incomplete","directory_unavailable"}
+                and last["list_http"] not in {401, 403}):
+            connection_state, connection_label = "waiting", "Connexion EDOF à vérifier"
+        return {"clock":clock, "active": verified, "connection_state":connection_state, "connection_label":connection_label,
+                "pending": pending, "checked": checked, "sync": sync, "schedule": schedule, "manual_sync": self.manual_sync_status(owner, "all"),
                 "recovery": recovery.status(self, owner),
                 "login_budget": {k:budget[k] for k in ("used","limit","remaining","retry_at")} if budget else None,
                 "last_read": dict(row) if row else None,
@@ -619,7 +632,9 @@ class ServerTestStore:
                     if row["code"] == "interrupted" and result.get("restart"):
                         due.append(row["owner"])
                         continue
-                    delay = POLL_SECONDS if row["code"] in {"directory_ready","directory_progress","requests_ready","pending_unavailable"} or awaiting_edof_return(result) else 900
+                    list_report = (result.get("diagnostics") or {}).get("directory") or {}
+                    list_error = row["code"] == "directory_incomplete" and list_report.get("http") == 200
+                    delay = POLL_SECONDS if list_error or row["code"] in {"directory_ready","directory_progress","requests_ready","pending_unavailable"} or awaiting_edof_return(result) else 900
                     if (delay == 900 and row["manual_start"] and row["code"] == "browser_error"
                             and result.get("stage") == "login_page" and not result.get("gmail_code_used")
                             and not (result.get("diagnostics") or {}).get("login_post_status")):

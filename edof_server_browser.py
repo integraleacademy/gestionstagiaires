@@ -459,7 +459,7 @@ def read_official_pending(page, checkpoint, timeout_error, api_context=None):
     return directory.dated_snapshot(snapshot)
 
 
-def read_recent_directory(context, witness, state, checkpoint, progress, *, size=100, cursor=None):
+def read_recent_directory(context, witness, state, checkpoint, progress, *, size=100, cursor=None, overlap_retry=False):
     """Use the portal's session-date descending order and stop at the first archival page."""
     if witness is None or witness.method != "GET":
         raise directory.IncompleteDirectory()
@@ -477,9 +477,11 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
     if saved:
         rows, seen, total = saved["rows"], set(saved["seen"]), saved["total"]
         ordered, previous, index, size = saved["ordered"], saved["previous"], saved["index"], saved["size"]
+        overlap_retry = saved.get("overlap_retry", False)
     batch_start = index
     while len(seen) <= directory.MAX_ROWS:
-        progress.update(method="session_desc", page=index+1, seen=len(rows))
+        progress.update(method="session_desc", page=index+1, seen=len(rows), page_size=size,
+                        overlap_retry=overlap_retry, private_list=False)
         checkpoint()
         params = {"page":index, "max":size, "state":state, "filter":"tous",
                   "sort":"DATE_DEBUT_SESSION", "order":"DESC"}
@@ -488,7 +490,7 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
             progress["http"] = reply.status
             directory.check_throttling(reply)
             if index == 0 and size > 10 and reply.status in {400, 422}:
-                size = 10  # The official list's default page size.
+                size = 500 if size > 500 else 10
                 continue
             if reply.status != 200 or not directory_list_url(reply.url):
                 raise directory.IncompleteDirectory("http")
@@ -498,8 +500,13 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
             data = json.loads(body)
         finally:
             reply.dispose()
+        if not isinstance(data, dict):
+            raise directory.IncompleteDirectory("unreadable")
         count, items = data.get("numberOfItems"), data.get("items")
-        if type(count) is not int or count < 0 or total not in (None, count) or not isinstance(items, list):
+        if type(count) is not int or not 0 <= count <= directory.MAX_ROWS or not isinstance(items, list):
+            raise directory.IncompleteDirectory("count")
+        progress["private_list"] = True
+        if total not in (None, count):
             raise directory.IncompleteDirectory("count")
         if not items and len(seen) != count:
             raise directory.IncompleteDirectory("empty_page")
@@ -508,7 +515,9 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
         for item in items:
             info = item.get("trainingActionInfo") or {}
             folder = str(item.get("id") or "")
-            if not directory.ID_RE.fullmatch(folder) or folder in seen:
+            if not directory.ID_RE.fullmatch(folder):
+                raise directory.IncompleteDirectory("invalid_id")
+            if folder in seen:
                 raise directory.IncompleteDirectory("page_overlap")
             seen.add(folder)
             # The portal sorts the planned session; beginDate may be an actual entry.
@@ -530,17 +539,33 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
             raise directory.IncompleteDirectory("count")
         progress.update(pages=index+1, seen=len(rows))
         # An older item among recent ones does not finish the catalogue. Read the next page.
-        if len(seen) == total or (ordered and archive_only and state != "notProcessed"):
+        if len(seen) == total or (ordered and archive_only and state != "notProcessed" and not overlap_retry):
             if cursor:
                 cursor.clear()
             return {"rows":rows, "checked":time.time(), "scope":{"all":"all", "accepted":"accepted"}.get(state,"pending")}
         index += 1
         if cursor:
             cursor.save({"rows":rows, "seen":list(seen), "total":total, "ordered":ordered,
-                         "previous":previous, "index":index, "size":size})
+                         "previous":previous, "index":index, "size":size, "overlap_retry":overlap_retry})
             if index-batch_start >= PAGES_PER_BATCH:
                 raise BatchPending()
     raise directory.IncompleteDirectory("limit")
+
+
+def read_full_directory(context, witness, checkpoint, progress, cursor):
+    try:
+        return read_recent_directory(context, witness, "all", checkpoint, progress, cursor=cursor)
+    except directory.IncompleteDirectory as exc:
+        if cursor:
+            cursor.clear()
+        if exc.args != ("page_overlap",):
+            raise
+        # Tied session dates can move dossiers across page boundaries. Request
+        # the advertised total in one bounded page when the portal accepts it.
+        size = min(progress["total"], 2000)
+        if size <= progress["page_size"] or progress["overlap_retry"]:
+            raise
+        return read_recent_directory(context, witness, "all", checkpoint, progress, size=size, cursor=cursor, overlap_retry=True)
 
 
 def read_pending_with_private_session(context, witness, checkpoint=lambda: None):
@@ -1493,15 +1518,7 @@ def _run_browser(spec, *, live=None, traffic=None):
                 signals["directory"] = {}
                 progress("reading_all_folders")
                 try:
-                    try:
-                        snapshot = read_recent_directory(context,witness,"all",checkpoint,signals["directory"],cursor=cursor)
-                    except directory.IncompleteDirectory as exc:
-                        can_widen = not cursor or not cursor.value or cursor.value.get("size",100) < 500
-                        if cursor:
-                            cursor.clear()
-                        if exc.args != ("page_overlap",) or not can_widen:
-                            raise
-                        snapshot = read_recent_directory(context,witness,"all",checkpoint,signals["directory"],size=500,cursor=cursor)
+                    snapshot = read_full_directory(context, witness, checkpoint, signals["directory"], cursor)
                 except BatchPending:
                     vault.put("browser",session_cookies(context.storage_state()),ttl=86400)
                     clock_event("verified",fresh=not reused)
@@ -1515,9 +1532,20 @@ def _run_browser(spec, *, live=None, traffic=None):
                         # An expired witness must not trap subsequent reads on the fast path.
                         live.pop("pending_witness",None)
                     reason = str(exc) if isinstance(exc,directory.IncompleteDirectory) and exc.args else "unreadable"
-                    signals["directory"]["failure"] = reason if reason in {"http","size","count","empty_page","page_overlap","scope","limit"} else "unreadable"
+                    report = signals["directory"]
+                    report["failure"] = reason if reason in {"http","size","count","empty_page","page_overlap","invalid_id","scope","limit"} else "unreadable"
+                    if report.get("http") in {401,403}:
+                        raise StopRun("directory_incomplete") from None
                     if pending_result:
-                        pending_result["diagnostics"] = {"directory":signals["directory"]}
+                        pending_result["diagnostics"] = {"directory":report}
+                        return pending_result
+                    if report.get("private_list"):
+                        # A parsed private list proves access even when it cannot be published.
+                        vault.put("browser",session_cookies(context.storage_state()),ttl=86400)
+                        clock_event("verified",fresh=not reused)
+                        return {"code":"directory_incomplete","stage":stage,"session_saved":True,
+                                "fresh_session":not reused,"gmail_code_used":gmail_code_used,
+                                "diagnostics":{"directory":report}}
                     raise StopRun("directory_incomplete") from None
                 progress("saving_directory")
                 vault.put(directory.record_key(spec["owner"]),snapshot)
@@ -1841,7 +1869,8 @@ def _run_browser(spec, *, live=None, traffic=None):
         except (StopRun, directory.PortalThrottled) as exc:
             if vault and isinstance(exc, directory.PortalThrottled):
                 exc.remember(vault)
-            if exc.code in {"directory_unavailable","directory_incomplete"} and pending_result:
+            if (exc.code in {"directory_unavailable","directory_incomplete"} and pending_result
+                    and signals.get("directory", {}).get("http") not in {401,403}):
                 return pending_result
             if vault and exc.code in {"credentials_rejected", "account_unavailable", "otp_rejected", "verification_code", "sign_in_error"}:
                 vault.delete("browser")

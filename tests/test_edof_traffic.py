@@ -147,6 +147,51 @@ def test_changed_list_is_not_certified_complete(vault,fault):
     assert vault.get(directory.record_key('a')) is None
 
 
+def test_overlapping_pages_are_read_once_with_the_advertised_total(vault):
+    context, witness, _ = portal()
+    count = 1535
+    items = [{"id":str(100000+i), "beginDate":"2026-11-01", "currentState":"accepted"} for i in range(count)]
+    requests = []
+
+    def get(url, params, **kwargs):
+        page, size = params["page"], params["max"]
+        requests.append((page, size))
+        start = max(0, page*size - 1)  # An item changes page within a tied date.
+        response = Mock(status=200, url=url)
+        response.body.return_value = json.dumps({"numberOfItems":count, "items":items[start:start+size]}).encode()
+        return response
+
+    context.request.get.side_effect = get
+    snapshot = runner.read_full_directory(context, witness, lambda:None, {}, Cursor(vault, {"owner":"a"}))
+    assert requests == [(0,100), (1,100), (0,count)]
+    assert len(snapshot["rows"]) == count and snapshot["scope"] == "all"
+
+
+def test_partial_list_preserves_watch_without_restarting_full_read(site):
+    import datetime as dt
+    from edof_day_session import PARIS, POLL_SECONDS
+
+    store, owner = site.store, site.owner
+    store.use_directory(owner, enable=True)
+    store.activate_manual(owner)
+    site.vault.put("browser", {"cookies":[{"name":"fixture"}]})
+    old = site.vault.get(directory.record_key(owner))
+    job = store.reserve(owner, "directory", day_session=True)
+    store.finish(job, {"code":"directory_incomplete", "session_saved":True, "diagnostics":{
+        "directory":{"http":200, "failure":"page_overlap", "private_list":True}}})
+    live = store.live_connection(owner, True)
+    assert live["active"] and live["connection_state"] == "active"
+    assert "Liste générale incomplète" in live["recovery"]["message"]
+    assert site.vault.get(directory.record_key(owner)) == old
+    now = dt.datetime.now(PARIS)
+    assert owner in store.day_owners(now + dt.timedelta(seconds=POLL_SECONDS+1))
+    assert recovery.next_job(store, site.gate.state(), now) is None
+    job = store.reserve(owner, "directory", day_session=True)
+    store.finish(job, {"code":"directory_incomplete", "diagnostics":{"directory":{"http":401}}})
+    assert store.live_connection(owner, True)["connection_state"] == "inactive"
+    assert owner not in store.day_owners(now + dt.timedelta(seconds=POLL_SECONDS+2))
+
+
 def test_recovery_continues_immediately_but_does_not_complete_on_a_batch(recovery_site):
     site=recovery_site
     site.read('portal_throttled')
@@ -227,6 +272,20 @@ def test_warm_batches_yield_to_manual_proposal_and_keep_two_minute_poll(conn,mon
         assert len(vault.get(directory.record_key('owner'))['rows'])==5
         assert not any(isinstance(c,tuple) and c[0]=='accepted' for c in calls)
         assert 'efp_auth' not in json.dumps(calls)
+        # An unusable general list must leave the authenticated tab available for new dossiers.
+        def repeated(_context, url, **kw):
+            pending = kw["params"]["state"] == "notProcessed"
+            data = {"numberOfItems":0,"items":[]} if pending else {
+                "numberOfItems":2, "items":[{"id":"200000","currentState":"accepted","beginDate":"2026-11-01"}]}
+            reply = Mock(status=200,url=url)
+            reply.body.return_value = json.dumps(data).encode()
+            return reply
+        monkeypatch.setattr(APIRequestContext, 'get', repeated)
+        partial = runner.run_browser(full,live=live)
+        assert partial["code"] == "directory_incomplete" and partial["session_saved"]
+        assert len(vault.get(directory.record_key('owner'))['rows']) == 5
+        watch = runner.run_browser({**full, "full_sync":False}, live=live)
+        assert watch["code"] == "requests_ready" and not watch["gmail_code_used"]
         # A rejected session leaves the fast path, so a later job can restore normally.
         monkeypatch.setattr(APIRequestContext,'get',lambda *a,**kw:Mock(status=401,url=URL))
         assert runner.run_browser(full,live=live)['code']=='directory_incomplete'

@@ -171,7 +171,7 @@
           if (read?.finished >= control.requested) {
             control.awaiting = false;
             busy(control.button, false);
-            const success = ['directory_ready','requests_ready'].includes(read.code) && state.active;
+            const success = state.active;
             feedback.finish(control.token, success ? 'success' : 'warning', success ?
               'L’accès à EDOF a été vérifié. La connexion est active.' : state.error || 'La connexion n’a pas été confirmée. Consultez les paramètres de connexion.');
           } else feedback.update(control.token, state.phase || 'Le serveur attend son tour puis vérifie l’accès à EDOF.', state.phase || 'Connexion en cours…');
@@ -248,17 +248,17 @@
         if (activate) activate.querySelector("button").textContent = state.manual ? "Réessayer la lecture" : "Activer la connexion pour 1 heure";
         const resume = document.getElementById("edof-resume");
         if (resume) resume.hidden = !state.paused;
-        lamp.classList.toggle("on", state.active);
-        lamp.textContent = state.active ? "Connexion EDOF active" : "Connexion EDOF inactive";
+        lamp.dataset.state = state.connection_state;
+        lamp.textContent = state.connection_label;
         note.textContent = [state.schedule, state.pending ? (state.phase || "Lecture en cours…") : state.error,
           state.until && "Activation manuelle jusqu’à " + state.until,
           state.checked && "Dernier contrôle le " + state.checked].filter(Boolean).join(" · ");
         if (state.active && box.dataset.list === "1" && state.stamp > Number(box.dataset.stamp)
             && !preserveSelection()) location.reload();
       } catch {
-        lamp.classList.remove("on");
-        lamp.textContent = "Connexion EDOF inactive";
-        note.textContent = "Le serveur n’a pas pu confirmer la connexion.";
+        lamp.dataset.state = "waiting";
+        lamp.textContent = "État de la connexion indisponible";
+        note.textContent = "Le statut sera vérifié automatiquement.";
         for (const control of [...syncControls, ...connectionControls, catchupRequest].filter(Boolean)) {
           if (control.awaiting && !control.submitting) feedback?.update(control.token,
             'Le suivi est momentanément indisponible. Le traitement peut continuer sur le serveur ; aucune nouvelle demande n’est envoyée.', 'Vérification en attente…');
