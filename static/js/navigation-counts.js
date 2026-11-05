@@ -7,7 +7,7 @@
     sales: ["sidebarSalesTodayBadge"],
   };
   const labels = {
-    documents: "document(s) à contrôler", conventions: "convention(s) signée(s) à consulter",
+    documents: "document(s) à contrôler", conventions: "convention(s) à imprimer",
     cnaps: "changement(s) de statut CNAPS", tools: "notification(s) dans les outils",
     sales: "inscription(s) aujourd’hui",
   };

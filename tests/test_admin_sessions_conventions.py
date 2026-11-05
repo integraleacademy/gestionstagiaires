@@ -477,6 +477,74 @@ class AdminSessionsConventionsTests(unittest.TestCase):
             {"T-RECENT-1", "T-RECENT-2"},
         )
 
+    def test_sidebar_badge_matches_print_queue_including_vae_financing(self):
+        def signed(trainee_id, **fields):
+            return {"id": trainee_id, "convention_signature": {
+                "status": "done", "created_at": "2026-11-04T10:00:00Z",
+                "signed_at": "2026-11-04T12:00:00Z",
+            }, **fields}
+
+        trainees = [
+            signed("A3P-TO-PRINT"),
+            signed("ALREADY-PRINTED", printed=True),
+            signed("CANCELLED", registration_cancelled=True),
+            signed("CANCELLED-LEGACY", inscription_annulee="oui"),
+            signed("HISTORICAL", convention_signature={
+                "status": "done", "created_at": "2026-06-01T10:00:00Z"}),
+            signed("NO-CREATION-DATE", convention_signature={"status": "done"}),
+            {"id": "LEGACY-TO-PRINT", "convention_status": "signed",
+             "convention_legacy_signed": True,
+             "convention_aps_generated_at": "2026-11-04T10:00:00Z"},
+            {"id": "UNSIGNED", "convention_signature": {
+                "status": "ongoing", "signature_request_id": "pending",
+                "created_at": "2026-11-04T10:00:00Z"}},
+        ]
+        # An old signature timestamp must not override a current error/refusal.
+        for state in ("error", "download_error", "declined", "refused", "expired", "cancelled"):
+            trainee = signed("STATUS-" + state)
+            trainee["convention_signature"]["status"] = state
+            trainees.append(trainee)
+        fake_data = {"sessions": [
+            {"id": "S-A3P", "training_type": "A3P", "trainees": trainees},
+            {"id": "S-VAE", "training_type": "DIRIGEANT VAE", "trainees": [
+                signed("VAE-BEFORE-FINANCING", vae_status="livret_1_validated"),
+                signed("VAE-FINANCED", vae_status="financement_validated"),
+                signed("VAE-INFERRED", vae_status="livret_1_validated",
+                       vae_action_dates={"financement_validated": "2026-11-04"}),
+                signed("VAE-AFTER-FINANCING", vae_status="jury"),
+                signed("VAE-PRINTED", vae_status="financement_validated", printed=True),
+            ]},
+            {"id": "S-ARCHIVED", "training_type": "APS", "archived": True,
+             "trainees": [signed("ARCHIVED")]},
+        ]}
+        captured = {}
+
+        def capture_template(template_name, **context):
+            captured.update(context)
+            return "OK"
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data), \
+             patch.object(gestion_app, "save_data") as save, \
+             patch.object(gestion_app, "render_template", side_effect=capture_template), \
+             patch.object(gestion_app, "_refresh_yousign_convention_status_if_pending", return_value=False), \
+             patch.object(gestion_app, "_docs_to_control_items", return_value=[]), \
+             patch.object(gestion_app, "_visible_cnaps_changes", return_value=0), \
+             patch.object(gestion_app, "_sales_today_count", return_value=0), \
+             patch.object(gestion_app, "partner_has_module", return_value=True):
+            badge = self.client.get("/api/conventions_signed_unseen")
+            navigation = self.client.get("/api/admin/navigation-counts?fresh=1")
+            page = self.client.get("/admin/sessions/conventions?status=to_print")
+
+        expected = {"A3P-TO-PRINT", "LEGACY-TO-PRINT", "VAE-FINANCED", "VAE-INFERRED", "VAE-AFTER-FINANCING"}
+        self.assertEqual(badge.status_code, 200)
+        self.assertEqual(navigation.status_code, 200)
+        self.assertEqual(page.status_code, 200)
+        self.assertEqual({item["trainee_id"] for item in badge.get_json()["items"]}, expected)
+        self.assertEqual({row["trainee_id"] for row in captured["rows"]}, expected)
+        self.assertEqual(captured["stats"]["to_print"], len(expected))
+        self.assertEqual(navigation.get_json()["conventions"], len(expected))
+        save.assert_not_called()
+
 
     def test_print_button_is_highlighted_only_for_unprinted_signed_conventions(self):
         fake_data = {
