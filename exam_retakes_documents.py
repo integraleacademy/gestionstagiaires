@@ -20,7 +20,7 @@ def retake_font():
     return 'Helvetica'
 
 
-def retake_page_frame(font, document_label, ref):
+def retake_page_frame(font, document_label, ref, heading="VOTRE RATTRAPAGE"):
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.utils import ImageReader
@@ -29,7 +29,7 @@ def retake_page_frame(font, document_label, ref):
     def frame(canvas,doc):
         canvas.saveState();canvas.setFillColor(navy);canvas.rect(0,A4[1]-100,A4[0],100,stroke=0,fill=1)
         canvas.drawImage(logo,48,A4[1]-86,width=215,height=64,mask='auto',preserveAspectRatio=True)
-        canvas.setFillColor(gold);canvas.setFont(font+'-Bold',9);canvas.drawRightString(547,A4[1]-42,'VOTRE RATTRAPAGE')
+        canvas.setFillColor(gold);canvas.setFont(font+'-Bold',9);canvas.drawRightString(547,A4[1]-42,heading)
         canvas.setFillColor(colors.white);canvas.setFont(font,8);canvas.drawRightString(547,A4[1]-61,document_label+' '+ref)
         canvas.setFillColor(gold);canvas.rect(0,A4[1]-103,A4[0],3,stroke=0,fill=1)
         canvas.setStrokeColor(colors.HexColor('#D5DFE9'));canvas.line(48,66 if document_label == 'CONVENTION' else 42,547,66 if document_label == 'CONVENTION' else 42)

@@ -1,0 +1,8 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Dossier VTC{% endblock %} · Intégrale Academy</title>
+<link rel="stylesheet" href="{{url_for('static',filename='css/vtc-orders.css')}}">
+{% block head %}{% endblock %}</head><body>
+<header class="top"><a href="https://admissions.integraleconnect.com/vtc"><img src="{{url_for('static',filename='parcours-alternance/logo.png')}}" width="200" height="60" alt="Intégrale Academy"></a></header>
+<main>{% block content %}{% endblock %}</main>
+<footer>Intégrale Sécurité Formations · 54 chemin du Carreou, 83480 Puget-sur-Argens<br><a href="tel:+33422470768">04 22 47 07 68</a> · <a href="mailto:ecole@integraleacademy.com">ecole@integraleacademy.com</a> · <a href="/confidentialite">Confidentialité</a></footer>
+</body></html>

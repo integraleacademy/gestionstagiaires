@@ -569,6 +569,9 @@ def preflight(host, row):
 
 
 def register(app, host):
+    from vtc_public_orders import register as register_vtc_orders
+    register_vtc_orders(app, host)
+
     @app.get('/api/sessions/<sid>/stagiaires/<tid>/rattrapages')
     @host.admin_login_required
     def retake_list(sid, tid):
@@ -833,6 +836,12 @@ def start_worker(host):
                     process_pending(host)
             except Exception as exc:
                 host.app.logger.error("retake_worker_failed type=%s", type(exc).__name__)
+            try:
+                from vtc_public_orders import process_pending as process_vtc_orders
+                with host.app.app_context():
+                    process_vtc_orders(host)
+            except Exception as exc:
+                host.app.logger.error("vtc_orders_worker_failed type=%s", type(exc).__name__)
             wake.wait(45)
             wake.clear()
     thread = threading.Thread(target=run, name="exam-retakes", daemon=True)
