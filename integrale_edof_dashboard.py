@@ -15,6 +15,8 @@ from flask import g, jsonify, Blueprint, abort, flash, get_flashed_messages, red
 import integrale_edof_views as views
 import integrale_edof_history as history_view
 import edof_directory as directory
+import edof_dossier_dates as dossier_dates
+from integrale_edof_sync import dates_for_view
 from edof_schedule import paper_entry, scheduled_at
 import edof_throttle as throttle
 import edof_declarations as declarations
@@ -64,7 +66,8 @@ STATE_KEYS.update({
     "declared":{"servicedonedeclared", "servicedonedeclaredrevised", "service fait declare", "service fait declare revise"},
     "billable":{"servicedonevalidated", "servicedonevalidatedrevisionvsf", "service fait valide"},
     "paid":{"paid", "paye", "payee"},
-    "ft":{"waitingforfrancetravailvalidation", "pendingfrancetravail", "demande de financement ft en cours", "demande de financement france travail en cours"},
+    "ft_refused":{"financement ft refuse", "financement france travail refuse", "demande de financement france travail refusee", "demande de financement ft refusee"},
+    "ft":{"financement ft en cours", "financement france travail en cours", "waitingforfrancetravailvalidation", "pendingfrancetravail", "demande de financement ft en cours", "demande de financement france travail en cours"},
 })
 STATE_KEYS["waiting"].update({"waitingforattendeevalidation", "en attente de validation du titulaire"})
 STATE_KEYS["out"].add("terminated")
@@ -103,7 +106,7 @@ def apply_confirmed_entries(snapshot, directory_path, owner):
     if not snapshot:
         return snapshot
     with closing(declarations.database(directory_path)) as db:
-        verified = db.execute("""SELECT folder, intent FROM cpf_declarations
+        verified = db.execute("""SELECT folder, intent, changed FROM cpf_declarations
             WHERE owner=? AND action='entry_training' AND status='confirmed' AND changed>?
             ORDER BY changed""", (owner, snapshot.get("checked") or 0)).fetchall()
     rows = dict(snapshot["rows"])
@@ -113,6 +116,8 @@ def apply_confirmed_entries(snapshot, directory_path, owner):
         if row and category(row) == "accepted" and declarations.same_enrolment(row, intent):
             # Older receipts certify entry, even if their precise portal state wasn't stored.
             rows[record["folder"]] = {**row, "state": intent.get("confirmed_state") or "Entrée déclarée",
+                                      "filed_at": dossier_dates.source_dates(row, category)[0],
+                                      "state_at": "", "request_date": "", "observed_at": record["changed"],
                                       "entry_confirmed_on": intent["actual_date"]}
     return {**snapshot, "rows": rows}
 
@@ -413,6 +418,10 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         rows, counts = dashboard_rows(snap, data, local_operations(selection), now)
         all_rows = rows
         folder = request.args.get("folder", "")
+        if rows and (section == "state" or folder):
+            with closing(selection.connect()) as db:
+                saved_dates = dates_for_view(db, owner, rows, snap.get("checked", 0), category)
+            dossier_dates.annotate(rows, saved_dates, snap.get("checked", 0), category)
         selected_row = next((r for r in rows if r["folder_id"] == folder), None) if folder else None
         previewing = section == "state" and request.args.get("matching") == "1"
         matches = matching_rows(owner, snap, data) if previewing else {}
@@ -528,8 +537,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                         and row["operation_bucket"] == "overdue" and not row["dispatch_status"]
                         and row["evaluation"] == "unconfirmed" and row["catchup_outcome"] not in {"blocked", "review"}):
                     row["entry_choice"] = entry_choice(row)
-        elif not detail:
-            prioritize_rows(rows, now)
+        elif section == "state":
+            dossier_dates.newest_first(rows)
         pages = max(1, math.ceil(len(rows) / 25))
         page = max(1, min(request.args.get("page", 1, type=int) or 1, pages))
         if detail:
