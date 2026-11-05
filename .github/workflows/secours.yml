@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -18,11 +18,12 @@ jobs:
         run: |
           set -eu
           docker build -t connect-secours-test .
-          docker run --network host -e PORT=19078 -e UPSTREAM=http://127.0.0.1:19077 --name secours -d connect-secours-test
+          docker run --network host -e PORT=19078 -e ORIGIN_HOST=origine.test -e UPSTREAM=http://127.0.0.1:19077 --name secours -d connect-secours-test
           python3 verify.py || { docker logs secours; exit 1; }
       - name: Vérifier le routage public en lecture seule
         run: |
           ns=$(dig +short NS integraleconnect.com | sort | paste -sd ' ')
           cname=$(dig +short CNAME www.integraleconnect.com | paste -sd ' ')
-          origin=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' 'https://gestionstagiaires-r5no.onrender.com/healthz' -H 'Host: www.integraleconnect.com' || true)
-          printf 'DNS autoritaire: %s\nCNAME www: %s\nSanté origine Render avec nom public: %s\n' "$ns" "$cname" "$origin" | tee -a "$GITHUB_STEP_SUMMARY"
+          origin=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' 'https://gestionstagiaires-r5no.onrender.com/healthz' -H 'X-Forwarded-Host: www.integraleconnect.com' -H 'X-Forwarded-Proto: https')
+          printf 'DNS autoritaire: %s\nCNAME www: %s\nSanté de la vraie origine Render avec hôte TLS canonique: %s\n' "$ns" "$cname" "$origin" | tee -a "$GITHUB_STEP_SUMMARY"
+          test "$origin" = 200

@@ -33,9 +33,10 @@
 }
 
 (origin) {
-	header_up Host {$PUBLIC_HOST:www.integraleconnect.com}
+	header_up Host {$ORIGIN_HOST:gestionstagiaires-r5no.onrender.com}
 	header_up X-Forwarded-Host {$PUBLIC_HOST:www.integraleconnect.com}
 	header_up X-Forwarded-Proto https
+	header_down Location "^https?://gestionstagiaires-r5no[.]onrender[.]com(/.*|$)" "https://{$PUBLIC_HOST:www.integraleconnect.com}$1"
 }
 
 (page_proxy) {
@@ -50,6 +51,13 @@
 }
 
 :{$PORT:8080} {
+	@gateway_health {
+		method GET HEAD
+		path /__connect_gateway_health
+	}
+	handle @gateway_health {
+		respond 204
+	}
 	@public host {$PUBLIC_HOST:www.integraleconnect.com}
 	handle @public {
 		@navigation {

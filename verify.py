@@ -1,6 +1,5 @@
 """Exercise a real first HTTP request against the gateway and a disposable origin."""
 import http.client
-import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
@@ -16,11 +15,11 @@ class Origin(BaseHTTPRequestHandler):
         self.answer()
     def answer(self):
         body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
-        state["requests"].append((self.command, self.path, self.headers.get("Host"), body))
+        state["requests"].append((self.command, self.path, self.headers.get("Host"), self.headers.get("X-Forwarded-Host"), body))
         self.send_response(state["status"])
         self.send_header("Content-Type", "text/plain")
         if state["status"] == 302:
-            self.send_header("Location", "/login?next=/admin/partners")
+            self.send_header("Location", "https://gestionstagiaires-r5no.onrender.com/login?next=/admin/partners")
         if state["status"] == 200:
             self.send_header("Set-Cookie", "session=test-only; Secure; HttpOnly")
         self.end_headers()
@@ -60,12 +59,12 @@ for failure in (502, 503, 504):
     assert request(accept="application/json", dest="empty")[0::2] == (failure, b"origin")
     count = len(state["requests"])
     assert request(method="POST", body=b"unique")[0::2] == (failure, b"origin")
-    assert state["requests"][count:] == [("POST", "/admin/partners?filter=active", HOST, b"unique")]
+    assert state["requests"][count:] == [("POST", "/admin/partners?filter=active", "origine.test", HOST, b"unique")]
 for other in (401, 403, 404, 500):
     state["status"] = other
     assert request()[0::2] == (other, b"origin")
 state["status"] = 302
-assert request()[1]["Location"] == "/login?next=/admin/partners"
+assert request()[1]["Location"] == "https://www.integraleconnect.com/login?next=/admin/partners"
 state["status"] = 200
 assert request()[1]["Set-Cookie"] == "session=test-only; Secure; HttpOnly"
 assert request("/healthz")[0::2] == (200, b"origin")
