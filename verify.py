@@ -48,6 +48,9 @@ for attempt in range(50):
         if attempt == 49: raise
         sleep(.2)
 
+alias = "gestionstagiaires-docker-test.onrender.com"
+assert request("/test-502", host=alias)[0::2] == (503, PAGE)
+assert request("/admin/partners", host=alias)[0] == 404
 for failure in (502, 503, 504):
     state["status"] = failure
     for dest in ("document", None):
@@ -68,6 +71,7 @@ assert request()[1]["Location"] == "https://www.integraleconnect.com/login?next=
 state["status"] = 200
 assert request()[1]["Set-Cookie"] == "session=test-only; Secure; HttpOnly"
 assert request("/healthz")[0::2] == (200, b"origin")
+assert request("/__connect_origin_health", host=alias)[0::2] == (200, b"origin")
 assert request()[0::2] == (200, b"origin")
 assert state["requests"][-1][1] == "/admin/partners?filter=active"
 server.shutdown()
