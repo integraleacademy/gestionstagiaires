@@ -106,7 +106,7 @@ def test_automations_show_actions_and_legacy_billing_links_find_dossiers(site):
 
 
 def test_today_counter_lists_only_current_actions_due_on_the_paris_day(site, monkeypatch):
-    # Still the previous UTC day. The entry at 08:00 and exit at 18:00 are both due today.
+    # Still the previous UTC day. Both 18:00 deadlines fall on the new Paris day.
     instant = dt.datetime(2026, 11, 4, 23, 30, tzinfo=dt.timezone.utc)
     class Clock(dt.datetime):
         @classmethod
