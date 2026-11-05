@@ -1,6 +1,7 @@
 import concurrent.futures
 import copy
 import datetime as dt
+import re
 import sqlite3
 from unittest.mock import patch
 
@@ -164,7 +165,13 @@ def test_readonly_preview_never_sends_or_creates_a_delivery(learner):
     assert 'Retour à tous les stagiaires' in page.text
     assert '/admin/sessions/session-aps/trainees' in page.text
     assert 'Votre formation agent de prévention et de sécurité (APS)' in response.text
-    assert '/static/images/email/cassandre-signature.png' in response.text
+    assert re.search(r'<h1[^>]*>Suivi de votre formation e-learning</h1>', response.text)
+    assert 'Votre formation agent de prévention' not in response.text.split('Bonjour Alice,', 1)[1]
+    assert 'Memoji de Cassandre MENARD' in response.text and 'border-radius:50%' in response.text
+    assert 'Responsable commerciale – Intégrale Academy' in response.text
+    assert 'href="tel:0422470768"' in response.text
+    assert '/static/images/email/cassandre-signature.png' not in response.text
+    assert 'Aucun mail de suivi e-learning envoyé' in page.text
     assert '04 87 83 06 16' in response.text and '07 43 58 22 64' in response.text
     assert not daily.ledger_path(host).exists()
     send.assert_not_called()
@@ -174,6 +181,48 @@ def test_readonly_preview_never_sends_or_creates_a_delivery(learner):
         auth.update(admin_role='partner_admin', partner_id='other')
     assert case.client.get(case.report_url + '/mail-du-jour').status_code == 404
     assert case.client.get('/admin/sessions/session-aps/e-learning/aps-resume').status_code == 404
+
+
+def test_sent_history_is_scoped_and_opens_original_even_after_the_session(learner):
+    case, training, person = learner
+    day = NOW.date()
+    with patch.object(host, 'brevo_send_email', return_value={'ok': True}) as send:
+        assert daily.run(host, now=NOW)['sent'] == 1
+        original = send.call_args.args[2]
+        assert daily.MAIL_TITLE in send.call_args.kwargs['text_content']
+        assert 'Votre formation agent de prévention' not in send.call_args.kwargs['text_content']
+    with daily.connect_ledger(host) as db:
+        for sid, tid, offset, status, subject in (
+            (training['id'], person['id'], -1, 'sent', 'Ancien mail'),
+            (training['id'], person['id'], 1, 'uncertain', 'Incertain'),
+            (training['id'], person['id'], 2, 'refused', 'Refusé'),
+            (training['id'], person['id'], 3, 'sending', 'En cours'),
+            ('other-session', person['id'], 1, 'sent', 'Autre session'),
+            (training['id'], 'other-id', 1, 'sent', 'Autre élève'),
+        ):
+            db.execute("""INSERT INTO deliveries(session_id,trainee_id,day,status,recipient,subject,html,text,attempted_at)
+                VALUES(?,?,?,?,?,?,?,'','')""", (sid, tid, (day+dt.timedelta(days=offset)).isoformat(), status,
+                'original@example.test', subject, '<p>Texte archivé</p>'))
+    history_url = case.report_url + '/historique-mails/'
+    person.update(first_name='Changé', email='new@example.test')
+    with patch.object(daily, 'clock', return_value=NOW+dt.timedelta(days=40)), patch.object(host, 'brevo_send_email') as send:
+        report = case.client.get(case.report_url)
+        assert report.status_code == 200
+        assert '<a href="#historique-mails">Historique mails</a>' in report.text
+        section = report.text.split('<section id="historique-mails"', 1)[1].split('</section>', 1)[0]
+        assert section.index('04/11/2026 à 09h00') < section.index('Ancien mail')
+        assert 'alice@example.test' in section and 'new@example.test' not in section
+        assert section.count(history_url) == 2 and section.count('original@example.test') == 1
+        assert history_url + day.isoformat() in section
+        assert case.client.get(history_url + day.isoformat()).text == original
+        assert case.client.get(history_url + '2026-11-03').text == '<p>Texte archivé</p>'
+        for absent in ('2026-11-05', '2026-11-06', '2026-11-07', '2026-11-08'):
+            assert case.client.get(history_url + absent).status_code == 404
+        send.assert_not_called()
+    assert host.app.test_client().get(history_url + day.isoformat()).status_code == 302
+    with case.client.session_transaction() as auth:
+        auth.update(admin_role='partner_admin', partner_id='other')
+    assert case.client.get(history_url + day.isoformat()).status_code == 404
 
 
 def test_concurrent_jobs_can_claim_only_one_send(learner):

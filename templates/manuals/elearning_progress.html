@@ -30,7 +30,7 @@
       </article>
     </div>
   </section>
-  <nav class="el-report-nav" aria-label="Rubriques du suivi"><a href="#modules">Modules et activités</a><a href="#resultats">Examens blancs</a>{% if order.course_code == 'vtc' %}<a href="#simulation-cma">Examen en conditions réelles</a>{% endif %}<a href="#connexions">Historique des connexions</a>{% if daily_preview %}<a href="#mail-du-jour">Mail du jour · Cassandre</a>{% endif %}</nav>
+  <nav class="el-report-nav" aria-label="Rubriques du suivi"><a href="#modules">Modules et activités</a><a href="#resultats">Examens blancs</a>{% if order.course_code == 'vtc' %}<a href="#simulation-cma">Examen en conditions réelles</a>{% endif %}<a href="#connexions">Historique des connexions</a>{% if daily_preview %}<a href="#mail-du-jour">Mail du jour · Cassandre</a><a href="#historique-mails">Historique mails</a>{% endif %}</nav>
   <section data-el-live-region="modules" id="modules" class="el-report-section"><h2>Progression par module</h2><p class="muted">Le pourcentage reflète les activités{{ ' obligatoires' if is_vtc else '' }} terminées.{% if is_vtc %} Les productions personnelles sont facultatives et leur absence ne bloque pas la validation.{% endif %} La validation d’un module exige aussi que sa durée obligatoire soit atteinte.{% if is_mac_aps %} Les temps cibles de chaque objectif sont vérifiés séparément. Les compléments restent hors du parcours principal.{% endif %}</p>
     {% for module in report.modules %}{% set module_key = 'module-' ~ loop.index0 %}<details class="el-report-module" data-el-live-key="{{ module_key }}"><summary><span class="el-report-module-number">{{ '%02d'|format(loop.index) }}</span><span class="el-report-module-title"><strong>{{ module.title }}</strong><small>{{ module.status_label }}{% if is_mac_aps %} · Édition {{ module.version }}{% endif %}</small></span><span class="el-report-module-value">{% if module.available %}<strong>{{ '%g'|format(module.progress_percent) }} %</strong><small>{{ module.active_time_label }}</small>{% else %}<strong>Indisponible</strong>{% endif %}</span><span class="el-report-chevron" aria-hidden="true">⌄</span></summary>
       {% if module.available %}<div class="el-report-module-body"><progress value="{{ module.progress_percent }}" max="100" aria-label="Progression du module {{ loop.index }}">{{ module.progress_percent }} %</progress><div class="el-report-module-facts"><p><span>{{ 'Activités obligatoires terminées' if is_vtc else 'Activités terminées' }}</span><strong>{{ module.completed_activities }} / {{ module.total_activities }}</strong></p><p><span>Temps requis</span><strong>{{ module.required_time_label }}</strong></p><p><span>Temps restant</span><strong>{{ module.remaining_time_label }}</strong></p>{% if module.total_questions %}<p><span>Questions du cours</span><strong>{{ module.answered_questions }} / {{ module.total_questions }} répondues</strong><small>{{ ('%g'|format(module.score_percent)) ~ ' % de réponses correctes sur le total' if module.score_percent is not none else 'Aucune réponse enregistrée' }}</small></p>{% endif %}{% if module.assessment_summary and module.assessment_summary.total_attempt_count %}<p><span>Premier essai · questions</span><strong>{{ (module.assessment_summary.first_attempt_score_percent|round|int) ~ ' %' if module.assessment_summary.first_attempt_score_percent is not none else '—' }}</strong><small>{{ module.assessment_summary.assessed_items }} question(s) · {{ module.assessment_summary.incorrect_attempt_count }} erreur(s) avant correction</small></p><p><span>Premier essai · ateliers</span><strong>{{ (module.assessment_summary.practice.first_attempt_score_percent|round|int) ~ ' %' if module.assessment_summary.practice.first_attempt_score_percent is not none else '—' }}</strong><small>{{ module.assessment_summary.practice.attempt_count }} essai(s) conservé(s)</small></p>{% endif %}{% if module.total_videos %}<p><span>Vidéos terminées</span><strong>{{ module.completed_videos }} / {{ module.total_videos }}</strong></p>{% endif %}</div>
@@ -53,6 +53,18 @@
       <p><a href="{{ daily_preview.url }}" target="_blank" rel="noopener">Ouvrir l’aperçu en grand ↗</a></p>
       <iframe title="Aperçu du mail quotidien APS de Cassandre" src="{{ daily_preview.url }}" loading="lazy" style="width:100%;height:720px;border:1px solid #dbeafe;border-radius:12px;background:#fff;"></iframe>
     </details>
+  </section>
+  <section id="historique-mails" data-el-live-region="mail-history" class="el-report-section">
+    <h2>Historique mails</h2>
+    {% if daily_preview.history %}
+    <div class="el-table-wrap"><table class="el-table">
+      <thead><tr><th>Envoyé le</th><th>Destinataire</th><th>Objet du mail</th></tr></thead>
+      <tbody>{% for mail in daily_preview.history %}
+        <tr><td>{{ mail.sent_at|frdatetime if mail.sent_at else mail.day|frdate }}</td><td>{{ mail.recipient }}</td>
+          <td><a href="{{ url_for('admin_aps_sent_mail', session_id=order.id, trainee_id=person.id, day=mail.day) }}" target="_blank" rel="noopener">{{ mail.subject }}</a></td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="muted">Aucun mail de suivi e-learning envoyé par Cassandre à ce stagiaire.</p>{% endif %}
   </section>
   {% endif %}
   <section data-el-live-region="exams" id="resultats" class="el-report-section">

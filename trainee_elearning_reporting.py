@@ -107,6 +107,7 @@ def register_routes(host, bp, *, page):
             enabled = daily.eligible(host, effective, person, day)
             daily_preview = {'url': url_for('admin_aps_daily_preview', session_id=session_id, trainee_id=trainee_id),
                 'day': day.strftime('%d/%m/%Y'), 'enabled': enabled,
+                'history': daily.sent_history(host, session_id, trainee_id),
                 'status': receipt['status'] if receipt else '',
                 'sent_at': receipt['sent_at'] if receipt else ''}
         return page('elearning_progress.html', partner=partner, order=source, person=person,
