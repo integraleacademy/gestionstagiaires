@@ -1,3 +1,0 @@
-# Installed only for the production EDOF web service.
-playwright==1.64.1
-cryptography==50.0.2
