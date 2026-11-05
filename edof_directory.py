@@ -1,6 +1,7 @@
 """Minimal, account-scoped directory from the official EDOF dossier list."""
 from datetime import datetime
 import hmac
+import os
 import time
 import unicodedata
 from zoneinfo import ZoneInfo
@@ -80,6 +81,14 @@ def dated_snapshot(snapshot):
     return {**snapshot, "rows": {r["folder_id"]: r for r in rows if in_scope(r)}}
 
 
+def email_proof(key, folder, email):
+    # Scope the keyed digest to one dossier so the directory never retains contact addresses.
+    if not key or not isinstance(email, str) or "@" not in email:
+        return ""
+    message = f"edof-email-v1\0{folder}\0{email.strip().casefold()}"
+    return hmac.digest(key.encode(), message.encode(), "sha256").hex()
+
+
 def project(row):
     if not isinstance(row, dict) or not ID_RE.fullmatch(str(row.get("id", ""))):
         raise IncompleteDirectory()
@@ -98,12 +107,14 @@ def project(row):
     # or accepted solicitation takes precedence over an older refused one.
     ft_refused = bool(ft_statuses & {"refused", "rejected", "denied", "refuse", "refusee"}) and not (
         ft_pending or ft_statuses & {"accepted", "approved", "validated", "granted"})
+    proof = email_proof(os.environ.get("EDOF_CONNECTOR_KEY"), row["id"], attendee.get("email"))
     summary = {}
     if normalized(text_field(row.get("currentState"),80)) in {"notprocessed","not processed","non traite","a traiter","received","tobeprocessed"}:
         for key in ("indicativeDuration","weeklyDuration","hoursInCenter","hoursInCompany","totalIncl"):
             if isinstance(info.get(key), (str,int,float)) and not isinstance(info[key],bool):
                 summary["priceTotal" if key=="totalIncl" else key] = str(info[key])[:25]
     return {**dates.project(row, info, solicitations, ft_pending, ft_refused, normalized, REQUEST_STATES),
+            **({"email_proof": proof} if proof else {}),
             **({"offer_summary":summary} if summary else {}), "request_date":session_date(row.get("changingStateDate")), "ft_pending": ft_pending, "ft_refused": ft_refused, "service_done_validated": info.get("validatedServiceDone") is True,
             "payment_state": text_field(row.get("paymentState"), 80), **({"billing_state": text_field(row["currentBillingState"], 80)} if row.get("currentBillingState") else {}),
             "folder_id": str(row["id"]), "first_name": text_field(attendee.get("firstName"), 120),
@@ -259,6 +270,9 @@ def csv_snapshot(content, first, progress):
             elif (("dossier" in words and words & {"id", "identifiant", "numero", "num", "n", "no", "ref", "reference"})
                     or label in {"numero cpf", "identifiant cpf", "n cpf", "dossier", "registrationfolderid", "externalid"}):
                 columns.setdefault("folder_id", i)
+            elif label in {"email titulaire", "email du titulaire", "courriel du titulaire", "e mail du titulaire",
+                           "email du stagiaire", "adresse electronique du titulaire", "attendee email"}:
+                columns.setdefault("attendee_email", i)
             elif identity_column and ("prenom" in words or label == "firstname"):
                 columns.setdefault("first_name", i)
             elif identity_column and ("nom" in words or label == "lastname"):
@@ -299,6 +313,9 @@ def csv_snapshot(content, first, progress):
         if not ID_RE.fullmatch(key) or key in rows or len(rows) >= total:
             raise IncompleteDirectory()
         item["folder_id"] = key
+        proof = email_proof(os.environ.get("EDOF_CONNECTOR_KEY"), key, item.pop("attendee_email", None))
+        if proof:
+            item["email_proof"] = proof
         for field in ("state", "title", "session_start_date", "session_end_date"):
             item.setdefault(field, "")
         item["filed_at"] = dates.stamp(item.get("filed_at"))

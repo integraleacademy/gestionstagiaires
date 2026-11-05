@@ -30,7 +30,10 @@ def seed(portal, *, online=False):
         trainee["candidate_sheet"] = {"first_names": "Élodie", "last_name": "DUPRÉ", "study_domain": "Sécurité"}
         trainee["candidate_sheet_saved_at"] = "2026-11-04T10:00:00"
     portal[1].write_text(json.dumps(data))
-    return admin(portal)
+    client = admin(portal)
+    assert client.post("/admin/sessions/S1/stagiaires/T1/attestation-elearning.pdf",
+        data={"document_check_token":"csrf-test", "certificate":(BytesIO(pdf(b"ELEARNING")), "attestation.pdf")}).status_code == 200
+    return client
 
 
 def rows(client):
@@ -55,16 +58,19 @@ def test_single_pdf_all_pages_in_order_and_no_duplicate_file_token(portal):
     result = download(client)
     assert result.status_code == 200 and result.mimetype == "application/pdf"
     pages = PdfReader(BytesIO(result.data)).pages
-    assert [page.extract_text().strip() for page in pages] == ["CANDIDATE", "ATTESTATION", "PROJECT ONE", "PROJECT TWO"]
+    assert [page.extract_text().strip() for page in pages] == ["CANDIDATE", "ATTESTATION", "PROJECT ONE", "PROJECT TWO", "ELEARNING"]
     assert not next(row for row in rows(client) if row["id"] == "T2")["ready"]
 
 
-@pytest.mark.parametrize("key", ["candidate_info_sheet", "desp_exam_sworn_statement", "project"])
+@pytest.mark.parametrize("key", ["candidate_info_sheet", "desp_exam_sworn_statement", "project", "elearning"])
 def test_each_missing_component_blocks_ui_and_direct_download(portal, key):
     client = seed(portal)
     data = json.loads(portal[1].read_text())
     trainee = data["sessions"][0]["trainees"][0]
-    if key == "project":
+    if key == "elearning":
+        from desp_scotia import certificate_path
+        certificate_path(host, data["sessions"][0], trainee).unlink()
+    elif key == "project":
         trainee.pop(projects.KEY)
     else:
         trainee["documents"] = [d for d in trainee["documents"] if d["key"] != key]
@@ -92,7 +98,7 @@ def test_one_project_pdf_is_sufficient_and_late_deletion_is_rechecked(portal):
     client = seed(portal)
     upload(portal, remove_2="1")
     assert first(client)["ready"]
-    assert len(PdfReader(BytesIO(download(client).data)).pages) == 3
+    assert len(PdfReader(BytesIO(download(client).data)).pages) == 4
     Path(host._detokenize_path(projects.documents(person(portal))[0]["file"])).unlink()
     assert download(client).status_code == 409
 
@@ -104,8 +110,8 @@ def test_saved_online_sheet_is_exported_with_every_value(portal):
     assert result.status_code == 200
     pages = PdfReader(BytesIO(result.data)).pages
     assert "Élodie" in pages[0].extract_text() and "Sécurité" in pages[0].extract_text()
-    assert pages[-3].extract_text().strip() == "ATTESTATION"
-    assert pages[-1].extract_text().strip() == "PROJECT TWO"
+    assert pages[-4].extract_text().strip() == "ATTESTATION"
+    assert pages[-2].extract_text().strip() == "PROJECT TWO"
 
 
 def test_png_attestation_is_converted(portal):
@@ -116,7 +122,7 @@ def test_png_attestation_is_converted(portal):
     data["sessions"][0]["trainees"][0]["documents"][1].update(file=path.name, files=[])
     portal[1].write_text(json.dumps(data))
     assert first(client)["ready"]
-    assert len(PdfReader(BytesIO(download(client).data)).pages) == 4
+    assert len(PdfReader(BytesIO(download(client).data)).pages) == 5
 
 
 def test_auth_cancelled_other_training_and_tenant_access(portal, monkeypatch):
@@ -154,3 +160,19 @@ def test_exam_tab_and_pdf_only_public_inputs(portal):
     assert 'data-exam-tab="scotia"' in text and 'Dossier SCOTIA' in text
     public = client.get("/espace/PUB-T1").get_data(as_text=True)
     assert 'accept=".pdf"' in public and 'Format accepté : PDF uniquement.' in public
+
+
+def test_certificate_replacement_requires_admin_write_csrf_and_valid_pdf(portal):
+    client = seed(portal)
+    url = "/admin/sessions/S1/stagiaires/T1/attestation-elearning.pdf"
+    def replace(content, token="csrf-test"):
+        return client.post(url, data={"certificate": (BytesIO(content), "attestation.pdf"),
+                                      "document_check_token": token})
+    assert replace(b"broken").status_code == 400
+    assert replace(pdf(b"OTHER"), "wrong").status_code == 403
+    assert client.get(url).data == pdf(b"ELEARNING")
+    assert replace(pdf(b"NEW")).status_code == 200
+    assert PdfReader(BytesIO(download(client).data)).pages[-1].extract_text().strip() == "NEW"
+    with client.session_transaction() as session:
+        session["admin_role"] = "viewer"
+    assert replace(pdf(b"NO")).status_code == 403

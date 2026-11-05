@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css') }}">{% endblock %}
+{% macro date_label(day) %}{{ day[8:10] ~ '/' ~ day[5:7] ~ '/' ~ day[:4] if day else '—' }}{% endmacro %}
+{% block content %}
+<div class="wedof-page native-cpf">
+  <a class="btn btn-outline" href="{{ url_for('admin_trainee_page', session_id=group.id, trainee_id=trainee.id, _anchor='cpfTracking') }}">← Fiche stagiaire</a>
+  <header class="wedof-hero"><div class="wedof-hero-copy"><span class="wedof-eyebrow">INTÉGRALE EDOF</span>
+    <h1>Retrouver le dossier CPF</h1>
+    <p>{{ trainee.first_name or trainee.prenom }} {{ trainee.last_name or trainee.nom }} · {{ group.name }} · {{ date_label(group.date_start or group.date_debut) }} au {{ date_label(group.date_end or group.date_fin) }}</p>
+  </div></header>
+  <section class="wedof-panel"><div class="edof-panel-body">
+    <form class="edof-search" method="get"><label>Nom du titulaire ou numéro de dossier CPF
+      <input type="search" name="q" value="{{ query }}" maxlength="120" placeholder="Nom, prénom ou numéro CPF"></label>
+      <button class="btn btn-primary">Rechercher</button>
+    </form>
+    <h2>{{ 'Résultats de la recherche' if query else 'Dossiers correspondant au stagiaire' }}</h2>
+    {% for hit in results %}{% set row = hit.row %}
+    <article class="association">
+      <h3>{{ row.first_name }} {{ row.last_name }} · N° {{ row.folder_id }}</h3>
+      <p>{{ row.title }} · {{ date_label(row.session_start_date) }} au {{ date_label(row.session_end_date) }} · {{ row.state }}</p>
+      <p>{{ hit.checks.checks|map(attribute='label')|join(' · ') }}</p>
+      <a href="{{ url_for('integrale_edof.index', folder=row.folder_id) }}">Consulter le dossier EDOF</a>
+      {% if hit.linked %}<p>Dossier déjà associé.</p>
+      {% elif hit.checks.issues %}<p>{{ hit.checks.issues|join(' ') }}</p>
+      {% elif active %}<form method="post" action="{{ url_for('integrale_edof.associate', folder=row.folder_id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="session_id" value="{{ group.id }}"><input type="hidden" name="trainee_id" value="{{ trainee.id }}"><input type="hidden" name="return_to_trainee" value="1">
+        <label><input type="checkbox" name="verified" required value="yes"> J’ai vérifié l’identité et les dates de la session.</label>
+        <button class="btn btn-primary">Associer ce dossier au stagiaire</button>
+      </form>{% endif %}
+    </article>
+    {% else %}<p>{{ 'Aucun dossier correspondant dans la liste synchronisée.' if synced else 'La première synchronisation des dossiers EDOF est nécessaire.' }}</p>
+    <a href="{{ url_for('integrale_edof.index', section='state', group='all') }}">Ouvrir Intégrale EDOF pour synchroniser les dossiers</a>{% endfor %}
+    {% if pages > 1 %}<nav aria-label="Pages des résultats">{% if page > 1 %}<a href="{{ url_for('integrale_edof.trainee_search', session_id=group.id, trainee_id=trainee.id, q=query, page=page-1) }}">Précédent</a>{% endif %} {{ page }} / {{ pages }} {% if page < pages %}<a href="{{ url_for('integrale_edof.trainee_search', session_id=group.id, trainee_id=trainee.id, q=query, page=page+1) }}">Suivant</a>{% endif %}</nav>{% endif %}
+    {% if not active and results %}<p>Pour enregistrer une association, activez Intégrale EDOF dans les <a href="{{ url_for('integrale_edof.index', section='technical') }}">paramètres CPF</a>.</p>{% endif %}
+  </div></section>
+</div>
+{% endblock %}

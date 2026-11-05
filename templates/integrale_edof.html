@@ -125,7 +125,7 @@
 <a class="btn btn-outline" href="{{ url_for('edof_test.index') }}">Lecture manuelle avec le module Chrome</a></div></div></section>
 {% elif section == 'consumption' %}{% include '_edof_history.html' %}
 {% else %}
-{% if previewing %}<section class="wedof-panel edof-panel-body" id="matching"><span class="wedof-section-label">ASSOCIATIONS LOCALES</span><h2>Prévisualisation des correspondances</h2><p>{{ matches|length }} dossier(s) en cours d’entrée ou de sortie · {{ match_counts['exact_match'] or 0 }} correspondance(s) fiable(s). Une association fiable requiert des dates concordantes et un contact vérifié.</p></section>{% endif %}
+{% if previewing %}<section class="wedof-panel edof-panel-body" id="matching"><span class="wedof-section-label">ASSOCIATIONS LOCALES</span><h2>Prévisualisation des correspondances</h2><p>{{ matches|length }} dossier(s) à associer · {{ match_counts['exact_match'] or 0 }} correspondance(s) fiable(s). Une association fiable requiert des dates concordantes et un contact vérifié.</p></section>{% endif %}
 {% if testing %}<section class="wedof-panel edof-panel-body" id="simulation"><span class="wedof-section-label">SIMULATION SUR LA LISTE SYNCHRONISÉE</span><h2>Résultat du test des automatisations</h2><p>Échéances en heure de Paris · entrée et sortie avec service fait à 18 h. Le test indique quelles échéances sont passées, préparées ou bloquées. Il ne transmet aucune déclaration.</p><div class="metrics">
 {% for key,label in simulation_labels.items() %}<div><strong>{{ simulation[key] or 0 }}</strong>{{ label }}</div>{% endfor %}</div></section>{% endif %}
 {% if section == 'automations' %}
@@ -155,6 +155,11 @@
     <p>{{ 'Suivez les échéances, les blocages et les réceptions vérifiées. Les compteurs portent sur les actions.' if section == 'automations' else 'Chaque dossier est classé selon son étape actuelle. Choisissez une rubrique puis un statut.' }}</p>
   </div></div>
   {% if section == 'state' %}
+  <nav class="wedof-counters" aria-label="Associations CPF">
+    <a class="wedof-counter {{ 'is-active' if tab == 'unlinked' else '' }}" data-wedof-counter="to_associate" href="{{ url_for('integrale_edof.index', section='state', group='all', tab='unlinked') }}">
+      <strong>{{ unlinked_count if has_snapshot else '—' }}</strong><span>À associer</span></a>
+  </nav>
+  {% if tab == 'unlinked' %}<p class="hint">Tous les soirs à 18 h (heure de Paris), Intégrale EDOF tente de rattacher chaque dossier à une inscription. Les correspondances incertaines restent dans cette liste.</p>{% endif %}
   <nav class="edof-folder-groups" aria-label="Parcours des dossiers CPF">
     {% for key, label in groups.items() %}<a class="edof-folder-group {{ 'is-active' if group == key else '' }}" data-group="{{ key }}" href="{{ url_for('integrale_edof.index', section='state', group=key, tab=('request' if key=='requests' else 'all'), q=query, course=course, period=period) }}" {% if group==key %}aria-current="page"{% endif %}>
       <span>{{ label }}</span><strong>{{ group_counts[key] or 0 if checked else '—' }}</strong>
@@ -162,7 +167,7 @@
   </nav>
   {% endif %}
   {% set colors = {'today':'training', 'overdue':'anomaly', 'attention':'planned', 'blocked':'anomaly', 'running':'training', 'planned':'accepted', 'history':'service', 'due':'planned', 'entry':'training', 'out':'training', 'declared':'service', 'billable':'invoiced', 'paid':'service', 'unlinked':'to_associate', 'request':'planned', 'waiting':'accepted', 'ft':'invoiced', 'ft_refused':'anomaly', 'refused':'anomaly', 'canceled':'anomaly'} %}
-  <nav class="wedof-counters state-tabs {{ 'edof-operation-counters' if section=='automations' else '' }}" aria-label="{{ 'Filtres des actions' if section=='automations' else 'Filtres des dossiers' }}">{% for key,label in tabs.items() %}
+  <nav class="wedof-counters state-tabs {{ 'edof-operation-counters' if section=='automations' else '' }}" aria-label="{{ 'Filtres des actions' if section=='automations' else 'Filtres des dossiers' }}">{% for key,label in tabs.items() if key != "unlinked" %}
     <a class="wedof-counter {{ 'is-active' if tab == key else '' }}" data-wedof-counter="{{ colors.get(key,key) }}" href="{{ link(section, key) }}" {% if tab == key %}aria-current="page"{% endif %}>
       <strong>{{ (counts[key] or 0) if checked else '—' }}</strong><span>{{ label }}</span>
     </a>{% endfor %}

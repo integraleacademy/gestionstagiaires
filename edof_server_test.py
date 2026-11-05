@@ -870,13 +870,15 @@ def register_edof_server_test(legacy):
     store = ServerTestStore("/data")
     store.data_file = legacy.DATA_FILE
     store.legacy = legacy
-    register_routes(legacy.app, store, legacy=legacy,
+    nightly_associations = register_routes(legacy.app, store, legacy=legacy,
         admin_required=legacy.admin_login_required,
         can_access=lambda: legacy._is_super_admin_session() and not session.get("assist_partner_id"))
 
     def refresh_active_directories():
         worker = DayWorker()
         inspected = None
+        associated_day = None
+        next_association_attempt = 0
         # Gunicorn can have several schedulers. Only one owns the in-memory tab.
         store.directory.mkdir(parents=True, exist_ok=True)
         with open(store.directory / "edof_day_leader.lock", "a") as leader:
@@ -895,6 +897,14 @@ def register_edof_server_test(legacy):
                             store.process_catchups(active)
                             if active["pending"]:
                                 continue
+                            if (daily and now.hour >= 18 and associated_day != now.date()
+                                    and now.timestamp() >= next_association_attempt):
+                                next_association_attempt = now.timestamp() + 300
+                                try:
+                                    if nightly_associations(now):
+                                        associated_day = now.date()
+                                except Exception:
+                                    legacy.app.logger.exception("EDOF: échec du rapprochement du soir")
                             recovery.prepare(store, active, now)
                             # Explicit dossier actions take the next free slot before background reads.
                             proposal = proposals.next_job(store.directory, active)
@@ -1296,5 +1306,5 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
     app.register_blueprint(bp)
     if legacy is not None:
         from integrale_edof_dashboard import register_dashboard
-        register_dashboard(app, legacy, store, results_owner=results_owner, vault=vault,
+        return register_dashboard(app, legacy, store, results_owner=results_owner, vault=vault,
                            gmail_status=gmail_status, admin_required=admin_required, check_csrf=check_csrf)

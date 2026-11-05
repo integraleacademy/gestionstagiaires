@@ -17078,6 +17078,15 @@ def admin_partners():
     q = (request.args.get("q") or "").strip().lower()
     status = (request.args.get("status") or "").strip()
     plan = (request.args.get("plan") or "").strip().lower()
+    last_logins = {}
+    for user in data.get("users", []):
+        if not isinstance(user, dict) or not user.get("partner_id"):
+            continue
+        stamp = _parse_iso_datetime(user.get("last_login_at"))
+        partner_id = user["partner_id"]
+        if stamp and (partner_id not in last_logins or stamp > last_logins[partner_id]):
+            last_logins[partner_id] = stamp
+
     partners = []
     for partner in data.get("partners", []):
         if not isinstance(partner, dict):
@@ -17091,6 +17100,10 @@ def admin_partners():
             continue
         row = dict(partner)
         row["counts"] = _partner_counts(data, partner.get("id") or "")
+        latest = last_logins.get(partner.get("id"))
+        row["last_login_label"] = (latest.replace(tzinfo=datetime.timezone.utc)
+                                   .astimezone(ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y %Hh%M")
+                                   if latest else "Aucune connexion")
         partners.append(row)
     partners.sort(key=lambda item: (item.get("name") or "").lower())
     return render_template("admin_partners.html", partners=partners, q=q, status=status, plan=plan, status_labels=PARTNER_STATUS_LABELS, protected_partner_id=INTEGRALE_PARTNER_ID, **partner_workspace.platform_context(sys.modules[__name__], data))
@@ -34674,7 +34687,8 @@ def _professional_experience_sheet_payload(raw: Any, trainee: Dict[str, Any], se
         job_title = str(experience.get("job_title") or "").strip()
         company_name = str(experience.get("company_name") or "").strip()
         start_date = str(experience.get("start_date") or "").strip()
-        end_date = str(experience.get("end_date") or "").strip()
+        current_job = experience.get("current_job") is True
+        end_date = "" if current_job else str(experience.get("end_date") or "").strip()
         contract_type = str(experience.get("contract_type") or "").strip()
         executive_status = str(experience.get("executive_status") or "").strip()
         contract_other = str(experience.get("contract_other") or "").strip()
@@ -34685,8 +34699,8 @@ def _professional_experience_sheet_payload(raw: Any, trainee: Dict[str, Any], se
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", start_date):
             errors[f"experiences.{index}.start_date"] = "Renseignez la date d’entrée."
         is_last_experience = index == min(len(raw_experiences), 5) - 1
-        if not end_date and is_last_experience:
-            errors[f"experiences.{index}.end_date"] = "Renseignez la date de sortie de votre dernière expérience."
+        if not end_date and is_last_experience and not current_job:
+            errors[f"experiences.{index}.end_date"] = "Renseignez la date de sortie de votre dernière expérience ou cochez « Poste actuel »."
         elif end_date and not _professional_experience_date_is_valid(end_date):
             errors[f"experiences.{index}.end_date"] = "Renseignez une date de sortie valide."
         if contract_type not in allowed_contracts or not contract_type:
@@ -34713,6 +34727,7 @@ def _professional_experience_sheet_payload(raw: Any, trainee: Dict[str, Any], se
             "company_name": company_name,
             "start_date": start_date,
             "end_date": end_date,
+            "current_job": current_job,
             "work_time_percent": work_time,
             "contract_type": contract_type,
             "contract_other": contract_other if contract_type == "other" else "",
@@ -34875,11 +34890,14 @@ def _professional_experience_sheet_pdf(sheet: Dict[str, Any]) -> BytesIO:
             contract = f"{contract} — {experience.get('contract_other') or '—'}"
         percent = experience.get("work_time_percent")
         percent_label = "—" if percent in (None, "") else f"{percent:g} %"
+        start = fr_date(str(experience.get("start_date") or "")) or "—"
+        end = fr_date(str(experience.get("end_date") or "")) or "—"
+        period = f"Depuis le {start} · Poste actuel" if experience.get("current_job") else f"{start} au {end}"
         block = [
             Paragraph(f"Expérience {index}", ParagraphStyle(name=f"Experience{index}", parent=styles["Heading3"], fontName="Helvetica-Bold", fontSize=10, textColor=gold, spaceBefore=5, spaceAfter=4)),
             value_table([
                 ("Intitulé du poste", experience.get("job_title")), ("Entreprise", experience.get("company_name")),
-                ("Période", f"{fr_date(str(experience.get('start_date') or '')) or '—'} au {fr_date(str(experience.get('end_date') or '')) or '—'}"),
+                ("Période", period),
                 ("Temps de travail", percent_label), ("Type de contrat", contract), ("Statut cadre", executive_labels.get(str(experience.get("executive_status") or ""), "—")),
             ]),
         ]
@@ -40643,7 +40661,10 @@ def admin_trainee_page(session_id: str, trainee_id: str):
             not aps_signature_issues or aps_force_active
         )
 
-    if (not _is_partner_data_scope_session() and _current_session_role() != "viewer"
+    native_cpf_search = ("integrale_edof.trainee_search" in app.view_functions
+                         and _is_super_admin_session() and not _is_partner_data_scope_session()
+                         and (s.get("partner_id") or INTEGRALE_PARTNER_ID) == INTEGRALE_PARTNER_ID)
+    if (not native_cpf_search and not _is_partner_data_scope_session() and _current_session_role() != "viewer"
             and (s.get("partner_id") or INTEGRALE_PARTNER_ID) == INTEGRALE_PARTNER_ID):
         link = _cpf_active_link(data, session_id=session_id, trainee_id=trainee_id)
         admin_trainee_wedof_refresh.schedule_refresh(sys.modules[__name__], session_id, trainee_id, link)
@@ -40693,6 +40714,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         automation_module_locked=bool(_automation_document_config(s).get("enabled")) and not _automation_partner_module_enabled(),
         automation_disabled_by_cancellation=t["registration_cancelled"],
         financing_module_locked=not _financing_partner_module_enabled(),
+        native_cpf_search=native_cpf_search,
         cpf_tracking=build_cpf_view(t, s, data),
         cpf_association_preview=(session.get("cpf_association_preview") or {})
             if (session.get("cpf_association_preview") or {}).get("trainee_id") == trainee_id else None,
