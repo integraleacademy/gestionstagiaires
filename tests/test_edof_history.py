@@ -187,3 +187,18 @@ def test_observed_milestones_are_not_fabricated_automations_or_duplicate_receipt
     assert result["counts"]["confirmed"] == 1 and result["counts"]["observed"] == 3
     assert {e["kind"] for e in result["entries"]} == {"entry", "billable", "invoiced", "paid"}
     assert all("détection" in e["note"] for e in result["entries"] if e["status"] == "observed")
+
+
+def test_missing_attendance_is_never_labelled_as_declared(site):
+    snap = site.vault.get(directory.record_key(site.owner))
+    row = snap["rows"]["100000"]
+    audit.decision(site.store.directory, site.owner, row, "entry_training", "missing")
+    page = site.client.get("/admin/edof-test?section=consumption&q=100000")
+    assert "Entrée non transmise" in page.text
+    assert "Entrée en formation" in page.text and "Entrée déclarée" not in page.text
+    with closing(ledger.database(site.store.directory)) as db, db:
+        audit.add(db, owner=site.owner, folder=row["folder_id"], kind="entry", status="confirmed",
+                  occurred=time.time(), detail="declaration_confirmed", row=row, source="declaration")
+    events = history.page(site.store, site.owner, snap, MultiDict({"q":"100000"}))["entries"]
+    assert [(e["kind_label"], e["label"]) for e in events] == [
+        ("Entrée déclarée", "Réception confirmée par EDOF"), ("Entrée en formation", "Entrée non transmise")]

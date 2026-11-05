@@ -95,10 +95,10 @@
       title.textContent = options.title || (status === 'success' ? titles[current.kind][1] :
         status === 'warning' ? 'Traitement à vérifier' : current.kind === 'proposal' ? 'Transmission non aboutie' : 'Traitement non terminé');
       subtitle.textContent = status === 'success' ? 'Le serveur a confirmé le résultat.' : 'Le détail ci-dessous indique la suite à donner.';
-      phase.textContent = status === 'success' ? 'Confirmation reçue' : status === 'warning' ? 'Une vérification est nécessaire' : 'Une difficulté a été rencontrée';
+      phase.textContent = options.phase || (status === 'success' ? 'Confirmation reçue' : status === 'warning' ? 'Une vérification est nécessaire' : 'Une difficulté a été rencontrée');
       message.textContent = text;
-      help.textContent = status === 'success' ? 'Vous pouvez fermer cette fenêtre et poursuivre votre travail.' :
-        'Consultez le suivi avant de relancer : aucune tentative supplémentaire n’est déclenchée par cette fenêtre.';
+      help.textContent = options.help || (status === 'success' ? 'Vous pouvez fermer cette fenêtre et poursuivre votre travail.' :
+        'Consultez le suivi avant de relancer : aucune tentative supplémentaire n’est déclenchée par cette fenêtre.');
       reload.hidden = !refresh;
       current.correct = options.correct;
       correct.hidden = !options.correct;

@@ -201,3 +201,16 @@ def test_scheduler_is_woken_from_another_process_without_twenty_second_wait(tmp_
             assert inbox['seen'] > 0
         finally:
             child.wait(timeout=2)
+
+
+def test_failed_initial_read_shows_that_nothing_was_sent(screen):
+    send(screen)
+    work = jobs.record(screen.site.store.directory, FOLDER, screen.site.owner)
+    jobs.complete(screen.site.store.directory, work, {"code":"read_unconfirmed"}, jobs.LEGACY_READ_MESSAGE)
+    page = screen.page
+    page.locator('#edof-action-dialog[data-state="error"]').wait_for()
+    assert page.locator('#edof-action-title').inner_text() == 'Proposition non envoyée'
+    assert 'Aucune proposition envoyée' in page.locator('#edof-action-message').inner_text()
+    assert 'lecture autonome' not in page.locator('#edof-action-dialog').inner_text()
+    assert not page.get_by_role('button', name='Revoir les informations').is_visible()
+    assert screen.posts == [BASE+'submit']

@@ -53,8 +53,10 @@
         if (!pending.has(job.status)) {
           const status = job.status === 'confirmed' ? 'success' : job.status === 'uncertain' ? 'warning' : 'error';
           feedback.finish(id, status, job.message, job.status === 'confirmed', {
-            title:job.status === 'uncertain' ? 'Réception à vérifier dans EDOF' : undefined,
-            correct:job.status === 'error' ? () => correct(job.message) : undefined
+            title:job.stopped_before_send ? 'Proposition non envoyée' : job.status === 'uncertain' ? 'Réception à vérifier dans EDOF' : undefined,
+            phase:job.stopped_before_send ? 'Lecture interrompue avant l’envoi' : undefined,
+            help:job.stopped_before_send ? 'Fermez cette fenêtre pour retrouver votre proposition.' : undefined,
+            correct:job.status === 'error' && !job.stopped_before_send ? () => correct(job.message) : undefined
           });
           await refreshDetail(job.detail_url);
           return;

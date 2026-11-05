@@ -40,7 +40,7 @@
         <td data-label="Dossier / Stagiaire"><div class="edof-history-person">{% if event.fields.first_name or event.fields.last_name %}<strong>{{ event.fields.first_name }} {{ event.fields.last_name }}</strong>{% endif %}
           {% if event.folder %}{% if event.available %}<a href="{{ url_for('integrale_edof.index', section='state', group='all', folder=event.folder, _anchor='dossier') }}">Dossier {{ event.folder }} ↗</a>{% else %}<span>Dossier {{ event.folder }}</span>{% endif %}{% else %}<strong>Connecteur EDOF</strong>{% endif %}
           {% if event.fields.title %}<span>{{ event.fields.title }}</span>{% endif %}</div></td>
-        <td data-label="Automatisation"><span class="edof-type-chip type-{{ event.kind }}">{{ history.types[event.kind] }}</span>{% if event.kind=='billable' %}<small>Service fait validé</small>{% endif %}<small>{{ event.source_label }}</small>{% if event.fields.actual_date and event.source!='edof' %}<small>Date d’effet : {{ date_fr(event.fields.actual_date) }}</small>{% endif %}</td>
+        <td data-label="Automatisation"><span class="edof-type-chip type-{{ event.kind }}">{{ event.kind_label }}</span>{% if event.kind=='billable' %}<small>Service fait validé</small>{% endif %}<small>{{ event.source_label }}</small>{% if event.fields.actual_date and event.source!='edof' %}<small>Date d’effet : {{ date_fr(event.fields.actual_date) }}</small>{% endif %}</td>
         <td data-label="Résultat et détail"><span class="edof-history-result result-{{ event.result }}"><i aria-hidden="true"></i>{{ event.label }}</span><p>{{ event.note }}</p></td>
       </tr>{% endfor %}
     </tbody></table>

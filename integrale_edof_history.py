@@ -13,7 +13,8 @@ import edof_proposal_jobs as proposals
 from integrale_edof_sync import event_tables
 
 PARIS = ZoneInfo("Europe/Paris")
-TYPES = {"entry": "Entrée déclarée", "out": "Sortie déclarée", "declared": "Service fait déclaré",
+RECEIPT_TYPES = {"entry": "Entrée déclarée", "out": "Sortie déclarée", "declared": "Service fait déclaré"}
+TYPES = {"entry": "Entrée en formation", "out": "Sortie de formation", "declared": "Service fait",
          "billable": "À facturer", "invoiced": "Facturé", "paid": "Payé",
          "proposal": "Proposition au titulaire", "sync": "Synchronisation EDOF", "control": "Contrôle du connecteur"}
 RESULTS = {"all": "Tous les résultats", "confirmed": "Confirmées", "observed": "Changements détectés",
@@ -119,7 +120,24 @@ def page(store, owner, snapshot, args):
                 "paused": "Traitement suspendu. Consultez le dossier avant toute reprise.",
             }.get(item["status"], "Consultez le dossier pour retrouver les informations de l’opération.")
         label = "Envoi différé · problème de connexion" if item["status"] == "queued" and item["result"] == "issues" else STATUS_LABELS.get(item["status"], "À vérifier")
-        entries.append({**item, **timestamp(item["occurred"]), "fields": fields, "note": note,
+        kind_label = TYPES[item["kind"]]
+        if item["status"] in {"confirmed", "observed"} and item["kind"] in RECEIPT_TYPES:
+            kind_label = RECEIPT_TYPES[item["kind"]]
+            if item["status"] == "confirmed":
+                label = "Réception confirmée par EDOF"
+        if item["source"] == "discovery":
+            label = "Aucun envoi lors du contrôle"
+            if item["detail"] == "discovery_missing" and item["kind"] == "entry":
+                label = "Entrée non transmise"
+                note = "Au moment du contrôle, aucun justificatif ni aucune confirmation de présence ne permettait de déclarer l’entrée."
+            elif item["detail"] == "discovery_missing" and item["kind"] == "declared":
+                label = "Service fait non transmis"
+        if item["kind"] == "proposal" and item["detail"] == proposals.LEGACY_READ_MESSAGE:
+            if item["status"] == "error":
+                note = proposals.read_failure_message("")
+            elif item["status"] == "uncertain":
+                note = "Le dossier n’a pas pu être relu après le début de la transmission. Vérifiez la réception depuis sa fiche avant tout nouvel envoi."
+        entries.append({**item, "kind_label": kind_label, **timestamp(item["occurred"]), "fields": fields, "note": note,
                         "label": label, "source_label": SOURCES[item["source"]], "available": item["folder"] in visible})
     return {"entries": entries, "counts": counts, "type_counts": type_counts, "total": total,
             "page": number, "pages": pages, "type": kind, "result": result, "q": query,
