@@ -96,14 +96,33 @@ def ledger_path(host):
     return Path(host.PERSIST_DIR) / 'native_elearning' / 'daily_followup.sqlite3'
 
 
-def delivery(host, sid, tid, day):
+@contextmanager
+def read_ledger(host):
+    """Open the existing send archive without creating or changing it."""
     path = ledger_path(host)
     if not path.is_file():
-        return None
+        yield None
+        return
     with closing(sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True, timeout=5)) as db:
         db.row_factory = sqlite3.Row
+        yield db
+
+
+def sent_history(host, sid, tid):
+    with read_ledger(host) as db:
+        if db is None:
+            return []
+        return db.execute("""SELECT day, sent_at, recipient, subject FROM deliveries
+            WHERE session_id=? AND trainee_id=? AND status='sent' ORDER BY day DESC""",
+            (str(sid), str(tid))).fetchall()
+
+
+def delivery(host, sid, tid, day):
+    with read_ledger(host) as db:
+        if db is None:
+            return None
         row = db.execute('SELECT * FROM deliveries WHERE session_id=? AND trainee_id=? AND day=?',
-                         (str(sid), str(tid), day.isoformat())).fetchone()
+                         (str(sid), str(tid), str(day))).fetchone()
         return dict(row) if row else None
 
 
@@ -175,9 +194,7 @@ def progress_since_yesterday(host, training, person, report, day):
         return None
 
 
-TITLES = ('Votre prochain pas vers le présentiel', 'Un nouveau jour pour avancer',
-          'Votre régularité fait la différence', 'Gardez votre élan', 'Votre objectif se rapproche',
-          'Construisez vos acquis, jour après jour', 'On fait le point sur votre parcours')
+MAIL_TITLE = 'Suivi de votre formation e-learning'
 TIPS = ('Installez-vous au calme et prévoyez un créneau sans interruption.',
         'Reprenez à l’endroit où vous vous êtes arrêté : votre progression est enregistrée.',
         'Après une séquence, prenez quelques minutes pour reformuler les idées essentielles.',
@@ -232,8 +249,7 @@ def message(host, training, person, report, day):
             if tone not in ('urgent', 'behind'):
                 headline = 'Retrouvons votre rythme, une étape à la fois'
                 encouragement = 'Vous avez déjà construit des acquis. Reprenez votre parcours aujourd’hui pour les consolider et poursuivre jusqu’à la validation complète avant le présentiel.'
-    title = TITLES[ordinal % len(TITLES)]
-    tip = TIPS[(ordinal + ordinal // len(TITLES)) % len(TIPS)]
+    tip = TIPS[(ordinal + ordinal // len(TIPS)) % len(TIPS)]
     origin = host.PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')
     access_url = origin + '/espace/' + quote(str(person.get('public_token') or ''), safe='') + '/elearning'
     training_label = 'Votre formation agent de prévention et de sécurité (APS)'
@@ -241,15 +257,17 @@ def message(host, training, person, report, day):
     context = dict(first_name=str(person.get('first_name') or person.get('prenom') or '').strip(),
                    session_name=training.get('name') or training.get('nom') or 'Formation APS',
                    day_label=day.strftime('%d/%m/%Y'), onsite_label=onsite.strftime('%d/%m/%Y') if onsite else 'à confirmer',
-                   title=title, headline=headline, encouragement=encouragement, tip=tip, tone=tone,
-                   training_label=training_label, delta=delta, daily_note=daily_note,
+                   encouragement=encouragement, tip=tip, tone=tone,
+                   delta=delta, daily_note=daily_note,
                    report=report, remaining_label=time_label(remaining), daily_label=time_label(daily_seconds),
                    days=days, access_url=access_url, complete=complete,
                    daily_feasible=daily_seconds <= 8 * 3600)
     fragment = host.app.jinja_env.get_template('emails/aps_daily_followup.html').render(**context)
-    html = render_email(fragment, title=title, eyebrow=training_label,
+    html = render_email(fragment, title=MAIL_TITLE, eyebrow=training_label,
                         subtitle=headline, signature='cassandre', preheader=f"Votre progression : {percent:g} %. Présentiel le {context['onsite_label']}.")
-    text = (f"Bonjour {context['first_name']},\n\n{training_label}\n{headline}\n{daily_note}\n{encouragement}\n\n"
+    text = (f"{MAIL_TITLE}\n{headline}\n\nBonjour {context['first_name']},\n\n"
+            + (f"{daily_note}\n\n" if daily_note else '')
+            + f"{encouragement}\n\n"
             + (f"Depuis le point d’hier : {delta['time_label']} de suivi supplémentaire, {delta['activities']} activité(s) terminée(s).\n" if delta and delta['advanced'] else '')
             + f"{context['session_name']} — Point du {context['day_label']}\n"
             f"Progression : {percent:g} %\nTemps suivi : {report['active_time_label']}\n"
@@ -258,11 +276,11 @@ def message(host, training, person, report, day):
             + ('' if complete else f"Objectif indicatif par jour : {context['daily_label']}, sur {days} jour(s).\n"
                if context['daily_feasible'] else "Le volume restant est important au regard du délai : contactez-nous dès aujourd’hui pour faire le point et organiser la suite de votre parcours.\n")
             + f"\n{tip}\nReprendre mon parcours : {access_url}\n\n"
-            "À la moindre difficulté, contactez-nous au 04 22 47 07 68. "
+            "Vous pouvez répondre à ce mail, m’appeler sur ma ligne directe au 04 87 83 06 16 "
+            "ou sur mon portable au 07 43 58 22 64.\n"
             "Signaler un problème technique : ecole@integraleacademy.com\n\n"
-            "Cassandre MENARD\nResponsable commerciale · Intégrale Academy\n"
-            "Ligne directe : 04 87 83 06 16\nPortable : 07 43 58 22 64\n"
-            "cassandre@integraleacademy.com\n54 chemin du Carreou, 83480 Puget-sur-Argens")
+            "Cassandre MENARD\nResponsable commerciale – Intégrale Academy\n"
+            "04 22 47 07 68 · cassandre@integraleacademy.com\n54 chemin du Carreou – 83480 Puget-sur-Argens")
     return {'subject': subject, 'html': html, 'text': text, 'tone': tone,
             'progress': progress_snapshot(report)}
 
@@ -368,13 +386,30 @@ def register(host):
                 rows[str(person['id'])] = '<span class="aps-followup-empty">Suivi temporairement indisponible</span>'
         return jsonify(ok=True, rows=rows), 200, {'Cache-Control': 'no-store'}
 
-    @app.get('/admin/sessions/<session_id>/stagiaires/<trainee_id>/e-learning/suivi/mail-du-jour')
-    @host.admin_login_required
-    def admin_aps_daily_preview(session_id, trainee_id):
+    def daily_learner(session_id, trainee_id):
         training = scoped_training(session_id)
         person = next((t for t in host._session_trainees_list(training) if str(t.get('id')) == trainee_id), None)
         if person is None or training.get('partner_id') not in (None, '', host.INTEGRALE_PARTNER_ID):
             abort(404)
+        return training, person
+
+    def mail_response(html):
+        return html, 200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store',
+                           'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': 'sandbox'}
+
+    @app.get('/admin/sessions/<session_id>/stagiaires/<trainee_id>/e-learning/suivi/historique-mails/<day>')
+    @host.admin_login_required
+    def admin_aps_sent_mail(session_id, trainee_id, day):
+        daily_learner(session_id, trainee_id)
+        receipt = delivery(host, session_id, trainee_id, day)
+        if not receipt or receipt['status'] != 'sent':
+            abort(404)
+        return mail_response(receipt['html'])
+
+    @app.get('/admin/sessions/<session_id>/stagiaires/<trainee_id>/e-learning/suivi/mail-du-jour')
+    @host.admin_login_required
+    def admin_aps_daily_preview(session_id, trainee_id):
+        training, person = daily_learner(session_id, trainee_id)
         today = clock().date()
         sent = delivery(host, session_id, trainee_id, today)
         if sent and sent['status'] in ('sent', 'sending', 'uncertain'):
@@ -384,7 +419,7 @@ def register(host):
             if not report['available']:
                 abort(409, 'Le suivi est indisponible : aucun mail ne sera envoyé avec des données incomplètes.')
             html = message(host, training, person, report, today)['html']
-        return html, 200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'}
+        return mail_response(html)
 
     @app.post('/internal/cron/aps-daily-followup')
     def internal_cron_aps_daily_followup():

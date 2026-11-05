@@ -1,5 +1,4 @@
 <p style="font-size:19px;color:#102c5c;">Bonjour {{ first_name }},</p>
-<p style="font-weight:700;color:#102c5c;">{{ training_label }}</p>
 {% if daily_note %}<p>{{ daily_note }}</p>{% endif %}
 <p>{{ encouragement }}</p>
 {% if delta and delta.advanced %}<p style="padding:14px 18px;background:#eaf7f0;border-radius:10px;color:#166042;"><strong>Depuis le point d’hier</strong><br>+ {{ delta.time_label }} de suivi{% if delta.activities %} · {{ delta.activities }} activité{{ 's' if delta.activities > 1 else '' }} terminée{{ 's' if delta.activities > 1 else '' }}{% endif %}. Chaque étape compte !</p>{% endif %}
@@ -22,5 +21,5 @@
 </div>
 <p><strong>Votre conseil du jour</strong><br>{{ tip }}</p>
 <p style="text-align:center;margin:26px 0;"><a href="{{ access_url }}" style="display:inline-block;background:#285ac8;color:#fff;padding:16px 26px;border-radius:10px;text-decoration:none;font-weight:700;">{{ 'Revoir mon parcours' if complete else 'Reprendre mon e-learning' }} →</a></p>
-<p>À la moindre difficulté, contactez-nous : nous sommes là pour vous accompagner. Vous pouvez répondre à ce mail ou nous appeler au <a href="tel:+33422470768">04 22 47 07 68</a>.</p>
+<p>À la moindre difficulté, vous pouvez répondre à ce mail, m’appeler sur ma ligne directe au <a href="tel:+33487830616">04 87 83 06 16</a> ou sur mon portable au <a href="tel:+33743582264">07 43 58 22 64</a>.</p>
 <p style="padding:15px 18px;background:#f7f9fc;border-radius:10px;font-size:14px;">Un problème technique ? <a href="mailto:ecole@integraleacademy.com?subject=Probl%C3%A8me%20technique%20e-learning%20APS">Cliquez ici pour le signaler à ecole@integraleacademy.com</a>. Indiquez votre nom et ce qui vous empêche d’avancer.</p>
