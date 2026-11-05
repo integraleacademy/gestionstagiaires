@@ -483,3 +483,74 @@ def test_human_confirmed_entry_for_a_later_individual_cpf_start(site, monkeypatc
     assert not ledger.matches_linked_proof(row, proof, {**draft,"action":"service_done"})
     proof["first_name"] = "Autre"
     assert not ledger.check_before_job(site.store, spec)
+
+
+def test_paper_entry_runs_at_18_paris_without_a_local_enrolment(site, monkeypatch):
+    from edof_schedule import PARIS
+    from integrale_edof_dashboard import simulate
+
+    instant = dt.datetime(2026, 11, 6, 16, 59, 59, tzinfo=dt.timezone.utc)
+
+    class Clock(dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return instant.astimezone(tz)
+
+    monkeypatch.setattr(dt, "datetime", Clock)
+    monkeypatch.setattr(providers, "on_test_service", lambda: True)
+    site.gate.switch("integrale", 0, "admin")
+    flags = {}
+    monkeypatch.setattr(ledger, "authoritative_proofs", lambda ids: {f: {"blocks": flags.get(f, [])} for f in ids})
+    rows = {}
+    for folder, state, start in [
+        (FOLDER, "accepted", "2026-11-06"),
+        ("200001", "accepted", "2026-11-06"),
+        ("200002", "accepted", "2026-11-06"),
+        ("200003", "accepted", "2026-11-07"),
+        ("200004", "canceled", "2026-11-06"),
+        ("200005", "inTraining", "2026-11-06"),
+        ("200006", "accepted", "2026-11-04"),
+    ]:
+        rows[folder] = {**ROW, "folder_id": folder, "state": state, "session_start_date": start, "session_end_date": "2026-12-01"}
+    ledger.hold_folder(site.store.directory, "200001", True)
+    flags["200002"] = ["entry_training"]
+
+    def scan():
+        return ledger.discover(site.store, site.owner, {"rows": rows})
+
+    assert simulate("accepted", "2026-11-06", None, None, instant.astimezone(PARIS)) == "planned"
+    assert scan()["entry_training"] == 0
+    instant += dt.timedelta(seconds=1)
+    assert simulate("accepted", "2026-11-06", None, None, instant.astimezone(PARIS)) == "ready"
+    report = scan()
+    assert (report["entry_training"], report["blocked"], report["missing"]) == (1, 2, 1)
+    assert scan()["existing"] == 1
+    job = ledger.next_job(site.store, 1)
+    assert job["folder_id"] == FOLDER and job["intent"]["actual_date"] == "2026-11-06"
+    assert job["intent"]["source"] == "edof_schedule" and not job["intent"].get("operator_confirmed")
+    assert not job["intent"].get("evidence")
+    assert ledger.check_before_job(site.store, job)
+    ledger.hold_folder(site.store.directory, FOLDER, True)
+    assert not ledger.begin_send(site.store.directory, job)
+
+    ledger.hold_folder(site.store.directory, FOLDER, False)
+    assert scan()["entry_training"] == 1
+    new_job = ledger.next_job(site.store, 1)
+    assert new_job["operation"] != job["operation"]
+    assert not ledger.begin_send(site.store.directory, job)
+    assert ledger.begin_send(site.store.directory, new_job)
+    ledger.complete(site.store.directory, new_job, "declaration_confirmed")
+    assert scan()["existing"] == 1
+    instant += dt.timedelta(days=1)
+    assert scan()["entry_training"] == 1
+    saturday = ledger.next_job(site.store, 1)
+    assert saturday["folder_id"] == "200003"
+    flags["200003"] = ["both"]
+    assert not ledger.check_before_job(site.store, saturday)
+    assert ledger.next_job(site.store, 1) is None
+    assert scan()["entry_training"] == 0
+    flags.clear()
+    instant += dt.timedelta(days=1)
+    assert scan()["entry_training"] == 2
+    assert {r["folder"]: r["intent"]["actual_date"] for r in ledger.records(site.store.directory)
+            if r["status"] == "queued"} == {"200002": "2026-11-06", "200003": "2026-11-07"}

@@ -126,12 +126,12 @@
 {% elif section == 'consumption' %}{% include '_edof_history.html' %}
 {% else %}
 {% if previewing %}<section class="wedof-panel edof-panel-body" id="matching"><span class="wedof-section-label">ASSOCIATIONS LOCALES</span><h2>Prévisualisation des correspondances</h2><p>{{ matches|length }} dossier(s) en cours d’entrée ou de sortie · {{ match_counts['exact_match'] or 0 }} correspondance(s) fiable(s). Une association fiable requiert des dates concordantes et un contact vérifié.</p></section>{% endif %}
-{% if testing %}<section class="wedof-panel edof-panel-body" id="simulation"><span class="wedof-section-label">SIMULATION SUR LA LISTE SYNCHRONISÉE</span><h2>Résultat du test des automatisations</h2><p>Échéances en heure de Paris · entrée à 8 h et sortie avec service fait à 18 h. Le test indique quelles échéances sont passées, préparées ou bloquées. Il ne transmet aucune déclaration.</p><div class="metrics">
+{% if testing %}<section class="wedof-panel edof-panel-body" id="simulation"><span class="wedof-section-label">SIMULATION SUR LA LISTE SYNCHRONISÉE</span><h2>Résultat du test des automatisations</h2><p>Échéances en heure de Paris · entrée et sortie avec service fait à 18 h. Le test indique quelles échéances sont passées, préparées ou bloquées. Il ne transmet aucune déclaration.</p><div class="metrics">
 {% for key,label in simulation_labels.items() %}<div><strong>{{ simulation[key] or 0 }}</strong>{{ label }}</div>{% endfor %}</div></section>{% endif %}
 {% if section == 'automations' %}
 <section class="wedof-panel edof-catchup" id="rattrapage" data-phase="{{ catchup.phase if catchup else 'idle' }}">
   <div><span class="wedof-section-label">Rattrapage</span><h2>Déclarations en retard</h2>
-    <p>L’entrée est prévue le jour de début de formation à 8 h. La sortie et le service fait sont prévus le jour de fin à 18 h (heure de Paris). Le rattrapage traite les échéances dépassées.</p>
+    <p>Pour les dossiers acceptés, l’entrée est transmise automatiquement à partir de 18 h le jour du début indiqué dans EDOF (heure de Paris). En cas d’absence ou de report, cochez « Bloquer l’automatisation » sur le dossier avant 18 h. Conservez l’émargement papier. La sortie et le service fait sont prévus le jour de fin à 18 h.</p>
     {% if not active %}<p>Disponible lorsque <a href="{{ url_for('integrale_edof.index', section='technical') }}">Intégrale EDOF est actif</a>.</p>{% endif %}
   </div>
   {% if session.get('admin_role') != 'viewer' %}
@@ -242,7 +242,7 @@
       <div><span>État EDOF</span><strong>{{ detail.display.label }}</strong></div>
       <div><span>Échéance de l’automatisation</span><strong>{{ action_labels.get(detail.display.action, 'Aucune action prévue') }}</strong>
         {% if detail.display.scheduled %}<time datetime="{{ detail.display.scheduled.isoformat() }}">{{ detail.display.scheduled.strftime('%d/%m/%Y à %H h %M') }}</time>{% endif %}
-        {% if detail.display.block %}<span class="wedof-badge is-danger">Automatisation bloquée</span>{% endif %}
+        {% if detail.held or detail.display.block %}<span class="wedof-badge is-danger">Automatisation bloquée</span>{% elif active and detail.display.automatic_entry %}<span>Envoi automatique à partir de 18 h, heure de Paris.</span>{% endif %}
       </div>
       <div><span>Rattachement local</span><strong>{{ 'Associé' if detail.display.link else 'Non associé' }}</strong></div>
     </div>
@@ -252,7 +252,7 @@
 <a class="btn btn-outline" href="{{ detail.official }}" target="_blank" rel="noreferrer">Ouvrir le dossier dans EDOF</a></div>
 {% if session.get("admin_role") != "viewer" %}<form method="post" action="{{ url_for('integrale_edof.dossier_hold',folder=f.folder_id) }}">{{ token() }}
 <input type="hidden" name="section" value="{{ section }}"><input type="hidden" name="tab" value="{{ tab }}">
-<label><input type="checkbox" name="hold" value="yes" {% if detail.held %}checked{% endif %}> Bloquer automatisation sur le dossier</label>
+<label><input type="checkbox" name="hold" value="yes" {% if detail.held %}checked{% endif %}> Bloquer l’automatisation sur le dossier</label>
 {{ btn('Enregistrer le choix') }}</form>{% endif %}
 {% if detail.request and (active or detail.transfers.values()|select|list) %}<h3>Transmettre la demande</h3>
 <p>Le transfert utilise les coordonnées de la fiche détaillée EDOF, la formation et le numéro du dossier.</p>
