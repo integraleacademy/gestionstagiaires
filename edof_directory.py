@@ -5,6 +5,7 @@ import time
 import unicodedata
 from zoneinfo import ZoneInfo
 
+import edof_dossier_dates as dates
 from edof_readonly_test import ID_RE, SIRET
 from edof_throttle import PortalThrottled
 
@@ -60,6 +61,10 @@ def canonical_dates(row):
             "session_end_date": session_date(row.get("session_end_date"))}
 
 
+REQUEST_STATES = {"notprocessed", "not processed", "a traiter", "non traite", "received", "tobeprocessed",
+                  "to be processed", "demande recue", "demande d inscription", "dossier non traite"}
+
+
 def in_scope(row):
     day = row.get("session_start_date")
     if day:
@@ -98,7 +103,8 @@ def project(row):
         for key in ("indicativeDuration","weeklyDuration","hoursInCenter","hoursInCompany","totalIncl"):
             if isinstance(info.get(key), (str,int,float)) and not isinstance(info[key],bool):
                 summary["priceTotal" if key=="totalIncl" else key] = str(info[key])[:25]
-    return {**({"offer_summary":summary} if summary else {}), "request_date":session_date(row.get("changingStateDate")), "ft_pending": ft_pending, "ft_refused": ft_refused, "service_done_validated": info.get("validatedServiceDone") is True,
+    return {**dates.project(row, info, solicitations, ft_pending, ft_refused, normalized, REQUEST_STATES),
+            **({"offer_summary":summary} if summary else {}), "request_date":session_date(row.get("changingStateDate")), "ft_pending": ft_pending, "ft_refused": ft_refused, "service_done_validated": info.get("validatedServiceDone") is True,
             "payment_state": text_field(row.get("paymentState"), 80), **({"billing_state": text_field(row["currentBillingState"], 80)} if row.get("currentBillingState") else {}),
             "folder_id": str(row["id"]), "first_name": text_field(attendee.get("firstName"), 120),
             "last_name": text_field(attendee.get("lastName"), 120),
@@ -151,11 +157,12 @@ def with_pending(full, pending):
     full, pending = dated_snapshot(full), dated_snapshot(pending)
     if not pending:
         return full
+    pending_rows = {k: {**r, "observed_at": pending["checked"]} for k, r in pending["rows"].items()}
     if full and pending["checked"] <= full["checked"]:
-        undated = {k:r for k,r in pending["rows"].items() if not r["session_start_date"] and k not in full["rows"]}
+        undated = {k:r for k,r in pending_rows.items() if not r["session_start_date"] and k not in full["rows"]}
         return {**full, "rows":{**full["rows"],**undated}} if undated else full
     combined = dict(full or {"checked":0, "rows":{}, "scope":"pending"})
-    combined["rows"] = {**combined["rows"], **pending["rows"]}
+    combined["rows"] = {**combined["rows"], **pending_rows}
     combined["pending_ids"] = set(pending["rows"])
     combined["pending_checked"] = pending["checked"]
     return combined
@@ -178,7 +185,7 @@ def with_accepted(snapshot, accepted):
         if key in pending and combined.get("pending_checked",0) > accepted["checked"]:
             continue
         pending.discard(key)
-        rows[key] = row
+        rows[key] = {**row, "observed_at": accepted["checked"]}
     if "pending_ids" in combined:
         combined["pending_ids"] = pending
     return {**combined, "rows":rows, "accepted_checked":accepted["checked"]}
@@ -234,7 +241,22 @@ def csv_snapshot(content, first, progress):
             words = set(label.split())
             identity_column = not words & {"financeur", "organisme", "commercial", "structure", "formateur", "certificateur",
                                           "formation", "session", "certification", "ville", "lieu"}
-            if (("dossier" in words and words & {"id", "identifiant", "numero", "num", "n", "no", "ref", "reference"})
+            if label in {"date d inscription", "date de demande", "date de la demande", "registrationdate"}:
+                columns.setdefault("filed_at", i)
+            elif label == "date de creation du dossier":
+                columns.setdefault("created_at", i)
+            elif label in {"date du statut du dossier", "date de changement de statut du dossier", "changingstatedate"}:
+                columns.setdefault("state_at", i)
+            elif words & {"statut", "etat"} and "abondement" in words and "travail" in words and "date" not in words:
+                columns.setdefault("funding_status", i)
+            elif "date" in words and "abondement" in words and "travail" in words:
+                if "refus" in words:
+                    columns.setdefault("ft_refused_at", i)
+                elif "demande" in words:
+                    columns.setdefault("ft_requested_at", i)
+            elif "date" in words and words & {"etat", "statut"}:
+                continue
+            elif (("dossier" in words and words & {"id", "identifiant", "numero", "num", "n", "no", "ref", "reference"})
                     or label in {"numero cpf", "identifiant cpf", "n cpf", "dossier", "registrationfolderid", "externalid"}):
                 columns.setdefault("folder_id", i)
             elif identity_column and ("prenom" in words or label == "firstname"):
@@ -279,6 +301,16 @@ def csv_snapshot(content, first, progress):
         item["folder_id"] = key
         for field in ("state", "title", "session_start_date", "session_end_date"):
             item.setdefault(field, "")
+        item["filed_at"] = dates.stamp(item.get("filed_at"))
+        item["state_at"] = dates.stamp(item.get("state_at"))
+        item["created_at"] = dates.stamp(item.get("created_at"))
+        funding = normalized(item.pop("funding_status", ""))
+        item["ft_pending"] = funding in {"inprogress", "en cours", "en cours de traitement", "demande en cours"}
+        item["ft_refused"] = funding in {"refused", "refuse", "refusee", "refus", "demande refusee"}
+        if item["ft_pending"] or item["ft_refused"]:
+            item["funding_at"] = dates.stamp(item.get("ft_requested_at" if item["ft_pending"] else "ft_refused_at"))
+        if normalized(item["state"]) in REQUEST_STATES:
+            item["request_date"] = session_date(item["state_at"] or item["filed_at"])
         rows[key] = canonical_dates(item)
         progress["export_rows"] = len(rows)
     if len(rows) != total or (total and not any(row["first_name"] and row["last_name"] for row in rows.values())):

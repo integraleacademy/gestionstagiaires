@@ -192,7 +192,11 @@ def with_receipts(path, owner, snap):
             continue
         if not before and combined.get("scope")=="all" and combined["checked"] > r["updated"]:
             continue
-        rows[folder] = row
+        if before and not row.get("filed_at"):
+            row["filed_at"] = before.get("filed_at") or before.get("state_at") or before.get("request_date") or ""
+        if before and before.get("created_at") and not row.get("created_at"):
+            row["created_at"] = before["created_at"]
+        rows[folder] = {**row, "observed_at": r["updated"]}
         pending.discard(folder)
     if "pending_ids" in combined:
         combined["pending_ids"] = pending
