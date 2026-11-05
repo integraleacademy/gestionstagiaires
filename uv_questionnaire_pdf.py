@@ -95,7 +95,7 @@ def build(training, trainee, course, row, result=None, correction=False, *, titl
     info=[topic,p(f'Stagiaire : {name}   •   Dossier : {trainee.get("id", "")}'),Spacer(1,5),
           p(f'Session : {training.get("name", "")}'),Spacer(1,10)]
     if result:
-        info.extend([p(f'Score : {result["score"]}/20   •   Remis le {result["submitted_at"]}',bold),Spacer(1,8)])
+        info.extend([p(f'Score : {result["score"]}/20   •   Terminé le {result["submitted_at"]}',bold),Spacer(1,8)])
     else:
         info.extend([p('Date : ____________________    Formateur : ____________________'),Spacer(1,6),
                      p('Signature du stagiaire : ______________________________________'),Spacer(1,10)])
@@ -149,7 +149,7 @@ def build_dossier(training, person, units, mode, *, course, notice):
     story = [Paragraph(escape(notice), note)]
     for unit, result in units:
         story.append(Paragraph(f"UV {unit['number']:02} · {escape(unit['title'])}", section))
-        info = (f"Score : {result['score']}/20 · Remis le {escape(str(result['submitted_at']))}" if mode == "answers"
+        info = (f"Score : {result['score']}/20 · Terminé le {escape(str(result['submitted_at']))}" if mode == "answers"
                 else "Date : __________________   Formateur : __________________   Signature : __________________")
         story.append(Paragraph(info, body))
         for index, question in enumerate(unit["questions"], 1):
