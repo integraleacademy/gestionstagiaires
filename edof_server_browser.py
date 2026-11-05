@@ -481,11 +481,12 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
     batch_start = index
     while len(seen) <= directory.MAX_ROWS:
         progress.update(method="session_desc", page=index+1, seen=len(rows), page_size=size,
-                        overlap_retry=overlap_retry, private_list=False)
+                        overlap_retry=overlap_retry, private_list=False, http=None)
         checkpoint()
         params = {"page":index, "max":size, "state":state, "filter":"tous",
                   "sort":"DATE_DEBUT_SESSION", "order":"DESC"}
-        reply = context.request.get(target, params=params, headers=headers, max_redirects=0, timeout=20000)
+        reply = context.request.get(target, params=params, headers=headers, max_redirects=0,
+                                    timeout=60000 if size > 500 else 20000)
         try:
             progress["http"] = reply.status
             directory.check_throttling(reply)
@@ -512,16 +513,21 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
             raise directory.IncompleteDirectory("empty_page")
         total = progress["total"] = count
         archive_only = bool(items)
+        started_in_archive = bool(previous and previous < directory.FIRST_SESSION)
+        archive_overlap = False
         for item in items:
             info = item.get("trainingActionInfo") or {}
             folder = str(item.get("id") or "")
             if not directory.ID_RE.fullmatch(folder):
                 raise directory.IncompleteDirectory("invalid_id")
-            if folder in seen:
-                raise directory.IncompleteDirectory("page_overlap")
-            seen.add(folder)
             # The portal sorts the planned session; beginDate may be an actual entry.
             day = directory.session_date(info.get("sessionStartDate") or item.get("beginDate"))
+            if folder in seen:
+                if (not started_in_archive or state == "notProcessed" or not day
+                        or day >= directory.FIRST_SESSION or folder in rows or overlap_retry):
+                    raise directory.IncompleteDirectory("page_overlap")
+                archive_overlap = True
+            seen.add(folder)
             if day:
                 if previous and day > previous:
                     ordered = False
@@ -529,12 +535,19 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
             if day and day < directory.FIRST_SESSION:
                 continue
             archive_only = False
-            row = directory.project(item)
+            try:
+                row = directory.project(item)
+            except directory.IncompleteDirectory:
+                raise directory.IncompleteDirectory("record") from None
             if directory.in_scope(row):
                 if state == "notProcessed" and directory.normalized(row["state"]) not in {
                         "notprocessed","not processed","a traiter","non traite"}:
                     raise directory.IncompleteDirectory("scope")
                 rows[folder] = row
+        # Duplicate archival IDs are irrelevant only after crossing the cutoff
+        # in order and confirming that the entire next page is also archival.
+        if archive_overlap and not (ordered and archive_only):
+            raise directory.IncompleteDirectory("page_overlap")
         if len(seen) > total or len(seen) > directory.MAX_ROWS:
             raise directory.IncompleteDirectory("count")
         progress.update(pages=index+1, seen=len(rows))
@@ -554,7 +567,7 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
 
 def read_full_directory(context, witness, checkpoint, progress, cursor):
     try:
-        return read_recent_directory(context, witness, "all", checkpoint, progress, cursor=cursor)
+        return read_recent_directory(context, witness, "all", checkpoint, progress, size=500, cursor=cursor)
     except directory.IncompleteDirectory as exc:
         if cursor:
             cursor.clear()
@@ -1532,8 +1545,10 @@ def _run_browser(spec, *, live=None, traffic=None):
                         # An expired witness must not trap subsequent reads on the fast path.
                         live.pop("pending_witness",None)
                     reason = str(exc) if isinstance(exc,directory.IncompleteDirectory) and exc.args else "unreadable"
+                    if isinstance(exc, BrowserTimeout):
+                        reason = "read_timeout"
                     report = signals["directory"]
-                    report["failure"] = reason if reason in {"http","size","count","empty_page","page_overlap","invalid_id","scope","limit"} else "unreadable"
+                    report["failure"] = reason if reason in {"http","size","count","empty_page","page_overlap","invalid_id","record","read_timeout","scope","limit"} else "unreadable"
                     if report.get("http") in {401,403}:
                         raise StopRun("directory_incomplete") from None
                     if pending_result:

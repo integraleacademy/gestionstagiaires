@@ -509,6 +509,16 @@ class ServerTestStore:
                 WHERE owner=? AND mode='directory' AND finished IS NOT NULL ORDER BY finished DESC LIMIT 1""", (owner,)).fetchone()
             last_private = db.execute("""SELECT MAX(finished) FROM jobs WHERE owner=? AND json_extract(result,'$.session_saved')=1""",
                                       (owner,)).fetchone()[0] or 0
+            list_read_issue = last and last["code"] == "directory_incomplete" and last["list_http"] in {None, 200, 500, 502, 503, 504}
+            retain_private = False
+            if list_read_issue and saved_session and 0 <= now.timestamp()-last_private < POLL_SECONDS*3:
+                # Never revive a prior session after an intervening refusal or restart.
+                retain_private = not db.execute("""SELECT 1 FROM jobs WHERE owner=? AND finished>?
+                    AND (mode='directory' OR json_extract(result,'$.code') IN ('credentials_rejected','otp_rejected','account_unavailable','authentication_unconfirmed'))
+                    AND NOT (json_extract(result,'$.code')='directory_incomplete'
+                             AND coalesce(json_extract(result,'$.diagnostics.directory.http'),0) IN (0,200,500,502,503,504))
+                    AND json_extract(result,'$.code') NOT IN ('requests_ready','directory_progress','directory_ready') LIMIT 1""",
+                    (owner,last_private)).fetchone()
             successes = dict(db.execute("""SELECT json_extract(result,'$.code') code, MAX(finished)
                 FROM jobs WHERE owner=? AND mode='directory' AND finished IS NOT NULL
                 AND json_extract(result,'$.code') IN ('directory_ready','requests_ready') GROUP BY code""", (owner,)))
@@ -533,7 +543,8 @@ class ServerTestStore:
                 and phase.get("private_status") == 200 and (private_at >= stamp or last and last["code"] in {"requests_ready","directory_progress","directory_ready"})):
             verified = True
         pending = bool(open_now and (queued or row and row["finished"] is None))
-        if open_now and last_private >= earliest and last_private >= stamp and 0 <= now.timestamp()-last_private < POLL_SECONDS*3:
+        if (open_now and last_private >= earliest and (last_private >= stamp or retain_private)
+                and 0 <= now.timestamp()-last_private < POLL_SECONDS*3):
             verified = True
         latest_check = max(stamp,last_private)
         checked = dt.datetime.fromtimestamp(latest_check, PARIS).strftime("%d/%m à %H h %M") if latest_check else ""
@@ -633,7 +644,7 @@ class ServerTestStore:
                         due.append(row["owner"])
                         continue
                     list_report = (result.get("diagnostics") or {}).get("directory") or {}
-                    list_error = row["code"] == "directory_incomplete" and list_report.get("http") == 200
+                    list_error = row["code"] == "directory_incomplete" and list_report.get("http") in {None, 200, 500, 502, 503, 504}
                     delay = POLL_SECONDS if list_error or row["code"] in {"directory_ready","directory_progress","requests_ready","pending_unavailable"} or awaiting_edof_return(result) else 900
                     if (delay == 900 and row["manual_start"] and row["code"] == "browser_error"
                             and result.get("stage") == "login_page" and not result.get("gmail_code_used")
@@ -787,7 +798,7 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
                       f"fault={(result.get('diagnostics') or {}).get('fault')} "
                       f"operation={(result.get('diagnostics') or {}).get('operation')} "
                       f"phase={(result.get('diagnostics') or {}).get('initial_phase')} "
-                      f"full_http={report.get('http')} page={report.get('page')} total={report.get('total')} "
+                      f"full_http={report.get('http')} page={report.get('page')} page_size={report.get('page_size')} total={report.get('total')} "
                       f"seen={report.get('seen')} reason={report.get('failure')}", flush=True)
         finally:
             os.close(lock_fd)
