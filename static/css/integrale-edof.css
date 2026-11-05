@@ -72,8 +72,12 @@
   color: #fff;
 }
 
-#edof-lamp.on {
+#edof-lamp[data-state="active"] {
   background: #187147;
+}
+
+#edof-lamp[data-state="waiting"] {
+  background: #805518;
 }
 
 #edof-connection-note {
