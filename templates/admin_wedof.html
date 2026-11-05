@@ -62,6 +62,7 @@
       </div>
     </div>
     <div class="wedof-hero-actions" aria-label="Actions WEDOF">
+      {% if config.EDOF_READONLY_TEST_ENABLED %}<a class="btn btn-outline" href="{{ url_for('integrale_edof.index') }}">Choisir le système CPF actif</a>{% endif %}
       <form method="post" action="{{ url_for('admin_wedof_matching_preview') }}">
         <button class="btn wedof-primary-action" type="submit">Réanalyser les dossiers</button>
       </form>

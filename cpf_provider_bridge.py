@@ -9,7 +9,7 @@ import uuid
 from flask import Blueprint, jsonify, request
 import requests
 
-from cpf_provider import (PROD_SERVICE_ID, PROVIDERS, ProviderUnavailable, current_store,
+from cpf_provider import (production_edof_ready, PROD_SERVICE_ID, PROVIDERS, ProviderUnavailable, current_store,
                           on_test_service, provider_operation)
 from cpf_transfer_history import TARGETS, historical_delivery, receipt, receipts, respect_native_receipt
 
@@ -98,6 +98,10 @@ def register_production_control(legacy):
 
     @bp.before_request
     def authorize():
+        if production_edof_ready():
+            # The production connector uses local provider locks and receipts.
+            # Retired test instances must never acquire permission for a second dispatch.
+            return jsonify(error="connector_moved"), 409
         expected = os.environ.get(SECRET_NAME, "").encode()
         supplied = request.headers.get("X-Cpf-Control", "").encode()
         if len(expected) < 32 or not hmac.compare_digest(expected, supplied):

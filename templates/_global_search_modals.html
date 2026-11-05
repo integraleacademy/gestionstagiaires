@@ -100,7 +100,7 @@
   }
 </style>
 
-<script>
+<script{% if g.edof_nonce %} nonce="{{ g.edof_nonce }}"{% endif %}>
 (function(){
   function openSearchModal(id, focusId){
     if(typeof window.openModal === 'function') window.openModal(id);

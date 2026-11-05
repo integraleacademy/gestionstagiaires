@@ -1,0 +1,20 @@
+<dialog class="edof-action-dialog" id="edof-action-dialog" aria-labelledby="edof-action-title" aria-describedby="edof-action-message">
+  <div class="edof-action-hero">
+    <span class="edof-action-eyebrow">INTÉGRALE EDOF · SUIVI EN DIRECT</span>
+    <button type="button" class="edof-action-close" data-action-close aria-label="Fermer le suivi">×</button>
+    <div class="edof-action-brand" data-action-brand hidden><img src="/templates/cpf.jpg" alt="Mon Compte Formation" width="164" height="78"><span>TRANSMISSION SÉCURISÉE À EDOF</span></div>
+    <div class="edof-action-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path class="action-sync" d="M20 8a8 8 0 0 0-14-2L3 9m0-5v5h5M4 16a8 8 0 0 0 14 2l3-3m0 5v-5h-5"/><path class="action-check" d="m5 12 4 4L19 6"/><path class="action-warning" d="M12 6v7m0 3v2"/></svg></div>
+    <h2 id="edof-action-title">Traitement EDOF en cours</h2>
+    <p data-action-subtitle>Votre demande est prise en charge par le serveur.</p>
+    <p class="edof-action-case" data-action-case hidden></p>
+  </div>
+  <div class="edof-action-body">
+    <ol class="edof-action-steps" aria-label="Avancement de l’action"><li data-action-step="request"><span>1</span>Demande</li><li data-action-step="running"><span>2</span>Traitement</li><li data-action-step="done"><span>3</span>Résultat</li></ol>
+    <div class="edof-action-status" role="status" aria-live="polite" aria-atomic="true"><strong data-action-phase>Transmission de votre demande…</strong><p id="edof-action-message"></p></div>
+    <ul class="edof-action-issues" data-action-issues hidden aria-label="Informations à vérifier"></ul>
+    <div class="edof-action-track" aria-hidden="true"><span></span></div>
+    <p class="edof-action-reassurance" data-action-help>Vous pouvez continuer en arrière-plan : le traitement se poursuit sur le serveur.</p>
+    <div class="edof-action-footer"><span data-action-elapsed role="timer" aria-live="off">Depuis 00:00</span><div><button type="button" class="btn btn-outline" data-action-close>Continuer en arrière-plan</button><button type="button" class="btn btn-blue" data-action-correct hidden>Revoir les informations</button><button type="button" class="btn btn-blue" data-action-reload hidden>Actualiser les dossiers</button></div></div>
+  </div>
+</dialog>
+<button type="button" class="edof-action-resume" id="edof-action-resume" hidden><span aria-hidden="true" class="edof-action-dot"></span><span data-action-banner>Action EDOF en cours</span><strong>Voir le suivi ↗</strong></button>

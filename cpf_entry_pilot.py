@@ -45,6 +45,10 @@ def snapshot(data, folder):
             "reserved": bool(ours), "ticket": ours.get("pilot_ticket", ""), "operation": ours.get("pilot_operation", "")}
 
 
+def blocks_pilot(block, ticket):
+    return not ticket or block.get("source") != PILOT or block.get("pilot_ticket") != ticket
+
+
 def change(data, folder, mode, actor, operation=""):
     state = snapshot(data, folder)
     ours = next((b for b in active_holds(data, folder) if b.get("source") == PILOT), None)
@@ -67,10 +71,25 @@ def change(data, folder, mode, actor, operation=""):
     return data
 
 
-def register_pilot(legacy, bp, store, public_state, folder_pattern):
-    from flask import g, jsonify, request
+def operate_pilot(legacy, folder, mode, actor="", operation=""):
     from cpf_production_evidence import read_evidence
     from cpf_provider import provider_operation
+    with provider_operation("wedof"):
+        if mode == "inspect":
+            data = legacy.load_data(run_background_tasks=False)
+        else:
+            with automation_lock(legacy):
+                data = legacy._atomic_update_data(lambda current: change(current, folder, mode, actor, operation))
+        state = snapshot(data, folder)
+        if mode == "inspect":
+            proof = read_evidence(legacy, [folder], data=data)[folder]
+            state["proof"] = {key: value for key, value in proof.items() if key in
+                              ("first_name", "last_name", "session_start_date", "session_end_date", ACTION)}
+        return state
+
+
+def register_pilot(legacy, bp, store, public_state, folder_pattern):
+    from flask import g, jsonify, request
 
     @bp.post("/entry-pilot")
     def entry_pilot():
@@ -85,23 +104,13 @@ def register_pilot(legacy, bp, store, public_state, folder_pattern):
                 or mode == "claim" and (not isinstance(operation, str) or len(operation) != 32
                                         or any(c not in "0123456789abcdef" for c in operation))):
             return jsonify(error="invalid_request"), 400
-        with provider_operation("wedof"):
-            if mode == "inspect":
-                data = legacy.load_data(run_background_tasks=False)
-            else:
-                try:
-                    with automation_lock(legacy):
-                        data = legacy._atomic_update_data(lambda current: change(current, folder, mode, actor, operation))
-                except ProviderUnavailable:
-                    raise
-                except ValueError as exc:
-                    return jsonify(**public_state(store.state()), pilot={"error": str(exc)}), 200
-            state = snapshot(data, folder)
-            if mode == "inspect":
-                proof = read_evidence(legacy, [folder], data=data)[folder]
-                state["proof"] = {key: value for key, value in proof.items() if key in
-                                  ("first_name", "last_name", "session_start_date", "session_end_date", ACTION)}
-            return jsonify(**public_state(store.state()), pilot=state)
+        try:
+            state = operate_pilot(legacy, folder, mode, actor, operation)
+        except ProviderUnavailable:
+            raise
+        except ValueError as exc:
+            state = {"error": str(exc)}
+        return jsonify(**public_state(store.state()), pilot=state)
 
     @legacy.app.before_request
     def protect_entry_hold():
