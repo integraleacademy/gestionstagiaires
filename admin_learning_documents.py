@@ -85,7 +85,7 @@ def register(host):
             if len(people) * len(numbers) > 500:
                 abort(400, 'Sélectionnez moins de 500 questionnaires par impression.')
             if course == 'aps' and any(not uv._result(p, course, n) for p in people for n in valid):
-                abort(409, 'Impression bloquée : chaque stagiaire sélectionné doit avoir remis tous ses questionnaires de fin d’UV.')
+                abort(409, 'Impression bloquée : chaque stagiaire sélectionné doit avoir terminé tous ses questionnaires de fin d’UV.')
             for person in people:
                 units = []
                 for number in sorted(map(int, numbers)):
@@ -106,7 +106,7 @@ def register(host):
                     content = build_dossier(training, person, units, mode, course=course, notice=uv.NOTICE)
                     writer.append(content, outline_item=f"{person.get('last_name', '')} {person.get('first_name', '')}")
         if not writer.pages:
-            abort(409, 'Aucun questionnaire remis pour cette sélection. Choisissez les questionnaires vierges pour préparer la session.')
+            abort(409, 'Aucun questionnaire terminé pour cette sélection. Choisissez les questionnaires vierges pour préparer la session.')
         output = BytesIO()
         writer.write(output)
         writer.close()
