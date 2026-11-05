@@ -27,6 +27,7 @@ LABELS = {
 REASONS = {
     "declaration_refused": "EDOF a refusé la déclaration. Son statut initial a été vérifié sur le dossier.",
     "declaration_form_changed": "Le formulaire renvoyé par EDOF ne correspond pas à l’opération demandée.",
+    "declaration_read_unavailable": "EDOF n’a pas renvoyé la fiche. L’entrée est en attente. Une nouvelle lecture est prévue dans 15 minutes.",
     "declaration_changed": "Le statut, l’identité ou les dates du dossier ont changé sur EDOF.",
     "declaration_unverified": "La relecture du dossier ne confirme pas encore toutes les valeurs.",
     "declaration_blocked": "Un blocage a été enregistré pour ce dossier.",
@@ -164,7 +165,7 @@ def complete(directory, spec, code, confirmed_state=None):
                        AND action='service_done' AND json_extract(intent,'$.exit_confirmed') IS NULL""",
                        (uuid.uuid4().hex, code, time.time(), spec["operation"]))
             return
-        if row["status"] == "queued" and code in {"timeout","browser_error","saved_session_unavailable","authentication_unconfirmed","day_login_used","day_login_wait","day_closed","portal_throttled"}:
+        if row["status"] == "queued" and code in {"timeout","browser_error","saved_session_unavailable","authentication_unconfirmed","day_login_used","day_login_wait","day_closed","portal_throttled","declaration_read_unavailable"}:
             # No official write crossed the send fence. Retry after the sign-in cooldown.
             db.execute("UPDATE cpf_declarations SET detail=?,changed=? WHERE token=?", (code,time.time()+900,spec["operation"]))
             return
@@ -197,7 +198,7 @@ def is_recorded(fields, intent):
     completed = {"servicedonedeclared", "servicedonedeclaredrevised", "servicedonevalidated", "servicedonevalidatedrevisionvsf", "service fait declare", "service fait valide",
                  "billed", "invoiced", "paid", "facture", "paye"}
     if intent["action"] == "entry_training":
-        return state in completed | {"intraining", "entree declaree", "en formation", "outoftraining", "terminated", "sortie declaree"} and fields.get("start_date") == intent["actual_date"]
+        return state in completed | {"intraining", "in training", "entree declaree", "en formation", "outoftraining", "out of training", "terminated", "sortie declaree"} and fields.get("start_date") == intent["actual_date"]
     if state not in completed or fields.get("end_date") != intent["actual_date"]:
         return False
     try:

@@ -167,9 +167,20 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
         monkeypatch.setattr("edof_declaration_form.transmit",receipt)
         for mode in ("declare","reconcile"):
             result = runner.run_browser({"mode":mode,"owner":"fixture","shared_job":True,"folder_id":"100088",
-                                         "intent":{"action":"entry_training"}},live=live)
+                                         "intent":{"action":"service_done"}},live=live)
             assert result["code"] == "declaration_confirmed",result
             assert result["session_saved"] and not result["gmail_code_used"] and not result["fresh_session"]
+
+        def entry_request(context, witness, spec, storage, origin, prefix):
+            assert context is active_page.context or context.raw is active_page.context
+            assert witness.method == "GET" and witness.url.startswith("https://" + runner.EDOF_HOST + runner.WORKSPACE_API_PREFIX)
+            assert spec["folder_id"] == "100088"
+            return {"code": "declaration_confirmed"}
+        monkeypatch.setattr("edof_entry_request.run_entry", entry_request)
+        for mode in ("declare", "reconcile"):
+            result = runner.run_browser({"mode": mode, "owner": "fixture", "shared_job": True,
+                                         "folder_id": "100088", "intent": {"action": "entry_training"}}, live=live)
+            assert result["code"] == "declaration_confirmed" and not result["gmail_code_used"]
         # A real login form in this same previously verified tab ends the timer
         # before any mail lookup. This entire exchange is routed locally.
         timing = runner.session_clock.read_clock(vault, "fixture")
