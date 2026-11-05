@@ -15,6 +15,7 @@ from flask import g, jsonify, Blueprint, abort, flash, get_flashed_messages, red
 import integrale_edof_views as views
 import integrale_edof_history as history_view
 import edof_directory as directory
+from edof_schedule import paper_entry, scheduled_at
 import edof_throttle as throttle
 import edof_declarations as declarations
 import edof_proposal as proposal_form
@@ -129,12 +130,7 @@ def active_blocks(data):
 
 
 def scheduled_time(kind, date):
-    if kind not in ACTIONS:
-        return None
-    try:
-        return dt.datetime.combine(dt.date.fromisoformat(date), dt.time(8 if kind == "accepted" else 18), PARIS)
-    except (TypeError, ValueError):
-        return None
+    return scheduled_at(ACTIONS.get(kind), date)
 
 
 def simulate(kind, date, block, draft, now):
@@ -147,6 +143,8 @@ def simulate(kind, date, block, draft, now):
         return "missing"
     if scheduled > now:
         return "planned"
+    if paper_entry(ACTIONS[kind], date):
+        return "ready"
     if draft and draft.get("action") == ACTIONS[kind] and draft.get("actual_date") and (draft.get("operator_confirmed") or draft.get("evidence")):
         return "ready"
     return "unconfirmed"
@@ -180,7 +178,7 @@ def dashboard_rows(snapshot, data, operations, now):
             tags.add("anomaly")
         counts.update(tags)
         rows.append({**record, "kind": kind, "label": LABELS[kind] if kind != "unknown" else record.get("state") or LABELS[kind],
-                     "scheduled": scheduled_time(kind, date), "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": links.get(folder),
+                     "scheduled": scheduled_time(kind, date), "automatic_entry": paper_entry(action, date), "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": links.get(folder),
                      "handled": bool(flags.get("handled")), "archived": bool(flags.get("archived")),
                      "draft": flags.get("draft"), "official_url": DETAIL_PREFIX + folder})
     return rows, counts
@@ -890,11 +888,14 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             abort(400)
         if not clear:
             with closing(declarations.database(store.directory)) as db, db:
+                db.execute("BEGIN IMMEDIATE")
                 pending = db.execute(
                     "SELECT action,status FROM cpf_declarations WHERE folder=?", (folder,)).fetchall()
                 if any(x["action"] in (action,) or action == "both" for x in pending if x["status"] in {"sending", "uncertain"}):
                     raise ValueError("Un envoi est déjà parti. Vérifiez sa réception dans cette fiche.")
-                db.execute("UPDATE cpf_declarations SET status='review',detail='declaration_blocked' WHERE folder=? AND (action=? OR ?='both') AND status='queued'", (folder, action, action))
+                db.execute("""UPDATE cpf_declarations SET status=CASE WHEN json_extract(intent,'$.source')='edof_schedule'
+                              THEN 'paused' ELSE 'review' END, detail='declaration_blocked'
+                              WHERE folder=? AND (action=? OR ?='both') AND status='queued'""", (folder, action, action))
         now = dt.datetime.now(PARIS).isoformat()
         def apply(data):
             blocks = data.setdefault("wedof_automation_blocks", [])
