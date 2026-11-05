@@ -1173,15 +1173,23 @@ def create_native_elearning_blueprint(
     @admin_required
     def admin_preview(course_id: str) -> Any:
         # Preview never creates a learner context or opens the tracking store.
-        course = preview_course(course_id)
+        return render_preview(preview_course(course_id))
+
+    def render_preview(course, *, support=None, raw=None):
+        course_id = course["id"]
+        progress = project_progress(raw or {}, course)
+        def activity_url(activity_id, **extra):
+            if support:
+                return url_for("manuals_shop.elearning_progress_assistance", **support, course_id=course_id, activity=activity_id, **extra)
+            return url_for("native_elearning.admin_preview", course_id=course_id, version=course["version"], activity=activity_id, **extra)
+
         order = [str(value) for value in course.get("activity_order") or []]
         if not order:
             abort(404, "Ce module ne contient aucune activité.")
-        requested_id = str(request.args.get("activity") or order[0])
+        requested_id = str(request.args.get("activity") or (progress.get("current_activity_id") if support else None) or order[0])
         replacement = course.get('retired_activity_redirects', {}).get(requested_id)
         if replacement:
-            return redirect(url_for('native_elearning.admin_preview', course_id=course_id,
-                                    version=course['version'], activity=replacement,
+            return redirect(activity_url(replacement,
                                     _anchor='exemple-' + requested_id))
         if requested_id not in order:
             abort(404, "Activité introuvable.")
@@ -1200,9 +1208,11 @@ def create_native_elearning_blueprint(
             "nonce": nonce, "expires_at": int(time.time()) + ACCESS_TOKEN_TTL_SECONDS,
         })
 
-        def activity_url(activity_id: str) -> str:
-            return url_for("native_elearning.admin_preview", course_id=course_id,
-                           version=course["version"], activity=activity_id)
+        navigation = navigation_for(course, progress, token="", current_activity_id=requested_id, preview=True)
+        if support:
+            for group in navigation:
+                for item in group["activities"]:
+                    item["url"] = activity_url(item["id"])
 
         next_required = next((activity_id for activity_id in order[index + 1:]
                               if activity_id in required_activity_order(course)), "")
@@ -1211,28 +1221,28 @@ def create_native_elearning_blueprint(
             course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course),
                     "version": course["version"], "counts": course["counts"], "training_label": course.get("training_label","APS"),
                     'aps_depth_revision': course.get('aps_depth_revision'), 'aps_reading_revision': course.get('aps_reading_revision'), 'study_plan': course.get('study_plan')},
-            activity=prepare_activity(select_vtc_activity(course, raw_activity, {}), asset_token, course_id),
-            training_url=url_for('native_elearning.training_admin_catalog', course_id=course_id, version=course['version']) if course_id.startswith('academy-vtc-') else '',
+            activity=prepare_activity(select_vtc_activity(course, question_for_history(raw_activity, course, progress) if support else raw_activity, progress), asset_token, course_id),
+            training_url=url_for('native_elearning.training_admin_catalog', course_id=course_id, version=course['version']) if not support and course_id.startswith('academy-vtc-') else '',
             introduction=[prepare_block(block, asset_token, course_id)
                           for block in course.get("introduction") or []
                           if isinstance(block, Mapping)] if index == 0 else [],
             section_title=str(section.get("title") or ""),
-            progress=project_progress({}, course), activity_completed=False,
-            navigation=navigation_for(course, {}, token="", current_activity_id=requested_id, preview=True),
+            progress=progress, activity_completed=requested_id in progress["completed_activity_ids"], support_mode=bool(support),
+            navigation=navigation,
             activity_position=index + 1, activity_count=len(order),
             previous_url=activity_url(order[index - 1]) if index else "",
             next_url=activity_url(order[index + 1]) if index + 1 < len(order) else "",
             optional_skip_url=activity_url(next_required) if next_required else "",
-            portal_url=url_for("native_elearning.admin_macaps_catalog" if course.get("training_label") == "MAC APS" else "native_elearning.admin_a3p_catalog" if course.get("training_label") == "A3P" else "native_elearning.admin_vtc_catalog" if course.get("training_label") == "VTC" else "native_elearning.admin_catalog"),
-            preview_config={
+            portal_url=url_for("manuals_shop.elearning_progress_assistance", **support) if support else url_for("native_elearning.admin_macaps_catalog" if course.get("training_label") == "MAC APS" else "native_elearning.admin_a3p_catalog" if course.get("training_label") == "A3P" else "native_elearning.admin_vtc_catalog" if course.get("training_label") == "VTC" else "native_elearning.admin_catalog"),
+            preview_config={} if support else {
                 "questionType": raw_activity.get("question_type") or "",
                 "csrfToken": _csrf_token(),
                 "answerUrl": url_for("native_elearning.admin_preview_answer", course_id=course_id,
                                      activity_id=requested_id, version=course["version"]),
             },
-            preview_can_answer=session.get("admin_role") != "viewer",
-            production_ai_config=production_ai_config(course, requested_id, preview=True) if raw_activity.get('production') and not is_vtc_production(course, raw_activity) else None,
-            exam_url=url_for('native_elearning.admin_exam',exam_id=course['mock_exam_id'],version=course['version']) if course.get('mock_exam_id') else '',
+            preview_can_answer=not support and session.get("admin_role") != "viewer",
+            production_ai_config=production_ai_config(course, requested_id, preview=True) if not support and raw_activity.get('production') and not is_vtc_production(course, raw_activity) else None,
+            exam_url=url_for('native_elearning.admin_exam',exam_id=course['mock_exam_id'],version=course['version']) if not support and course.get('mock_exam_id') else '',
         )
 
     @blueprint.post("/api/admin/elearning/courses/<course_id>/preview/activities/<activity_id>/answer")
@@ -1982,6 +1992,9 @@ def create_native_elearning_blueprint(
             return redirect(url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_login", token=token))
         session_obj, trainee = learner_session(token)
         raw_progress = store().learner_progress(str(session_obj["id"]), str(trainee.get("id") or trainee.get("trainee_id")))
+        return render_path(session_obj, trainee, raw_progress, token=token)
+
+    def render_path(session_obj, trainee, raw_progress, *, token="", support=None):
         progress_by_key = {(item["course_id"], item["course_version"]): item for item in raw_progress}
         modules = load_path(session_obj)
         free_module_navigation = allows_free_module_navigation(session_obj)
@@ -2009,8 +2022,9 @@ def create_native_elearning_blueprint(
                 continue
             progress = project_progress(progress_by_key.get((course["id"], course["version"]), {}), course)
             item["progress"] = progress
-            item["url"] = url_for("native_elearning.course_player", token=token, course_id=course["id"])
-            item['exam_url'] = url_for('native_elearning.learner_exam',token=token,exam_id=course['mock_exam_id']) if course.get('mock_exam_id') else ''
+            item["url"] = (url_for("manuals_shop.elearning_progress_assistance", **support, course_id=course["id"])
+                           if support else url_for("native_elearning.course_player", token=token, course_id=course["id"]))
+            item['exam_url'] = url_for('native_elearning.learner_exam',token=token,exam_id=course['mock_exam_id']) if not support and course.get('mock_exam_id') else ''
             item["time_label"] = _format_seconds(progress["active_seconds"])
             item["required_time_label"] = _format_seconds(progress["required_seconds"])
             item["remaining_time_label"] = _format_seconds(progress["remaining_seconds"])
@@ -2044,9 +2058,9 @@ def create_native_elearning_blueprint(
             and {m['course']['id'] for m in modules if m['course']} == set(mac_aps.curriculum_ids())
             and all(m['course'] and m['course']['version'] == mac_aps.VERSION for m in modules))
         macaps_complements = [{**item, 'url': url_for('native_elearning.macaps_resources', token=token, course_id=item['id'])}
-            for item in mac_aps.complement_manifest()['modules']] if macaps_v2 else []
+            for item in mac_aps.complement_manifest()['modules']] if macaps_v2 and not support else []
         return render_template(
-            "native_elearning_path.html", modules=modules,
+            "native_elearning_path.html", modules=modules, support_mode=bool(support),
             learner_brand=session_obj.get("learner_brand") or {},
             training_label=training_label,
             macaps_v2=macaps_v2, macaps_full_path=macaps_full_path, macaps_complements=macaps_complements,
@@ -2067,14 +2081,18 @@ def create_native_elearning_blueprint(
             programme_required_label=_duration_label(sum(m['course'].get('required_minutes', 0) * 60 if m.get('course') else int(m['assignment'].get('required_minutes') or 0) * 60 for m in modules)),
             aps_final_time=aps_final, modules_time_label=modules_time_label,
             programme_time_label=_format_seconds(sum(m['course'].get('required_minutes', 0) * 60 for m in modules if m.get('course'))),
-            cma_url=url_for('native_elearning.cma_learner_home', token=token) if {f'academy-vtc-{letter}' for letter in 'abcdefg'}.issubset({m['course']['id'] for m in modules if m.get('course')}) else '',
-            portal_url=url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_space", token=token),
-            final_exam_url=url_for('native_elearning.learner_exam',token=token,exam_id=matched_manifest.get('final_exam_id','final')) if final_available else '',
+            cma_url=url_for('native_elearning.cma_learner_home', token=token) if not support and {f'academy-vtc-{letter}' for letter in 'abcdefg'}.issubset({m['course']['id'] for m in modules if m.get('course')}) else '',
+            portal_url=url_for("manuals_shop.elearning_progress", **support) if support else url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_space", token=token),
+            final_exam_url=url_for('native_elearning.learner_exam',token=token,exam_id=matched_manifest.get('final_exam_id','final')) if final_available and not support else '',
             final_exam_unlocked=final_ready,
             final_module_count=len(exam_modules),
-            annales_url=url_for('native_elearning.annales_learner_catalog',token=token) if any(m['course'] and m['course']['id'].startswith('academy-vtc-') for m in modules) else '',
+            annales_url=url_for('native_elearning.annales_learner_catalog',token=token) if not support and any(m['course'] and m['course']['id'].startswith('academy-vtc-') for m in modules) else '',
             final_exam_description=("Les 10 objectifs du parcours MAC APS de 14 heures" if macaps_v2 else "Les 5 parties de votre édition MAC APS") if training_label == "MAC APS" else "Les 8 unités A3P" if training_label == "A3P" else "Les sept matières théoriques VTC" if training_label == "VTC" else "Les 15 modules APS",
         )
+
+    @blueprint.record_once
+    def enable_partner_assistance(state):
+        state.app.extensions["elearning_assistance"] = (render_path, render_preview)
 
     def macaps_resource_context(token: str, course_id: str):
         session_obj, trainee = learner_session(token)

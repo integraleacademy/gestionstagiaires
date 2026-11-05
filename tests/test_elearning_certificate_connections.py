@@ -38,7 +38,7 @@ def pdf_text(document):
 def test_long_pdf_includes_every_connection_and_repeats_identification_and_headers():
     values = sample([connection(index) for index in range(1, 138)])
     document = PdfReader(io.BytesIO(certificate_pdf(*values)))
-    assert len(document.pages) >= 5
+    assert 2 <= len(document.pages) <= 4
     text = pdf_text(document)
     for index in range(1, 138):
         assert text.count(f"Trace-{index:03d}") == 1
@@ -72,7 +72,7 @@ def test_connection_totals_preserve_recorded_fractional_seconds():
 
 def test_no_connection_still_has_an_identified_zero_time_annex():
     document = PdfReader(io.BytesIO(certificate_pdf(*sample([]))))
-    assert len(document.pages) == 2
+    assert len(document.pages) == 1
     text = pdf_text(document)
     assert "Relevé détaillé des connexions" in text and "0 connexions enregistrées" in text
     assert "Aucune connexion au parcours n’est enregistrée à la date d’édition" in text
@@ -82,7 +82,7 @@ def test_no_connection_still_has_an_identified_zero_time_annex():
 
 def test_specimen_watermark_remains_on_all_connection_annex_pages():
     document = PdfReader(io.BytesIO(certificate_pdf(*sample([connection(index) for index in range(1, 85)]), specimen=True)))
-    assert len(document.pages) >= 4
+    assert 2 <= len(document.pages) <= 3
     for page in document.pages:
         text = page.extract_text()
         assert "SPECIMEN" in text and "DONNÉES FICTIVES" in text

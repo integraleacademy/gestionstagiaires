@@ -33,7 +33,7 @@ from elearning_native.module_signatures import MAC_APS_NOTICE
 
 CUSTOMER_ENDPOINTS = {"manuals_shop." + name for name in (
     "elearning_progress", "elearning_progress_certificate", "elearning_progress_connections",
-    "elearning_progress_programme", "elearning_progress_exam_copy",
+    "elearning_progress_programme", "elearning_progress_exam_copy", "elearning_progress_assistance",
 )}
 STATUS_LABELS = {"not_started": "Non commencé", "in_progress": "En cours",
                  "awaiting_time": "Temps de suivi à compléter", "passed": "Terminé",
@@ -376,7 +376,7 @@ def group_progress(host, group):
         reader = reader or ProgressReader(host)
         report = reader.report(order, person, detailed=False)
         result[row["id"]] = {k: report[k] for k in (
-            "available", "progress_percent", "active_time_label", "completed_modules", "total_modules", "status_label")}
+            "available", "progress_percent", "active_time_label", "completed_modules", "total_modules", "status_label", "complete")}
     return result
 
 
@@ -414,6 +414,7 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
         ("heading", "Helvetica-Bold", 11, 14, "#19324b", 5),
         ("body", "Helvetica", 8.5, 12, "#263d55", 4),
         ("small", "Helvetica", 7.2, 10, "#62768b", 2),
+        ("ledger", "Helvetica", 7.2, 8.4, "#263d55", 0),
         ("cell", "Helvetica", 7.5, 10, "#263d55", 0),
         ("th", "Helvetica-Bold", 7, 10, "#ffffff", 0))}
     # Embed the same readable typeface for every training path and PDF viewer.
@@ -616,11 +617,11 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
     # Table headers identify the centre and learner again on every annex page.
     # A last heartbeat is deliberately never relabelled as a disconnection.
     connections = report.get("connections") or []
-    story.extend([PageBreak(), p("Relevé détaillé des connexions", "title"),
+    story.extend([CondPageBreak(155), p("Relevé détaillé des connexions", "heading"),
                   p(f"{len(connections)} connexion{'s' if len(connections) != 1 else ''} enregistrée{'s' if len(connections) != 1 else ''}", "heading"),
                   p("Tous les horaires sont exprimés dans le fuseau Europe/Paris. Le temps actif correspond au travail comptabilisé par la plateforme, et non à la durée écoulée entre le début et la fin d’une connexion.", "small"),
                   p("La dernière activité est le dernier signal enregistré. Une fin non enregistrée ne signifie pas que le stagiaire est toujours connecté.", "small"),
-                  Spacer(1, 4 * mm)])
+                  Spacer(1, 2 * mm)])
     specimen_identity = "SPECIMEN - DONNÉES FICTIVES\n" if specimen else ""
     connection_identity = p(f"{specimen_identity}Organisme : {centre_name}\nStagiaire : {name} · {person.get('email', '')}\n"
                             f"Parcours : {course_label} · {order.get('group_name') or 'Accès individuel'}", "small")
@@ -654,17 +655,17 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
             end = str(connection.get("ended_at_label") or "").strip()
             has_end = bool(end and end not in {"—", "-", "Non enregistrée", "Non renseignée"})
             connection_rows.append([
-                p(f"{index}. {connection.get('module') or 'Module'}", "cell"),
-                p(connection.get("started_at_label") or "Non renseigné", "cell"),
-                p(connection.get("last_seen_label") or "Non renseignée", "cell"),
-                p(end if has_end else "Non enregistrée", "cell"),
-                p("Clôturée" if has_end else "Fin non enregistrée", "cell"),
-                p(connection_time(connection_seconds(connection)), "cell"),
+                p(f"{index}. {connection.get('module') or 'Module'}", "ledger"),
+                p(connection.get("started_at_label") or "Non renseigné", "ledger"),
+                p(connection.get("last_seen_label") or "Non renseignée", "ledger"),
+                p(end if has_end else "Non enregistrée", "ledger"),
+                p("Clôturée" if has_end else "Fin non enregistrée", "ledger"),
+                p(connection_time(connection_seconds(connection)), "ledger"),
             ])
-        connection_rows.append([p("TOTAL DU TEMPS ACTIF DANS CE RELEVÉ", "cell"), "", "", "", "",
+        connection_rows.append([p("TOTAL DU TEMPS ACTIF DANS CE RELEVÉ", "ledger"), "", "", "", "",
                                 p(connection_time(total_connection_seconds), "cell")])
         connection_table = LongTable(connection_rows,
-            colWidths=[43 * mm, 29 * mm, 29 * mm, 29 * mm, 20 * mm, 24 * mm],
+            colWidths=[37 * mm, 30 * mm, 30 * mm, 30 * mm, 22 * mm, 25 * mm],
             repeatRows=2, hAlign="LEFT")
         connection_table.setStyle(TableStyle([
             ("SPAN", (0, 0), (-1, 0)), ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#edf4fb")),
@@ -673,8 +674,8 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
             ("SPAN", (0, -1), (4, -1)), ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#dceaf6")),
             ("NOSPLIT", (0, -2), (-1, -1)),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-            ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING", (0, 0), (-1, -1), 2), ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+            ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
         ]))
         story.append(connection_table)
     story.extend([Spacer(1, 5 * mm),
@@ -695,7 +696,7 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
         story.extend([detail_table(rows, [72, 35, 35, 32]), Spacer(1, 5 * mm), p("Connexions aux compléments", "heading")])
         supplementary = report.get("complement_connections") or []
         if supplementary:
-            rows = [[p(value, "th") for value in ("COMPLÉMENT", "DÉBUT / DERNIÈRE ACTIVITÉ", "FIN ENREGISTRÉE", "TEMPS ACTIF")]]
+            rows = [[p(value, "th") for value in ("COMPLÉMENT", "DÉBUT / DERNIÈRE ACTIVITÉ", "FIN ENREGISTRÉE", "ÉTAT", "TEMPS ACTIF")]]
             for connection in supplementary:
                 rows.append([p(connection["module"], "cell"), p(connection["started_at_label"] + "\n" + connection["last_seen_label"], "cell"),
                              p(connection["ended_at_label"] if connection["ended_at_label"] != "—" else "Non enregistrée", "cell"),
@@ -753,6 +754,35 @@ def register_routes(host, bp, *, page, customer, partner_data):
         return partner, order, person, group
 
     base = "/admin/organisme/e-learning/commandes/<oid>/stagiaires/<learner_id>/suivi"
+
+    @bp.get(base + "/espace")
+    @bp.get(base + "/espace/<course_id>")
+    @customer
+    def elearning_progress_assistance(oid, learner_id, course_id=None):
+        partner, order, person, _ = context(oid, learner_id)
+        if partner.get("status") not in {"active", "trial"}:
+            abort(404)
+        reader = ProgressReader(host)
+        label = learning.course_label(order["course_code"])
+        training = read_transition_session({
+            "id": "el-" + oid, "name": order.get("group_name") or label, "training_type": label,
+            "aps_native_modules": order.get("modules", []), "aps_native_path_title": "Mon parcours " + label,
+            "learner_brand": learning.learner_brand({"partners": [partner]}, order, host=host),
+        }, person, reader.database_path)
+        raw = reader.rows("progress", training["id"], learner_id)
+        support = {"oid": oid, "learner_id": learner_id}
+        path, player = host.app.extensions["elearning_assistance"]
+        if not course_id:
+            return path(training, person, raw, support=support)
+        assignment = next((a for a in training["aps_native_modules"] if a.get("course_id") == course_id), None)
+        if not assignment:
+            abort(404)
+        try:
+            course = reader.course(assignment)
+        except CourseImportError:
+            abort(404)
+        progress = next((row for row in raw if row["course_id"] == course_id and row["course_version"] == course["version"]), {})
+        return player(course, support=support, raw=progress)
 
     @bp.get(base)
     @customer

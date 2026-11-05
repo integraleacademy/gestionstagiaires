@@ -38,7 +38,7 @@ def register(host):
         training, _, people = context(session_id)
         course = uv.course_for(training)
         units = [r for r in uv.bank()['courses'].get(course, {}).get('units', []) if uv.unit(course, r['number'])] if uv.eligible(training) else []
-        result = dict(ok=True, certificates=is_native_aps_session(training),
+        result = dict(ok=True, require_all_uv=course == 'aps', certificates=is_native_aps_session(training),
             units=[dict(number=r['number'], title=r['title']) for r in units],
             people=[dict(id=p['id'], name=' '.join(str(p.get(k) or '') for k in ('last_name', 'first_name')),
                          submitted=[r['number'] for r in units if uv._result(p, course, r['number'])],
@@ -84,7 +84,10 @@ def register(host):
                 abort(400, 'Unité de valeur invalide.')
             if len(people) * len(numbers) > 500:
                 abort(400, 'Sélectionnez moins de 500 questionnaires par impression.')
+            if course == 'aps' and any(not uv._result(p, course, n) for p in people for n in valid):
+                abort(409, 'Impression bloquée : chaque stagiaire sélectionné doit avoir remis tous ses questionnaires de fin d’UV.')
             for person in people:
+                units = []
                 for number in sorted(map(int, numbers)):
                     result = uv._result(person, course, number)
                     if mode == 'answers' and not result:
@@ -92,9 +95,16 @@ def register(host):
                     row = uv.unit(course, number, result['version'] if result else uv.VERSION)
                     if not row:
                         abort(409, 'L’édition d’un questionnaire est indisponible. Aucun PDF partiel n’a été produit.')
+                    if course == 'aps':
+                        units.append((row, result))
+                        continue
                     content = uv.pdf(training, person, course, row,
                                      result=result if mode == 'answers' else None, correction=mode != 'blank')
                     writer.append(content, outline_item=f"{person.get('last_name', '')} {person.get('first_name', '')} · UV {number:02}")
+                if units:
+                    from uv_questionnaire_pdf import build_dossier
+                    content = build_dossier(training, person, units, mode, course=course, notice=uv.NOTICE)
+                    writer.append(content, outline_item=f"{person.get('last_name', '')} {person.get('first_name', '')}")
         if not writer.pages:
             abort(409, 'Aucun questionnaire remis pour cette sélection. Choisissez les questionnaires vierges pour préparer la session.')
         output = BytesIO()

@@ -47,7 +47,7 @@ PUBLIC_ENDPOINTS |= manuals_public.PUBLIC_ENDPOINTS | manuals_accounts.PUBLIC_EN
 CUSTOMER_ENDPOINTS |= manuals_metrics.CUSTOMER_ENDPOINTS | manuals_fulfillment.CUSTOMER_ENDPOINTS | elearning_orders.CUSTOMER_ENDPOINTS | elearning_groups.CUSTOMER_ENDPOINTS | elearning_reporting.CUSTOMER_ENDPOINTS | organisme_profile.CUSTOMER_ENDPOINTS
 CUSTOMER_ENDPOINTS |= {'native_module_signatures.' + name for name in (
     'index', 'order_modules', 'prepare_order', 'reissue', 'snapshot_pdf', 'send', 'refresh', 'signed_pdf', 'audit_archive')}
-SAFE_ENDPOINTS = {"static", "admin_login", "admin_login_post", "admin_logout", "manuals_shop.elearning_access"} | PUBLIC_ENDPOINTS | CUSTOMER_ENDPOINTS
+SAFE_ENDPOINTS = {"static", "native_elearning.course_asset", "admin_login", "admin_login_post", "admin_logout", "manuals_shop.elearning_access"} | PUBLIC_ENDPOINTS | CUSTOMER_ENDPOINTS
 MAX_LOGO_BYTES = 5 * 1024 * 1024
 
 

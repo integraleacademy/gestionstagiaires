@@ -18715,6 +18715,7 @@ def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any
                 "signed_at": signed_at,
                 "admin_url": f"/admin/sessions/{session_id}/stagiaires/{trainee_id}",
             })
+    items.extend(row for row in exam_retakes.signed_conventions(sys.modules[__name__], data) if row["needs_printing"])
     items.sort(key=lambda item: item.get("signed_at") or "", reverse=True)
     return items
 
@@ -18723,6 +18724,8 @@ def _mark_signed_conventions_seen(data: Dict[str, Any]) -> bool:
     changed = False
     now = _now_iso()
     for item in _signed_conventions_unseen_items(data):
+        if item.get("retake_id"):
+            continue
         sess = find_session(data, item.get("session_id"))
         if not sess:
             continue
@@ -18953,6 +18956,25 @@ def admin_sessions_conventions():
             }
             convention_rows.append(row)
 
+    for row in exam_retakes.signed_conventions(sys.modules[__name__], data):
+        key = row["formation_key"]
+        formation_options_by_key.setdefault(key, row["training_type"])
+        if selected_formation and selected_formation != key:
+            continue
+        if selected_q and selected_q not in " ".join(str(row[k] or "") for k in (
+            "first_name", "last_name", "email", "trainee_id", "formation", "signature_request_id", "retake_id")).lower():
+            continue
+        stats["signed"] += 1
+        stats["total"] += 1
+        stats["to_print"] += int(row["needs_printing"])
+        if selected_status not in ("", "signed") and not (selected_status == "to_print" and row["needs_printing"]):
+            continue
+        row.update(trainee_url=row["admin_url"], summary_url=row["admin_url"],
+                   signed_at=_format_automation_datetime(row["signed_at"]), created_at=_format_automation_datetime(row["created_at"]),
+                   signed_pdf_url=url_for("retake_document", rid=row["retake_id"], kind="signed"),
+                   print_url=url_for("retake_mark_printed", rid=row["retake_id"]))
+        convention_rows.append(row)
+
     if data_changed:
         save_data(data)
     formation_options = [{"key": key, "label": label} for key, label in sorted(formation_options_by_key.items(), key=lambda item: item[1].lower())]
@@ -18962,6 +18984,7 @@ def admin_sessions_conventions():
     convention_rows.sort(key=lambda row: (row.get("status_key") != "waiting_signature", row.get("date_start_label") or "", (row.get("last_name") or "").lower(), (row.get("first_name") or "").lower()))
     response = make_response(render_template(
         "admin_sessions_conventions.html",
+        retake_csrf=session.setdefault("retake_csrf", secrets.token_urlsafe(32)) if any(row.get("retake_id") for row in convention_rows) else "",
         rows=convention_rows,
         stats=stats,
         formation_options=formation_options,
@@ -25868,6 +25891,7 @@ def admin_trainees(session_id: str):
         aps_attendance_by_id=aps_attendance_by_id,
         is_dirigeant=is_dirigeant,
         is_desp_initial=_is_desp_initial_session(s),
+        show_desp_tabs=desp_jury_projects.supported(sys.modules[__name__], s) or desp_kickoff.supported(sys.modules[__name__], s),
         desp_kickoff_attendance=_desp_kickoff_attendance_view(s),
         finance_summary=_admin_trainees_finance_summary(session_view, trainees),
         registered_trainees=registered,

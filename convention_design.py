@@ -545,7 +545,7 @@ def style_document(document, *, reference_key=None):
             continue
         # Narrative blocks become regular paragraphs; data remain true tables.
         text = table.cell(0, 0).text.strip()
-        if text.startswith(("Et le ", "Entreprise acheteuse")):
+        if text.startswith(("Et le ", "Entreprise acheteuse", "Entreprise financeuse")):
             next_node = table._tbl.getnext()
             if next_node is not None and next_node.tag == qn("w:p") and Paragraph(next_node, document).text.strip().startswith("(ci-après"):
                 table.cell(0, 0)._tc.append(next_node)
@@ -590,7 +590,20 @@ def style_document(document, *, reference_key=None):
             p.paragraph_format.space_before = Pt(0)
             p.paragraph_format.space_after = Pt(0)
             p.paragraph_format.keep_with_next = True
-    _article_flow(document)
+    employer = any(t.cell(0, 0).text.startswith(("Entreprise financeuse", "Entreprise acheteuse"))
+                   for t in document.tables)
+    if employer:
+        # The first page identifies the parties. Let long programme articles
+        # flow by paragraph instead of moving a whole article to the next page.
+        headings = [p for p in document.paragraphs if ARTICLE.match(p.text.strip())]
+        if headings:
+            headings[0].paragraph_format.page_break_before = True
+        for table in document.tables:
+            if table.cell(0, 0).text.startswith("Pour "):
+                for cell in table.rows[-1].cells:
+                    cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
+    else:
+        _article_flow(document)
     if _content(document) != before:
         raise ValueError("La mise en page ne doit modifier aucun texte, champ ou visuel de la convention.")
     return document

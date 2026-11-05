@@ -75,14 +75,36 @@ def test_roster_is_highlighted_without_a_normal_trainee_row(real_app):
     response=client.get('/admin/sessions/S2/trainees')
     assert response.status_code==200
     page=html.fromstring(response.data)
-    retake_rows=page.xpath('//tr[@class="exam-retake-roster"]')
+    retake_rows=page.xpath('//article[@class="exam-retake-roster"]')
     assert len(retake_rows)==1 and 'Camille TEST' in retake_rows[0].text_content()
     assert 'Rattrapage examen' in retake_rows[0].text_content()
     links = {a.text_content(): a.get('href') for a in retake_rows[0].xpath('.//a')}
-    assert links['Prévisualiser la convocation'] == '/admin/rattrapages/' + row['id'] + '/convocation.pdf'
-    assert links['Gérer l’envoi'].endswith('/S1/stagiaires/T1#rattrapage')
+    assert links['Voir la convocation'] == '/admin/rattrapages/' + row['id'] + '/convocation.pdf'
+    assert links['Voir la convention'].endswith('/signed.pdf?v=' + row['pdf_sha256'])
+    assert links['Camille TEST'].endswith('/S1/stagiaires/T1#rattrapage')
     assert not page.xpath('//tr[@data-trainee-id="T1"]')
     assert data['sessions'][1]['trainees']==[]
+
+
+def test_signed_retake_is_printable_before_payment_independently(real_app):
+    client, data = real_app
+    row = create(real_app)
+    row.update(status='payment', signed_at=retakes.now())
+    retakes.Store(host).save(row)
+    data['sessions'][0]['trainees'][0]['printed'] = True
+    board = client.get('/admin/sessions/conventions')
+    page = html.fromstring(board.data)
+    print_button = page.xpath('//*[@data-print-url]')[0]
+    badge = '/api/conventions_signed_unseen'
+    assert client.get(badge).json['count'] == 1
+    assert page.xpath('//a[contains(@href, "/signed.pdf")]')
+    mark = print_button.get('data-print-url')
+    assert client.post(mark, json={'printed':True}).status_code == 403
+    assert client.post(mark, json={'printed':True, 'csrf':print_button.get('data-csrf')}).json['success']
+    assert client.get(badge).json['count'] == 0
+    assert not html.fromstring(client.get('/admin/sessions/conventions').data).xpath('//*[@data-print-url]')
+    assert data['sessions'][0]['trainees'][0]['printed'] is True
+    assert client.get('/admin/sessions/conventions?status=signed').status_code == 200
 
 
 def test_public_page_displays_only_its_retakes(real_app):

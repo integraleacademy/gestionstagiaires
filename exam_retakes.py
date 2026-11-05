@@ -225,6 +225,7 @@ class Store:
                 id TEXT PRIMARY KEY, source_session TEXT NOT NULL, trainee TEXT NOT NULL,
                 target_session TEXT NOT NULL, status TEXT NOT NULL, request_id TEXT,
                 invoice_id TEXT, next_attempt REAL NOT NULL, payload TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS printed_retakes (retake_id TEXT PRIMARY KEY);
                 CREATE INDEX IF NOT EXISTS retakes_trainee ON retakes(source_session,trainee);
                 CREATE INDEX IF NOT EXISTS retakes_target ON retakes(target_session,status);
                 CREATE UNIQUE INDEX IF NOT EXISTS retakes_request ON retakes(request_id) WHERE request_id IS NOT NULL;
@@ -459,6 +460,39 @@ def roster(host, sid):
     return [view(r) for r in Store(host).query("target_session=? AND status='confirmed'", (sid,))]
 
 
+def signed_conventions(host, data):
+    """One print record per signed retake, independent of payment and initial agreement."""
+    if not (Path(host.PERSIST_DIR) / "exam_retakes" / "retakes.sqlite3").is_file():
+        return
+    sessions = {s["id"]: s for s in data.get("sessions", []) if s.get("id") and
+                (s.get("partner_id") or host.INTEGRALE_PARTNER_ID) == host.INTEGRALE_PARTNER_ID}
+    if not sessions or host._current_partner_id() not in ("", host.INTEGRALE_PARTNER_ID):
+        return
+    with Store(host).connect() as db:
+        records = db.execute("""SELECT r.payload, p.retake_id IS NOT NULL
+            FROM retakes r LEFT JOIN printed_retakes p ON p.retake_id = r.id
+            WHERE COALESCE(json_extract(r.payload, '$.signed_at'), '') <> ''
+              AND r.status NOT IN ('cancelled', 'stopped')""").fetchall()
+    for payload, printed in records:
+        record = json.loads(payload)
+        source = sessions.get(record["source_session"])
+        if not source:
+            continue
+        person = next((t for t in host._session_trainees_list(source) if t.get("id") == record["trainee_id"]), None)
+        if person is None:
+            continue
+        kind = record.get("kind") or source.get("training_type", "")
+        yield dict(session_id=source["id"], trainee_id=person["id"], retake_id=record["id"],
+                   first_name=person.get("first_name", ""), last_name=person.get("last_name", ""),
+                   email=person.get("email", ""), phone=person.get("phone", ""), training_type=kind,
+                   formation_key=kind.upper(), formation="Rattrapage · " + kind, session_name=source.get("name", ""),
+                   signed_at=record["signed_at"], created_at=record.get("created_at", ""),
+                   signature_request_id=record.get("request_id", ""), date_start_label=date_label(record.get("exam_date")),
+                   printed=bool(printed), needs_printing=not printed, status_key="signed",
+                   status_label="Signée", status_tone="complete", reminder_count=0,
+                   admin_url=f"/admin/sessions/{source['id']}/stagiaires/{person['id']}#rattrapage")
+
+
 def participants(host, training, *, data=None, kind=None, exam_day=None, writable=False):
     """Exam-only identities. The new result belongs to the receiving exam, never the original enrolment."""
     if (not getattr(host, "PERSIST_DIR", None) or training.get("partner_id") not in (None, "", host.INTEGRALE_PARTNER_ID)
@@ -679,6 +713,28 @@ def register(app, host):
             return jsonify(ok=True, record=view(row))
         except (RetakeError, ValueError) as exc:
             return jsonify(ok=False, error=str(exc)), 409
+
+    @app.post('/api/rattrapages/<rid>/impression')
+    @host.admin_login_required
+    @host.admin_write_required
+    def retake_mark_printed(rid):
+        payload = request.get_json(silent=True) or {}
+        check_csrf(payload)
+        if type(payload.get("printed")) is not bool:
+            abort(400)
+        store = Store(host)
+        row = store.get(rid)
+        if not row or not row.get("signed_at"):
+            abort(404)
+        scoped(host, row["source_session"], row["trainee_id"])
+        if host._current_partner_id() not in ("", host.INTEGRALE_PARTNER_ID):
+            abort(403)
+        with store.connect() as db:
+            if payload["printed"]:
+                db.execute("INSERT OR IGNORE INTO printed_retakes VALUES (?)", (rid,))
+            else:
+                db.execute("DELETE FROM printed_retakes WHERE retake_id=?", (rid,))
+        return jsonify(success=True, printed=payload["printed"])
 
     @app.get('/admin/rattrapages/<rid>/<kind>.pdf')
     @host.admin_login_required
