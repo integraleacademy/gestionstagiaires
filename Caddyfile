@@ -1,0 +1,91 @@
+{
+	admin off
+	auto_https off
+}
+
+(browser_page) {
+	method GET
+	header Accept *text/html*
+	not path /healthz /api /api/* /internal /internal/* /webhooks /webhooks/* /.well-known/*
+	not header Upgrade *
+	not header Range *
+	header_regexp dest Sec-Fetch-Dest ^(document|iframe)$
+}
+
+(waiting) {
+	route {
+		header {
+			Cache-Control "no-store, max-age=0"
+			Retry-After 12
+			Referrer-Policy no-referrer
+			X-Content-Type-Options nosniff
+		}
+		request_header -Range
+		request_header -If-Modified-Since
+		request_header -If-None-Match
+		rewrite * /index.html
+		file_server {
+			root /srv/waiting
+			status 503
+			disable_canonical_uris
+		}
+	}
+}
+
+(origin) {
+	header_up Host {$PUBLIC_HOST:www.integraleconnect.com}
+	header_up X-Forwarded-Host {$PUBLIC_HOST:www.integraleconnect.com}
+	header_up X-Forwarded-Proto https
+}
+
+(page_proxy) {
+	vars waiting_page yes
+	reverse_proxy {$UPSTREAM:https://gestionstagiaires-r5no.onrender.com} {
+		import origin
+		@gateway_error status 502 503 504
+		handle_response @gateway_error {
+			import waiting
+		}
+	}
+}
+
+:{$PORT:8080} {
+	@public host {$PUBLIC_HOST:www.integraleconnect.com}
+	handle @public {
+		@navigation {
+			import browser_page
+		}
+		@legacy_navigation {
+			method GET
+			header Accept *text/html*
+			not header Sec-Fetch-Dest *
+			not header X-Requested-With *
+			not header Range *
+			not header Upgrade *
+			not path /healthz /api /api/* /internal /internal/* /webhooks /webhooks/* /.well-known/*
+		}
+		handle @navigation {
+			import page_proxy
+		}
+		handle @legacy_navigation {
+			import page_proxy
+		}
+		handle {
+			reverse_proxy {$UPSTREAM:https://gestionstagiaires-r5no.onrender.com} {
+				import origin
+			}
+		}
+	}
+	handle {
+		respond 404
+	}
+	handle_errors {
+		@pageFailure expression `{http.vars.waiting_page} == "yes" && {err.status_code} in [502, 503, 504]`
+		handle @pageFailure {
+			import waiting
+		}
+		handle {
+			respond "{err.status_code}" {err.status_code}
+		}
+	}
+}
