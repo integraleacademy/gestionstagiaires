@@ -12,6 +12,7 @@ import edof_automation_audit as audit
 
 from edof_directory import FIRST_SESSION, dated_snapshot, normalized
 from edof_readonly_test import ID_RE
+from edof_schedule import paper_entry, scheduled_at
 
 MOTIFS = {
     "trainee_absent": "Absence ou abandon du stagiaire sans force majeure",
@@ -82,7 +83,15 @@ def enqueue(directory, owner, revision, row, draft, actor, *, automatic=False):
     date = dt.date.fromisoformat(draft["actual_date"])
     if not row["session_start_date"] <= date.isoformat() <= row["session_end_date"] or date > dt.datetime.now(ZoneInfo("Europe/Paris")).date():
         raise ValueError("Vérifiez la date de la déclaration.")
-    if not (draft.get("evidence") or draft.get("operator_confirmed") is True) or (action == "service_done" and (type(draft.get("rate")) is not int or not 0 <= draft["rate"] <= 100 or (draft["rate"] < 100 and draft.get("motif") not in MOTIFS))):
+    if draft.get("source") == "edof_schedule":
+        from integrale_edof_dashboard import category
+        start = row["session_start_date"]
+        if not (automatic and category(row) == "accepted" and paper_entry(action, start)
+                and date.isoformat() == start and scheduled_at(action, start) <= dt.datetime.now(ZoneInfo("Europe/Paris"))):
+            raise ValueError("Cette entrée automatique doit être échue et correspondre au dossier CPF accepté.")
+    elif not (draft.get("evidence") or draft.get("operator_confirmed") is True):
+        raise ValueError("Confirmez la réalisation de la formation.")
+    if action == "service_done" and (type(draft.get("rate")) is not int or not 0 <= draft["rate"] <= 100 or (draft["rate"] < 100 and draft.get("motif") not in MOTIFS)):
         raise ValueError("Confirmez la réalisation et, pour une sortie, le taux et le motif éventuel.")
     stamp = time.time()
     intent = {**{k: row[k]
@@ -155,8 +164,12 @@ def begin_send(directory, spec):
 
 def complete(directory, spec, code, confirmed_state=None):
     with closing(database(directory)) as db, db:
-        row = db.execute("SELECT status FROM cpf_declarations WHERE token=?", (spec["operation"],)).fetchone()
+        row = db.execute("SELECT status, json_extract(intent,'$.source') AS source FROM cpf_declarations WHERE token=?", (spec["operation"],)).fetchone()
         if not row or row["status"] in {"confirmed", "paused"}:
+            return
+        if code == "declaration_blocked" and row["status"] == "queued" and row["source"] == "edof_schedule":
+            db.execute("UPDATE cpf_declarations SET status='paused',detail=?,changed=? WHERE token=?",
+                       (code, time.time(), spec["operation"]))
             return
         if code == "declaration_exit_confirmed" and row["status"] in {"sending","uncertain"}:
             # EDOF confirms only the exit. A new token may submit only the remaining service fait.
@@ -306,7 +319,7 @@ def discover(store, owner, snapshot, *, outcomes=None):
         if kind not in ACTIONS:
             continue
         date = row.get("session_start_date" if kind == "accepted" else "session_end_date")
-        if simulate(kind, date, False, None, now) != "unconfirmed":
+        if simulate(kind, date, False, None, now) not in {"ready", "unconfirmed"}:
             continue
         action = ACTIONS[kind]
         status = existing.get((folder, action))
@@ -332,7 +345,9 @@ def discover(store, owner, snapshot, *, outcomes=None):
             remote_draft = training_proof(row, proof, action)
             local_draft = training_proof(row, local_proof, action)
             saved = drafts.get(folder, {}).get("draft") or {}
-            if saved.get("source") == "admin" and saved.get("action") == action:
+            if paper_entry(action, row.get("session_start_date")):
+                draft = {"action": action, "actual_date": row["session_start_date"], "source": "edof_schedule"}
+            elif saved.get("source") == "admin" and saved.get("action") == action:
                 if (not same_enrolment(row, saved) or (proof.get("first_name") and not matches_linked_proof(row, proof, saved))
                         or (saved.get("rate", 100) < 100 and saved.get("motif") not in MOTIFS)):
                     record(folder, action, "review", "review")
