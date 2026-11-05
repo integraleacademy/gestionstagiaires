@@ -444,3 +444,42 @@ def test_exercise_on_a_later_day_does_not_move_an_entry_and_a_partial_draft_has_
     job = ledger.next_job(site.store,1)
     assert job["intent"]["rate"] == 65 and job["intent"]["actual_date"] == EXIT["actual_date"]
     assert ledger.check_before_job(site.store,job)
+
+
+def test_individual_cpf_entry_in_group_started_earlier(site, monkeypatch):
+    site.gate.switch("integrale", 0, "admin")
+    monkeypatch.setattr(providers, "on_test_service", lambda: True)
+    row = {**ROW, "state":"accepted", "session_start_date":"2026-01-05"}
+    proof = {**ROW, "session_start_date":"2025-12-29"}
+    monkeypatch.setattr(ledger, "authoritative_proofs", lambda ids: {FOLDER:proof})
+    def discover():
+        return ledger.discover(site.store, site.owner, {"rows":{FOLDER:row}})
+    assert discover()["missing"] == 1
+    assert not ledger.records(site.store.directory)
+    proof["entry_training"] = {**ENTRY, "actual_date":"2026-01-05", "source":"production"}
+    assert discover()["entry_training"] == 1
+    job = ledger.next_job(site.store, 1)
+    assert job["intent"]["actual_date"] == row["session_start_date"]
+    assert ledger.check_before_job(site.store, job)
+    assert discover()["existing"] == 1
+    proof["entry_training"]["actual_date"] = "2025-12-29"
+    assert not ledger.check_before_job(site.store, job)
+
+
+def test_human_confirmed_entry_for_a_later_individual_cpf_start(site, monkeypatch):
+    site.gate.switch("integrale", 0, "admin")
+    monkeypatch.setattr(providers, "on_test_service", lambda: True)
+    row = {**ROW, "session_start_date":"2026-01-05"}
+    proof = {**ROW, "session_start_date":"2025-12-29"}
+    draft = {"action":"entry_training", "actual_date":row["session_start_date"], "operator_confirmed":True}
+    monkeypatch.setattr(ledger, "authoritative_proofs", lambda ids: {FOLDER:proof})
+    ledger.enqueue(site.store.directory, site.owner, 1, row, draft, "admin")
+    spec = ledger.next_job(site.store, 1)
+    assert ledger.check_before_job(site.store, spec)
+    for changed in ({"last_name":"Autre"}, {"first_name":"Autre"}, {"session_end_date":"2026-02-01"},
+                    {"session_start_date":"2026-01-06"}, {"entry_training":{"actual_date":"2025-12-29"}}):
+        assert not ledger.matches_linked_proof(row, {**proof, **changed}, draft)
+    assert not ledger.matches_linked_proof(row, proof, {**draft,"actual_date":"2026-01-06"})
+    assert not ledger.matches_linked_proof(row, proof, {**draft,"action":"service_done"})
+    proof["first_name"] = "Autre"
+    assert not ledger.check_before_job(site.store, spec)

@@ -235,6 +235,23 @@ def same_enrolment(row, proof):
                ("first_name", "last_name", "session_start_date", "session_end_date"))
 
 
+def matches_linked_proof(row, proof, draft):
+    """Compare evidence returned for this exact CPF number to the individual EDOF period."""
+    if same_enrolment(row, proof):
+        return True
+    # A participant can join an existing group on the first day of their CPF
+    # contract. The group's earlier start alone neither proves nor disproves entry.
+    start = row.get("session_start_date")
+    group_start = proof.get("session_start_date")
+    recorded_start = (proof.get("entry_training") or {}).get("actual_date")
+    return bool(draft.get("action") == "entry_training" and start and draft.get("actual_date") == start
+                and group_start and group_start < start <= (row.get("session_end_date") or "")
+                and row["session_end_date"] == proof.get("session_end_date")
+                and (not recorded_start or recorded_start == start)
+                and all(row.get(k) and normalized(row[k]) == normalized(proof.get(k) or "")
+                        for k in ("first_name", "last_name")))
+
+
 def training_proof(row, proof, action):
     draft = proof.get(action) or {}
     # Older versions of the production bridge return the first completed exercise
@@ -315,15 +332,15 @@ def discover(store, owner, snapshot, *, outcomes=None):
             local_draft = training_proof(row, local_proof, action)
             saved = drafts.get(folder, {}).get("draft") or {}
             if saved.get("source") == "admin" and saved.get("action") == action:
-                if (not same_enrolment(row, saved) or (proof.get("first_name") and not same_enrolment(row, proof))
+                if (not same_enrolment(row, saved) or (proof.get("first_name") and not matches_linked_proof(row, proof, saved))
                         or (saved.get("rate", 100) < 100 and saved.get("motif") not in MOTIFS)):
                     record(folder, action, "review", "review")
                     continue
                 draft = saved
-            elif remote_draft and same_enrolment(row, proof):
+            elif remote_draft and matches_linked_proof(row, proof, remote_draft):
                 draft = remote_draft
-            elif (not remote_draft and (not proof.get("first_name") or same_enrolment(row, proof))
-                  and local_draft and same_enrolment(row, local_proof)):
+            elif (not remote_draft and local_draft and matches_linked_proof(row, local_proof, local_draft)
+                  and (not proof.get("first_name") or matches_linked_proof(row, proof, local_draft))):
                 draft = {**local_draft, "source":"local"}
             else:
                 record(folder, action, "missing", "missing")
@@ -378,26 +395,26 @@ def check_before_job(store, spec):
             complete(store.directory, spec, "declaration_blocked")
             return False
         source = spec["intent"].get("source")
-        if spec["intent"].get("operator_confirmed") and proof.get("first_name") and not same_enrolment(spec["intent"],proof):
+        if spec["intent"].get("operator_confirmed") and proof.get("first_name") and not matches_linked_proof(spec["intent"], proof, spec["intent"]):
             complete(store.directory,spec,"declaration_changed")
             return False
         if source == "admin":
             from integrale_edof_dashboard import local_operations
             current = local_operations(ProviderStore(store.directory)).get(folder, {}).get("draft") or {}
             if (not same_enrolment(spec["intent"],current) or any(spec["intent"].get(k) != v for k,v in current.items())
-                    or proof.get("first_name") and not same_enrolment(spec["intent"],proof)):
+                    or proof.get("first_name") and not matches_linked_proof(spec["intent"], proof, spec["intent"])):
                 complete(store.directory, spec, "declaration_evidence_changed")
                 return False
         if source in {"production", "local"}:
             if source == "local":
-                if training_proof(spec["intent"],proof,action) or (proof.get("first_name") and not same_enrolment(spec["intent"],proof)):
+                if training_proof(spec["intent"],proof,action) or (proof.get("first_name") and not matches_linked_proof(spec["intent"], proof, spec["intent"])):
                     complete(store.directory, spec, "declaration_evidence_changed")
                     return False
                 proof = local_proofs(store, [folder]).get(folder, {})
             current = training_proof(spec["intent"], proof, action)
             if current and source == "local":
                 current = {**current, "source":"local"}
-            if not same_enrolment(spec["intent"], proof) or not current or any(spec["intent"].get(k) != v for k, v in current.items()):
+            if not matches_linked_proof(spec["intent"], proof, spec["intent"]) or not current or any(spec["intent"].get(k) != v for k, v in current.items()):
                 complete(store.directory, spec, "declaration_evidence_changed")
                 return False
     return True
