@@ -1,0 +1,12 @@
+<p>Bonjour {{row.person.first_name}},</p>
+<p>{{message}}</p>
+<p><a href="{{link}}" style="display:inline-block;padding:15px 24px;background:#285ac8;color:#fff;text-decoration:none">{{action}} &nbsp;→</a></p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0;background:#f0f4fa;border-radius:12px">
+  <tr><td style="padding:18px 20px;color:#1b3659">
+    <p style="font-size:11px;letter-spacing:1.5px;font-weight:bold;color:#49617f;margin:0 0 5px">VOTRE FORMULE</p>
+    <p style="margin:0;font-size:17px;font-weight:bold">{{summary}}</p>
+    <p style="margin:5px 0 0;font-size:14px">{{centre or area}}{% if row.exam_date %} · {{row.exam_date|vtc_date}}{% endif %}</p>
+  </td></tr>
+</table>
+<p style="margin:0 0 5px;font-weight:bold;color:#173456">Lors de votre inscription à l’examen</p>
+<p style="font-size:14px">{{cma}}</p>

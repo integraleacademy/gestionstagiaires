@@ -1,11 +1,13 @@
 {% extends 'vtc_orders/layout.html' %}
-{% block head %}{% if row.stage=='billing' and not pay or row.stage=='contract' and not row.signature_url %}<meta http-equiv="refresh" content="25">{% endif %}{% endblock %}
+{% block title %}{{stages[row.stage]}}{% endblock %}
+{% block head %}{% if row.stage=='billing' %}<script defer src="{{url_for('static',filename='js/vtc-payment.js')}}?v=1"></script>{% elif row.stage=='contract' and not row.signature_url %}<meta http-equiv="refresh" content="25">{% endif %}{% endblock %}
 {% block content %}
 <p class="kicker">DOSSIER VTC · {{row.id[:10]|upper}}</p>
-<h1>{{stages[row.stage]}}</h1><p>{{offers[row.offer]}} · <strong>{{150 if row.offer=='vehicule' else 600}} € TTC</strong></p>
+<h1>{{stages[row.stage]}}</h1><p>{{offers[row.offer]}}{% if row.stage!='billing' %} · <strong>{{150 if row.offer=='vehicule' else 600}} € TTC</strong>{% endif %}{% if row.exam_centre in centres %}<br>{{centres[row.exam_centre]}}{% endif %}</p>
 {% if error %}<p class="error" role="alert">{{error}}</p>{% endif %}
 {% if row.stage=='verify' %}
-<form method="post"><input type="hidden" name="csrf_token" value="{{csrf}}"><button name="action" value="verify">Confirmer mon adresse et continuer</button></form>
+<p>{% if row.offer=='vehicule' and not row.exam_date %}Confirmez votre adresse pour préparer le paiement du véhicule. Vous pourrez ensuite régler les 150 € sur la page sécurisée de Qonto.{% elif row.offer=='vehicule' %}Confirmez votre adresse. Le centre vérifiera la disponibilité du véhicule le {{row.exam_date|vtc_date}} avant de vous adresser le lien de paiement.{% elif row.offer=='cpf' %}Confirmez votre adresse pour choisir un rendez-vous téléphonique avec Cassandre.{% else %}Confirmez votre adresse pour poursuivre votre inscription à la séance pratique.{% endif %}</p>
+<form method="post"><input type="hidden" name="csrf_token" value="{{csrf}}"><button name="action" value="verify">{{'Confirmer et accéder au paiement' if row.offer=='vehicule' and not row.exam_date else 'Confirmer mon adresse et continuer'}} →</button></form>
 {% elif row.stage=='calendar' %}
 <p>Choisissez un créneau téléphonique avec Cassandre. Elle vous accompagne dans votre demande sur Mon Compte Formation. Votre place sera confirmée après validation du financement.</p>
 <a class="button" href="{{booking}}">Choisir mon rendez-vous téléphonique →</a>
@@ -15,10 +17,7 @@
 {% if row.signature_url %}<a class="button" rel="noreferrer" href="{{row.signature_url}}">Signer mon contrat en ligne →</a>{% else %}<p>Votre contrat et votre lien de signature sont en préparation. Vous les recevrez également par e-mail.</p>{% endif %}
 {% elif row.stage=='delivery' %}<p>Votre contrat est signé. Vous recevrez le lien de règlement après la réalisation des prestations.</p>
 {% elif row.stage=='billing' %}
-{% if pay %}<a class="button" rel="noreferrer" href="{{pay}}">Payer {{150 if row.offer=='vehicule' else 600}} € par carte →</a>
-{% else %}<p>Votre paiement est en cours de préparation ou de vérification auprès de Qonto. Cette page se met à jour automatiquement.</p>{% endif %}
-<p>Après votre règlement, revenez ici pour retrouver votre confirmation et vos documents.</p>
-<form method="post"><input type="hidden" name="csrf_token" value="{{csrf}}"><button name="action" value="refresh">Vérifier mon paiement</button></form>
+{% include 'vtc_orders/payment.html' %}
 {% elif row.stage=='paid' %}<p>Votre règlement de {{150 if row.offer=='vehicule' else 600}} € est confirmé. Conservez vos documents et transmettez votre convocation CMA au centre dès réception.</p>
 {% elif row.stage=='funded' %}<p>Votre financement CPF est confirmé par le centre. Votre inscription et vos justificatifs de financement sont disponibles sur Mon Compte Formation.</p>
 {% elif row.stage=='withdrawn' %}<p>Votre demande d’annulation est enregistrée. Le centre vous répondra par e-mail.</p>

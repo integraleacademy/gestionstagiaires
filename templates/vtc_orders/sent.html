@@ -1,4 +1,31 @@
-{% extends 'vtc_orders/layout.html' %}{% block content %}
-<p class="kicker">EXAMEN PRATIQUE VTC</p><h1>Confirmez votre adresse e-mail</h1>
-<p>Votre demande a été enregistrée. Ouvrez l’e-mail « Confirmez votre adresse e-mail » pour accéder à votre dossier et {% if offer=='cpf' %}choisir votre rendez-vous{% elif offer=='vehicule' %}poursuivre votre réservation{% else %}finaliser votre inscription{% endif %}.</p>
-<p>Si le message tarde, vérifiez vos courriers indésirables. L’équipe est joignable au <a href="tel:+33422470768">04 22 47 07 68</a>.</p>{% endblock %}
+{% extends 'vtc_orders/layout.html' %}
+{% block title %}Vérifiez votre boîte mail{% endblock %}
+{% block main_class %}confirmation{% endblock %}
+{% block content %}
+<header class="confirmation-hero">
+  <div><p class="kicker">Examen pratique VTC</p><h1>Vérifiez votre<br><em>boîte mail.</em></h1>
+  <p>{% if sent %}Votre demande est enregistrée. Le lien pour la poursuivre est envoyé à <strong>{{sent.person.email}}</strong>.{% else %}Après votre commande, vous recevez un lien personnel pour confirmer votre adresse et ouvrir votre dossier.{% endif %}</p></div>
+  <svg class="mail-art" viewBox="0 0 210 165" aria-hidden="true" fill="none">
+    <circle cx="107" cy="84" r="74" fill="#DCEAF6"/><circle cx="107" cy="84" r="59" fill="#E9F2FA"/>
+    <g stroke="#233F63" stroke-width="2.6" stroke-linejoin="round">
+      <path d="m43 71 53-43q6-5 12 0l55 43-2 65-117-1z" fill="#E3B04D"/>
+      <path d="m63 91 1-49 77 1-1 48-39 30z" fill="#FFFCF6"/>
+      <path d="m78 58 41 1m-41 10 48 1m-48 10 31 1" stroke="#6B89A6"/>
+      <path d="m44 71 58 37 61-37-2 65-117-1z" fill="#F9CB65"/>
+      <path d="m45 134 42-36m73 37-43-37"/>
+    </g>
+    <circle cx="156" cy="118" r="18" fill="#284E6C" stroke="#F2F7FB" stroke-width="4"/><path d="m148 118 5 5 10-12" stroke="#FFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</header>
+<div class="confirmation-body">
+  <section class="next"><h2>La prochaine étape</h2>
+    <p>Ouvrez le message <strong>« Confirmez votre adresse e-mail »</strong> d’Intégrale Academy et cliquez sur « Confirmer mon adresse e-mail ».</p>
+    <p>{% if offer=='cpf' %}Vous pourrez ensuite réserver votre appel avec Cassandre pour préparer votre dossier CPF.{% elif offer=='formation' %}Vous pourrez ensuite organiser votre séance et signer votre contrat. Le règlement par carte intervient après la formation et la mise à disposition du véhicule.{% elif sent and sent.exam_date %}Nous vérifierons la disponibilité du véhicule le {{sent.exam_date|vtc_date}} avant de vous envoyer le lien pour régler les 150 € par carte.{% else %}Après confirmation, votre dossier affichera le bouton <strong>« Payer 150 € par carte »</strong>{% if not sent %} dès que le véhicule pourra être réservé{% endif %}.{% endif %}</p>
+    <details><summary>Je ne trouve pas l’e-mail</summary><p>Regardez dans vos courriers indésirables ou recherchez « Intégrale Academy ». Si le message tarde, appelez l’équipe au <a href="tel:+33422470768">04 22 47 07 68</a>.</p></details>
+  </section>
+  <section class="recap"><p class="kicker">Votre formule</p><h2>{{offers[offer]}}</h2><p class="total">{{150 if offer=='vehicule' else 600}} € <small>TTC</small></p>
+    <p>{{'Financement CPF · appel avec Cassandre' if offer=='cpf' else 'Paiement par carte bancaire'}}</p>
+    <div class="recap-location"><strong>Lieu de l’examen</strong><br>{% if sent and sent.exam_centre in centres %}{{centres[sent.exam_centre]}}{% else %}Saint-Laurent-du-Var (06) ou La Valette-du-Var (83){% endif %}</div>
+  </section>
+</div>
+{% endblock %}
