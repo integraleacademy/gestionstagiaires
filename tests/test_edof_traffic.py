@@ -163,7 +163,7 @@ def test_overlapping_pages_are_read_once_with_the_advertised_total(vault):
 
     context.request.get.side_effect = get
     snapshot = runner.read_full_directory(context, witness, lambda:None, {}, Cursor(vault, {"owner":"a"}))
-    assert requests == [(0,100), (1,100), (0,count)]
+    assert requests == [(0,500), (1,500), (0,count)]
     assert len(snapshot["rows"]) == count and snapshot["scope"] == "all"
 
 
@@ -190,6 +190,26 @@ def test_partial_list_preserves_watch_without_restarting_full_read(site):
     store.finish(job, {"code":"directory_incomplete", "diagnostics":{"directory":{"http":401}}})
     assert store.live_connection(owner, True)["connection_state"] == "inactive"
     assert owner not in store.day_owners(now + dt.timedelta(seconds=POLL_SECONDS+2))
+
+
+@pytest.mark.parametrize("last_day", ["2025-10-01", "2026-02-01"])
+def test_overlap_beyond_cutoff_requires_an_entire_ordered_archive_page(last_day):
+    context, witness, _ = portal()
+    def item(number, day):
+        return {"id":str(number),"beginDate":day,"currentState":"accepted"}
+    first = [item(100001,"2026-11-01"),item(100002,"2025-11-01")]
+    second = [first[1],item(100003,last_day)]
+    def get(url, params, **kwargs):
+        reply = Mock(status=200,url=url)
+        reply.body.return_value = json.dumps({"numberOfItems":4, "items":[first,second][params["page"]]}).encode()
+        return reply
+    context.request.get.side_effect = get
+    if last_day.startswith("2026"):
+        with pytest.raises(directory.IncompleteDirectory, match="page_overlap"):
+            runner.read_recent_directory(context, witness, "all", lambda:None, {})
+    else:
+        result = runner.read_recent_directory(context, witness, "all", lambda:None, {})
+        assert list(result["rows"]) == ["100001"]
 
 
 def test_recovery_continues_immediately_but_does_not_complete_on_a_batch(recovery_site):

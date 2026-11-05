@@ -42,7 +42,7 @@ def finished(db, job, result):
     code = result.get("code")
     directory_report = (result.get("diagnostics") or {}).get("directory") or {}
     if (code in {"directory_incomplete","requests_ready"} and directory_report.get("failure")
-            and directory_report.get("http") == 200):
+            and directory_report.get("http") in {None, 200, 500, 502, 503, 504}):
         mark(db, job["owner"], "directory_incomplete")
         db.execute("""UPDATE directory_recovery SET job_id=NULL,revision=NULL,retry_after=?,message=?
             WHERE owner=? AND completed IS NULL""", (time.time()+RETRY_SECONDS,
