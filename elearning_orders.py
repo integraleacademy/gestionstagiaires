@@ -175,7 +175,7 @@ def status_view(order):
         and state.get("payment_link_status") == "open") else ""
     return {"status": state.get("status"), "payment_status": state.get("payment_status"), "invoice_status": state.get("invoice_status"),
             "paid": entitled(order), "checkout_url": checkout_url,
-            "payment_url": bool(state.get("payment_url")), "payment_link_status": state.get("payment_link_status"),
+            "payment_url": bool(checkout_url), "payment_link_status": state.get("payment_link_status"),
             "active": bool(order.get("activated_at")), "mail_sent": sent,
             "dispatch_requested": requested, "dispatch_complete": complete,
             "can_send": entitled(order) and not requested and not complete}

@@ -1,0 +1,44 @@
+{% extends 'manuals/layout.html' %}
+{% from 'manuals/_elearning_ui.html' import errors_box, group_title, icon, learner_row %}
+{% block title %}Modifier la liste · {{ group_title(group) }}{% endblock %}
+{% block extra_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/elearning-orders.css', v='20261017-followup') }}">
+<script defer src="{{ url_for('static', filename='js/elearning-orders.js', v='20261105-amend') }}"></script>
+{% endblock %}
+{% block content %}
+<div class="el-wrap">
+  <a class="text-link el-back" href="{{ url_for('manuals_shop.elearning_group', gid=group.id) }}">← {{ group_title(group) }}</a>
+  <div class="el-detail-heading">
+    <div><h1>Modifier la liste des stagiaires</h1><p class="muted">{{ order.reference }} · {{ order.course_code|elearning_label }} · En attente de paiement</p></div>
+    <span id="el-save-status" class="el-saved" role="status">{{ 'Modifications à confirmer' if removed or errors else 'Liste actuelle' }}</span>
+  </div>
+  {{ errors_box(errors) }}
+  {% if removed %}<p class="notice">{{ removed.first_name }} {{ removed.last_name }} sera retiré de la commande à la confirmation.</p>{% endif %}
+  <form method="post" action="{{ url_for('manuals_shop.elearning_group_amend', gid=group.id, oid=order.id) }}"
+        id="el-roster-form" data-amendment="true" data-price="{{ order.unit_cents }}" data-unsaved="{{ 'true' if removed or errors else 'false' }}"
+        data-max-learners="{{ 1 if group.mode == 'individual' else 100 }}" data-locked-count="{{ group.learners|length - order.learners|length }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="revision" value="{{ group.revision }}">
+    <input type="hidden" name="terms_version" value="{{ terms_version }}">
+    <div class="el-workspace-grid">
+      <section class="form-card el-roster-card">
+        <h2>Stagiaires de la commande</h2>
+        <div id="el-learners">
+          {% for person in rows %}{{ learner_row(person, loop.index) }}{% else %}{{ learner_row({}, 1) }}{% endfor %}
+        </div>
+        {% if group.mode != 'individual' %}<button class="button secondary el-add-person" type="button" id="el-add">{{ icon('plus') }} Ajouter un stagiaire</button>{% endif %}
+      </section>
+      <aside class="el-preparation-summary el-review-summary" aria-label="Montant après modification">
+        <h2>Votre commande modifiée</h2>
+        <div class="el-summary-line"><span>Prix par stagiaire</span><strong>{{ order.unit_cents|manuals_money }}</strong></div>
+        <div class="el-summary-line"><span>Nombre de stagiaires</span><strong id="el-count">{{ rows|length }}</strong></div>
+        <div class="el-grand-total" aria-live="polite"><span>Nouveau total TTC</span><strong id="el-total">{{ (order.unit_cents * rows|length)|manuals_money }}</strong></div>
+        <p class="small">Après vérification du paiement, la nouvelle commande remplacera l’ancienne. Si vous retirez tous les stagiaires, la commande sera annulée.</p>
+        <label class="el-terms"><input name="confirm" type="checkbox" value="yes" required><span>Je valide cette liste et j’accepte les <a href="/conditions-de-vente?version={{ terms_version }}" target="_blank" rel="noopener">conditions de vente</a>.</span></label>
+        <button class="button primary full" type="submit" id="el-review-button">Confirmer la modification</button>
+        <a class="el-later-link" href="{{ url_for('manuals_shop.elearning_group', gid=group.id) }}">Revenir au groupe</a>
+      </aside>
+    </div>
+  </form>
+</div>
+{% endblock %}

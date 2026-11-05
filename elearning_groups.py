@@ -24,7 +24,7 @@ import manuals_commerce as commerce
 
 CUSTOMER_ENDPOINTS = {"manuals_shop." + name for name in (
     "elearning_group_create", "elearning_group", "elearning_group_save",
-    "elearning_group_review", "elearning_group_confirm", "elearning_group_delete",
+    "elearning_group_review", "elearning_group_confirm", "elearning_group_delete", "elearning_group_amend",
 )}
 MAX_GROUPS = 300
 
@@ -40,12 +40,27 @@ def group_orders(data, group):
                   key=lambda o: o.get("created_at", ""), reverse=True)
 
 
+def _unpaid_batch(order):
+    state = order.get("commerce", {})
+    return (order.get("status") == "received" and not order.get("cancellation_requested_at")
+            and not order.get("free_snapshot") and type(order.get("unit_cents")) is int
+            and order["unit_cents"] > 0 and order.get("total_cents") == order["unit_cents"] * len(order.get("learners", []))
+            and not order.get("access_dispatch_requested_at") and not order.get("activated_at")
+            and not any(person.get("activated_at") for person in order.get("learners", []))
+            and state.get("invoice_status") in (None, "", "draft", "unpaid")
+            and state.get("payment_status") in (None, "", "unpaid")
+            and state.get("payment_link_status") not in {"processing", "paid"}
+            and not state.get("paid_cents") and not state.get("confirmed_invoice_payment"))
+
+
 def group_view(data, group):
     """Derive payment state from purchase snapshots, never from roster input."""
     orders = group_orders(data, group)
+    editable_orders = {o["id"] for o in orders if _unpaid_batch(o)} if not (
+        group.get("deletion_requested_at") or group.get("roster_amendment")) else set()
     reservations = {}
     for order in orders:
-        if order.get("status") in {"draft", "cancelled"} or order.get("commerce", {}).get("invoice_status") == "canceled":
+        if order.get("status") in {"draft", "cancelled"} or (order.get("commerce", {}).get("invoice_status") == "canceled" and not order.get("cancellation_requested_at")):
             continue
         for person in order.get("learners", []):
             reservations.setdefault(person["id"], (order, person))
@@ -62,14 +77,14 @@ def group_view(data, group):
         row.update(locked=bool(order), order_id=order["id"] if order else None, status=status)
         people.append(row)
     pending = [p for p in people if not p["locked"]]
-    result.update(learners=people, pending_learners=pending, orders=orders,
+    result.update(learners=people, pending_learners=pending, orders=orders, editable_orders=editable_orders,
                   pending_count=len(pending), active_count=sum(p["status"] == "active" for p in people),
                   waiting_count=sum(p["locked"] and p["status"] != "active" for p in people),
                   dispatch_orders=[{"order": order, "delivery": learning.status_view(order)} for order in orders
                                    if order.get("status") not in {"draft", "cancelled"} and order.get("commerce", {}).get("invoice_status") != "canceled"],
                   total_count=len(people), can_change_course=not orders,
                   deletion_pending=bool(group.get("deletion_requested_at")), deletion_error=group.get("deletion_error", ""),
-                  can_delete=not group.get("deletion_requested_at") and not deletion_block_reason(orders),
+                  can_delete=not group.get("roster_amendment") and not group.get("deletion_requested_at") and not deletion_block_reason(orders),
                   delete_block_reason=deletion_block_reason(orders))
     return result
 
@@ -107,6 +122,39 @@ def _remote_billing(order):
     return any(state.get(key) for key in ("invoice_id", "invoice_creation_started", "payment_id", "payment_creation_started"))
 
 
+def _purchase(group, people, unit, free, terms, now, request_id, *, billing, centre, modules):
+    oid = str(uuid.uuid4())
+    code = group["course_code"]
+    total = unit * len(people)
+    return {
+        "id": oid, "order_type": "elearning", "partner_id": group["partner_id"], "group_id": group["id"],
+        "created_by": terms.get("user_id"), "status": "received", "created_at": now, "submitted_at": now,
+        "reference": "EL-" + str(dt.date.today().year) + "-" + oid[:8].upper(), "request_id": request_id,
+        "course_code": code, "group_name": group["group_name"], "learners": copy.deepcopy(people),
+        "terms_acceptance": terms, "billing": copy.deepcopy(billing), "centre": copy.deepcopy(centre),
+        "modules": copy.deepcopy(modules), "free_snapshot": free, "unit_cents": unit, "total_cents": total,
+        "shipping_cents": 0, "items": [{"kind": "elearning", "code": code,
+            "label": "Accès e-learning " + learning.course_label(code),
+            "quantity": len(people), "unit_cents": unit, "total_cents": total}],
+        "commerce": {"queued": True, "status": "pending", "flow": "elearning_invoice_first", "attempts": 0, "emails": {}},
+    }
+
+
+def _apply_amendment(data, group, old, now):
+    amendment = group.pop("roster_amendment")
+    group.pop("amendment_error", None)
+    people = amendment["learners"]
+    old_ids = {p["id"] for p in old["learners"]}
+    group["learners"] = [p for p in group["learners"] if p["id"] not in old_ids] + people
+    group.update(revision=group["revision"] + 1, updated_at=now)
+    if people:
+        replacement = _purchase(group, people, old["unit_cents"], False, amendment["terms"], now,
+                                secrets.token_hex(16), billing=old["billing"], centre=old["centre"], modules=old["modules"])
+        replacement["replaces_order_id"] = old["id"]
+        old["replaced_by_order_id"] = replacement["id"]
+        data["manual_orders"].append(replacement)
+
+
 class CancellationBlocked(Exception):
     """A confirmed or in-flight payment must remain attached to the customer."""
 
@@ -122,6 +170,7 @@ def process_cancellation(host, order):
         if link.get("invoice_id") != order["commerce"].get("invoice_id") or commerce._money_cents(link.get("amount")) != order["total_cents"]:
             raise commerce.ReviewRequired("Le lien de paiement ne correspond pas à cette commande.")
         if link.get("status") in {"paid", "processing"}:
+            commerce._save(host, order, payment_status="processing", payment_url="")
             raise CancellationBlocked("Un paiement est reçu ou en cours. La suppression n’a pas été effectuée.")
         if link.get("status") not in {"open", "expired", "canceled"}:
             raise commerce.ReviewRequired("Le statut du lien de paiement doit être vérifié avant suppression.")
@@ -133,6 +182,7 @@ def process_cancellation(host, order):
             if not isinstance(payments, list) or any(not isinstance(payment, dict) for payment in payments):
                 raise commerce.ReviewRequired("La liste des paiements doit être vérifiée avant suppression.")
             if any(payment.get("status") not in {"failed", "canceled", "expired"} for payment in payments):
+                commerce._save(host, order, payment_status="processing", payment_url="")
                 raise CancellationBlocked("Un règlement est en cours ou a été reçu. La suppression n’a pas été effectuée.")
             if not host._qonto_invoice_list_has_next_page(response, page, len(payments), 100):
                 return
@@ -157,7 +207,13 @@ def process_cancellation(host, order):
             if not current or current.get("commerce", {}).get("lease_token") != order["commerce"]["lease_token"]:
                 return {}
             group = next((g for g in data.get("manual_orders", []) if is_group(g) and g.get("id") == order.get("group_id") and g.get("partner_id") == order["partner_id"]), None)
-            if group:
+            if group and group.get("roster_amendment", {}).get("order_id") == current["id"]:
+                group.pop("roster_amendment")
+                group.update(amendment_error="La modification a été refusée. Un accès est déjà activé ou un règlement a été détecté.",
+                             revision=group["revision"] + 1, updated_at=host._now_iso())
+                current.pop("cancellation_requested_at", None)
+                current["commerce"].update(queued=True, next_attempt=0, lease_until=0, lease_token=str(uuid.uuid4()))
+            elif group and group.get("deletion_requested_at"):
                 group.pop("deletion_requested_at", None)
                 group.update(deletion_error=message, revision=group["revision"] + 1, updated_at=host._now_iso())
                 for item in group_orders(data, group):
@@ -248,7 +304,9 @@ def process_cancellation(host, order):
             now = host._now_iso()
             _cancel_locally(current, now)
             group = next((g for g in data.get("manual_orders", []) if is_group(g) and g.get("id") == order.get("group_id") and g.get("partner_id") == order["partner_id"]), None)
-            if group and group.get("deletion_requested_at"):
+            if group and group.get("roster_amendment", {}).get("order_id") == current["id"]:
+                _apply_amendment(data, group, current, now)
+            elif group and group.get("deletion_requested_at"):
                 remaining = group_orders(data, group)
                 if all(o.get("status") == "cancelled" for o in remaining):
                     group.update(deleted_at=now, updated_at=now, revision=group["revision"] + 1, deletion_error="")
@@ -267,7 +325,9 @@ def process_cancellation(host, order):
                        next_attempt=time.time() + min(60 * 2 ** min(order["commerce"].get("attempts", 1), 6), 3600), lease_until=0)
         def note(data):
             group = next((g for g in data.get("manual_orders", []) if is_group(g) and g.get("id") == order.get("group_id") and g.get("partner_id") == order["partner_id"]), None)
-            if group and group.get("deletion_requested_at"):
+            if group and group.get("roster_amendment", {}).get("order_id") == order["id"]:
+                group["amendment_error"] = "La vérification de l’ancien paiement prend plus de temps. Une nouvelle tentative est prévue."
+            elif group and group.get("deletion_requested_at"):
                 group["deletion_error"] = message
             return {}
         host._atomic_update_data(note, partner_id=order["partner_id"])
@@ -459,6 +519,74 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             return jsonify(presence(group_view(data, group)))
         return detail(data, partner, group)
 
+    @bp.route("/admin/organisme/e-learning/groupes/<gid>/commandes/<oid>/modifier", methods=["GET", "POST"])
+    @customer
+    @elearning_sales.required(host)
+    def elearning_group_amend(gid, oid):
+        from manuals_public import acceptance
+        data, partner = partner_data()
+
+        def selection(current):
+            group = find(current, gid)
+            order = commerce._find(current, group["partner_id"], oid)
+            if not order or not learning.is_order(order) or order.get("group_id") != gid:
+                abort(404)
+            if group.get("deletion_requested_at") or group.get("roster_amendment") or not _unpaid_batch(order):
+                abort(409, "Cette commande ne peut plus être modifiée. Rechargez le groupe pour consulter son état.")
+            return group, order
+
+        group, order = selection(data)
+        rows = order["learners"]
+        removed = None
+        error = None
+        if request.method == "GET":
+            removed = next((p for p in rows if p["id"] == request.args.get("retirer")), None)
+            if removed:
+                rows = [p for p in rows if p["id"] != removed["id"]]
+        else:
+            check_csrf()
+            expected = _revision(request.form)
+            if request.form.get("confirm") != "yes" or "learner_id" not in request.form:
+                abort(400)
+            terms = acceptance(host)
+
+            def amend(current):
+                group, order = selection(current)
+                if group["revision"] != expected:
+                    abort(409, "Le groupe a changé. Rouvrez sa liste avant de confirmer.")
+                if order.get("commerce", {}).get("lease_until", 0) > time.time():
+                    raise ValueError("Le paiement est en cours de vérification. Réessayez dans quelques instants.")
+                old_ids = {p["id"] for p in order["learners"]}
+                others = [p for p in group["learners"] if p["id"] not in old_ids]
+                people = _roster(request.form, group, others)
+                if people == order["learners"]:
+                    return {"message": "Votre liste est déjà à jour."}
+                now = host._now_iso()
+                group.pop("amendment_error", None)
+                group.update(roster_amendment={"order_id": oid, "learners": people, "terms": terms},
+                             revision=expected + 1, updated_at=now)
+                if _remote_billing(order):
+                    order["cancellation_requested_at"] = now
+                    order["commerce"].update(queued=True, status="cancellation_pending", next_attempt=0,
+                                             lease_until=0, lease_token=str(uuid.uuid4()))
+                    return {"message": "Modification enregistrée. Nous vérifions le paiement avant de remplacer la commande."}
+                _cancel_locally(order, now)
+                _apply_amendment(current, group, order, now)
+                return {"message": "Votre commande a été mise à jour." if people else "La commande vide a été annulée."}
+
+            try:
+                result = host._atomic_update_data(amend, partner_id=partner["id"])
+            except ValueError as exc:
+                error = str(exc)
+                rows = [dict(id=i, last_name=l, first_name=f, email=e) for i, l, f, e in zip(
+                    *(request.form.getlist(k) for k in ("learner_id", "last_name", "first_name", "email")))]
+            else:
+                kick_worker()
+                flash(result["message"], "success")
+                return redirect(url_for("manuals_shop.elearning_group", gid=gid), code=303)
+        return page("elearning_group_amend.html", group=group, order=order, partner=partner,
+                    rows=rows, removed=removed, errors=[error] if error else []), 400 if error else 200
+
     @bp.post("/admin/organisme/e-learning/groupes/<gid>/supprimer")
     @customer
     def elearning_group_delete(gid):
@@ -473,6 +601,8 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
                 return {"error": "Le groupe a changé. Vérifiez sa version actuelle avant de le supprimer."}
             if group.get("deletion_requested_at"):
                 return {"pending": True}
+            if group.get("roster_amendment"):
+                return {"error": "Une modification de la liste est déjà en cours."}
             orders = group_orders(data, group)
             blocked = deletion_block_reason(orders)
             if blocked:
@@ -523,6 +653,8 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             group = find(data, gid)
             if group.get("revision") != expected:
                 return {"conflict": True}
+            if group.get("roster_amendment"):
+                raise ValueError("Une modification de la liste est déjà en cours.")
             if group.get("deletion_requested_at"):
                 raise ValueError("La suppression de ce groupe est en cours de vérification.")
             view = group_view(data, group)
@@ -562,6 +694,8 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             if _revision(request.form) != group.get("revision"):
                 return detail(data, partner, group, errors=["Le groupe a été modifié. Vérifiez sa liste actuelle avant de créer les accès."]), 409
         view = group_view(data, group)
+        if group.get("roster_amendment"):
+            return detail(data, partner, group, errors=["Une modification de la liste est déjà en cours."]), 409
         if view["deletion_pending"]:
             return detail(data, partner, group, errors=["La suppression de ce groupe est en cours de vérification."]), 409
         if not view["pending_count"]:
@@ -595,6 +729,8 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         billing.update(country="France", country_code="FR")
         def confirm(current):
             current_group = find(current, gid)
+            if current_group.get("roster_amendment"):
+                return {"error": "Une modification de la liste est déjà en cours."}
             if current_group.get("deletion_requested_at"):
                 raise ValueError("La suppression de ce groupe est en cours de vérification.")
             orders = current.setdefault("manual_orders", [])
@@ -616,23 +752,13 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
                 return {"error": "Votre tarif a changé. Le nouveau total est affiché ci-dessous. Vérifiez-le avant de confirmer."}
             if not price["free"] and any(not 1 <= len(billing[k]) <= limit or any(ord(c) < 32 for c in billing[k]) for k, limit in (("address", 200), ("postal_code", 20), ("city", 100))):
                 raise ValueError("Complétez l’adresse de facturation de votre organisme.")
-            oid, now = str(uuid.uuid4()), host._now_iso()
-            unit, quantity = price["unit_cents"], len(people)
-            order = {"id": oid, "order_type": "elearning", "partner_id": partner["id"], "group_id": gid,
-                     "created_by": session.get("user_id"), "status": "received", "created_at": now, "submitted_at": now,
-                     "reference": "EL-" + str(dt.date.today().year) + "-" + oid[:8].upper(),
-                     "request_id": quote["request_id"], "course_code": current_group["course_code"],
-                     "group_name": current_group["group_name"], "learners": people,
-                     "terms_acceptance": terms,
-                     "modules": learning.curriculum(current_group["course_code"]), "billing": copy.deepcopy(billing),
-                     "free_snapshot": price["free"], "unit_cents": unit, "total_cents": unit * quantity, "shipping_cents": 0,
-                     "items": [{"kind": "elearning", "code": current_group["course_code"], "label": "Accès e-learning " + learning.course_label(current_group["course_code"]),
-                                "quantity": quantity, "unit_cents": unit, "total_cents": unit * quantity}],
-                     "centre": learning.centre_snapshot(current_partner),
-                     "commerce": {"queued": True, "status": "pending", "flow": "elearning_invoice_first", "attempts": 0, "emails": {}}}
+            now = host._now_iso()
+            order = _purchase(current_group, people, price["unit_cents"], price["free"], terms, now,
+                              quote["request_id"], billing=billing, centre=learning.centre_snapshot(current_partner),
+                              modules=learning.curriculum(current_group["course_code"]))
             orders.append(order)
             current_group.update(revision=expected + 1, updated_at=now, billing=copy.deepcopy(billing))
-            return {"id": oid}
+            return {"id": order["id"]}
         try:
             result = host._atomic_update_data(confirm, partner_id=partner["id"])
         except ValueError as exc:

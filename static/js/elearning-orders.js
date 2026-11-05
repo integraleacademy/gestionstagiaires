@@ -111,15 +111,15 @@
     const update = () => {
       const list = rows();
       const count = list.filter(filled).length;
-      const selected = course.selectedOptions[0];
-      const rawPrice = selected ? selected.dataset.price : '';
+      const selected = course?.selectedOptions[0];
+      const rawPrice = selected ? selected.dataset.price : roster.dataset.price ?? '';
       const price = rawPrice === '' ? null : Number(rawPrice);
       document.getElementById('el-count').textContent = String(count);
       document.getElementById('el-total').textContent = price === null ? 'Tarif à définir' : price === 0 ? 'Gratuit' : money.format(price * count / 100);
       const counter = document.getElementById('el-roster-count');
       if (counter) counter.textContent = count + ' à préparer';
       if (add) { add.disabled = list.length >= max; add.title = add.disabled ? 'Ce groupe peut contenir jusqu’à 100 stagiaires.' : ''; }
-      review.disabled = review.dataset.salesPaused === 'true' || count === 0 || roster.dataset.conflict === 'true' || roster.dataset.pendingDeletion === 'true';
+      review.disabled = review.dataset.salesPaused === 'true' || (count === 0 && roster.dataset.amendment !== 'true') || roster.dataset.conflict === 'true' || roster.dataset.pendingDeletion === 'true';
       const seen = new Set();
       list.forEach((row, index) => {
         row.querySelector('.el-row-number').textContent = String(index + 1);
