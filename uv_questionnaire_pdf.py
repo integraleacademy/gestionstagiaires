@@ -132,7 +132,7 @@ def build(training, trainee, course, row, result=None, correction=False, *, titl
     return output
 
 
-def build_dossier(training, person, units, mode, *, course, notice):
+def build_dossier(training, person, units, *, course, notice):
     """Print all requested UVs in continuous reading order for one learner."""
     from reportlab.lib.pagesizes import A4
     regular, bold = fonts()
@@ -145,34 +145,31 @@ def build_dossier(training, person, units, mode, *, course, notice):
     section = ParagraphStyle("unit", parent=prompt, fontSize=12, leading=15, spaceBefore=8,
                              spaceAfter=4, keepWithNext=True)
     name = " ".join(str(person.get(k) or "") for k in ("last_name", "first_name")).strip()
-    mode_label = {"answers": "Réponses et correction", "blank": "Questionnaire vierge", "correction": "Corrigé formateur"}[mode]
     story = [Paragraph(escape(notice), note)]
     for unit, result in units:
         story.append(Paragraph(f"UV {unit['number']:02} · {escape(unit['title'])}", section))
-        info = (f"Score : {result['score']}/20 · Terminé le {escape(str(result['submitted_at']))}" if mode == "answers"
-                else "Date : __________________   Formateur : __________________   Signature : __________________")
+        info = f"Score : {result['score']}/20 · Terminé le {escape(str(result['submitted_at']))}"
         story.append(Paragraph(info, body))
         for index, question in enumerate(unit["questions"], 1):
-            selected = result.get("answers", {}).get(question["id"]) if mode == "answers" else None
+            selected = result.get("answers", {}).get(question["id"])
             parts = [Paragraph(f"{index}. {escape(question['prompt'])}", prompt)]
             for i, option in enumerate(question["options"]):
                 marks = []
-                if mode != "blank" and option["id"] == question["answer"]:
+                if option["id"] == question["answer"]:
                     marks.append("Bonne réponse")
                 if selected == option["id"]:
                     marks.append("Votre réponse")
                 label = f"{chr(65+i)}. {escape(option['text'])}"
                 parts.append(Paragraph(label + (" · " + " · ".join(marks) if marks else ""), body))
-            if mode != "blank":
-                prefix = "Sans réponse. " if mode == "answers" and not selected else ""
-                parts.append(Paragraph(prefix + escape(question["explanation"]), note))
+            prefix = "Sans réponse. " if not selected else ""
+            parts.append(Paragraph(prefix + escape(question["explanation"]), note))
             story.append(KeepTogether(parts))
 
     def frame(canvas, document):
         width, height = A4
         canvas.setFont(bold, 9)
         canvas.drawString(13*mm, height-11*mm, "Questionnaires de fin d’UV · " + course.upper())
-        canvas.drawRightString(width-13*mm, height-11*mm, mode_label)
+        canvas.drawRightString(width-13*mm, height-11*mm, "Réponses et correction")
         canvas.setFont(regular, 8)
         identity = f"{name} · {person['id']} · {training.get('name', '')}"
         canvas.drawString(13*mm, 8*mm, identity[:96])

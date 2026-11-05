@@ -22,20 +22,18 @@
     let people = [], loaded = false, busy = false;
     const checks = () => [...list.querySelectorAll('input[name="trainee_id"]')];
     function update() {
-      const mode = form.elements.mode?.value || '';
       const number = units?.value || '';
       let printable = 0, blocked = 0;
       checks().forEach(check => {
         const person = people.find(p => String(p.id) === check.value);
         const complete = !requireAll || person.submitted.length === unitCount;
-        const available = complete && (mode !== 'answers' || person.submitted.some(n => !number || String(n) === number));
+        const available = complete && (!units || person.submitted.some(n => !number || String(n) === number));
         if (check.checked && !complete) blocked++;
         check.disabled = !requireAll && !available;
         if (check.checked && available) printable++;
         const link = check.closest('article').querySelector('[data-learning-individual]');
         const url = new URL(form.action, window.location.origin);
         url.searchParams.set('trainee_id', check.value);
-        if (mode) url.searchParams.set('mode', mode);
         if (number) url.searchParams.set('uv', number);
         link.href = panel.dataset.learningDocuments === 'attestations' ? person.certificate_url : url.href;
         link.hidden = !available;
@@ -45,7 +43,7 @@
       toggle.textContent = checks().some(c => c.checked && !c.disabled) ? 'Tout désélectionner' : 'Tout sélectionner';
       print.disabled = !printable || blocked > 0;
       toggle.disabled = !people.length;
-      status.textContent = blocked ? `Impression bloquée : ${blocked} stagiaire(s) sélectionné(s) doivent encore terminer des questionnaires.` : people.length ? (requireAll ? 'Tous les questionnaires de chaque stagiaire sélectionné doivent être terminés avant impression.' : mode === 'answers' ? 'Seules les réponses aux questionnaires terminés sont imprimées.' : 'Chaque PDF s’ouvre dans un nouvel onglet : utilisez ensuite le bouton Imprimer du lecteur PDF.') : 'Aucun stagiaire actif dans cette session.';
+      status.textContent = blocked ? `Impression bloquée : ${blocked} stagiaire(s) sélectionné(s) doivent encore terminer des questionnaires.` : people.length ? (requireAll ? 'Tous les questionnaires de chaque stagiaire sélectionné doivent être terminés avant impression.' : units ? 'Seules les réponses aux questionnaires terminés sont imprimées.' : 'Chaque PDF s’ouvre dans un nouvel onglet : utilisez ensuite le bouton Imprimer du lecteur PDF.') : 'Aucun stagiaire actif dans cette session.';
     }
     async function load() {
       if (loaded || busy) return;

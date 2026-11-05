@@ -25891,7 +25891,7 @@ def admin_trainees(session_id: str):
         aps_attendance_by_id=aps_attendance_by_id,
         is_dirigeant=is_dirigeant,
         is_desp_initial=_is_desp_initial_session(s),
-        show_desp_tabs=desp_jury_projects.supported(sys.modules[__name__], s) or desp_kickoff.supported(sys.modules[__name__], s),
+        show_desp_kickoff_dialog=desp_jury_projects.supported(sys.modules[__name__], s) or desp_kickoff.supported(sys.modules[__name__], s),
         desp_kickoff_attendance=_desp_kickoff_attendance_view(s),
         finance_summary=_admin_trainees_finance_summary(session_view, trainees),
         registered_trainees=registered,
