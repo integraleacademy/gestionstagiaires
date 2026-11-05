@@ -750,3 +750,97 @@ def test_multiple_batches_cancel_in_sequence_and_a_late_payment_preserves_the_gr
     remaining = {p["id"] for p in processing["learners"]}
     quoted = confirm(shop, url)
     assert {p["id"] for p in quoted["learners"]} == remaining
+
+
+def amendment_fields(shop, url, people):
+    fields = save_fields(shop, url, people or [person("", "", "")])
+    fields.update({"confirm": "yes", "terms_version": TERMS_VERSION})
+    return fields
+
+
+def test_partner_amends_invoiced_roster_after_verified_cancellation(shop, merchant, monkeypatch):
+    url, order = billed_group(shop, merchant)
+    cancellation_provider(monkeypatch, merchant, lose_cancel_response=True)
+    client = shop["client"]
+    edit = url + "/commandes/" + order["id"] + "/modifier"
+    before = copy.deepcopy(record(shop, url))
+    assert edit in client.get(url).text
+    preview = client.get(edit + "?retirer=" + order["learners"][0]["id"])
+    assert preview.status_code == 200 and "sera retiré" in preview.text and "0,00 €" in preview.text
+    assert record(shop, url) == before
+    people = [person("emma@example.test", "Emma"), person("sara@example.test", "Sara")]
+    fields = amendment_fields(shop, url, people)
+    fields["unit_cents"] = "1"
+    assert client.post(edit, data=fields).status_code == 303
+    assert client.post(edit, data=fields).status_code == 409
+    assert client.post(url + "/supprimer", data=deletion_fields(shop, url)).status_code == 409
+    assert client.post(url + "/enregistrer", data=save_fields(shop, url, [])).status_code == 400
+    assert len(purchases(shop)) == 1 and record(shop, url)["learners"] == before["learners"]
+    assert not learning.status_view(purchases(shop)[0])["checkout_url"]
+    run(order)
+    assert len(purchases(shop)) == 1
+    state = purchases(shop)[0]["commerce"]
+    monkeypatch.setattr(time, "time", lambda: max(state["next_attempt"], state["lease_until"]) + 1)
+    run(order)
+    old, new = purchases(shop)
+    assert old["status"] == "cancelled" and old["learners"] == order["learners"]
+    assert merchant["payment"]["status"] == merchant["invoice"]["status"] == "canceled"
+    assert new["replaces_order_id"] == old["id"] and old["replaced_by_order_id"] == new["id"]
+    assert new["total_cents"] == new["items"][0]["total_cents"] == 11800
+    assert new["learners"] == record(shop, url)["learners"]
+    assert [p["email"] for p in new["learners"]] == [p["email"] for p in people]
+    assert not learning.entitled(new) and "payment_url" not in new["commerce"]
+    assert "roster_amendment" not in record(shop, url) and "amendment_error" not in record(shop, url)
+    assert client.post(edit, data=fields).status_code == 409
+    assert len(purchases(shop)) == 2
+    merchant.update(invoice=None, payment=None)
+    run(new)
+    assert merchant["invoice"]["total_amount_cents"] == 11800
+    assert Decimal(merchant["payment"]["amount"]["value"]) == Decimal("118.00")
+    assert not learning.entitled(purchases(shop)[1])
+
+
+def test_amending_last_learner_checks_late_payment_and_preserves_other_batches(shop, merchant, monkeypatch):
+    url, order = billed_group(shop, merchant)
+    cancellation_provider(monkeypatch, merchant)
+    client = shop["client"]
+    save(shop, url, [person("emma@example.test", "Emma")])
+    other = confirm(shop, url)
+    original = copy.deepcopy(record(shop, url)["learners"])
+    edit = url + "/commandes/" + order["id"] + "/modifier"
+    assert client.post(edit, data=amendment_fields(shop, url, [other["learners"][0]])).status_code == 400
+    assert client.post(edit, data=amendment_fields(shop, url, [])).status_code == 303
+    mark_paid(merchant)
+    run(order)
+    assert record(shop, url)["learners"] == original
+    assert record(shop, url).get("amendment_error") and not record(shop, url).get("roster_amendment")
+    assert client.post(edit, data=amendment_fields(shop, url, [])).status_code == 409
+    assert len(purchases(shop)) == 2 and purchases(shop)[1] == other
+    # Removing the only person on the other, still unbilled batch creates no zero-euro order.
+    other_edit = url + "/commandes/" + other["id"] + "/modifier"
+    assert client.post(other_edit, data=amendment_fields(shop, url, [])).status_code == 303
+    assert record(shop, url)["learners"] == order["learners"]
+    assert len(purchases(shop)) == 2 and purchases(shop)[1]["status"] == "cancelled"
+    assert client.get(url).status_code == 200
+
+
+def test_amendment_requires_owner_revision_csrf_and_writable_access(shop, merchant):
+    url, order = billed_group(shop, merchant)
+    client = shop["client"]
+    edit = url + "/commandes/" + order["id"] + "/modifier"
+    fields = amendment_fields(shop, url, order["learners"])
+    assert client.post(edit, data={**fields, "revision": "0"}).status_code == 409
+    assert client.post(edit, data={**fields, "csrf_token": ""}).status_code == 400
+    assert client.post(edit, data={**fields, "confirm": ""}).status_code == 400
+    assert client.post(edit, data=fields).status_code == 303
+    assert not record(shop, url).get("roster_amendment")
+    other_group = create(client)
+    assert client.get(edit.replace(url, other_group)).status_code == 404
+    other = host.app.test_client()
+    assert signup(other, email="other@example.test").status_code == 303
+    login(other, email="other@example.test")
+    assert other.get(edit).status_code == 404
+    with client.session_transaction() as current:
+        current["admin_role"] = "viewer"
+    assert client.post(edit, data=fields).status_code == 403
+    assert purchases(shop) == [order]

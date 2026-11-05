@@ -65,9 +65,9 @@ class People extends Element {
 
 const complete = (email = 'alice@example.fr', id = 'learner-1') => ({learner_id: id, last_name: 'Martin', first_name: 'Alice', email});
 
-function boot({rows = [{}], individual = false, locked = 0, price = '5900', unsaved = false, conflict = false, salesPaused = false} = {}) {
+function boot({rows = [{}], individual = false, locked = 0, price = '5900', unsaved = false, conflict = false, salesPaused = false, amendment = false} = {}) {
   const people = rows === null ? null : new People(rows.map(values => new Row(values)));
-  const roster = new Element({dataset: {mode: individual ? 'individual' : 'group', lockedCount: String(locked), maxLearners: individual ? '1' : '100', unsaved: String(unsaved), conflict: String(conflict)}});
+  const roster = new Element({dataset: {amendment: String(amendment), price, mode: individual ? 'individual' : 'group', lockedCount: String(locked), maxLearners: individual ? '1' : '100', unsaved: String(unsaved), conflict: String(conflict)}});
   roster.querySelectorAll = () => people ? people.children.flatMap(row => row.inputs.filter(input => ['first_name', 'last_name'].includes(input.name))) : [];
   roster.checkValidity = () => !people || people.children.every(row => row.inputs.every(input => input.valid()));
   roster.reportValidity = () => { roster.reported = true; };
@@ -78,7 +78,7 @@ function boot({rows = [{}], individual = false, locked = 0, price = '5900', unsa
   const status = new Element();
   const nodes = {
     'el-roster-form': roster, 'el-learners': people, 'el-add': add,
-    'el-course-code': course, 'el-save-status': status, 'el-review-button': review,
+    'el-course-code': amendment ? null : course, 'el-save-status': status, 'el-review-button': review,
     'el-count': new Element(), 'el-total': new Element(), 'el-roster-count': people ? new Element() : null,
   };
   const document = {querySelector: () => null, querySelectorAll: () => [], getElementById: id => nodes[id] || null};
@@ -125,6 +125,14 @@ test('removing the last saved learner clears its ID and keeps a usable empty row
   assert.equal(page.nodes['el-count'].textContent, '0');
   assert.equal(page.review.disabled, true);
   assert.equal(page.roster.checkValidity(), true);
+});
+
+test('amendments price the existing batch and allow confirmation after removing everyone', () => {
+  const page = boot({rows: [complete()], price: '7200', amendment: true});
+  assert.match(page.nodes['el-total'].textContent, /^72,00\s+€/);
+  page.people.dispatch('click', {target: page.people.children[0].removeButton});
+  assert.match(page.nodes['el-total'].textContent, /^0,00\s+€/);
+  assert.equal(page.review.disabled, false);
 });
 
 test('duplicate e-mails are rejected case-insensitively and recover after correction', () => {
