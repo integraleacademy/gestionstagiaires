@@ -36,18 +36,18 @@ def unique(values, message):
     return values[0]
 
 
-def ensure_signature(host, store, row):
+def ensure_signature(host, store, row, *, name=None, prefix="retake", filename="convention-rattrapage.pdf", notify=True):
     path = store.document(row['id'],'convention')
     if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != row['pdf_sha256']:
         raise RetakeError('La convention enregistrée est absente ou a changé. Vérification nécessaire avant envoi.')
-    external = 'retake-'+row['id']
+    external = prefix+'-'+row['id']
     if not row.get('request_id'):
         if row.get('pending') == 'request':
             matches = [r for r in host._list_yousign_signature_requests({'external_id':external},max_pages=10) if r.get('external_id') == external]
             result = unique(matches,'Création Yousign non confirmée. Vérifiez la demande dans Yousign avant toute nouvelle création.')
         else:
             result = mutate(host,store,row,'request','POST','/signature_requests',json={
-                'name':('Rattrapage '+row['kind']+' - '+row['person']['first_name']+' '+row['person']['last_name'])[:120],
+                'name':((name or 'Rattrapage '+row['kind'])+' - '+row['person']['first_name']+' '+row['person']['last_name'])[:120],
                 'delivery_mode':'none','timezone':'Europe/Paris','external_id':external,'audit_trail_locale':'fr'})
         if not result.get('id'):
             raise RetakeError('Yousign n’a pas renvoyé la référence de signature.')
@@ -65,7 +65,7 @@ def ensure_signature(host, store, row):
             result = unique(docs,'Le dépôt de la convention dans Yousign reste à vérifier.')
         else:
             with path.open('rb') as file:
-                result = mutate(host,store,row,'document','POST',request_path+'/documents',files={'file':('convention-rattrapage.pdf',file,'application/pdf')},data={'nature':'signable_document','parse_anchors':'false'})
+                result = mutate(host,store,row,'document','POST',request_path+'/documents',files={'file':(filename,file,'application/pdf')},data={'nature':'signable_document','parse_anchors':'false'})
         if not result.get('id'):
             raise RetakeError('Yousign n’a pas confirmé le document.')
         checkpoint(store,row,document_id=result['id'],pending='')
@@ -94,7 +94,8 @@ def ensure_signature(host, store, row):
     if remote.get('status') not in {'done','completed'}:
         if not link:
             raise RetakeError('Le lien de signature est temporairement indisponible.')
-        send_email(host,store,row,'signature',link,[])
+        if notify:
+            send_email(host,store,row,'signature',link,[])
     return remote
 
 
@@ -106,10 +107,14 @@ def store_pdf(path, content):
     tmp.replace(path)
 
 
+def purchase_order(row):
+    return row.get("purchase_order") or "RET-" + row["id"]
+
+
 def invoice_assert(row, invoice):
     client_id = invoice.get('client_id') or (invoice.get('client') or {}).get('id')
     if (not invoice.get('id') or (row.get('invoice_id') and invoice['id'] != row['invoice_id'])
-            or invoice.get('purchase_order') != 'RET-'+row['id'] or client_id != row.get('client_id')):
+            or invoice.get('purchase_order') != purchase_order(row) or client_id != row.get('client_id')):
         raise RetakeError('La référence de facture Qonto ne correspond pas au rattrapage.')
     amount = invoice.get('total_amount') or {}
     if (not isinstance(amount,dict) or (amount.get('currency') or invoice.get('currency')) != 'EUR'
@@ -121,7 +126,7 @@ def recover_invoice(host,row):
     for page in range(1,21):
         result=host.list_qonto_invoices({'filter[created_at_from]':row['submitted_at'],'sort_by':'created_at:desc','per_page':100,'page':page})
         invoices=list(host._iter_qonto_invoice_payloads(result))
-        matches=[i for i in invoices if i.get('purchase_order') == 'RET-'+row['id']]
+        matches=[i for i in invoices if i.get('purchase_order') == purchase_order(row)]
         if matches:
             found=unique(matches,'Plusieurs factures correspondent au rattrapage. Vérifiez Qonto.')
             return host._qonto_invoice_payload(host.get_qonto_invoice(found['id']))
@@ -148,20 +153,27 @@ def ensure_invoice(host,store,row):
         if not rate.is_finite() or rate < 0 or rate > 1:
             raise RetakeError('Le taux de TVA de la fiche stagiaire est invalide.')
         items=[]
-        for item in line_items(row):
+        for item in row.get('billing_lines') or line_items(row):
             if item['total_cents'] == 0:
                 continue
             net=(Decimal(item['unit_cents'])/100/(1+rate)).quantize(Decimal('.000001'))
             description=item['label']
-            if item['discount_cents']:
+            if item.get('discount_cents'):
                 description+=' · Tarif unitaire de référence TTC : '+money(item['reference_unit_cents'])+' · '+discount_label(item)+' sur cette ligne, déjà déduite du prix facturé.'
             items.append({'title':item['label'],'description':description,'quantity':str(item['quantity']),
+                          **({'vat_exemption_reason': row['vat_exemption']} if row.get('vat_exemption') else {}),
                           'unit_price':{'value':str(net),'currency':'EUR'},'vat_rate':str(rate)})
         payload={'client_id':row['client_id'],'status':'draft','currency':'EUR','issue_date':today(),'due_date':today(),
-                 'purchase_order':'RET-'+row['id'],'header':'Rattrapage '+row['kind'],
+                 'purchase_order':purchase_order(row),'header':row.get('invoice_title') or 'Rattrapage '+row['kind'],
                  'payment_methods':{'iban':host.get_qonto_invoice_iban()},'items':items,
                  'performance_start_date':row['days'][0]['date'] if row['days'] else row['exam_date'],
                  'performance_end_date':row['exam_date'],'terms_and_conditions':'Paiement à réception. Participation confirmée après règlement intégral.'}
+        if row.get("invoice_title"):
+            payload["terms_and_conditions"] = row["payment_terms"]
+            payload["settings"] = {"transaction_type": "services"}
+            for key in ("performance_start_date", "performance_end_date"):
+                if not payload.get(key):
+                    payload.pop(key, None)
         checkpoint(store,row,invoice_started=now())
         try:
             invoice=host._qonto_invoice_payload(host._qonto_request('POST','/v2/client_invoices',payload,idempotency_key='retake-invoice-'+row['id']))
@@ -197,6 +209,8 @@ def ensure_payment(host,store,row,invoice):
     payment = host.normalize_qonto_invoice_payment_data(invoice, {'amount_ttc': row['total_cents'] / 100})
     invoice_paid = payment['qonto_amount_paid_cents']
     if payment['qonto_payment_status'] == 'paid':
+        if row.get('invoice_title') and invoice_paid != row['total_cents']:
+            raise RetakeError('Le montant acquitté doit correspondre au total de la facture.')
         record_payment(store, row, 'paid', invoice_paid)
         return
     if invoice_paid and not (row.get('payment_id') or row.get('payment_started')):
@@ -271,14 +285,14 @@ def ensure_payment(host,store,row,invoice):
     record_payment(store, row, 'unpaid', 0, url)
 
 
-def send_email(host,store,row,kind,link,paths,*,delivery_key=None):
+def send_email(host,store,row,kind,link,paths,*,delivery_key=None,content_builder=None):
     state=row.setdefault('emails',{}).setdefault(delivery_key or kind,{'key':str(uuid.uuid4())})
     if state.get('sent_at'):
         return state
     # Brevo deduplication is bounded. Do not retry an ambiguous send after its window.
     if state.get('uncertain_at') and time.time()-state['uncertain_at'] > 600:
         raise RetakeError('L’envoi de l’e-mail reste à vérifier dans l’historique Brevo avant une nouvelle tentative.')
-    subject,html,text=email_content(host,row,kind,link)
+    subject,html,text=(content_builder or email_content)(host,row,kind,link)
     attachments=[{'name':name,'content':base64.b64encode(path.read_bytes()).decode()} for name,path in paths]
     state.setdefault('uncertain_at',time.time())
     store.save(row)

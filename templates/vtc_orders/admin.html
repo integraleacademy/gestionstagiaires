@@ -1,0 +1,36 @@
+{% extends 'base.html' %}{% block content %}
+<section style="max-width:1000px;margin:20px auto;padding:18px">
+<h1>Commandes VTC</h1><p>Réservations des candidats à l’épreuve pratique. Les paiements sont confirmés par Qonto.</p>
+<details><summary>Créneaux de formation ouverts à la réservation par carte</summary>
+<p>Publiez uniquement les places disponibles pour les candidats qui réservent ici. La confirmation de leur e-mail réserve la place et déclenche le contrat.</p>
+{% for slot in slots %}<form method="post" action="{{url_for('.publish')}}"><input type="hidden" name="csrf_token" value="{{csrf}}">{{slot.day|vtc_date}} · {{slot.start}} – {{slot.end}} · {{slot.free}} place(s) · {{slot.trainer}} <button name="close" value="{{slot.id}}">Fermer les réservations</button></form>{% endfor %}
+<form method="post" action="{{url_for('.publish')}}"><input type="hidden" name="csrf_token" value="{{csrf}}"><input type="hidden" name="draft" value="{{slot_key}}">
+<label>Date <input type="date" required name="day"></label> <label>De <input type="time" required name="start"></label> <label>à <input type="time" required name="end"></label>
+<label>Nom et qualification du formateur <input required name="trainer" maxlength="160"></label> <label>Places disponibles <input type="number" required name="capacity" min="1" max="12"></label> <button>Publier le créneau</button></form></details>
+{% if error %}<p role="alert">{{error}}</p>{% endif %}
+{% for row in rows %}
+<article style="background:white;padding:16px;margin:14px 0;border:1px solid #d7dfe7;border-radius:10px">
+<h2>{{row.person.first_name}} {{row.person.last_name}} · {{stages[row.stage]}}</h2>
+<p>{{row.submitted_at[:10]|vtc_date}} · Réf. {{row.id[:10]|upper}} · {{offers[row.offer]}} · {{150 if row.offer=='vehicule' else 600}} € · {{'CPF' if row.offer=='cpf' else 'Carte bancaire'}}</p>
+<p>{{row.person.email}} · {{row.person.phone}}{% if row.exam_date %} · Examen le {{row.exam_date|vtc_date}}{% endif %}</p>
+{% if row.slot %}<p>Séance du {{row.slot.day|vtc_date}} de {{row.slot.start}} à {{row.slot.end}} · {{row.slot.trainer}}</p>{% endif %}
+{% if row.cpf_reference %}<p>Dossier CPF {{row.cpf_reference}}</p>{% endif %}
+{% if row.error %}<p role="alert">À vérifier · {{row.error}}</p>{% endif %}
+{% for kind,label in documents(row).items() %}<a class="btn" href="{{url_for('.admin_pdf',oid=row.id,kind=kind)}}">{{label}} (PDF)</a> {% endfor %}
+{% if row.stage in ['calendar','planning','availability','delivery'] or row.error %}
+<form method="post" action="{{url_for('.manage',oid=row.id)}}"><input type="hidden" name="csrf_token" value="{{csrf}}">
+{% if row.stage in ['calendar','planning'] %}
+<p><label>Date de la formation <input required type="date" name="day" min="{{today}}"></label>
+<label>De <input required type="time" name="start"></label> <label>à <input required type="time" name="end"></label></p>
+<p><label>Nom et qualification du formateur <input required name="trainer" maxlength="160"></label></p>
+{% if row.offer=='cpf' %}<label>Référence du dossier CPF <input required name="cpf_reference" pattern="[0-9]{8,18}"></label><label><input required type="checkbox" name="funding_confirmed" value="yes"> Financement validé dans Mon Compte Formation</label>{% endif %}
+<button class="btn" name="action" value="schedule">{{'Valider la prise en charge CPF' if row.offer=='cpf' else 'Préparer le contrat à signer'}}</button>
+{% elif row.stage=='availability' %}<button class="btn" name="action" value="available">Confirmer la disponibilité et ouvrir le paiement</button>
+{% elif row.stage=='delivery' %}<label><input required type="checkbox" name="delivered" value="yes"> La séance a eu lieu et le véhicule a été mis à disposition pour l’examen.</label> <button class="btn" name="action" value="delivered">Ouvrir le paiement de 600 €</button>
+{% elif row.error %}<button class="btn" name="action" value="retry">Relancer le traitement</button>{% endif %}</form>
+{% endif %}
+{% if row.stage=='withdrawn' %}<p>Demande à traiter par le centre. Vérifiez le contrat, le lien de paiement et, le cas échéant, le remboursement auprès de Qonto.</p>{% endif %}
+</article>
+{% else %}<p>Aucune commande VTC pour le moment.</p>{% endfor %}
+{% if page %}<a href="?page={{page-1}}">Précédent</a>{% endif %} {% if more %}<a href="?page={{page+1}}">Suivant</a>{% endif %}
+</section>{% endblock %}

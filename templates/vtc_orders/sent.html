@@ -1,0 +1,4 @@
+{% extends 'vtc_orders/layout.html' %}{% block content %}
+<p class="kicker">EXAMEN PRATIQUE VTC</p><h1>Confirmez votre adresse e-mail</h1>
+<p>Votre demande a été enregistrée. Ouvrez l’e-mail « Confirmez votre adresse e-mail » pour accéder à votre dossier et {% if offer=='cpf' %}choisir votre rendez-vous{% elif offer=='vehicule' %}poursuivre votre réservation{% else %}finaliser votre inscription{% endif %}.</p>
+<p>Si le message tarde, vérifiez vos courriers indésirables. L’équipe est joignable au <a href="tel:+33422470768">04 22 47 07 68</a>.</p>{% endblock %}
