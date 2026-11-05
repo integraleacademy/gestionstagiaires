@@ -1,5 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+.desp-session-tabs {display:flex; gap:8px; border-bottom:1px solid #d5deea; margin:12px 0 18px}
+.desp-session-tabs button {padding:10px 16px; border:0; border-bottom:3px solid transparent; border-radius:6px 6px 0 0; background:none; font:inherit; font-weight:700; color:#526477; cursor:pointer}
+.desp-session-tabs button[aria-selected="true"] {color:#123e69; border-color:#1d5492; background:#eef5fc}
+.desp-session-panel {padding:18px; border:1px solid #d9e3ee; border-radius:12px; background:white}
+.exam-retake-roster {display:flex; justify-content:space-between; align-items:center; gap:18px}
+.session-kickoff-actions,.exam-retake-actions {display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.session-kickoff-actions form {margin:0}
+.exam-retake-roster {flex-wrap:wrap; margin:12px 0; padding:15px 18px; border:1px solid #d9e3ee; border-left:4px solid #c29138; border-radius:12px; background:white}
+.exam-retake-label,.exam-retake-name {display:block}
+.exam-retake-label {font-size:.76rem; color:#865b12; font-weight:700}
+.exam-retake-name {margin:3px 0; font-size:1.05rem; color:#163b62; font-weight:750}
+.exam-retake-date {color:#526277; font-size:.85rem}
+.exam-retake-status {padding:6px 10px; border-radius:20px; color:#176244; background:#e7f6ed; font-weight:700; font-size:.8rem}
+</style>
 {% if is_native_aps %}
 <div data-aps-roster-url="{{ url_for('admin_aps_learning_roster', session_id=session.id) }}" hidden></div>
 <script src="{{ url_for('static', filename='js/aps-learning-roster.js', v='20261104') }}" defer></script>
@@ -127,6 +142,50 @@
 </div>
 {% endif %}
 
+{% macro desp_kickoff_tools() %}
+    {% if desp_kickoff_supported(session) %}
+    <a class="btn btn-outline" id="btnPreviewDespKickoff" href="{{ url_for('admin_desp_kickoff_pdf', session_id=session.id) }}" target="_blank" rel="noopener" title="Disponible automatiquement dans l’espace stagiaire dès le premier jour de formation">Prévisualiser le diaporama DESP</a>
+    {% endif %}
+    <a class="btn btn-outline" id="btnPreviewDespKickoffAttendance"
+       href="{{ url_for('admin_desp_kickoff_attendance_preview', session_id=session.id) }}"
+       target="_blank" rel="noopener"
+       title="Modèle de la feuille de présence, sans les signatures des stagiaires">👁️ Aperçu vierge présence Zoom</a>
+      {% if desp_kickoff_attendance.can_download_pdf %}
+      <a class="btn btn-primary" id="btnSignedDespKickoffAttendance"
+         href="{{ url_for('admin_view_signed_desp_kickoff_attendance', session_id=session.id) }}"
+         title="Télécharger le PDF original Yousign avec les signatures déjà apposées, sans attendre les autres signataires">
+        {% if desp_kickoff_attendance.is_done %}📥 Télécharger présence Zoom signée{% else %}📥 Télécharger avec les signatures reçues{% endif %}
+      </a>
+      {% endif %}
+      {% if not desp_kickoff_attendance.is_done and not is_read_only %}
+      <form method="post"
+            action="{{ url_for('admin_send_desp_kickoff_attendance_yousign', session_id=session.id) }}"
+            style="display:inline;"
+            onsubmit="return confirm('Confirmer l’envoi de la feuille de présence DESP à tous les stagiaires via Yousign ?');">
+        <button class="btn btn-primary" id="btnSendDespKickoffAttendance" type="submit">
+          {% if desp_kickoff_attendance.is_pending %}📨 Renvoyer les liens Yousign{% else %}✍️ Envoyer la présence via Yousign{% endif %}
+        </button>
+      </form>
+      {% endif %}
+      {% if desp_kickoff_attendance.is_pending %}
+      <span class="pill" title="Version en cours : le téléchargement contient uniquement les signatures déjà apposées.">Yousign : {{ desp_kickoff_attendance.signed_count }}/{{ desp_kickoff_attendance.signer_count }} signature(s)</span>
+      {% endif %}
+      {% if desp_kickoff_attendance.last_error %}
+      <span class="pill" title="{{ desp_kickoff_attendance.last_error }}">Yousign : erreur de synchronisation</span>
+      {% endif %}
+{% endmacro %}
+{% if show_desp_tabs %}
+<div class="desp-session-tabs" role="tablist" aria-label="Session DESP">
+  <button type="button" id="despRosterTab" role="tab" aria-selected="true" aria-controls="despRosterPanel">Stagiaires</button>
+  <button type="button" id="despKickoffTab" role="tab" aria-selected="false" tabindex="-1" aria-controls="despKickoffPanel">Réunion de démarrage</button>
+</div>
+<section class="desp-session-panel" id="despKickoffPanel" role="tabpanel" aria-labelledby="despKickoffTab" hidden>
+  <div class="session-kickoff-actions">
+    {{ desp_kickoff_tools() }}
+  </div>
+</section>
+<div id="despRosterPanel" role="tabpanel" aria-labelledby="despRosterTab">
+{% endif %}
 {% include 'partials/afc_documents.html' %}
 
 {% if session.afc_enabled and ssiap_exam_supported %}
@@ -144,7 +203,7 @@
   <h2 style="margin:0;">Stagiaires</h2>
 
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-    {% if is_desp_initial %}
+    {% if is_desp_initial and not show_desp_tabs %}
       <a class="btn btn-primary" id="btnManageDespExam" href="{{ url_for('admin_exam_detail', session_id=session.id) }}">🎓 Gestion examen</a>
     {% endif %}
     <div class="trainee-search-field" role="search">
@@ -216,43 +275,16 @@
     {% if aps_kickoff_supported(session) %}
     <a class="btn btn-outline" id="btnPreviewApsKickoff" href="{{ url_for('admin_aps_kickoff_pdf', session_id=session.id) }}" target="_blank" rel="noopener" title="Disponible automatiquement dans l’espace stagiaire dès le premier jour de formation">Prévisualiser le diaporama APS</a>
     {% endif %}
-    {% if desp_kickoff_supported(session) %}
-    <a class="btn btn-outline" id="btnPreviewDespKickoff" href="{{ url_for('admin_desp_kickoff_pdf', session_id=session.id) }}" target="_blank" rel="noopener" title="Disponible automatiquement dans l’espace stagiaire dès le premier jour de formation">Prévisualiser le diaporama DESP</a>
-    {% endif %}
     {% if is_aps_training %}
     <a class="btn btn-outline" id="btnPrintApsKickoffAttendance"
        href="{{ url_for('admin_aps_kickoff_attendance_print', session_id=session.id, autoprint=1) }}"
        target="_blank" rel="noopener"
        title="Imprimer la feuille de présence de la réunion de démarrage APS">📝 Feuille de présence e-learning</a>
     {% endif %}
-    {% if is_desp_initial %}
-    <a class="btn btn-outline" id="btnPreviewDespKickoffAttendance"
-       href="{{ url_for('admin_desp_kickoff_attendance_preview', session_id=session.id) }}"
-       target="_blank" rel="noopener"
-       title="Modèle de la feuille de présence, sans les signatures des stagiaires">👁️ Aperçu vierge présence Zoom</a>
-      {% if desp_kickoff_attendance.can_download_pdf %}
-      <a class="btn btn-primary" id="btnSignedDespKickoffAttendance"
-         href="{{ url_for('admin_view_signed_desp_kickoff_attendance', session_id=session.id) }}"
-         title="Télécharger le PDF original Yousign avec les signatures déjà apposées, sans attendre les autres signataires">
-        {% if desp_kickoff_attendance.is_done %}📥 Télécharger présence Zoom signée{% else %}📥 Télécharger avec les signatures reçues{% endif %}
-      </a>
-      {% endif %}
-      {% if not desp_kickoff_attendance.is_done and not is_read_only %}
-      <form method="post"
-            action="{{ url_for('admin_send_desp_kickoff_attendance_yousign', session_id=session.id) }}"
-            style="display:inline;"
-            onsubmit="return confirm('Confirmer l’envoi de la feuille de présence DESP à tous les stagiaires via Yousign ?');">
-        <button class="btn btn-primary" id="btnSendDespKickoffAttendance" type="submit">
-          {% if desp_kickoff_attendance.is_pending %}📨 Renvoyer les liens Yousign{% else %}✍️ Envoyer la présence via Yousign{% endif %}
-        </button>
-      </form>
-      {% endif %}
-      {% if desp_kickoff_attendance.is_pending %}
-      <span class="pill" title="Version en cours : le téléchargement contient uniquement les signatures déjà apposées.">Yousign : {{ desp_kickoff_attendance.signed_count }}/{{ desp_kickoff_attendance.signer_count }} signature(s)</span>
-      {% endif %}
-      {% if desp_kickoff_attendance.last_error %}
-      <span class="pill" title="{{ desp_kickoff_attendance.last_error }}">Yousign : erreur de synchronisation</span>
-      {% endif %}
+    {% if is_desp_initial and not show_desp_tabs %}
+    {{ desp_kickoff_tools() }}
+    {% elif not is_desp_initial and desp_kickoff_supported(session) %}
+    <a class="btn btn-outline" id="btnPreviewDespKickoff" href="{{ url_for('admin_desp_kickoff_pdf', session_id=session.id) }}" target="_blank" rel="noopener" title="Disponible automatiquement dans l’espace stagiaire dès le premier jour de formation">Prévisualiser le diaporama DESP</a>
     {% endif %}
     {% if is_ssiap_session and not is_read_only and registered_trainees|selectattr('ssiap_exam_status', 'equalto', 'certified')|list %}
     <form class="ssiap-diploma-generation-form" method="post" action="{{ url_for('admin_generate_ssiap_diplomas', session_id=session.id) }}" style="display:inline;" target="_blank">
@@ -898,25 +930,26 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
       </tr>
       {% endfor %}
-      {% for r in exam_retakes|default([]) %}
-      <tr class="exam-retake-roster" style="background:#fff3cd;color:#6b4500">
-        <td colspan="99" style="padding:16px 20px;border-left:4px solid #e7aa28">
-          <strong style="margin-right:14px">↻ Rattrapage examen</strong>
-          <a href="{{ url_for('admin_trainee_page',session_id=r.source_session,trainee_id=r.trainee_id) }}#rattrapage" style="font-weight:800;color:#6b4500">{{ r.trainee_name }}</a>
-          <span style="margin-left:14px">{{ r.kind }} · {{ r.exam_date_label }}{% if r.exam_time %} à {{ r.exam_time }}{% endif %}</span>
-          <span style="margin-left:14px">{% if r.total_cents %}Règlement confirmé{% else %}Offert · convention signée{% endif %}</span>
-          {% if r.convocation_url %}<span style="margin-left:14px"><a href="{{ r.convocation_url }}" target="_blank" rel="noopener">Prévisualiser la convocation</a> · <a href="{{ url_for('admin_trainee_page',session_id=r.source_session,trainee_id=r.trainee_id) }}#rattrapage">Gérer l’envoi</a></span>{% endif %}
-          <small style="display:block;margin-top:5px">{% if r.days %}{{ r.days|length }} journée{{ 's' if r.days|length > 1 }} de préparation et présentation à l’examen{% else %}Présentation à l’examen uniquement{% endif %}</small>
-          {% if ssiap_exam_supported and r.kind.startswith('SSIAP') %}
-          <span><a href="{{ url_for('admin_ssiap_exam_attendance', session_id=session.id) }}" target="_blank" rel="noopener">Feuille de présence de l’examen</a>
-          {% if r.days %} · <a href="{{ url_for('admin_ssiap_preparation_attendance', session_id=session.id, day='toutes') }}" target="_blank" rel="noopener">Feuilles de présence de préparation</a>{% endif %}</span>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
     </tbody>
   </table>
 </div>
+
+{% for r in exam_retakes|default([]) %}
+<article class="exam-retake-roster">
+  <div>
+    <span class="exam-retake-label">Rattrapage examen</span>
+    <a class="exam-retake-name" href="{{ url_for('admin_trainee_page',session_id=r.source_session,trainee_id=r.trainee_id) }}#rattrapage">{{ r.trainee_name }}</a>
+    <div class="exam-retake-date">{{ r.kind }} · {{ r.exam_date_label }}{% if r.exam_time %} à {{ r.exam_time }}{% endif %}
+      {% if r.days %} · {{ r.days|length }} journée{{ 's' if r.days|length > 1 }} de préparation{% endif %}
+    </div>
+  </div>
+  <div class="exam-retake-actions">
+    <span class="exam-retake-status">{% if r.total_cents %}✅ Paiement confirmé{% else %}✓ Offert · convention signée{% endif %}</span>
+    {% if r.convocation_url %}<a class="btn btn-outline" href="{{ r.convocation_url }}" target="_blank" rel="noopener">Voir la convocation</a>{% endif %}
+    <a class="btn btn-outline" href="{{ r.convention_url }}" target="_blank" rel="noopener">Voir la convention</a>
+  </div>
+</article>
+{% endfor %}
 
 {% if not is_read_only and not is_all_vtc and not is_vtc %}
 <dialog id="bulkImportDialog" class="bulk-import-dialog" aria-labelledby="bulkImportTitle" aria-describedby="bulkImportDescription">
@@ -4477,5 +4510,31 @@ applyRowFilters();
 {% include '_aps_digiforma_bulk_import.html' %}
 {% endif %}
 {% if ssiap_exam_supported %}{% include '_ssiap_exam_modal.html' %}{% endif %}
+{% if show_desp_tabs %}
+</div>
+<script>
+(() => {
+  const tabs = [...document.querySelectorAll('.desp-session-tabs [role="tab"]')];
+  function select(tab) {
+    for (const item of tabs) {
+      const active = item === tab;
+      item.setAttribute('aria-selected', String(active));
+      item.tabIndex = active ? 0 : -1;
+      document.getElementById(item.getAttribute('aria-controls')).hidden = !active;
+    }
+  }
+  for (const tab of tabs) {
+    tab.addEventListener('click', () => select(tab));
+    tab.addEventListener('keydown', event => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs[1] : tabs.find(item => item !== tab);
+      select(next);
+      next.focus();
+    });
+  }
+})();
+</script>
+{% endif %}
 {% endblock %}
 

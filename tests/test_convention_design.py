@@ -86,6 +86,20 @@ def test_employer_clauses_and_signature_artwork_are_unchanged(model):
     assert content_snapshot(as_bytes(doc)) == before
 
 
+def test_vae_employer_and_beneficiary_panel_is_outside_issuer_and_articles():
+    model = ROOT / 'templates_word/conventionvae.docx'
+    values = dict(nom_complet='EXEMPLE Camille', date_jour='05/11/2026', lieu_formation='Puget')
+    company = dict(name='Entreprise exemple', address='Puget', representative='C. Exemple',
+                   remote_rate='30', payment='Virement')
+    doc = company_convention.build_document(model, company, values)
+    before = content_snapshot(as_bytes(doc))
+    style_document(doc)
+    assert content_snapshot(as_bytes(doc)) == before
+    assert doc.tables[1].cell(0, 0).text.startswith('Entreprise financeuse')
+    assert all('Article 1' not in cell.text for cell in doc.tables[0].rows[0].cells)
+    assert any(p.text.startswith('Article 1 ') for p in doc.paragraphs)
+
+
 def test_apprenticeship_text_financial_values_and_signature_markers_are_unchanged():
     import bts_contract_documents as bts
     from tests.test_bts_contracts import assets, settings

@@ -197,6 +197,10 @@ def test_quote_does_not_charge_and_paid_batch_waits_for_dispatch(shop, merchant)
     assert learning.entitled(purchases(shop)[0]) and not purchases(shop)[0].get("activated_at")
     paid = send_accesses(shop, order)
     assert learning.entitled(paid) and paid["activated_at"]
+    active_ids = {learner["id"] for learner in paid["learners"]}
+    assert client.get(url + "?presence=1").json == dict.fromkeys(active_ids, False)
+    roster = client.get(url)
+    assert roster.status_code == 200 and "Hors ligne" in roster.text and "Ouvrir l’espace e-learning" in roster.text
     for learner in paid["learners"]:
         token = learning.access_token(host, paid, learner)
         assert learning.learner_context(all_data(shop), token)[1]["id"] == learner["id"]

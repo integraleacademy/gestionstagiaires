@@ -110,7 +110,7 @@
       </div>
     </div>
     {% if preview_mode %}
-    <span class="native-preview-badge">{{ 'Révisions complémentaires' if resource_mode else 'Mode aperçu' }}</span>
+    <span class="native-preview-badge">{{ 'Révisions complémentaires' if resource_mode else 'Assistance · lecture seule' if support_mode else 'Mode aperçu' }}</span>
     {% else %}
     <div class="native-live-metrics" aria-label="Suivi de la session">
       <div class="native-tracking-state" id="nativeTrackingState" data-state="connecting">
@@ -136,7 +136,7 @@
       <div class="native-sidebar__learner">
         {% if preview_mode %}
         <a class="native-back-link" href="{{ portal_url }}">← Retour aux modules</a>
-        <span>{{ 'Réviser librement' if resource_mode else 'Aperçu administrateur' }}</span>
+        <span>{{ 'Réviser librement' if resource_mode else 'Assistance stagiaire' if support_mode else 'Aperçu administrateur' }}</span>
         <strong>{{ course.counts.sections }} séquences · {{ activity_count }} activités</strong>
         {% else %}
         <a class="native-back-link" href="{{ path_url }}">← Tous mes modules</a>
@@ -188,7 +188,7 @@
         {% if preview_mode %}
         <section class="native-preview-notice" aria-label="Mode aperçu">
           <strong>{{ 'Ressources complémentaires' if resource_mode else 'Visualisation du contenu' }}</strong>
-          <p>{{ 'Ces révisions et vidéos sont accessibles séparément, hors des 14 heures du parcours principal. Aucun temps ni résultat n’est crédité et aucun geste pratique n’est validé.' if resource_mode and course.training_label == 'MAC APS' else 'Ces révisions, vidéos et préparations du présentiel restent en accès libre. Elles ne sont pas comptées dans votre temps à distance et ne valident aucun geste pratique.' if resource_mode else 'Parcourez librement les séquences et testez les questions. Aucun temps, score ou résultat stagiaire n’est enregistré.' }}</p>
+          <p>{{ 'Ces révisions et vidéos sont accessibles séparément, hors des 14 heures du parcours principal. Aucun temps ni résultat n’est crédité et aucun geste pratique n’est validé.' if resource_mode and course.training_label == 'MAC APS' else 'Ces révisions, vidéos et préparations du présentiel restent en accès libre. Elles ne sont pas comptées dans votre temps à distance et ne valident aucun geste pratique.' if resource_mode else 'Vous consultez le parcours à la position du stagiaire. Son temps de connexion et ses résultats sont préservés.' if support_mode else 'Parcourez librement les séquences et testez les questions. Aucun temps, score ou résultat stagiaire n’est enregistré.' }}</p>
         </section>
         {% endif %}
         {% if course.training_label == 'MAC APS' %}<p class="macaps-scope">Support de préparation et de révision MAC APS. L’ouverture temporaire au distanciel prévue par l’arrêté du 27 janvier 2025 se terminait le 31 décembre 2025. Ce suivi numérique ne vaut pas attestation réglementaire de stage.</p>{% endif %}

@@ -43,15 +43,23 @@ def test_questionnaires_group_blank_answers_and_versioned_correction(aps_case):
     person['uv_questionnaires'] = {'aps': {'2': {'version': uv.VERSION, 'score':20,
         'submitted_at':'2026-11-16', 'answers':{q['id']:q['answer'] for q in row['questions']}}}}
     query = {'trainee_id':[person['id'],'other'], 'uv':'2'}
+    for mode in ('blank', 'correction', 'answers'):
+        assert aps_case.client.get(base+'questionnaires.pdf',query_string={**query, 'mode':mode}).status_code == 409
+    for item in uv.bank()['courses']['aps']['units']:
+        number = item['number']
+        if uv.unit('aps', number):
+            person['uv_questionnaires']['aps'][str(number)] = dict(version=uv.VERSION, score=20, submitted_at='2026-11-16',
+                answers={q['id']:q['answer'] for q in item['questions']})
+    assert aps_case.client.get(base+'questionnaires.pdf',query_string=query).status_code == 409
+    query['trainee_id'] = person['id']
     blank = aps_case.client.get(base+'questionnaires.pdf',query_string=query)
     assert blank.status_code == 200 and 'inline' in blank.headers['Content-Disposition']
     blank_text = '\n'.join(p.extract_text() for p in PdfReader(BytesIO(blank.data)).pages)
-    assert 'Alice' in blank_text and 'Bob' in blank_text and 'Bonne réponse' not in blank_text
+    assert 'Alice' in blank_text and 'Bob' not in blank_text and 'Bonne réponse' not in blank_text
     answers = aps_case.client.get(base+'questionnaires.pdf',query_string={**query,'mode':'answers'})
     assert answers.status_code == 200
     text = '\n'.join(p.extract_text() for p in PdfReader(BytesIO(answers.data)).pages)
-    assert 'Alice' in text and 'Bob' not in text and '20/20' in text and 'Bonne réponse' in text
-    assert aps_case.client.get(base+'questionnaires.pdf',query_string={'trainee_id':'other','uv':'2','mode':'answers'}).status_code == 409
+    assert 'Alice' in text and '20/20' in text and 'Bonne réponse' in text
     assert aps_case.client.get(base+'questionnaires.pdf',query_string={**query,'uv':'1'}).status_code == 400
     with patch('admin_learning_documents.uv.unit', wraps=uv.unit) as unit:
         aps_case.client.get(base+'questionnaires.pdf',query_string={**query,'mode':'answers'})

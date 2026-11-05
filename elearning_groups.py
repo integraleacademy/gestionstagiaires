@@ -14,7 +14,7 @@ import time
 import unicodedata
 import uuid
 
-from flask import abort, flash, redirect, request, session, url_for
+from flask import abort, flash, jsonify, redirect, request, session, url_for
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.datastructures import MultiDict
 
@@ -371,10 +371,27 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
     def serializer():
         return URLSafeTimedSerializer(host.app.secret_key, salt="elearning-group-quote-v1")
 
+    def presence(view):
+        from aps_learning_followup import live_records
+        from elearning_reporting import ProgressReader
+        reader = ProgressReader(host)
+        by_order, result = {}, {}
+        for row in view["learners"]:
+            if row["status"] != "active":
+                continue
+            oid = row["order_id"]
+            if oid not in by_order:
+                records = live_records(reader, "el-" + oid)
+                by_order[oid] = None if records is None else {r[0] for r in records}
+            ids = by_order[oid]
+            result[row["id"]] = None if ids is None else row["id"] in ids
+        return result
+
     def detail(data, partner, group, *, errors=None, values=None, rows=None):
         view = group_view(data, group)
         from elearning_reporting import group_progress
         view["progress"] = group_progress(host, view)
+        view["presence"] = presence(view)
         return page("elearning_group.html", partner=partner, courses=learning.prices(partner), group=view,
                     errors=errors or [], values=values if values is not None else group,
                     rows=rows if rows is not None else view["pending_learners"])
@@ -437,7 +454,10 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
     @customer
     def elearning_group(gid):
         data, partner = partner_data()
-        return detail(data, partner, find(data, gid))
+        group = find(data, gid)
+        if request.args.get("presence") == "1":
+            return jsonify(presence(group_view(data, group)))
+        return detail(data, partner, group)
 
     @bp.post("/admin/organisme/e-learning/groupes/<gid>/supprimer")
     @customer

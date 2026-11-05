@@ -131,6 +131,15 @@ def test_real_progress_pinned_selection_active_time_and_exam_results_are_read_on
     assert "76.7" in html.text and "00 h 00 min 30 s" in html.text
     assert "SECRET-ANSWER" not in html.text and "private-tab-nonce" not in html.text
     assert "Activité exclue" not in html.text
+    support = report_url(order) + "/espace"
+    path = shop["client"].get(support)
+    assert path.status_code == 200 and "lecture seule" in path.text
+    assert support + "/report-fixture" in path.text and "Activité exclue" not in path.text
+    page = shop["client"].get(support + "/report-fixture")
+    assert page.status_code == 200 and "Assistance · lecture seule" in page.text
+    assert "nativePlayerConfig" not in page.text and "/api/elearning/tracking/start" not in page.text
+    assert learning.access_token(host, order, order["learners"][0]) not in path.text + page.text
+    assert shop["client"].get(support + "/wrong-module").status_code == 404
     csv = shop["client"].get(report_url(order) + "/connexions.csv")
     assert csv.status_code == 200 and csv.text.count("Module de la commande") == 1
     pdf = shop["client"].get(report_url(order) + "/attestation.pdf")
@@ -158,7 +167,7 @@ def test_full_completion_uses_actual_time_and_missing_snapshot_cannot_fall_back(
 def test_report_and_exports_are_tenant_scoped_and_require_activation(shop):
     order = submit(shop, free=True)
     url = report_url(order)
-    for suffix in ("", "/attestation.pdf", "/connexions.csv", "/programme.pdf"):
+    for suffix in ("", "/attestation.pdf", "/connexions.csv", "/programme.pdf", "/espace"):
         assert shop["client"].get(url + suffix).status_code == 404
     run(order)
     send_accesses(shop, order)
@@ -167,7 +176,7 @@ def test_report_and_exports_are_tenant_scoped_and_require_activation(shop):
     signup(other, email="other-report@example.test")
     login(other, email="other-report@example.test")
     anonymous = host.app.test_client()
-    for suffix in ("", "/attestation.pdf", "/connexions.csv", "/programme.pdf"):
+    for suffix in ("", "/attestation.pdf", "/connexions.csv", "/programme.pdf", "/espace"):
         assert other.get(url + suffix).status_code == 404
         assert anonymous.get(url + suffix).status_code == 302
         assert shop["client"].get(url.replace(order["learners"][0]["id"], "wrong-person") + suffix).status_code == 404
