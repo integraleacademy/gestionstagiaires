@@ -1339,7 +1339,7 @@ def _run_browser(spec, *, live=None, traffic=None):
                         items.append({"id": folder_id, "first_name": attendee.get("firstName"), "last_name": attendee.get("lastName")})
                 lists.append({"items": items, "total": raw.get("numberOfItems")})
                 del lists[:-2]
-            elif isinstance(raw, dict) and raw.get("id") == tail:
+            elif isinstance(raw, dict) and str(raw.get("id", "")) == tail:
                 # Keep only the specifically requested dossier, or a shortlisted
                 # result subsequently opened by this runner.
                 if tail == spec.get("folder_id") or tail == spec.get("selected_id"):
@@ -1505,24 +1505,30 @@ def _run_browser(spec, *, live=None, traffic=None):
                     vault.put("pending-attempt:"+spec["owner"],time.time(),ttl=900)
                 return read_pending_with_private_session(context,witness,checkpoint)
 
-            def run_proposal(witness, reused):
-                from edof_proposal_jobs import perform
+            def run_proposal(witness, reused, *, workspace_witness=False):
+                from edof_proposal_jobs import perform, FolderUnavailable, FolderIdentityMismatch
                 from edof_proposal import InvalidTerms
                 try:
                     # perform always reads the exact dossier again and checks identity,
                     # state and conditions before any fenced write. Only auth is reused.
-                    result = perform(context,witness,spec,os.environ["EDOF_CONNECTOR_DIRECTORY"],vault,API_PREFIX,EDOF_HOST)
+                    result = perform(context,witness,spec,os.environ["EDOF_CONNECTOR_DIRECTORY"],vault,
+                                     API_PREFIX,EDOF_HOST,workspace_witness=workspace_witness)
                 except InvalidTerms as exc:
                     return {"code":"proposal_refused","proposal_message":str(exc)[:350]}
-                except ValueError:
+                except FolderIdentityMismatch:
+                    return {"code":"identity_mismatch"}
+                except FolderUnavailable:
                     return {"code":"read_unconfirmed"}
-                if result["code"] != "identity_mismatch":
-                    vault.put("browser",session_cookies(context.storage_state()),ttl=86400)
-                    clock_event("verified",fresh=not reused)
-                    if live is not None:
-                        live["proposal_witness"] = (spec["owner"],spec["folder_id"],witness)
+                except ValueError:
+                    return {"code":"proposal_response_invalid"}
+                if result["code"] in {"identity_mismatch", "proposal_read_unavailable", "proposal_folder_missing"}:
+                    return result
+                vault.put("browser",session_cookies(context.storage_state()),ttl=86400)
+                clock_event("verified",fresh=not reused)
+                if live is not None and not workspace_witness:
+                    live["proposal_witness"] = (spec["owner"],spec["folder_id"],witness)
                 return {**result,"fresh_session":not reused,"gmail_code_used":gmail_code_used,
-                        "session_saved":result["code"] != "identity_mismatch"}
+                        "session_saved":True}
 
             def run_full(witness, reused):
                 nonlocal stage
@@ -1585,11 +1591,17 @@ def _run_browser(spec, *, live=None, traffic=None):
                             pending_result = save_pending(pending,witness,True)
                     return run_full(witness,True)
 
+            tried_proposal_read = False
             if warm and proposal_mode and vault and private_page(page.url):
                 previous = live.pop("proposal_witness", None)
-                if previous and previous[:2] == (spec["owner"],spec.get("folder_id")):
+                exact = previous is not None and previous[:2] == (spec["owner"],spec.get("folder_id"))
+                witness = previous[2] if exact else live.get("pending_witness")
+                if witness is not None:
                     stage = "dossier"
-                    return run_proposal(previous[2], True)
+                    tried_proposal_read = True
+                    result = run_proposal(witness, True, workspace_witness=not exact)
+                    if result["code"] != "proposal_read_unavailable":
+                        return result
 
             # A verified open tab can read just the filtered endpoint. Its prior request
             # stays in this browser's memory; only a fresh successful response counts.
@@ -1759,6 +1771,11 @@ def _run_browser(spec, *, live=None, traffic=None):
 
             if vault and signals.get("workspace_status") == 200:
                 vault.delete("efp-paused-day")
+            if proposal_mode and vault and private_witness is not None and not tried_proposal_read:
+                stage = "dossier"
+                result = run_proposal(private_witness, reused, workspace_witness=True)
+                if result["code"] != "proposal_read_unavailable":
+                    return result
             if spec["mode"] == "inspect_forms":
                 from edof_declaration_form import ENTRY, EXIT, button
                 inspected = {}

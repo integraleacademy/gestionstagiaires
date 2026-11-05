@@ -516,7 +516,10 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             catchup = store.catchup_status(owner, include_outcomes=True)
             rows = views.operation_rows(rows, dispatches, now, selected["revision"], (catchup or {}).get("outcomes"))
             counts = Counter(r["operation_bucket"] for r in rows)
-            if tab == "due":
+            counts["today"] = sum(r["scheduled_today"] for r in rows)
+            if tab == "today":
+                rows = sorted((r for r in rows if r["scheduled_today"]), key=lambda r: (r["scheduled"], r["folder_id"]))
+            elif tab == "due":
                 rows = [r for r in rows if "due" in r["tags"] and r["operation_bucket"] != "history"]
                 prioritize_rows(rows, now)  # Preserve the scope/order of old bookmarked links.
             else:
@@ -709,7 +712,10 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             if active_job:
                 message = ("Connexion et vérification des conditions du dossier sur EDOF." if active_job["mode"] in {"proposal_send","proposal_check"}
                            else "Une opération EDOF est déjà en cours. Votre dossier sera transmis dès qu’elle se termine.")
+        stopped_before_send = status == "error" and not work["phase"] and (
+            work["result_code"] in {"read_unconfirmed", "proposal_read_unavailable"} or message == proposals.read_failure_message(""))
         return dict(status=status, label=proposals.LABELS[status], message=message, updated=work["updated"],
+                    stopped_before_send=stopped_before_send,
                     poll_url=url_for("integrale_edof.proposal_send_status",folder=folder,ticket=work["token"]),
                     detail_url=url_for("integrale_edof.index",section="requests",tab="waiting" if status=="confirmed" else "request",folder=folder))
 

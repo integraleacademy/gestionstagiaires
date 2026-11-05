@@ -22,7 +22,7 @@ GROUP_TABS = {
     "all": {"all": "Tous les dossiers", "unlinked": "À associer", "anomaly": "À vérifier"},
 }
 AUTOMATION_TABS = {
-    "overdue": "En retard", "attention": "À compléter / À vérifier",
+    "today": "Prévu aujourd’hui", "overdue": "En retard", "attention": "À compléter / À vérifier",
     "blocked": "Bloquées / En erreur", "running": "En cours",
     "planned": "À venir",
 }
@@ -123,6 +123,7 @@ def operation_rows(rows, dispatches, now, revision, outcomes=None):
         else:
             bucket, note = "planned", "Échéance à venir"
         result.append({**row, "action": action, "scheduled": scheduled, "block": block,
+                       "scheduled_today": bool(current and scheduled and scheduled.date() == now.date() and bucket != "history"),
                        "due": bool(scheduled and scheduled <= now and bucket not in {"history", "planned"}),
                        "dispatch_status": status, "catchup_outcome": outcome, "operation_bucket": bucket,
                        "operation_note": note, "operation_changed": changed,

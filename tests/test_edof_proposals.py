@@ -330,3 +330,58 @@ def test_background_offer_preserves_input_and_focus_in_chromium(site):
         assert page.locator(".step-programme").evaluate("(e) => e.open")
         assert "proposal_read=" not in page.url
         browser.close()
+
+
+@pytest.mark.parametrize("phase", ["", "saving", "validating"])
+def test_missing_read_reports_which_write_was_possible(conn, phase):
+    spec = prepare(conn)
+    if phase:
+        assert jobs.fence(conn.path, spec, phase)
+    jobs.complete(conn.path, spec, {"code":"read_unconfirmed"}, jobs.LEGACY_READ_MESSAGE)
+    record = jobs.record(conn.path, FOLDER, "owner")
+    assert record["status"] == ("uncertain" if phase else "error")
+    assert record["message"] == jobs.read_failure_message(phase)
+    assert jobs.LEGACY_READ_MESSAGE not in record["message"]
+    with jobs.database(conn.path) as db:
+        db.execute("UPDATE inscription_proposals SET message=? WHERE token=?", (jobs.LEGACY_READ_MESSAGE,spec["token"]))
+    assert jobs.record(conn.path, FOLDER, "owner")["message"] == record["message"]
+
+
+@pytest.mark.parametrize("url", [URL.replace(directory.SIRET, "another-siret"), URL.replace(EDOF_HOST, "example.invalid"),
+                                 URL.replace("https:", "http:"), URL.replace("/private/", "/public/")])
+def test_proposal_cannot_use_unrelated_workspace_credentials(conn, url):
+    spec = prepare(conn)
+    conn.witness.url = url
+    conn.portal.get = Mock(side_effect=AssertionError("unexpected request"))
+    result = jobs.perform(conn.ctx,conn.witness,spec,conn.path,conn.vault,API_PREFIX,EDOF_HOST,workspace_witness=True)
+    assert result["code"] == "identity_mismatch" and not conn.portal.writes
+
+
+def test_workspace_read_failure_before_and_after_edit(conn):
+    spec = prepare(conn)
+    conn.witness.url = URL.rsplit("/", 1)[0] + "/pad"
+    original_get = conn.portal.get
+    def unavailable(url, **kwargs):
+        return conn.portal.response(url, 503, {})
+    conn.portal.get = unavailable
+    def perform():
+        return jobs.perform(conn.ctx, conn.witness, spec, conn.path, conn.vault, API_PREFIX,
+                            EDOF_HOST, workspace_witness=True)
+    assert perform()["code"] == "proposal_read_unavailable"
+    assert jobs.record(conn.path, FOLDER, "owner")["phase"] == "" and not conn.portal.writes
+    def lose_read_after_edit(url, **kwargs):
+        return unavailable(url) if conn.portal.writes else original_get(url, **kwargs)
+    conn.portal.get = lose_read_after_edit
+    with pytest.raises(jobs.FolderUnavailable):
+        perform()
+    assert jobs.record(conn.path, FOLDER, "owner")["phase"] == "saving" and conn.portal.writes == [URL]
+
+
+def test_workspace_read_wrong_holder_never_writes(conn):
+    spec = prepare(conn)
+    conn.witness.url = URL.rsplit("/", 1)[0] + "/pad"
+    conn.portal.raw["attendee"]["lastName"] = "Autre personne"
+    with pytest.raises(jobs.FolderIdentityMismatch):
+        jobs.perform(conn.ctx, conn.witness, spec, conn.path, conn.vault, API_PREFIX,
+                     EDOF_HOST, workspace_witness=True)
+    assert not conn.portal.writes

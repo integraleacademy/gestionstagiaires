@@ -103,3 +103,30 @@ def test_automations_show_actions_and_legacy_billing_links_find_dossiers(site):
         section, group, _, tab = views.navigation(args)
         assert (section, group, tab) == expected
         assert site.client.get("/admin/edof-test", query_string=args).status_code == 200
+
+
+def test_today_counter_lists_only_current_actions_due_on_the_paris_day(site, monkeypatch):
+    # Still the previous UTC day. The entry at 08:00 and exit at 18:00 are both due today.
+    instant = dt.datetime(2026, 11, 4, 23, 30, tzinfo=dt.timezone.utc)
+    class Clock(dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return instant.astimezone(tz)
+    monkeypatch.setattr(dashboard.dt, "datetime", Clock)
+    key = edof_directory.record_key(site.owner)
+    snap = site.vault.get(key)
+    base = snap["rows"]["100000"]
+    specs = [("600001","accepted","2026-11-05","2026-11-12"), ("600002","inTraining","2026-10-26","2026-11-05"),
+             ("600003","accepted","2026-11-04","2026-11-10"), ("600004","accepted","2026-11-06","2026-11-11"),
+             ("600005","serviceDoneValidated","2026-10-22","2026-11-05")]
+    snap["rows"] = {f:{**base,"folder_id":f,"state":state,"session_start_date":start,"session_end_date":end}
+                    for f,state,start,end in specs}
+    site.vault.put(key, snap)
+    def check(query, ids):
+        html = site.client.get("/admin/edof-test", query_string={"section":"automations","tab":"today","q":query}).text
+        assert table_ids(html) == ids
+        assert re.search(r'<strong>'+str(len(ids))+r'</strong><span>Prévu aujourd’hui</span>', html)
+    check("", ["600001", "600002"])
+    instant += dt.timedelta(hours=12)
+    check("", ["600001", "600002"])
+    check("600002", ["600002"])

@@ -4,6 +4,7 @@ import json
 import secrets
 import time
 import uuid
+from urllib.parse import urlsplit
 
 from cpf_provider import ProviderStore
 import edof_automation_audit as audit
@@ -15,7 +16,11 @@ PENDING = {"notprocessed","not processed","tobeprocessed","to be processed","a t
 WAITING = {"validated","waitingacceptation","en attente de validation du titulaire"}
 ADVANCED = {"accepted","accepte","intraining","terminated","servicedonedeclared","servicedonevalidated","billed","paid"}
 BUSY = {"queued","saving","validating","checking","uncertain"}
+LEGACY_READ_MESSAGE = "La réponse du dossier n’a pas été reçue. La lecture autonome reste à valider."
 MESSAGES = {
+    "proposal_read_unavailable":"EDOF n’a pas renvoyé les conditions de ce dossier. Vous pouvez relire l’offre depuis sa fiche.",
+    "proposal_folder_missing":"EDOF ne trouve plus ce numéro de dossier pour cet établissement.",
+    "proposal_response_invalid":"Le contenu renvoyé par EDOF pour ce dossier est incomplet.",
     "proposal_loaded":"Les conditions de l’offre EDOF ont été chargées.",
     "proposal_confirmed":"Proposition envoyée au titulaire et confirmée par EDOF.",
     "proposal_changed":"Le dossier a changé dans EDOF. Rechargez ses conditions avant de valider.",
@@ -77,10 +82,23 @@ def finish_read(path,spec,note):
         db.execute("UPDATE proposal_reads SET status='finished',updated=?,message=? WHERE token=?", (time.time(),note,spec["token"]))
 
 
+def read_failure_message(phase):
+    if phase == "validating":
+        return "L’envoi a été lancé. EDOF n’a pas confirmé sa réception. Cliquez sur « Vérifier la réception dans EDOF » avant tout nouvel envoi."
+    if phase == "saving":
+        return "La proposition n’a pas été envoyée au titulaire. Cliquez sur « Vérifier la réception dans EDOF » pour savoir si les modifications ont été enregistrées."
+    return "Aucune proposition envoyée. L’application n’a pas pu relire le dossier avant l’envoi. Vous pouvez relancer la transmission depuis cette fiche."
+
+
 def record(path, folder, owner):
     with closing(database(path)) as db:
         row = db.execute("SELECT * FROM inscription_proposals WHERE folder=? AND owner=?", (folder,owner)).fetchone()
-    return {**dict(row),"terms":json.loads(row["terms"])} if row else None
+    if not row:
+        return None
+    message = row["message"]
+    if message == LEGACY_READ_MESSAGE:
+        message = read_failure_message(row["phase"])
+    return {**dict(row),"message":message,"terms":json.loads(row["terms"])}
 
 
 def enqueue(path, owner, revision, row, source, values):
@@ -145,6 +163,8 @@ def complete(path, spec, result, message):
         r = db.execute("SELECT * FROM inscription_proposals WHERE token=?", (spec["token"],)).fetchone()
         if not r or r["status"] in {"confirmed","error"}:
             return
+        if code in {"read_unconfirmed", "proposal_read_unavailable"}:
+            message = read_failure_message(r["phase"])
         receipt = result.get("proposal_receipt")
         if code=="proposal_confirmed" and receipt and receipt["folder_id"] == r["folder"]:
             state = "confirmed"
@@ -201,12 +221,27 @@ def remember_own_edit(vault, owner, folder, source, signature):
         vault.put(key, {**draft,"signature":source["signature"]}, ttl=86400)
 
 
-def perform(context, witness, spec, path, vault, prefix, origin):
+class FolderUnavailable(Exception):
+    pass
+
+
+class FolderIdentityMismatch(Exception):
+    pass
+
+
+def perform(context, witness, spec, path, vault, prefix, origin, *, workspace_witness=False):
     """Use only the two fixed same-establishment PUTs used by the official portal."""
+    from playwright.sync_api import Error as BrowserError
     folder = spec["folder_id"]
     target = "https://"+origin+prefix+folder
-    if not directory.ID_RE.fullmatch(folder) or not witness or witness.method != "GET" or witness.url != target:
+    if not directory.ID_RE.fullmatch(folder) or not witness or witness.method != "GET":
         return {"code":"identity_mismatch"}
+    if witness.url != target:
+        url = urlsplit(witness.url)
+        trusted_prefix = f"/edof-api/v1/api/private/siret/{directory.SIRET}/"
+        if not (workspace_witness and (url.scheme, url.netloc) == ("https", origin)
+                and url.path.startswith(trusted_prefix)):
+            return {"code":"identity_mismatch"}
     headers = directory.private_headers(witness)
     version = None
 
@@ -238,12 +273,17 @@ def perform(context, witness, spec, path, vault, prefix, origin):
     def fresh():
         status, raw = call("get", target)
         if status != 200 or not isinstance(raw,dict):
-            raise ValueError("La relecture du dossier EDOF a échoué.")
+            raise FolderUnavailable(status)
         row = directory.project(raw)
         if row["folder_id"] != folder or any(not row[k] or directory.normalized(row[k]) != directory.normalized(spec[k])
                                                for k in ("first_name","last_name")):
-            raise ValueError("L’identité du dossier a changé.")
-        return raw,row,form.project(raw)
+            raise FolderIdentityMismatch()
+        try:
+            source = form.project(raw)
+        except form.InvalidTerms as exc:
+            # A malformed official response is not a refusal of a submitted offer.
+            raise ValueError("Conditions EDOF illisibles.") from exc
+        return raw,row,source
 
     def reject(status, body):
         if status == 412:
@@ -253,7 +293,14 @@ def perform(context, witness, spec, path, vault, prefix, origin):
             return {"code":"proposal_refused","proposal_message":directory.text_field(explanation,350)}
         return {"code":"proposal_uncertain"}
 
-    raw,row,source = fresh()
+    # Only this first GET may fall back to reopening the portal. Once a write
+    # has begun, its durable phase must go through read-only reconciliation.
+    try:
+        raw,row,source = fresh()
+    except FolderUnavailable as exc:
+        return {"code":"proposal_folder_missing" if exc.args == (404,) else "proposal_read_unavailable"}
+    except (BrowserError, OSError):
+        return {"code":"proposal_read_unavailable"}
     state = directory.normalized(row["state"])
     options = vault.get(option_key(spec["owner"])) or {}
     if spec["mode"]=="proposal_read":

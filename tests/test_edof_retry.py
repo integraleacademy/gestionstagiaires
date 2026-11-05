@@ -135,7 +135,8 @@ def test_pause_does_not_close_live_worker_or_consume_a_code(monkeypatch):
     process.wait.assert_not_called()
 
 
-def test_warm_proposal_checks_fresh_data_without_reloading_the_portal(conn,monkeypatch):
+@pytest.mark.parametrize("exact", [True, False])
+def test_warm_proposal_checks_fresh_data_without_reloading_the_portal(conn,monkeypatch,exact):
     from playwright.sync_api import sync_playwright, Page, APIRequestContext
     import edof_server_browser as runner
     spec=prepare(conn)
@@ -152,7 +153,12 @@ def test_warm_proposal_checks_fresh_data_without_reloading_the_portal(conn,monke
         context.route('**/*',lambda route:route.fulfill(content_type='text/html',body='Dossier EDOF'))
         page=context.new_page()
         page.goto(runner.DETAIL_PREFIX+FOLDER)
-        live={'pw':pw,'browser':browser,'page':(context,page),'proposal_witness':('owner',FOLDER,conn.witness)}
+        live={'pw':pw,'browser':browser,'page':(context,page)}
+        if exact:
+            live['proposal_witness'] = ('owner',FOLDER,conn.witness)
+        else:
+            conn.witness.url = 'https://'+runner.EDOF_HOST+runner.API_PREFIX+'pad?state=notProcessed'
+            live['pending_witness'] = conn.witness
         monkeypatch.setattr(Page,'reload',Mock(side_effect=AssertionError('Unexpected full page reload')))
         monkeypatch.setattr(runner,'open_workspace_or_login',Mock(side_effect=AssertionError('Unexpected login')))
         reads=[]
@@ -164,7 +170,7 @@ def test_warm_proposal_checks_fresh_data_without_reloading_the_portal(conn,monke
         result=runner.run_browser({**spec,'shared_job':True},live=live)
         assert result['code']=='proposal_confirmed' and not result['gmail_code_used']
         assert reads==[URL,URL,URL] and conn.portal.writes==[URL,URL+'/status']
-        assert 'proposal_witness' in live
+        assert ('proposal_witness' in live) == exact
         browser.close()
 
 
