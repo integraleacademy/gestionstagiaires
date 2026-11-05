@@ -760,13 +760,19 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
                     result["import_error"] = str(exc)
                 except (OSError, sqlite3.Error):
                     result["import_error"] = "Enregistrement local indisponible. Réessayez depuis le dossier."
-            if result.get("code") == "directory_ready" and store.data_file and spec.get("owner"):
+            if result.get("code") in {"directory_ready", "requests_ready"} and store.data_file and spec.get("owner"):
                 try:
-                    from integrale_edof_sync import process_directory
-                    snapshot = Vault(store.directory, store.connector_key).get(directory.record_key(spec["owner"]))
-                    if snapshot:
-                        snapshot = directory.dated_snapshot(snapshot)
-                        process_directory(store, snapshot, owner=spec["owner"])
+                    from integrale_edof_sync import observe_pending, process_directory
+                    owner = spec["owner"]
+                    private = Vault(store.directory, store.connector_key)
+                    if result["code"] == "requests_ready":
+                        pending = private.get(directory.pending_key(owner))
+                        if pending:
+                            observe_pending(store, directory.dated_snapshot(pending), owner)
+                    else:
+                        snapshot = private.get(directory.record_key(owner))
+                        if snapshot:
+                            process_directory(store, directory.dated_snapshot(snapshot), owner=owner)
 
                 except (OSError, ValueError, sqlite3.Error):
                     # Keep the verified source snapshot. The next full sync
