@@ -84,6 +84,11 @@ class ProviderStore:
         state = self.state(db)
         if revision != state["revision"]:
             raise ProviderUnavailable("Le choix a changé depuis l’affichage de cette page. Actualisez-la.")
+        if on_production_service() and target == "wedof" and state["provider"] != target:
+            if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='cpf_declarations'").fetchone():
+                outstanding = db.execute("SELECT folder FROM cpf_declarations WHERE status IN ('sending','uncertain') LIMIT 1").fetchone()
+                if outstanding:
+                    raise ProviderUnavailable(f"Vérifiez d’abord la réception du dossier {outstanding[0]} avant la bascule.")
         if record or state["provider"] != target:
             db.execute("INSERT INTO selections VALUES (?, ?, ?, ?)", (revision + 1, target, time.time(), actor))
         return self.state(db)
@@ -91,6 +96,14 @@ class ProviderStore:
 
 def on_test_service():
     return os.environ.get("RENDER_SERVICE_ID") == TEST_SERVICE_ID
+
+
+def on_production_service():
+    return os.environ.get("RENDER_SERVICE_ID") == PROD_SERVICE_ID
+
+
+def production_edof_ready():
+    return on_production_service() and Path("/data/edof-production.ready").is_file()
 
 
 def current_store():

@@ -25,3 +25,19 @@ register_crm_cnaps_tracking_api(
 register_production_control(legacy_app)
 register_wedof_guards(app)
 register_maintenance_jobs(legacy_app)
+
+from cpf_provider import on_production_service, production_edof_ready
+if on_production_service():
+    from edof_readonly_test import register_edof_readonly_test
+    from edof_server_test import register_edof_server_test
+    if production_edof_ready():
+        register_edof_readonly_test(legacy_app)
+        register_edof_server_test(legacy_app)
+    else:
+        @app.get("/admin/integrale-edof")
+        @legacy_app.admin_login_required
+        def edof_handoff_pending():
+            from flask import abort
+            if not legacy_app._is_super_admin_session():
+                abort(403)
+            return "Intégrale EDOF est en cours de transfert depuis Test V2.", 503

@@ -3245,9 +3245,9 @@ def inject_read_only():
     admin_logged_in = bool(session.get("admin_logged_in"))
     can_view_notifications = admin_logged_in and _admin_can_view_notifications()
     ctx_data: Optional[Dict[str, Any]] = None
-    # The BTS area is intentionally independent from the historical data.json
-    # payload. Its navigation badges stay neutral instead of loading that file.
-    if admin_logged_in and request.endpoint != "admin_bts":
+    # These dashboards use their own data sources. Keep navigation badges neutral
+    # instead of reloading the full trainee store for every filter or page change.
+    if admin_logged_in and request.endpoint not in {"admin_bts", "integrale_edof.index", "integrale_edof_legacy.index"}:
         try:
             ctx_data = load_data()
         except Exception:
@@ -20299,7 +20299,8 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
         summary.append(f"Lieu: {location}")
     case_id = str(entry.get("folder_id") or payload.get("externalId") or "").strip()
     if case_id:
-        summary.append(f"Dossier WeDoF: {case_id}")
+        source = "Intégrale EDOF" if entry.get("provider") == "integrale_edof" else "WeDoF"
+        summary.append(f"Dossier {source}: {case_id}")
     if entry.get("event"):
         summary.append(f"Événement: {entry.get('event')}")
 
@@ -27413,40 +27414,8 @@ def api_unarchive_session(session_id: str):
 # API - Trainees (create + update for autosave)
 # =========================
 
-@app.post("/api/sessions/<session_id>/trainees/create")
-@admin_login_required
-@admin_write_required
-def api_create_trainee(session_id: str):
-    data = load_data()
-    s = find_session(data, session_id)
-    if not s:
-        return jsonify({"ok": False, "error": "session_not_found"}), 404
-
-    payload = request.get_json(silent=True) or {}
-    afc_candidate_id = str(payload.get("afc_candidate_id") or "").strip()
-    if afc_candidate_id:
-        try:
-            candidate = afc_enrolments.validate(sys.modules[__name__], data, s, afc_candidate_id)
-        except ValueError as exc:
-            return jsonify(ok=False, error=str(exc)), 400
-        payload = {**afc_enrolments.fields(candidate), **payload}
-    crm_prefill_id = str(payload.get("crm_prefill") or "").strip()
-    crm_transfer = None
-    if crm_prefill_id:
-        now = datetime.datetime.now(datetime.timezone.utc)
-        crm_transfer = next((item for item in data.get("crm_prefill_transfers", [])
-                             if hmac.compare_digest(str(item.get("id") or ""), crm_prefill_id)), None)
-        if not crm_transfer:
-            return jsonify({"ok": False, "error": "crm_prefill_not_found"}), 410
-        try:
-            expires_at = datetime.datetime.fromisoformat(str(crm_transfer.get("expires_at") or ""))
-            if expires_at.tzinfo is None: expires_at = expires_at.replace(tzinfo=datetime.timezone.utc)
-        except (TypeError, ValueError):
-            expires_at = now
-        if expires_at <= now:
-            return jsonify({"ok": False, "error": "crm_prefill_expired"}), 410
-        if crm_transfer.get("matched_session_id") != session_id:
-            return jsonify({"ok": False, "error": "crm_session_mismatch"}), 409
+def _new_session_trainee(s, payload):
+    """Build a standard registration, including the session-specific document schema."""
     last_name = normalize_last_name(payload.get("last_name") or "")
     first_name = normalize_first_name(payload.get("first_name") or "")
     birth_date = (payload.get("birth_date") or "").strip()
@@ -27461,14 +27430,9 @@ def api_create_trainee(session_id: str):
     other_amount = (payload.get("other_amount") or "").strip()
     carte_pro_ok = bool(payload.get("carte_pro_ok"))
     vtc_real_training_dates = (payload.get("vtc_real_training_dates") or "").strip()
-    afc_candidate_id = (payload.get("afc_candidate_id") or "").strip()
-
-    # ✅ nouveau : choisir si on envoie l'accès tout de suite
-    send_access = payload.get("send_access", True)
-    send_access = True if send_access in (True, "true", "1", 1, "yes", "on") else False
 
     if not last_name or not first_name:
-        return jsonify({"ok": False, "error": "missing_name"}), 400
+        raise ValueError("missing_name")
 
     trainee_id = "TRN-" + uuid.uuid4().hex[:8].upper()
 
@@ -27480,10 +27444,7 @@ def api_create_trainee(session_id: str):
 
     pathway_choice = str(payload.get("ssiap_pathway") or "ssiap")
     if ssiap_pathways.enabled(s) or payload.get("ssiap_pathway"):
-        try:
-            ssiap_pathways.validate_choice(s, pathway_choice)
-        except ValueError as exc:
-            return jsonify(ok=False, error=str(exc)), 400
+        ssiap_pathways.validate_choice(s, pathway_choice)
         if ssiap_pathways.enabled(s):
             proposed_price = ssiap_pathways.settings(s)[pathway_choice + "_price"]
             if proposed_price != "":
@@ -27557,17 +27518,7 @@ def api_create_trainee(session_id: str):
         "ypareo_cursus_id": "",
         "ypareo_cursus_erreur": "",
     }
-    try:
-        t.update(afc_schedule.trainee_update(s, t, payload))
-    except ValueError as exc:
-        return jsonify(ok=False, error=str(exc)), 400
-    if crm_transfer:
-        crm_payload = crm_transfer.get("payload") or {}
-        t["crm_contact_id"] = str(crm_payload.get("crm_contact_id") or "")
-        t["crm_source"] = str(crm_payload.get("source") or "")
-        t["crm_parcours"] = str(crm_payload.get("parcours") or "")
-        t["comment"] = str(crm_payload.get("commentaires") or "")
-
+    t.update(afc_schedule.trainee_update(s, t, payload))
     if ssiap_pathways.enabled(s):
         t["ssiap_pathway"] = pathway_choice
 
@@ -27578,6 +27529,62 @@ def api_create_trainee(session_id: str):
     from elearning_native.vtc_enrolments import mark_new_vtc_enrolment
     mark_new_vtc_enrolment(s, t)
     vtc_elearning_activation.schedule_new_enrolment(sys.modules[__name__], s, t)
+
+    return t
+
+
+@app.post("/api/sessions/<session_id>/trainees/create")
+@admin_login_required
+@admin_write_required
+def api_create_trainee(session_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    payload = request.get_json(silent=True) or {}
+    afc_candidate_id = str(payload.get("afc_candidate_id") or "").strip()
+    if afc_candidate_id:
+        try:
+            candidate = afc_enrolments.validate(sys.modules[__name__], data, s, afc_candidate_id)
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 400
+        payload = {**afc_enrolments.fields(candidate), **payload}
+    crm_prefill_id = str(payload.get("crm_prefill") or "").strip()
+    crm_transfer = None
+    if crm_prefill_id:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        crm_transfer = next((item for item in data.get("crm_prefill_transfers", [])
+                             if hmac.compare_digest(str(item.get("id") or ""), crm_prefill_id)), None)
+        if not crm_transfer:
+            return jsonify({"ok": False, "error": "crm_prefill_not_found"}), 410
+        try:
+            expires_at = datetime.datetime.fromisoformat(str(crm_transfer.get("expires_at") or ""))
+            if expires_at.tzinfo is None: expires_at = expires_at.replace(tzinfo=datetime.timezone.utc)
+        except (TypeError, ValueError):
+            expires_at = now
+        if expires_at <= now:
+            return jsonify({"ok": False, "error": "crm_prefill_expired"}), 410
+        if crm_transfer.get("matched_session_id") != session_id:
+            return jsonify({"ok": False, "error": "crm_session_mismatch"}), 409
+    try:
+        t = _new_session_trainee(s, payload)
+    except ValueError as exc:
+        return jsonify(ok=False, error=str(exc)), 400
+    trainee_id, public_token = t["id"], t["public_token"]
+    first_name, email, phone = t["first_name"], t["email"], t["phone"]
+    training_type = _session_get(s, "training_type", "")
+    show_vae = training_type == "DIRIGEANT VAE"
+    send_access = payload.get("send_access", True) in (True, "true", "1", 1, "yes", "on")
+    if crm_transfer:
+        crm_payload = crm_transfer.get("payload") or {}
+        t["crm_contact_id"] = str(crm_payload.get("crm_contact_id") or "")
+        t["crm_source"] = str(crm_payload.get("source") or "")
+        t["crm_parcours"] = str(crm_payload.get("parcours") or "")
+        t["comment"] = str(crm_payload.get("commentaires") or "")
+
+    trainees = _session_trainees_list(s)
+    trainees.insert(0, t)
 
     enrolled_at = ""
     if afc_candidate_id:
