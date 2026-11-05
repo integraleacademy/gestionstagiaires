@@ -17,7 +17,8 @@
 {% elif row.stage=='billing' %}
 {% if pay %}<a class="button" rel="noreferrer" href="{{pay}}">Payer {{150 if row.offer=='vehicule' else 600}} € par carte →</a>
 {% else %}<p>Votre paiement est en cours de préparation ou de vérification auprès de Qonto. Cette page se met à jour automatiquement.</p>{% endif %}
-<p>Après votre règlement, revenez sur cette page pour retrouver votre confirmation et vos documents.</p>
+<p>Après votre règlement, revenez ici pour retrouver votre confirmation et vos documents.</p>
+<form method="post"><input type="hidden" name="csrf_token" value="{{csrf}}"><button name="action" value="refresh">Vérifier mon paiement</button></form>
 {% elif row.stage=='paid' %}<p>Votre règlement de {{150 if row.offer=='vehicule' else 600}} € est confirmé. Conservez vos documents et transmettez votre convocation CMA au centre dès réception.</p>
 {% elif row.stage=='funded' %}<p>Votre financement CPF est confirmé par le centre. Votre inscription et vos justificatifs de financement sont disponibles sur Mon Compte Formation.</p>
 {% elif row.stage=='withdrawn' %}<p>Votre demande d’annulation est enregistrée. Le centre vous répondra par e-mail.</p>

@@ -197,8 +197,8 @@ def register(app, host):
     def earliest():
         return (dt.date.fromisoformat(exam_retakes.today()) + dt.timedelta(days=15)).isoformat()
 
-    def render(page, **values):
-        return render_template("vtc_orders/"+page+".html", csrf=csrf_token(), offers=OFFERS, stages=STAGES,
+    def render(template, **values):
+        return render_template("vtc_orders/"+template+".html", csrf=csrf_token(), offers=OFFERS, stages=STAGES,
                                cma=CMA, booking=BOOKING, today=exam_retakes.today(), **values)
 
     @bp.after_request
@@ -272,6 +272,12 @@ def register(app, host):
                         row["previous_stage"]=row["stage"]
                         row["stage"]="withdrawn"
                         row["withdrawn_at"]=exam_retakes.now()
+                    elif action=="refresh" and row["stage"] in {"billing","contract"}:
+                        if time.time() - row.get("last_refresh",0) < 30:
+                            return redirect(url_for(".status",key=key),303)
+                        row["last_refresh"]=time.time()
+                    else:
+                        return redirect(url_for(".status",key=key),303)
                     row["due"]=0
                     store.save(row)
                 exam_retakes.wake_worker(host)
