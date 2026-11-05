@@ -1,10 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-.desp-session-tabs {display:flex; gap:8px; border-bottom:1px solid #d5deea; margin:12px 0 18px}
-.desp-session-tabs button {padding:10px 16px; border:0; border-bottom:3px solid transparent; border-radius:6px 6px 0 0; background:none; font:inherit; font-weight:700; color:#526477; cursor:pointer}
-.desp-session-tabs button[aria-selected="true"] {color:#123e69; border-color:#1d5492; background:#eef5fc}
-.desp-session-panel {padding:18px; border:1px solid #d9e3ee; border-radius:12px; background:white}
+#despKickoffDialog {width:min(680px,calc(100vw - 24px))}
+#despKickoffDialog .session-kickoff-actions {padding:20px 24px}
 .exam-retake-roster {display:flex; justify-content:space-between; align-items:center; gap:18px}
 .session-kickoff-actions,.exam-retake-actions {display:flex; flex-wrap:wrap; gap:8px; align-items:center}
 .session-kickoff-actions form {margin:0}
@@ -174,18 +172,6 @@
       <span class="pill" title="{{ desp_kickoff_attendance.last_error }}">Yousign : erreur de synchronisation</span>
       {% endif %}
 {% endmacro %}
-{% if show_desp_tabs %}
-<div class="desp-session-tabs" role="tablist" aria-label="Session DESP">
-  <button type="button" id="despRosterTab" role="tab" aria-selected="true" aria-controls="despRosterPanel">Stagiaires</button>
-  <button type="button" id="despKickoffTab" role="tab" aria-selected="false" tabindex="-1" aria-controls="despKickoffPanel">Réunion de démarrage</button>
-</div>
-<section class="desp-session-panel" id="despKickoffPanel" role="tabpanel" aria-labelledby="despKickoffTab" hidden>
-  <div class="session-kickoff-actions">
-    {{ desp_kickoff_tools() }}
-  </div>
-</section>
-<div id="despRosterPanel" role="tabpanel" aria-labelledby="despRosterTab">
-{% endif %}
 {% include 'partials/afc_documents.html' %}
 
 {% if session.afc_enabled and ssiap_exam_supported %}
@@ -203,7 +189,7 @@
   <h2 style="margin:0;">Stagiaires</h2>
 
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-    {% if is_desp_initial and not show_desp_tabs %}
+    {% if is_desp_initial and not show_desp_kickoff_dialog %}
       <a class="btn btn-primary" id="btnManageDespExam" href="{{ url_for('admin_exam_detail', session_id=session.id) }}">🎓 Gestion examen</a>
     {% endif %}
     <div class="trainee-search-field" role="search">
@@ -258,6 +244,7 @@
     <a class="btn btn-outline" id="btnAfcHoursExport" href="{{ url_for('admin_afc_hours', session_id=session.id) }}">Export Excel AFC</a>
     {% endif %}
     {% if is_desp_initial and security_jury_supported %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Examen</button>{% endif %}
+    {% if show_desp_kickoff_dialog %}<button class="btn btn-primary" id="btnDespKickoff" type="button" aria-haspopup="dialog" aria-controls="despKickoffDialog">Réunion de démarrage</button>{% endif %}
     {% if ssiap_exam_supported and not session.afc_enabled %}<button class="btn btn-primary" id="btnSsiapExam" type="button" aria-haspopup="dialog">Examen</button>{% endif %}
     {% if is_aps_training and session.aps_elearning_enabled and not is_native_aps and not is_read_only %}
     <button class="btn btn-outline" id="btnImportDigiforma" type="button">Importer les relevés Digiforma</button>
@@ -281,7 +268,7 @@
        target="_blank" rel="noopener"
        title="Imprimer la feuille de présence de la réunion de démarrage APS">📝 Feuille de présence e-learning</a>
     {% endif %}
-    {% if is_desp_initial and not show_desp_tabs %}
+    {% if is_desp_initial and not show_desp_kickoff_dialog %}
     {{ desp_kickoff_tools() }}
     {% elif not is_desp_initial and desp_kickoff_supported(session) %}
     <a class="btn btn-outline" id="btnPreviewDespKickoff" href="{{ url_for('admin_desp_kickoff_pdf', session_id=session.id) }}" target="_blank" rel="noopener" title="Disponible automatiquement dans l’espace stagiaire dès le premier jour de formation">Prévisualiser le diaporama DESP</a>
@@ -4510,29 +4497,24 @@ applyRowFilters();
 {% include '_aps_digiforma_bulk_import.html' %}
 {% endif %}
 {% if ssiap_exam_supported %}{% include '_ssiap_exam_modal.html' %}{% endif %}
-{% if show_desp_tabs %}
-</div>
+{% if show_desp_kickoff_dialog %}
+{% if not (is_desp_initial and security_jury_supported) %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css', v='20261020-1') }}">
+{% endif %}
+<dialog id="despKickoffDialog" class="exam-dialog" aria-labelledby="despKickoffTitle">
+  <header class="exam-heading">
+    <div><h2 id="despKickoffTitle">Réunion de démarrage</h2><p>{{ session.name }}</p></div>
+    <form method="dialog"><button type="submit" class="exam-close" aria-label="Fermer la réunion de démarrage">×</button></form>
+  </header>
+  <div class="session-kickoff-actions">{{ desp_kickoff_tools() }}</div>
+</dialog>
 <script>
 (() => {
-  const tabs = [...document.querySelectorAll('.desp-session-tabs [role="tab"]')];
-  function select(tab) {
-    for (const item of tabs) {
-      const active = item === tab;
-      item.setAttribute('aria-selected', String(active));
-      item.tabIndex = active ? 0 : -1;
-      document.getElementById(item.getAttribute('aria-controls')).hidden = !active;
-    }
-  }
-  for (const tab of tabs) {
-    tab.addEventListener('click', () => select(tab));
-    tab.addEventListener('keydown', event => {
-      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-      event.preventDefault();
-      const next = event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs[1] : tabs.find(item => item !== tab);
-      select(next);
-      next.focus();
-    });
-  }
+  const dialog = document.getElementById('despKickoffDialog');
+  document.getElementById('btnDespKickoff').addEventListener('click', () => dialog.showModal());
+  dialog.addEventListener('click', event => {
+    if (event.target === dialog) dialog.close();
+  });
 })();
 </script>
 {% endif %}

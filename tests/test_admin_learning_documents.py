@@ -37,14 +37,13 @@ def test_same_attestations_individual_or_group_without_changing_progress(aps_cas
     assert not (aps_case.persist_dir / 'native_elearning' / 'tracking.sqlite3').exists()
 
 
-def test_questionnaires_group_blank_answers_and_versioned_correction(aps_case):
+def test_questionnaires_only_print_submitted_answers_from_complete_aps_dossiers(aps_case):
     training, person, base = setup(aps_case)
     row = uv.unit('aps', 2)
     person['uv_questionnaires'] = {'aps': {'2': {'version': uv.VERSION, 'score':20,
         'submitted_at':'2026-11-16', 'answers':{q['id']:q['answer'] for q in row['questions']}}}}
     query = {'trainee_id':[person['id'],'other'], 'uv':'2'}
-    for mode in ('blank', 'correction', 'answers'):
-        assert aps_case.client.get(base+'questionnaires.pdf',query_string={**query, 'mode':mode}).status_code == 409
+    assert aps_case.client.get(base+'questionnaires.pdf',query_string=query).status_code == 409
     for item in uv.bank()['courses']['aps']['units']:
         number = item['number']
         if uv.unit('aps', number):
@@ -52,14 +51,12 @@ def test_questionnaires_group_blank_answers_and_versioned_correction(aps_case):
                 answers={q['id']:q['answer'] for q in item['questions']})
     assert aps_case.client.get(base+'questionnaires.pdf',query_string=query).status_code == 409
     query['trainee_id'] = person['id']
-    blank = aps_case.client.get(base+'questionnaires.pdf',query_string=query)
-    assert blank.status_code == 200 and 'inline' in blank.headers['Content-Disposition']
-    blank_text = '\n'.join(p.extract_text() for p in PdfReader(BytesIO(blank.data)).pages)
-    assert 'Alice' in blank_text and 'Bob' not in blank_text and 'Bonne réponse' not in blank_text
-    answers = aps_case.client.get(base+'questionnaires.pdf',query_string={**query,'mode':'answers'})
-    assert answers.status_code == 200
+    for mode in ('blank', 'correction'):
+        assert aps_case.client.get(base+'questionnaires.pdf', query_string={**query,'mode':mode}).status_code == 400
+    answers = aps_case.client.get(base+'questionnaires.pdf',query_string=query)
+    assert answers.status_code == 200 and 'inline' in answers.headers['Content-Disposition']
     text = '\n'.join(p.extract_text() for p in PdfReader(BytesIO(answers.data)).pages)
-    assert 'Alice' in text and '20/20' in text and 'Bonne réponse' in text
+    assert 'Alice' in text and 'Bob' not in text and '20/20' in text and 'Votre réponse' in text
     assert aps_case.client.get(base+'questionnaires.pdf',query_string={**query,'uv':'1'}).status_code == 400
     with patch('admin_learning_documents.uv.unit', wraps=uv.unit) as unit:
         aps_case.client.get(base+'questionnaires.pdf',query_string={**query,'mode':'answers'})

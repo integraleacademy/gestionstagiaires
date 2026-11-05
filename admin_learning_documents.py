@@ -74,9 +74,8 @@ def register(host):
         else:
             if not uv.eligible(training):
                 abort(404)
-            mode = request.args.get('mode', 'blank')
-            if mode not in ('blank', 'answers', 'correction'):
-                abort(400, 'Type de questionnaire invalide.')
+            if request.args.get('mode', 'answers') != 'answers':
+                abort(400, 'Ce dossier contient uniquement les questionnaires remplis par les stagiaires.')
             course = uv.course_for(training)
             valid = {str(r['number']) for r in uv.bank()['courses'][course]['units'] if uv.unit(course, r['number'])}
             numbers = {n for n in request.args.getlist('uv') if n} or valid
@@ -90,23 +89,22 @@ def register(host):
                 units = []
                 for number in sorted(map(int, numbers)):
                     result = uv._result(person, course, number)
-                    if mode == 'answers' and not result:
+                    if not result:
                         continue
-                    row = uv.unit(course, number, result['version'] if result else uv.VERSION)
+                    row = uv.unit(course, number, result['version'])
                     if not row:
                         abort(409, 'L’édition d’un questionnaire est indisponible. Aucun PDF partiel n’a été produit.')
                     if course == 'aps':
                         units.append((row, result))
                         continue
-                    content = uv.pdf(training, person, course, row,
-                                     result=result if mode == 'answers' else None, correction=mode != 'blank')
+                    content = uv.pdf(training, person, course, row, result=result, correction=True)
                     writer.append(content, outline_item=f"{person.get('last_name', '')} {person.get('first_name', '')} · UV {number:02}")
                 if units:
                     from uv_questionnaire_pdf import build_dossier
-                    content = build_dossier(training, person, units, mode, course=course, notice=uv.NOTICE)
+                    content = build_dossier(training, person, units, course=course, notice=uv.NOTICE)
                     writer.append(content, outline_item=f"{person.get('last_name', '')} {person.get('first_name', '')}")
         if not writer.pages:
-            abort(409, 'Aucun questionnaire terminé pour cette sélection. Choisissez les questionnaires vierges pour préparer la session.')
+            abort(409, 'Aucun questionnaire terminé pour cette sélection.')
         output = BytesIO()
         writer.write(output)
         writer.close()
