@@ -43888,6 +43888,7 @@ def buildBillingLinesFromSessions(
                     # payment refresh.
                     line['qontoLastSyncedAt'] = qonto_source.get('qontoLastSyncedAt') or ''
                 line['qontoDuplicateDebitWarning'] = _sepa_duplicate_warning(line)
+                line['directDebitInstallments'] = _sepa_installments(line)
                 line['qontoCollectedAmountCents'] = sum(money_value_to_cents(row.get('amount') or 0) for row in _paid_sepa_collections(line))
                 out.append(line)
     return out
@@ -49417,8 +49418,6 @@ def _debit_attachment_line_error(line):
         return 'Un autre règlement est renseigné. Vérifiez les paiements avant le rattachement.'
     if not line.get('qonto_direct_debit_mandate_id') or not line.get('qonto_mandate_rum'):
         return 'Synchronisez d’abord le mandat Qonto de ce dossier.'
-    if any(not row.get('qonto_direct_debit_collection_id') for row in _paid_sepa_collections(line)):
-        return 'Un paiement sans identifiant Qonto est déjà renseigné. Vérifiez son rattachement avant de continuer.'
     return ''
 
 
@@ -49468,6 +49467,22 @@ def _debit_attachment_remaining(line):
                - sum(money_value_to_cents(row.get('amount') or 0) for row in _paid_sepa_collections(line)))
 
 
+def _debit_attachment_local_matches(line, proof):
+    return [row for row in _sepa_installments(line)
+            if not row.get('qonto_direct_debit_subscription_id')
+            and not row.get('qonto_direct_debit_collection_id')
+            and _installment_counts_toward_schedule(row)
+            and str(row.get('due_date') or row.get('date') or '')[:10] == proof['date']
+            and money_value_to_cents(row.get('amount') or 0) == money_value_to_cents(proof['amount'])]
+
+
+def _debit_attachment_capacity(line, matches):
+    # Linking the evidence of an already-entered payment must not add cash.
+    credited = (money_value_to_cents(matches[0]['amount'])
+                if len(matches) == 1 and str(matches[0].get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES else 0)
+    return _debit_attachment_remaining(line) + credited
+
+
 @app.post('/api/billing/direct-debits/search')
 @admin_login_required
 @admin_write_required
@@ -49493,9 +49508,12 @@ def api_billing_direct_debit_search():
     for collection_id, row in records.items():
         if collection_id in owners:
             continue
-        blocked = 'Montant supérieur au reste à payer.' if money_value_to_cents(row['amount']) > remaining else ''
+        matches = _debit_attachment_local_matches(line, row)
+        blocked = ('Plusieurs paiements locaux correspondent : vérifiez le suivi.' if len(matches) > 1 else
+                   'Montant supérieur au reste à payer.' if money_value_to_cents(row['amount']) > _debit_attachment_capacity(line, matches) else '')
         candidate = {'id': collection_id, 'date': row['date'], 'amount': row['amount'],
-                     'reference': row['reference'], 'blocked_reason': blocked}
+                     'reference': row['reference'], 'blocked_reason': blocked,
+                     'already_entered': bool(len(matches) == 1 and str(matches[0].get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES)}
         if not blocked:
             candidate['selection_token'] = signer.dumps({'line_id': line['id'], 'nonce': nonce,
                 'snapshot': _debit_attachment_snapshot(line), 'record': row})
@@ -49539,15 +49557,10 @@ def api_billing_direct_debit_attach():
             return {'ok': False, 'error': error or 'Le dossier a changé. Recherchez à nouveau le prélèvement.'}
         if proof['qonto_direct_debit_collection_id'] in _debit_attachment_owners(current):
             return {'ok': False, 'error': 'Ce prélèvement est déjà rattaché à un dossier.'}
-        if money_value_to_cents(proof['amount']) > _debit_attachment_remaining(target):
+        matching = _debit_attachment_local_matches(target, proof)
+        if money_value_to_cents(proof['amount']) > _debit_attachment_capacity(target, matching):
             return {'ok': False, 'error': 'Ce prélèvement dépasse le reste à payer.'}
         rows = _sepa_installments(target)
-        matching = [row for row in rows if not row.get('qonto_direct_debit_subscription_id')
-                    and not row.get('qonto_direct_debit_collection_id')
-                    and str(row.get('status') or '').lower() not in QONTO_PAID_COLLECTION_STATUSES
-                    and not row.get('tracking_removed_at')
-                    and str(row.get('due_date') or row.get('date') or '')[:10] == proof['date']
-                    and money_value_to_cents(row.get('amount') or 0) == money_value_to_cents(proof['amount'])]
         if len(matching) > 1:
             return {'ok': False, 'error': 'Plusieurs échéances locales correspondent. Vérifiez le suivi avant le rattachement.'}
         row = matching[0] if matching else {}
