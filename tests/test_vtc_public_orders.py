@@ -66,7 +66,8 @@ def test_vehicle_payment_and_documents(host,tmp_path):
     assert client.get(path+"/convention.pdf").status_code==404
     assert not host._yousign_json.called
     create=[call for call in host._qonto_request.call_args_list if call.args[:2]==("POST","/v2/client_invoices")]
-    assert len(create)==1 and create[0].args[2]["items"][0]["unit_price"]["value"]=="125.000000"
+    assert create[0].args[2]["items"][0]["vat_rate"] == "0"
+    assert len(create)==1 and create[0].args[2]["items"][0]["unit_price"]["value"]=="150.000000"
 
 
 def test_training_contract_before_collection(host,monkeypatch):
@@ -174,3 +175,18 @@ def test_fixed_exam_date_explains_availability_before_payment(host):
     assert store.get(oid)["stage"] == "availability"
     assert 'vérifie la disponibilité' in client.get(path).get_data(as_text=True)
     assert client.get(path + "/payer").location == path
+
+
+def test_legacy_unbilled_vehicle_uses_zero_vat(host):
+    client, store, oid, path, _ = begin(host, "vehicule")
+    row = store.get(oid)
+    row["vat_rate"] = "20"
+    store.save(row)
+    _, invoice = providers(host, store, row)
+    invoice["purchase_order"] = "VTC-" + oid
+    cycle(host, store, oid)
+    calls = [c for c in host._qonto_request.call_args_list if c.args[:2] == ("POST", "/v2/client_invoices")]
+    item = calls[0].args[2]["items"][0]
+    assert item["vat_rate"] == "0"
+    assert item["unit_price"]["value"] == "150.000000"
+    assert store.get(oid)["vat_rate"] == "0"

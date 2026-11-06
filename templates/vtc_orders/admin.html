@@ -15,6 +15,7 @@
 <p>{{row.person.email}} · {{row.person.phone}}{% if row.exam_centre in centres %} · {{centres[row.exam_centre]}}{% endif %}{% if row.exam_date %} · Examen le {{row.exam_date|vtc_date}}{% endif %}</p>
 {% if row.slot %}<p>Séance du {{row.slot.day|vtc_date}} de {{row.slot.start}} à {{row.slot.end}} · {{row.slot.trainer}}</p>{% endif %}
 {% if row.cpf_reference %}<p>Dossier CPF {{row.cpf_reference}}</p>{% endif %}
+{% if row.vat_rate != '0' and (row.invoice_id or row.invoice_started) %}<p role="alert" style="padding:12px;background:#fff1d6;color:#624617">TVA à vérifier sur la facture déjà créée{% if row.invoice_number %} {{row.invoice_number}}{% endif %}. Cette commande a été facturée avec l’ancien taux de {{row.vat_rate}} %. Le tarif demandé est de {{150 if row.offer=='vehicule' else 600}} € avec TVA à 0 %. Vérifiez la correction comptable dans Qonto.</p>{% endif %}
 {% if row.error %}<p role="alert">À vérifier · {{row.error}}</p>{% endif %}
 {% for kind,label in documents(row).items() %}<a class="btn" href="{{url_for('.admin_pdf',oid=row.id,kind=kind)}}">{{label}} (PDF)</a> {% endfor %}
 {% if row.stage in ['calendar','planning','availability','delivery'] or row.error %}

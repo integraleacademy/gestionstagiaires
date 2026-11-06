@@ -101,6 +101,8 @@ def advance(host, store, row):
     elif stage == "billing":
         if row["offer"] == "formation" and not store.document(row["id"],"completion").exists():
             document(row,store.document(row["id"],"completion"),completed=True)
+        if not row.get("invoice_id") and not row.get("invoice_started"):
+            row["vat_rate"] = "0"
         try:
             invoice = provider.ensure_invoice(host, store, row)
             provider.ensure_payment(host, store, row, invoice)
@@ -189,7 +191,7 @@ def new_order(host, form, offer, oid):
             "selected_slot":form.get("slot_id","")[:64] if offer=="formation" else "",
             "total_cents":total, "purchase_order":"VTC-"+oid, "invoice_title":OFFERS[offer],
             "billing_lines":[{"label":OFFERS[offer]+" – examen VTC","unit_cents":total,"total_cents":total,"quantity":1}],
-            "vat_rate":"20" if offer=="vehicule" else "0", "vat_exemption":"" if offer=="vehicule" else "S261",
+            "vat_rate":"0", "vat_exemption":"" if offer=="vehicule" else "S261",
             "payment_terms":"Paiement par carte bancaire. "+("Mise à disposition du véhicule pour le passage organisé avec le centre." if offer=="vehicule" else "Règlement à l’issue des prestations."),
             "due":0}
 

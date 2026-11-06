@@ -1,26 +1,27 @@
 {% extends 'vtc_orders/layout.html' %}
 {% block title %}{{offers[offer]}}{% endblock %}
 {% block content %}
-<a class="back" href="https://admissions.integraleconnect.com/vtc">← Les deux formules</a>
-<p class="kicker">EXAMEN PRATIQUE VTC</p>
-<h1>{{offers[offer]}}</h1>
-<p class="price">{{150 if offer=='vehicule' else 600}} € TTC</p>
-{% if offer=='cpf' %}<p>Après confirmation de votre adresse e-mail, choisissez votre rendez-vous téléphonique avec Cassandre. Elle vérifiera votre projet et votre financement. Vous validerez ensuite votre dossier sur Mon Compte Formation. Une participation peut rester à votre charge.</p>
-{% elif offer=='formation' %}<p>Le centre organise avec vous la séance à Puget-sur-Argens et vous adresse votre contrat à signer en ligne. Vous réglez les 600 € par carte après la formation et la mise à disposition du véhicule. Aucun acompte.</p>
-{% else %}<p>Réservez le véhicule pour votre passage à l’examen pratique avec les candidats du centre. Réglez 150 € par carte via notre espace sécurisé. Si la CMA vous a déjà attribué une date, le centre vérifie la disponibilité avant de vous proposer le paiement.</p>{% endif %}
-<p class="location-note">{{area}}</p>
-<aside><strong>Votre inscription auprès de la CMA</strong><p>{{cma}}</p></aside>
+<a class="back" href="https://admissions.integraleconnect.com/vtc">← Voir les formules</a>
+<header class="page-heading">
+  <p class="eyebrow">Intégrale Academy · Examen pratique VTC</p>
+  <h1>{{'Réservez votre véhicule.' if offer=='vehicule' else 'Préparez votre examen pratique.'}}</h1>
+  <p class="lead">{% if offer=='vehicule' %}Réservez notre véhicule à doubles commandes et passez votre examen pratique avec nos candidats.{% else %}Entraînez-vous avec un formateur et profitez de notre véhicule à doubles commandes le jour de l’examen.{% endif %}</p>
+</header>
+<div class="booking-grid">
+<div class="form-panel">
 {% if error %}<p class="error" role="alert">{{error}}</p>{% endif %}
 <form method="post">
 <input type="hidden" name="csrf_token" value="{{csrf}}"><input type="hidden" name="draft" value="{{session['vtc_form_'+offer]}}">
-<h2>Vos coordonnées</h2>
+<div class="section-heading"><span>01</span><div><h2>Vos coordonnées</h2><p>Pour préparer votre réservation et vos documents.</p></div></div>
 <div class="fields">
 {% for key,label,ac,type,maximum in [('first_name','Prénom','given-name','text',80),('last_name','Nom','family-name','text',80),('email','Adresse e-mail','email','email',254),('phone','Téléphone mobile','tel','tel',30),('address','Adresse','street-address','text',160),('city','Ville','address-level2','text',90),('zip_code','Code postal','postal-code','text',12),('country_code','Code pays (FR pour France)','country','text',2)] %}
 {% if offer!='cpf' or key in ['first_name','last_name','email','phone'] %}<label>{{label}}<input required type="{{type}}" name="{{key}}" autocomplete="{{ac}}" maxlength="{{maximum}}" value="{{request.form.get(key,'FR' if key=='country_code' else '')}}"></label>{% endif %}{% endfor %}
+</div><div class="section-heading"><span>02</span><div><h2>Votre examen</h2><p>Le véhicule est proposé exclusivement dans les deux centres ci-dessous.</p></div></div><div class="fields">
 <label>Centre de votre examen pratique
 <select required name="exam_centre"><option value="">Choisissez votre centre</option>{% for code, name in centres.items() %}<option value="{{code}}" {{'selected' if request.form.get('exam_centre')==code}}>{{name}}</option>{% endfor %}</select></label>
 <label>Date de l’examen, si déjà fixée<input type="date" name="exam_date" min="{{today}}" value="{{request.form.get('exam_date','')}}"></label>
 </div>
+<div class="cma-note"><strong>À indiquer lors de votre inscription à la CMA</strong><p>Précisez que vous passerez l’examen avec le véhicule d’<b>Intégrale Academy – Intégrale Sécurité Formations</b>. Votre passage pourra ainsi être organisé avec nos autres candidats.</p></div>
 {% if offer=='formation' and slots %}<label>Votre séance de formation
 <select name="slot_id"><option value="">Être recontacté pour une autre date</option>{% for slot in slots %}<option value="{{slot.id}}" {{'selected' if request.form.get('slot_id')==slot.id}}>{{slot.day|vtc_date}} de {{slot.start}} à {{slot.end}} · {{slot.free}} place(s)</option>{% endfor %}</select></label>{% endif %}
 {% if offer!='vehicule' %}<label class="check"><input type="checkbox" name="admissible" value="yes" required {{'checked' if request.form.get('admissible')}}>Je suis admissible à l’épreuve pratique VTC et titulaire du permis B.</label>{% endif %}
@@ -29,6 +30,7 @@
 <p>Pour toute rétractation ou modification, utilisez le suivi de votre dossier ou écrivez à ecole@integraleacademy.com en indiquant votre nom et votre référence. Le centre accusera réception de votre demande. Pour la formation financée personnellement, vous disposez de 14 jours après la signature du contrat à distance. Pour le véhicule seul, le centre vous accorde 14 jours après la commande pour vous rétracter avant exécution. En cas d’indisponibilité du véhicule à la date convenue, le centre propose un autre créneau avec votre accord ou rembourse la prestation non fournie.</p>
 </details>
 <label class="check"><input type="checkbox" name="accepted" value="yes" required {{'checked' if request.form.get('accepted')}}>J’ai pris connaissance du tarif, des modalités de ma formule et de la consigne à communiquer à la CMA.</label>
-<button>{{ 'Recevoir mon e-mail de confirmation' }}</button>
-</form>
+<button class="wide">{{'Continuer vers le financement CPF' if offer=='cpf' else 'Continuer ma réservation'}} <span aria-hidden="true">→</span></button>
+<p class="form-footnote">{% if offer=='cpf' %}Vous recevrez un e-mail pour confirmer votre adresse, puis réserver votre appel avec Cassandre.{% elif offer=='formation' %}Confirmez ensuite votre adresse e-mail. Nous organiserons votre séance et la signature de votre contrat. Le paiement interviendra après les prestations.{% else %}Confirmez ensuite votre adresse e-mail pour poursuivre votre réservation. Si votre date d’examen est déjà fixée, nous vérifierons d’abord la disponibilité du véhicule.{% endif %}</p>
+</form></div><div class="booking-side">{% include 'vtc_orders/summary.html' %}</div></div>
 {% endblock %}
