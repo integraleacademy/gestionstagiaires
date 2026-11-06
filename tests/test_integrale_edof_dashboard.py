@@ -93,7 +93,7 @@ def site(tmp_path, monkeypatch):
     access = lambda: session.get("admin_logged_in") and not session.get("assist_partner_id")
     observer.register_routes(app, observer.ObservationStore(tmp_path), admin_required=lambda f:f,
                              can_access=access, data_file=datafile, dashboard=True)
-    server.register_routes(app, store, legacy=legacy, admin_required=lambda f:f, can_access=access)
+    nightly = server.register_routes(app, store, legacy=legacy, admin_required=lambda f:f, can_access=access)
     client = app.test_client()
     with client.session_transaction() as sess:
         sess.update(admin_logged_in=True, admin_username="admin")
@@ -105,7 +105,7 @@ def site(tmp_path, monkeypatch):
                for i,state in enumerate(("Accepté", "Entrée déclarée", "A traiter", "Annulé par le titulaire"))]
     vault = Vault(tmp_path, store.connector_key)
     vault.put(edof_directory.record_key(owner), {"checked":10000,"rows":{r["folder_id"]:r for r in records}})
-    return SimpleNamespace(client=client, gate=gate, csrf=csrf, store=store, local=datafile, vault=vault, owner=owner)
+    return SimpleNamespace(client=client, gate=gate, csrf=csrf, store=store, local=datafile, vault=vault, owner=owner, nightly=nightly)
 
 
 def test_tabs_render_native_data_and_read_only_efp(site):
@@ -541,3 +541,51 @@ def test_legacy_full_request_survives_queue_upgrade(site):
         db.execute("INSERT INTO manual_directory VALUES(?,?,NULL)",(site.owner,time.time()))
     assert site.store.next_manual_sync()["scope"] == "all"
     assert site.store.manual_sync_status(site.owner,"all")["busy"]
+
+
+def test_native_lookup_and_home_kpi_include_every_state(site):
+    from bs4 import BeautifulSoup
+    home = BeautifulSoup(site.client.get("/admin/edof-test").text, "html.parser")
+    kpi = home.select_one('a[data-wedof-counter="to_associate"]')
+    assert kpi.strong.text == "4" and "tab=unlinked" in kpi["href"]
+    pending = site.client.get(kpi["href"])
+    assert all(f'data-edof-folder="{n}"' in pending.text for n in range(100000, 100004))
+    path = "/admin/edof-test/inscriptions/s1/t1/recherche-cpf"
+    site.gate.switch("integrale", 0, "admin")
+    assert "100002" in site.client.get(path).text
+    searched = site.client.get(path, query_string={"q":"100003"}).text
+    assert "Annulé par le titulaire" in searched and "100002" not in searched
+    assert site.client.get(path.replace("t1","other")).status_code == 404
+    form = {"csrf":site.csrf, "session_id":"s1", "trainee_id":"t1","verified":"yes","return_to_trainee":"1"}
+    reply = site.client.post("/admin/edof-test/dossiers/100003/associate", data=form)
+    assert reply.status_code == 303 and reply.location.endswith("/s1/stagiaire/t1#cpfTracking")
+    remaining = BeautifulSoup(site.client.get("/admin/edof-test").text, "html.parser")
+    assert remaining.select_one('a[data-wedof-counter="to_associate"] strong').text == "3"
+    assert "Dossier déjà associé" in site.client.get(path, query_string={"q":"100003"}).text
+
+
+def test_nightly_all_statuses_after_18_paris_handles_duplicates_and_restart(site, monkeypatch):
+    site.gate.switch("integrale", 0, "admin")
+    saved = site.vault.get(edof_directory.record_key(site.owner))
+    monkeypatch.setenv("EDOF_CONNECTOR_KEY", site.store.connector_key)
+    # Verified contact is bound to one dossier. The official list keeps no raw remote address.
+    for folder in ("100002", "100003"):
+        row = saved["rows"][folder]
+        item = {"id":folder, "attendee":{"firstName":"Anne","lastName":"Exemple","email":"anne@example.invalid"}}
+        projected = edof_directory.project(item)
+        assert "anne@example.invalid" not in str(projected)
+        row["email_proof"] = projected["email_proof"]
+    site.vault.put(edof_directory.record_key(site.owner), saved)
+    summer = dt.datetime(2026, 7, 6, 15, 59, tzinfo=dt.timezone.utc)
+    assert not site.nightly(summer.astimezone(dashboard.PARIS))
+    assert site.nightly((summer + dt.timedelta(minutes=1)).astimezone(dashboard.PARIS))
+    assert not json.loads(site.local.read_text()).get("wedof_links")
+    del saved["rows"]["100003"]
+    site.vault.put(edof_directory.record_key(site.owner), saved)
+    assert site.nightly((summer + dt.timedelta(hours=1)).astimezone(dashboard.PARIS))
+    assert not json.loads(site.local.read_text()).get("wedof_links")
+    winter = dt.datetime(2026, 11, 6, 17, 0, tzinfo=dt.timezone.utc).astimezone(dashboard.PARIS)
+    assert site.nightly(winter)
+    assert site.nightly(winter)
+    links = json.loads(site.local.read_text())["wedof_links"]
+    assert [(link["external_id"],link["trainee_id"],link["provider"]) for link in links] == [("100002","t1","integrale")]

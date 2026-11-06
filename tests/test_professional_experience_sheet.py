@@ -286,6 +286,19 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertIn("certified", errors)
         self.assertNotIn("professional_experience_sheet", self.payload["sessions"][0]["trainees"][0])
 
+    def test_current_job_is_persisted_without_an_end_date_and_prints_explicitly(self):
+        self._authenticate_public()
+        payload = self._valid_payload()
+        payload["experiences"][0]["current_job"] = True
+        response = self.client.post("/espace/public-token/fiche-experience-professionnelle", json=payload)
+        self.assertEqual(response.status_code, 200)
+        sheet = self.payload["sessions"][0]["trainees"][0]["professional_experience_sheet"]
+        self.assertTrue(sheet["experiences"][0]["current_job"])
+        self.assertEqual(sheet["experiences"][0]["end_date"], "")
+        self._authenticate_admin()
+        printed = self.client.get("/admin/sessions/S1/stagiaires/T1/fiche-experience-professionnelle")
+        self.assertIn("Poste actuel", printed.get_data(as_text=True))
+
     def test_public_submission_requires_end_date_on_last_experience_only(self):
         self._authenticate_public()
         payload = self._valid_payload()
@@ -327,7 +340,7 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertNotIn("experiences.0.end_date", errors)
         self.assertEqual(
             errors["experiences.1.end_date"],
-            "Renseignez la date de sortie de votre dernière expérience.",
+            "Renseignez la date de sortie de votre dernière expérience ou cochez « Poste actuel ».",
         )
 
     def test_public_submission_rejects_invalid_optional_end_date(self):
@@ -376,14 +389,16 @@ const renumberSource = source.slice(start, end).replace("const renumber =", "var
 
 const makeCard = () => {
   const heading = {textContent: ""};
-  const endDate = {required: false};
+  const endDate = {required: false, closest: () => ({})};
+  const currentJob = {checked:false};
   const endDateLabel = {innerHTML: ""};
   const contractInputs = [{name: ""}, {name: ""}];
   const executiveInputs = [{name: ""}, {name: ""}];
   return {
-    dataset: {}, heading, endDate, endDateLabel, contractInputs, executiveInputs,
+    dataset: {}, heading, endDate, endDateLabel, contractInputs, executiveInputs, currentJob,
     querySelector(selector) {
       if (selector === "h4 span") return heading;
+      if (selector === '[data-field="current_job"]') return currentJob;
       if (selector === '[data-field="end_date"]') return endDate;
       if (selector === "[data-end-date-label]") return endDateLabel;
       return null;
@@ -408,6 +423,10 @@ context.renumber();
 if (!first.endDate.required || first.endDateLabel.innerHTML !== "Date de sortie <strong>*</strong>")
   throw new Error("the only experience is not required");
 
+first.currentJob.checked = true;
+context.renumber();
+if (first.endDate.required || !first.endDate.disabled) throw new Error("current job requires end date");
+first.currentJob.checked = false;
 const second = makeCard();
 experiences.children.push(second);
 context.renumber();

@@ -624,18 +624,26 @@
 {% set current_cpf_steps = cpf.steps|selectattr('state', 'equalto', 'current')|list if cpf.found else [] %}
 <details class="cpf-panel" id="cpfTracking">
   <summary class="cpf-panel__summary" aria-labelledby="cpfTrackingTitle">
-    <div class="cpf-brand"><div class="cpf-logo" aria-hidden="true">€</div><div><div class="cpf-eyebrow">FINANCEMENT CPF</div><h2 id="cpfTrackingTitle">Suivi dossier CPF</h2><p>Données synchronisées avec WEDOF et suivi des actions automatisées.</p></div></div>
+    <div class="cpf-brand"><div class="cpf-logo" aria-hidden="true">€</div><div><div class="cpf-eyebrow">FINANCEMENT CPF</div><h2 id="cpfTrackingTitle">Suivi dossier CPF</h2><p>{{ 'Retrouvez le dossier et ses déclarations dans Intégrale EDOF.' if native_cpf_search else 'Données synchronisées avec WEDOF et suivi des actions automatisées.' }}</p></div></div>
     {% if current_cpf_steps %}{% set current_step = current_cpf_steps[0] %}<div class="cpf-panel__current"><span class="cpf-step__dot">{{ cpf.steps.index(current_step) + 1 }}</span><span class="cpf-panel__current-label">{{ current_step.label }}<small>Étape actuelle</small></span></div>{% elif not cpf.found %}<span class="cpf-sync">Non associé</span>{% endif %}
     <span class="cpf-panel__chevron" aria-hidden="true"></span>
   </summary>
+  {% if native_cpf_search %}
+    <div class="cpf-head"><div class="cpf-actions">
+    {% if cpf.found %}<a class="btn btn-primary" href="{{ url_for('integrale_edof.index', folder=d.external_id) }}">Ouvrir le dossier {{ d.external_id }} dans Intégrale EDOF</a>
+    {% else %}<h3>Retrouver le dossier CPF</h3>
+    <a class="btn btn-primary" href="{{ url_for('integrale_edof.trainee_search', session_id=session.id, trainee_id=trainee.id) }}">Rechercher dans Intégrale EDOF</a>{% endif %}
+    </div></div>
+  {% else %}
   <header class="cpf-head">
     <div class="cpf-actions"><span class="cpf-sync{% if cpf.sync_error %} is-error{% endif %}">{{ cpf.sync_error or ('Données en cache' if cpf.found else 'Non associé') }}</span>{% if cpf.found %}<form method="post" action="{{ url_for('admin_trainee_cpf_refresh',session_id=session.id,trainee_id=trainee.id) }}"><button class="btn btn-primary" type="submit" {% if is_read_only %}disabled{% endif %}>Actualiser ce dossier</button></form>{% endif %}{% if d.wedof_url %}<a class="btn btn-outline" href="{{ d.wedof_url }}" target="_blank" rel="noopener">Ouvrir dans WEDOF</a>{% endif %}</div>
   </header>
+  {% endif %}
   {% if cpf.found %}
-    {% if cpf.unknown %}<div class="cpf-alert">Statut WEDOF non classé : « {{ d.state or 'Non communiqué' }} ». Aucune étape n’a été déduite artificiellement.</div>{% endif %}
+    {% if cpf.unknown %}<div class="cpf-alert">Statut {{ 'CPF' if native_cpf_search else 'WEDOF' }} non classé : « {{ d.state or 'Non communiqué' }} ». Aucune étape n’a été déduite artificiellement.</div>{% endif %}
     {% if cpf.waiting_reason %}<div class="cpf-wait">{{ cpf.waiting_reason }}</div>{% endif %}
     <div class="cpf-info">
-      <div class="cpf-info__item"><span>N° dossier CPF</span><strong>{{ d.external_id or 'Non communiqué' }}</strong></div><div class="cpf-info__item"><span>Statut exact WEDOF</span><strong>{{ d.state or 'Non communiqué' }}</strong></div>
+      <div class="cpf-info__item"><span>N° dossier CPF</span><strong>{{ d.external_id or 'Non communiqué' }}</strong></div><div class="cpf-info__item"><span>{{ 'Statut CPF enregistré' if native_cpf_search else 'Statut exact WEDOF' }}</span><strong>{{ d.state or 'Non communiqué' }}</strong></div>
       <div class="cpf-info__item"><span>Montant formation</span><strong>{{ cpf.money.total_amount }}</strong></div><div class="cpf-info__item"><span>Financé par le CPF</span><strong>{{ cpf.money.cpf_amount }}</strong></div>
       {% if d.candidate_amount is defined and d.candidate_amount not in [none,''] %}<div class="cpf-info__item"><span>Reste candidat</span><strong>{{ cpf.money.candidate_amount }}</strong></div>{% endif %}
       <div class="cpf-info__item"><span>Formation</span><strong>{{ d.training_title or session.training_type or 'Non communiqué' }}</strong></div><div class="cpf-info__item"><span>Dates</span><strong>{{ d.start_date|frdate if d.start_date else 'Non communiqué' }} — {{ d.end_date|frdate if d.end_date else 'Non communiqué' }}</strong></div>
@@ -644,7 +652,7 @@
     {{ funding_card(france_travail, cpf.last_sync_label, cpf.sync_error) }}
     <div class="cpf-stepper" aria-label="Parcours du dossier CPF">{% for step in cpf.steps %}<div class="cpf-step is-{{ step.state }}"><span class="cpf-step__dot">{% if step.state == 'done' %}✓{% else %}{{ loop.index }}{% endif %}</span>{{ step.label }}{% if step.date %}<small>{{ step.date }}</small>{% endif %}{% if step.state == 'current' %}<span class="cpf-current">Étape actuelle</span>{% endif %}</div>{% endfor %}</div>
     <section class="cpf-automations"><h3>Automatisations du dossier</h3><div class="cpf-auto-grid">{% for action in cpf.automation.actions %}<article class="cpf-auto"><span class="cpf-badge cpf-badge--{{ action.tone }}">{{ action.status }}</span><strong>{{ action.action }}</strong><div class="hint">{{ action.detail }}{% if action.retry_at != 'Non communiqué' %}<br>Prochaine tentative : {{ action.retry_at }}{% endif %}</div></article>{% endfor %}</div><form method="post" action="{{ url_for('admin_trainee_cpf_unlink',session_id=session.id,trainee_id=trainee.id) }}" style="margin-top:16px" onsubmit="return confirm('Retirer cette association CPF ? Cette correction sera historisée.');"><input type="hidden" name="confirm_unlink" value="UNLINK"><button class="btn btn-outline" type="submit" {% if is_read_only %}disabled{% endif %}>Corriger l’association</button></form></section>
-  {% else %}
+  {% elif not native_cpf_search %}
     <div class="cpf-empty">
       <div class="cpf-empty__head">
         <h3>Retrouver le dossier CPF</h3>
@@ -704,7 +712,7 @@
     </div>
   {% endif %}
 </details>
-{% if not cpf.found %}<script src="{{ url_for('static', filename='js/cpf-auto-match.js', v='20260831-live-search') }}" defer></script>{% endif %}
+{% if not cpf.found and not native_cpf_search %}<script src="{{ url_for('static', filename='js/cpf-auto-match.js', v='20260831-live-search') }}" defer></script>{% endif %}
 {% endif %}
 
 {% if not is_read_only %}

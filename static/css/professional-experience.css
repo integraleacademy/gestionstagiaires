@@ -42,3 +42,6 @@
 .documents-upload-card .docs-stack > .docrow.professional-experience-docrow:before{content:none!important}
 .documents-upload-card .docs-stack .professional-experience-docrow .docmeta{padding:0!important}
 .documents-upload-card .docs-stack .professional-experience-docrow .pro-sheet-launch{margin-top:0}
+
+.pro-sheet-field[hidden] { display: none; }
+.pro-sheet-choice input:focus-visible + span { outline: 2px solid currentColor; outline-offset: 2px; }

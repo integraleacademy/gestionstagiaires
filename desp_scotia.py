@@ -1,8 +1,9 @@
 """Complete, tenant-scoped DESP initial examination dossiers, assembled on demand."""
 from io import BytesIO
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
-from flask import abort, jsonify, send_file, url_for
+from flask import abort, jsonify, request, send_file, url_for
 from pypdf import PdfReader, PdfWriter
 from werkzeug.exceptions import HTTPException
 
@@ -13,6 +14,7 @@ GROUPS = (
     ("candidate_info_sheet", "Fiche de renseignement candidat"),
     ("desp_exam_sworn_statement", "Attestation sur l’honneur de prise en compte de l’examen DESP"),
     ("project", "Projet de cadrage"),
+    ("elearning", "Attestation e-learning"),
 )
 MAX_FILE_BYTES = 25 * 1024 * 1024
 MAX_DOSSIER_BYTES = 75 * 1024 * 1024
@@ -58,12 +60,30 @@ def _read_file(host, training, trainee, token, *, project=None):
     return convert_upload(raw, path.name)[0]
 
 
+def certificate_path(host, training, trainee):
+    root = Path(host.get_partner_storage_path(
+        training.get("partner_id") or host.INTEGRALE_PARTNER_ID, "stagiaires"))
+    return (root / host._safe_upload_identifier(training["id"], "session_id")
+            / host._safe_upload_identifier(trainee["id"], "trainee_id")
+            / "desp_exam" / "attestation-elearning.pdf")
+
+
 def inspect(host, training, trainee, *, include_content=False):
     groups, parts, total = [], [], 0
     for key, label in GROUPS:
         error, content = "", []
         try:
-            if key == "project":
+            if key == "elearning":
+                path = certificate_path(host, training, trainee)
+                if not path.is_file():
+                    raise ValueError("Attestation e-learning à déposer.")
+                with path.open("rb") as source:
+                    raw = source.read(MAX_FILE_BYTES + 1)
+                if len(raw) > MAX_FILE_BYTES:
+                    raise ValueError("Attestation trop volumineuse.")
+                _validate_pdf(raw)
+                content = [raw]
+            elif key == "project":
                 entries = sorted(projects.documents(trainee), key=lambda item: item["slot"])
                 if not entries:
                     raise ValueError("Au moins un PDF de projet est requis.")
@@ -101,6 +121,67 @@ def register(app, host):
             abort(404)
         return training
 
+    def candidate(session_id, trainee_id):
+        training = training_or_404(session_id)
+        trainee = next((t for t in host._registered_trainees(training)
+                        if str(t.get("id")) == trainee_id), None)
+        if not trainee:
+            abort(404)
+        return training, trainee
+
+    @app.get("/api/admin/sessions/<session_id>/desp-attestations")
+    @host.admin_login_required
+    def api_desp_certificates(session_id):
+        training = training_or_404(session_id)
+        rows = []
+        for trainee in sorted(host._registered_trainees(training),
+                              key=lambda t: (str(t.get("last_name") or "").casefold(),
+                                             str(t.get("first_name") or "").casefold())):
+            url = url_for("admin_desp_certificate", session_id=session_id, trainee_id=trainee["id"])
+            rows.append({"name": " ".join(filter(None, [host.normalize_first_name(trainee.get("first_name") or ""),
+                                                        host.normalize_last_name(trainee.get("last_name") or "")])),
+                         "url": url, "available": certificate_path(host, training, trainee).is_file()})
+        return jsonify(candidates=rows), 200, {"Cache-Control": "private, no-store"}
+
+    @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/attestation-elearning.pdf")
+    @host.admin_login_required
+    def admin_desp_certificate(session_id, trainee_id):
+        path = certificate_path(host, *candidate(session_id, trainee_id))
+        if not path.is_file():
+            abort(404)
+        response = send_file(path, mimetype="application/pdf", download_name="Attestation e-learning.pdf")
+        response.headers.update({"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
+        return response
+
+    @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/attestation-elearning.pdf")
+    @host.admin_login_required
+    @host.admin_write_required
+    def admin_desp_certificate_upload(session_id, trainee_id):
+        path = certificate_path(host, *candidate(session_id, trainee_id))
+        if request.content_length and request.content_length > projects.MAX_BYTES + 128 * 1024:
+            return jsonify(error="Le PDF doit peser au maximum 15 Mo."), 413
+        if not host.trainee_checks.valid_request():
+            abort(403)
+        upload = request.files.get("certificate")
+        if not upload or Path(upload.filename or "").suffix.lower() != ".pdf":
+            return jsonify(error="Sélectionnez une attestation au format PDF."), 400
+        raw = upload.stream.read(projects.MAX_BYTES + 1)
+        if len(raw) > projects.MAX_BYTES:
+            return jsonify(error="Le PDF doit peser au maximum 15 Mo."), 413
+        try:
+            _validate_pdf(raw)
+        except ValueError as exc:
+            return jsonify(error=str(exc)), 400
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with NamedTemporaryFile(dir=path.parent, delete=False) as temp:
+            staged = Path(temp.name)
+        try:
+            staged.write_bytes(raw)
+            staged.replace(path)
+        finally:
+            staged.unlink(missing_ok=True)
+        return jsonify(ok=True)
+
     @app.get("/api/admin/sessions/<session_id>/desp-scotia")
     @host.admin_login_required
     def api_desp_scotia(session_id):
@@ -127,10 +208,7 @@ def register(app, host):
     @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/dossier-scotia.pdf")
     @host.admin_login_required
     def admin_desp_scotia_download(session_id, trainee_id):
-        training = training_or_404(session_id)
-        trainee = next((t for t in host._registered_trainees(training) if str(t.get("id")) == trainee_id), None)
-        if not trainee:
-            abort(404)
+        training, trainee = candidate(session_id, trainee_id)
         groups, parts = inspect(host, training, trainee, include_content=True)
         missing = [group["label"] + " : " + group["error"] for group in groups if not group["available"]]
         if missing:

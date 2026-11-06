@@ -82,13 +82,13 @@
 
     <section><h2><span class="number">03</span> Expériences professionnelles</h2>
       {% for experience in sheet.experiences or [] %}<article class="experience">
-        <div class="experience-head"><strong>Expérience {{ loop.index }} · {{ experience.job_title or 'Poste non renseigné' }}</strong><small>{{ experience.start_date|frdate if experience.start_date else '—' }} → {{ experience.end_date|frdate if experience.end_date else '—' }}</small></div>
+        <div class="experience-head"><strong>Expérience {{ loop.index }} · {{ experience.job_title or 'Poste non renseigné' }}</strong><small>{{ experience.start_date|frdate if experience.start_date else '—' }} → {{ 'Poste actuel' if experience.current_job else (experience.end_date|frdate if experience.end_date else '—') }}</small></div>
         <div class="experience-body">
           <div class="field span-2"><span class="label">Entreprise</span><span class="value">{{ experience.company_name or '—' }}</span></div>
           <div class="field"><span class="label">Temps de travail</span><span class="value">{{ experience.work_time_percent if experience.work_time_percent is not none else '—' }}{% if experience.work_time_percent is not none %} %{% endif %}</span></div>
           <div class="field"><span class="label">Type de contrat</span><span class="value">{{ contract_labels.get(experience.contract_type, '—') }}{% if experience.contract_type == 'other' and experience.contract_other %} — {{ experience.contract_other }}{% endif %}</span></div>
           <div class="field"><span class="label">Statut cadre</span><span class="value">{% if experience.executive_status == 'yes' %}Oui{% elif experience.executive_status == 'no' %}Non{% else %}—{% endif %}</span></div>
-          <div class="field"><span class="label">Période</span><span class="value">{{ experience.start_date|frdate if experience.start_date else '—' }} au {{ experience.end_date|frdate if experience.end_date else '—' }}</span></div>
+          <div class="field"><span class="label">Période</span><span class="value">{% if experience.current_job %}Depuis le {{ experience.start_date|frdate }} · Poste actuel{% else %}{{ experience.start_date|frdate if experience.start_date else '—' }} au {{ experience.end_date|frdate if experience.end_date else '—' }}{% endif %}</span></div>
         </div>
       </article>{% else %}<div class="field"><span class="value">Aucune expérience renseignée.</span></div>{% endfor %}
     </section>

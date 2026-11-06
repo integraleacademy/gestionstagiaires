@@ -62,7 +62,12 @@
       const endDate = card.querySelector('[data-field="end_date"]');
       const endDateLabel = card.querySelector("[data-end-date-label]");
       const isLast = index === cards.length - 1;
-      if (endDate) endDate.required = isLast;
+      const currentJob = card.querySelector('[data-field="current_job"]').checked;
+      if (endDate) {
+        endDate.required = isLast && !currentJob;
+        endDate.disabled = currentJob;
+        endDate.closest("label").hidden = currentJob;
+      }
       if (endDateLabel) {
         endDateLabel.innerHTML = isLast
           ? "Date de sortie <strong>*</strong>"
@@ -86,7 +91,10 @@
     remove.closest(".pro-sheet-experience").remove();
     renumber();
   });
-  form.addEventListener("change", updateConditionals);
+  form.addEventListener("change", event => {
+    if (event.target.matches('[data-field="current_job"]')) renumber();
+    updateConditionals();
+  });
   form.querySelector('[name="validation_name"]')?.addEventListener("input", event => { signature.textContent = event.target.value.trim() || "Votre signature"; });
 
   const clearErrors = () => {
@@ -140,8 +148,10 @@
   };
   const experiencePayload = card => {
     const value = field => card.querySelector(`[data-field="${field}"]`)?.value?.trim() || "";
+    const currentJob = card.querySelector('[data-field="current_job"]').checked;
     return {
-      job_title: value("job_title"), company_name: value("company_name"), start_date: value("start_date"), end_date: value("end_date"),
+      current_job: currentJob,
+      job_title: value("job_title"), company_name: value("company_name"), start_date: value("start_date"), end_date: currentJob ? "" : value("end_date"),
       work_time_percent: value("work_time_percent"), contract_type: card.querySelector('[data-field="contract_type"]:checked')?.value || "",
       contract_other: value("contract_other"), executive_status: card.querySelector('[data-field="executive_status"]:checked')?.value || ""
     };

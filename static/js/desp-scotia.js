@@ -30,7 +30,51 @@
     } catch (error) { status.textContent = error.message; }
     finally { loading = false; refresh.disabled = false; panel.removeAttribute('aria-busy'); }
   }
-  document.getElementById('btnSsiapExam')?.addEventListener('click', load);
+  const certificates = document.querySelector('[data-certificates-url]');
+  const list = certificates.querySelector('[data-certificate-list]');
+  const listStatus = certificates.querySelector('[data-certificate-list-status]');
+  const viewLink = url => `<a href="${esc(url)}" target="_blank" rel="noopener">Voir l’attestation</a>`;
+  async function loadCertificates() {
+    listStatus.textContent = 'Chargement des attestations…';
+    try {
+      const response = await fetch(certificates.dataset.certificatesUrl, {cache:'no-store'});
+      if (!response.ok) throw new Error();
+      const {candidates} = await response.json();
+      list.innerHTML = candidates.map(row => `<article class="exam-card">
+        <div class="exam-candidate-top"><h4>${esc(row.name)}</h4><span data-certificate-link>${row.available ? viewLink(row.url) : 'À déposer'}</span></div>
+        ${certificates.dataset.readOnly === '1' ? '' : `<form data-upload-url="${esc(row.url)}" class="exam-actions">
+          <input type="file" name="certificate" accept=".pdf,application/pdf" required aria-label="Attestation de ${esc(row.name)}">
+          <button class="btn btn-primary" type="submit">${row.available ? 'Remplacer le PDF' : 'Déposer le PDF'}</button></form>`}
+        <p role="status"></p></article>`).join('');
+      listStatus.textContent = candidates.length ? '' : 'Aucun stagiaire inscrit dans cette session.';
+    } catch {
+      listStatus.textContent = 'Impossible de charger les attestations. Rouvrez l’onglet pour réessayer.';
+    }
+  }
+  list.addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = event.target;
+    const card = form.closest('article');
+    const feedback = card.querySelector('[role="status"]');
+    const button = form.querySelector('button');
+    const body = new FormData(form);
+    body.set('document_check_token', certificates.dataset.token);
+    button.disabled = true;
+    feedback.textContent = 'Envoi du PDF…';
+    try {
+      const response = await fetch(form.dataset.uploadUrl, {method:'POST', body, headers:{Accept:'application/json'}});
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) throw new Error(result.error || 'Le dépôt a échoué. Rechargez la page puis réessayez.');
+      card.querySelector('[data-certificate-link]').innerHTML = viewLink(form.dataset.uploadUrl);
+      form.reset();
+      button.textContent = 'Remplacer le PDF';
+      feedback.textContent = 'Attestation enregistrée.';
+    } catch (error) { feedback.textContent = error.message; }
+    finally { button.disabled = false; }
+  });
+  document.getElementById('btnSsiapExam')?.addEventListener('click', () => panel.hidden ? loadCertificates() : load());
+  document.querySelector('[data-exam-tab="certificates"]').addEventListener('click', loadCertificates);
+  document.querySelector('[data-exam-tab="scotia"]').addEventListener('click', load);
   refresh.addEventListener('click', load);
   panel.addEventListener('click', async event => {
     const button = event.target.closest('[data-scotia-download]');

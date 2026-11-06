@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 
 from flask import g, jsonify, Blueprint, abort, flash, get_flashed_messages, redirect, render_template, request, session, url_for
 
+import integrale_edof_associations as associations
 import integrale_edof_views as views
 import integrale_edof_history as history_view
 import edof_directory as directory
@@ -30,8 +31,7 @@ from edof_readonly_test import ID_RE
 from edof_server_browser import DETAIL_PREFIX
 from integrale_edof_registration import create_registration, eligible_sessions
 from integrale_edof_transfers import TARGETS, receipt, transfer
-from wedof_links import save_manual_wedof_link, sync_exact_wedof_links
-from wedof_matching import match_folder
+from wedof_links import save_manual_wedof_link
 
 PARIS = ZoneInfo("Europe/Paris")
 SECTIONS = {"state": "Dossiers CPF", "automations": "Automatisations",
@@ -178,7 +178,7 @@ def dashboard_rows(snapshot, data, operations, now):
             tags.discard("request")
         if evaluation in {"planned", "unconfirmed", "ready"}:
             tags.add("due")
-        if folder not in links and action:
+        if folder not in links:
             tags.add("unlinked")
         if block or kind == "unknown" or (action and not date):
             tags.add("anomaly")
@@ -280,6 +280,8 @@ def entry_choice(row):
 def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status, admin_required, check_csrf):
     bp = Blueprint("integrale_edof", __name__, url_prefix="/admin/integrale-edof" if on_production_service() else "/admin/edof-test")
     selection = ProviderStore(store.directory)
+    partner_id = getattr(legacy, "INTEGRALE_PARTNER_ID", "integrale")
+    is_cancelled = getattr(legacy, "_trainee_registration_is_cancelled", lambda t: bool(t.get("registration_cancelled")))
 
     def native_action(view):
         @wraps(view)
@@ -322,9 +324,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         with open(legacy.DATA_FILE, encoding="utf-8") as source:
             data = json.load(source)
         sessions = []
-        for group in data.get("sessions", []):
-            if not isinstance(group,dict):
-                continue
+        for group in associations.eligible_groups(data, partner_id, is_cancelled):
             summary = {key:group[key] for key in ("id", "name", "training_type", "date_start", "date_end",
                   "date_debut", "date_fin", "partner_id", "archived", "is_archived", "status") if key in group}
             summary["trainees"] = [{key:t[key] for key in ("id","first_name","last_name","prenom","nom","email","mail")
@@ -359,24 +359,60 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             return enriched
         return row
 
-    def matching_rows(owner, snapshot, data):
-        with closing(store.connect()) as db:
-            reads = db.execute("""SELECT result FROM jobs WHERE owner=? AND mode='read'
-                       AND json_extract(result,'$.code')='read_success' ORDER BY finished DESC""", (owner,)).fetchall()
-        contacts = {}
-        for item in reads:
-            fields = json.loads(item[0]).get("fields", {})
-            contacts.setdefault(fields.get("folder_id"), fields)
-        results = {}
-        for row in (snapshot or {}).get("rows", {}).values():
-            if category(row) not in ACTIONS:
+    def find_matches(data, records):
+        return associations.match_unlinked(data, records, partner_id, is_cancelled, folder_for_matching, store.connector_key)
+
+    def reconcile(records):
+        matches = find_matches(local_data(), records)
+        if not any(m["status"] == "exact_match" for m in matches.values()):
+            return len(matches), 0
+        # Recheck both sides of every association under the application's write lock.
+        outcome = {}
+        def apply(data):
+            current = find_matches(data, records)
+            outcome.update(examined=len(current), created=associations.synchronize(data, current))
+            return {}
+        legacy._atomic_update_data(apply)
+        return outcome["examined"], outcome["created"]
+
+    def nightly_associations(now):
+        with provider_operation("integrale"):
+            return associations.nightly(store, now, snapshot, reconcile)
+
+    @bp.get("/inscriptions/<session_id>/<trainee_id>/recherche-cpf")
+    @admin_required
+    def trainee_search(session_id, trainee_id):
+        owner = results_owner()
+        data = local_data()
+        group = next((g for g in data.get("sessions", []) if str(g.get("id")) == session_id), None)
+        trainee = next((t for t in (group or {}).get("trainees", []) if str(t.get("id")) == trainee_id), None)
+        if not trainee:
+            abort(404)
+        snap = snapshot(owner)
+        records = associations.observed_rows(store, owner, snap)
+        csrf = session.setdefault("edof_server_csrf", secrets.token_urlsafe(32))
+        query = request.args.get("q", "").strip()[:120]
+        results = []
+        # Compare only this registration, while keeping every existing CPF link for conflict checks.
+        subset = {"sessions": [{**group, "trainees":[trainee]}], "wedof_links": [
+            l for l in data.get("wedof_links", []) if l.get("active") and str(l.get("session_id")) == session_id
+            and str(l.get("trainee_id")) == trainee_id]}
+        linked = {str(l.get("external_id")) for l in data.get("wedof_links", []) if l.get("active")}
+        for folder, row in records.items():
+            words = directory.normalized(" ".join(str(row.get(k) or "") for k in ("folder_id","first_name","last_name","title")))
+            if query and not all(w in words.split() for w in directory.normalized(query).split()):
                 continue
-            detail = contacts.get(row["folder_id"], {})
-            if detail and all(directory.normalized(detail.get(k) or "") == directory.normalized(row.get(k) or "")
-                              for k in ("first_name","last_name")):
-                row = {**row, "email":detail.get("email", "")}
-            results[row["folder_id"]] = match_folder(folder_for_matching(row), data.get("sessions", []))
-        return results
+            observed = {**row, "email": associations.verified_email(row, [trainee], store.connector_key)}
+            checks = manual_options(subset, observed, pair=(session_id, trainee_id))[0]
+            if query or checks["identity_match"] or checks["email_match"]:
+                results.append({"row":row, "checks":checks, "linked":folder in linked})
+        results.sort(key=lambda r: (not r["checks"]["concordant"], not r["checks"]["identity_match"],
+                                    not r["checks"]["dates_match"], r["row"]["folder_id"]))
+        pages = max(1, math.ceil(len(results) / 25))
+        page = max(1, min(request.args.get("page", 1, type=int) or 1, pages))
+        return render_template("edof_trainee_search.html", title="Recherche CPF · Intégrale EDOF",
+            group=group, trainee=trainee, results=results[(page-1)*25:page*25], page=page, pages=pages,
+            query=query, csrf=csrf, synced=bool(snap), active=selection.state()["provider"]=="integrale")
 
     @bp.after_request
     def private(response):
@@ -417,6 +453,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             data["wedof_automation_blocks"] = [*data.get("wedof_automation_blocks", []),
                 *({"external_id":f,"action":"both","active":True,"reason_code":"administrative_issue"} for f in held)]
         rows, counts = dashboard_rows(snap, data, local_operations(selection), now)
+        unlinked_count = counts["unlinked"]
         all_rows = rows
         folder = request.args.get("folder", "")
         if rows and (section == "state" or folder):
@@ -425,7 +462,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             dossier_dates.annotate(rows, saved_dates, snap.get("checked", 0), category)
         selected_row = next((r for r in rows if r["folder_id"] == folder), None) if folder else None
         previewing = section == "state" and request.args.get("matching") == "1"
-        matches = matching_rows(owner, snap, data) if previewing else {}
+        matches = find_matches(data, associations.observed_rows(store, owner, snap)) if previewing else {}
         if previewing:
             rows = [r for r in rows if r["folder_id"] in matches]
         testing = section == "state" and request.args.get("simulation") == "1"
@@ -570,7 +607,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 detail["pilot_error"] = str(exc)
         return render_template("integrale_edof.html", proposal_fields=proposal_form, proposal_status=proposals.LABELS, title="Intégrale EDOF · Pilotage CPF",
             selection=selected, production=production, bridge_error=bridge_error, aligned=aligned, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=tabs, tab=tab,
-            groups=views.GROUPS, group=group, group_counts=groups_count, course=course, courses=courses,
+            unlinked_count=unlinked_count, has_snapshot=bool(snap), groups=views.GROUPS, group=group, group_counts=groups_count, course=course, courses=courses,
             period=period, periods=periods, operation_tabs=views.AUTOMATION_TABS,
             dispatch_labels=declarations.LABELS, dispatch_reasons=MESSAGES, motifs=declarations.MOTIFS,
             inspection=check, dispatches=dispatches, csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
@@ -668,14 +705,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         snap = snapshot(owner)
         if snap is None:
             raise ValueError("Synchronisez d’abord la liste EDOF.")
-        summary = {}
-        def apply(data):
-            results = matching_rows(owner, snap, data)
-            summary.update(sync_exact_wedof_links(data, results.values()))
-            return data
-        legacy._atomic_update_data(apply)
-        flash(f"{summary['created']} association(s) créée(s), {summary['already_linked']} déjà présente(s), "
-              f"{summary['conflicts']} conflit(s). Le rapprochement automatique exige aussi un contact vérifié.", "success")
+        examined, created = reconcile(associations.observed_rows(store, owner, snap))
+        flash(f"{created} association(s) créée(s) sur {examined} dossier(s) examinés.", "success")
         return back()
 
     @bp.post("/dossiers/<folder>/associate")
@@ -685,7 +716,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         sid, tid = request.form.get("session_id"), request.form.get("trainee_id")
         outcome = []
         def apply(data):
-            choices = manual_options(data, row, pair=(sid, tid))
+            scoped = {**data, "sessions": list(associations.eligible_groups(data, partner_id, is_cancelled))}
+            choices = manual_options(scoped, row, pair=(sid, tid))
             if len(choices) != 1 or choices[0]["issues"] or request.form.get("verified") != "yes":
                 raise ValueError("Vérifiez l’identité, la session et les éventuels conflits avant d’associer.")
             result = save_manual_wedof_link(data, external_id=folder, session_id=sid, trainee_id=tid,
@@ -696,6 +728,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             return data
         legacy._atomic_update_data(apply)
         flash("Association locale enregistrée." if outcome == ["created"] else "Association déjà enregistrée.", "success")
+        if request.form.get("return_to_trainee") == "1":
+            return redirect(url_for("admin_trainee_page", session_id=sid, trainee_id=tid, _anchor="cpfTracking"), code=303)
         return back(folder=folder)
 
     def proposal_back(folder, **extra):
@@ -1078,3 +1112,4 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
     if on_production_service():
         # Previously saved links and the technical console still use this path.
         app.register_blueprint(bp, name="integrale_edof_legacy", url_prefix="/admin/edof-test")
+    return nightly_associations

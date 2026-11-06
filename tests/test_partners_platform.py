@@ -150,3 +150,21 @@ def test_hub_controls_require_platform_admin_and_csrf(shop):
     assert client.post(SALES, data=fields).status_code == 403
     assert client.post(SETTINGS, data=fields).status_code == 403
     assert sales.enabled(host)
+
+
+def test_organisation_latest_login_uses_all_accounts_and_paris_time(shop):
+    client = shop["client"]
+    signup(client)
+    pid = all_data(shop)["users"][0]["partner_id"]
+    def seed(data):
+        first = data["users"][0]
+        first["last_login_at"] = "2026-11-05T09:05:00Z"
+        data["users"].append({**first, "id":"other-account", "email":"test2@example.invalid",
+                              "last_login_at":"2026-11-05T11:32:00+01:00"})
+        return {}
+    with host.app.test_request_context():
+        host._atomic_update_data(seed, partner_id=pid)
+    as_admin(client)
+    page = client.get(HUB + "?tab=organisations")
+    assert page.status_code == 200 and "Dernière connexion" in page.text
+    assert "05/11/2026 11h32" in page.text and "05/11/2026 10h05" not in page.text
