@@ -30,3 +30,12 @@
 
 .platform-hub .form-card > p { margin:12px 0; }
 .platform-hub form > .small { margin:14px 0; }
+
+.platform-hub .partner-directory{display:grid;gap:20px}
+.platform-hub .partner-directory-card{padding:24px;border:1px solid #dce5ef;border-radius:18px;background:#fff;box-shadow:0 4px 18px #18365106}
+.platform-hub .partner-directory-card>header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:22px}.platform-hub .partner-directory-card h3{font-size:20px;line-height:1.35;margin:0}.platform-hub .partner-directory-card header p{margin:5px 0 0;color:#62738a}
+.platform-hub .partner-directory-info{display:grid;grid-template-columns:minmax(200px,1fr) 2fr;gap:28px;align-items:start}.platform-hub .partner-directory-contact{display:flex;flex-direction:column;gap:7px;min-width:0;font-size:14px}.platform-hub .partner-directory-contact a{overflow-wrap:anywhere}.platform-hub .partner-directory-label,.platform-hub .partner-directory-info dt{font-size:12px;font-weight:650;color:#687b94}
+.platform-hub .partner-directory-info dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 28px;margin:0}.platform-hub .partner-directory-info dd{margin:6px 0 0;font-size:14px;font-weight:600;line-height:1.5}.platform-hub .partner-directory-last{color:#173c5b;white-space:nowrap}
+.platform-hub .partner-directory-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:24px;padding-top:18px;border-top:1px solid #edf1f6}.platform-hub .partner-directory-actions form{margin:0}.platform-hub .partner-directory-actions .btn{margin:0;min-height:40px;padding:10px 16px;font-size:13px}.platform-hub .partner-directory-more{margin-left:auto}.platform-hub .partner-directory-more summary{cursor:pointer;color:#62738a;font-size:13px;padding:10px}.platform-hub .partner-directory-more>div{display:flex;gap:10px;padding-top:10px}
+@media(max-width:800px){.platform-hub .partner-directory-info{grid-template-columns:1fr;gap:22px}.platform-hub .partner-directory-card{padding:20px}.platform-hub .partner-directory-info dl{gap:18px}.platform-hub .partner-directory-more{margin-left:0}.platform-hub .partner-directory-last{white-space:normal}}
+.platform-hub .partner-directory-actions a.btn-blue{color:#fff}

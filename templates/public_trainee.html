@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 {% if ssiap_pathway %}<div class="card" style="margin:16px 0;padding:18px;"><strong>Votre parcours : {{ ssiap_pathway.label }}</strong><p>SSIAP : du {{ ssiap_pathway.ssiap_start|frdate }} au {{ ssiap_pathway.ssiap_end|frdate }} · {{ ssiap_pathway.ssiap_schedule }}</p>{% if ssiap_pathway.with_sst %}<p>SST : {% for d in ssiap_pathway.sst_dates %}{{ d|frdate }}{% if not loop.last %}, {% endif %}{% endfor %} · {{ ssiap_pathway.sst_schedule }}</p>{% endif %}</div>{% endif %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/professional-experience.css', v='20261106') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/professional-experience.css', v='20261106-visible-checkbox') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/trainee-document-checks.css') }}">
 {% set token_safe = token or trainee.public_token or '' %}
 
@@ -3256,6 +3256,6 @@ function normalizePRE(s){
   }
 })();
 </script>
-{% if show_professional_experience_sheet %}<script src="{{ url_for('static', filename='js/professional-experience.js', v='20261106') }}" defer></script>{% endif %}
+{% if show_professional_experience_sheet %}<script src="{{ url_for('static', filename='js/professional-experience.js', v='20261106-visible-checkbox') }}" defer></script>{% endif %}
 <script src="{{ url_for('static', filename='js/postal_city_lookup.js') }}"></script>
 {% endblock %}

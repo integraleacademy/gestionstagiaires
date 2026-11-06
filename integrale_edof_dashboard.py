@@ -103,6 +103,14 @@ def category(row):
     return STATES.get(raw, "unknown")
 
 
+ASSOCIABLE_KINDS = {"request", "accepted", "training", "entry", "declared", "billable"}
+
+
+def associable(row):
+    return (category(row) in ASSOCIABLE_KINDS
+            and STATES.get(directory.normalized(row.get("state") or "")) in ASSOCIABLE_KINDS)
+
+
 def apply_confirmed_entries(snapshot, directory_path, owner):
     if not snapshot:
         return snapshot
@@ -178,14 +186,14 @@ def dashboard_rows(snapshot, data, operations, now):
             tags.discard("request")
         if evaluation in {"planned", "unconfirmed", "ready"}:
             tags.add("due")
-        if folder not in links:
+        if folder not in links and associable(record):
             tags.add("unlinked")
         if block or kind == "unknown" or (action and not date):
             tags.add("anomaly")
         counts.update(tags)
         rows.append({**record, "kind": kind, "label": LABELS[kind] if kind != "unknown" else record.get("state") or LABELS[kind],
                      "scheduled": scheduled_time(kind, date), "automatic_entry": paper_entry(action, date), "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": links.get(folder),
-                     "handled": bool(flags.get("handled")), "archived": bool(flags.get("archived")),
+                     "associable": associable(record), "handled": bool(flags.get("handled")), "archived": bool(flags.get("archived")),
                      "draft": flags.get("draft"), "official_url": DETAIL_PREFIX + folder})
     return rows, counts
 
@@ -360,7 +368,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         return row
 
     def find_matches(data, records):
-        return associations.match_unlinked(data, records, partner_id, is_cancelled, folder_for_matching, store.connector_key)
+        return associations.match_unlinked(data, {k:r for k,r in records.items() if associable(r)}, partner_id, is_cancelled, folder_for_matching, store.connector_key)
 
     def reconcile(records):
         matches = find_matches(local_data(), records)
@@ -399,6 +407,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             and str(l.get("trainee_id")) == trainee_id]}
         linked = {str(l.get("external_id")) for l in data.get("wedof_links", []) if l.get("active")}
         for folder, row in records.items():
+            if not associable(row):
+                continue
             words = directory.normalized(" ".join(str(row.get(k) or "") for k in ("folder_id","first_name","last_name","title")))
             if query and not all(w in words.split() for w in directory.normalized(query).split()):
                 continue
@@ -709,17 +719,43 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         flash(f"{created} association(s) créée(s) sur {examined} dossier(s) examinés.", "success")
         return back()
 
+    @bp.get("/dossiers/<folder>/inscriptions")
+    @admin_required
+    def association_options(folder):
+        owner = results_owner()
+        try:
+            row = enrich(owner, folder_record(owner, folder))
+        except ValueError as exc:
+            return jsonify(message=str(exc)), 404
+        if not associable(row):
+            return jsonify(message="Ce statut ne permet pas d’associer le dossier."), 409
+        data = local_data()
+        query = request.args.get("q", "").strip()[:120]
+        choices = (manual_options(data, row, query=query) if query else build_comparison(data, row)["candidates"])
+        items = []
+        for c in choices:
+            items.append({**c, "session_archived":c["archived"], "session_training_type":c["training_type"],
+                          "session_date_start":c["start_date"], "session_date_end":c["end_date"],
+                          "match_reason":" · ".join(check["label"] for check in c["checks"]),
+                          "blocked":bool([issue for issue in c["issues"] if issue != "Cette session est archivée."])})
+        return jsonify(items=items, total=len(items))
+
     @bp.post("/dossiers/<folder>/associate")
     @native_action
     def associate(owner, folder):
         row = enrich(owner, folder_record(owner, folder))
+        if not associable(row):
+            raise ValueError("Ce statut ne permet pas d’associer le dossier.")
         sid, tid = request.form.get("session_id"), request.form.get("trainee_id")
         outcome = []
         def apply(data):
             scoped = {**data, "sessions": list(associations.eligible_groups(data, partner_id, is_cancelled))}
             choices = manual_options(scoped, row, pair=(sid, tid))
-            if len(choices) != 1 or choices[0]["issues"] or request.form.get("verified") != "yes":
+            if len(choices) != 1 or any(i != "Cette session est archivée." for i in choices[0]["issues"]) or request.form.get("verified") != "yes":
                 raise ValueError("Vérifiez l’identité, la session et les éventuels conflits avant d’associer.")
+            choice = choices[0]
+            if (choice["dates_match"] is not True or choice["archived"]) and request.form.get("confirm_date_mismatch") != "1":
+                raise ValueError("Confirmez les dates différentes ou la session archivée avant d’associer.")
             result = save_manual_wedof_link(data, external_id=folder, session_id=sid, trainee_id=tid,
                        state=folder_for_matching(row)["state"], date_start=row.get("session_start_date"), date_end=row.get("session_end_date"))
             if result == "conflict":
@@ -727,6 +763,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             outcome.append(result)
             return data
         legacy._atomic_update_data(apply)
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify(ok=True, message="Association locale enregistrée.")
         flash("Association locale enregistrée." if outcome == ["created"] else "Association déjà enregistrée.", "success")
         if request.form.get("return_to_trainee") == "1":
             return redirect(url_for("admin_trainee_page", session_id=sid, trainee_id=tid, _anchor="cpfTracking"), code=303)

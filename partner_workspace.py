@@ -12,6 +12,7 @@ import elearning_orders as learning
 import elearning_reporting as reporting
 import manuals_commerce as commerce
 import manuals_fulfillment as fulfillment
+import partner_presence
 
 TABS = (("overview", "Vue d’ensemble"), ("orders", "Commandes"),
         ("invoices", "Factures"), ("learning", "E-learning & stagiaires"),
@@ -120,6 +121,7 @@ def context(host, data, partner):
             alerts.append({"label": row["reference"] + " · Accès prêts à envoyer", "tab": "learning"})
     logs = sorted(data.get("activity_logs", []), key=lambda row: row.get("created_at") or "", reverse=True)[:30]
     return dict(
+        workspace_account_access={uid: stamp.isoformat() for uid,stamp in partner_presence.latest(host, data).items()},
         workspace_tabs=TABS, active_tab=request.args.get("tab") if request.args.get("tab") in dict(TABS) else "overview",
         workspace_orders=orders, workspace_invoices=invoices, workspace_cards=cards,
         workspace_sessions=data.get("sessions", []), workspace_alerts=alerts,

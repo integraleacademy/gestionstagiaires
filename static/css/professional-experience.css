@@ -45,3 +45,9 @@
 
 .pro-sheet-field[hidden] { display: none; }
 .pro-sheet-choice input:focus-visible + span { outline: 2px solid currentColor; outline-offset: 2px; }
+
+.pro-sheet-current-job{grid-column:1/-1;display:flex;align-items:flex-start;gap:12px;padding:16px;margin:2px 0 4px;border:2px solid var(--pro-gold);border-radius:12px;background:#fff9e9;cursor:pointer}
+.pro-sheet-current-job input[type=checkbox]{appearance:auto;position:static;opacity:1;pointer-events:auto;flex:0 0 22px;width:22px;height:22px;margin:2px 0;accent-color:#977320;cursor:pointer}
+.pro-sheet-current-job strong{display:block;font-size:15px;color:#252015}.pro-sheet-current-job small{display:block;margin-top:5px;color:#665d46;font-size:13px;line-height:1.5}
+.pro-sheet-current-job:has(input:checked){background:#edf8ef;border-color:#218347}.pro-sheet-current-job:focus-within{outline:3px solid #c7a64a55;outline-offset:3px}
+.pro-sheet-modal .pro-sheet-header h2{color:#fff}

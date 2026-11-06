@@ -543,32 +543,36 @@ def test_legacy_full_request_survives_queue_upgrade(site):
     assert site.store.manual_sync_status(site.owner,"all")["busy"]
 
 
-def test_native_lookup_and_home_kpi_include_every_state(site):
+def test_native_lookup_and_home_kpi_include_only_eligible_states(site):
     from bs4 import BeautifulSoup
     home = BeautifulSoup(site.client.get("/admin/edof-test").text, "html.parser")
     kpi = home.select_one('a[data-wedof-counter="to_associate"]')
-    assert kpi.strong.text == "4" and "tab=unlinked" in kpi["href"]
+    assert kpi.strong.text == "3" and "tab=unlinked" in kpi["href"]
     pending = site.client.get(kpi["href"])
-    assert all(f'data-edof-folder="{n}"' in pending.text for n in range(100000, 100004))
+    assert all(f'data-edof-folder="{n}"' in pending.text for n in range(100000, 100003))
     path = "/admin/edof-test/inscriptions/s1/t1/recherche-cpf"
     site.gate.switch("integrale", 0, "admin")
     assert "100002" in site.client.get(path).text
     searched = site.client.get(path, query_string={"q":"100003"}).text
-    assert "Annulé par le titulaire" in searched and "100002" not in searched
+    assert "Annulé par le titulaire" not in searched and "100002" not in searched
+    assert 'data-edof-folder="100003"' not in pending.text
     assert site.client.get(path.replace("t1","other")).status_code == 404
     form = {"csrf":site.csrf, "session_id":"s1", "trainee_id":"t1","verified":"yes","return_to_trainee":"1"}
-    reply = site.client.post("/admin/edof-test/dossiers/100003/associate", data=form)
+    reply = site.client.post("/admin/edof-test/dossiers/100003/associate", data=form, headers={"Accept":"application/json"})
+    assert reply.status_code == 409 and not json.loads(site.local.read_text()).get("wedof_links")
+    reply = site.client.post("/admin/edof-test/dossiers/100002/associate", data=form)
     assert reply.status_code == 303 and reply.location.endswith("/s1/stagiaire/t1#cpfTracking")
     remaining = BeautifulSoup(site.client.get("/admin/edof-test").text, "html.parser")
-    assert remaining.select_one('a[data-wedof-counter="to_associate"] strong').text == "3"
-    assert "Dossier déjà associé" in site.client.get(path, query_string={"q":"100003"}).text
+    assert remaining.select_one('a[data-wedof-counter="to_associate"] strong').text == "2"
+    assert "Dossier déjà associé" in site.client.get(path, query_string={"q":"100002"}).text
 
 
-def test_nightly_all_statuses_after_18_paris_handles_duplicates_and_restart(site, monkeypatch):
+def test_nightly_eligible_statuses_after_18_paris_handles_duplicates_and_restart(site, monkeypatch):
     site.gate.switch("integrale", 0, "admin")
     saved = site.vault.get(edof_directory.record_key(site.owner))
     monkeypatch.setenv("EDOF_CONNECTOR_KEY", site.store.connector_key)
     # Verified contact is bound to one dossier. The official list keeps no raw remote address.
+    saved["rows"]["100003"]["state"] = "Service fait déclaré"
     for folder in ("100002", "100003"):
         row = saved["rows"][folder]
         item = {"id":folder, "attendee":{"firstName":"Anne","lastName":"Exemple","email":"anne@example.invalid"}}
@@ -589,3 +593,56 @@ def test_nightly_all_statuses_after_18_paris_handles_duplicates_and_restart(site
     assert site.nightly(winter)
     links = json.loads(site.local.read_text())["wedof_links"]
     assert [(link["external_id"],link["trainee_id"],link["provider"]) for link in links] == [("100002","t1","integrale")]
+
+@pytest.mark.parametrize('state,eligible', [
+    ('À traiter',True), ('Accepté',True), ('En formation',True),
+    ('Service fait déclaré',True), ('Service fait validé',True),
+    ('serviceDoneValidatedRevisionVSF',True), ('inTraining',True),
+    ('Annulé par le titulaire',False), ('Refusé',False),
+    ('En attente de validation du titulaire',False), ('Financement FT en cours',False),
+    ('Financement FT refusé',False), ('Facturé',False), ('Payé',False), ('Sortie déclarée',False), ('Inconnu',False),
+])
+def test_association_state_gate_applies_to_list_lookup_manual_and_nightly(site,state,eligible):
+    from bs4 import BeautifulSoup
+    site.gate.switch('integrale',0,'admin')
+    saved=site.vault.get(edof_directory.record_key(site.owner))
+    row={**saved['rows']['100000'],'state':state,'email':'anne@example.invalid'}
+    saved['rows']={'100000':row}
+    site.vault.put(edof_directory.record_key(site.owner),saved)
+    before=site.local.read_text()
+    page=BeautifulSoup(site.client.get('/admin/edof-test?tab=unlinked&group=all').text,'html.parser')
+    assert page.select_one('a[data-wedof-counter=to_associate] strong').text == ('1' if eligible else '0')
+    assert bool(page.select('[data-manual-link]')) is eligible
+    options=site.client.get('/admin/edof-test/dossiers/100000/inscriptions')
+    assert options.status_code == (200 if eligible else 409)
+    lookup=site.client.get('/admin/edof-test/inscriptions/s1/t1/recherche-cpf').text
+    assert ('N° 100000' in lookup) is eligible
+    assert site.local.read_text()==before  # Opening the chooser is read-only.
+    site.nightly(dt.datetime(2026,11,6,18,tzinfo=dashboard.PARIS))
+    assert bool(json.loads(site.local.read_text()).get('wedof_links')) is eligible
+    site.local.write_text(before)
+    reply=site.client.post('/admin/edof-test/dossiers/100000/associate',headers={'Accept':'application/json'},
+        data={'csrf':site.csrf,'session_id':'s1','trainee_id':'t1','verified':'yes'})
+    assert reply.status_code == (200 if eligible else 409)
+    assert bool(json.loads(site.local.read_text()).get('wedof_links')) is eligible
+
+
+def test_native_modal_search_conflicts_and_explicit_different_dates(site):
+    site.gate.switch('integrale',0,'admin')
+    url='/admin/edof-test/dossiers/100000/inscriptions'
+    assert site.client.get(url).json['items'][0]['trainee_id']=='t1'
+    assert site.client.get(url+'?q=Anne').json['items'][0]['session_id']=='s1'
+    assert not site.client.get(url+'?q=Introuvable').json['items']
+    data=json.loads(site.local.read_text()); data['sessions'][0]['date_end']='2026-02-07'
+    site.local.write_text(json.dumps(data))
+    form={'csrf':site.csrf,'session_id':'s1','trainee_id':'t1','verified':'yes'}
+    post=lambda:site.client.post('/admin/edof-test/dossiers/100000/associate',data=form,headers={'Accept':'application/json'})
+    assert post().status_code==409
+    form['confirm_date_mismatch']='1'
+    assert post().status_code==200
+    # A second dossier cannot replace an occupied registration.
+    assert site.client.get('/admin/edof-test/dossiers/100002/inscriptions').json['items'][0]['blocked']
+    assert site.client.post('/admin/edof-test/dossiers/100002/associate',data=form,headers={'Accept':'application/json'}).status_code==409
+    assert len(json.loads(site.local.read_text())['wedof_links'])==1
+    with site.client.session_transaction() as sess: sess['admin_role']='viewer'
+    assert site.client.post('/admin/edof-test/dossiers/100002/associate',data=form).status_code==403
