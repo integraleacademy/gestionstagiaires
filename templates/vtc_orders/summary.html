@@ -1,0 +1,13 @@
+<section class="order-summary">
+  <img src="{{url_for('static',filename='vtc/vehicle.webp')}}" alt="Notre véhicule pour l’examen pratique VTC" width="1088" height="612">
+  <div class="summary-content">
+    <p class="eyebrow">Votre réservation</p>
+    <h2>{{offers[offer]}}</h2>
+    <div class="summary-price"><strong>{{150 if offer=='vehicule' else 600}} €</strong><span>TTC{% if row is not defined or row.vat_rate == '0' or not (row.invoice_id or row.invoice_started) %}<br>TVA à 0 %{% endif %}</span></div>
+    <ul class="included"><li>Véhicule à doubles commandes</li><li>Mise à disposition le jour de l’examen</li>{% if offer!='vehicule' %}<li>Formation pratique à Puget-sur-Argens</li>{% endif %}</ul>
+    <div class="summary-place"><span>Centre d’examen</span><strong>{% if row is defined and row.exam_centre in centres %}{{centres[row.exam_centre]}}{% elif sent is defined and sent and sent.exam_centre in centres %}{{centres[sent.exam_centre]}}{% else %}Saint-Laurent-du-Var (06)<br>ou La Valette-du-Var (83){% endif %}</strong></div>
+    {% if row is defined and row.exam_date %}<div class="summary-place"><span>Date communiquée</span><strong>{{row.exam_date|vtc_date}}</strong></div>{% endif %}
+    <p class="summary-note">Les frais d’inscription à l’examen sont à régler auprès de la CMA.</p>
+  </div>
+</section>
+<div class="help-card"><span class="help-icon" aria-hidden="true">?</span><div><strong>Une question ? Parlons-en.</strong><br><a href="tel:+33422470768">04 22 47 07 68</a></div></div>

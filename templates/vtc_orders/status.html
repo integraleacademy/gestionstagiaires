@@ -2,11 +2,13 @@
 {% block title %}{{stages[row.stage]}}{% endblock %}
 {% block head %}{% if row.stage=='billing' %}<script defer src="{{url_for('static',filename='js/vtc-payment.js')}}?v=1"></script>{% elif row.stage=='contract' and not row.signature_url %}<meta http-equiv="refresh" content="25">{% endif %}{% endblock %}
 {% block content %}
-<p class="kicker">DOSSIER VTC · {{row.id[:10]|upper}}</p>
-<h1>{{stages[row.stage]}}</h1><p>{{offers[row.offer]}}{% if row.stage!='billing' %} · <strong>{{150 if row.offer=='vehicule' else 600}} € TTC</strong>{% endif %}{% if row.exam_centre in centres %}<br>{{centres[row.exam_centre]}}{% endif %}</p>
+{% set offer=row.offer %}
+<header class="page-heading status-heading"><div><p class="eyebrow">Votre réservation VTC · {{row.id[:10]|upper}}</p><h1>{{'Finalisez votre réservation.' if row.stage=='billing' else 'Votre dossier VTC.'}}</h1><p class="lead">Retrouvez ici votre réservation et vos documents.</p></div><span class="status-badge">{{stages[row.stage]}}</span></header>
+<div class="booking-grid"><div class="dossier-main">
 {% if error %}<p class="error" role="alert">{{error}}</p>{% endif %}
+{% if row.stage!='billing' %}<section class="action-panel"><h2>{{stages[row.stage]}}</h2>{% endif %}
 {% if row.stage=='verify' %}
-<p>{% if row.offer=='vehicule' and not row.exam_date %}Confirmez votre adresse pour préparer le paiement du véhicule. Vous pourrez ensuite régler les 150 € sur la page sécurisée de Qonto.{% elif row.offer=='vehicule' %}Confirmez votre adresse. Le centre vérifiera la disponibilité du véhicule le {{row.exam_date|vtc_date}} avant de vous adresser le lien de paiement.{% elif row.offer=='cpf' %}Confirmez votre adresse pour choisir un rendez-vous téléphonique avec Cassandre.{% else %}Confirmez votre adresse pour poursuivre votre inscription à la séance pratique.{% endif %}</p>
+<p>{% if row.offer=='vehicule' and not row.exam_date %}Confirmez votre adresse pour préparer le paiement du véhicule. Vous pourrez ensuite payer les 150 € par carte bancaire.{% elif row.offer=='vehicule' %}Confirmez votre adresse. Le centre vérifiera la disponibilité du véhicule le {{row.exam_date|vtc_date}} avant de vous adresser le lien de paiement.{% elif row.offer=='cpf' %}Confirmez votre adresse pour choisir un rendez-vous téléphonique avec Cassandre.{% else %}Confirmez votre adresse pour poursuivre votre inscription à la séance pratique.{% endif %}</p>
 <form method="post"><input type="hidden" name="csrf_token" value="{{csrf}}"><button name="action" value="verify">{{'Confirmer et accéder au paiement' if row.offer=='vehicule' and not row.exam_date else 'Confirmer mon adresse et continuer'}} →</button></form>
 {% elif row.stage=='calendar' %}
 <p>Choisissez un créneau téléphonique avec Cassandre. Elle vous accompagne dans votre demande sur Mon Compte Formation. Votre place sera confirmée après validation du financement.</p>
@@ -22,8 +24,10 @@
 {% elif row.stage=='funded' %}<p>Votre financement CPF est confirmé par le centre. Votre inscription et vos justificatifs de financement sont disponibles sur Mon Compte Formation.</p>
 {% elif row.stage=='withdrawn' %}<p>Votre demande d’annulation est enregistrée. Le centre vous répondra par e-mail.</p>
 {% elif row.stage=='stopped' %}<p>Contactez le centre pour reprendre votre dossier.</p>{% endif %}
+{% if row.stage!='billing' %}</section>{% endif %}
 {% if row.slot %}<p><strong>Votre formation à Puget-sur-Argens</strong><br>{{row.slot.day|vtc_date}} · {{row.slot.start}} – {{row.slot.end}}</p>{% endif %}
-{% if docs %}<h2>Vos documents</h2><ul>{% for kind,label in docs.items() %}<li><a href="{{url_for('.pdf',key=key,kind=kind)}}">{{label}} (PDF)</a></li>{% endfor %}</ul>{% endif %}
-<aside><strong>À communiquer à la CMA</strong><p>{{cma}}</p></aside>
+{% if docs %}<section class="documents-panel"><h2>Vos documents</h2><ul class="document-links">{% for kind,label in docs.items() %}<li><a href="{{url_for('.pdf',key=key,kind=kind)}}">{{label}} (PDF)</a></li>{% endfor %}</ul></section>{% endif %}
+<div class="cma-note"><strong>Pensez à prévenir la CMA</strong><p>Lors de votre inscription à l’examen, indiquez que vous utiliserez le véhicule d’<b>Intégrale Academy – Intégrale Sécurité Formations</b> pour passer avec nos candidats. Transmettez-nous votre convocation dès réception.</p></div>
 {% if row.stage not in ['verify','withdrawn'] %}<details><summary>Demander l’annulation ou me rétracter</summary><form method="post"><input type="hidden" name="csrf_token" value="{{csrf}}"><p>Cette demande sera enregistrée et transmise au centre pour traitement.</p><button name="action" value="withdraw">Confirmer ma demande d’annulation</button></form></details>{% endif %}
+</div><div class="booking-side">{% include 'vtc_orders/summary.html' %}</div></div>
 {% endblock %}

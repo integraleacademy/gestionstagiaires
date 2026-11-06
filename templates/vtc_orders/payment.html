@@ -1,13 +1,13 @@
 <section class="payment-panel" data-payment-state="{{payment}}" data-status-url="{{url_for('.payment_progress',key=key)}}">
-<div class="payment-heading"><p class="kicker">Règlement par carte bancaire</p><p class="total">{{150 if row.offer=='vehicule' else 600}} € <small>TTC</small></p></div>
+<div class="payment-heading"><p class="eyebrow">Paiement sécurisé</p><p class="total">{{150 if row.offer=='vehicule' else 600}} € <small>TTC</small></p></div>
 {% if payment=='ready' %}
-  <h2>Votre paiement est prêt</h2><p>Cliquez sur le bouton ci-dessous. La page sécurisée de Qonto s’ouvrira pour saisir votre carte et valider le règlement.</p>
+  <h2>Réglez votre réservation</h2><p>Réglez les {{150 if row.offer=='vehicule' else 600}} € par carte bancaire pour finaliser votre réservation.</p>
   <a class="button pay-button" href="{{url_for('.pay',key=key)}}" rel="noreferrer">Payer {{150 if row.offer=='vehicule' else 600}} € par carte <span aria-hidden="true">→</span></a>
-  <p class="fine">Votre facture et votre attestation seront disponibles dans ce dossier après confirmation du règlement.</p>
+  <p class="fine">Dès réception du paiement, vous recevrez votre facture et votre attestation par e-mail. Vous pourrez également les télécharger ici.</p>
 {% elif payment=='preparing' %}
-  <h2>Préparation de votre paiement</h2><p>Patientez pendant la création de votre lien sécurisé. Le bouton de paiement apparaîtra ici automatiquement.</p>
+  <h2>Connexion au paiement sécurisé</h2><p>Nous préparons votre accès au paiement par carte. Le bouton pour payer s’affichera automatiquement.</p>
 {% elif payment=='processing' %}
-  <h2>Vérification du règlement</h2><p>Qonto vérifie la transaction. Patientez avant toute nouvelle action. Vous recevrez votre confirmation par e-mail.</p>
+  <h2>Vérification du règlement</h2><p>Votre règlement est en cours de vérification. La confirmation s’affichera ici et vous sera envoyée par e-mail.</p>
 {% elif payment=='documents' %}
   <h2>Paiement reçu</h2><p>Votre règlement est confirmé. Nous préparons votre facture et votre attestation. Vous les recevrez aussi par e-mail.</p>
 {% elif payment=='review' %}
@@ -23,9 +23,12 @@
 </section>
 {% if payment=='preparing' %}
 <dialog id="payment-wait" aria-labelledby="wait-title" aria-describedby="wait-detail">
-  <div class="wait-symbol" aria-hidden="true"><span></span></div>
-  <h2 id="wait-title">Un instant, nous préparons votre paiement.</h2>
-  <p id="wait-detail">Le bouton pour régler {{150 if row.offer=='vehicule' else 600}} € par carte s’affichera dès que Qonto aura créé votre lien sécurisé.</p>
-  <button type="button" class="text-action" data-close-dialog>Revenir à mon dossier</button>
+  <div class="modal-top"><span class="lock-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></svg></span><span class="eyebrow">Paiement sécurisé</span></div>
+  <h2 id="wait-title">Votre paiement<br>se prépare.</h2>
+  <p id="wait-detail">Patientez quelques instants. Vous pourrez ensuite régler votre réservation par carte bancaire.</p>
+  <div class="modal-total"><span>Montant à régler</span><strong>{{150 if row.offer=='vehicule' else 600}} € <small>TTC</small></strong></div>
+  <div class="loading-track" aria-hidden="true"><span></span></div>
+  <p class="modal-caption" role="status">Connexion au service de paiement…</p>
+  <button type="button" class="modal-close" data-close-dialog>Continuer à consulter mon dossier</button>
 </dialog>
 {% endif %}
