@@ -186,14 +186,17 @@ def dashboard_rows(snapshot, data, operations, now):
             tags.discard("request")
         if evaluation in {"planned", "unconfirmed", "ready"}:
             tags.add("due")
-        if folder not in links and associable(record):
-            tags.add("unlinked")
+        if folder not in links:
+            if flags.get("association_ignored"):
+                tags.add("association_ignored")
+            elif associable(record):
+                tags.add("unlinked")
         if block or kind == "unknown" or (action and not date):
             tags.add("anomaly")
         counts.update(tags)
         rows.append({**record, "kind": kind, "label": LABELS[kind] if kind != "unknown" else record.get("state") or LABELS[kind],
                      "scheduled": scheduled_time(kind, date), "automatic_entry": paper_entry(action, date), "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": links.get(folder),
-                     "associable": associable(record), "handled": bool(flags.get("handled")), "archived": bool(flags.get("archived")),
+                     "associable": associable(record), "association_ignored": bool(flags.get("association_ignored")), "handled": bool(flags.get("handled")), "archived": bool(flags.get("archived")),
                      "draft": flags.get("draft"), "official_url": DETAIL_PREFIX + folder})
     return rows, counts
 
@@ -224,7 +227,21 @@ def operations_db(store):
     db = store.connect()
     db.execute("""CREATE TABLE IF NOT EXISTS dossier_work (folder TEXT PRIMARY KEY, handled INTEGER DEFAULT 0,
                   archived INTEGER DEFAULT 0, draft TEXT, updated TEXT, actor TEXT)""")
+    db.execute("""CREATE TABLE IF NOT EXISTS dossier_association_preferences
+                  (folder TEXT PRIMARY KEY, ignored INTEGER NOT NULL DEFAULT 0, updated TEXT, actor TEXT)""")
     return db
+
+
+def ignored_associations(store):
+    with closing(operations_db(store)) as db:
+        return {row[0] for row in db.execute("SELECT folder FROM dossier_association_preferences WHERE ignored=1")}
+
+
+def record_association_preference(store, folder, actor, ignored):
+    with closing(operations_db(store)) as db, db:
+        db.execute("""INSERT INTO dossier_association_preferences VALUES(?,?,?,?)
+                      ON CONFLICT(folder) DO UPDATE SET ignored=excluded.ignored, updated=excluded.updated, actor=excluded.actor""",
+                   (folder, int(ignored), dt.datetime.now(PARIS).isoformat(), actor))
 
 
 def local_operations(store):
@@ -234,6 +251,8 @@ def local_operations(store):
             draft = json.loads(row["draft"]) if row["draft"] else None
             # Legacy exercise drafts cannot establish a different start date.
             result[row["folder"]] = {**dict(row), "draft": None if draft and draft.get("source") == "lms" else draft}
+        for row in db.execute("SELECT folder,ignored FROM dossier_association_preferences"):
+            result.setdefault(row["folder"], {})["association_ignored"] = bool(row["ignored"])
         return result
 
 
@@ -369,7 +388,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         return row
 
     def find_matches(data, records):
-        return associations.match_unlinked(data, {k:r for k,r in records.items() if associable(r)}, partner_id, is_cancelled, folder_for_matching, store.connector_key)
+        ignored = ignored_associations(selection)
+        return associations.match_unlinked(data, {k:r for k,r in records.items() if associable(r) and k not in ignored}, partner_id, is_cancelled, folder_for_matching, store.connector_key)
 
     def reconcile(records):
         matches = find_matches(local_data(), records)
@@ -407,8 +427,9 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             l for l in data.get("wedof_links", []) if l.get("active") and str(l.get("session_id")) == session_id
             and str(l.get("trainee_id")) == trainee_id]}
         linked = {str(l.get("external_id")) for l in data.get("wedof_links", []) if l.get("active")}
+        ignored = ignored_associations(selection)
         for folder, row in records.items():
-            if not associable(row):
+            if not associable(row) or folder in ignored:
                 continue
             words = directory.normalized(" ".join(str(row.get(k) or "") for k in ("folder_id","first_name","last_name","title")))
             if query and not all(w in words.split() for w in directory.normalized(query).split()):
@@ -465,6 +486,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 *({"external_id":f,"action":"both","active":True,"reason_code":"administrative_issue"} for f in held)]
         rows, counts = dashboard_rows(snap, data, local_operations(selection), now)
         unlinked_count = counts["unlinked"]
+        ignored_count = counts["association_ignored"]
         all_rows = rows
         folder = request.args.get("folder", "")
         if rows and (section == "state" or folder):
@@ -618,7 +640,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 detail["pilot_error"] = str(exc)
         return render_template("integrale_edof.html", proposal_fields=proposal_form, proposal_status=proposals.LABELS, title="Intégrale EDOF · Pilotage CPF",
             selection=selected, production=production, bridge_error=bridge_error, aligned=aligned, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=tabs, tab=tab,
-            unlinked_count=unlinked_count, has_snapshot=bool(snap), groups=views.GROUPS, group=group, group_counts=groups_count, course=course, courses=courses,
+            unlinked_count=unlinked_count, ignored_count=ignored_count, has_snapshot=bool(snap), groups=views.GROUPS, group=group, group_counts=groups_count, course=course, courses=courses,
             period=period, periods=periods, operation_tabs=views.AUTOMATION_TABS,
             dispatch_labels=declarations.LABELS, dispatch_reasons=MESSAGES, motifs=declarations.MOTIFS,
             inspection=check, dispatches=dispatches, csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
@@ -720,6 +742,21 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         flash(f"{created} association(s) créée(s) sur {examined} dossier(s) examinés.", "success")
         return back()
 
+    @bp.post("/dossiers/<folder>/association-preference")
+    @native_action
+    def association_preference(owner, folder):
+        folder_record(owner, folder)
+        if request.form.get("ignore") not in {None, "1"}:
+            abort(400)
+        ignored = request.form.get("ignore") == "1"
+        record_association_preference(selection, folder, session.get("admin_username") or owner, ignored)
+        message = ("Dossier masqué de À associer et exclu du rapprochement automatique."
+                   if ignored else "Dossier réintégré aux associations selon son statut.")
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify(ok=True, ignored=ignored, message=message)
+        flash(message, "success")
+        return back(group="all", tab="association_ignored" if not ignored else "unlinked")
+
     @bp.get("/dossiers/<folder>/inscriptions")
     @admin_required
     def association_options(folder):
@@ -728,6 +765,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             row = enrich(owner, folder_record(owner, folder))
         except ValueError as exc:
             return jsonify(message=str(exc)), 404
+        if folder in ignored_associations(selection):
+            return jsonify(message="Réaffichez ce dossier dans À associer avant de l’associer."), 409
         if not associable(row):
             return jsonify(message="Ce statut ne permet pas d’associer le dossier."), 409
         data = local_data(include_cancelled=True)
@@ -744,6 +783,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
     @bp.post("/dossiers/<folder>/associate")
     @native_action
     def associate(owner, folder):
+        if folder in ignored_associations(selection):
+            raise ValueError("Réaffichez ce dossier dans À associer avant de l’associer.")
         row = enrich(owner, folder_record(owner, folder))
         if not associable(row):
             raise ValueError("Ce statut ne permet pas d’associer le dossier.")

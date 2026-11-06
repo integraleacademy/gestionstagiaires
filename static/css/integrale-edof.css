@@ -615,3 +615,8 @@ dialog.edof-action-dialog { width:min(580px,calc(100vw - 32px)); max-width:calc(
 .edof-action-dialog[data-kind="proposal"] .edof-action-footer > div { display:flex; flex-wrap:wrap; gap:8px; }
 .edof-proposal [data-proposal-follow] { align-self:flex-start; margin-top:10px; }
 @media(max-width:540px) { .edof-action-brand img { width:140px; height:66px; } .edof-action-dialog[data-kind="proposal"] .edof-action-hero { padding-top:22px; } }
+
+.edof-association-preference{display:grid;gap:7px;max-width:250px;padding:10px 12px;border:1px solid #dce4f0;border-radius:10px;background:#f8fafc}
+.edof-association-preference label{display:flex;align-items:flex-start;gap:9px;font-size:12px;line-height:1.45;cursor:pointer;color:#334766}
+.edof-association-preference input[type=checkbox]{appearance:auto;position:static;opacity:1;width:18px;height:18px;min-width:18px;margin:0;accent-color:#315be8}
+.edof-association-preference small:empty{display:none}
