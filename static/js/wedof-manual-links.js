@@ -18,6 +18,11 @@
   const reviewLocalDates = document.querySelector('#wedof-review-local-dates');
   const reviewConfirm = document.querySelector('#wedof-review-confirm');
   const feedback = document.querySelector('#wedof-manual-feedback');
+  const successModal = document.querySelector('#edof-association-success');
+  if (native && successModal) {
+    successModal.addEventListener('close', () => window.location.reload());
+    document.querySelector('#edof-association-success-close').addEventListener('click', () => successModal.close());
+  }
 
   let folder = {};
   let selectedEnrolment = null;
@@ -111,13 +116,20 @@
     results.innerHTML = '';
     results.setAttribute('aria-busy', 'false');
     if (!items.length) {
+      if (native) {
+        resultsStatus.textContent = automatic
+          ? 'Aucune inscription locale ne correspond exactement à l’identité de ce dossier CPF.'
+          : 'Aucune inscription locale ne correspond à votre recherche.';
+        results.innerHTML = '<div class="wedof-empty-search"><strong>Aucune inscription trouvée</strong><span>Un dossier présent dans EDOF n’est pas forcément déjà inscrit dans Gestion Stagiaires. Essayez le nom seul, une autre orthographe, l’e-mail ou la session. Si sa fiche n’existe pas encore, créez d’abord le stagiaire dans la bonne session.</span></div>';
+        return;
+      }
       resultsStatus.textContent = automatic
         ? 'Aucun stagiaire correspondant n’a été trouvé automatiquement. Recherchez son nom, son e-mail ou son téléphone.'
         : 'Aucun stagiaire ne correspond à cette recherche.';
       results.innerHTML = '<div class="wedof-empty-search"><strong>Aucun résultat</strong><span>Vérifiez l’orthographe ou essayez avec l’e-mail ou le téléphone.</span></div>';
       return;
     }
-    resultsStatus.textContent = `${total} inscription${total > 1 ? 's' : ''} trouvée${total > 1 ? 's' : ''}. Cliquez sur « Associer » en face de la bonne session.`;
+    resultsStatus.textContent = `${total} inscription${total > 1 ? 's' : ''} trouvée${total > 1 ? 's' : ''}. ${native && items.every(item => item.blocked) ? 'Ces inscriptions ne peuvent pas être associées : consultez le motif indiqué.' : 'Cliquez sur « Associer » en face de la bonne session.'}`;
     items.forEach(item => {
       const card = document.createElement('article');
       card.className = 'wedof-enrolment-card';
@@ -135,6 +147,7 @@
         <span class="wedof-match-reason">${esc(item.match_reason)}</span>
         <button type="button" class="btn btn-blue wedof-associate-button">Associer</button>`;
       card.querySelector('.wedof-associate-button').disabled = !!item.blocked;
+      if (item.cancelled) card.querySelector('.wedof-associate-button').textContent = 'Inscription annulée';
       card.querySelector('.wedof-associate-button').addEventListener('click', event => {
         chooseEnrolment(item, event.currentTarget);
       });
@@ -204,7 +217,7 @@
   }
 
   function updateDashboardRow(payload) {
-    if (native) { window.location.reload(); return; }
+    if (native) return;
     if (!currentRow) return;
     currentRow.querySelector('[data-local-session]').textContent = payload.session;
     currentRow.querySelector('[data-local-trainee]').textContent = payload.trainee;
@@ -240,6 +253,10 @@
       updateDashboardRow(payload);
       showPageFeedback(payload.message);
       modal.close();
+      if (native && successModal) {
+        document.querySelector('#edof-association-success-detail').textContent = `${identity(item)} · ${item.session_name} · dossier ${folder.externalId}`;
+        successModal.showModal();
+      }
     } catch (error) {
       setModalAlert(error.message, 'error');
       if (button) {

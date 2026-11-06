@@ -69,6 +69,7 @@ def _registration(group, trainee):
     return {
         **_session(group),
         "trainee_id": _id(trainee.get("id")),
+        "cancelled": str(trainee.get("registration_cancelled", trainee.get("registration_canceled", trainee.get("inscription_annulee", "")))).lower() in {"true", "1", "yes", "on", "oui", "annulee", "annulée", "cancelled", "canceled"},
         "first_name": _text(trainee.get("first_name") or trainee.get("prenom")),
         "last_name": _text(trainee.get("last_name") or trainee.get("nom")),
         "email": _text(trainee.get("email") or trainee.get("mail")),
@@ -92,6 +93,8 @@ def _checks(candidate, observation, linked_folders):
         checks.append({"key": key, "matches": value,
                        "label": identical if value is True else different if value is False else missing})
     issues = []
+    if candidate["cancelled"]:
+        issues.append("Inscription annulée : association impossible.")
     if candidate["archived"]:
         issues.append("Cette session est archivée.")
     if conflicts:

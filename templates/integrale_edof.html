@@ -159,7 +159,7 @@
     <a class="wedof-counter {{ 'is-active' if tab == 'unlinked' else '' }}" data-wedof-counter="to_associate" href="{{ url_for('integrale_edof.index', section='state', group='all', tab='unlinked') }}">
       <strong>{{ unlinked_count if has_snapshot else '—' }}</strong><span>À associer</span></a>
   </nav>
-  {% if tab == 'unlinked' %}<p class="hint">Dossiers concernés : À traiter, Accepté, En formation, Service fait déclaré et À facturer (service fait validé). Cliquez sur « Associer » pour choisir le stagiaire et sa session. Chaque soir à 18 h, les correspondances fiables sont associées automatiquement ; les autres restent à vérifier ici.</p>{% endif %}
+  {% if tab == 'unlinked' %}<p class="hint">Dossiers concernés : Accepté, En formation, Service fait déclaré et À facturer (service fait validé). Cliquez sur « Associer » pour choisir le stagiaire et sa session. Chaque soir à 18 h, les correspondances fiables sont associées automatiquement ; les autres restent à vérifier ici.</p>{% endif %}
   <nav class="edof-folder-groups" aria-label="Parcours des dossiers CPF">
     {% for key, label in groups.items() %}<a class="edof-folder-group {{ 'is-active' if group == key else '' }}" data-group="{{ key }}" href="{{ url_for('integrale_edof.index', section='state', group=key, tab=('request' if key=='requests' else 'all'), q=query, course=course, period=period) }}" {% if group==key %}aria-current="page"{% endif %}>
       <span>{{ label }}</span><strong>{{ group_counts[key] or 0 if checked else '—' }}</strong>
@@ -313,7 +313,8 @@
 {% include "_edof_association_modal.html" %}
 {% endblock %}
 {% block scripts %}
-  <script nonce="{{ nonce }}" src="{{ url_for('static',filename='js/wedof-manual-links.js',v='20261106-native-associations') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static',filename='js/wedof-loading.js') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static',filename='js/wedof-manual-links.js',v='20261106-association-feedback') }}" defer></script>
   {% include '_edof_feedback.html' %}
   <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-feedback.js',v='20261105-proposal-feedback') }}" defer></script>
   <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261105-connexion') }}" defer></script>

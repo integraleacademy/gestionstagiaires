@@ -103,7 +103,7 @@ def category(row):
     return STATES.get(raw, "unknown")
 
 
-ASSOCIABLE_KINDS = {"request", "accepted", "training", "entry", "declared", "billable"}
+ASSOCIABLE_KINDS = {"accepted", "training", "entry", "declared", "billable"}
 
 
 def associable(row):
@@ -332,21 +332,22 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         with open(legacy.DATA_FILE, encoding="utf-8") as source:
             data = json.load(source)
         sessions = []
-        for group in associations.eligible_groups(data, partner_id, is_cancelled):
+        for group in associations.eligible_groups(data, partner_id, is_cancelled, include_cancelled=True):
             summary = {key:group[key] for key in ("id", "name", "training_type", "date_start", "date_end",
                   "date_debut", "date_fin", "partner_id", "archived", "is_archived", "status") if key in group}
-            summary["trainees"] = [{key:t[key] for key in ("id","first_name","last_name","prenom","nom","email","mail")
-                                    if key in t} for t in (group.get("trainees") or group.get("stagiaires") or []) if isinstance(t,dict)]
+            summary["trainees"] = [{**{key:t[key] for key in ("id","first_name","last_name","prenom","nom","email","mail")
+                                    if key in t}, "registration_cancelled": is_cancelled(t)} for t in (group.get("trainees") or group.get("stagiaires") or []) if isinstance(t,dict)]
             sessions.append(summary)
         return {"sessions": sessions, "wedof_links": data.get("wedof_links", []),
                 "wedof_automation_blocks": data.get("wedof_automation_blocks", [])}
 
-    def local_data():
+    def local_data(*, include_cancelled=False):
         try:
             st = Path(legacy.DATA_FILE).stat()
         except FileNotFoundError:
             return {}
-        return local_projection((st.st_ino, st.st_mtime_ns, st.st_size))
+        data = local_projection((st.st_ino, st.st_mtime_ns, st.st_size))
+        return data if include_cancelled else {**data, "sessions": list(associations.eligible_groups(data, partner_id, is_cancelled))}
 
     def enrich(owner, row):
         previous = store.successful_read(owner, spec={"folder_id": row["folder_id"], "first_name": "", "last_name": ""})
@@ -729,14 +730,14 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             return jsonify(message=str(exc)), 404
         if not associable(row):
             return jsonify(message="Ce statut ne permet pas d’associer le dossier."), 409
-        data = local_data()
+        data = local_data(include_cancelled=True)
         query = request.args.get("q", "").strip()[:120]
         choices = (manual_options(data, row, query=query) if query else build_comparison(data, row)["candidates"])
         items = []
         for c in choices:
             items.append({**c, "session_archived":c["archived"], "session_training_type":c["training_type"],
                           "session_date_start":c["start_date"], "session_date_end":c["end_date"],
-                          "match_reason":" · ".join(check["label"] for check in c["checks"]),
+                          "match_reason":" · ".join([*c["issues"], *(check["label"] for check in c["checks"])]),
                           "blocked":bool([issue for issue in c["issues"] if issue != "Cette session est archivée."])})
         return jsonify(items=items, total=len(items))
 
