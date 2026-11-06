@@ -31,12 +31,12 @@ def observed_rows(store, owner, snapshot):
     return rows
 
 
-def eligible_groups(data, partner_id, is_cancelled):
+def eligible_groups(data, partner_id, is_cancelled, *, include_cancelled=False):
     for group in data.get("sessions", []):
         if (group.get("partner_id") or partner_id) != partner_id:
             continue
         trainees = group.get("trainees", group.get("stagiaires", [])) or []
-        yield {**group, "trainees": [t for t in trainees if isinstance(t, dict) and not is_cancelled(t)]}
+        yield {**group, "trainees": [t for t in trainees if isinstance(t, dict) and (include_cancelled or not is_cancelled(t))]}
 
 
 def verified_email(row, trainees, key):

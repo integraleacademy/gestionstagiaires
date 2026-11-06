@@ -43,3 +43,22 @@
 
 <div id="wedof-manual-feedback" class="wedof-toast is-success" role="status" hidden></div>
 
+
+<dialog id="wedof-loading-modal" class="wedof-loading" aria-labelledby="wedof-loading-title" aria-describedby="wedof-loading-description">
+  <div class="wedof-loading-card" role="status" aria-live="polite">
+    <div class="wedof-loading-mark" aria-hidden="true"><span class="wedof-loading-spinner"></span><span class="wedof-loading-pulse"></span></div>
+    <h2 id="wedof-loading-title">Association du dossier en cours</h2>
+    <p id="wedof-loading-description">Nous vérifions le rattachement du dossier CPF au stagiaire et à sa session. Merci de patienter.</p>
+    <div class="wedof-loading-progress" aria-hidden="true"></div>
+    <button id="wedof-loading-close" type="button" class="btn btn-outline" hidden>Fermer et continuer</button>
+  </div>
+</dialog>
+<dialog id="edof-association-success" class="wedof-loading" aria-labelledby="edof-association-success-title">
+  <div class="wedof-loading-card">
+    <div class="wedof-live-status is-success">✓ Association enregistrée</div>
+    <h2 id="edof-association-success-title">Le dossier CPF est associé</h2>
+    <p id="edof-association-success-detail"></p>
+    <p>Le stagiaire et sa session sont maintenant rattachés au dossier dans Intégrale EDOF.</p>
+    <button type="button" class="btn btn-blue" id="edof-association-success-close">Revenir aux dossiers</button>
+  </div>
+</dialog>
