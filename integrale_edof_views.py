@@ -21,7 +21,7 @@ GROUP_TABS = {
                 "billable": "À facturer · Service fait validé", "invoiced": "Facturé · En attente de paiement",
                 "paid": "Payé"},
     "closed": {"all": "Refus et annulations", "refused": "Refusé", "canceled": "Annulé"},
-    "all": {"all": "Tous les dossiers", "unlinked": "À associer", "anomaly": "À vérifier"},
+    "all": {"all": "Tous les dossiers", "unlinked": "À associer", "association_ignored": "Dossiers masqués", "anomaly": "À vérifier"},
 }
 AUTOMATION_TABS = {
     "today": "Prévu aujourd’hui", "overdue": "En retard", "attention": "À compléter / À vérifier",

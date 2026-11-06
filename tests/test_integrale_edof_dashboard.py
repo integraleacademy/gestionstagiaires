@@ -667,3 +667,54 @@ def test_cancelled_registration_is_explained_in_chooser_but_never_linked(site):
     assert post.status_code==409 and site.local.read_text()==before
     site.nightly(dt.datetime(2026,11,6,18,tzinfo=dashboard.PARIS))
     assert not json.loads(site.local.read_text()).get('wedof_links')
+
+
+def test_ignore_association_persists_hides_count_and_is_reversible(site):
+    from bs4 import BeautifulSoup
+    site.gate.switch('integrale',0,'admin')
+    url='/admin/edof-test/dossiers/100000/association-preference'
+    before=site.local.read_text()
+    post=lambda values:site.client.post(url,data={'csrf':site.csrf,**values},headers={'Accept':'application/json'})
+    assert post({'ignore':'1'}).json['ignored'] is True
+    assert site.local.read_text()==before  # No dossier, declaration or link modified.
+    assert '100000' in dashboard.ignored_associations(providers.ProviderStore(site.store.directory))
+    page=BeautifulSoup(site.client.get('/admin/edof-test?group=all&tab=unlinked').text,'html.parser')
+    assert not page.select('[data-edof-folder="100000"]')
+    assert page.select_one('[data-wedof-counter=to_associate] strong').text=='1'
+    hidden=BeautifulSoup(site.client.get('/admin/edof-test?group=all&tab=association_ignored').text,'html.parser')
+    assert hidden.select_one('[data-edof-folder="100000"] input[name=ignore]').has_attr('checked')
+    assert not hidden.select('[data-edof-folder="100000"] [data-manual-link]')
+    assert '100000' in site.client.get('/admin/edof-test?group=all&tab=all').text
+    assert site.client.get('/admin/edof-test/dossiers/100000/inscriptions').status_code==409
+    assert 'N° 100000' not in site.client.get('/admin/edof-test/inscriptions/s1/t1/recherche-cpf').text
+    denied=site.client.post('/admin/edof-test/dossiers/100000/associate',headers={'Accept':'application/json'},
+        data={'csrf':site.csrf,'session_id':'s1','trainee_id':'t1','verified':'yes'})
+    assert denied.status_code==409 and site.local.read_text()==before
+    assert post({}).json['ignored'] is False
+    assert not dashboard.ignored_associations(providers.ProviderStore(site.store.directory))
+    restored=site.client.get('/admin/edof-test?group=all&tab=unlinked').text
+    assert 'data-edof-folder="100000"' in restored and site.local.read_text()==before
+
+
+def test_ignore_preference_protects_access_and_nightly_reconciliation(site):
+    site.gate.switch('integrale',0,'admin')
+    url='/admin/edof-test/dossiers/100000/association-preference'
+    assert site.client.post(url,data={'ignore':'1'}).status_code==403
+    with site.client.session_transaction() as sess:sess['admin_role']='viewer'
+    assert site.client.post(url,data={'csrf':site.csrf,'ignore':'1'}).status_code==403
+    with site.client.session_transaction() as sess:sess['admin_role']='super_admin'
+    assert site.client.post(url,data={'csrf':site.csrf,'ignore':'invalid'}).status_code==400
+    assert site.client.post(url.replace('100000','999999'),data={'csrf':site.csrf,'ignore':'1'},headers={'Accept':'application/json'}).status_code==409
+    saved=site.vault.get(edof_directory.record_key(site.owner))
+    row={**saved['rows']['100000'],'email':'anne@example.invalid'}
+    saved['rows']={'100000':row};site.vault.put(edof_directory.record_key(site.owner),saved)
+    assert site.client.post(url,data={'csrf':site.csrf,'ignore':'1'}).status_code==303
+    site.nightly(dt.datetime(2026,11,6,18,tzinfo=dashboard.PARIS))
+    assert not json.loads(site.local.read_text()).get('wedof_links')
+    # New synchronized snapshots do not undo the administrator's persistent choice.
+    site.vault.put(edof_directory.record_key(site.owner),{**saved,'checked':20000})
+    site.nightly(dt.datetime(2026,11,7,18,tzinfo=dashboard.PARIS))
+    assert not json.loads(site.local.read_text()).get('wedof_links')
+    assert site.client.post(url,data={'csrf':site.csrf}).status_code==303
+    site.nightly(dt.datetime(2026,11,8,18,tzinfo=dashboard.PARIS))
+    assert len(json.loads(site.local.read_text())['wedof_links'])==1
