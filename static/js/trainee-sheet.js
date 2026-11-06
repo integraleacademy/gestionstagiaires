@@ -1647,7 +1647,8 @@ function updateDocsRelanceState(status, plannedDateIso){
       .map(l=>Array.isArray(l.directDebitInstallments) ? l.directDebitInstallments : [])
       .filter(installments=>installments.length);
     const hasScheduledInQonto=schedules.length>0 && schedules.every(installments=>installments.every(installment=>Boolean(installment.qonto_direct_debit_subscription_id)));
-    return {hasScheduledInQonto, needsQontoScheduling:sepaLines.length>0 && !hasScheduledInQonto};
+    const needsQontoScheduling=sepaLines.some(line=>!line.financial_tracking_override?.enabled && logicalInstallmentsForLine(line).some(row=>!row.qonto_direct_debit_subscription_id && !['completed','paid','succeeded','success'].includes(String(row.status||'').toLowerCase())));
+    return {hasScheduledInQonto, needsQontoScheduling};
   }
   function generatedCashPersonalInvoiceAmount(lines){
     return lines
@@ -2240,7 +2241,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
           const response=await billingApi('/api/billing/direct-debits/search',{lineId:line.id});
           const records=response.collections||[];
           feedback.textContent=records.length?'Vérifiez la date, le montant et le libellé avant le rattachement.':'Aucun prélèvement encaissé non rattaché trouvé sur ce mandat.';
-          results.innerHTML=records.map((record,index)=>`<div class="qonto-invoice-card" style="margin-top:12px"><strong>${fmtMoney(record.amount)} · ${formatIsoDateFr(record.date)}</strong><p>${esc(record.reference||'Sans libellé')}</p><small>Prélèvement ${esc(record.id)}</small><p>${record.blocked_reason?esc(record.blocked_reason):`<button type="button" class="btn btn-primary" data-attach="${index}">Rattacher à ce dossier</button>`}</p></div>`).join('');
+          results.innerHTML=records.map((record,index)=>`<div class="qonto-invoice-card" style="margin-top:12px"><strong>${fmtMoney(record.amount)} · ${formatIsoDateFr(record.date)}</strong><p>${esc(record.reference||'Sans libellé')}</p>${record.already_entered?'<p>Ce paiement est déjà saisi : seul son lien Qonto sera ajouté.</p>':''}<small>Prélèvement ${esc(record.id)}</small><p>${record.blocked_reason?esc(record.blocked_reason):`<button type="button" class="btn btn-primary" data-attach="${index}">Rattacher à ce dossier</button>`}</p></div>`).join('');
           results.querySelectorAll('[data-attach]').forEach(button=>button.onclick=async()=>{
             if(busy)return;const record=records[Number(button.dataset.attach)];
             if(!confirm(`Rattacher le prélèvement de ${fmtMoney(record.amount)} du ${formatIsoDateFr(record.date)} à ce dossier ?\n\nCette action met à jour le suivi local. Les prélèvements programmés dans Qonto restent à vérifier séparément.`))return;

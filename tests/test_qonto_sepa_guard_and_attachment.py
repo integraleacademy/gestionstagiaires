@@ -83,6 +83,19 @@ def test_invoice_generation_preserves_already_programmed_schedule(monkeypatch, l
     ensure.assert_called_once_with(line)
 
 
+def test_generated_billing_line_exposes_duplicate_markers_in_both_aliases(line):
+    sessions = [{'id': 'session', 'training_type': 'SSIAP 1', 'date_start': '2026-11-01',
+                 'trainees': [{'id': 'trainee', 'first_name': 'Alex', 'last_name': 'Martin', 'personal_amount': 980}]}]
+    built = gestion.buildBillingLinesFromSessions(sessions)[0]
+    rows = copy.deepcopy(line['directDebitInstallments']) * 2
+    rows[1] = dict(rows[0], qonto_direct_debit_subscription_id='second', qonto_direct_debit_collection_id='second-col')
+    built['directDebitInstallments'] = copy.deepcopy(rows)
+    built['sepa_payment_plan'] = {'installments': copy.deepcopy(rows)}
+    result = gestion.buildBillingLinesFromSessions(sessions, {built['id']: built})[0]
+    assert result['qontoCollectedAmountCents'] == 98000
+    assert all(row['duplicate_qonto_schedule'] for row in result['directDebitInstallments'])
+
+
 @pytest.fixture
 def attachment(monkeypatch, line):
     data = {'billing_lines': [line]}
@@ -153,3 +166,32 @@ def test_attachment_refuses_tampered_token_and_readonly_user(attachment):
     with client.session_transaction() as session:
         session['admin_role'] = 'viewer'
     assert client.post('/api/billing/direct-debits/search', json={'lineId': 'bill_test'}).status_code == 403
+
+
+def test_attach_evidence_to_already_entered_payment_without_double_counting(attachment):
+    client, data, _ = attachment
+    line = data['billing_lines'][0]
+    line['directDebitInstallments'].append({'index': 2, 'schedule_index': 2,
+        'date': '2026-11-03', 'amount': 490, 'status': 'completed', 'manual_tracking_entry': True})
+    line['financial_tracking_override'] = {'enabled': True, 'source': 'admin_reviewed_schedule'}
+    candidates = search(client)
+    assert candidates[0]['already_entered']
+    token = candidates[0]['selection_token']
+    response = client.post('/api/billing/direct-debits/attach', json={'selectionToken': token})
+    assert response.status_code == 200, response.json
+    assert response.json['remaining_cents'] == 0
+    target = data['billing_lines'][0]
+    assert len(target['directDebitInstallments']) == 2
+    assert gestion._reconciled_qonto_paid_cents(target, 0) == 98000
+    assert target['directDebitInstallments'][1]['qonto_direct_debit_collection_id'] == 'col-new'
+    assert search(client) == []
+
+
+def test_ambiguous_manual_payments_cannot_be_linked(attachment):
+    client, data, _ = attachment
+    line = data['billing_lines'][0]
+    line['directDebitInstallments'] = [{'index': i, 'date': '2026-11-03', 'amount': 490,
+                                      'status': 'completed'} for i in (1, 2)]
+    candidate = search(client)[0]
+    assert 'Plusieurs' in candidate['blocked_reason']
+    assert 'selection_token' not in candidate
