@@ -1,0 +1,45 @@
+<dialog id="wedof-manual-modal" class="wedof-modal" data-provider="integrale" aria-labelledby="wedof-manual-title">
+  <form id="wedof-manual-form" data-wedof-loading-managed="manual" class="wedof-modal-body" method="post" action="">
+    {{ token() }}<input type="hidden" name="verified" value="yes"><input type="hidden" name="external_id">
+    <input type="hidden" name="session_id">
+    <input type="hidden" name="trainee_id">
+    <input type="hidden" name="confirm_manual_link" value="1">
+    <input type="hidden" name="confirm_date_mismatch" value="">
+    <header class="wedof-modal-header">
+      <div>
+        <span class="wedof-section-label">Rattachement local</span>
+        <h2 id="wedof-manual-title">Rechercher le stagiaire à associer</h2>
+        <p>La recherche porte directement sur tous les stagiaires enregistrés dans la base.</p>
+      </div>
+      <button type="button" class="wedof-modal-close" id="wedof-modal-cancel" aria-label="Fermer">×</button>
+    </header>
+    <div class="wedof-modal-scroll">
+      <div id="wedof-folder-summary" class="wedof-folder-summary"></div>
+      <div id="wedof-live-status" class="wedof-live-status is-loading" role="status">Vérification du dossier Intégrale EDOF en cours…</div>
+      <div class="wedof-search-block">
+        <label for="wedof-global-trainee-search">Nom, e-mail ou session du stagiaire</label>
+        <div class="wedof-search-input-wrap">
+          <input id="wedof-global-trainee-search" autocomplete="off" placeholder="Commencez à saisir pour rechercher dans toute la base">
+        </div>
+        <p class="wedof-search-help">Les correspondances Intégrale EDOF sont proposées automatiquement. Chaque résultat indique la session exacte et ses dates.</p>
+      </div>
+      <div id="wedof-enrolment-status" class="wedof-enrolment-status" role="status"></div>
+      <div id="wedof-enrolment-results" class="wedof-enrolment-results" aria-live="polite"></div>
+      <div id="wedof-modal-alert" class="wedof-modal-alert is-info" role="alert" hidden></div>
+      <section id="wedof-association-review" class="wedof-association-review" hidden>
+        <h3 id="wedof-association-review-title">Vérification nécessaire</h3>
+        <div class="wedof-review-grid">
+          <div><span>Stagiaire sélectionné</span><strong id="wedof-review-trainee">—</strong></div>
+          <div><span>Session sélectionnée</span><strong id="wedof-review-session">—</strong></div>
+          <div><span>Dates Intégrale EDOF</span><strong id="wedof-review-remote-dates">—</strong></div>
+          <div><span>Dates locales</span><strong id="wedof-review-local-dates">—</strong></div>
+        </div>
+        <div class="wedof-review-actions"><button type="button" class="btn btn-blue" id="wedof-review-confirm">Confirmer l’association</button></div>
+      </section>
+      <p class="wedof-modal-note">Cette opération crée uniquement un rattachement interne. Elle n’envoie aucune déclaration à Intégrale EDOF.</p>
+    </div>
+  </form>
+</dialog>
+
+<div id="wedof-manual-feedback" class="wedof-toast is-success" role="status" hidden></div>
+

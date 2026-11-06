@@ -17078,14 +17078,14 @@ def admin_partners():
     q = (request.args.get("q") or "").strip().lower()
     status = (request.args.get("status") or "").strip()
     plan = (request.args.get("plan") or "").strip().lower()
+    import partner_presence
+    account_access = partner_presence.latest(sys.modules[__name__], data)
     last_logins = {}
     for user in data.get("users", []):
-        if not isinstance(user, dict) or not user.get("partner_id"):
-            continue
-        stamp = _parse_iso_datetime(user.get("last_login_at"))
-        partner_id = user["partner_id"]
-        if stamp and (partner_id not in last_logins or stamp > last_logins[partner_id]):
-            last_logins[partner_id] = stamp
+        stamp = account_access.get(str(user.get("id")))
+        pid = user.get("partner_id")
+        if stamp and (pid not in last_logins or stamp > last_logins[pid]):
+            last_logins[pid] = stamp
 
     partners = []
     for partner in data.get("partners", []):
@@ -57129,6 +57129,8 @@ import parcours_alternance
 parcours_alternance.register(sys.modules[__name__])
 import partner_workspace
 partner_workspace.register(sys.modules[__name__])
+import partner_presence
+partner_presence.register(sys.modules[__name__])
 
 _log_memory_stage("AFTER_ROUTE_REGISTRATION", _APP_IMPORT_STARTED_AT, "-")
 _log_memory_stage("IMPORT_END_REAL", _APP_IMPORT_STARTED_AT, "-")

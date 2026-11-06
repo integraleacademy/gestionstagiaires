@@ -159,7 +159,7 @@
     <a class="wedof-counter {{ 'is-active' if tab == 'unlinked' else '' }}" data-wedof-counter="to_associate" href="{{ url_for('integrale_edof.index', section='state', group='all', tab='unlinked') }}">
       <strong>{{ unlinked_count if has_snapshot else '—' }}</strong><span>À associer</span></a>
   </nav>
-  {% if tab == 'unlinked' %}<p class="hint">Tous les soirs à 18 h (heure de Paris), Intégrale EDOF tente de rattacher chaque dossier à une inscription. Les correspondances incertaines restent dans cette liste.</p>{% endif %}
+  {% if tab == 'unlinked' %}<p class="hint">Dossiers concernés : À traiter, Accepté, En formation, Service fait déclaré et À facturer (service fait validé). Cliquez sur « Associer » pour choisir le stagiaire et sa session. Chaque soir à 18 h, les correspondances fiables sont associées automatiquement ; les autres restent à vérifier ici.</p>{% endif %}
   <nav class="edof-folder-groups" aria-label="Parcours des dossiers CPF">
     {% for key, label in groups.items() %}<a class="edof-folder-group {{ 'is-active' if group == key else '' }}" data-group="{{ key }}" href="{{ url_for('integrale_edof.index', section='state', group=key, tab=('request' if key=='requests' else 'all'), q=query, course=course, period=period) }}" {% if group==key %}aria-current="page"{% endif %}>
       <span>{{ label }}</span><strong>{{ group_counts[key] or 0 if checked else '—' }}</strong>
@@ -217,6 +217,7 @@
           {% if previewing %}<small>{{ 'Correspondance fiable' if matches[r.folder_id].status == 'exact_match' else 'À vérifier' }}</small>{% if matches[r.folder_id].status == 'exact_match' %}<small>{{ matches[r.folder_id].session }} · {{ matches[r.folder_id].trainee }}</small>{% endif %}{% endif %}
         </div></td>
         <td data-label="Actions"><div class="edof-row-actions">{% if batch_entries and r.entry_choice %}<label class="edof-entry-choice"><input form="edof-effective-entries" type="checkbox" name="entry" value="{{ r.entry_choice }}"> Entrée le {{ date_fr(r.session_start_date) }}</label>{% endif %}<a class="btn btn-outline" href="{{ href }}">Ouvrir le dossier</a>
+          {% if r.associable and not r.link and session.get('admin_role') != 'viewer' %}<button type="button" class="btn btn-blue" data-manual-link data-external-id="{{ r.folder_id }}" data-first-name="{{ r.first_name }}" data-last-name="{{ r.last_name }}" data-date-start="{{ r.session_start_date }}" data-date-end="{{ r.session_end_date }}" data-search-url="{{ url_for('integrale_edof.association_options',folder=r.folder_id) }}" data-associate-url="{{ url_for('integrale_edof.associate',folder=r.folder_id) }}">Associer</button>{% endif %}
           {% if r.kind == "accepted" and not r.link %}<a class="btn btn-blue" href="{{ url_for('integrale_edof.index', section='state', group='training', tab='accepted', folder=r.folder_id, _anchor='creer-stagiaire') }}">Créer le stagiaire</a>{% endif %}
 {% if r.action and active and r.block and r.block.action != "both" %}<form method="post" action="{{ url_for('integrale_edof.block', folder=r.folder_id) }}">{{ token() }}
 <input type="hidden" name="action" value="{{ r.block.action }}"><input type="hidden" name="release" value="yes">{{ btn('Lever le blocage de cette action') }}</form>{% endif %}
@@ -279,7 +280,7 @@
 {% for c in detail.comparison.candidates %}<div class="association"><strong>{{ c.first_name }} {{ c.last_name }} · {{ c.session_name }}</strong><p>{{ c.checks|map(attribute='label')|join(' · ') }}</p>
 {% for issue in c.issues %}<p class="warning">{{ issue }}</p>{% endfor %}
 {% if detail.comparison.status == 'found' %}<p>Association locale enregistrée.</p>
-{% elif active and not c.issues %}<form method="post" action="{{ url_for('integrale_edof.associate',folder=f.folder_id) }}">{{ token() }}<input type="hidden" name="session_id" value="{{ c.session_id }}"><input type="hidden" name="trainee_id" value="{{ c.trainee_id }}"><label><input type="checkbox" name="verified" value="yes" required> J’ai vérifié l’identité et la session.</label>{{ btn('Associer ce stagiaire') }}</form>{% endif %}</div>
+{% elif active and detail.display.associable and not c.issues %}<form method="post" action="{{ url_for('integrale_edof.associate',folder=f.folder_id) }}">{{ token() }}<input type="hidden" name="session_id" value="{{ c.session_id }}"><input type="hidden" name="trainee_id" value="{{ c.trainee_id }}"><label><input type="checkbox" name="verified" value="yes" required> J’ai vérifié l’identité et la session.</label>{% if not c.dates_match %}<label><input type="checkbox" name="confirm_date_mismatch" value="1" required> Je confirme l’association malgré les dates différentes.</label>{% endif %}{{ btn('Associer ce stagiaire') }}</form>{% endif %}</div>
 {% else %}<p>Aucune inscription locale correspondante.</p>{% endfor %}
 </div></section></details>
 <details class="edof-extra wedof-panel" id="declaration-edof" {% if not detail.request %}open{% endif %}><summary>Historique et déclarations EDOF</summary>
@@ -309,8 +310,10 @@
   </div></section></details>
 {% endif %}
 </div>
+{% include "_edof_association_modal.html" %}
 {% endblock %}
 {% block scripts %}
+  <script nonce="{{ nonce }}" src="{{ url_for('static',filename='js/wedof-manual-links.js',v='20261106-native-associations') }}" defer></script>
   {% include '_edof_feedback.html' %}
   <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-feedback.js',v='20261105-proposal-feedback') }}" defer></script>
   <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261105-connexion') }}" defer></script>

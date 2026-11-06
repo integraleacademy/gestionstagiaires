@@ -3,6 +3,8 @@
   const form = document.querySelector('#wedof-manual-form');
   if (!modal || !form) return;
 
+  const native = modal.dataset.provider === "integrale";
+  const providerLabel = native ? "Intégrale EDOF" : "WEDOF";
   const searchInput = document.querySelector('#wedof-global-trainee-search');
   const results = document.querySelector('#wedof-enrolment-results');
   const resultsStatus = document.querySelector('#wedof-enrolment-status');
@@ -84,13 +86,14 @@
     const folderIdentity = [folder.firstName, folder.lastName].filter(Boolean).join(' ').trim()
       || folder.identity || '—';
     document.querySelector('#wedof-folder-summary').innerHTML = `
-      <div><span>Numéro WEDOF</span><strong>${esc(folder.externalId) || '—'}</strong></div>
+      <div><span>Numéro ${providerLabel}</span><strong>${esc(folder.externalId) || '—'}</strong></div>
       <div><span>Candidat</span><strong>${esc(folderIdentity)}</strong></div>
       <div><span>Coordonnées</span><strong>${esc(folder.email) || '—'}</strong><small>${esc(folder.phone) || '—'}</small></div>
-      <div><span>Période WEDOF</span><strong>Du ${fr(folder.dateStart)} au ${fr(folder.dateEnd)}</strong></div>`;
+      <div><span>Période ${providerLabel}</span><strong>Du ${fr(folder.dateStart)} au ${fr(folder.dateEnd)}</strong></div>`;
   }
 
   function buildSearchUrl(query = '') {
+    if (native) return `${folder.searchUrl}?${new URLSearchParams({q:query})}`;
     const params = new URLSearchParams({
       q: query,
       email: folder.email || '',
@@ -131,6 +134,7 @@
         </div>
         <span class="wedof-match-reason">${esc(item.match_reason)}</span>
         <button type="button" class="btn btn-blue wedof-associate-button">Associer</button>`;
+      card.querySelector('.wedof-associate-button').disabled = !!item.blocked;
       card.querySelector('.wedof-associate-button').addEventListener('click', event => {
         chooseEnrolment(item, event.currentTarget);
       });
@@ -200,6 +204,7 @@
   }
 
   function updateDashboardRow(payload) {
+    if (native) { window.location.reload(); return; }
     if (!currentRow) return;
     currentRow.querySelector('[data-local-session]').textContent = payload.session;
     currentRow.querySelector('[data-local-trainee]').textContent = payload.trainee;
@@ -216,7 +221,7 @@
   async function submitAssociation(item, button, confirmMismatch) {
     form.elements.session_id.value = item.session_id;
     form.elements.trainee_id.value = item.trainee_id;
-    form.elements.confirm_date_mismatch.value = confirmMismatch ? '1' : '';
+    form.elements.confirm_date_mismatch.value = (confirmMismatch || (native && item.session_archived)) ? '1' : '';
     const previousText = button?.textContent;
     if (button) {
       button.disabled = true;
@@ -264,6 +269,7 @@
       phone: button.dataset.phone,
       dateStart: button.dataset.dateStart,
       dateEnd: button.dataset.dateEnd,
+      searchUrl: button.dataset.searchUrl,
     };
     form.elements.external_id.value = folder.externalId;
     renderFolder();
@@ -272,6 +278,13 @@
     liveStatus.className = 'wedof-live-status is-loading';
     modal.showModal();
 
+    if (native) {
+      form.action = button.dataset.associateUrl;
+      liveStatus.textContent = 'Dernières informations synchronisées dans Intégrale EDOF';
+      liveStatus.className = 'wedof-live-status is-success';
+      await searchEnrolments('', {automatic:true});
+      return;
+    }
     const initialSearch = searchEnrolments('', {automatic: true});
     const remoteRefresh = getJson(
       `/admin/wedof/matching/manual/folder?external_id=${encodeURIComponent(folder.externalId)}`,

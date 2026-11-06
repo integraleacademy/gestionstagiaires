@@ -3,7 +3,7 @@
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/partner-workspace.css', v='20261016-1') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/elearning-sales.css', v='20261014-1') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/partners-platform.css', v='20261017') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/partners-platform.css', v='20261106-presence') }}">
 <div class="pw platform-hub" data-partner-workspace>
   {% for category,message in get_flashed_messages(with_categories=true) %}<div class="pw-notice {{ 'error' if category == 'error' }}" role="status">{{ message }}</div>{% endfor %}
   <header class="pw-hero"><div><div class="pw-eyebrow">INTÉGRALE CONNECT · ADMINISTRATION</div><h1>Organismes de formation</h1><p>Manuels, clés USB, e-learning et facturation : toute la gestion de votre boutique.</p></div><a class="pw-button light" href="{{ url_for('admin_partner_new') }}">+ Nouveau partenaire</a></header>
