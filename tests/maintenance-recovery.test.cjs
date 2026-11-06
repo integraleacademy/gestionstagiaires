@@ -9,9 +9,14 @@ const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '..');
 const hostname = '127.0.0.1';
 let status = 200;
+let transportDown = false;
 let posts = 0;
 let lastPost = '';
 const server = http.createServer((req, res) => {
+  if (transportDown) {
+    req.socket.destroy();
+    return;
+  }
   res.setHeader('Cache-Control', 'no-store');
   const pathname = new URL(req.url, 'http://localhost').pathname;
   const files = {
@@ -93,11 +98,13 @@ const server = http.createServer((req, res) => {
     assert.equal(page.url(), originalURL);
     assert.equal((await context.cookies()).find(c => c.name === 'integrale_admin').value, 'local-test-session');
 
-    await context.setOffline(true);
+    // Break the actual connection: browser offline emulation can leave a
+    // service worker's independent network connection online in Chromium.
+    transportDown = true;
     const offline = await page.reload();
     assert.equal(offline.status(), 503);
     await page.getByText('Veuillez patienter…', { exact: true }).waitFor();
-    await context.setOffline(false);
+    transportDown = false;
     await page.getByRole('heading', { name: 'Original page' }).waitFor({ timeout: 20000 });
     assert.equal(page.url(), originalURL);
     console.log('PASS real service worker: 502/503/504/offline, automatic return with path/query/hash and cookie, API/health unchanged, POST once, only public maintenance cached');
