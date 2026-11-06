@@ -1804,7 +1804,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     // Once Qonto has reported a terminal collection, the SEPA history is the
     // authority. This also covers collections completed before the invoice.
     if(Array.isArray(l.qontoBankTransfers)&&l.qontoBankTransfers.length)return Math.max(Number(l.qontoBankTransferPaidCents||0)/100,Number(e?.paid_amount_cents||0)/100);
-    if(rawInstallments.some(i=>terminalStatuses.has(String(i.status||'').toLowerCase())))return installmentPaid;
+    if(rawInstallments.some(i=>terminalStatuses.has(String(i.status||'').toLowerCase())))return l.qontoCollectedAmountCents!=null?Number(l.qontoCollectedAmountCents)/100:installmentPaid;
     return e?Number(e.paid_amount_cents ?? 0)/100:installmentPaid;
   }
   function lineRemaining(l){return Math.max(lineAmount(l)-linePaid(l),0)}
@@ -2075,14 +2075,15 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       const date=canEdit?`<input type="date" data-edit-installment-date="${i}" value="${esc(installmentDate(it))}" aria-label="Date de l’échéance ${position}">`:(formatIsoDateFr(installmentDate(it))||'—');
       const amount=canEdit?`<input type="number" data-edit-installment-amount="${i}" value="${Number(it.amount||0).toFixed(2)}" min="0.01" max="1000000" step="0.01" required inputmode="decimal" aria-label="Montant en euros de l’échéance ${position}">`:fmtMoney(it.amount);
       const actions=canRemove?`<div class="finance-actions"><button type="button" class="qonto-action-btn qonto-action-btn--primary" data-save-installment="${i}" hidden>Enregistrer</button><button type="button" class="qonto-action-btn qonto-action-btn--secondary" data-cancel-installment="${i}" hidden>Annuler</button><button type="button" class="qonto-action-btn qonto-action-btn--danger" data-delete-installment="${i}">Supprimer</button></div>`:'';
-      return `<div class="finance-line finance-installment-row ${it.tracking_removed_at?'finance-line--retry-history':rowClass}"><div><strong>${current?`${position}/${it.total||c.totalMensualites}`:'Historique'}</strong>${retry?`<div style="margin-top:7px">${badge(retryLabel,current?'purple':'gray')}</div>`:''}</div><div><span class="finance-mini-label">${dateLabel}</span>${date}</div><div><span class="finance-mini-label">Montant${canEdit?' (€)':''}</span>${amount}</div><div>${badge(installmentStatusLabel(it),it.tracking_removed_at?'gray':tone)}</div><div>${it.paidAt?formatIsoDateFr(String(it.paidAt).slice(0,10)):''}${it.failureReason?` <span class="${treated||!current?'muted':'qonto-error'}">${esc(installmentFailureReasonLabel(it.failureReason))}</span>`:''}</div>${actions}</div>`;
+      return `<div class="finance-line finance-installment-row ${it.tracking_removed_at?'finance-line--retry-history':rowClass}"><div><strong>${it.duplicate_qonto_schedule?'Doublon Qonto à vérifier':(current?`${position}/${it.total||c.totalMensualites}`:'Historique')}</strong>${retry?`<div style="margin-top:7px">${badge(retryLabel,current?'purple':'gray')}</div>`:''}</div><div><span class="finance-mini-label">${dateLabel}</span>${date}</div><div><span class="finance-mini-label">Montant${canEdit?' (€)':''}</span>${amount}</div><div>${badge(installmentStatusLabel(it),it.tracking_removed_at?'gray':tone)}</div><div>${it.paidAt?formatIsoDateFr(String(it.paidAt).slice(0,10)):''}${it.failureReason?` <span class="${treated||!current?'muted':'qonto-error'}">${esc(installmentFailureReasonLabel(it.failureReason))}</span>`:''}</div>${actions}</div>`;
     }).join('');
+    const duplicateNotice=currentLines.filter(line=>line.qontoDuplicateDebitWarning).map(line=>`<div class="finance-alert finance-alert--red"><strong>⚠</strong><span>${esc(line.qontoDuplicateDebitWarning)}</span></div>`).join('');
     const historyNote=hasHistory?`<div class="finance-empty">Les lignes « Rejet traité », « Tentative précédente » et « Supprimée du suivi » restent dans l’historique et ne s’ajoutent pas aux ${c.totalMensualites} mensualités.</div>`:'';
     const candidates=currentLines.filter(line=>!isCpfQontoLine(line)&&line.paymentMode==='sepa_direct_debit'&&!line.registrationCancelled&&!['cancelled','deleted'].includes(line.invoiceStatus));
     const notice=!readOnly&&candidates.length?'<div class="finance-empty"><strong>Modification du suivi</strong><br>Les dates, les montants et les échéances modifiés ici mettent à jour cette fiche. Ces changements ne modifient, n’annulent et ne créent aucun prélèvement bancaire. Reportez-les dans Qonto.</div>':'';
     const add=!readOnly&&candidates.length?`<div><button type="button" class="btn btn-outline" id="addTrackedInstallment">+ Ajouter une échéance</button><form id="newTrackedInstallment" class="finance-installment-add" hidden><label${candidates.length===1?' hidden':''}>Financement<select name="lineId">${candidates.map(line=>`<option value="${esc(line.id)}">${esc(line.financeurName||line.financingType)} · ${fmtMoney(line.amountTTC||line.amount)}</option>`).join('')}</select></label><label>Date<input name="date" type="date" required></label><label>Montant (€)<input name="amount" type="number" min="0.01" max="1000000" step="0.01" required inputmode="decimal"></label><div class="finance-actions"><button class="btn btn-primary" type="submit">Ajouter au suivi</button><button class="btn btn-outline" type="button" id="cancelNewInstallment">Annuler</button></div></form></div>`:'';
     const container=document.getElementById('financeInstallments');
-    container.innerHTML=notice+`<div id="installmentEditFeedback" role="status" aria-live="polite" hidden></div>`+(c.totalMensualites?`<div class="finance-line"><strong>${c.mensualitesPayees} mensualités payées sur ${c.totalMensualites}</strong><div><span class="finance-mini-label">Plan contractuel / suivi</span>${planLabel}</div><div><span class="finance-mini-label">Prochaine mensualité</span>${c.prochaineEcheance?`${formatIsoDateFr(installmentDate(c.prochaineEcheance))} — ${fmtMoney(c.prochaineEcheance.amount)}`:'—'}</div><div><span class="finance-mini-label">Reste dans l’échéancier</span>${fmtMoney(c.montantRestantAPrelever)}</div></div>`:'<div class="finance-empty">Aucune échéance active dans le suivi.</div>')+historyNote+rows+add;
+    container.innerHTML=duplicateNotice+notice+`<div id="installmentEditFeedback" role="status" aria-live="polite" hidden></div>`+(c.totalMensualites?`<div class="finance-line"><strong>${c.mensualitesPayees} mensualités payées sur ${c.totalMensualites}</strong><div><span class="finance-mini-label">Plan contractuel / suivi</span>${planLabel}</div><div><span class="finance-mini-label">Prochaine mensualité</span>${c.prochaineEcheance?`${formatIsoDateFr(installmentDate(c.prochaineEcheance))} — ${fmtMoney(c.prochaineEcheance.amount)}`:'—'}</div><div><span class="finance-mini-label">Reste dans l’échéancier</span>${fmtMoney(c.montantRestantAPrelever)}</div></div>`:'<div class="finance-empty">Aucune échéance active dans le suivi.</div>')+historyNote+rows+add;
     container.querySelectorAll('[data-edit-installment-date],[data-edit-installment-amount]').forEach(input=>input.addEventListener('input',()=>{
       installmentDraftActive=true;
       const row=input.closest('.finance-installment-row');
@@ -2210,6 +2211,53 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     };
   }
   document.getElementById('btnAssignBankTransfer')?.addEventListener('click',openBankTransferModal);
+  document.getElementById('btnAttachQontoDebit')?.addEventListener('click',async()=>{
+    if(readOnly)return;
+    const overlay=document.createElement('div');
+    overlay.className='billing-modal-overlay no-print';
+    overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');
+    overlay.setAttribute('aria-label','Rattacher un prélèvement Qonto');
+    overlay.innerHTML='<div class="billing-modal"><div class="billing-modal-header"><div><h2>Rattacher un prélèvement Qonto</h2><p>Sélectionnez un prélèvement déjà encaissé sur le mandat de ce dossier.</p></div><button type="button" class="billing-modal-close" data-close aria-label="Fermer">✕</button></div><div data-content role="status" aria-live="polite">Chargement…</div><div class="billing-modal-actions"><button type="button" class="btn btn-outline" data-close>Fermer</button></div></div>';
+    document.body.appendChild(overlay);
+    let busy=false;
+    function close(){if(!busy){overlay.remove();document.getElementById('btnAttachQontoDebit')?.focus();}}
+    overlay.querySelectorAll('[data-close]').forEach(button=>button.onclick=close);
+    overlay.addEventListener('keydown',event=>{if(event.key==='Escape')close();});
+    overlay.querySelector('[data-close]').focus();
+    const content=overlay.querySelector('[data-content]');
+    try{
+      await load();if(!overlay.isConnected)return;
+      const lines=currentLines.filter(line=>!isCpfQontoLine(line)&&line.paymentMode==='sepa_direct_debit'&&!line.registrationCancelled);
+      if(!lines.length){content.textContent='Aucun financement par prélèvement sur ce dossier. Renseignez d’abord son mandat Qonto.';return;}
+      content.innerHTML=`<label>Financement<select data-line>${lines.map(line=>`<option value="${esc(line.id)}">${esc(line.financeurName||line.financingType)} · ${esc(line.qontoInvoiceNumber||'Sans facture')} · ${fmtMoney(lineAmount(line))}</option>`).join('')}</select></label><div class="billing-modal-actions"><button class="btn btn-primary" type="button" data-search>Rechercher dans Qonto</button></div><p data-feedback></p><div data-results></div>`;
+      const selector=content.querySelector('[data-line]'),search=content.querySelector('[data-search]'),feedback=content.querySelector('[data-feedback]'),results=content.querySelector('[data-results]');
+      selector.onchange=()=>{results.replaceChildren();feedback.textContent='';};
+      search.onclick=async()=>{
+        if(busy)return;busy=true;search.disabled=true;selector.disabled=true;results.replaceChildren();
+        feedback.className='muted';feedback.textContent='Recherche des prélèvements encaissés dans Qonto…';
+        try{
+          const line=lines.find(item=>item.id===selector.value);
+          const response=await billingApi('/api/billing/direct-debits/search',{lineId:line.id});
+          const records=response.collections||[];
+          feedback.textContent=records.length?'Vérifiez la date, le montant et le libellé avant le rattachement.':'Aucun prélèvement encaissé non rattaché trouvé sur ce mandat.';
+          results.innerHTML=records.map((record,index)=>`<div class="qonto-invoice-card" style="margin-top:12px"><strong>${fmtMoney(record.amount)} · ${formatIsoDateFr(record.date)}</strong><p>${esc(record.reference||'Sans libellé')}</p><small>Prélèvement ${esc(record.id)}</small><p>${record.blocked_reason?esc(record.blocked_reason):`<button type="button" class="btn btn-primary" data-attach="${index}">Rattacher à ce dossier</button>`}</p></div>`).join('');
+          results.querySelectorAll('[data-attach]').forEach(button=>button.onclick=async()=>{
+            if(busy)return;const record=records[Number(button.dataset.attach)];
+            if(!confirm(`Rattacher le prélèvement de ${fmtMoney(record.amount)} du ${formatIsoDateFr(record.date)} à ce dossier ?\n\nCette action met à jour le suivi local. Les prélèvements programmés dans Qonto restent à vérifier séparément.`))return;
+            busy=true;overlay.querySelectorAll('button,select').forEach(item=>item.disabled=true);
+            feedback.className='muted';feedback.textContent='Vérification du paiement et rattachement…';
+            try{
+              const attached=await billingApi('/api/billing/direct-debits/attach',{selectionToken:record.selection_token});
+              await load();overlay.remove();showQontoFeedback(`${attached.message} Reste à payer : ${fmtMoney(attached.remaining_cents/100)}.`);
+            }catch(error){feedback.className='qonto-error';feedback.textContent=error.message||'Rattachement impossible.';results.replaceChildren();}
+            finally{busy=false;overlay.querySelectorAll('button,select').forEach(item=>item.disabled=false);}
+          });
+        }catch(error){feedback.className='qonto-error';feedback.textContent=error.message||'Recherche impossible.';}
+        finally{busy=false;search.disabled=false;selector.disabled=false;}
+      };
+      search.click();
+    }catch(error){content.textContent=error.message||'Chargement impossible.';}
+  });
   function setRowBusy(btn,busy){
     const row = btn.closest('.qonto-invoice-row');
     row?.querySelectorAll('[data-action-control]').forEach(control=>{ if('disabled' in control) control.disabled=busy; else control.setAttribute('aria-disabled', busy?'true':'false'); });

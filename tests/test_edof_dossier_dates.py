@@ -86,7 +86,7 @@ def test_every_list_sorts_by_filing_before_pagination(site, group, tab, state):
     assert table_ids(first) == [str(100000+i) for i in range(27, 2, -1)]
     assert table_ids(last) == ["100002", "100001", "100000", "999999"]
     assert "Demande du 28/10/2026" in first and "Passage dans le statut" in first
-    assert "Constaté le" in last
+    assert "Date de changement inconnue" in last and "Statut observé le" in last
 
 
 def test_exact_refusal_appears_in_table_and_detail_with_paris_time(site):
@@ -123,3 +123,15 @@ def test_legacy_view_keeps_its_first_observation_after_next_sync(site):
     process_directory(site.store, snapshot(800), owner=site.owner)
     with closing(site.gate.connect()) as db:
         assert stage_dates(db, site.owner)["123456"]["observed"] == 100
+
+
+def test_undated_ft_refusal_explicitly_labels_observation_in_list_and_detail(site):
+    row = folder(trainingActionInfo={"sessionStartDate": "2026-12-01", "solicitations": [
+        {"fundingType": 9, "status": "refused"}]})
+    site.vault.put(directory.record_key(site.owner), {"checked": 1793875080, "rows": {"123456": row}})
+    url = "/admin/edof-test?section=state&group=requests&tab=ft_refused"
+    for page in (site.client.get(url), site.client.get(url + "&folder=123456")):
+        assert page.status_code == 200
+        assert "Date du refus inconnue" in page.text
+        assert "Statut observé le" in page.text
+        assert "Constaté le" not in page.text
