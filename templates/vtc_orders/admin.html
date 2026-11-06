@@ -12,7 +12,7 @@
 <article style="background:white;padding:16px;margin:14px 0;border:1px solid #d7dfe7;border-radius:10px">
 <h2>{{row.person.first_name}} {{row.person.last_name}} · {{stages[row.stage]}}</h2>
 <p>{{row.submitted_at[:10]|vtc_date}} · Réf. {{row.id[:10]|upper}} · {{offers[row.offer]}} · {{150 if row.offer=='vehicule' else 600}} € · {{'CPF' if row.offer=='cpf' else 'Carte bancaire'}}</p>
-<p>{{row.person.email}} · {{row.person.phone}}{% if row.exam_date %} · Examen le {{row.exam_date|vtc_date}}{% endif %}</p>
+<p>{{row.person.email}} · {{row.person.phone}}{% if row.exam_centre in centres %} · {{centres[row.exam_centre]}}{% endif %}{% if row.exam_date %} · Examen le {{row.exam_date|vtc_date}}{% endif %}</p>
 {% if row.slot %}<p>Séance du {{row.slot.day|vtc_date}} de {{row.slot.start}} à {{row.slot.end}} · {{row.slot.trainer}}</p>{% endif %}
 {% if row.cpf_reference %}<p>Dossier CPF {{row.cpf_reference}}</p>{% endif %}
 {% if row.error %}<p role="alert">À vérifier · {{row.error}}</p>{% endif %}

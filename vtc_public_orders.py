@@ -6,7 +6,6 @@ import os
 import re
 import time
 import uuid
-from html import escape
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, abort, redirect, render_template, request, send_file, session, url_for
@@ -14,7 +13,7 @@ from flask import Blueprint, abort, redirect, render_template, request, send_fil
 import exam_retakes
 import exam_retakes_workflow as provider
 from manuals_commerce import safe_payment_url
-from vtc_order_documents import BOOKING, CMA, CONTACT, OFFERS, document
+from vtc_order_documents import AREA, BOOKING, CENTRES, CMA, CONTACT, OFFERS, document
 from vtc_order_store import Store
 
 PARIS = ZoneInfo("Europe/Paris")
@@ -37,10 +36,22 @@ def status_link(host, row):
 def notify(host, store, row, key, subject, message, paths=()):
     link = status_link(host, row)
     def content(_host, _row, _key, _link):
-        body = (f"<p>Bonjour {escape(row['person']['first_name'])},</p><p>{escape(message)}</p>"
-                f'<p><a href="{escape(link, quote=True)}">Accéder à mon dossier VTC</a></p>'
-                f"<p>{escape(CMA)}</p><p>Intégrale Academy · {escape(CONTACT)}</p>")
-        return subject + " · Intégrale Academy", body, message + "\n" + link + "\n" + CMA + "\n" + CONTACT
+        actions = {
+            "verify": "Confirmer mon adresse e-mail", "pay": "Accéder au paiement par carte",
+            "signature": "Accéder à la signature", "paid": "Retrouver ma facture et mon attestation",
+            "signed": "Retrouver mon contrat signé", "cpf": "Consulter mon dossier CPF",
+        }
+        action = actions.get(key, "Consulter mon dossier VTC")
+        summary = OFFERS[row["offer"]] + " · " + ("150 € TTC" if row["offer"] == "vehicule" else "600 € TTC")
+        centre = CENTRES.get(row.get("exam_centre"))
+        content = host.app.jinja_env.get_template("vtc_orders/email.html").render(
+                                  row=row, message=message, link=link,
+                                  action=action, summary=summary, centre=centre, area=AREA, cma=CMA)
+        html = host.render_academy_email(content, title=subject, eyebrow="EXAMEN PRATIQUE VTC",
+                                         subtitle="Votre dossier candidat", preheader=message)
+        text = "\n\n".join([f"Bonjour {row['person']['first_name']},", message, action + " : " + link,
+                            summary, centre or AREA, CMA, CONTACT])
+        return subject + " · Intégrale Academy", html, text
     return provider.send_email(host, store, row, key, link, paths, content_builder=content)
 
 
@@ -54,7 +65,15 @@ def receipt(store, row):
 def advance(host, store, row):
     stage = row["stage"]
     if stage == "verify":
-        notify(host, store, row, "verify", "Confirmez votre adresse e-mail", "Ouvrez votre dossier puis confirmez votre adresse pour poursuivre votre demande VTC.")
+        if row["offer"] == "cpf":
+            message = "Confirmez votre adresse pour choisir un rendez-vous téléphonique avec Cassandre au sujet de votre financement CPF."
+        elif row["offer"] == "formation":
+            message = "Confirmez votre adresse pour préparer votre séance et signer votre contrat de formation en ligne."
+        elif row.get("exam_date"):
+            message = "Confirmez votre adresse pour que notre équipe vérifie la disponibilité du véhicule à la date de votre examen. Nous vous préviendrons dès que vous pourrez payer."
+        else:
+            message = "Confirmez votre adresse pour accéder au paiement sécurisé de 150 € par carte bancaire."
+        notify(host, store, row, "verify", "Confirmez votre adresse e-mail", message)
     elif stage == "contract":
         path = store.document(row["id"], "convention")
         if not row.get("pdf_sha256"):
@@ -82,8 +101,13 @@ def advance(host, store, row):
     elif stage == "billing":
         if row["offer"] == "formation" and not store.document(row["id"],"completion").exists():
             document(row,store.document(row["id"],"completion"),completed=True)
-        invoice = provider.ensure_invoice(host, store, row)
-        provider.ensure_payment(host, store, row, invoice)
+        try:
+            invoice = provider.ensure_invoice(host, store, row)
+            provider.ensure_payment(host, store, row, invoice)
+        except Exception:
+            row["billing_problem"] = True
+            raise
+        row["billing_problem"] = False
         if row.get("payment_status") == "paid" and row.get("paid_cents") == row["total_cents"]:
             path = store.document(row["id"], "invoice")
             pdf, _ = host.fetch_qonto_client_invoice_pdf(row["invoice_id"])
@@ -151,6 +175,9 @@ def new_order(host, form, offer, oid):
     person = clean_person(form, host, offer)
     if form.get("accepted") != "yes":
         raise ValueError("Veuillez prendre connaissance des modalités de votre formule et de la consigne CMA.")
+    centre = form.get("exam_centre", "")
+    if centre not in CENTRES:
+        raise ValueError("Choisissez votre centre d’examen parmi les deux centres desservis.")
     day = form.get("exam_date","").strip()
     if day and exam_retakes.date_value(day,"Examen") < exam_retakes.today():
         raise ValueError("La date d’examen indiquée est passée.")
@@ -158,7 +185,7 @@ def new_order(host, form, offer, oid):
         raise ValueError("Confirmez votre admissibilité à l’épreuve pratique.")
     total = 15000 if offer=="vehicule" else 60000
     return {"id":oid, "access_key":secrets.token_urlsafe(32), "created":time.time(), "submitted_at":exam_retakes.now(), "offer":offer, "kind":"VTC pratique",
-            "stage":"verify","status":"queued","person":person,"exam_date":day,"days":[],"accepted_at":exam_retakes.now(),
+            "stage":"verify","status":"queued","person":person,"exam_centre":centre,"exam_date":day,"days":[],"accepted_at":exam_retakes.now(),
             "selected_slot":form.get("slot_id","")[:64] if offer=="formation" else "",
             "total_cents":total, "purchase_order":"VTC-"+oid, "invoice_title":OFFERS[offer],
             "billing_lines":[{"label":OFFERS[offer]+" – examen VTC","unit_cents":total,"total_cents":total,"quantity":1}],
@@ -182,6 +209,24 @@ def schedule(form, personal):
     return dict(day=day.isoformat(),start=start,end=end,trainer=trainer,duration=f"{mins//60} h {mins%60:02d}")
 
 
+def payment_state(row):
+    """Only an open, verified Qonto link may be offered to the candidate."""
+    if row["stage"] != "billing":
+        return row["stage"]
+    status = row.get("payment_status")
+    if status == "paid":
+        return "documents" if row.get("paid_cents") == row["total_cents"] else "review"
+    if status == "processing":
+        return "processing"
+    if status in {"review", "partially_paid", "canceled"}:
+        return "review"
+    if row.get("billing_problem", bool(row.get("error"))):
+        return "unavailable"
+    if status == "unpaid" and safe_payment_url(row.get("payment_url")):
+        return "ready"
+    return "preparing"
+
+
 def register(app, host):
     bp = Blueprint("vtc_orders",__name__)
     def csrf_token():
@@ -199,7 +244,7 @@ def register(app, host):
 
     def render(template, **values):
         return render_template("vtc_orders/"+template+".html", csrf=csrf_token(), offers=OFFERS, stages=STAGES,
-                               cma=CMA, booking=BOOKING, today=exam_retakes.today(), **values)
+                               centres=CENTRES, area=AREA, cma=CMA, booking=BOOKING, today=exam_retakes.today(), **values)
 
     @bp.after_request
     def private_headers(response):
@@ -228,6 +273,7 @@ def register(app, host):
                 if not slot or row["exam_date"] and slot["day"] > row["exam_date"]:
                     raise ValueError("Choisissez un créneau disponible avant votre examen.")
             store.add(row,request.remote_addr or "unknown")
+            session["vtc_sent_"+offer] = oid
             exam_retakes.wake_worker(host)
         except ValueError as exc:
             return render("checkout",offer=offer,error=str(exc),slots=Store(host).slots(earliest()) if offer=="formation" else []),400
@@ -238,8 +284,11 @@ def register(app, host):
         if offer not in OFFERS:
             abort(404)
         # The email link is the only public access to the purchaser's details.
-        session.pop("vtc_form_"+offer,None)
-        return render("sent",offer=offer)
+        oid = session.get("vtc_sent_"+offer)
+        row = Store(host).get(oid) if oid else None
+        if oid and session.get("vtc_form_"+offer) == oid:
+            session.pop("vtc_form_"+offer, None)
+        return render("sent", offer=offer, sent=row)
 
     def lookup(key):
         parts = re.fullmatch(r"([a-f0-9]{32})\.([A-Za-z0-9_-]{43})", key)
@@ -284,8 +333,20 @@ def register(app, host):
                 return redirect(url_for(".status",key=key),303)
             except exam_retakes.RetakeError as exc:
                 error=str(exc)
-        return render("status",row=row,key=key,error=error,pay=safe_payment_url(row.get("payment_url")),
+        return render("status",row=row,key=key,error=error,payment=payment_state(row),
                       docs=available_documents(store,row))
+
+    @bp.get("/vtc/suivi/<key>/etat-paiement")
+    def payment_progress(key):
+        _, row = lookup(key)
+        return {"state": payment_state(row)}
+
+    @bp.get("/vtc/suivi/<key>/payer")
+    def pay(key):
+        _, row = lookup(key)
+        if payment_state(row) == "ready":
+            return redirect(safe_payment_url(row["payment_url"]), 303)
+        return redirect(url_for(".status", key=key), 303)
 
     @bp.get("/vtc/suivi/<key>/<kind>.pdf")
     def pdf(key,kind):

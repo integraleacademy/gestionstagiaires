@@ -1,0 +1,31 @@
+<section class="payment-panel" data-payment-state="{{payment}}" data-status-url="{{url_for('.payment_progress',key=key)}}">
+<div class="payment-heading"><p class="kicker">Règlement par carte bancaire</p><p class="total">{{150 if row.offer=='vehicule' else 600}} € <small>TTC</small></p></div>
+{% if payment=='ready' %}
+  <h2>Votre paiement est prêt</h2><p>Cliquez sur le bouton ci-dessous. La page sécurisée de Qonto s’ouvrira pour saisir votre carte et valider le règlement.</p>
+  <a class="button pay-button" href="{{url_for('.pay',key=key)}}" rel="noreferrer">Payer {{150 if row.offer=='vehicule' else 600}} € par carte <span aria-hidden="true">→</span></a>
+  <p class="fine">Votre facture et votre attestation seront disponibles dans ce dossier après confirmation du règlement.</p>
+{% elif payment=='preparing' %}
+  <h2>Préparation de votre paiement</h2><p>Patientez pendant la création de votre lien sécurisé. Le bouton de paiement apparaîtra ici automatiquement.</p>
+{% elif payment=='processing' %}
+  <h2>Vérification du règlement</h2><p>Qonto vérifie la transaction. Patientez avant toute nouvelle action. Vous recevrez votre confirmation par e-mail.</p>
+{% elif payment=='documents' %}
+  <h2>Paiement reçu</h2><p>Votre règlement est confirmé. Nous préparons votre facture et votre attestation. Vous les recevrez aussi par e-mail.</p>
+{% elif payment=='review' %}
+  <h2>Votre dossier doit être vérifié</h2><p>Notre équipe doit vérifier votre règlement avant de poursuivre. Pour faire le point, appelez le <a href="tel:+33422470768">04 22 47 07 68</a> avec la référence de votre dossier.</p>
+{% else %}
+  <h2>Le paiement est momentanément indisponible</h2><p>Votre demande est conservée. Le service réessaie automatiquement. Vous recevrez un e-mail dès que le lien sera prêt.</p>
+{% endif %}
+{% if payment in ['preparing','unavailable','processing','documents'] %}<p class="fine" data-wait-hint aria-live="polite"></p>{% endif %}
+{% if payment!='review' %}
+<form method="post" class="secondary-action"><input type="hidden" name="csrf_token" value="{{csrf}}">
+<button name="action" value="refresh" class="text-action">{% if payment=='ready' %}J’ai déjà payé · actualiser mon dossier{% elif payment=='preparing' or payment=='unavailable' %}Actualiser la disponibilité du lien{% else %}Actualiser mon dossier{% endif %}</button></form>
+{% endif %}
+</section>
+{% if payment=='preparing' %}
+<dialog id="payment-wait" aria-labelledby="wait-title" aria-describedby="wait-detail">
+  <div class="wait-symbol" aria-hidden="true"><span></span></div>
+  <h2 id="wait-title">Un instant, nous préparons votre paiement.</h2>
+  <p id="wait-detail">Le bouton pour régler {{150 if row.offer=='vehicule' else 600}} € par carte s’affichera dès que Qonto aura créé votre lien sécurisé.</p>
+  <button type="button" class="text-action" data-close-dialog>Revenir à mon dossier</button>
+</dialog>
+{% endif %}

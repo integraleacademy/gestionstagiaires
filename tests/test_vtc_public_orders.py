@@ -18,7 +18,8 @@ def begin(host, offer, **extras):
     payload = dict(first_name="Camille",last_name="EXEMPLE",email="vtc@example.test",phone="0612345678",
                    address="10 rue des Tests",zip_code="83480",city="Puget-sur-Argens",accepted="yes",admissible="yes",
                    csrf_token=form.xpath('//input[@name="csrf_token"]/@value')[0],draft=form.xpath('//input[@name="draft"]/@value')[0],
-                   total_cents="1",**extras)
+                   total_cents="1",exam_centre="06")
+    payload.update(extras)
     assert client.post(checkout,data=payload).status_code==303
     assert client.post(checkout,data=payload).status_code==303
     store=Store(host)
@@ -111,3 +112,65 @@ def test_cpf_booking_and_funding(host,monkeypatch):
     assert cycle(host,store,oid)["stage"]=="funded" and not host._qonto_request.called
     assert client.get(path+"/vehicle.pdf").status_code==200
     assert client.get(path+"/invoice.pdf").status_code==404
+
+
+def test_centres_and_confirmation_privacy(host):
+    client = host.app.test_client()
+    url = "/vtc/commande/vehicule"
+    page = html.fromstring(client.get(url).data)
+    payload = dict(first_name="Camille", last_name="Exemple", email="vtc@example.test",
+                   phone="0612345678", address="10 rue des Tests", city="Nice", zip_code="06000",
+                   accepted="yes", csrf_token=page.xpath('//input[@name="csrf_token"]/@value')[0],
+                   draft=page.xpath('//input[@name="draft"]/@value')[0])
+    for code in ("", "75"):
+        assert client.post(url, data=dict(payload, exam_centre=code)).status_code == 400
+    assert client.post(url, data=dict(payload, exam_centre="83")).status_code == 303
+    for _ in range(2):
+        confirmation = client.get(url + "/confirmation")
+        assert b"vtc@example.test" in confirmation.data
+        assert b"La Valette-du-Var (83)" in confirmation.data
+        assert orders.token(Store(host).get(payload["draft"])).encode() not in confirmation.data
+        assert confirmation.headers["Cache-Control"] == "no-store"
+    assert b"vtc@example.test" not in host.app.test_client().get(url + "/confirmation").data
+    with host.app.app_context():
+        orders.process_pending(host)
+    args = host.brevo_send_email.call_args
+    assert 'data-academy-email' in args.args[2] and "La Valette-du-Var (83)" in args.args[2]
+    assert 'Confirmer mon adresse e-mail' in args.args[2] and '150 €' in args.kwargs['text_content']
+
+
+def test_payment_states_and_safe_redirect(host):
+    client, store, oid, path, _ = begin(host, "vehicule")
+    row = store.get(oid)
+    # Existing orders predate the centre selection and still have a working private dossier.
+    row.pop("exam_centre")
+    store.save(row)
+    assert client.get(path + "/etat-paiement").json == {"state": "preparing"}
+    assert b'id="payment-wait"' in client.get(path).data
+    assert client.get(path + "/payer").location == path
+    _, invoice = providers(host, store, row)
+    invoice["purchase_order"] = "VTC-" + oid
+    row = cycle(host, store, oid)
+    assert client.get(path + "/etat-paiement").json == {"state": "ready"}
+    assert 'Payer 150 € par carte' in client.get(path).get_data(as_text=True)
+    assert client.get(path + "/payer").location == row["payment_url"]
+    for status, problem, state in [
+        ("unpaid", True, "unavailable"), ("processing", False, "processing"),
+        ("partially_paid", False, "review"), ("canceled", False, "review"), ("paid", False, "documents"),
+    ]:
+        row.update(payment_status=status, billing_problem=problem, paid_cents=row["total_cents"] if status == "paid" else 0)
+        store.save(row)
+        assert client.get(path + "/etat-paiement").json == {"state": state}
+        assert client.get(path + "/payer").location == path
+        assert b'class="button pay-button"' not in client.get(path).data
+    row.update(payment_status="unpaid", payment_url="https://not-qonto.example/checkout")
+    store.save(row)
+    assert client.get(path + "/payer").location == path
+    assert client.get(path + "x/etat-paiement").status_code == 404
+
+
+def test_fixed_exam_date_explains_availability_before_payment(host):
+    client, store, oid, path, _ = begin(host, "vehicule", exam_date="2026-12-10", exam_centre="83")
+    assert store.get(oid)["stage"] == "availability"
+    assert 'vérifie la disponibilité' in client.get(path).get_data(as_text=True)
+    assert client.get(path + "/payer").location == path

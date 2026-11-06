@@ -14,6 +14,8 @@ CMA = ("Au moment de votre inscription à l’examen pratique auprès de la Cham
        "et de l’artisanat, indiquez « Intégrale Academy – Intégrale Sécurité Formations » comme "
        "établissement mettant le véhicule à disposition. Cela permet de coordonner votre passage "
        "avec ceux des autres candidats du centre.")
+CENTRES = {"06": "Saint-Laurent-du-Var (06)", "83": "La Valette-du-Var (83)"}
+AREA = "Le véhicule est proposé uniquement pour les examens de Saint-Laurent-du-Var (06) et de La Valette-du-Var (83)."
 OFFERS = {"vehicule": "Prêt du véhicule à double commande",
           "formation": "Formation pratique et prêt du véhicule", "cpf": "Formation pratique et prêt du véhicule"}
 BOOKING = "https://calendly.com/integraleacademy/chauffeurvtc"
@@ -75,6 +77,8 @@ def document(row, path, *, contract=False, completed=False):
             line("Date de passage communiquée : " + date_label(row["exam_date"]) + ".")
         line("Cette attestation accompagne votre convocation officielle de la CMA. L’équipe du centre coordonne la mise à disposition du véhicule.")
     if not completed:
+        centre = CENTRES.get(row.get("exam_centre"))
+        line("Centre d’examen : " + centre if centre else AREA)
         line(CMA)
     line(CONTACT)
     if contract:
