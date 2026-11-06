@@ -190,3 +190,20 @@ def test_legacy_unbilled_vehicle_uses_zero_vat(host):
     assert item["vat_rate"] == "0"
     assert item["unit_price"]["value"] == "150.000000"
     assert store.get(oid)["vat_rate"] == "0"
+
+
+def test_public_canonical_domain_and_gateway_do_not_redirect_in_loop(host):
+    client = host.app.test_client()
+    path = "/vtc/commande/vehicule"
+    response = client.get(path, base_url="https://gestionstagiaires-r5no.onrender.com")
+    assert response.status_code == 302
+    assert response.location == "https://admissions.integraleconnect.com"+path
+    proxied = client.get(path, base_url="https://gestionstagiaires-r5no.onrender.com", headers={"X-VTC-Gateway":"admissions"})
+    assert proxied.status_code == 200 and b'csrf_token' in proxied.data
+    row = {"id":"a"*32, "access_key":"b"*43}
+    assert orders.status_link(host,row).startswith("https://admissions.integraleconnect.com/vtc/suivi/")
+    with host.app.test_request_context(path):
+        rendered = host.app.jinja_env.get_template("vtc_orders/payment.html").render(
+            payment="preparing", key=orders.token(row), row={"offer":"vehicule"}, csrf="test")
+    assert 'Nous préparons votre paiement' in rendered
+    assert 'Votre paiement<br>se prépare' not in rendered

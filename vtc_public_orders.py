@@ -17,7 +17,7 @@ from vtc_order_documents import AREA, BOOKING, CENTRES, CMA, CONTACT, OFFERS, do
 from vtc_order_store import Store
 
 PARIS = ZoneInfo("Europe/Paris")
-ORIGIN = (os.getenv("RENDER_EXTERNAL_URL") or "https://gestionstagiaires-r5no.onrender.com").rstrip("/")
+ORIGIN = "https://admissions.integraleconnect.com"
 STAGES = {"verify":"Adresse e-mail à confirmer", "calendar":"Rendez-vous CPF avec Cassandre",
           "planning":"Créneau de formation à fixer", "availability":"Créneau d’examen à confirmer",
           "contract":"Contrat à signer", "delivery":"Prestations à réaliser", "billing":"Paiement par carte",
@@ -247,6 +247,16 @@ def register(app, host):
     def render(template, **values):
         return render_template("vtc_orders/"+template+".html", csrf=csrf_token(), offers=OFFERS, stages=STAGES,
                                centres=CENTRES, area=AREA, cma=CMA, booking=BOOKING, today=exam_retakes.today(), **values)
+
+    @bp.before_request
+    def canonical_public_address():
+        # Legacy email links remain valid. The gateway marker only prevents a
+        # redirect loop; it never grants access or replaces token/CSRF checks.
+        if (request.method in {"GET", "HEAD"}
+                and request.path.startswith(("/vtc/commande/", "/vtc/suivi/"))
+                and request.host.split(":")[0] in {"gestionstagiaires-r5no.onrender.com", "integraleconnect.com", "www.integraleconnect.com"}
+                and request.headers.get("X-VTC-Gateway") != "admissions"):
+            return redirect(ORIGIN + request.full_path.rstrip("?"), 302)
 
     @bp.after_request
     def private_headers(response):

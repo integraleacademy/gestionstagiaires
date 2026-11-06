@@ -24,7 +24,7 @@
 {% if payment=='preparing' %}
 <dialog id="payment-wait" aria-labelledby="wait-title" aria-describedby="wait-detail">
   <div class="modal-top"><span class="lock-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></svg></span><span class="eyebrow">Paiement sécurisé</span></div>
-  <h2 id="wait-title">Votre paiement<br>se prépare.</h2>
+  <h2 id="wait-title">Nous préparons votre paiement</h2>
   <p id="wait-detail">Patientez quelques instants. Vous pourrez ensuite régler votre réservation par carte bancaire.</p>
   <div class="modal-total"><span>Montant à régler</span><strong>{{150 if row.offer=='vehicule' else 600}} € <small>TTC</small></strong></div>
   <div class="loading-track" aria-hidden="true"><span></span></div>
