@@ -129,6 +129,8 @@ def annotate(rows, saved, checked, category):
         since = exact or (datetime.fromtimestamp(observed, PARIS).isoformat() if observed else "")
         row.update(filed_label=display(filed or created), creation_only=bool(created and not filed),
                    stage_label=display(since), stage_observed=not exact,
+                   stage_exact_label=display(exact),
+                   stage_unknown_label=('Date du refus inconnue' if row['kind'] == 'ft_refused' else 'Date de changement inconnue'),
                    filing_order=instant(filed or created), stage_order=instant(since))
 
 

@@ -209,7 +209,7 @@
       <tr data-edof-folder="{{ r.folder_id }}">
         <td data-label="Dossier"><div class="wedof-folder-ref"><strong><a href="{{ href }}">{{ r.folder_id }}</a></strong><small>{{ ("Créé le " if r.creation_only else "Demande du ") ~ r.filed_label if r.filed_label else "Date de demande inconnue" }}</small><span class="wedof-state-label">{{ r.label }}</span></div></td>
         <td data-label="Candidat EDOF"><div class="wedof-person-cell"><strong>{{ r.first_name }} {{ r.last_name }}</strong><span>{{ r.title or 'Formation non renseignée' }}</span></div></td>
-        <td data-label="Passage dans le statut">{% if r.stage_label %}{% if r.stage_observed %}<small title="EDOF ne fournit pas la date exacte. Date de première observation par Intégrale EDOF.">Constaté le</small> {% endif %}{{ r.stage_label }}{% else %}Date inconnue{% endif %}</td>
+        <td data-label="Passage dans le statut">{% if r.stage_exact_label %}{{ r.stage_exact_label }}{% else %}<strong>{{ r.stage_unknown_label }}</strong>{% if r.stage_label %}<div><small>Statut observé le {{ r.stage_label }}</small></div>{% endif %}<small>EDOF ne fournit pas la date de ce changement.</small>{% endif %}</td>
         <td data-label="Période"><div class="wedof-date-range"><span>Du {{ date_fr(r.session_start_date) }}</span><span>au {{ date_fr(r.session_end_date) }}</span>{% if r.entry_confirmed_on %}<small>Entrée confirmée le {{ date_fr(r.entry_confirmed_on) }}</small>{% endif %}</div></td>
         {% if testing %}<td data-label="Simulation">{{ simulation_labels.get(r.evaluation, 'Aucune action prévue') }}</td>{% endif %}
         <td data-label="Rattachement local"><div class="wedof-link-cell">
@@ -245,7 +245,7 @@
     <div class="edof-summary">
       <div><span>État EDOF</span><strong>{{ detail.display.label }}</strong></div>
       <div><span>{{ "Création du dossier" if detail.display.creation_only else "Date de la demande" }}</span><strong>{{ detail.display.filed_label or 'Inconnue' }}</strong></div>
-      <div><span>{{ 'Statut constaté le' if detail.display.stage_observed else 'Passage dans le statut' }}</span><strong>{{ detail.display.stage_label or 'Date inconnue' }}</strong></div>
+      <div><span>Passage dans le statut</span><strong>{{ detail.display.stage_exact_label or detail.display.stage_unknown_label }}</strong>{% if detail.display.stage_observed and detail.display.stage_label %}<small>Statut observé le {{ detail.display.stage_label }}. EDOF ne fournit pas la date de ce changement.</small>{% endif %}</div>
       <div><span>Échéance de l’automatisation</span><strong>{{ action_labels.get(detail.display.action, 'Aucune action prévue') }}</strong>
         {% if detail.display.scheduled %}<time datetime="{{ detail.display.scheduled.isoformat() }}">{{ detail.display.scheduled.strftime('%d/%m/%Y à %H h %M') }}</time>{% endif %}
         {% if detail.held or detail.display.block %}<span class="wedof-badge is-danger">Automatisation bloquée</span>{% elif active and detail.display.automatic_entry %}<span>Envoi automatique à partir de 18 h, heure de Paris.</span>{% endif %}

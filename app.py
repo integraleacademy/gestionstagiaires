@@ -28,6 +28,7 @@ import signal
 import atexit
 import sys
 import ssiap_exam
+from qonto_sepa_guard import ensure_subscription as ensure_sepa_subscription
 from qonto_bank_transfers import (bank_transfer_paid_cents, match_bank_transfers,
                                  bank_transfer_candidates, verified_bank_transfer)
 from itsdangerous import URLSafeTimedSerializer, BadSignature
@@ -1994,9 +1995,9 @@ def _reconciled_qonto_paid_cents(invoice: Dict[str, Any], fallback_cents: int) -
     terminal = {"completed", "paid", "succeeded", "success", "failed", "returned", "rejected", "refunded"}
     if not any(str(item.get("status") or "").lower() in terminal for item in all_installments):
         return fallback_cents
-    # Keep rejected/reprogrammed history for the authority decision above, but
-    # count only one current attempt per contractual installment below.
-    installments = _effective_sepa_installments(invoice)
+    # Distinct completed collection IDs represent real cash even when two
+    # subscriptions accidentally collected the same contractual installment.
+    installments = _paid_sepa_collections(invoice)
     paid = sum(
         money_value_to_cents(item.get("amount") or 0)
         for item in installments
@@ -42062,10 +42063,48 @@ def _effective_sepa_installments(line: Dict[str, Any]) -> List[Dict[str, Any]]:
     ]
 
 
+def _paid_sepa_collections(line: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Count real collections, including distinct payments of the same slot."""
+    rows = {}
+    for order, item in enumerate(_sepa_installments(line)):
+        collection_id = str(item.get('qonto_direct_debit_collection_id') or '')
+        subscription_id = str(item.get('qonto_direct_debit_subscription_id') or '')
+        key = ('collection', collection_id) if collection_id else (
+            'subscription', subscription_id, str(item.get('date') or item.get('due_date') or '')
+        ) if subscription_id else ('local', _installment_schedule_position(item, order + 1))
+        # Keep the latest authoritative status of the same collection, so a
+        # returned debit cannot survive as a stale completed duplicate.
+        previous = rows.get(key)
+        if previous is None or str(item.get('updated_at') or '') >= str(previous.get('updated_at') or ''):
+            rows[key] = item
+    return [item for item in rows.values()
+            if str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES
+            and _installment_counts_toward_schedule(item)]
+
+
+def _sepa_duplicate_warning(line: Dict[str, Any]) -> str:
+    slots = {}
+    for order, item in enumerate(_sepa_installments(line), 1):
+        item['duplicate_qonto_schedule'] = False
+        if not _installment_counts_toward_schedule(item):
+            continue
+        if str(item.get('status') or '').lower() in QONTO_REJECTED_COLLECTION_STATUSES | {'cancelled', 'canceled'}:
+            continue
+        sid = str(item.get('qonto_direct_debit_subscription_id') or '')
+        if sid:
+            slots.setdefault(_installment_schedule_position(item, order), {}).setdefault(sid, []).append(item)
+    duplicates = [slot for slot in slots.values() if len(slot) > 1]
+    for slot in duplicates:
+        for rows in slot.values():
+            for item in rows:
+                item['duplicate_qonto_schedule'] = True
+    return ('Plusieurs prélèvements Qonto existent pour une même échéance. Les paiements distincts sont comptabilisés ; vérifiez les prélèvements à venir dans Qonto.' if duplicates else '')
+
+
 def _sepa_schedule_total(line: Dict[str, Any], installments: Optional[List[Dict[str, Any]]] = None) -> int:
     """Resolve the contractual count, independently from retry-history rows."""
     override = line.get('financial_tracking_override') or {}
-    if override.get('enabled') and override.get('source') == 'inline_schedule':
+    if override.get('enabled') and override.get('source') in {'inline_schedule', 'qonto_attachment'}:
         return len(_effective_sepa_installments(line))
     installments = installments if installments is not None else _sepa_installments(line)
     payment_plan = line.get('paymentPlan') if isinstance(line.get('paymentPlan'), dict) else {}
@@ -42259,10 +42298,8 @@ def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
         if installment.get('is_rejection_retry'):
             installment['retry_superseded'] = not is_current
     total_due = round(sum(_money(item.get('amount')) for item in effective_installments), 2)
-    total_paid = round(sum(
-        _money(item.get('amount')) for item in effective_installments
-        if str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES
-    ), 2)
+    total_paid = round(sum(_money(item.get('amount')) for item in _paid_sepa_collections(line)), 2)
+    line['qontoDuplicateDebitWarning'] = _sepa_duplicate_warning(line)
     paid_count = sum(
         1 for item in effective_installments
         if str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES
@@ -42638,10 +42675,7 @@ def _repair_sepa_schedule_slot_totals(line: Dict[str, Any]) -> bool:
 
     schedule_total = _sepa_schedule_total(line, installments)
     total_due = round(sum(_money(item.get('amount')) for item in effective), 2)
-    total_paid = round(sum(
-        _money(item.get('amount')) for item in effective
-        if str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES
-    ), 2)
+    total_paid = round(sum(_money(item.get('amount')) for item in _paid_sepa_collections(line)), 2)
     paid_count = sum(
         1 for item in effective
         if str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES
@@ -42746,6 +42780,17 @@ def _prepare_sepa_payment_plan(line: Dict[str, Any], payment_plan: Dict[str, Any
 def _setup_qonto_direct_debit_for_line(line: Dict[str, Any], payment_plan: Dict[str, Any]) -> None:
     if line.get('registrationCancelled'):
         raise RuntimeError('Prélèvement bloqué : cette inscription est annulée.')
+    if _sepa_installments(line) and (
+        (line.get('financial_tracking_override') or {}).get('enabled')
+        or any(row.get('qonto_direct_debit_subscription_id') or row.get('qonto_direct_debit_collection_id')
+               for row in _sepa_installments(line))
+    ):
+        # Creating the invoice after the mandate must preserve the existing
+        # schedule and its bank IDs, including attached external collections.
+        line['paymentMode'] = 'sepa_direct_debit'
+        _sync_sepa_aliases(line)
+        ensure_qonto_sepa_installments_for_line(line)
+        return
     if payment_plan.get('mode') != 'sepa_direct_debit':
         line['paymentPlan'] = payment_plan
         line['paymentMode'] = 'cash'
@@ -42813,6 +42858,48 @@ def _persist_qonto_mandate_on_trainee(data: Dict[str, Any], line: Dict[str, Any]
     trainee['qonto_mandate_status'] = line.get('qonto_mandate_status') or ''
 
 
+def _find_existing_qonto_schedule_slot(line, installment, index):
+    """Read all pages before any POST; only adopt an exact owned schedule."""
+    mandate_id = str(line.get('qonto_direct_debit_mandate_id') or '')
+    tokens = {str(value).removesuffix('-PROFORMA').casefold() for value in (
+        line.get('id'), line.get('qontoInvoiceNumber'), line.get('qontoInvoiceId'),
+    ) if value}
+    matches = []
+    for page in range(1, 101):
+        response = list_qonto_direct_debit_subscriptions(mandate_id, page=page, per_page=100)
+        if not any(isinstance(response.get(key), list) for key in ('direct_debit_subscriptions', 'subscriptions', 'items')):
+            raise ValueError('La vérification des prélèvements Qonto est incomplète. Aucune nouvelle programmation.')
+        items = _qonto_direct_debit_subscription_items(response)
+        for sub in items:
+            if _qonto_subscription_mandate_id(sub) != mandate_id:
+                continue
+            reference = _qonto_subscription_reference(sub)
+            position, _, _ = _qonto_reference_schedule_position(reference)
+            owned = reference.split(' - ', 1)[0].strip().removesuffix('-PROFORMA').casefold() in tokens
+            due = str(sub.get('initial_collection_date') or sub.get('collection_date') or sub.get('start_date') or '')[:10]
+            same = (due == str(installment.get('due_date') or installment.get('date') or '')[:10]
+                    and money_value_to_cents(sub.get('amount') or 0) == money_value_to_cents(installment.get('amount') or 0))
+            if owned and position == index:
+                if not same or str(sub.get('status') or '').lower() in {'canceled', 'cancelled'}:
+                    raise ValueError('Cette échéance existe déjà dans Qonto avec d’autres paramètres. Vérifiez son échéancier.')
+                if not sub.get('id'):
+                    raise ValueError('Un prélèvement Qonto sans identifiant a été trouvé. Aucune nouvelle programmation.')
+                matches.append(str(sub['id']))
+            elif same:
+                raise ValueError('Un prélèvement de même date et montant existe déjà sur ce mandat. Vérifiez son rattachement avant de programmer.')
+        meta = response.get('meta') or {}
+        next_page = meta.get('next_page') or meta.get('nextPage')
+        total_pages = meta.get('total_pages') or meta.get('totalPages')
+        if not next_page and ((total_pages and page >= int(total_pages)) or (not total_pages and len(items) < 100)):
+            break
+    else:
+        raise ValueError('La vérification de tous les prélèvements Qonto n’a pas abouti. Aucune nouvelle programmation.')
+    matches = list(dict.fromkeys(matches))
+    if len(matches) > 1:
+        raise ValueError('Plusieurs prélèvements existent déjà pour cette échéance dans Qonto. Aucune nouvelle programmation.')
+    return matches[0] if matches else ''
+
+
 def ensure_qonto_sepa_installments_for_line(line: Dict[str, Any]) -> Dict[str, Any]:
     if line.get('registrationCancelled'):
         _sync_sepa_aliases(line)
@@ -42839,21 +42926,26 @@ def ensure_qonto_sepa_installments_for_line(line: Dict[str, Any]) -> Dict[str, A
     installments = _effective_sepa_installments(line)
     total = len(installments)
     created_count = 0
-    invoice_ref = line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or line.get('id')
+    invoice_ref = str(line.get('id') or '')
+    if not invoice_ref:
+        raise ValueError('Identifiant du financement manquant : programmation bloquée.')
     for inst in installments:
         if inst.get('qonto_direct_debit_subscription_id'):
             continue
-        idx = int(inst.get('index') or (installments.index(inst) + 1))
+        idx = _installment_schedule_position(inst, installments.index(inst) + 1)
         ref = f"{invoice_ref} - échéance {idx}/{total}"
         payload = {'client_id': client_id, 'bank_account_id': bank_account_id, 'initial_collection_date': inst.get('due_date') or inst.get('date'), 'amount': {'value': f"{_money(inst.get('amount')):.2f}", 'currency': 'EUR'}, 'reference': ref, 'notify_client': True, 'schedule_type': 'one_off', 'direct_debit_mandate_id': mandate_id, 'send_mandate_signature_email': True}
-        sub = create_qonto_direct_debit_subscription(payload)
-        sub_item = sub.get('direct_debit_subscription') or sub.get('subscription') or sub
-        inst['qonto_direct_debit_subscription_id'] = sub_item.get('id') or ''
+        subscription_id, created = ensure_sepa_subscription(
+            PERSIST_DIR, f'{mandate_id}:{invoice_ref}:{idx}', payload,
+            lambda: _find_existing_qonto_schedule_slot(line, inst, idx),
+            create_qonto_direct_debit_subscription,
+        )
+        inst['qonto_direct_debit_subscription_id'] = subscription_id
         inst['status'] = 'scheduled'
         inst['updated_at'] = _now_iso()
-        created_count += 1
-        app.logger.info('[QONTO] subscription créée pour échéance %s/%s subscription_id=%s', idx, total, inst['qonto_direct_debit_subscription_id'])
-        _billing_log(line, f'Subscription SEPA Qonto créée pour échéance {idx}/{total}', 'success', ref, inst['qonto_direct_debit_subscription_id'])
+        created_count += int(created)
+        app.logger.info('[QONTO] subscription %s pour échéance %s/%s subscription_id=%s', 'créée' if created else 'retrouvée', idx, total, subscription_id)
+        _billing_log(line, f'Échéance SEPA {idx}/{total} : ' + ('créée' if created else 'existante retrouvée'), 'success', ref, subscription_id)
     line['qonto_direct_debit_subscription_id'] = next((i.get('qonto_direct_debit_subscription_id') for i in installments if i.get('qonto_direct_debit_subscription_id')), line.get('qonto_direct_debit_subscription_id') or '')
     _sync_sepa_aliases(line)
     return {'created': created_count, 'pending_signature': False}
@@ -43795,6 +43887,8 @@ def buildBillingLinesFromSessions(
                     # an explicit Qonto sync timestamp may throttle a remote
                     # payment refresh.
                     line['qontoLastSyncedAt'] = qonto_source.get('qontoLastSyncedAt') or ''
+                line['qontoDuplicateDebitWarning'] = _sepa_duplicate_warning(line)
+                line['qontoCollectedAmountCents'] = sum(money_value_to_cents(row.get('amount') or 0) for row in _paid_sepa_collections(line))
                 out.append(line)
     return out
 
@@ -44271,7 +44365,7 @@ def calculate_trainee_financial_summary(
         # Direct-debit collections can be reported before (or independently
         # from) a client-invoice payment amount.  The schedule is then the only
         # source of truth available for the money already collected.
-        installments = _effective_sepa_installments(line)
+        installments = _paid_sepa_collections(line)
         if installments:
             paid_statuses = {'completed', 'paid', 'succeeded', 'success'}
             installment_paid_cents = sum(
@@ -48062,7 +48156,12 @@ def _sync_qonto_direct_debit_line(
         # Recurring subscriptions share an id across all monthly rows. Match
         # the collection to its planned date so one paid/rejected collection
         # cannot incorrectly change every installment in the schedule.
-        collection = next((candidate for candidate in collections if _qonto_collection_date(candidate) == due_date), None)
+        known_collection = str(item.get('qonto_direct_debit_collection_id') or '')
+        collection = next((candidate for candidate in collections if known_collection and str(candidate.get('id') or '') == known_collection), None)
+        if known_collection and item.get('qonto_attachment') and collection is None:
+            continue
+        if collection is None:
+            collection = next((candidate for candidate in collections if _qonto_collection_date(candidate) == due_date), None)
         if collection is None:
             same_subscription_rows = sum(
                 1 for candidate in installments
@@ -48136,6 +48235,7 @@ def _sync_qonto_direct_debit_line(
                 item for item in installments
                 if str(item.get('due_date') or item.get('date') or '')[:10] == due_date
                 and money_value_to_cents(item.get('amount') or 0) == amount_cents
+                and (not item.get('qonto_attachment') or str(item.get('qonto_direct_debit_collection_id') or '') == str(collection.get('id') or ''))
             ]
             exact_subscription = [
                 item for item in matching
@@ -49306,6 +49406,171 @@ def api_billing_sync_qonto():
         'lines': all_lines, 'errors': errors, 'invoice': invoice,
         'financial_summary': summary,
     })
+
+
+def _debit_attachment_line_error(line):
+    if not line or is_cpf_billing_context(line) or line.get('paymentMode') != 'sepa_direct_debit':
+        return 'Choisissez un financement par prélèvement du stagiaire.'
+    if line.get('registrationCancelled') or line.get('invoiceStatus') in {'cancelled', 'canceled', 'deleted', 'control'}:
+        return 'Ce financement ne permet pas le rattachement d’un paiement.'
+    if line.get('qontoBankTransfers') or line.get('amountPaid') or line.get('amount_paid') or line.get('manualPaymentInvoiceId'):
+        return 'Un autre règlement est renseigné. Vérifiez les paiements avant le rattachement.'
+    if not line.get('qonto_direct_debit_mandate_id') or not line.get('qonto_mandate_rum'):
+        return 'Synchronisez d’abord le mandat Qonto de ce dossier.'
+    if any(not row.get('qonto_direct_debit_collection_id') for row in _paid_sepa_collections(line)):
+        return 'Un paiement sans identifiant Qonto est déjà renseigné. Vérifiez son rattachement avant de continuer.'
+    return ''
+
+
+def _debit_attachment_snapshot(line):
+    fields = ('id', 'sessionId', 'traineeId', 'amount', 'amountTTC', 'paymentMode',
+              'qontoInvoiceId', 'qonto_direct_debit_mandate_id', 'qonto_mandate_rum',
+              'qontoClientId', 'qontoCustomerId', 'financial_tracking_override', 'registrationCancelled')
+    row_fields = ('index', 'schedule_index', 'date', 'due_date', 'amount', 'status',
+                  'qonto_direct_debit_collection_id', 'qonto_direct_debit_subscription_id',
+                  'tracking_removed_at', 'excluded_from_schedule_totals')
+    value = {key: line.get(key) for key in fields}
+    value['rows'] = [{key: row.get(key) for key in row_fields} for row in _sepa_installments(line)]
+    return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def _debit_attachment_records(line):
+    """Read only: both mandate ownership and completed collection are verified."""
+    response = get_qonto_direct_debit_mandate(line['qonto_direct_debit_mandate_id'])
+    mandate = _qonto_direct_debit_mandate_payload(response)
+    client_id = str(line.get('qontoClientId') or line.get('qontoCustomerId') or line.get('qonto_mandate_client_id') or '')
+    if (str(mandate.get('id') or '') != line['qonto_direct_debit_mandate_id']
+            or _qonto_mandate_rum(mandate) != line['qonto_mandate_rum']
+            or not client_id or str(mandate.get('client_id') or '') != client_id):
+        raise ValueError('Le mandat Qonto ne correspond pas au client de ce dossier. Rattachement bloqué.')
+    result = {}
+    for collection in _all_qonto_direct_debit_collections_for_rum(line['qonto_mandate_rum']):
+        if str(collection.get('status') or '').lower() not in QONTO_PAID_COLLECTION_STATUSES:
+            continue
+        amount = collection.get('amount')
+        currency = amount.get('currency') if isinstance(amount, dict) else collection.get('currency')
+        if currency and str(currency).upper() != 'EUR':
+            continue
+        row = _financial_reset_row_from_collection(collection)
+        if row['qonto_direct_debit_collection_id'] and row['date'] and row['amount'] > 0:
+            result[row['qonto_direct_debit_collection_id']] = row
+    return result
+
+
+def _debit_attachment_owners(data):
+    return {str(row['qonto_direct_debit_collection_id'])
+            for line in _qonto_background_lines(data).values()
+            for row in _sepa_installments(line) if row.get('qonto_direct_debit_collection_id')}
+
+
+def _debit_attachment_remaining(line):
+    return max(0, money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+               - sum(money_value_to_cents(row.get('amount') or 0) for row in _paid_sepa_collections(line)))
+
+
+@app.post('/api/billing/direct-debits/search')
+@admin_login_required
+@admin_write_required
+def api_billing_direct_debit_search():
+    if _is_partner_data_scope_session():
+        return jsonify(ok=False, error='Rattachement réservé à l’administration Intégrale.'), 403
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify(ok=False, error='Requête JSON requise.'), 400
+    data = load_data()
+    line = _find_billing_line(data, str(payload.get('lineId') or ''))
+    error = _debit_attachment_line_error(line)
+    if error:
+        return jsonify(ok=False, error=error), 409
+    try:
+        records = _debit_attachment_records(line)
+    except Exception as exc:
+        return jsonify(ok=False, error=format_qonto_error_for_front(exc)), 409
+    owners, remaining = _debit_attachment_owners(data), _debit_attachment_remaining(line)
+    nonce = session.setdefault('debit_attachment_nonce', secrets.token_urlsafe(24))
+    signer = URLSafeTimedSerializer(app.secret_key, salt='debit-attachment')
+    candidates = []
+    for collection_id, row in records.items():
+        if collection_id in owners:
+            continue
+        blocked = 'Montant supérieur au reste à payer.' if money_value_to_cents(row['amount']) > remaining else ''
+        candidate = {'id': collection_id, 'date': row['date'], 'amount': row['amount'],
+                     'reference': row['reference'], 'blocked_reason': blocked}
+        if not blocked:
+            candidate['selection_token'] = signer.dumps({'line_id': line['id'], 'nonce': nonce,
+                'snapshot': _debit_attachment_snapshot(line), 'record': row})
+        candidates.append(candidate)
+    candidates.sort(key=lambda row: (row['date'], row['id']), reverse=True)
+    return jsonify(ok=True, collections=candidates, remaining_cents=remaining, rum=line['qonto_mandate_rum'])
+
+
+@app.post('/api/billing/direct-debits/attach')
+@admin_login_required
+@admin_write_required
+def api_billing_direct_debit_attach():
+    if _is_partner_data_scope_session():
+        return jsonify(ok=False, error='Rattachement réservé à l’administration Intégrale.'), 403
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify(ok=False, error='Requête JSON requise.'), 400
+    try:
+        selected = URLSafeTimedSerializer(app.secret_key, salt='debit-attachment').loads(
+            str(payload.get('selectionToken') or ''), max_age=600)
+        if not session.get('debit_attachment_nonce') or selected.get('nonce') != session['debit_attachment_nonce']:
+            raise BadSignature('Session changed')
+    except BadSignature:
+        return jsonify(ok=False, error='La sélection a expiré. Recherchez à nouveau le prélèvement.'), 409
+    line = _find_billing_line(load_data(), selected['line_id'])
+    error = _debit_attachment_line_error(line)
+    if error or _debit_attachment_snapshot(line) != selected['snapshot']:
+        return jsonify(ok=False, error=error or 'Le dossier a changé. Recherchez à nouveau le prélèvement.'), 409
+    proof = selected['record']
+    try:
+        records = _debit_attachment_records(line)
+        if records.get(proof['qonto_direct_debit_collection_id']) != proof:
+            raise ValueError('Le prélèvement a changé depuis la recherche. Vérifiez à nouveau Qonto.')
+    except Exception as exc:
+        return jsonify(ok=False, error=format_qonto_error_for_front(exc)), 409
+
+    def persist(current):
+        target = _find_billing_line(current, selected['line_id'])
+        error = _debit_attachment_line_error(target)
+        if error or _debit_attachment_snapshot(target) != selected['snapshot']:
+            return {'ok': False, 'error': error or 'Le dossier a changé. Recherchez à nouveau le prélèvement.'}
+        if proof['qonto_direct_debit_collection_id'] in _debit_attachment_owners(current):
+            return {'ok': False, 'error': 'Ce prélèvement est déjà rattaché à un dossier.'}
+        if money_value_to_cents(proof['amount']) > _debit_attachment_remaining(target):
+            return {'ok': False, 'error': 'Ce prélèvement dépasse le reste à payer.'}
+        rows = _sepa_installments(target)
+        matching = [row for row in rows if not row.get('qonto_direct_debit_subscription_id')
+                    and not row.get('qonto_direct_debit_collection_id')
+                    and str(row.get('status') or '').lower() not in QONTO_PAID_COLLECTION_STATUSES
+                    and not row.get('tracking_removed_at')
+                    and str(row.get('due_date') or row.get('date') or '')[:10] == proof['date']
+                    and money_value_to_cents(row.get('amount') or 0) == money_value_to_cents(proof['amount'])]
+        if len(matching) > 1:
+            return {'ok': False, 'error': 'Plusieurs échéances locales correspondent. Vérifiez le suivi avant le rattachement.'}
+        row = matching[0] if matching else {}
+        if not matching:
+            position = max((_installment_schedule_position(item, i) for i, item in enumerate(rows, 1)), default=0) + 1
+            row.update(index=position, schedule_index=position)
+            rows.append(row)
+        row.update(copy.deepcopy(proof))
+        row.update(qonto_attachment=True, attached_at=_now_iso(), attached_by=session.get('admin_username') or 'admin')
+        target['directDebitInstallments'] = rows
+        target['sepa_payment_plan'] = {'installments': rows}
+        target['financial_tracking_override'] = {'enabled': True, 'source': 'qonto_attachment', 'updated_at': _now_iso()}
+        _sync_sepa_aliases(target)
+        normalize_qonto_invoice_storage_fields(target)
+        target['qontoDirectDebitSyncWarning'] = ''
+        _billing_log(target, 'Prélèvement Qonto existant rattaché au dossier', 'success',
+                     f"{proof['amount']:.2f} EUR · {proof['date']}", proof['qonto_direct_debit_collection_id'])
+        _save_billing_line(current, target)
+        return {'ok': True, 'remaining_cents': _debit_attachment_remaining(target),
+                'message': 'Prélèvement existant rattaché. Le suivi financier est à jour.'}
+
+    result = _atomic_update_data(persist)
+    return jsonify(result), (200 if result['ok'] else 409)
 
 
 @app.post('/api/billing/reset-financial-tracking')

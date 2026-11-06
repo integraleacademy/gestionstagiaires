@@ -1697,6 +1697,7 @@
           <button class="btn btn-outline" type="button" id="btnSyncQontoTrainee" {{ financing_read_only_attr }}>Synchroniser Qonto</button>
           {% if not is_read_only and not financing_locked %}
             <button class="btn btn-outline" type="button" id="btnAssignBankTransfer">Affecter un virement</button>
+            <button class="btn btn-outline" type="button" id="btnAttachQontoDebit">Rattacher un prélèvement Qonto</button>
             <button class="btn btn-outline finance-reset-tracking-btn" type="button" id="btnResetFinancialTracking">↺ Réinitialiser le suivi financier</button>
           {% endif %}
           <div class="finance-validation-admin"
