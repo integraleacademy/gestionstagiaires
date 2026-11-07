@@ -825,7 +825,8 @@
 
 /* Dossier stagiaire : échéancier local et opérations bancaires Qonto. */
 #financeInstallments { display:block; min-width:0; container-type:inline-size; }
-.schedule-totals { display:flex; flex-wrap:wrap; gap:12px 32px; margin:4px 0 18px; }
+.schedule-totals { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr)); gap:8px; margin:14px 0; }
+.schedule-totals > div { padding:10px 12px; border:1px solid #dbe3ed; border-radius:8px; background:#f7f9fc; }
 .schedule-totals span,.schedule-totals strong,.schedule-table small,.schedule-operation span { display:block; }
 .schedule-totals span,.schedule-actions small,.schedule-help,.schedule-table small { color:#526079; }
 .schedule-totals strong { margin-top:3px; font-size:1.1rem; font-variant-numeric:tabular-nums; }

@@ -120,3 +120,26 @@ def test_scheduled_collections_stay_out_of_history_and_missing_statement_dates_a
     assert [row['id'] for row in history] == ['old']
     assert history[0]['date'] == '2020-10-10' and 'transaction_date' not in history[0]
     assert '_rum' not in history[0] and '_account' not in history[0]
+
+
+def test_finite_recurrence_reserves_only_unissued_and_unsettled_collections():
+    sub = subscription('monthly', '2026-12-04', schedule_type='monthly', schedule_total_collection_count=4)
+    ops = [dict(id=str(i), direct_debit_subscription_id='monthly', collection_date='2026-10-04',
+                status=status, amount={'value': value})
+           for i, (status, value) in enumerate([('completed', '367.50'), ('declined', '367.50'), ('on_hold', '200.00')])]
+    with patch.object(gestion, 'list_qonto_direct_debit_subscriptions', return_value={'items': [sub]}), \
+         patch.object(gestion, 'list_qonto_direct_debit_collections', return_value={'items': ops + [ops[-1]]}):
+        upcoming, history = gestion._trainee_bank_schedule([{'qonto_direct_debit_subscription_id': 'monthly'}])
+    assert [(r['remaining_count'], r['remaining_cents']) for r in upcoming] == [(2, 56750)]
+    assert len(history) == 2
+
+
+def test_one_off_is_not_still_programmed_once_its_collection_is_returned():
+    sub = subscription('once', None, status='in_progress')
+    row = dict(id='attempt', direct_debit_subscription_id='once', collection_date='2026-10-04',
+               status='returned', amount={'value': '539.50'})
+    with patch.object(gestion, 'list_qonto_direct_debit_subscriptions', return_value={'items': [sub]}), \
+         patch.object(gestion, 'list_qonto_direct_debit_collections', return_value={'items': [row]}):
+        upcoming, history = gestion._trainee_bank_schedule([{'qonto_direct_debit_subscription_id': 'once'}])
+    assert upcoming == []
+    assert history[0]['status'] == 'returned'

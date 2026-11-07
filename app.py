@@ -46289,6 +46289,39 @@ def _read_debit_statement_dates(history):
     _match_debit_transaction_dates(history, transactions)
 
 
+def _bank_schedule_upcoming(subscriptions, collections):
+    """Count remaining occurrences once, including collections already issued by Qonto."""
+    terminal = QONTO_PAID_COLLECTION_STATUSES | QONTO_REJECTED_COLLECTION_STATUSES | {'canceled', 'cancelled'}
+    by_subscription = {}
+    for row in collections.values():
+        by_subscription.setdefault(row['subscription_id'], []).append(row)
+    upcoming = []
+    for sid, sub in subscriptions.items():
+        issued = by_subscription.pop(sid, [])
+        pending = [row for row in issued if row['status'] not in terminal]
+        finished = sub['status'] in {'completed', 'canceled', 'cancelled'}
+        if finished:
+            upcoming.extend(pending)
+            continue
+        count = sub.pop('total_count')
+        # Qonto can leave a subscription in progress after its final collection.
+        # An open-ended recurrence has no reliable remaining total.
+        if count is not None:
+            unissued = max(0, count - len(issued))
+            if not unissued and not pending:
+                continue
+            sub['remaining_count'] = unissued + len(pending)
+            sub['remaining_cents'] = unissued * sub['amount_cents'] + sum(r['amount_cents'] for r in pending)
+        if any(row['status'] not in {'scheduled', 'pending', 'processing', 'in_progress', 'on_hold'} for row in pending):
+            sub['remaining_cents'] = None
+        upcoming.append(sub)
+    # A finished or shared subscription can be absent from the subscription
+    # list while a collection explicitly linked to this dossier is in flight.
+    for issued in by_subscription.values():
+        upcoming.extend(row for row in issued if row['status'] not in terminal)
+    return sorted(upcoming, key=lambda row: (row['date'] or '9999', row['id']))
+
+
 def _trainee_bank_schedule(lines):
     known_subscriptions, known_collections, references = set(), set(), set()
     orphan_collections, attached_subscriptions = set(), set()
@@ -46313,7 +46346,7 @@ def _trainee_bank_schedule(lines):
                 if reference:
                     references.add((mandate, str(reference).strip().casefold()))
     known_collections -= {None, ''}
-    subscriptions, history, bank_accounts = {}, {}, {}
+    subscriptions, history, bank_accounts, collections = {}, {}, {}, {}
     today = datetime.datetime.now(ZoneInfo('Europe/Paris')).date().isoformat()
     if not (known_subscriptions or known_collections or references):
         return [], []
@@ -46330,7 +46363,9 @@ def _trainee_bank_schedule(lines):
         if not date and sub.get('schedule_type') == 'one_off' and status == 'scheduled':
             date = sub.get('initial_collection_date')
         subscriptions[sid] = dict(id=sid, date=date, amount_cents=_qonto_collection_amount_cents(sub),
-                                  frequency=sub.get('schedule_type'), reference=reference, status=status)
+                                  frequency=sub.get('schedule_type'), reference=reference, status=status,
+                                  total_count=1 if sub.get('schedule_type') == 'one_off' else
+                                  (_positive_installment_int(sub.get('schedule_total_collection_count')) or None))
     # The list can omit a finished subscription. Its collections still belong
     # to the dossier through the stored immutable subscription id.
     allowed_ids = known_subscriptions.union(subscriptions)
@@ -46347,6 +46382,9 @@ def _trainee_bank_schedule(lines):
                 continue
             status = str(row.get('status') or '').lower()
             date = row.get('collection_date')
+            amount = _qonto_collection_amount_cents(row)
+            collections[cid] = dict(id=cid, subscription_id=sid, date=date, status=status, amount_cents=amount,
+                                    frequency='one_off', remaining_count=1, remaining_cents=amount)
             if status not in QONTO_PAID_COLLECTION_STATUSES | QONTO_REJECTED_COLLECTION_STATUSES | {'canceled', 'cancelled'}:
                 continue
             if date and date > today:
@@ -46364,8 +46402,7 @@ def _trainee_bank_schedule(lines):
     for row in history.values():
         row.pop('_rum')
         row.pop('_account')
-    upcoming = [s for s in subscriptions.values() if s['status'] not in {'completed', 'canceled', 'cancelled'}]
-    upcoming.sort(key=lambda s: (s['date'] or '9999', s['id']))
+    upcoming = _bank_schedule_upcoming(subscriptions, collections)
     return upcoming, sorted(history.values(), key=lambda r: (r.get('transaction_date') or r['date'] or '', r['id']), reverse=True)
 
 
