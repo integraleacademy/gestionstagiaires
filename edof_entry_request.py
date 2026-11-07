@@ -5,7 +5,7 @@ from urllib.parse import urlsplit
 from uuid import uuid4
 
 import edof_directory as directory
-from edof_declarations import begin_send, is_recorded, verify_identity
+from edof_declarations import begin_send, is_recorded, official_terms_match, verify_identity
 
 
 def run_entry(context, witness, spec, storage, origin, prefix):
@@ -84,6 +84,8 @@ def _run_status(context, witness, spec, storage, origin, prefix):
         if already_out and current["end_date"] == intent["actual_date"]:
             return {"code": "declaration_exit_confirmed"}
         return {"code": "declaration_unverified"}
+    if not official_terms_match(current, intent):
+        return {"code": "declaration_terms_mismatch"}
     if already_out:
         # An existing exit uses the portal's remaining service-only form.
         return None

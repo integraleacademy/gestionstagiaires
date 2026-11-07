@@ -6,11 +6,14 @@ import pytest
 
 from edof_entry_request import run_entry
 from edof_declarations import records
-from test_edof_declarations import API_PREFIX, EDOF_HOST, ENTRY, FOLDER, ROW, prepare
+from test_edof_declarations import API_PREFIX, EDOF_HOST, ENTRY as HISTORICAL_ENTRY, FOLDER, ROW, prepare
+
+
+ENTRY = {**HISTORICAL_ENTRY, "actual_date": ROW["session_start_date"]}
 
 
 class Portal:
-    def __init__(self, folder=FOLDER, state="ACCEPTED", effective=None, row=ROW, expected_date="03/01/2026"):
+    def __init__(self, folder=FOLDER, state="ACCEPTED", effective=None, row=ROW, expected_date="01/01/2026"):
         self.folder, self.state, self.effective = folder, state, effective
         self.row, self.expected_date = row, expected_date
         self.writes = []
@@ -117,7 +120,7 @@ class CompletionPortal(Portal):
     def put(self, url, data, **options):
         assert url == "https://" + EDOF_HOST + API_PREFIX + FOLDER + "/status"
         assert options["max_redirects"] == 0
-        assert data == {"state": "TERMINATED", "terminatedDate": "29/01/2026", "completed": True,
+        assert data == {"state": "TERMINATED", "terminatedDate": "30/01/2026", "completed": True,
                         "absenceUnit": "", "absenceDuration": 0, "achievementRate": 100,
                         "forceMajeureAbsence": False, "terminatedReason": "8"}
         self.writes.append(data)
@@ -133,13 +136,13 @@ def complete_service(portal, spec, path):
 
 def test_combined_exit_needs_official_date_rate_and_status_and_never_replays(tmp_path):
     from test_edof_declarations import EXIT
-    spec = prepare(tmp_path, {**EXIT, "rate": 100, "motif": ""})
+    spec = prepare(tmp_path, {**EXIT, "actual_date": ROW["session_end_date"], "rate": 100, "motif": ""})
     portal = CompletionPortal()
     assert complete_service(portal, spec, tmp_path)["code"] == "declaration_confirmed"
     assert complete_service(portal, spec, tmp_path)["code"] == "declaration_confirmed"
     portal.state = "SERVICE_DONE_DECLARED"
     assert complete_service(portal, {**spec, "mode": "reconcile"}, tmp_path)["code"] == "declaration_confirmed"
-    for end, rate in (("28/01/2026", 100), ("29/01/2026", None), ("29/01/2026", 90)):
+    for end, rate in (("28/01/2026", 100), ("30/01/2026", None), ("30/01/2026", 90)):
         portal.end, portal.rate = end, rate
         assert complete_service(portal, {**spec, "mode": "reconcile"}, tmp_path)["code"] == "declaration_unverified"
     assert len(portal.writes) == 1
@@ -147,7 +150,7 @@ def test_combined_exit_needs_official_date_rate_and_status_and_never_replays(tmp
 
 def test_exit_only_and_uncertain_receipts_are_not_full_confirmation(tmp_path):
     from test_edof_declarations import EXIT
-    spec = prepare(tmp_path, {**EXIT, "rate": 100, "motif": ""})
+    spec = prepare(tmp_path, {**EXIT, "actual_date": ROW["session_end_date"], "rate": 100, "motif": ""})
     portal = CompletionPortal()
     portal.after_write = "terminated"
     assert complete_service(portal, spec, tmp_path)["code"] == "declaration_exit_confirmed"
@@ -157,24 +160,26 @@ def test_exit_only_and_uncertain_receipts_are_not_full_confirmation(tmp_path):
     assert len(portal.writes) == 1
 
 
-@pytest.mark.parametrize("action", ["partial", "hold", "before_entry", "hours", "other_folder", "wrong_state"])
+@pytest.mark.parametrize("action", ["partial", "hold", "before_entry", "hours", "other_folder", "wrong_state", "other_end_date"])
 def test_exit_request_rejects_ineligible_operations(tmp_path, action):
     from test_edof_declarations import EXIT
     from edof_declarations import hold_folder
-    spec = prepare(tmp_path, {**EXIT, "rate": 100, "motif": ""})
+    spec = prepare(tmp_path, {**EXIT, "actual_date": ROW["session_end_date"], "rate": 100, "motif": ""})
     portal = CompletionPortal()
     if action == "partial":
         spec["intent"]["rate"] = 90
     elif action == "hold":
         hold_folder(tmp_path, FOLDER, True)
     elif action == "before_entry":
-        portal.effective = "30/01/2026"
+        portal.effective = "31/01/2026"
     elif action == "hours":
         spec["intent"].update(source="local", actual_hours="10")
+    elif action == "other_end_date":
+        spec["intent"]["actual_date"] = "2026-01-28"
     elif action == "other_folder":
         portal.folder = "987654321"
     elif action == "wrong_state":
         portal.state = "canceled"
     assert complete_service(portal, spec, tmp_path)["code"] in {
-        "declaration_changed", "declaration_blocked", "declaration_evidence_changed"}
+        "declaration_changed", "declaration_blocked", "declaration_evidence_changed", "declaration_terms_mismatch"}
     assert not portal.writes

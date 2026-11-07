@@ -91,8 +91,8 @@ def test_exit_receipt_checks_actual_date_rate_identity_and_state(tmp_path):
 
 def test_operator_routes_require_admin_csrf_active_provider_and_actual_evidence(site):
     client = site.client
-    form_data = {"csrf": site.csrf, "action": "service_done", "actual_date": "2026-02-05", "rate": "65",
-                 "evidence": "Feuille vérifiée", "attested": "yes", "motif": "trainee_absent"}
+    form_data = {"csrf": site.csrf, "action": "service_done", "actual_date": "2026-02-06", "rate": "100",
+                 "evidence": "Feuille vérifiée", "attested": "yes"}
     url = "/admin/edof-test/dossiers/100001/submit"
     assert "désactivé" in client.post(url, data=form_data, follow_redirects=True).text
     client.post("/admin/edof-test/provider", data={"csrf": site.csrf, "provider": "integrale", "revision": 0})
@@ -127,7 +127,7 @@ def test_individual_entry_uses_persisted_production_hold_and_official_status_pay
     ticket = "a" * 32
     store = NS(directory=tmp_path, data_file=None)
     row = {**ROW, "state": "accepted"}
-    good = {**ENTRY, "source": "production"}
+    good = {**ENTRY, "actual_date": row["session_start_date"], "source": "production"}
     proof = {**ROW, "entry_training": good}
     states = {FOLDER: {"available": True, "start": ROW["session_start_date"], "end": ROW["session_end_date"],
                        "reserved": True, "ticket": ticket, "proof": proof}}
@@ -141,9 +141,9 @@ def test_individual_entry_uses_persisted_production_hold_and_official_status_pay
     assert spec["folder_id"] == FOLDER and ledger.check_before_job(store, spec)
     gate = form.SingleWrite(spec, EDOF_HOST, API_PREFIX, tmp_path)
     gate.armed = True
-    payload = {"state":"IN_TRAINING", "date":"03/01/2026"}
+    payload = {"state":"IN_TRAINING", "date":"01/01/2026"}
     for url, invalid in [(PREFIX+"/status", {**payload,"state":"CANCELED"}),
-                         (PREFIX+"/status", {**payload,"date":"01/01/2026"}),
+                         (PREFIX+"/status", {**payload,"date":"03/01/2026"}),
                          (PREFIX+"/status", {**payload,"anotherAction": True}),
                          (PREFIX+"/in-training", payload), (PREFIX+"1/status",payload)]:
         assert not gate.allows(request(url, invalid))
@@ -389,7 +389,7 @@ def test_date_based_entries_only_queue_the_selected_effective_starts(site):
     assert jobs[0]["intent"]["actual_date"] == base["session_start_date"]
 
 
-def test_prefilled_cpf_date_and_full_rate_allow_an_explicit_partial_exit(site):
+def test_official_dates_and_full_rate_are_locked_and_old_form_values_rejected(site):
     import re
     site.gate.switch("integrale",0,"admin")
     for folder,date in (("100000","2026-02-02"),("100001","2026-02-06")):
@@ -399,11 +399,17 @@ def test_prefilled_cpf_date_and_full_rate_allow_an_explicit_partial_exit(site):
         assert 'name="evidence"' not in form
         assert re.search(r'<button[^>]*name="attested" value="yes"',form)
         if folder == "100001":
-            assert 'name="rate" value="100"' in form
+            assert 'name="rate" value="100" readonly' in form and 'name="motif"' not in form
     site.client.post("/admin/edof-test/dossiers/100001/submit", data={"csrf":site.csrf,"attested":"yes",
                      "action":"service_done","actual_date":"2026-02-05","rate":"65","motif":"trainee_absent"})
+    assert not ledger.records(site.store.directory)
+    for change in ({"rate":"65"}, {"actual_date":"2026-02-05"}, {"motif":"trainee_absent"}):
+        fields = {"csrf":site.csrf,"attested":"yes","action":"service_done","actual_date":"2026-02-06","rate":"100"}
+        site.client.post("/admin/edof-test/dossiers/100001/submit", data={**fields, **change})
+        assert not ledger.records(site.store.directory)
+    site.client.post("/admin/edof-test/dossiers/100001/submit", data=fields)
     receipt = ledger.records(site.store.directory)[0]["intent"]
-    assert receipt["actual_date"] == "2026-02-05" and receipt["rate"] == 65 and receipt["operator_confirmed"]
+    assert receipt["actual_date"] == "2026-02-06" and receipt["rate"] == 100 and receipt["operator_confirmed"]
 
 def test_native_catchup_uses_cpf_date_even_if_local_effective_date_differs(site, monkeypatch):
     import json
@@ -443,10 +449,8 @@ def test_exercise_on_a_later_day_does_not_move_an_entry_and_a_partial_draft_has_
     remote["service_done"] = {**EXIT,"rate":100,"source":"production","actual_date":ROW["session_end_date"]}
     saved = {**ROW, **EXIT, "source":"admin","operator_confirmed":True}
     dashboard.record_work(site.gate,FOLDER,"admin",draft=json.dumps(saved))
-    assert scan("inTraining")["service_done"] == 1
-    job = ledger.next_job(site.store,1)
-    assert job["intent"]["rate"] == 65 and job["intent"]["actual_date"] == EXIT["actual_date"]
-    assert ledger.check_before_job(site.store,job)
+    assert scan("inTraining")["review"] == 1
+    assert ledger.next_job(site.store,1) is None
 
 
 def test_individual_cpf_entry_in_group_started_earlier(site, monkeypatch):
@@ -599,21 +603,20 @@ def test_unblocked_exit_uses_cpf_end_and_full_rate_despite_different_local_sessi
     assert discover()["existing"] == 1
 
 
-def test_unsent_legacy_work_adopts_cpf_dates_then_manual_partial_can_replace_it(site, monkeypatch):
+def test_unsent_full_legacy_work_adopts_cpf_dates_and_manual_partial_cannot_replace_it(site, monkeypatch):
     site.gate.switch("integrale", 0, "admin")
     monkeypatch.setattr(providers, "on_test_service", lambda: True)
     row = {**ROW, "state": "inTraining"}
-    legacy = {**EXIT, "source": "production", "rate": 100}
+    legacy = {**EXIT, "source": "production", "rate": 100, "motif": ""}
     ledger.enqueue(site.store.directory, site.owner, 1, row, legacy, "Gestion Stagiaires", automatic=True)
     old_token = ledger.records(site.store.directory)[0]["token"]
     converted = ledger.next_job(site.store, 1)
     assert converted["operation"] != old_token
     assert converted["intent"]["actual_date"] == row["session_end_date"]
-    ledger.enqueue(site.store.directory, site.owner, 1, row, {**EXIT, "operator_confirmed": True}, "admin")
-    assert not ledger.begin_send(site.store.directory, converted)
-    corrected = ledger.next_job(site.store, 1)
-    assert corrected["intent"]["rate"] == 65
-    assert ledger.begin_send(site.store.directory, corrected)
+    with pytest.raises(ValueError, match="Transmission suspendue"):
+        ledger.enqueue(site.store.directory, site.owner, 1, row, {**EXIT, "operator_confirmed": True}, "admin")
+    assert ledger.next_job(site.store, 1)["operation"] == converted["operation"]
+    assert ledger.check_before_job(site.store, {**converted, "mode": "reconcile"})
 
 
 def test_confirmed_service_projects_date_rate_and_state_until_next_official_read(site):
@@ -639,3 +642,15 @@ def test_confirmed_service_projects_date_rate_and_state_until_next_official_read
     assert present(row, result["observed_at"] + 2) == row
     advanced = {**row, "state": "paid"}
     assert present(advanced) == advanced
+
+
+@pytest.mark.parametrize("draft", [EXIT, {**EXIT, "actual_date": ROW["session_end_date"]},
+                                   {**EXIT, "motif": "", "rate": 100}, ENTRY])
+def test_stale_queued_terms_block_the_worker_without_rewriting_evidence(tmp_path, draft):
+    spec = prepare(tmp_path, draft)
+    store = NS(directory=tmp_path, data_file=None)
+    assert not ledger.check_before_job(store, spec)
+    row = ledger.records(tmp_path)[0]
+    assert row["status"] == "review" and row["detail"] == "declaration_terms_mismatch"
+    assert row["intent"]["actual_date"] == draft["actual_date"]
+    assert ledger.check_before_job(store, {**spec, "mode": "reconcile"})

@@ -286,31 +286,20 @@ def declaration_draft(row, fields, *, require_reference=False):
     action = ACTIONS.get(category(row))
     if not action or fields.get("action") != action or fields.get("attested") != "yes":
         raise ValueError("Le dossier doit être déclarable et sa réalisation effective confirmée.")
-    try:
-        date = dt.date.fromisoformat(fields.get("actual_date", ""))
-    except (TypeError, ValueError):
-        raise ValueError("Renseignez la date effective.") from None
-    if date > dt.datetime.now(PARIS).date():
-        raise ValueError("La date effective ne peut pas être future.")
-    if row.get("session_start_date") and date.isoformat() < row["session_start_date"]:
-        raise ValueError("La date effective précède le début de la session.")
-    if row.get("session_end_date") and date.isoformat() > row["session_end_date"]:
-        raise ValueError("La date effective dépasse la fin de la session EDOF.")
+    date = row.get("session_start_date" if action == "entry_training" else "session_end_date")
+    if not date or fields.get("actual_date") != date:
+        raise ValueError("La date doit correspondre à celle du dossier EDOF. Actualisez la fiche.")
+    if dt.date.fromisoformat(date) > dt.datetime.now(PARIS).date():
+        raise ValueError("La date du dossier EDOF ne peut pas être future.")
+    if action == "service_done" and (str(fields.get("rate")) != "100" or fields.get("motif")
+                                     or (fields.get("reason") or "").strip()):
+        raise ValueError(declarations.REASONS["declaration_terms_mismatch"])
     evidence = fields.get("evidence", "").strip()
     if (evidence or require_reference) and not 3 <= len(evidence) <= 250:
         raise ValueError("Indiquez la référence du justificatif (3 à 250 caractères).")
-    result = {"action": action, "actual_date": date.isoformat(), "evidence": evidence, "operator_confirmed": True}
+    result = {"action": action, "actual_date": date, "evidence": evidence, "operator_confirmed": True}
     if action == "service_done":
-        try:
-            rate = int(fields.get("rate", ""))
-        except (TypeError, ValueError):
-            rate = -1
-        reason = fields.get("reason", "").strip()
-        if not 0 <= rate <= 100 or (rate < 100 and not 3 <= len(reason) <= 250):
-            raise ValueError("Vérifiez le taux réalisé et le motif en cas de parcours partiel.")
-        result.update(rate=rate, reason=reason[:250] if rate < 100 else "")
-        if fields.get("motif") in declarations.MOTIFS and rate < 100:
-            result["motif"] = fields["motif"]
+        result["rate"] = 100
     return result
 
 
@@ -1181,10 +1170,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         blocks = active_blocks(local_data())
         if (folder, action) in blocks or (folder, "both") in blocks:
             raise ValueError("Une suspension est en cours sur ce dossier.")
-        fields = request.form.to_dict()
-        if fields.get("motif") in declarations.MOTIFS and not fields.get("reason", "").strip():
-            fields["reason"] = declarations.MOTIFS[fields["motif"]]
-        draft = declaration_draft(row, fields)
+        draft = declaration_draft(row, request.form)
         state = declarations.enqueue(store.directory, owner, selection.state()[
                                      "revision"], row, draft, session.get("admin_username") or owner)
         flash(declarations.LABELS[state], "success")
