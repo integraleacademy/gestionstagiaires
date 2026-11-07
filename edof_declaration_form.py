@@ -228,6 +228,17 @@ def binding_values(data, keys):
             yield from binding_values(item, keys)
 
 
+def completion_hours_match(intent, fields):
+    if intent.get("source") not in {"production", "local"}:
+        return True
+    try:
+        actual = Decimal(str(intent["actual_hours"]))
+        contracted = Decimal(str(fields["duration_hours"]))
+        return actual.is_finite() and contracted.is_finite() and actual == contracted and actual > 0
+    except (InvalidOperation, KeyError, TypeError):
+        return False
+
+
 def transmit(page, spec, fields, gate, reload_fields):
     intent = spec["intent"]
 
@@ -252,14 +263,8 @@ def transmit(page, spec, fields, gate, reload_fields):
         return result("declaration_changed")
     if not entry and (not fields.get("start_date") or intent["actual_date"] < fields["start_date"]):
         return result("declaration_changed")
-    if not entry and intent.get("source") in {"production", "local"}:
-        try:
-            actual = Decimal(intent["actual_hours"])
-            contracted = Decimal(fields["duration_hours"])
-            if not actual.is_finite() or not contracted.is_finite() or actual != contracted or actual <= 0:
-                return result("declaration_evidence_changed")
-        except (InvalidOperation, KeyError, TypeError):
-            return result("declaration_evidence_changed")
+    if not entry and not completion_hours_match(intent, fields):
+        return result("declaration_evidence_changed")
     try:
         already_out = not entry and normalized(fields.get("state") or "") in {"terminated", "sortie declaree"}
         if already_out and fields.get("end_date") != intent["actual_date"]:
@@ -280,8 +285,12 @@ def transmit(page, spec, fields, gate, reload_fields):
             date_field(page, intent, entry)
         if not entry:
             if not already_out:
-                use(button(page, r"suivant"))
-                dialog_next = page.get_by_role("dialog").get_by_role("button", name=exact(r"(?:arrow_forward )?suivant"))
+                next_button = page.locator("sl7-registration-folder-set-terminated-form button#next-button:visible")
+                use(next_button if next_button.count() == 1 else button(page, r"suivant"))
+                dialog_next = button(page.get_by_role("dialog"), r"suivant")
+                # Angular mounts the confirmation dialog after the date control is submitted.
+                if next_button.count() and not dialog_next.count():
+                    dialog_next.wait_for(state="visible", timeout=5000)
                 if dialog_next.count() == 1 and dialog_next.is_visible():
                     use(dialog_next)
             choice = option(page, r"suivi int[ée]gralement" if intent["rate"] == 100 else r"suivi partiellement")

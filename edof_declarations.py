@@ -28,8 +28,8 @@ LABELS = {
 }
 REASONS = {
     "declaration_refused": "EDOF a refusé la déclaration. Son statut initial a été vérifié sur le dossier.",
-    "declaration_form_changed": "Le formulaire renvoyé par EDOF ne correspond pas à l’opération demandée.",
-    "declaration_read_unavailable": "EDOF n’a pas renvoyé la fiche. L’entrée est en attente. Une nouvelle lecture est prévue dans 15 minutes.",
+    "declaration_form_changed": "Aucune déclaration transmise. Le connecteur s’est arrêté avant l’envoi du formulaire EDOF.",
+    "declaration_read_unavailable": "EDOF n’a pas renvoyé la fiche. La déclaration est en attente. Une nouvelle lecture est prévue dans 15 minutes.",
     "declaration_changed": "Le statut, l’identité ou les dates du dossier ont changé sur EDOF.",
     "declaration_unverified": "La relecture du dossier ne confirme pas encore toutes les valeurs.",
     "declaration_blocked": "Un blocage a été enregistré pour ce dossier.",
@@ -239,7 +239,8 @@ def verify_identity(fields, spec):
 def is_recorded(fields, intent):
     state = normalized(fields.get("state") or "")
     completed = {"servicedonedeclared", "servicedonedeclaredrevised", "servicedonevalidated", "servicedonevalidatedrevisionvsf", "service fait declare", "service fait valide",
-                 "billed", "invoiced", "paid", "facture", "paye"}
+                 "service done declared", "service done declared revised", "service done validated",
+                 "service done validated revision vsf", "billed", "invoiced", "paid", "facture", "paye"}
     if intent["action"] == "entry_training":
         return state in completed | {"intraining", "in training", "entree declaree", "en formation", "outoftraining", "out of training", "terminated", "sortie declaree"} and fields.get("start_date") == intent["actual_date"]
     if state not in completed or fields.get("end_date") != intent["actual_date"]:

@@ -181,6 +181,13 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
             result = runner.run_browser({"mode": mode, "owner": "fixture", "shared_job": True,
                                          "folder_id": "100088", "intent": {"action": "entry_training"}}, live=live)
             assert result["code"] == "declaration_confirmed" and not result["gmail_code_used"]
+        monkeypatch.setattr("edof_entry_request.run_full_completion", entry_request)
+        with monkeypatch.context() as scoped:
+            scoped.setattr("edof_declaration_form.transmit", lambda *args: pytest.fail("Full exit reopened the form"))
+            for mode in ("declare", "reconcile"):
+                result = runner.run_browser({"mode": mode, "owner": "fixture", "shared_job": True,
+                                             "folder_id": "100088", "intent": {"action": "service_done", "rate": 100}}, live=live)
+                assert result["code"] == "declaration_confirmed" and not result["gmail_code_used"]
         # A real login form in this same previously verified tab ends the timer
         # before any mail lookup. This entire exchange is routed locally.
         timing = runner.session_clock.read_clock(vault, "fixture")
