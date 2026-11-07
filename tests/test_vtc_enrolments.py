@@ -152,7 +152,7 @@ def test_creation_uses_server_marker_ignores_payload_and_transfer_preserves_it(c
     assert MARKER not in case.data['sessions'][0]['trainees'][0]
 
 
-def test_web_new_and_old_people_share_session_but_not_obligations_and_exports(client_case):
+def test_existing_editions_share_free_navigation_and_preserve_separate_exports(client_case):
     case = client_case
     session = case.data['sessions'][0]
     session['trainees'].append(dict(id='new-person', public_token='new-token', first_name='Nouveau',
@@ -161,20 +161,20 @@ def test_web_new_and_old_people_share_session_but_not_obligations_and_exports(cl
     with case.client.session_transaction() as browser:
         browser['public_auth_public-token'] = True
         browser['public_auth_new-token'] = True
-    for token, required in (('public-token', False), ('new-token', True)):
+    for token, edition in (('public-token', COURSE_VERSION), ('new-token', REQUIRED_VERSION)):
         response = case.client.get(f'/espace/{token}/elearning/academy-vtc-a')
         assert response.status_code == 200, response.text
         config = case._player_config(response)
-        assert bool(config['requiredVideos']) is required
-        assert config['initialRemainingSeconds'] == 7*60
+        assert not config['requiredVideos']
+        assert config['initialRemainingSeconds'] == 0
         started = case._api_post(config['startUrl'], config, activity_id=config['activityId'], tab_id=token)
         assert started.status_code == 200
         completed = case._api_post(config['completeUrl'], config)
-        assert completed.status_code == (409 if required else 200)
+        assert completed.status_code == 200
         exam = case.client.get(f'/espace/{token}/elearning/exams/vtc-a')
         assert exam.status_code == 200, exam.text
         exam_config = json.loads(re.search(r'id="apsExamConfig">(.*?)</script>', exam.text).group(1))
-        assert exam_config['exam']['version'] == (REQUIRED_VERSION if required else COURSE_VERSION)
+        assert exam_config['exam']['version'] == edition
         page = response.get_data(as_text=True)
         assert 'lesson-a-01.mp4' in page
     assert session == frozen
@@ -184,14 +184,14 @@ def test_web_new_and_old_people_share_session_but_not_obligations_and_exports(cl
     rows = {row['trainee_id']:row for row in live.json['learners']}
     assert rows['trainee-1']['course_version'] == COURSE_VERSION
     assert rows['new-person']['course_version'] == REQUIRED_VERSION
-    assert rows['trainee-1']['required_seconds'] == rows['new-person']['required_seconds'] == 420
+    assert rows['trainee-1']['required_seconds'] == rows['new-person']['required_seconds'] == 0
     assert rows['trainee-1']['required_video_count'] == 0
-    assert rows['new-person']['required_video_count'] == 1
+    assert rows['new-person']['required_video_count'] == 0
     exported = case.client.get('/admin/elearning/courses/academy-vtc-a/export.csv')
     assert exported.status_code == 200
     csv_rows = list(csv.DictReader(io.StringIO(exported.get_data(as_text=True).lstrip('\ufeff')), delimiter=';'))
     assert {r['Version du cours'] for r in csv_rows} == {COURSE_VERSION, REQUIRED_VERSION}
-    assert {r['Durée obligatoire (secondes)'] for r in csv_rows} == {'420'}
+    assert {r['Durée obligatoire (secondes)'] for r in csv_rows} == {'0'}
     assert session == frozen
 
 

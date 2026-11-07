@@ -126,8 +126,8 @@
 
   {% if programme_time is defined and not preview_mode %}
   <section class="native-programme-time" aria-label="Temps de formation du parcours">
-    <div><span>Votre temps de formation · parcours {{ course.training_label }}</span><strong><span id="nativeProgrammeTime" data-other-seconds="{{ programme_time.other_seconds }}">{{ programme_time.active_label }}</span> <span class="native-programme-total">/ {{ programme_time.required_label }}</span></strong></div>
-    <div><span>Durée totale à réaliser</span><progress id="nativeProgrammeProgress" max="100" value="{{ programme_time.percent }}" data-required-seconds="{{ programme_time.required_seconds }}" aria-label="Temps réalisé sur la durée totale">{{ programme_time.percent|round|int }} %</progress></div>
+    <div><span>Votre temps de formation · parcours {{ course.training_label }}</span><strong><span id="nativeProgrammeTime" data-other-seconds="{{ programme_time.other_seconds }}">{{ programme_time.active_label }}</span>{% if course.training_label != 'VTC' %} <span class="native-programme-total">/ {{ programme_time.required_label }}</span>{% endif %}</strong></div>
+    {% if course.training_label != 'VTC' %}<div><span>Durée totale à réaliser</span><progress id="nativeProgrammeProgress" max="100" value="{{ programme_time.percent }}" data-required-seconds="{{ programme_time.required_seconds }}" aria-label="Temps réalisé sur la durée totale">{{ programme_time.percent|round|int }} %</progress></div>{% endif %}
   </section>
   {% endif %}
   <div class="native-layout">
@@ -285,15 +285,18 @@
             {% if activity.optional %}<a class="native-button native-button--primary" id="vtcOptionalSkip" href="{{ optional_skip_url or portal_url }}">Passer cet atelier facultatif →</a>{% else %}<a class="native-button native-button--primary" href="{{ next_url or portal_url }}">{{ 'Suivant →' if next_url else 'Retour aux modules →' }}</a>{% endif %}
           </div>
           {% else %}
+          {% if course.training_label == 'VTC' and not activity.optional and not activity_completed %}
+          <a class="native-button native-button--secondary" data-vtc-skip href="{{ end_url if is_last_activity else next_url }}">Passer cette activité →</a>
+          {% endif %}
           {% if activity.optional %}<div class="native-preview-actions"><a class="native-button native-button--secondary" id="vtcOptionalSkip" href="{{ optional_skip_url }}">Passer cet atelier facultatif →</a>{% endif %}
-          <button class="native-button native-button--primary" id="nativeActionButton" type="button" data-mode="{{ 'navigate' if activity_completed else ('answer' if activity.scored else 'complete') }}"{% if (required_videos and not videos_completed) or (activity_completed and is_last_activity and has_next_module and not progress.module_complete and not course.aps_depth_revision) %} disabled{% endif %}>
+          <button class="native-button native-button--primary" id="nativeActionButton" type="button" data-mode="{{ 'navigate' if activity_completed else ('answer' if activity.scored else 'complete') }}"{% if (required_videos and not videos_completed) or (activity_completed and is_last_activity and has_next_module and not progress.module_complete and not course.aps_depth_revision and course.training_label != 'VTC') %} disabled{% endif %}>
             {% if required_videos and not videos_completed %}Regardez la vidéo jusqu’à la fin{% else %}{% if activity_completed %}{{ end_label if is_last_activity else 'Continuer' }}{% elif activity.optional %}Valider cet atelier{% elif activity.scored %}Valider ma réponse{% elif is_last_activity %}{{ 'Terminer les activités' if course.aps_depth_revision else 'Terminer le module' }}{% else %}Terminer et continuer{% endif %} →{% endif %}
           </button>
           {% if activity.optional %}</div>{% endif %}
           {% endif %}
         </div>
         {% if not preview_mode %}
-        <p class="native-tracking-explainer">{% if continue_when_hidden %}Le temps des cours, exercices, examens blancs de module et corrigés est enregistré dans le même compteur. Vous pouvez regarder une vidéo sans bouger la souris. Changer de page dans le module ou passer sur un autre onglet ne coupe pas le chrono. Il se met en pause après 10 minutes sans interaction ni lecture vidéo suivie. Revenez sur le cours et reprenez votre travail pour relancer le suivi. Les vidéos se mettent en pause lorsqu’elles ne sont plus visibles ; leur progression reste enregistrée. Pour ouvrir le module suivant, terminez les activités et la durée obligatoire.{% else %}Le temps réellement passé est enregistré pendant la lecture d’une vidéo obligatoire, au rythme proposé par le lecteur, tant que cette page reste visible et active. Vous pouvez regarder la vidéo sans bouger la souris. Une pause, un chargement ou une lecture arrêtée rétablit la règle habituelle : après 5 minutes sans interaction, le chrono se met en pause. Quitter la page arrête la lecture et le suivi. {% if course.training_label == 'VTC' %}Tous vos modules restent accessibles. Pour terminer un module, réalisez ses activités obligatoires et sa durée obligatoire. Les ateliers facultatifs peuvent être passés ; leur temps réellement effectué est comptabilisé.{% else %}Pour ouvrir le module suivant, terminez les activités et la durée obligatoire.{% endif %}{% endif %}</p>
+        <p class="native-tracking-explainer">{% if course.training_label == 'VTC' %}Votre temps actif et vos réponses sont enregistrés. Vous pouvez passer une activité ou ouvrir directement une autre leçon depuis le sommaire.{% elif continue_when_hidden %}Le temps des cours, exercices, examens blancs de module et corrigés est enregistré dans le même compteur. Vous pouvez regarder une vidéo sans bouger la souris. Changer de page dans le module ou passer sur un autre onglet ne coupe pas le chrono. Il se met en pause après 10 minutes sans interaction ni lecture vidéo suivie. Revenez sur le cours et reprenez votre travail pour relancer le suivi. Les vidéos se mettent en pause lorsqu’elles ne sont plus visibles ; leur progression reste enregistrée. Pour ouvrir le module suivant, terminez les activités et la durée obligatoire.{% else %}Le temps réellement passé est enregistré pendant la lecture d’une vidéo obligatoire, au rythme proposé par le lecteur, tant que cette page reste visible et active. Vous pouvez regarder la vidéo sans bouger la souris. Une pause, un chargement ou une lecture arrêtée rétablit la règle habituelle : après 5 minutes sans interaction, le chrono se met en pause. Quitter la page arrête la lecture et le suivi. Pour ouvrir le module suivant, terminez les activités et la durée obligatoire.{% endif %}</p>
         {% endif %}
       </div>
     </main>
@@ -332,6 +335,7 @@
     'endUrl': end_url,
     'endLabel': end_label,
     'hasNextModule': has_next_module,
+    'freeNavigation': course.training_label == 'VTC',
     'initialModuleComplete': progress.module_complete,
     'initialRemainingSeconds': progress.remaining_seconds,
     'startUrl': url_for('native_elearning.tracking_start'),
@@ -354,12 +358,12 @@
     'initialTimedObjectives': progress.get('timed_objectives', [])
   }|tojson }}</script>
   <script src="{{ url_for('static', filename='js/native-video-pacing.js', v='20261013-vtc-normal-speed') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261102-completion') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261107-vtc') }}" defer></script>
   {% endif %}
 {% if course.training_label == 'VTC' %}<script src="{{ url_for('static', filename='js/vtc-video-companion.js', v='20261013-vtc-normal-speed') }}" defer></script>{% endif %}
 {% if course.training_label == 'MAC APS' %}<script src="{{ url_for('static', filename='js/mac-aps-elearning.js', v='20261012-1') }}" defer></script>{% endif %}
 <script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-2') }}" defer></script>
-{% if paged_reading or (course.id.startswith('academy-aps62-') and activity.get('academy', {}).get('kind') == 'lesson') %}<script src="{{ url_for('static', filename='js/aps62-lesson.js', v='20261107-lecture-vtc') }}" defer></script>{% endif %}
+{% if paged_reading or (course.id.startswith('academy-aps62-') and activity.get('academy', {}).get('kind') == 'lesson') %}<script src="{{ url_for('static', filename='js/aps62-lesson.js', v='20261107-lecture-libre-vtc') }}" defer></script>{% endif %}
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261102-completion') }}" defer></script>
 {% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261102-completion') }}" defer></script>{% endif %}

@@ -214,6 +214,8 @@ def load_bundled_course(course_id,version=None):
 
 def allow_free_viewing(course):
     """Apply current viewing rules to a course copy, including historical editions."""
+    course['settings']['force_navigation'] = False
+    course['settings']['require_correct_answers'] = False
     for section in course['sections']:
         for activity in section['activities']:
             blocks = list(activity.get('blocks') or [])

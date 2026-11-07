@@ -1041,7 +1041,8 @@ def create_native_elearning_blueprint(
                 full = catalog().load_course(c['id'],c['version'])
                 if c.get('training_label') == 'A3P':
                     full = project_course(full, {'required_minutes': full['required_minutes']})
-                if set(c['activity_order']) != set(full['activity_order']) or not project_progress(by_key.get((c['id'],c['version']),{}),c)['module_complete']:
+                entire_module = set(c['activity_order']) == set(full['activity_order'])
+                if not entire_module or (not is_vtc and not project_progress(by_key.get((c['id'],c['version']),{}),c)['module_complete']):
                     abort(403, 'Terminez tous les modules complets et leurs durées obligatoires pour ouvrir ' + ('le quiz final.' if is_vtc else 'l’examen final.'))
             exam = load_exam(exam_id, versions.pop())
             back_url = url_for('native_elearning.learner_path', token=token)
@@ -2044,7 +2045,8 @@ def create_native_elearning_blueprint(
             if {m['course']['id'] for m in exam_modules} == {m['id'] for m in candidate['modules']}
             and (candidate.get('final_exam_id') != 'macaps-final' or {m['course']['version'] for m in exam_modules} == {candidate['version']})),None)
         final_available = bool(matched_manifest and len({m['course']['version'] for m in exam_modules}) == 1)
-        final_ready = final_available and all(m.get('complete') and set(m['course']['activity_order']) ==
+        vtc_final = final_available and matched_manifest.get('final_exam_id') == 'vtc-final'
+        final_ready = final_available and all((vtc_final or m.get('complete')) and set(m['course']['activity_order']) ==
             set(project_course(catalog().load_course(m['course']['id'],m['course']['version']), {'required_minutes': m['course']['required_minutes']})['activity_order']) for m in exam_modules)
         aps_final = final_time(assigned_modules(session_obj), raw_progress)
         modules_time_label = _format_seconds(seconds)
@@ -2398,7 +2400,7 @@ def create_native_elearning_blueprint(
             return jsonify({"ok": False, "error": "Rechargez le lecteur pour activer le suivi d’inactivité."}), 409
         reading_pages = lesson_pages(_course, next((item for _, item in _activity_pairs(_course)
                                                   if item.get('id') == activity_id), {}))
-        if reading_pages and not payload.get('lesson_page_id'):
+        if not payload.get('lesson_page_id') and any(page['required_seconds'] or page.get('video_id') for page in reading_pages):
             return jsonify(ok=False, error='Le cours a été mis à jour. Rechargez la page pour activer le temps de lecture.'), 409
         try:
             result = store().heartbeat(

@@ -128,4 +128,4 @@ class VtcOptionalWebTests(unittest.TestCase):
         self.assertEqual(self.client.get(final_url).status_code, 200)
         with store._connect() as db:
             db.execute('UPDATE learner_course_progress SET active_seconds=active_seconds-60 WHERE course_id=?', ('academy-vtc-a',))
-        self.assertEqual(self.client.get(final_url).status_code, 403)
+        self.assertEqual(self.client.get(final_url).status_code, 200)

@@ -146,7 +146,7 @@ def test_full_flow_five_qrc_corrections_and_course_progress_unchanged(case):
         assert db.execute("SELECT count(*) FROM vtc_cma_attempts").fetchone()[0] == 1
     _, reloaded = page_config(case, url=BASE + "?attempt=" + state["id"])
     assert reloaded["state"]["result"]["passed"] is True
-    assert case.client.get("/espace/public-token/elearning/exams/vtc-final").status_code == 403
+    assert case.client.get("/espace/public-token/elearning/exams/vtc-final").status_code == 200
 
 
 def test_unavailable_ai_preserves_copies_without_mark_and_retry_succeeds(case):

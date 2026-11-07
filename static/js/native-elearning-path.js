@@ -20,7 +20,7 @@
   const modules = config.modules.map((item) => {
     const outline = outlineFor(item);
     return { ...item, course_version: item.course_version || outline?.course_version || "",
-      required_minutes: item.required_minutes ?? 0,
+      required_minutes: outline?.vtc ? 0 : (item.required_minutes ?? 0),
       title: item.title || "", section_ids: item.section_ids || outline?.sections.map((section) => section.id) || [] };
   });
   const validDuration = (value) => Number.isInteger(value) && value >= 0 && value <= 60000;
@@ -64,7 +64,8 @@
     });
     const duration = modules.reduce((sum, item) => sum + (validDuration(item.required_minutes) ? item.required_minutes : 0), 0);
     totals.replaceChildren(...[`${modules.length} modules`, `${sequenceCount} séquences`, `${activityCount} activités`,
-      `${Math.floor(duration / 60)} h ${String(duration % 60).padStart(2, "0")} min obligatoires`]
+      modules.length && modules.every(item => outlineFor(item)?.vtc)
+        ? "Navigation libre" : `${Math.floor(duration / 60)} h ${String(duration % 60).padStart(2, "0")} min obligatoires`]
       .map((value) => textNode("span", "", value)));
   }
   function renderLibrary() {
@@ -81,7 +82,7 @@
       card.append(button(present ? "Déjà dans le parcours" : "+ Ajouter au parcours", () => {
         if (readonly() || modules.length >= 100) return;
         modules.push({ course_id: course.course_id, course_version: course.course_version,
-          required_minutes: course.planned_minutes || 0,
+          required_minutes: course.vtc ? 0 : (course.planned_minutes || 0),
           title: "", section_ids: course.sections.map((section) => section.id) });
         changed();
         renderModules();
@@ -111,7 +112,7 @@
     if (modules.length + additions.length > 100) { status.textContent = 'Le parcours ne peut pas dépasser 100 modules.'; return; }
     additions.sort((a,b) => a.course_id.localeCompare(b.course_id)).forEach(course => {
       modules.push({course_id:course.course_id,course_version:course.course_version,title:'',
-        required_minutes:course.planned_minutes,section_ids:course.sections.map(section => section.id)});
+        required_minutes:0,section_ids:course.sections.map(section => section.id)});
     });
     if (modules.length === 8 && additions.length === 8) title.value = 'VTC · Le parcours illustré';
     changed();renderModules();renderLibrary();
@@ -158,7 +159,8 @@
       const identity = textNode("div", "np-module-identity");
       const headingTitle = textNode("h3", "", item.title || outline?.title || "Module indisponible");
       identity.append(headingTitle, textNode("p", "", `${item.section_ids.length} séquences sélectionnées · Déplier pour composer`));
-      const durationSummary = textNode("small", "np-duration-summary", `Durée obligatoire : ${formatMinutes(item.required_minutes)}`);
+      const durationSummary = textNode("small", "np-duration-summary", outline?.vtc
+        ? "Navigation libre · Aucune durée minimale" : `Durée obligatoire : ${formatMinutes(item.required_minutes)}`);
       identity.append(durationSummary);
       heading.append(identity);
       const controls = textNode("div", "np-module-controls");
@@ -187,29 +189,31 @@
       input.addEventListener("input", () => { item.title = input.value; headingTitle.textContent = input.value || outline.title; changed(); });
       label.append(input);
       body.append(label, textNode("small", "np-version", `Source : ${outline.title} · Version ${item.course_version}`));
-      const duration = textNode("fieldset", "np-duration");
-      duration.append(textNode("legend", "", "Durée obligatoire de temps actif"));
-      const hoursLabel = textNode("label", "np-field", "Heures");
-      const minutesLabel = textNode("label", "np-field", "Minutes");
-      const hours = document.createElement("input"), minutes = document.createElement("input");
-      [hours, minutes].forEach((field) => {
-        field.type = "number"; field.min = "0"; field.step = "1"; field.required = true; field.disabled = readonly() || outline.macaps_fixed;
-      });
-      hours.max = "1000"; minutes.max = "59";
-      hours.dataset.duration = "hours"; minutes.dataset.duration = "minutes";
-      hours.value = Math.floor((item.required_minutes || 0) / 60);
-      minutes.value = (item.required_minutes || 0) % 60;
-      [hours, minutes].forEach((field) => field.addEventListener("input", () => {
-        const total = hours.valueAsNumber * 60 + minutes.valueAsNumber;
-        item.required_minutes = hours.checkValidity() && minutes.checkValidity() && validDuration(total) ? total : null;
-        durationSummary.textContent = `Durée obligatoire : ${formatMinutes(item.required_minutes)}`;
-        changed();
-      }));
-      hoursLabel.append(hours); minutesLabel.append(minutes); duration.append(hoursLabel, minutesLabel);
-      duration.append(textNode("p", "np-hint", outline.macaps_fixed
-        ? "Durée fixée pour cette édition : chaque objectif possède son propre minimum de temps actif et son questionnaire obligatoire. Les compléments sont accessibles séparément, hors des 14 heures."
-        : "Exemple : 4 h 00 min. Le stagiaire doit terminer les activités et atteindre ce temps actif pour débloquer le module suivant. 0 h 00 min signifie aucun minimum de temps."));
-      body.append(duration);
+      if (!outline.vtc) {
+        const duration = textNode("fieldset", "np-duration");
+        duration.append(textNode("legend", "", "Durée obligatoire de temps actif"));
+        const hoursLabel = textNode("label", "np-field", "Heures");
+        const minutesLabel = textNode("label", "np-field", "Minutes");
+        const hours = document.createElement("input"), minutes = document.createElement("input");
+        [hours, minutes].forEach((field) => {
+          field.type = "number"; field.min = "0"; field.step = "1"; field.required = true; field.disabled = readonly() || outline.macaps_fixed;
+        });
+        hours.max = "1000"; minutes.max = "59";
+        hours.dataset.duration = "hours"; minutes.dataset.duration = "minutes";
+        hours.value = Math.floor((item.required_minutes || 0) / 60);
+        minutes.value = (item.required_minutes || 0) % 60;
+        [hours, minutes].forEach((field) => field.addEventListener("input", () => {
+          const total = hours.valueAsNumber * 60 + minutes.valueAsNumber;
+          item.required_minutes = hours.checkValidity() && minutes.checkValidity() && validDuration(total) ? total : null;
+          durationSummary.textContent = `Durée obligatoire : ${formatMinutes(item.required_minutes)}`;
+          changed();
+        }));
+        hoursLabel.append(hours); minutesLabel.append(minutes); duration.append(hoursLabel, minutesLabel);
+        duration.append(textNode("p", "np-hint", outline.macaps_fixed
+          ? "Durée fixée pour cette édition : chaque objectif possède son propre minimum de temps actif et son questionnaire obligatoire. Les compléments sont accessibles séparément, hors des 14 heures."
+          : "Exemple : 4 h 00 min. Le stagiaire doit terminer les activités et atteindre ce temps actif pour débloquer le module suivant. 0 h 00 min signifie aucun minimum de temps."));
+        body.append(duration);
+      }
       const bulk = textNode("div", "np-sequence-tools");
       bulk.append(textNode("strong", "", "Séquences du module"), button("Tout inclure", () => {
         item.section_ids.push(...outline.sections.map((section) => section.id).filter((id) => !item.section_ids.includes(id)));
