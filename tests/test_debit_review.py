@@ -52,7 +52,7 @@ def test_signed_bank_proof_scoped_to_dossier_before_regular_sync():
         s.update(admin_logged_in=True,admin_role='admin')
     with patch.object(host,'load_data',return_value={}), patch.object(host,'_atomic_update_data',side_effect=lambda fn:fn({})), \
          patch.object(host,'_billing_lines_for_trainee_session',return_value=[line]), patch.object(host,'_financing_partner_module_enabled',return_value=True), \
-         patch.object(host,'_trainee_bank_schedule',return_value=([],[{'id':'Q','status':'declined'}])):
+         patch.object(host,'_trainee_bank_schedule',return_value=([],[{'id':'Q','status':'declined'}],[])):
         base='/api/billing/trainee/T/session/S/'
         proof=client.get(base+'bank-schedule').json['rejectionProof']
         payload={'bankProof':proof,'rejections':{'L':['collection:Q']}}

@@ -46236,12 +46236,17 @@ def _match_debit_transaction_dates(history, transactions):
         status = tx.get('status')
         if status not in {'completed', 'declined', 'reversed'}:
             continue
-        timestamp = _parse_iso_datetime(tx.get('settled_at') or tx.get('emitted_at'))
         tid = tx.get('id') or tx.get('transaction_id')
-        if tid and timestamp:
-            day = timestamp.astimezone(ZoneInfo('Europe/Paris')).date()
-            entries[tid] = (debit['unique_mandate_reference'], tx.get('amount_cents'), status,
-                            day, tx.get('bank_account_id'))
+        if not tid:
+            continue
+        try:
+            stamp = datetime.datetime.fromisoformat(str(tx.get('settled_at') or tx.get('emitted_at') or ''))
+        except ValueError:
+            continue
+        if stamp.tzinfo is not None:
+            stamp = stamp.astimezone(ZoneInfo('Europe/Paris'))
+        entries[tid] = (debit['unique_mandate_reference'], tx.get('amount_cents'), status,
+                        stamp, tx.get('bank_account_id'))
 
     # Prefer exact dates, then a shifted banking day only when neither side
     # has another candidate. Never identify a debtor from a name or amount.
@@ -46251,12 +46256,12 @@ def _match_debit_transaction_dates(history, transactions):
             presented = _parse_date_safe(row.get('date') or '')
             if row.get('transaction_date') or not presented or not row.get('_rum'):
                 continue
-            for tid, (rum, cents, status, day, account) in entries.items():
+            for tid, (rum, cents, status, stamp, account) in entries.items():
                 if row['_rum'] != rum or cents != row['amount_cents']:
                     continue
                 if account and row.get('_account') and account != row['_account']:
                     continue
-                if not 0 <= (day - presented).days <= tolerance:
+                if not 0 <= (stamp.date() - presented).days <= tolerance:
                     continue
                 if (status == 'completed') != (row['status'] in QONTO_PAID_COLLECTION_STATUSES):
                     continue
@@ -46264,7 +46269,10 @@ def _match_debit_transaction_dates(history, transactions):
                 by_transaction.setdefault(tid, []).append(cid)
         for cid, ids in by_collection.items():
             if len(ids) == 1 and len(by_transaction[ids[0]]) == 1:
-                history[cid]['transaction_date'] = entries.pop(ids[0])[3].isoformat()
+                stamp = entries.pop(ids[0])[3]
+                history[cid]['transaction_date'] = stamp.date().isoformat()
+                if stamp.tzinfo is not None:
+                    history[cid]['transaction_at'] = stamp.isoformat()
 
 
 def _read_debit_statement_dates(history):
@@ -46368,10 +46376,14 @@ def _trainee_bank_schedule(lines):
         if not date and sub.get('schedule_type') == 'one_off' and status == 'scheduled':
             date = sub.get('initial_collection_date')
         if status in {'canceled', 'cancelled'}:
-            changes['subscription', sid] = dict(id=sid, kind='subscription', status=status, reference=reference,
-                                date=sub.get('canceled_at') or sub.get('cancelled_at'),
-                                planned_date=date or sub.get('initial_collection_date'),
-                                amount_cents=_qonto_collection_amount_cents(sub))
+            planned_date = date
+            if not planned_date and sub.get('schedule_type') == 'one_off':
+                planned_date = sub.get('initial_collection_date')
+            changes['subscription', sid] = dict(
+                id=sid, kind='subscription', status=status, reference=reference, frequency=sub.get('schedule_type'),
+                date=sub.get('canceled_at') or sub.get('cancelled_at'),
+                planned_date=planned_date, amount_cents=_qonto_collection_amount_cents(sub),
+            )
         subscriptions[sid] = dict(id=sid, date=date, amount_cents=_qonto_collection_amount_cents(sub),
                                   frequency=sub.get('schedule_type'), reference=reference, status=status,
                                   total_count=1 if sub.get('schedule_type') == 'one_off' else
@@ -46395,13 +46407,14 @@ def _trainee_bank_schedule(lines):
             amount = _qonto_collection_amount_cents(row)
             collections[cid] = dict(id=cid, subscription_id=sid, date=date, status=status, amount_cents=amount,
                                     frequency='one_off', remaining_count=1, remaining_cents=amount)
-            if status not in QONTO_PAID_COLLECTION_STATUSES | QONTO_REJECTED_COLLECTION_STATUSES | {'canceled', 'cancelled'}:
+            if status in {'canceled', 'cancelled'}:
+                changes['collection', cid] = dict(
+                    id=cid, kind='collection', subscription_id=sid, status=status,
+                    date=row.get('canceled_at') or row.get('cancelled_at'),
+                    planned_date=date, amount_cents=amount,
+                )
                 continue
-            if date and date > today:
-                if status in {'canceled', 'cancelled'}:
-                    changes['collection', cid] = dict(id=cid, kind='collection', status=status,
-                                        date=row.get('canceled_at') or row.get('cancelled_at'),
-                                        planned_date=date, amount_cents=amount)
+            if status not in QONTO_PAID_COLLECTION_STATUSES | QONTO_REJECTED_COLLECTION_STATUSES or (date and date > today):
                 continue
             history[cid] = dict(id=cid, subscription_id=sid, date=date,
                                 _rum=row.get('unique_mandate_reference'), _account=bank_accounts.get(sid),
