@@ -46314,6 +46314,10 @@ def _bank_schedule_upcoming(subscriptions, collections):
             sub['remaining_cents'] = unissued * sub['amount_cents'] + sum(r['amount_cents'] for r in pending)
         if any(row['status'] not in {'scheduled', 'pending', 'processing', 'in_progress', 'on_hold'} for row in pending):
             sub['remaining_cents'] = None
+        if pending:
+            # Keep issued collections visible by date, even when the next date
+            # on the parent subscription has moved to a later month.
+            sub['open_collections'] = pending
         upcoming.append(sub)
     # A finished or shared subscription can be absent from the subscription
     # list while a collection explicitly linked to this dossier is in flight.
@@ -46347,9 +46351,10 @@ def _trainee_bank_schedule(lines):
                     references.add((mandate, str(reference).strip().casefold()))
     known_collections -= {None, ''}
     subscriptions, history, bank_accounts, collections = {}, {}, {}, {}
+    changes = {}
     today = datetime.datetime.now(ZoneInfo('Europe/Paris')).date().isoformat()
     if not (known_subscriptions or known_collections or references):
-        return [], []
+        return [], [], []
 
     for sub in _bank_view_pages(list_qonto_direct_debit_subscriptions, ('direct_debit_subscriptions', 'subscriptions', 'items')):
         sid = sub.get('id')
@@ -46362,6 +46367,11 @@ def _trainee_bank_schedule(lines):
         date = sub.get('schedule_next_collection_date')
         if not date and sub.get('schedule_type') == 'one_off' and status == 'scheduled':
             date = sub.get('initial_collection_date')
+        if status in {'canceled', 'cancelled'}:
+            changes['subscription', sid] = dict(id=sid, kind='subscription', status=status, reference=reference,
+                                date=sub.get('canceled_at') or sub.get('cancelled_at'),
+                                planned_date=date or sub.get('initial_collection_date'),
+                                amount_cents=_qonto_collection_amount_cents(sub))
         subscriptions[sid] = dict(id=sid, date=date, amount_cents=_qonto_collection_amount_cents(sub),
                                   frequency=sub.get('schedule_type'), reference=reference, status=status,
                                   total_count=1 if sub.get('schedule_type') == 'one_off' else
@@ -46378,7 +46388,7 @@ def _trainee_bank_schedule(lines):
     for filters in collection_queries:
         for row in _bank_view_pages(list_qonto_direct_debit_collections, ('direct_debit_collections', 'collections', 'items'), **filters):
             cid, sid = row.get('id'), row.get('direct_debit_subscription_id')
-            if not cid or (sid not in allowed_ids and cid not in known_collections):
+            if not cid or cid in collections or (sid not in allowed_ids and cid not in known_collections):
                 continue
             status = str(row.get('status') or '').lower()
             date = row.get('collection_date')
@@ -46388,6 +46398,10 @@ def _trainee_bank_schedule(lines):
             if status not in QONTO_PAID_COLLECTION_STATUSES | QONTO_REJECTED_COLLECTION_STATUSES | {'canceled', 'cancelled'}:
                 continue
             if date and date > today:
+                if status in {'canceled', 'cancelled'}:
+                    changes['collection', cid] = dict(id=cid, kind='collection', status=status,
+                                        date=row.get('canceled_at') or row.get('cancelled_at'),
+                                        planned_date=date, amount_cents=amount)
                 continue
             history[cid] = dict(id=cid, subscription_id=sid, date=date,
                                 _rum=row.get('unique_mandate_reference'), _account=bank_accounts.get(sid),
@@ -46403,7 +46417,7 @@ def _trainee_bank_schedule(lines):
         row.pop('_rum')
         row.pop('_account')
     upcoming = _bank_schedule_upcoming(subscriptions, collections)
-    return upcoming, sorted(history.values(), key=lambda r: (r.get('transaction_date') or r['date'] or '', r['id']), reverse=True)
+    return upcoming, sorted(history.values(), key=lambda r: (r.get('transaction_date') or r['date'] or '', r['id']), reverse=True), list(changes.values())
 
 
 @app.get('/api/billing/trainee/<trainee_id>/session/<session_id>/bank-schedule')
@@ -46414,7 +46428,7 @@ def api_trainee_bank_schedule(trainee_id, session_id):
     lines = _billing_lines_for_trainee_session(load_data(), trainee_id, session_id)
     try:
         lines = [line for line in lines if not is_cpf_billing_context(line)]
-        upcoming, history = _trainee_bank_schedule(lines)
+        upcoming, history, changes = _trainee_bank_schedule(lines)
     except Exception as exc:
         app.logger.warning('[QONTO] lecture de l’échéancier impossible : %s', _sanitize_qonto_error(str(exc)))
         return jsonify(ok=False, error='Lecture Qonto incomplète. Vous pouvez réessayer.'), 502
@@ -46434,7 +46448,7 @@ def api_trainee_bank_schedule(trainee_id, session_id):
             bank_keys.setdefault(str(owners[0]['id']), []).append('collection:' + row['id'])
     proof = URLSafeTimedSerializer(app.secret_key, salt='debit-review').dumps(
         {'dossier': [session_id, trainee_id], 'keys': bank_keys}) if bank_keys else ''
-    response = jsonify(ok=True, upcoming=upcoming, history=history, checked_at=_now_iso(),
+    response = jsonify(ok=True, upcoming=upcoming, history=history, changes=changes, checked_at=_now_iso(),
                        rejectionKeys=bank_keys, rejectionProof=proof)
     response.headers['Cache-Control'] = 'private, no-store'
     return response
