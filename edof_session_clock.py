@@ -28,11 +28,19 @@ def record(vault, owner, event, *, fresh=False, now=None):
         state = vault.get(key) or {}
         current = state.get("current")
         if event == "verified":
+            state.pop("restart_login_day", None)
             if not current or current.get("interrupted"):
                 current = state["current"] = {"start":now, "authenticated":fresh}
             current["last"] = max(now, current["start"], current.get("last", 0))
         elif not current or current.get("interrupted"):
             return
+        elif event == "server_restart":
+            # Only the elected scheduler records a service restart. An expired portal
+            # session or a Chromium retry never creates a free authentication.
+            day = datetime.fromtimestamp(now, PARIS).date()
+            if datetime.fromtimestamp(current["last"], PARIS).date() == day:
+                state["restart_login_day"] = day.isoformat()
+            current["interrupted"] = True
         elif event == "interrupted":
             current["interrupted"] = True
         elif event == "reauth":

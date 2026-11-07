@@ -222,7 +222,7 @@ def test_provider_off_and_paris_cutoffs_for_weekend_and_dst(tmp_path, monkeypatc
             at = dt.datetime.combine(day,dt.time(hour),PARIS)
             assert working_hours(at,daily=True)
             assert simulate(kind,day.isoformat(),None,None,at-dt.timedelta(seconds=1)) == "planned"
-            assert simulate(kind,day.isoformat(),None,None,at) == "unconfirmed"
+            assert simulate(kind,day.isoformat(),None,None,at) == "ready"
 
 
 def test_official_exit_status_payload_must_match_date_and_actual_rate(tmp_path):
@@ -303,21 +303,21 @@ def test_manual_catchup_runs_only_when_active_and_reuses_the_durable_ledger(site
     site.store.process_catchups(site.gate.state())
     state = site.store.catchup_status(site.owner)
     assert state["busy"] and state["phase"] == "send"
-    assert "en attente : 3" in state["message"]
+    assert "en attente : 4" in state["message"]
     assert "outcomes" not in state
     page = site.client.get("/admin/edof-test?section=automations&tab=due").text
     def table_row(folder):
         return page.split(f'<tr data-edof-folder="{folder}">',1)[1].split("</tr>",1)[0]
     assert "En attente de transmission" in table_row("100005")
     assert "Déclarer la date d’entrée" not in table_row("100005")
-    assert "Déclarer la date d’entrée" in table_row("100004")
+    assert "En attente de transmission" in table_row("100004")
     assert "#declaration-edof" in table_row("100004")
-    assert "entrées en formation · 1, sorties avec service fait · 1" in state["message"]
-    assert "Bloquées : 2" in state["message"] and "à préciser : 1" in state["message"]
+    assert "entrées en formation · 2, sorties avec service fait · 1" in state["message"]
+    assert "Bloquées : 2" in state["message"] and "à préciser : 0" in state["message"]
     assert "en cours : 1" in state["message"]
     jobs = ledger.records(site.store.directory)
     assert {(r["folder"],r["action"]) for r in jobs} == {
-        ("100001","entry_training"),("100002","service_done"),("100005","entry_training")}
+        ("100001","entry_training"),("100002","service_done"),("100004","entry_training"),("100005","entry_training")}
     assert old["token"] == next(r["token"] for r in jobs if r["folder"]=="100005")
     site.store.process_catchups(site.gate.state())
     assert jobs == ledger.records(site.store.directory)
@@ -340,7 +340,7 @@ def test_manual_catchup_runs_only_when_active_and_reuses_the_durable_ledger(site
     state = site.store.catchup_status(site.owner)
     assert state["phase"] == "done" and not state["busy"]
     assert state["result"] == "warning"
-    assert "confirmés par EDOF : 1" in state["message"] and "à vérifier : 2" in state["message"]
+    assert "confirmés par EDOF : 1" in state["message"] and "à vérifier : 3" in state["message"]
     # The next-stage exit is its own declaration, outside this run's original batch.
 
 
@@ -389,7 +389,7 @@ def test_date_based_entries_only_queue_the_selected_effective_starts(site):
     assert jobs[0]["intent"]["actual_date"] == base["session_start_date"]
 
 
-def test_prefilled_date_is_editable_and_never_sets_a_completion_rate(site):
+def test_prefilled_cpf_date_and_full_rate_allow_an_explicit_partial_exit(site):
     import re
     site.gate.switch("integrale",0,"admin")
     for folder,date in (("100000","2026-02-02"),("100001","2026-02-06")):
@@ -399,13 +399,13 @@ def test_prefilled_date_is_editable_and_never_sets_a_completion_rate(site):
         assert 'name="evidence"' not in form
         assert re.search(r'<button[^>]*name="attested" value="yes"',form)
         if folder == "100001":
-            assert 'name="rate" value=""' in form
+            assert 'name="rate" value="100"' in form
     site.client.post("/admin/edof-test/dossiers/100001/submit", data={"csrf":site.csrf,"attested":"yes",
                      "action":"service_done","actual_date":"2026-02-05","rate":"65","motif":"trainee_absent"})
     receipt = ledger.records(site.store.directory)[0]["intent"]
     assert receipt["actual_date"] == "2026-02-05" and receipt["rate"] == 65 and receipt["operator_confirmed"]
 
-def test_native_catchup_uses_linked_local_effective_date_if_production_only_knows_the_session(site, monkeypatch):
+def test_native_catchup_uses_cpf_date_even_if_local_effective_date_differs(site, monkeypatch):
     import json
 
     site.gate.switch("integrale",0,"admin")
@@ -421,7 +421,7 @@ def test_native_catchup_uses_linked_local_effective_date_if_production_only_know
     report = ledger.discover(site.store,site.owner,{"rows":{FOLDER:row}})
     assert report["entry_training"] == 1
     spec = ledger.next_job(site.store,1)
-    assert spec["intent"]["actual_date"] == "2026-01-03" and spec["intent"]["source"] == "local"
+    assert spec["intent"]["actual_date"] == "2026-01-01" and spec["intent"]["source"] == "edof_schedule"
     assert ledger.check_before_job(site.store,spec)
     remote[FOLDER]["first_name"] = "Autre"
     assert not ledger.check_before_job(site.store,spec)
@@ -435,8 +435,11 @@ def test_exercise_on_a_later_day_does_not_move_an_entry_and_a_partial_draft_has_
     monkeypatch.setattr(ledger,"authoritative_proofs",lambda ids:{FOLDER:remote})
     def scan(state):
         return ledger.discover(site.store,site.owner,{"rows":{FOLDER:{**ROW,"state":state}}})
-    assert scan("accepted")["missing"] == 1
-    assert not ledger.records(site.store.directory)
+    assert scan("accepted")["entry_training"] == 1
+    entry_job = ledger.next_job(site.store,1)
+    assert entry_job["intent"]["actual_date"] == ROW["session_start_date"]
+    assert ledger.begin_send(site.store.directory, entry_job)
+    ledger.complete(site.store.directory, entry_job, "declaration_confirmed", "inTraining")
     remote["service_done"] = {**EXIT,"rate":100,"source":"production","actual_date":ROW["session_end_date"]}
     saved = {**ROW, **EXIT, "source":"admin","operator_confirmed":True}
     dashboard.record_work(site.gate,FOLDER,"admin",draft=json.dumps(saved))
@@ -454,16 +457,13 @@ def test_individual_cpf_entry_in_group_started_earlier(site, monkeypatch):
     monkeypatch.setattr(ledger, "authoritative_proofs", lambda ids: {FOLDER:proof})
     def discover():
         return ledger.discover(site.store, site.owner, {"rows":{FOLDER:row}})
-    assert discover()["missing"] == 1
-    assert not ledger.records(site.store.directory)
-    proof["entry_training"] = {**ENTRY, "actual_date":"2026-01-05", "source":"production"}
     assert discover()["entry_training"] == 1
     job = ledger.next_job(site.store, 1)
     assert job["intent"]["actual_date"] == row["session_start_date"]
     assert ledger.check_before_job(site.store, job)
     assert discover()["existing"] == 1
-    proof["entry_training"]["actual_date"] = "2025-12-29"
-    assert not ledger.check_before_job(site.store, job)
+    proof["entry_training"] = {**ENTRY, "actual_date":"2025-12-29", "source":"production"}
+    assert ledger.check_before_job(site.store, job)
 
 
 def test_human_confirmed_entry_for_a_later_individual_cpf_start(site, monkeypatch):
@@ -519,12 +519,16 @@ def test_paper_entry_runs_at_18_paris_without_a_local_enrolment(site, monkeypatc
         return ledger.discover(site.store, site.owner, {"rows": rows})
 
     assert simulate("accepted", "2026-11-06", None, None, instant.astimezone(PARIS)) == "planned"
-    assert scan()["entry_training"] == 0
+    assert scan()["entry_training"] == 1  # An older unblocked dossier is due.
+    previous = ledger.next_job(site.store, 1)
+    assert previous["folder_id"] == "200006" and previous["intent"]["actual_date"] == "2026-11-04"
+    assert ledger.begin_send(site.store.directory, previous)
+    ledger.complete(site.store.directory, previous, "declaration_confirmed", "inTraining")
     instant += dt.timedelta(seconds=1)
     assert simulate("accepted", "2026-11-06", None, None, instant.astimezone(PARIS)) == "ready"
     report = scan()
-    assert (report["entry_training"], report["blocked"], report["missing"]) == (1, 2, 1)
-    assert scan()["existing"] == 1
+    assert (report["entry_training"], report["blocked"], report["missing"]) == (1, 2, 0)
+    assert scan()["existing"] == 2
     job = ledger.next_job(site.store, 1)
     assert job["folder_id"] == FOLDER and job["intent"]["actual_date"] == "2026-11-06"
     assert job["intent"]["source"] == "edof_schedule" and not job["intent"].get("operator_confirmed")
@@ -540,7 +544,7 @@ def test_paper_entry_runs_at_18_paris_without_a_local_enrolment(site, monkeypatc
     assert not ledger.begin_send(site.store.directory, job)
     assert ledger.begin_send(site.store.directory, new_job)
     ledger.complete(site.store.directory, new_job, "declaration_confirmed")
-    assert scan()["existing"] == 1
+    assert scan()["existing"] == 2
     instant += dt.timedelta(days=1)
     assert scan()["entry_training"] == 1
     saturday = ledger.next_job(site.store, 1)
@@ -554,3 +558,59 @@ def test_paper_entry_runs_at_18_paris_without_a_local_enrolment(site, monkeypatc
     assert scan()["entry_training"] == 2
     assert {r["folder"]: r["intent"]["actual_date"] for r in ledger.records(site.store.directory)
             if r["status"] == "queued"} == {"200002": "2026-11-06", "200003": "2026-11-07"}
+
+
+def test_unblocked_exit_uses_cpf_end_and_full_rate_despite_different_local_session(site, monkeypatch):
+    instant = dt.datetime(2026, 11, 6, 16, 59, 59, tzinfo=dt.timezone.utc)
+
+    class Clock(dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return instant.astimezone(tz)
+
+    monkeypatch.setattr(dt, "datetime", Clock)
+    monkeypatch.setattr(providers, "on_test_service", lambda: True)
+    site.gate.switch("integrale", 0, "admin")
+    row = {**ROW, "state": "inTraining", "session_start_date": "2026-10-06", "session_end_date": "2026-11-06"}
+    proof = {**row, "session_start_date": "2026-12-01", "session_end_date": "2026-12-31"}
+    monkeypatch.setattr(ledger, "authoritative_proofs", lambda ids: {FOLDER: proof})
+
+    def discover():
+        return ledger.discover(site.store, site.owner, {"rows": {FOLDER: row}})
+
+    assert discover()["service_done"] == 0
+    instant += dt.timedelta(seconds=1)
+    ledger.hold_folder(site.store.directory, FOLDER, True)
+    assert discover()["blocked"] == 1
+    ledger.hold_folder(site.store.directory, FOLDER, False)
+    assert discover()["service_done"] == 1
+    job = ledger.next_job(site.store, 1)
+    assert job["intent"]["actual_date"] == "2026-11-06" and job["intent"]["rate"] == 100
+    assert ledger.check_before_job(site.store, job)
+    ledger.hold_folder(site.store.directory, FOLDER, True)
+    assert not ledger.begin_send(site.store.directory, job)
+    ledger.hold_folder(site.store.directory, FOLDER, False)
+    instant += dt.timedelta(days=1)
+    assert discover()["service_done"] == 1
+    job = ledger.next_job(site.store, 1)
+    assert job["intent"]["actual_date"] == "2026-11-06"
+    assert ledger.begin_send(site.store.directory, job)
+    ledger.complete(site.store.directory, job, "declaration_confirmed", "serviceDoneDeclared")
+    assert discover()["existing"] == 1
+
+
+def test_unsent_legacy_work_adopts_cpf_dates_then_manual_partial_can_replace_it(site, monkeypatch):
+    site.gate.switch("integrale", 0, "admin")
+    monkeypatch.setattr(providers, "on_test_service", lambda: True)
+    row = {**ROW, "state": "inTraining"}
+    legacy = {**EXIT, "source": "production", "rate": 100}
+    ledger.enqueue(site.store.directory, site.owner, 1, row, legacy, "Gestion Stagiaires", automatic=True)
+    old_token = ledger.records(site.store.directory)[0]["token"]
+    converted = ledger.next_job(site.store, 1)
+    assert converted["operation"] != old_token
+    assert converted["intent"]["actual_date"] == row["session_end_date"]
+    ledger.enqueue(site.store.directory, site.owner, 1, row, {**EXIT, "operator_confirmed": True}, "admin")
+    assert not ledger.begin_send(site.store.directory, converted)
+    corrected = ledger.next_job(site.store, 1)
+    assert corrected["intent"]["rate"] == 65
+    assert ledger.begin_send(site.store.directory, corrected)

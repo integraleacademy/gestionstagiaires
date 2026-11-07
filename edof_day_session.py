@@ -39,19 +39,20 @@ def awaiting_edof_return(result):
             and diag.get("location") == "edof_initialisation" and not diag.get("workspace_denied"))
 
 
-def login_count(vault, today):
-    prior = vault.get("efp-login-day")
-    if isinstance(prior, dict):
-        return prior.get("count", 0) if prior.get("date") == today else 0
-    return int(prior == today)
-
-
-def login_policy(vault, *, owner=None, now=None, manual_until=0):
+def login_policy(vault, *, owner=None, now=None, manual_until=0, shared_session=True):
     now = (now or datetime.now(PARIS)).astimezone(PARIS)
     today = now.date().isoformat()
-    count = login_count(vault, today)
     prior = vault.get("efp-login-day")
-    last = prior.get("at", 0) if isinstance(prior, dict) and prior.get("date") == today else 0
+    from edof_session_clock import read_clock
+    day_record = prior if isinstance(prior, dict) and prior.get("date") == today else {}
+    count = day_record.get("count", int(prior == today))
+    last = day_record.get("at", 0)
+    restart_session = read_clock(vault, owner) if owner and shared_session else {}
+    # The verified session timestamp identifies one interrupted session across
+    # retries and repeated restarts. Reservation and credential submission share the browser lock.
+    witness = (restart_session.get("current") or {}).get("last")
+    restart = bool(witness and restart_session.get("restart_login_day") == today
+                   and day_record.get("recovered", {}).get(owner) != witness)
     override = bool(owner) and vault.get("day-login-override:" + owner) == today
     # Outside the daily watch, retain the existing explicit one-hour activation.
     limit = MAX_DAILY_LOGINS if working_hours(now) else 1
@@ -60,27 +61,35 @@ def login_policy(vault, *, owner=None, now=None, manual_until=0):
         code = "day_closed"
     elif vault.get("edof-throttled"):
         code = "portal_throttled"
-    elif count >= limit and not override:
+    elif count >= limit and not (override or restart):
         code = "day_login_used"
-    elif count and last and now.timestamp() < last + LOGIN_RETRY_SECONDS and not override:
+    elif last and now.timestamp() < last + LOGIN_RETRY_SECONDS and not override:
         code = "day_login_wait"
     return {"allowed":code is None, "code":code, "used":count, "limit":MAX_DAILY_LOGINS,
             "remaining":max(0,MAX_DAILY_LOGINS-count), "retry_at":last+LOGIN_RETRY_SECONDS if code == "day_login_wait" else None,
-            "override":override}
+            "override":override, "restart_witness":witness if restart else None, "restarts":day_record.get("restarts", 0)}
 
 
-def allow_login(vault, *, owner=None, now=None, manual_until=0):
+def allow_login(vault, *, owner=None, now=None, manual_until=0, shared_session=True):
     """Reserve the account's attempt before submitting credentials, under the job lock."""
     now = (now or datetime.now(PARIS)).astimezone(PARIS)
     today = now.date().isoformat()
-    policy = login_policy(vault, owner=owner, now=now, manual_until=manual_until)
+    policy = login_policy(vault, owner=owner, now=now, manual_until=manual_until, shared_session=shared_session)
     if not policy["allowed"]:
         if policy["code"] == "day_login_used":
             vault.put("efp-paused-day", today, ttl=86400)
         return False
     if policy["override"]:
         vault.get("day-login-override:" + owner, consume=True)
-    vault.put("efp-login-day", {"date":today, "count":policy["used"]+1, "at":now.timestamp()}, ttl=2*86400)
+    prior = vault.get("efp-login-day")
+    record = dict(prior) if isinstance(prior, dict) and prior.get("date") == today else {}
+    record.update(date=today, count=policy["used"], at=now.timestamp())
+    if policy["restart_witness"] is not None:
+        record.setdefault("recovered", {})[owner] = policy["restart_witness"]
+        record["restarts"] = policy["restarts"] + 1
+    else:
+        record["count"] += 1
+    vault.put("efp-login-day", record, ttl=2*86400)
     vault.delete("efp-paused-day")
     return True
 

@@ -16,7 +16,6 @@
         <td data-label="Actions"><div class="edof-row-actions">
           {% if batch_entries and r.entry_choice %}<label class="edof-entry-choice"><input form="edof-effective-entries" type="checkbox" name="entry" value="{{ r.entry_choice }}"> Entrée le {{ date_fr(r.session_start_date) }}</label>{% endif %}
           <a class="btn btn-outline" href="{{ href }}">{{ 'Voir le dossier' if r.operation_bucket=='history' else 'Ouvrir le dossier' }}</a>
-          {% if active and r.operation_bucket=='overdue' and not r.dispatch_status and not r.automatic_entry %}<a class="edof-evidence-link" href="{{ href }}">{{ 'Déclarer la date d’entrée' if r.action=='entry_training' else 'Déclarer la sortie et le taux réalisé' }}</a>{% endif %}
         </div></td>
       </tr>
     {% endfor %}</tbody>

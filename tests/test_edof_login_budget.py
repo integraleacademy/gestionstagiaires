@@ -93,3 +93,53 @@ def test_live_budget_does_not_present_legacy_pause_as_exhausted(tmp_path,monkeyp
     vault.put('efp-login-day',{'date':now.date().isoformat(),'count':4,'at':now.timestamp()-3600})
     assert store.live_connection('A',False)['paused']
     assert store.connection_status('A',False)['state']=='day_paused'
+
+
+def test_service_restart_restores_one_verified_session_outside_normal_quota(tmp_path, monkeypatch):
+    import edof_session_clock as clock
+
+    key = connector_key("restart-fixture" * 4)
+    store = ServerTestStore(tmp_path)
+    store.connector_key = key
+    start = dt.datetime(2026, 11, 6, 7, tzinfo=PARIS)
+    now = start
+    monkeypatch.setattr("time.time", lambda: now.timestamp())
+    store.use_directory("A", enable=True)
+    vault = Vault(tmp_path, key)
+    for _ in range(4):
+        assert allow_login(vault, owner="A", now=now)
+        now += dt.timedelta(minutes=15)
+    clock.record(vault, "A", "verified", now=now.timestamp())
+    assert not allow_login(vault, owner="A", now=now)
+    store.recover_directory_reads()
+    assert not allow_login(vault, owner="B", now=now)
+    assert not allow_login(vault, owner="A", now=now, shared_session=False)
+    vault.put("edof-throttled", True)
+    assert not allow_login(vault, owner="A", now=now)
+    vault.delete("edof-throttled")
+    assert allow_login(vault, owner="A", now=now)
+    assert vault.get("efp-login-day")["count"] == 4
+    assert vault.get("efp-login-day")["restarts"] == 1
+    now += dt.timedelta(minutes=16)
+    store.recover_directory_reads()  # No new verified session to recover.
+    assert not allow_login(vault, owner="A", now=now)
+    clock.record(vault, "A", "verified", now=now.timestamp())
+    store.recover_directory_reads()
+    assert allow_login(vault, owner="A", now=now)
+    assert login_policy(vault, owner="A", now=now)["restarts"] == 2
+    assert login_policy(vault, owner="A", now=now + dt.timedelta(days=1))["used"] == 0
+
+
+def test_restored_cookies_clear_credit_and_expiry_counts_as_normal(tmp_path):
+    import edof_session_clock as clock
+
+    vault = Vault(tmp_path, connector_key("restart-fixture" * 4))
+    now = dt.datetime(2026, 11, 6, 10, tzinfo=PARIS)
+    clock.record(vault, "A", "verified", now=now.timestamp())
+    clock.record(vault, "A", "server_restart", now=now.timestamp() + 1)
+    assert login_policy(vault, owner="A", now=now)["restart_witness"]
+    clock.record(vault, "A", "verified", now=now.timestamp() + 2)
+    clock.record(vault, "A", "reauth", now=now.timestamp() + 100)
+    assert allow_login(vault, owner="A", now=now + dt.timedelta(hours=1))
+    policy = login_policy(vault, owner="A", now=now + dt.timedelta(hours=2))
+    assert policy["used"] == 1 and policy["restarts"] == 0

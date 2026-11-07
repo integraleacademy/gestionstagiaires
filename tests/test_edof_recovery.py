@@ -70,9 +70,9 @@ def test_outage_survives_restart_partial_read_then_full_catchup_without_duplicat
     s.store.finish(job,{'code':'directory_ready'})
     recovery.prepare(s.store,s.gate.state(),s.now())
     state = recovery.status(s.store,s.owner)
-    assert not state['pending'] and 'Automatisations préparées : 1' in state['message'] and 'À vérifier : 1' in state['message']
+    assert not state['pending'] and 'Automatisations préparées : 2' in state['message'] and 'À vérifier : 0' in state['message']
     original = ledger.records(s.store.directory)
-    assert len(original) == 1 and original[0]['status'] == 'queued'
+    assert len(original) == 2 and all(row['status'] == 'queued' for row in original)
     recovery.prepare(s.store,s.gate.state(),s.now())
     s.read('requests_ready')
     assert recovery.next_job(s.store,s.gate.state(),s.now()) is None

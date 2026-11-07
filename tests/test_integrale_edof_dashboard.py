@@ -199,7 +199,7 @@ def test_simulate_at_actual_paris_cutoff_without_sending(site):
     before = dt.datetime(2026,2,2,7,59,tzinfo=dashboard.PARIS)
     after = before + dt.timedelta(minutes=1)
     assert dashboard.simulate("accepted", "2026-02-02", None, None, before) == "planned"
-    assert dashboard.simulate("accepted", "2026-02-02", None, None, after) == "unconfirmed"
+    assert dashboard.simulate("accepted", "2026-02-02", None, None, after) == "ready"
     assert dashboard.simulate("accepted", "2026-02-02", {"active":True}, None, after) == "blocked"
     assert dashboard.simulate("accepted", "2026-02-02", None, {"action":"entry_training","evidence":"LMS","actual_date":"2026-02-02"}, after) == "ready"
     reply = site.client.get("/admin/edof-test?section=state&simulation=1")
@@ -260,7 +260,7 @@ def test_legacy_french_dates_work_in_live_simulation_and_declarations_without_re
     response=site.client.get("/admin/edof-test?simulation=1")
     assert response.status_code == 200
     row = response.text.split('<tr data-edof-folder="100000">',1)[1].split("</tr>",1)[0]
-    assert "02/02/2026" in row and "Déclaration à compléter" in row
+    assert "02/02/2026" in row and "Déclaration préparée" in row
     assert "Date à vérifier" not in row
     site.gate.switch("integrale",0,"admin")
     result=site.client.post("/admin/edof-test/dossiers/100000/prepare", data={

@@ -18,7 +18,7 @@ import integrale_edof_history as history_view
 import edof_directory as directory
 import edof_dossier_dates as dossier_dates
 from integrale_edof_sync import dates_for_view
-from edof_schedule import paper_entry, scheduled_at
+from edof_schedule import scheduled_at
 import edof_throttle as throttle
 import edof_declarations as declarations
 import edof_proposal as proposal_form
@@ -157,11 +157,8 @@ def simulate(kind, date, block, draft, now):
         return "missing"
     if scheduled > now:
         return "planned"
-    if paper_entry(ACTIONS[kind], date):
-        return "ready"
-    if draft and draft.get("action") == ACTIONS[kind] and draft.get("actual_date") and (draft.get("operator_confirmed") or draft.get("evidence")):
-        return "ready"
-    return "unconfirmed"
+    return "ready"
+
 
 
 def dashboard_rows(snapshot, data, operations, now):
@@ -195,7 +192,7 @@ def dashboard_rows(snapshot, data, operations, now):
             tags.add("anomaly")
         counts.update(tags)
         rows.append({**record, "kind": kind, "label": LABELS[kind] if kind != "unknown" else record.get("state") or LABELS[kind],
-                     "scheduled": scheduled_time(kind, date), "automatic_entry": paper_entry(action, date), "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": links.get(folder),
+                     "scheduled": scheduled_time(kind, date), "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": links.get(folder),
                      "associable": associable(record), "association_ignored": bool(flags.get("association_ignored")), "handled": bool(flags.get("handled")), "archived": bool(flags.get("archived")),
                      "draft": flags.get("draft"), "official_url": DETAIL_PREFIX + folder})
     return rows, counts
@@ -260,6 +257,14 @@ def record_work(store, folder, actor, **changes):
     if not changes or not set(changes) <= {"handled", "archived", "draft"}:
         raise ValueError("Action CPF inconnue.")
     with closing(operations_db(store)) as db, db:
+        db.execute("BEGIN IMMEDIATE")
+        if changes.get("draft") and db.execute("SELECT 1 FROM sqlite_master WHERE name='cpf_declarations'").fetchone():
+            draft = json.loads(changes["draft"])
+            if draft.get("source") == "admin":
+                db.execute("""UPDATE cpf_declarations SET status='paused', changed=?
+                    WHERE folder=? AND action=? AND status='queued' AND json_extract(intent,'$.source')='edof_schedule'
+                      AND json_extract(intent,'$.exit_confirmed') IS NULL""",
+                    (dt.datetime.now(PARIS).timestamp(), folder, draft["action"]))
         db.execute("INSERT OR IGNORE INTO dossier_work(folder) VALUES (?)", (folder,))
         updates = {**changes, "updated": dt.datetime.now(PARIS).isoformat(), "actor": actor}
         db.execute("UPDATE dossier_work SET " + ", ".join(k + "=?" for k in updates) + " WHERE folder=?",
@@ -606,7 +611,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             for row in rows:
                 if (row["kind"] == "accepted" and row["action"] == "entry_training"
                         and row["operation_bucket"] == "overdue" and not row["dispatch_status"]
-                        and row["evaluation"] == "unconfirmed" and row["catchup_outcome"] not in {"blocked", "review"}):
+                        and row["evaluation"] == "ready" and row["catchup_outcome"] not in {"blocked", "review"}):
                     row["entry_choice"] = entry_choice(row)
         elif section == "state":
             dossier_dates.newest_first(rows)
@@ -721,7 +726,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 continue
             folder, start = row["folder_id"], row.get("session_start_date")
             blocked = blocks.get((folder,"both")) or blocks.get((folder,"entry_training"))
-            if simulate("accepted",start,blocked,None,now) != "unconfirmed":
+            if simulate("accepted",start,blocked,None,now) != "ready":
                 continue
             try:
                 draft = declaration_draft(row, {"action":"entry_training","actual_date":start,"attested":"yes"})
