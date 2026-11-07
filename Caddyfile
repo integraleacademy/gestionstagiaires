@@ -23,7 +23,7 @@
 		request_header -Range
 		request_header -If-Modified-Since
 		request_header -If-None-Match
-		rewrite * /index.html
+		rewrite * {http.vars.waiting_file}
 		file_server {
 			root /srv/waiting
 			status 503
@@ -41,6 +41,7 @@
 
 (page_proxy) {
 	vars waiting_page yes
+	vars waiting_file {args[1]}
 	reverse_proxy {args[0]} {
 		import origin
 		@gateway_error status 502 503 504
@@ -74,7 +75,7 @@
 	handle @demo {
 		route {
 			rewrite * /__connect_fixture_502
-			import page_proxy http://127.0.0.1:{$PORT:8080}
+			import page_proxy http://127.0.0.1:{$PORT:8080} /demo.html
 		}
 	}
 	@origin_probe {
@@ -107,10 +108,10 @@
 			not path /healthz /api /api/* /internal /internal/* /webhooks /webhooks/* /.well-known/*
 		}
 		handle @navigation {
-			import page_proxy {$UPSTREAM:https://gestionstagiaires-r5no.onrender.com}
+			import page_proxy {$UPSTREAM:https://gestionstagiaires-r5no.onrender.com} /index.html
 		}
 		handle @legacy_navigation {
-			import page_proxy {$UPSTREAM:https://gestionstagiaires-r5no.onrender.com}
+			import page_proxy {$UPSTREAM:https://gestionstagiaires-r5no.onrender.com} /index.html
 		}
 		handle {
 			reverse_proxy {$UPSTREAM:https://gestionstagiaires-r5no.onrender.com} {

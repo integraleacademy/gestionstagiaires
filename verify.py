@@ -49,7 +49,12 @@ for attempt in range(50):
         sleep(.2)
 
 alias = "gestionstagiaires-docker-test.onrender.com"
-assert request("/test-502", host=alias)[0::2] == (503, PAGE)
+status, headers, demo = request("/test-502", host=alias)
+assert status == 503 and "no-store" in headers["Cache-Control"]
+assert "Simulation d’une erreur 502".encode() in demo
+assert "Veuillez patienter".encode() not in demo
+assert b"/__connect_origin_health" in demo
+assert request("/__connect_origin_health", host=alias)[0::2] == (502, b"origin")
 assert request("/admin/partners", host=alias)[0] == 404
 for failure in (502, 503, 504):
     state["status"] = failure

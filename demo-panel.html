@@ -1,0 +1,35 @@
+<div class="state"><span class="signal" aria-hidden="true"></span>Simulation d’une erreur 502</div>
+<h1 id="demo-status" aria-live="polite">Test de maintenance</h1>
+<p class="explanation">Cette adresse simule une interruption pour tester la page de maintenance.</p>
+<noscript><p class="waiting-detail">Activez JavaScript pour vérifier la disponibilité du site.</p></noscript>
+<script>
+  (() => {
+    const title = document.getElementById('demo-status');
+    async function checkSite() {
+      const controller = new AbortController();
+      const deadline = setTimeout(() => controller.abort(), 5000);
+      let message = 'État du site inconnu.';
+      try {
+        const response = await fetch('/__connect_origin_health', {
+          headers: {Accept: 'application/json'}, credentials: 'omit', cache: 'no-store',
+          redirect: 'error', signal: controller.signal
+        });
+        if ([502, 503, 504].includes(response.status)) {
+          message = 'Intégrale Connect est temporairement indisponible.';
+        } else if (response.ok) {
+          const health = await response.json();
+          if (health.ok === true && health.service === 'gestionstagiaires') {
+            message = 'Intégrale Connect est en ligne.';
+          }
+        }
+      } catch {
+        // A lost connection cannot establish the state of the site.
+      } finally {
+        clearTimeout(deadline);
+      }
+      if (title.textContent !== message) title.textContent = message;
+      setTimeout(checkSite, 30000);
+    }
+    checkSite();
+  })();
+</script>
