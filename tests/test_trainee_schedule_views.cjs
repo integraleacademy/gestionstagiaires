@@ -12,7 +12,7 @@ function ui(){
     esc:String,fmtMoney:n=>Number(n).toFixed(2),scheduleDate:String,isCpfQontoLine:line=>line.financingType==='CPF',hasBankSchedule:()=>true,
     linePaid:line=>line.paid || 0,installmentIsRejected:row=>['refunded','rejected','failed','returned','declined'].includes(row.status),
     operationTable:rows=>rows.map(r=>r.date).join(' '),sameDayNotices:()=>'',scheduleTable:(heads,rows)=>heads.join(' ')+rows.join(' ')});
-  for(const name of ['paymentMethodTotals','initialTable','scheduleStats','scheduleBalances','initialScheduleSummary','updatedScheduleSummary','reviewSelection','dossierBalance','scheduleEventsTable','transferEvents','cashScheduleEvents','debitActivity','scheduleAuditEvents','financialScheduleSummary','scheduleReadView']){
+  for(const name of ['paymentMethodTotals','nextBankOperations','initialTable','scheduleStats','scheduleBalances','initialScheduleSummary','updatedScheduleSummary','reviewSelection','dossierBalance','scheduleEventDate','scheduleEventsTable','transferEvents','cashScheduleEvents','debitActivity','scheduleAuditEvents','financialScheduleSummary','scheduleReadView']){
     const start=source.indexOf('  function '+name+'(');assert.notEqual(start,-1);
     const end=source.indexOf('\n  function ',start+1);
     vm.runInContext(source.slice(start,end),ctx);
@@ -31,10 +31,10 @@ test('four original months stay independent from the bank next occurrences and i
   let html=ctx.scheduleReadView(finance(ctx),true);
   assert.match(html,/Échéancier initial/);assert.match(html,/2026-12-30/);assert.doesNotMatch(html,/Prévue au plan|Impayée|2026-11-10/);
   ctx.scheduleView='next';html=ctx.scheduleReadView(finance(ctx),true);
-  assert.match(html,/Au moins 1470.00 \/ 1470.00/);assert.doesNotMatch(html,/2026-12-30/);
-  assert.equal((html.match(/2026-11-10/g)||[]).length,4);
+  assert.match(html,/Au moins 1470.00/);assert.doesNotMatch(html,/2026-12-30/);
+  assert.equal((html.match(/2026-11-10/g)||[]).length,3);
   ctx.bankSnapshot=null;
-  assert.match(ctx.scheduleReadView(finance(ctx),true),/Reste à programmer<\/span><strong>—/);
+  assert.match(ctx.scheduleReadView(finance(ctx),true),/Programmation indisponible/);
 });
 test('review selects each visible rejection once and reopens only for a new collection',()=>{
   const ctx=ui(),lines=[{id:'L',debitRejectionReview:{pending:['collection:A'],treated:['collection:B']}}];
@@ -54,22 +54,22 @@ test('planned, paid, scheduled and uncovered amounts stay distinct',()=>{
     upcoming:[{date:'2026-12-04',frequency:'one_off',status:'scheduled',amount_cents:53950,remaining_count:1,remaining_cents:53950}]};
   ctx.scheduleView='next';
   let html=ctx.scheduleReadView(finance(ctx),true);
-  assert.match(html,/539.50 \/ 1079.00/);
+  assert.match(html,/Programmé chez Qonto<\/span><strong>539.50<\/strong>/);
   assert.match(html,/Déjà payé<\/span><strong>0.00/);
-  assert.match(html,/539.50 à programmer/);
+  assert.match(html,/539.50<\/strong> à programmer/);
   line.paid=100;
   html=ctx.scheduleReadView(finance(ctx),true);
   assert.match(html,/Reste à payer<\/span><strong>979.00/);
-  assert.match(html,/439.50 à programmer/);
+  assert.match(html,/439.50<\/strong> à programmer/);
   ctx.scheduleView='plan';
   assert.match(ctx.scheduleReadView(finance(ctx),true),/Déjà payé<\/span><strong>100.00/);
   ctx.scheduleView='next';
   line.paid=539.5;
-  assert.match(ctx.scheduleReadView(finance(ctx),true),/Reste à programmer<\/span><strong>0.00/);
+  assert.match(ctx.scheduleReadView(finance(ctx),true),/Solde SEPA entièrement programmé/);
   line.paid=1079;
-  assert.match(ctx.scheduleReadView(finance(ctx),true),/dépassent le reste à payer de <strong>539.50/);
+  assert.match(ctx.scheduleReadView(finance(ctx),true),/<strong>539.50<\/strong> programmés en trop/);
   ctx.bankError='Lecture Qonto indisponible';
-  assert.match(ctx.scheduleReadView(finance(ctx),true),/Reste à programmer<\/span><strong>—/);
+  assert.match(ctx.scheduleReadView(finance(ctx),true),/Programmation indisponible/);
 });
 
 test('six tabs share the hors-CPF balance, including cash and transfers without a SEPA plan',()=>{
@@ -91,11 +91,11 @@ test('six tabs share the hors-CPF balance, including cash and transfers without 
     assert.match(html,/Reste à payer<\/span><strong>850.00/);
     if(key==='transfers'||key==='history'){
       assert.equal((html.match(/Payeur A/g)||[]).length,1);
-      assert.match(html,/Contrepassé/);
+      assert.match(html,/Annulé par la banque/);
     }
     if(key==='history')assert.match(html,/Règlement en espèces/);
     if(key==='transfers')assert.match(html,/Rattacher un virement/);
-    if(key==='summary')assert.match(html,/Espèces<\/span><strong>50.00/);
+    if(key==='summary')assert.match(html,/Espèces<\/dt><dd>50.00/);
   }
   ctx.scheduleView='transfers'; ctx.readOnly=true;
   assert.doesNotMatch(ctx.scheduleReadView(c,false),/data-schedule-transfer/);

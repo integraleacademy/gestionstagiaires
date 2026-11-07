@@ -146,3 +146,42 @@ def test_one_off_is_not_still_programmed_once_its_collection_is_returned():
         upcoming, history, changes = gestion._trainee_bank_schedule([{'qonto_direct_debit_subscription_id': 'once'}])
     assert upcoming == []
     assert history[0]['status'] == 'returned'
+
+
+def test_cancellations_use_the_actual_action_date_on_both_sides_of_the_planned_date():
+    sub = subscription('series', None, status='canceled', schedule_type='monthly',
+                       initial_collection_date='2020-10-01')
+    line = {'qonto_direct_debit_subscription_id': 'series'}
+    past = dict(id='past', direct_debit_subscription_id='series', collection_date='2020-12-01',
+                status='canceled', amount={'value': '367.50'}, updated_at='2020-12-03T10:00:00Z')
+    future = dict(past, id='future', collection_date='2999-01-01', cancelled_at='2020-11-30T09:42:00Z')
+    with patch.object(gestion, 'list_qonto_direct_debit_subscriptions', return_value={'items': [sub]}), \
+         patch.object(gestion, 'list_qonto_direct_debit_collections', return_value={'items': [past, future, past]}):
+        upcoming, history, changes = gestion._trainee_bank_schedule([line])
+
+    assert upcoming == history == []
+    assert [(c['kind'], c['id'], c['date'], c['planned_date']) for c in changes] == [
+        ('subscription', 'series', None, None),
+        ('collection', 'past', None, '2020-12-01'),
+        ('collection', 'future', '2020-11-30T09:42:00Z', '2999-01-01'),
+    ]
+    assert changes[0]['frequency'] == 'monthly'
+    assert [c['subscription_id'] for c in changes[1:]] == ['series', 'series']
+
+
+def test_bank_statement_matches_keep_local_day_and_only_sourced_time():
+    def match(stamp):
+        history = {'C': {'date': '2026-11-08', '_account': 'A', '_rum': 'RUM',
+                         'status': 'completed', 'amount_cents': 100}}
+        transaction = {'id': 'T', 'side': 'credit', 'status': 'completed', 'currency': 'EUR',
+                       'amount_cents': 100, 'settled_at': stamp, 'bank_account_id': 'A',
+                       'direct_debit_collection': {'unique_mandate_reference': 'RUM'}}
+        gestion._match_debit_transaction_dates(history, [transaction])
+        return history['C']
+
+    late = match('2026-11-07T23:30:00Z')
+    assert late['transaction_date'] == '2026-11-08'
+    assert late['transaction_at'] == '2026-11-08T00:30:00+01:00'
+    day = match('2026-11-08')
+    assert day['transaction_date'] == '2026-11-08'
+    assert 'transaction_at' not in day

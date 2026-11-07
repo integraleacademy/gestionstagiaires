@@ -2129,11 +2129,11 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   let bankChecked = 0;
   const bankStates = {
     scheduled:['Programmé','blue'], in_progress:['En cours','blue'],
-    pending_mandate_signature:['Mandat à signer','orange'], on_hold:['En attente','orange'],
+    pending_mandate_signature:['Mandat à signer','orange'], on_hold:['En attente chez Qonto','orange'],
     pending:['En cours','blue'], processing:['En cours','blue'], success:['Encaissé','green'],
     completed:['Encaissé','green'], paid:['Encaissé','green'], succeeded:['Encaissé','green'],
     failed:['Rejeté','red'], declined:['Rejeté','red'], rejected:['Rejeté','red'],
-    returned:['Retourné','red'], refunded:['Remboursé','red'],
+    returned:['Retourné · non encaissé','red'], refunded:['Remboursé','red'],
     canceled:['Annulé','gray'], cancelled:['Annulé','gray']
   };
   const frequencies = {one_off:'Une fois', daily:'Quotidienne', weekly:'Hebdomadaire', monthly:'Mensuelle',
@@ -2163,8 +2163,9 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   }
   scheduleSection?.addEventListener('toggle', () => { if (scheduleSection.open) readBankSchedule(); });
 
-  function scheduleDate(date) {
-    return esc(formatIsoDateFr(date) || 'Date inconnue');
+  function scheduleDate(value, missing='Date à confirmer') {
+    const when=scheduleEventDate(value);
+    return esc(when?formatIsoDateFr(when.day):missing);
   }
   function scheduleTable(headings, rows, empty) {
     if (!rows.length) return `<p class="schedule-empty">${esc(empty)}</p>`;
@@ -2183,29 +2184,47 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       `<div class="schedule-notice"><span><strong>${scheduleDate(date)}</strong> · ${d.count} prélèvements programmés, soit <strong>${fmtMoney(d.cents/100)}</strong></span></div>`
     ).join('');
   }
+  function nextBankOperations(upcoming,today) {
+    const next=[];
+    for (const row of upcoming) {
+      const issued=row.open_collections || [];
+      const dated=issued.filter(item=>!item.date || item.date>=today);
+      if (issued.length && issued.length===row.remaining_count) {
+        next.push(...dated);
+        continue;
+      }
+      if (row.date && row.date<today && !issued.length) continue;
+      const first=dated.filter(item=>item.date).sort((a,b)=>a.date.localeCompare(b.date))[0];
+      const nextDate=row.date>=today?row.date:null;
+      const firstIsIssued=first && (!nextDate || first.date<=nextDate);
+      next.push({...row,date:firstIsIssued?first.date:nextDate,amount_cents:firstIsIssued?first.amount_cents:row.amount_cents});
+    }
+    return next.sort((a,b)=>(a.date || '9999').localeCompare(b.date || '9999'));
+  }
   function operationTable(records) {
     const rows = records.map(row => {
       const state = !row.subscription_id && row.status==='in_progress' && row.date ? bankStates.scheduled : bankStates[row.status];
       const detail = [
-        ...(row.open_collections || []).map(item=>`<span>Échéance émise · ${scheduleDate(item.date)} · ${fmtMoney(item.amount_cents/100)} · ${esc(bankStates[item.status]?.[0] || 'À vérifier')}</span>`),
+        ...(row.open_collections || []).map(item=>`<span>Prélèvement émis · ${scheduleDate(item.date,'Date de présentation non communiquée')} · ${fmtMoney(item.amount_cents/100)} · ${esc(bankStates[item.status]?.[0] || 'Statut à confirmer')}</span>`),
         row.reference && `<span>Libellé · ${esc(row.reference)}</span>`,
-        `<span>Référence Qonto · ${esc(row.id)}</span>`
+        row.id && `<span>Référence Qonto · ${esc(row.id)}</span>`
       ].filter(Boolean).join('');
+      const date=scheduleDate(row.date,'En attente de date');
+      const occurrence=row.frequency==='one_off'?'Ponctuel':(frequencies[row.frequency] || 'Fréquence à confirmer');
       const seriesTotal = row.remaining_count>1 && Number.isSafeInteger(row.remaining_cents)
-        ? `<small>${row.remaining_count} échéances · ${fmtMoney(row.remaining_cents/100)} au total</small>` : '';
-      return `<tr><td><details data-operation-id="${esc(row.id)}"><summary>${scheduleDate(row.date)}</summary><div class="schedule-operation">${detail}</div></details></td>
-        <td>${esc(frequencies[row.frequency] || 'Non renseignée')}</td><td>${badge(...(state || ['À vérifier','orange']))}</td><td>${fmtMoney(row.amount_cents/100)}${seriesTotal}</td></tr>`;
+        ? `<small>${row.remaining_count} échéances restantes · ${fmtMoney(row.remaining_cents/100)}</small>` : '';
+      return `<tr><td>${detail?`<details data-operation-id="next-${esc(row.id)}"><summary>${date}</summary><div class="schedule-operation">${detail}</div></details>`:date}</td>
+        <td>${esc(occurrence)}</td><td>${badge(...(state || ['Statut à confirmer','orange']))}</td><td><strong>${fmtMoney(row.amount_cents/100)}</strong>${seriesTotal}</td></tr>`;
     });
-    return scheduleTable(['Prochaine date','Fréquence','Statut','Montant'],rows,'Aucun prélèvement à venir rattaché à ce dossier.');
+    return scheduleTable(['Date prévue','Fréquence','Statut Qonto','Montant'],rows,'Aucun prélèvement à venir dans Qonto.');
   }
   function initialTable(items, multipleLines=false) {
-    const rows = [...items].sort((a,b)=>a.date.localeCompare(b.date)).map(item=>{
-      const date=new Date(item.date+'T12:00:00Z');
-      const month=Number.isFinite(date.getTime())?date.toLocaleString('fr-FR',{month:'long',timeZone:'UTC'}):'Échéance';
-      return `<tr><td><strong class="schedule-month">${esc(month)}</strong>${multipleLines?`<small>${esc(item.line.financeurName || item.line.financingType)}</small>`:''}</td><td>${scheduleDate(item.date)}</td><td>${fmtMoney(item.amount)}</td></tr>`;
-    });
-    return scheduleTable(['Mensualité','Date initialement prévue','Montant prévu'],rows,'Aucun échéancier initial enregistré.');
-}
+    const ordered=[...items].sort((a,b)=>(scheduleEventDate(a.date)?.day || '9999').localeCompare(scheduleEventDate(b.date)?.day || '9999'));
+    const headings=multipleLines?['Date convenue','Financement','Montant convenu']:['Date convenue','Montant convenu'];
+    const rows=ordered.map(item=>`<tr><td>${scheduleDate(item.date,'Date absente du plan initial')}</td>
+      ${multipleLines?`<td>${esc(item.line.financeurName || item.line.financingType || 'Non précisé')}</td>`:''}<td><strong>${fmtMoney(item.amount)}</strong></td></tr>`);
+    return scheduleTable(headings,rows,'Aucun échéancier initial pour ce dossier.');
+  }
 
   function scheduleStats(entries) {
     return `<div class="schedule-totals">${entries.map(([label,value,tone])=>`<div class="schedule-stat ${tone?'is-'+tone:''}"><span>${esc(label)}</span><strong>${value}</strong></div>`).join('')}</div>`;
@@ -2234,55 +2253,77 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   }
 
   function updatedScheduleSummary(lines,upcoming,c,today) {
-    if (!lines.length && !upcoming.length) return '';
-    const {planned,paid,outstanding} = scheduleBalances(lines);
-    const confirmed = upcoming.filter(row=>['scheduled','in_progress','processing','pending','on_hold'].includes(row.status));
-    const scheduled = confirmed.reduce((sum,row)=>sum+(row.remaining_cents ?? row.amount_cents),0);
-    const bankReady = !hasBankSchedule() || Boolean(bankSnapshot && !bankLoading && !bankError);
-    const exact = confirmed.every(row=>Number.isSafeInteger(row.remaining_cents) && row.remaining_cents>0);
-    const totalKnown = lines.length>0 && planned>0;
-    const date = confirmed.flatMap(row=>[row.date,...(row.open_collections || []).map(item=>item.date)]).filter(day=>day && day>=today).sort()[0];
-    const money = cents=>fmtMoney(cents/100);
-    const plannedText = totalKnown?money(planned):'—';
-    const scheduledText = bankReady?`${exact?'':'Au moins '}${money(scheduled)} / ${plannedText}`:'—';
-    const complete = bankReady && exact && confirmed.length===upcoming.length && totalKnown;
-    const history = bankSnapshot?.history || [];
-    const bankPaid = history.filter(row=>['paid','completed','succeeded','success'].includes(row.status))
-      .reduce((sum,row)=>sum+row.amount_cents,0);
-    const reversedIds = new Set(history.filter(installmentIsRejected).map(row=>row.id));
-    const recordedDebits = lines.every(line=>line.qontoCollectedAmountCents!=null)
-      ? lines.reduce((sum,line)=>sum+Number(line.qontoCollectedAmountCents),0) : paid;
-    const paidNeedsSync = bankPaid>recordedDebits || lines.some(line=>(line.directDebitInstallments || []).some(row=>
+    const activeLines=lines.filter(line=>!['canceled','cancelled','deleted'].includes(String(line.invoiceStatus||'').toLowerCase()));
+    if (!activeLines.length && !upcoming.length) return '';
+    const showDate=scheduleView==='summary';
+    const heading='<h4>Prélèvements SEPA</h4>';
+    const openDetails=showDate?'<button type="button" class="schedule-sepa-link" data-schedule-target="next">Voir les échéances <span aria-hidden="true">→</span></button>':'';
+    const header=`<header>${heading}${openDetails}</header>`;
+    let unavailable='';
+    if (!hasBankSchedule() && !upcoming.length) {
+      unavailable='Aucun mandat ou prélèvement Qonto rattaché à cet échéancier.';
+    } else if (bankLoading || bankError || !bankSnapshot) {
+      unavailable=bankLoading?'Lecture des prélèvements dans Qonto…':'Programmation indisponible. Actualisez Qonto pour connaître les montants.';
+    }
+    if (unavailable) return `<section class="schedule-sepa">${header}<p class="schedule-sepa-message" role="status">${unavailable}</p></section>`;
+    const {planned,paid,outstanding}=scheduleBalances(activeLines);
+    const confirmed=upcoming.filter(row=>['scheduled','in_progress','processing','pending','on_hold'].includes(row.status));
+    const exact=confirmed.every(row=>Number.isSafeInteger(row.remaining_cents) && row.remaining_cents>0);
+    const scheduled=confirmed.reduce((sum,row)=>sum+(row.remaining_cents ?? row.amount_cents),0);
+    const history=bankSnapshot?.history || [];
+    const bankPaid=history.filter(row=>['paid','completed','succeeded','success'].includes(row.status)).reduce((sum,row)=>sum+row.amount_cents,0);
+    const reversedIds=new Set(history.filter(installmentIsRejected).map(row=>row.id));
+    const recordedDebits=activeLines.every(line=>line.qontoCollectedAmountCents!=null)
+      ? activeLines.reduce((sum,line)=>sum+Number(line.qontoCollectedAmountCents),0) : paid;
+    const paidNeedsSync=bankPaid>recordedDebits || activeLines.some(line=>(line.directDebitInstallments || []).some(row=>
       ['paid','completed','succeeded','success'].includes(row.status) && reversedIds.has(row.qonto_direct_debit_collection_id)));
-    // A cash payment or another settlement can reduce the dossier balance below the SEPA balance.
-    let balanceToCover = Math.min(outstanding, Math.round(Math.max(0,c.resteAPayer)*100));
-    if (currentFinancialSummary?.by_financer) {
-      const byFinancer = ['PERSONNEL','AUTRE'].reduce((sum,type)=>{
-        const scope=lines.filter(line=>line.financingType===type);
-        const balance=scheduleBalances(scope).outstanding;
-        return sum+Math.min(balance,currentFinancialSummary.by_financer[type]?.remaining_amount_cents ?? balance);
+
+    // Money earmarked for cash is still unpaid but should not be scheduled as a debit.
+    const cashReserved=c.cashPaymentEnabled?Math.max(0,Math.round((c.cashPlanned-c.cashPaid)*100)):0;
+    const dossierOutstanding=Math.round(Math.max(0,c.resteAPayer)*100);
+    let balanceToCover=Math.min(outstanding,Math.max(0,dossierOutstanding-cashReserved));
+    if (currentFinancialSummary?.by_financer && activeLines.every(line=>['PERSONNEL','AUTRE'].includes(line.financingType))) {
+      const byFinancer=['PERSONNEL','AUTRE'].reduce((sum,type)=>{
+        const balance=scheduleBalances(activeLines.filter(line=>line.financingType===type)).outstanding;
+        const unpaid=currentFinancialSummary.by_financer[type]?.remaining_amount_cents;
+        if (unpaid==null) return sum+balance;
+        return sum+Math.min(balance,Math.max(0,unpaid-(type==='PERSONNEL'?cashReserved:0)));
       },0);
-      if (lines.every(line=>['PERSONNEL','AUTRE'].includes(line.financingType))) balanceToCover=Math.min(balanceToCover,byFinancer);
+      balanceToCover=Math.min(balanceToCover,byFinancer);
     }
-    const gap = balanceToCover-scheduled;
-    let notice = '';
-    if (bankReady && paidNeedsSync) {
-      notice='Les paiements enregistrés et l’historique Qonto diffèrent. Actualisez le suivi des encaissements pour vérifier le solde.';
-    } else if (bankReady && !exact) {
-      notice='Qonto confirme les prochaines échéances affichées. Le montant total restant de la programmation est à vérifier.';
-    } else if (bankReady && confirmed.length!==upcoming.length) {
-      notice='Une programmation attend confirmation. Le reste à programmer pourra ensuite être calculé.';
-    } else if (complete && gap>0) {
-      notice=`Il reste <strong>${money(gap)} à programmer</strong> pour couvrir le solde.`;
-    } else if (complete && gap<0 && scheduled>0) {
-      notice=`Les prélèvements programmés dépassent le reste à payer de <strong>${money(-gap)}</strong>.`;
+    const gap=balanceToCover-scheduled;
+    const date=confirmed.flatMap(row=>[row.date,...(row.open_collections || []).map(item=>item.date)])
+      .filter(day=>day && day>=today).sort()[0];
+    const firstDate=showDate && date?`<small>Prochaine date · ${scheduleDate(date)}</small>`:'';
+    let result;
+    let tone='';
+    if (paidNeedsSync) {
+      result='Encaissements à rapprocher avec Qonto';
+    } else if (upcoming.some(row=>row.status==='pending_mandate_signature') ||
+               (!upcoming.length && activeLines.some(line=>line.qonto_direct_debit_mandate_id && lineHasPendingMandate(line)))) {
+      result='Signature du mandat en attente';
+    } else if (confirmed.length!==upcoming.length) {
+      result='Confirmation de Qonto en attente';
+    } else if (!exact) {
+      result='Nombre de prélèvements restant à confirmer';
+    } else if (planned<=0) {
+      result='Montant initial à renseigner';
+    } else if (gap>0) {
+      tone='is-due';
+      result=`<strong>${fmtMoney(gap/100)}</strong> à programmer`;
+    } else if (gap<0) {
+      tone='is-due';
+      result=`<strong>${fmtMoney(-gap/100)}</strong> programmés en trop`;
+    } else if (scheduled>0) {
+      tone='is-covered';
+      result='Solde SEPA entièrement programmé';
+    } else {
+      result='Aucun prélèvement supplémentaire à programmer';
     }
-    const count = confirmed.reduce((sum,row)=>sum+(row.remaining_count || 1),0);
-    return scheduleStats([
-      ['Programmé sur l’échéancier SEPA',scheduledText,'blue'],
-      ['Reste à programmer',complete && !paidNeedsSync?money(Math.max(0,gap)):'—','amber']
-    ]) + (notice?`<p class="schedule-notice"><span>${notice}</span></p>`:'') +
-      (bankReady && count?`<p class="schedule-help">${exact?'':'Au moins '}${count} prélèvement${count>1?'s':''} programmé${count>1?'s':''}${date?` · Prochaine date : ${scheduleDate(date)}`:''}</p>`:'');
+    const label=confirmed.some(row=>['processing','pending','on_hold'].includes(row.status))?'Programmé ou en cours chez Qonto':'Programmé chez Qonto';
+    const program=confirmed.length || !upcoming.length?`<strong>${exact?'':'Au moins '}${fmtMoney(scheduled/100)}</strong>`:'Aucun montant confirmé';
+    return `<section class="schedule-sepa">${header}<div class="schedule-sepa-body"><div><span class="schedule-sepa-label">${label}</span>${program}${firstDate}</div>
+      <p class="schedule-sepa-result ${tone}">${result}</p></div></section>`;
   }
 
   function reviewSelection(lines) {
@@ -2297,24 +2338,69 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
 }
 
   function dossierBalance(c) {
-    const percent = Math.min(100,Math.max(0,Math.round(c.progressPaiement)));
-    return `<div class="schedule-balance"><div class="schedule-section-title">Montants du dossier <small>Hors CPF</small></div>${scheduleStats([
-      ['Total prévu',fmtMoney(c.objectifFacturation),'blue'],
-      ['Déjà payé',fmtMoney(c.totalPaye),'green'],
-      ['Reste à payer',fmtMoney(Math.max(0,c.resteAPayer)),c.resteAPayer>0?'amber':'green']
-    ])}${c.objectifFacturation>0?`<div class="schedule-progress"><progress max="100" value="${percent}" aria-label="Part du dossier payée"></progress><span>${percent} % payé</span></div>`:''}</div>`;
+    const balance=Math.max(0,c.resteAPayer);
+    return `<section class="schedule-balance" aria-label="Montants du dossier hors CPF">
+      <div class="schedule-balance-label">Montants du dossier <span>Hors CPF</span></div>
+      ${scheduleStats([['Total prévu',fmtMoney(c.objectifFacturation)],['Déjà payé',fmtMoney(c.totalPaye),'green'],
+        ['Reste à payer',fmtMoney(balance),balance>0?'amber':'green']])}</section>`;
   }
 
-  function scheduleEventsTable(events, empty, ascending=false) {
-    const sorted = [...events].sort((a,b)=> (ascending?1:-1)*String(a.date||'').localeCompare(String(b.date||'')));
-    const rows = sorted.map(event=>{
-      const details = (event.details || []).filter(Boolean).map(value=>`<span>${esc(value)}</span>`).join('');
-      const title = details
+  function scheduleEventDate(value) {
+    const raw=String(value || '').trim();
+    const legacy=raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const iso=legacy?`${legacy[3]}-${legacy[2]}-${legacy[1]}`:raw;
+    const match=iso.match(/^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/i);
+    if (!match) return null;
+    const check=new Date(match[1]+'T12:00:00Z');
+    if (!Number.isFinite(check.getTime()) || check.toISOString().slice(0,10)!==match[1]) return null;
+    if (!match[3]) return {day:match[1],time:'',stamp:null};
+    const instant=new Date(iso);
+    if (!Number.isFinite(instant.getTime())) return null;
+    const local=instant.toLocaleString('sv-SE',{timeZone:'Europe/Paris',dateStyle:'short',timeStyle:'medium'});
+    const [day,time]=local.split(' ');
+    return {day,time:time.slice(0,5),stamp:instant.getTime()};
+  }
+
+  function scheduleEventsTable(events, empty, ascending=false, view='') {
+    const dated=[], undated=[];
+    for (const event of events) {
+      const when=scheduleEventDate(event.date);
+      (when?dated:undated).push({event,when});
+    }
+    const direction=ascending?1:-1;
+    dated.sort((a,b)=>{
+      const day=direction*a.when.day.localeCompare(b.when.day);
+      if (day) return day;
+      if (a.when.stamp!=null && b.when.stamp!=null && a.when.stamp!==b.when.stamp) {
+        return direction*(a.when.stamp-b.when.stamp);
+      }
+      // A known day without a time cannot be ordered within that day's timed actions.
+      if (a.when.time || b.when.time) return Number(!a.when.time)-Number(!b.when.time);
+      return String(a.event.key).localeCompare(String(b.event.key));
+    });
+    undated.sort((a,b)=>String(a.event.plannedDate || '9999').localeCompare(String(b.event.plannedDate || '9999')) ||
+      String(a.event.key).localeCompare(String(b.event.key)));
+    function row({event,when}) {
+      const planned=scheduleEventDate(event.plannedDate)?.day;
+      const details=(event.details || []).filter(Boolean).map(value=>`<span>${esc(value)}</span>`).join('');
+      const title=details
         ? `<details data-operation-id="${esc(event.key)}"><summary>${esc(event.label)}</summary><div class="schedule-operation">${details}</div></details>`
         : esc(event.label);
-      return `<tr><td>${scheduleDate(String(event.date||'').slice(0,10))}</td><td>${title}<small>${esc(event.source)}</small></td><td>${badge(...event.state)}</td><td>${event.amount==null?'—':fmtMoney(event.amount)}</td></tr>`;
-    });
-    return scheduleTable(['Date','Opération','Statut','Montant'],rows,empty);
+      const context=[when && planned && (!event.dateRole || planned!==when.day) && 'Échéance du '+formatIsoDateFr(planned),
+        event.context,event.source].filter(Boolean).join(' · ');
+      const date=when?`<time datetime="${esc(when.stamp!=null?new Date(when.stamp).toISOString():when.day)}">${scheduleDate(when.day)}</time>`:
+        planned?`<time datetime="${esc(planned)}">${scheduleDate(planned)}</time>`:'—';
+      const subdate=when?[when.time,event.dateRole].filter(Boolean).join(' · '):'';
+      return `<tr><td>${date}${subdate?`<small class="schedule-event-time">${esc(subdate)}</small>`:''}</td><td>${title}<small class="schedule-event-context">${esc(context)}</small></td><td>${badge(...event.state)}</td><td>${event.amount==null?'—':fmtMoney(event.amount)}</td></tr>`;
+    }
+    const headings=[ascending?'Date prévue':'Date','Opération','Situation',view==='history'?'Montant concerné':'Montant'];
+    const timeline=dated.length || !undated.length?scheduleTable(headings,dated.map(row),empty):'';
+    if (!undated.length) return timeline;
+    const cancellations=undated.every(({event})=>event.undatedCancellation);
+    const heading=cancellations?'Annulations sans date communiquée par Qonto':
+      ascending?'Échéances en attente de date':'Opérations sans date communiquée';
+    const dateColumn=undated.some(({event})=>event.plannedDate)?'Échéance prévue':'Échéance';
+    return timeline+`<details class="schedule-undated" data-operation-id="undated-${esc(view || (ascending?'next':'events'))}"><summary>${heading} (${undated.length})</summary>${scheduleTable([dateColumn,...headings.slice(1)],undated.map(row),'')}</details>`;
   }
 
   function transferEvents(lines) {
@@ -2332,9 +2418,9 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
           }
           continue;
         }
-        const state = {completed:['Encaissé','green'],reversed:['Contrepassé','red'],ambiguous:['À vérifier','orange']};
+        const state = {completed:['Encaissé','green'],reversed:['Annulé par la banque','red'],ambiguous:['À vérifier','orange']};
         transfers.set(id,{
-          key:'transfer-'+id, lineId:line.id, status:record.status, date:record.paid_at || record.settled_at,
+          key:'transfer-'+id, lineId:line.id, status:record.status, date:record.paid_at || record.settled_at, dateRole:'Virement reçu',
           label:record.payer_name || record.label || 'Virement reçu', source:'Virement · '+bankTransferLabel(line),
           amount:Number(record.amount_cents)/100, state:state[record.status] || ['À vérifier','orange'],
           details:[record.reference, line.qontoInvoiceNumber, 'Référence Qonto · '+id]
@@ -2349,55 +2435,106 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   }
 
   function debitActivity(lines,today) {
-    const history = bankSnapshot?.history || [];
-    const upcoming = bankSnapshot?.upcoming || [];
-    const issued = upcoming.flatMap(row=>row.open_collections || (row.subscription_id?[row]:[]));
-    const remote = [...history,...issued];
-    const historicalIds = new Set(history.map(row=>row.id));
-    // A subscription can still be awaiting collection after its scheduled date.
-    const overdue = upcoming.filter(row=>!row.subscription_id && row.date && row.date<today &&
-      !(row.open_collections||[]).some(item=>item.date===row.date));
-    const events = [...remote,...overdue].map(row=>({
-      key:'debit-'+row.id, date:row.transaction_date || row.date, label:'Prélèvement', source:'Qonto',
-      state:bankStates[row.status] || ['À vérifier','orange'], amount:row.amount_cents/100,
-      details:[row.transaction_date && row.date && row.transaction_date!==row.date && 'Présentation le '+formatIsoDateFr(row.date),
-        row.reference, (installmentFailureReasonLabel(row.reason)==='Motif bancaire non répertorié'?row.reason:installmentFailureReasonLabel(row.reason)), row.reason_code, 'Référence Qonto · '+row.id],
-      terminal:historicalIds.has(row.id)
-    }));
-    const remoteDates = new Set([...remote,...overdue].map(row=>(row.subscription_id || row.id)+'/'+row.date));
-    const remoteIds = new Set(remote.map(row=>row.id));
-    for (const change of bankSnapshot?.changes || []) {
-      if (change.kind==='collection') remoteIds.add(change.id);
-      events.push({key:'cancel-'+change.id, date:change.date, terminal:true, historyOnly:true,
-        label:change.kind==='subscription'?'Programmation annulée':'Prélèvement annulé',source:'Qonto',
-        amount:change.amount_cents/100,state:bankStates.canceled,details:[change.planned_date &&
-          'Date prévue · '+formatIsoDateFr(change.planned_date), change.reference, 'Référence Qonto · '+change.id]});
+    const history=bankSnapshot?.history || [], upcoming=bankSnapshot?.upcoming || [];
+    const issued=upcoming.flatMap(row=>row.open_collections || (row.subscription_id?[row]:[]));
+    const historicIds=new Set(history.map(row=>row.id));
+    const remote=new Map();
+    for (const row of [...issued,...history]) remote.set(row.id,row);
+    const overdue=upcoming.filter(row=>!row.subscription_id && row.date && row.date<today &&
+      !(row.open_collections || []).some(item=>item.date===row.date));
+    const remoteDates=new Set([...remote.values(),...overdue].map(row=>(row.subscription_id || row.id)+'/'+row.date));
+    const collectionIds=new Set(remote.keys());
+    const events=[], pastCancellations=[];
+    for (const row of [...remote.values(),...overdue]) {
+      const booked=row.transaction_at || row.transaction_date;
+      const isCollection=remote.has(row.id);
+      const reason=installmentFailureReasonLabel(row.reason);
+      events.push({key:(isCollection?'debit-':'schedule-')+row.id,
+        date:booked || row.date,dateRole:booked?'Relevé bancaire':isCollection?'Présentation':'Échéance prévue',
+        plannedDate:row.date,label:isCollection?'Prélèvement':'Prélèvement prévu',source:'Qonto',
+        state:bankStates[row.status] || ['Statut à vérifier','orange'],amount:row.amount_cents/100,
+        details:[row.reference,reason==='Motif bancaire non répertorié'?row.reason:reason,row.reason_code,'Référence Qonto · '+row.id],
+        bankId:isCollection?row.id:null,terminal:historicIds.has(row.id)});
     }
-    const subscriptions = new Set(upcoming.map(row=>row.subscription_id || row.id));
-    const localUpcoming = [];
-    for (const line of lines) {
-      const saved = line.directDebitInstallments || [];
-      const items = saved.length || bankSnapshot ? saved : (line.initialDebitSchedule || []);
-      for (const [index,item] of items.entries()) {
-        const cid = item.qonto_direct_debit_collection_id, sid = item.qonto_direct_debit_subscription_id;
-        const status = item.qonto_collection_status_raw || item.status || 'scheduled';
-        const state = bankStates[status];
-        const terminal = state && ['green','red','gray'].includes(state[1]);
-        if (cid && remoteIds.has(cid) && !item.tracking_removed_at) continue;
-        const date = installmentDate(item);
-        // Local projections of a bank series are not additional debits.
-        if (!terminal && !item.tracking_pending_qonto && !item.tracking_removed_at && sid &&
-            ((date>=today && subscriptions.has(sid)) || remoteDates.has(sid+'/'+date))) continue;
-        const local = {key:'local-'+line.id+'-'+index, date, label:'Échéance', source:'Suivi local',
-          amount:Number(item.amount), state:item.tracking_removed_at?['Retirée du suivi','gray']:
-            terminal?state:[saved.length?'À confirmer':'Prévue au plan initial','orange'],
-          details:[line.qontoInvoiceNumber, cid], terminal:terminal || Boolean(item.tracking_removed_at)};
-        if (!local.terminal && !item.excluded_from_schedule_totals && (!date || date>=today)) localUpcoming.push(local);
-        else if (local.terminal || !item.excluded_from_schedule_totals) events.push(local);
+    // Mark distinct presentations explicitly when their day, amount and result coincide.
+    const sameDay=new Map();
+    for (const event of events.filter(item=>item.bankId)) {
+      const key=[scheduleEventDate(event.date)?.day,event.amount,event.state[0]].join('/');
+      if (!sameDay.has(key)) sameDay.set(key,[]);
+      sameDay.get(key).push(event);
+    }
+    for (const group of sameDay.values()) {
+      if (group.length<2) continue;
+      const suffixes=new Set(group.map(e=>String(e.bankId).slice(-8)));
+      for (const e of group) {
+        const ref=String(e.bankId);
+        e.context='Réf. '+(ref.length>8 && suffixes.size===group.length?'…'+ref.slice(-8):ref);
       }
     }
-    return {past:events.filter(e=>!e.historyOnly && e.date && (e.date<today || (e.date===today && e.terminal))),
-      history:events.filter(e=>e.terminal || (e.date && e.date<=today)),localUpcoming};
+    const changes=bankSnapshot?.changes || [];
+    const bySubscription=new Map();
+    for (const change of changes.filter(item=>item.kind==='collection')) {
+      collectionIds.add(change.id);
+      if (!change.subscription_id) continue;
+      if (!bySubscription.has(change.subscription_id)) bySubscription.set(change.subscription_id,[]);
+      bySubscription.get(change.subscription_id).push(change);
+    }
+    const paired=new Map();
+    const cancelledPrograms=new Set(changes.filter(change=>change.kind==='subscription').map(change=>change.id));
+    for (const sub of changes.filter(item=>item.kind==='subscription' && item.frequency==='one_off')) {
+      const children=bySubscription.get(sub.id) || [];
+      if (children.length!==1) continue;
+      const child=children[0];
+      // Combine only the same identified one-off, retaining its two Qonto references.
+      if (sub.amount_cents===child.amount_cents && sub.planned_date===child.planned_date && (sub.date || '')===(child.date || '')) paired.set(child.id,sub);
+    }
+    const pairedSubs=new Set([...paired.values()].map(item=>item.id));
+    for (const change of changes) {
+      if (change.kind==='subscription' && pairedSubs.has(change.id)) continue;
+      const isDebit=change.kind==='collection', parent=isDebit?paired.get(change.id):null;
+      const event={key:'cancel-'+change.kind+'-'+change.id,date:change.date,plannedDate:change.planned_date,
+        dateRole:'Annulation',label:parent?'Prélèvement et programmation annulés':isDebit?'Prélèvement annulé':'Programmation annulée',
+        source:'Qonto',amount:change.amount_cents/100,state:['Annulé','gray'],undatedCancellation:true,
+        details:[change.reference || parent?.reference,'Référence Qonto · '+change.id,parent && 'Programmation Qonto · '+parent.id],
+        terminal:true,historyOnly:true};
+      events.push(event);
+      if (isDebit && change.planned_date && change.planned_date<today) {
+        pastCancellations.push({...event,date:change.planned_date,dateRole:'Échéance prévue'});
+      }
+    }
+    const subscriptions=new Set(upcoming.map(row=>row.subscription_id || row.id));
+    const localUpcoming=[];
+    for (const line of lines) {
+      const saved=line.directDebitInstallments || [];
+      const items=saved.length || bankSnapshot ? saved : (line.initialDebitSchedule || []);
+      for (const [index,item] of items.entries()) {
+        const cid=item.qonto_direct_debit_collection_id, sid=item.qonto_direct_debit_subscription_id;
+        const state=bankStates[item.qonto_collection_status_raw || item.status || 'scheduled'];
+        const terminal=Boolean(state && ['green','red','gray'].includes(state[1]));
+        if (cid && collectionIds.has(cid)) continue;
+        // A removal is an edit event; its due date is never the day of that edit.
+        if (item.tracking_removed_at && (!terminal || state[1]==='gray')) continue;
+        if (state?.[1]==='gray' && !cid && cancelledPrograms.has(sid)) continue;
+        const date=installmentDate(item);
+        if (!terminal && !item.tracking_pending_qonto && sid &&
+            ((date>=today && subscriptions.has(sid)) || remoteDates.has(sid+'/'+date))) continue;
+        const cancelled=state?.[1]==='gray';
+        const actionDate=cancelled?(item.canceled_at || item.cancelled_at):(terminal && date>today?null:date);
+        const local={key:'local-'+line.id+'-'+index,date:actionDate,plannedDate:date,
+          dateRole:cancelled?'Annulation':'Échéance prévue',label:'Échéance de la fiche',source:'Suivi local',
+          amount:Number(item.amount),state:terminal?state:[saved.length?'À confirmer dans Qonto':'Prévue au plan initial','orange'],
+          details:[line.qontoInvoiceNumber,cid && 'Référence Qonto · '+cid],terminal};
+        if (!terminal && !item.excluded_from_schedule_totals && (!date || date>=today)) localUpcoming.push(local);
+        else if (terminal || !item.excluded_from_schedule_totals) events.push(local);
+      }
+    }
+    const past=[], journal=[];
+    for (const event of events) {
+      const day=scheduleEventDate(event.date)?.day;
+      if (event.terminal || (day && day<=today)) journal.push(event);
+      if (!event.historyOnly && day && (day<today || (day===today && event.terminal))) past.push(event);
+    }
+    return {past:[...past,...pastCancellations],history:journal,localUpcoming};
   }
 
   function cashScheduleEvents(c) {
@@ -2414,35 +2551,60 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   }
 
   function scheduleAuditEvents(lines) {
-    const labels = {add:'Échéance ajoutée',update:'Échéance modifiée',delete:'Échéance retirée'};
-    return lines.flatMap(line=>(line.financial_tracking_override?.edit_history || []).map((edit,i)=>{
-      const before = edit.before || [], after = edit.after || [];
-      const index = after.findIndex((row,j)=>!before[j] || installmentDate(row)!==installmentDate(before[j])
-        || Number(row.amount)!==Number(before[j].amount) || row.tracking_removed_at!==before[j].tracking_removed_at);
-      const term = row=>row && [formatIsoDateFr(installmentDate(row)),fmtMoney(row.amount)].filter(Boolean).join(' · ');
-      return {key:'edit-'+line.id+'-'+i,date:edit.at,label:labels[edit.action] || 'Modification de l’échéancier',
-        source:'Suivi local',state:['Enregistrée','blue'],amount:after[index]?.amount,
-        details:[before[index] && 'Avant · '+term(before[index]),after[index] && 'Échéance · '+term(after[index]),edit.by]};
-    }));
+    const labels={add:'Échéance ajoutée au suivi',update:'Échéance modifiée sur la fiche',delete:'Échéance retirée du suivi'};
+    const events=[];
+    for (const line of lines) {
+      const removed=new Set();
+      const removalKey=(row,index)=>JSON.stringify([row.qonto_direct_debit_collection_id || row.schedule_index || row.index || index+1,row.tracking_removed_at]);
+      for (const [i,edit] of (line.financial_tracking_override?.edit_history || []).entries()) {
+        const before=edit.before || [], after=edit.after || [];
+        let index=after.findIndex((row,j)=>!before[j] || installmentDate(row)!==installmentDate(before[j]) ||
+          Number(row.amount)!==Number(before[j].amount) || row.tracking_removed_at!==before[j].tracking_removed_at);
+        if (edit.action==='delete' && before.length>after.length && index===-1) index=after.length;
+        const previous=before[index], current=after[index];
+        const affected=edit.action==='delete'?previous || current:current;
+        if (edit.action==='delete' && current?.tracking_removed_at) removed.add(removalKey(current,index));
+        const changes=[];
+        if (edit.action==='update' && previous && current) {
+          if (installmentDate(previous)!==installmentDate(current)) changes.push('Ancienne date · '+formatIsoDateFr(installmentDate(previous)));
+          if (Number(previous.amount)!==Number(current.amount)) changes.push('Ancien montant · '+fmtMoney(previous.amount));
+        }
+        events.push({key:'edit-'+line.id+'-'+i,date:edit.at || current?.tracking_removed_at,
+          plannedDate:affected && installmentDate(affected),label:labels[edit.action] || 'Modification du calendrier',
+          source:'Fiche stagiaire',state:['Sans mouvement bancaire','blue'],amount:affected?.amount,
+          context:changes.join(' · '),details:[edit.by && 'Modifié par '+edit.by,line.qontoInvoiceNumber]});
+      }
+      // Older edits can outlive the capped audit log. Keep their actual removal timestamp.
+      for (const [i,row] of (line.directDebitInstallments || []).entries()) {
+        if (!row.tracking_removed_at || removed.has(removalKey(row,i))) continue;
+        events.push({key:'removed-'+line.id+'-'+i,date:row.tracking_removed_at,plannedDate:installmentDate(row),label:labels.delete,
+          source:'Fiche stagiaire',state:['Sans mouvement bancaire','blue'],amount:row.amount,details:[line.qontoInvoiceNumber]});
+      }
+    }
+    return events;
   }
+
 
   function financialScheduleSummary(c,lines,upcoming,today) {
     const methods=paymentMethodTotals(c,currentLines,currentFinancialSummary);
-    const groups = [
-      ['Financement de la formation',[
-        ['Prix de la formation',fmtMoney(c.prixFormation)],['CPF',fmtMoney(c.montantCpf)],
-        ['Personnel',fmtMoney(c.personalFundingPlanned)],['Autre financement',fmtMoney(c.otherFundingPlanned)]
-      ]],
-      ['Facturation hors CPF',[
-        ['Total facturé',fmtMoney(c.totalFacture),'blue'],['Reste à facturer',fmtMoney(Math.max(0,c.resteAFacturer)),'amber']
-      ]],
-      ['Encaissements hors CPF',methods.length?methods.map(([label,cents])=>[label,fmtMoney(cents/100),'green']):
-        [['Encaissements enregistrés',fmtMoney(0)]]]
+    const financing=[['Prix de la formation',c.prixFormation],...[
+      ['CPF',c.montantCpf],['Financement personnel',c.personalFundingPlanned],['Autres financements',c.otherFundingPlanned]
+    ].filter(([,amount])=>amount>0)];
+    const billed=[['Facturé',c.totalFacture]];
+    if (c.resteAFacturer>0.005) billed.push(['À facturer',c.resteAFacturer]);
+    if (c.resteAFacturer< -0.005) billed.push(['Facturé au-delà du montant prévu',-c.resteAFacturer]);
+    const groups=[
+      ['Financement',financing],
+      ['Facturation hors CPF',billed],
+      ['Règlements reçus hors CPF',methods.map(([method,cents])=>[method,cents/100])]
     ];
-    if (c.totalPaye>c.objectifFacturation) groups[2][1].push(['Trop-perçu',fmtMoney(c.totalPaye-c.objectifFacturation),'amber']);
-    const sepa = updatedScheduleSummary(lines,upcoming,c,today);
-    const groupsHtml = groups.map(([title,entries])=>`<section class="schedule-group"><h4>${title}</h4>${scheduleStats(entries)}</section>`).join('');
-    return groupsHtml+(sepa?`<section class="schedule-group"><h4>Prélèvements SEPA</h4>${sepa}</section>`:'');
+    const detail=groups.map(([title,rows])=>`<section><h5>${title}</h5>${rows.length?`<dl>${rows.map(([label,value])=>
+      `<div><dt>${esc(label)}</dt><dd>${fmtMoney(value)}</dd></div>`).join('')}</dl>`:'<p>Aucun règlement reçu.</p>'}</section>`).join('');
+    const overpayment=Math.round((c.totalPaye-c.objectifFacturation)*100);
+    const surplus=overpayment>0?`<p class="schedule-surplus"><span>Trop-perçu sur le dossier</span> <strong>${fmtMoney(overpayment/100)}</strong></p>`:'';
+    return surplus+updatedScheduleSummary(lines,upcoming,c,today)+
+      `<details class="schedule-financial-details" data-operation-id="financial-breakdown"><summary>Détail du financement, des factures et des règlements</summary>
+        <div class="schedule-financial-lines">${detail}</div></details>`;
   }
 
   function scheduleReadView(c, canEdit) {
@@ -2453,54 +2615,68 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris'}).format(new Date());
     const views=[['plan','Échéancier initial'],['past','Échéances passées'],['next','Prochaines échéances'],
       ['history','Historique complet'],['transfers','Virements'],['summary','Synthèse financière']];
-    const tabs=views.map(([key,title])=>`<button type="button" role="tab" id="schedule-tab-${key}" aria-selected="${key===scheduleView}" aria-controls="schedule-panel" tabindex="${key===scheduleView?0:-1}" data-schedule-view="${key}">${title}</button>`).join('');
-    const bankView=['past','next','history','summary'].includes(scheduleView);
-    const stamp=bankSnapshot?new Date(bankSnapshot.checked_at).toLocaleString('fr-FR',{timeZone:'Europe/Paris',dateStyle:'short',timeStyle:'short'}):'';
-    const source=bankLoading?'Lecture de Qonto…':[bankError,stamp?`Dernière lecture Qonto le ${stamp}`:''].filter(Boolean).join(' · ');
+    const tabs=views.map(([key,title])=>{
+      const count=key==='past' && c.nombreRejets>0
+        ? ` <span class="schedule-tab-count" title="Rejets à traiter">${c.nombreRejets} rejet${c.nombreRejets>1?'s':''}</span>` : '';
+      return `<button type="button" role="tab" id="schedule-tab-${key}" aria-selected="${key===scheduleView}" aria-controls="schedule-panel" tabindex="${key===scheduleView?0:-1}" data-schedule-view="${key}">${title}${count}</button>`;
+    }).join('');
+    const bankView=['past','next','history','summary'].includes(scheduleView) && hasBankSchedule();
+    const checked=Date.parse(bankSnapshot?.checked_at || '');
+    const stamp=Number.isFinite(checked)?new Date(checked).toLocaleString('fr-FR',{timeZone:'Europe/Paris',dateStyle:'short',timeStyle:'short'}):'';
+    const source=bankLoading?'Lecture de Qonto en cours…':[
+      bankError,stamp?`Dernière lecture Qonto le ${stamp}`:''
+    ].filter(Boolean).join(' · ');
     let content;
     switch (scheduleView) {
       case 'plan': {
         const total=initial.reduce((sum,row)=>sum+Math.round(Number(row.amount)*100),0);
-        content=(initial.length?`<h4>Plan initial <small>${initial.length} échéance${initial.length>1?'s':''} · ${fmtMoney(total/100)}</small></h4>`:'')+
+        const totalDiffers=total!==Math.round(c.objectifFacturation*100);
+        content=(initial.length?`<div class="schedule-view-head"><h4>Échéances convenues au départ</h4><span>${initial.length} échéance${initial.length>1?'s':''}${totalDiffers?' · '+fmtMoney(total/100)+' au plan initial':''}</span></div>`:'')+
           initialTable(initial,new Set(initial.map(row=>row.line.id)).size>1);
         break;
       }
       case 'past':
-        content=scheduleEventsTable(debitActivity(lines,today).past,hasBankSchedule() && !bankSnapshot?'Les échéances bancaires passées seront affichées après lecture de Qonto.':'Aucune échéance passée enregistrée.');
+        content='<div class="schedule-view-head"><h4>Échéances arrivées à terme</h4><span>Plus récentes en premier</span></div>'+
+          scheduleEventsTable(debitActivity(lines,today).past,hasBankSchedule() && !bankSnapshot?'Les échéances bancaires passées seront affichées après lecture de Qonto.':'Aucune échéance passée sur ce dossier.');
         break;
       case 'next': {
-        const next=upcoming.flatMap(row=>{
-          const issued=row.open_collections || [];
-          if (issued.length && (issued.length===row.remaining_count || (row.date && row.date<today))) {
-            return issued.filter(item=>!item.date || item.date>=today);
-          }
-          return !row.date || row.date>=today?[row]:[];
-        }).sort((a,b)=>(a.date || '9999').localeCompare(b.date || '9999'));
+        const next=nextBankOperations(upcoming,today);
         const local=debitActivity(lines,today).localUpcoming;
-        content=updatedScheduleSummary(lines,upcoming,c,today)+sameDayNotices(next);
-        if (bankSnapshot) content+=operationTable(next);
-        else if (!local.length || hasBankSchedule()) content+=`<p class="schedule-empty">${bankLoading?'Chargement des programmations Qonto…':hasBankSchedule()?'Programmations Qonto indisponibles.':'Aucune programmation Qonto rattachée à cette fiche.'}</p>`;
-        if (local.length) content+='<h4>Échéances du suivi local à confirmer</h4>'+scheduleEventsTable(local,'',true);
+        const coverage=updatedScheduleSummary(lines,upcoming,c,today);
+        content=coverage+sameDayNotices(next);
+        if (bankSnapshot) content+='<div class="schedule-view-head"><h4>Calendrier Qonto</h4></div>'+operationTable(next);
+        else if (!coverage && !local.length) content+=`<p class="schedule-empty">${bankLoading?'Chargement des programmations Qonto…':hasBankSchedule()?'Programmations Qonto indisponibles.':'Aucune programmation Qonto rattachée à cette fiche.'}</p>`;
+        if (local.length) content+='<div class="schedule-view-head"><h4>Prévisions de la fiche à confirmer</h4></div>'+scheduleEventsTable(local,'',true);
         break;
       }
       case 'history':
-        content=scheduleEventsTable([...debitActivity(lines,today).history,...transferEvents(currentLines),...cashScheduleEvents(c),...scheduleAuditEvents(lines)],hasBankSchedule() && !bankSnapshot?'Les opérations bancaires seront affichées après lecture de Qonto.':'Aucune opération enregistrée dans l’historique.');
+        content='<div class="schedule-view-head"><h4>Journal des opérations</h4><span>Plus récentes en premier</span></div>'+
+          scheduleEventsTable([...debitActivity(lines,today).history,...transferEvents(currentLines),...cashScheduleEvents(c),...scheduleAuditEvents(lines)],hasBankSchedule() && !bankSnapshot?'Les opérations bancaires seront affichées après lecture de Qonto.':'Aucune opération dans l’historique.',false,'history');
         break;
       case 'transfers':
-        content=`<div class="schedule-editor-head"><h4>Virements rattachés au dossier</h4>${readOnly?'':'<button type="button" class="btn btn-primary" data-schedule-transfer>Rattacher un virement</button>'}</div>`+
+        content=`<div class="schedule-view-head"><h4>Virements rattachés au dossier</h4>${readOnly?'':'<button type="button" class="btn btn-primary" data-schedule-transfer>Rattacher un virement</button>'}</div>`+
           scheduleEventsTable(transferEvents(currentLines),'Aucun virement rattaché à ce dossier.');
         break;
       case 'summary':
         content=financialScheduleSummary(c,lines,upcoming,today);
         break;
     }
-    const reviews=c.nombreRejets?`<div class="schedule-notice"><span>${c.nombreRejets===1?'1 rejet à traiter':`${c.nombreRejets} rejets à traiter`}</span>${!readOnly?`<button type="button" data-ack-rejections ${reviewBusy?'disabled':''}>Rejet traité</button>`:''}</div>`:
-      c.nombreRejetsTraites?'<div class="schedule-review-done">✓ Rejet traité</div>':'';
+    let review='';
+    if (scheduleView==='past' && c.nombreRejets) {
+      const plural=c.nombreRejets>1;
+      const label=plural?'Marquer ces rejets comme traités':'Marquer ce rejet comme traité';
+      review=`<div class="schedule-notice schedule-rejections"><strong>${c.nombreRejets} rejet${plural?'s':''} à traiter</strong>
+        ${readOnly?'':`<button type="button" data-ack-rejections ${reviewBusy?'disabled':''}>${label}</button>`}</div>`;
+    } else if (scheduleView==='past' && c.nombreRejetsTraites) {
+      review=`<p class="schedule-review-done">${c.nombreRejetsTraites} rejet${c.nombreRejetsTraites>1?'s traités':' traité'}</p>`;
+    }
+    const actions=bankView || (canEdit && scheduleView==='next')?`<div class="schedule-actions">
+      ${bankView?`<small role="status">${esc(source)}</small><button type="button" data-bank-refresh aria-disabled="${bankLoading}">Actualiser Qonto</button>`:''}
+      ${canEdit && scheduleView==='next'?'<button type="button" data-edit-schedule>Modifier le suivi local</button>':''}</div>`:'';
     return `<div class="schedule-nav" role="tablist" aria-label="Échéancier et prélèvements">${tabs}</div>
       <div class="schedule-content" id="schedule-panel" role="tabpanel" aria-labelledby="schedule-tab-${scheduleView}" tabindex="0">
-      ${dossierBalance(c)}${content}${reviews}<div class="schedule-actions">${bankView?`<small role="status">${esc(source)}</small>`:''}
-      ${bankView && hasBankSchedule()?`<button type="button" data-bank-refresh ${bankLoading?'disabled':''}>Actualiser Qonto</button>`:''}
-      ${canEdit && scheduleView==='next'?'<button type="button" data-edit-schedule>Modifier le suivi local</button>':''}</div></div>`;
+      ${dossierBalance(c)}${content}${review}${actions}</div>`;
+
   }
 
   function bindRejectionReview(container) {
@@ -2536,17 +2712,33 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     if (!container) return;
     const feedback='<div id="installmentEditFeedback" role="status" aria-live="polite" hidden></div>';
     if (!editingSchedule || readOnly) {
+      const active=document.activeElement;
+      let focusSelector='';
+      if (container.contains(active)) {
+        if (active.id) focusSelector='#'+CSS.escape(active.id);
+        else if (active.matches('summary') && active.parentElement.dataset.operationId) {
+          focusSelector='[data-operation-id="'+CSS.escape(active.parentElement.dataset.operationId)+'"] > summary';
+        } else {
+          const action=['data-bank-refresh','data-ack-rejections','data-schedule-transfer','data-edit-schedule','data-schedule-target'].find(name=>active.hasAttribute(name));
+          if (action) focusSelector='['+action+']';
+        }
+      }
       const expanded = new Set([...container.querySelectorAll('[data-operation-id][open]')].map(el=>el.dataset.operationId));
       container.innerHTML=feedback+scheduleReadView(c,!readOnly && candidates.length>0);
       bindRejectionReview(container);
-      container.querySelectorAll('[data-operation-id]').forEach(el=>{ el.open=expanded.has(el.dataset.operationId); });
+      container.querySelectorAll('[data-operation-id]').forEach(el=>{ if(expanded.has(el.dataset.operationId)) el.open=true; });
+      if (focusSelector) container.querySelector(focusSelector)?.focus({preventScroll:true});
       const tabs = [...container.querySelectorAll('[data-schedule-view]')];
+      function showView(key) {
+        scheduleView=key;
+        renderInstallments(c);
+        container.querySelector('[role="tab"][aria-selected="true"]')?.focus({preventScroll:true});
+      }
+      container.querySelectorAll('[data-schedule-target]').forEach(button=>{
+        button.onclick=()=>showView(button.dataset.scheduleTarget);
+      });
       tabs.forEach((button,index)=>{
-        button.onclick=()=>{
-          scheduleView=button.dataset.scheduleView;
-          renderInstallments(c);
-          container.querySelector('[role="tab"][aria-selected="true"]')?.focus();
-        };
+        button.onclick=()=>showView(button.dataset.scheduleView);
         button.onkeydown=event=>{
           const targets={ArrowLeft:(index+tabs.length-1)%tabs.length,ArrowRight:(index+1)%tabs.length,Home:0,End:tabs.length-1};
           if (!(event.key in targets)) return;
