@@ -422,7 +422,6 @@ def test_manual_allocation_denies_viewer_and_external_partner(third_party, monke
 
 
 @pytest.mark.parametrize('change', [
-    {'directDebitInstallments':[{'amount':1250,'status':'scheduled'}]},
     {'manualPaymentInvoiceId':'some-invoice'}, {'amountPaid':100}, {'invoiceStatus':'draft'},
 ])
 def test_manual_allocation_blocks_other_payment_modes(third_party, change):
@@ -505,7 +504,7 @@ def test_canceled_subscription_checks_every_page_before_accepting(third_party, m
     monkeypatch.setattr(gestion_app, 'get_qonto_direct_debit_subscription', lambda sid: {
         'direct_debit_subscription':{'id':sid,'status':'canceled'}})
     collections = Mock(side_effect=[
-        {'direct_debit_collections':[{'status':'failed'}], 'meta':pagination},
+        {'direct_debit_collections':[{'id':'rejected','status':'failed'}], 'meta':pagination},
         {'direct_debit_collections':[{'status':'completed'}], 'meta':{'next_page':0}},
     ])
     monkeypatch.setattr(gestion_app, 'list_qonto_direct_debit_collections', collections)
@@ -542,3 +541,71 @@ def test_historical_rejected_debit_does_not_hide_verified_transfer(third_party, 
     line = gestion_app._billing_lines(data)[0]
     assert line['qonto_invoice']['paid_amount_cents'] == 0
     assert gestion_app.calculate_trainee_financial_summary(trainee, [line])['remaining_total_cents'] == 125000
+
+
+@pytest.mark.parametrize('linked', [True, False])
+def test_transfer_after_partial_debit_keeps_both_receipts_and_reversal(third_party, monkeypatch, linked):
+    client, data, trainee, fetch, detail = third_party
+    if linked:
+        link_unpaid_invoice(third_party, monkeypatch)
+    line = data['billing_lines'][0]
+    line.update(paymentMode='sepa_direct_debit', directDebitInstallments=[
+        {'amount': 400, 'status': 'completed', 'qonto_direct_debit_subscription_id': 'old',
+         'qonto_direct_debit_collection_id': 'settled'},
+        {'amount': 400, 'status': 'failed', 'qonto_direct_debit_subscription_id': 'old'},
+        {'amount': 450, 'status': 'scheduled', 'manual_tracking_entry': True, 'tracking_pending_qonto': True},
+    ])
+    sub = {'id': 'old', 'status': 'completed'}
+    monkeypatch.setattr(gestion_app, 'get_qonto_direct_debit_subscription', lambda sid: sub)
+    ops = [{'id': 'settled', 'amount': {'value': '400.00'}, 'status': 'completed'},
+           {'id': 'reject', 'status': 'declined'}]
+    monkeypatch.setattr(gestion_app, 'list_qonto_direct_debit_collections', lambda **kw: {'collections': ops})
+    search = search_third_party(third_party).json
+    assert search['remaining_cents'] == search['available_cents'] == 85000
+    assert 'selection_token' not in search['transactions'][0]
+    fetch.return_value[0]['amount_cents'] = 85000
+    saved = assign_third_party(third_party)
+    assert saved.status_code == 200, saved.json
+    assert saved.json['paid_cents'] == 125000 and saved.json['remaining_cents'] == 0
+    assert data['billing_lines'][0]['paymentMode'] == 'sepa_direct_debit'
+    def summary():
+        return gestion_app.calculate_trainee_financial_summary(trainee, gestion_app._billing_lines(data))
+    assert summary()['paid_total_cents'] == 125000
+    assert gestion_app._session_financial_report(data, data['sessions'][0])['rows'][0]['invoices'][0]['paid'] == 1250
+    fetch.return_value[0]['status'] = 'reversed'
+    gestion_app._sync_qonto_bank_transfers(data, force=True)
+    assert summary()['paid_total_cents'] == 40000
+    assert summary()['remaining_total_cents'] == 85000
+    assert data['billing_lines'][0]['paymentStatus'] == 'partially_paid'
+
+
+def test_only_unreserved_balance_is_available_and_is_rechecked(third_party, monkeypatch):
+    client, data, trainee, fetch, detail = third_party
+    sub = {'id': 'plan', 'status': 'scheduled', 'schedule_type': 'monthly',
+           'schedule_total_collection_count': 3, 'amount': {'value': '300.00', 'currency': 'EUR'}}
+    data['billing_lines'][0].update(qonto_direct_debit_subscription_id='plan',
+        directDebitInstallments=[{'amount': 300, 'status': 'completed',
+                                 'qonto_direct_debit_subscription_id': 'plan', 'qonto_direct_debit_collection_id': 'paid'}])
+    ops = [{'id': 'paid', 'status': 'completed', 'amount': {'value': '300'}},
+           {'id': 'in-flight', 'status': 'on_hold', 'amount': {'value': '300'}}]
+    monkeypatch.setattr(gestion_app, 'get_qonto_direct_debit_subscription', lambda sid: sub)
+    monkeypatch.setattr(gestion_app, 'list_qonto_direct_debit_collections', lambda **kw: {'collections': ops})
+    fetch.return_value[0]['amount_cents'] = 35001
+    response = search_third_party(third_party)
+    assert response.json['reserved_cents'] == 60000
+    assert response.json['remaining_cents'] == 95000
+    assert response.json['available_cents'] == 35000
+    assert 'selection_token' not in response.json['transactions'][0]
+    fetch.return_value[0]['amount_cents'] = 35000
+    search = search_third_party(third_party)
+    sub['schedule_total_collection_count'] += 1
+    assert assign_third_party(third_party, search).status_code == 409
+    assert not data['billing_lines'][0].get('qontoBankTransfers')
+
+
+def test_whole_balance_reserved_shows_transfer_without_offering_assignment(third_party):
+    third_party[1]['billing_lines'][0]['directDebitInstallments'] = [{'amount': 1250, 'status': 'scheduled'}]
+    result = search_third_party(third_party).json
+    assert result['available_cents'] == 0
+    assert result['transactions'][0]['blocked_reason']
+    assert 'selection_token' not in result['transactions'][0]

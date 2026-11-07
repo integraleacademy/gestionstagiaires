@@ -1811,7 +1811,10 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     const installmentPaid=installments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).reduce((total,i)=>total+Number(i.amount||0),0);
     // Once Qonto has reported a terminal collection, the SEPA history is the
     // authority. This also covers collections completed before the invoice.
-    if(Array.isArray(l.qontoBankTransfers)&&l.qontoBankTransfers.length)return Math.max(Number(l.qontoBankTransferPaidCents||0)/100,Number(e?.paid_amount_cents||0)/100);
+    if(Array.isArray(l.qontoBankTransfers)&&l.qontoBankTransfers.length){
+      const collected=l.qontoCollectedAmountCents!=null?Number(l.qontoCollectedAmountCents)/100:installmentPaid;
+      return Math.max(collected+Number(l.qontoBankTransferPaidCents||0)/100,Number(e?.paid_amount_cents||0)/100);
+    }
     if(rawInstallments.some(i=>terminalStatuses.has(String(i.status||'').toLowerCase())))return l.qontoCollectedAmountCents!=null?Number(l.qontoCollectedAmountCents)/100:installmentPaid;
     return e?Number(e.paid_amount_cents ?? 0)/100:installmentPaid;
   }
@@ -2388,6 +2391,9 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
         const response=await billingApi('/api/billing/bank-transfers/search',{lineId:line.id,query:form.elements.query.value,dateFrom:form.elements.dateFrom.value});
         const transfers=response.transactions||[];
         feedback.textContent=transfers.length?`${transfers.length} virement(s) trouvé(s). Vérifiez le payeur, la date et le montant avant de confirmer.${response.truncated?' Précisez la recherche pour voir les autres résultats.':''}`:'Aucun virement trouvé. Essayez un autre nom ou une date de début plus ancienne.';
+        if(response.reserved_cents > 0){
+          feedback.textContent += ' Prélèvements prévus : '+fmtMoney(response.reserved_cents/100)+'. Disponible pour un virement : '+fmtMoney(response.available_cents/100)+'.';
+        }
         results.innerHTML=transfers.map((transfer,index)=>`<div class="qonto-invoice-card" style="margin-top:12px"><strong>${esc(transfer.payer_name||transfer.label||'Payeur non renseigné')}</strong><p>${fmtMoney(transfer.amount_cents/100)} · Reçu le ${formatIsoDateFr(String(transfer.paid_at).slice(0,10))}</p><p class="muted">${esc(transfer.reference||transfer.label||'Sans libellé')}</p>${transfer.blocked_reason?`<p>${esc(transfer.blocked_reason)}</p>`:`<button type="button" class="btn btn-primary" data-bank-assign="${index}">Affecter à ce dossier</button>`}</div>`).join('');
         results.querySelectorAll('[data-bank-assign]').forEach(button=>button.onclick=async()=>{
           if(busy)return;
