@@ -63,9 +63,9 @@ LABELS.update({**REQUEST_TABS, **AUTOMATION_TABS})
 LABELS.update({"accepted": "Accepté / À démarrer", "entry": "En formation",
                "invoiced": "Facturé · En attente de paiement"})
 STATE_KEYS.update({
-    "entry":{"intraining", "entree declaree", "entree en formation declaree"},
-    "declared":{"servicedonedeclared", "servicedonedeclaredrevised", "service fait declare", "service fait declare revise"},
-    "billable":{"servicedonevalidated", "servicedonevalidatedrevisionvsf", "service fait valide"},
+    "entry":{"intraining", "in training", "entree declaree", "entree en formation declaree"},
+    "declared":{"servicedonedeclared", "service done declared", "service done declared revised", "servicedonedeclaredrevised", "service fait declare", "service fait declare revise"},
+    "billable":{"servicedonevalidated", "service done validated", "service done validated revision vsf", "servicedonevalidatedrevisionvsf", "service fait valide"},
     "paid":{"paid", "paye", "payee"},
     "ft_refused":{"financement ft refuse", "financement france travail refuse", "demande de financement france travail refusee", "demande de financement ft refusee"},
     "ft":{"financement ft en cours", "financement france travail en cours", "waitingforfrancetravailvalidation", "pendingfrancetravail", "demande de financement ft en cours", "demande de financement france travail en cours"},
@@ -115,19 +115,30 @@ def apply_confirmed_entries(snapshot, directory_path, owner):
     if not snapshot:
         return snapshot
     with closing(declarations.database(directory_path)) as db:
-        verified = db.execute("""SELECT folder, intent, changed FROM cpf_declarations
-            WHERE owner=? AND action='entry_training' AND status='confirmed' AND changed>?
+        verified = db.execute("""SELECT folder, action, intent, changed FROM cpf_declarations
+            WHERE owner=? AND status='confirmed' AND changed>?
             ORDER BY changed""", (owner, snapshot.get("checked") or 0)).fetchall()
     rows = dict(snapshot["rows"])
     for record in verified:
         row = rows.get(record["folder"])
         intent = json.loads(record["intent"])
-        if row and category(row) == "accepted" and declarations.same_enrolment(row, intent):
-            # Older receipts certify entry, even if their precise portal state wasn't stored.
-            rows[record["folder"]] = {**row, "state": intent.get("confirmed_state") or "Entrée déclarée",
-                                      "filed_at": dossier_dates.source_dates(row, category)[0],
-                                      "state_at": "", "request_date": "", "observed_at": record["changed"],
-                                      "entry_confirmed_on": intent["actual_date"]}
+        if (not row or not declarations.same_enrolment(row, intent)
+                or (row.get("observed_at") or 0) > record["changed"]):
+            continue
+        kind = category(row)
+        if record["action"] == "entry_training" and kind == "accepted":
+            # Older entry receipts predate storage of the exact state from EDOF.
+            state = intent.get("confirmed_state") or "Entrée déclarée"
+            extra = {"entry_confirmed_on": intent["actual_date"]}
+        elif (record["action"] == "service_done" and intent.get("confirmed_state")
+              and kind in {"accepted", "training", "entry", "out"}):
+            state = intent["confirmed_state"]
+            extra = {"end_date": intent["actual_date"], "completion_rate": intent["rate"]}
+        else:
+            continue
+        rows[record["folder"]] = {**row, **extra, "state": state,
+                                  "filed_at": dossier_dates.source_dates(row, category)[0],
+                                  "state_at": "", "request_date": "", "observed_at": record["changed"]}
     return {**snapshot, "rows": rows}
 
 
