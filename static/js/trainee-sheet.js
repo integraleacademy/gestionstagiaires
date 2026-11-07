@@ -2180,16 +2180,17 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       const subscriptionStarted=!history && row.status==='in_progress' && row.date;
       const [label,tone]=subscriptionStarted?bankStates.scheduled:(bankStates[row.status] || ['À vérifier','orange']);
       const detail = [
+        history && row.date && row.transaction_date && row.date!==row.transaction_date && `<span>Date de présentation · ${scheduleDate(row.date)}</span>`,
         row.reference && `<span>Libellé · ${esc(row.reference)}</span>`,
         row.reason && `<span>Motif · ${esc(installmentFailureReasonLabel(row.reason)==='Motif bancaire non répertorié'?row.reason:installmentFailureReasonLabel(row.reason))}</span>`,
         row.reason_code && `<span>Code bancaire · ${esc(row.reason_code)}</span>`,
         `<span>Référence Qonto · ${esc(row.id)}</span>`
       ].filter(Boolean).join('');
       const amount = fmtMoney(row.amount_cents/100);
-      return `<tr><td><details data-operation-id="${esc(row.id)}"><summary>${scheduleDate(row.date)}</summary><div class="schedule-operation">${detail}</div></details></td>
+      return `<tr><td><details data-operation-id="${esc(row.id)}"><summary>${scheduleDate(row.transaction_date || row.date)}${history && !row.transaction_date?'<small>Date de présentation</small>':''}</summary><div class="schedule-operation">${detail}</div></details></td>
         ${history?'':`<td>${esc(frequencies[row.frequency] || 'Non renseignée')}</td>`}<td>${badge(label,tone)}</td><td>${tone==='red'||label==='Annulé'?`<del>${amount}</del>`:amount}</td></tr>`;
     });
-    return scheduleTable(history?['Date d’opération Qonto','Statut','Montant présenté']:['Prochaine date','Fréquence','Statut','Montant'],rows,
+    return scheduleTable(history?['Date','Statut','Montant présenté']:['Prochaine date','Fréquence','Statut','Montant'],rows,
       history?'Aucune opération bancaire rattachée à ce dossier.':'Aucun prélèvement à encaisser rattaché à ce dossier.');
   }
   function localHistory(items) {

@@ -45932,6 +45932,71 @@ def _bank_view_pages(fetch, keys, **filters):
     raise ValueError('Pagination Qonto incomplète.')
 
 
+def _match_debit_transaction_dates(history, transactions):
+    """Resolve a statement date only for an unambiguous credit on the same mandate."""
+    entries = {}
+    for tx in transactions:
+        debit = tx.get('direct_debit_collection') or {}
+        if not isinstance(debit, dict) or not debit.get('unique_mandate_reference'):
+            continue
+        if tx.get('side') != 'credit' or str(tx.get('currency') or '').upper() != 'EUR':
+            continue
+        status = tx.get('status')
+        if status not in {'completed', 'declined', 'reversed'}:
+            continue
+        timestamp = _parse_iso_datetime(tx.get('settled_at') or tx.get('emitted_at'))
+        tid = tx.get('id') or tx.get('transaction_id')
+        if tid and timestamp:
+            day = timestamp.astimezone(ZoneInfo('Europe/Paris')).date()
+            entries[tid] = (debit['unique_mandate_reference'], tx.get('amount_cents'), status,
+                            day, tx.get('bank_account_id'))
+
+    # Prefer exact dates, then a shifted banking day only when neither side
+    # has another candidate. Never identify a debtor from a name or amount.
+    for tolerance in (0, 7):
+        by_collection, by_transaction = {}, {}
+        for cid, row in history.items():
+            presented = _parse_date_safe(row.get('date') or '')
+            if row.get('transaction_date') or not presented or not row.get('_rum'):
+                continue
+            for tid, (rum, cents, status, day, account) in entries.items():
+                if row['_rum'] != rum or cents != row['amount_cents']:
+                    continue
+                if account and row.get('_account') and account != row['_account']:
+                    continue
+                if not 0 <= (day - presented).days <= tolerance:
+                    continue
+                if (status == 'completed') != (row['status'] in QONTO_PAID_COLLECTION_STATUSES):
+                    continue
+                by_collection.setdefault(cid, []).append(tid)
+                by_transaction.setdefault(tid, []).append(cid)
+        for cid, ids in by_collection.items():
+            if len(ids) == 1 and len(by_transaction[ids[0]]) == 1:
+                history[cid]['transaction_date'] = entries.pop(ids[0])[3].isoformat()
+
+
+def _read_debit_statement_dates(history):
+    rows = [row for row in history.values() if row.get('_rum') and _parse_date_safe(row.get('date') or '')]
+    if not rows:
+        return
+    dates = [_parse_date_safe(row['date']) for row in rows]
+    accounts = {row['_account'] for row in rows if row['_account']}
+    if any(not row['_account'] for row in rows):
+        accounts.update(item['id'] for item in get_qonto_organization_bank_accounts()['bank_accounts'] if item.get('id'))
+    params = {'side': 'credit', 'status[]': ['completed', 'declined', 'reversed'],
+              'operation_type[]': ['direct_debit_collection'],
+              'emitted_at_from': (min(dates) - datetime.timedelta(days=1)).isoformat() + 'T00:00:00Z',
+              'emitted_at_to': (max(dates) + datetime.timedelta(days=8)).isoformat() + 'T23:59:59Z',
+              'sort_by': 'emitted_at:desc'}
+
+    def fetch_transactions(**page):
+        return _qonto_request('GET', '/v2/transactions', params={**params, **page})
+
+    transactions = (tx for account in sorted(accounts)
+                    for tx in _bank_view_pages(fetch_transactions, ('transactions',), bank_account_id=account))
+    _match_debit_transaction_dates(history, transactions)
+
+
 def _trainee_bank_schedule(lines):
     known_subscriptions, known_collections, references = set(), set(), set()
     orphan_collections, attached_subscriptions = set(), set()
@@ -45956,7 +46021,8 @@ def _trainee_bank_schedule(lines):
                 if reference:
                     references.add((mandate, str(reference).strip().casefold()))
     known_collections -= {None, ''}
-    subscriptions, history = {}, {}
+    subscriptions, history, bank_accounts = {}, {}, {}
+    today = datetime.datetime.now(ZoneInfo('Europe/Paris')).date().isoformat()
     if not (known_subscriptions or known_collections or references):
         return [], []
 
@@ -45966,6 +46032,7 @@ def _trainee_bank_schedule(lines):
         invoice = reference.split(' - ', 1)[0].strip().casefold()
         if not sid or (sid not in known_subscriptions and (_qonto_subscription_mandate_id(sub), invoice) not in references):
             continue
+        bank_accounts[sid] = sub.get('bank_account_id')
         status = sub.get('status')
         date = sub.get('schedule_next_collection_date')
         if not date and sub.get('schedule_type') == 'one_off' and status == 'scheduled':
@@ -45986,14 +46053,28 @@ def _trainee_bank_schedule(lines):
             cid, sid = row.get('id'), row.get('direct_debit_subscription_id')
             if not cid or (sid not in allowed_ids and cid not in known_collections):
                 continue
-            history[cid] = dict(id=cid, subscription_id=sid, date=row.get('collection_date'),
+            status = str(row.get('status') or '').lower()
+            date = row.get('collection_date')
+            if status not in QONTO_PAID_COLLECTION_STATUSES | QONTO_REJECTED_COLLECTION_STATUSES | {'canceled', 'cancelled'}:
+                continue
+            if date and date > today:
+                continue
+            history[cid] = dict(id=cid, subscription_id=sid, date=date,
+                                _rum=row.get('unique_mandate_reference'), _account=bank_accounts.get(sid),
                                 amount_cents=_qonto_collection_amount_cents(row), status=row.get('status'),
                                 reason=row.get('status_reason') or row.get('status_reason_group'),
                                 reason_code=row.get('status_reason_code'),
                                 reference=subscriptions.get(sid, {}).get('reference', ''))
+    try:
+        _read_debit_statement_dates(history)
+    except Exception as exc:
+        app.logger.warning('[QONTO] dates du relevé indisponibles : %s', _sanitize_qonto_error(str(exc)))
+    for row in history.values():
+        row.pop('_rum')
+        row.pop('_account')
     upcoming = [s for s in subscriptions.values() if s['status'] not in {'completed', 'canceled', 'cancelled'}]
     upcoming.sort(key=lambda s: (s['date'] or '9999', s['id']))
-    return upcoming, sorted(history.values(), key=lambda r: (r['date'] or '', r['id']), reverse=True)
+    return upcoming, sorted(history.values(), key=lambda r: (r.get('transaction_date') or r['date'] or '', r['id']), reverse=True)
 
 
 @app.get('/api/billing/trainee/<trainee_id>/session/<session_id>/bank-schedule')
