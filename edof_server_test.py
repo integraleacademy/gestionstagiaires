@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import importlib.util
 import itertools
+import logging
 import json
 import math
 import os
@@ -752,6 +753,11 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
             temporary.cleanup()
             if result.get("code") == "portal_throttled" and store.connector_key:
                 result["proposal_message"] = throttle.message(Vault(store.directory,store.connector_key))
+            for detail in (result.get("diagnostics") or {}).get("crm_details", []):
+                logging.getLogger("gunicorn.error").info(
+                    "EDOF CRM détail %s : prix=%s durée=%s coordonnées=%s certification=%s événements=%s",
+                    detail["folder"], detail["price"], detail["duration"], detail["contact"],
+                    detail["certification"], detail["events"])
             if spec.get("import_session") and result.get("code") == "read_success":
                 from integrale_edof_registration import create_registration
                 try:

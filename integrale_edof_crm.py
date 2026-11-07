@@ -1,7 +1,9 @@
 """Read-only CRM feed of dossiers synchronized for the academy's EDOF account."""
 
 from threading import Lock
-from time import monotonic
+from time import monotonic, time
+
+import edof_crm_details as details
 
 from flask import Blueprint, jsonify, request
 
@@ -48,6 +50,8 @@ def crm_folder(row, category, observed):
     filed = row.get("created_at") or row.get("filed_at") or (row.get("request_date") if kind == "request" else "")
     if filed:
         result["createdAt"] = filed
+    if row.get("filed_at"):
+        result["edofFiledAt"] = row["filed_at"]
     if row.get("state_at"):
         result["updatedAt"] = row["state_at"]
     if row.get("billing_state"):
@@ -71,7 +75,8 @@ def register_crm_feed(app, store, vault, snapshot, category, authorized, active)
 
     def load_directory():
         rows, checked = {}, None
-        for owner in sorted(snapshot_owners(vault())):
+        private = vault()
+        for owner in sorted(snapshot_owners(private)):
             saved = snapshot(owner)
             if saved is None:
                 continue
@@ -79,7 +84,8 @@ def register_crm_feed(app, store, vault, snapshot, category, authorized, active)
             checked = max(checked or 0, base, *(saved.get(k) or 0 for k in (
                 "pending_checked", "accepted_checked", "receipt_checked")))
             subset = saved.get("rows", {})
-            pending_contacts = vault().get("crm-pending-contacts:" + owner) or {}
+            saved_details = details.known_details(private, owner)
+            pending_contacts = private.get("crm-pending-contacts:" + owner) or {}
             for ident, row in observed_rows(store, owner, {"rows":subset}).items():
                 contact = pending_contacts.get(ident, {})
                 if contact and all(row.get(k) and normalized(row[k]) == normalized(contact.get(k) or "")
@@ -87,7 +93,7 @@ def register_crm_feed(app, store, vault, snapshot, category, authorized, active)
                     row = {**row, **{k: contact[k] for k in ("email", "phone") if contact.get(k)}}
                 stamp = row.get("observed_at") or base
                 if ident not in rows or stamp >= rows[ident][0]:
-                    rows[ident] = (stamp, row)
+                    rows[ident] = (stamp, row, owner, ident in saved_details)
         return rows, checked
 
     def current_directory():
@@ -118,8 +124,20 @@ def register_crm_feed(app, store, vault, snapshot, category, authorized, active)
         if status_only:
             return jsonify(provider="integrale_edof", source_checked_at=checked)
         def export(ident):
-            observed, row = rows[ident]
-            return crm_folder(row, category, observed)
+            observed, row, owner, known = rows[ident]
+            result = crm_folder(row, category, observed)
+            private = vault()
+            detail = private.get(details.record_key(owner, ident)) if known else None
+            if detail and all(row.get(k) and normalized(row[k]) == normalized(detail["attendee"].get(native) or "")
+                              for k, native in (("first_name","firstName"),("last_name","lastName"))):
+                result["edofDetail"] = detail
+                for k in ("email", "phoneNumber"):
+                    if detail["attendee"].get(k) and not result["attendee"].get(k):
+                        result["attendee"][k] = detail["attendee"][k]
+            checked_detail = result.get("edofDetail", {}).get("readAt") or 0
+            if folder_id and time() - checked_detail >= details.DAY:
+                details.request_read(private, owner, ident)
+            return result
         if folder_id:
             if folder_id not in rows:
                 return jsonify(error="Dossier absent de la liste Intégrale EDOF"), 404
