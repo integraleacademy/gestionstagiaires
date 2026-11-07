@@ -8,7 +8,7 @@ import pytest
 import app as host
 import elearning_orders as learning
 import manuals_commerce as commerce
-from test_elearning_orders import submit, latest, mark_paid, send_accesses, prepare
+from test_elearning_orders import existing_invoice, submit, latest, mark_paid, send_accesses, prepare
 from test_elearning_groups import create, save, person, confirm
 from test_manuals_commerce import merchant, run, retry
 from test_manuals_shop import shop, csrf, all_data, signup, login
@@ -77,6 +77,7 @@ def test_payment_and_refresh_never_dispatch_until_explicit_post(shop, merchant, 
 
 def test_partial_payment_cancelled_order_and_cross_tenant_posts_are_blocked(shop, merchant):
     order = submit(shop)
+    existing_invoice(order)
     run(order)
     merchant["invoice"].update(paid_amount={"value": "59.00", "currency": "EUR"})
     retry(order)

@@ -67,7 +67,21 @@ def send_accesses(shop, order):
     return next(o for o in all_data(shop)["manual_orders"] if o["id"] == order["id"])
 
 
+def existing_invoice(order):
+    """Fixture for an order whose invoice was issued before basket checkout existed."""
+    def historical(current):
+        current["commerce"].update(flow="elearning_invoice_first", lease_token="historical")
+        return {"order":copy.deepcopy(current)}
+    old = commerce._mutate(host, order["partner_id"], order["id"], historical)["order"]
+    with host.app.app_context():
+        commerce._ensure_invoice(host, old, commerce.settings_from(host.load_data(run_background_tasks=False)))
+        commerce._mutate(host, old["partner_id"], old["id"], lambda current: current["commerce"].update(lease_until=0))
+
+
 def mark_paid(merchant):
+    if merchant["payment"] and merchant["payment"].get("resource_type") == "Basket":
+        merchant.update(paid=True, payments=None)
+        return
     merchant["invoice"].update(status="paid", paid_amount=copy.deepcopy(merchant["invoice"]["total_amount"]), paid_at="2026-10-08")
 
 
@@ -87,11 +101,13 @@ def test_group_quoted_server_side_and_idempotent(shop, merchant):
     run(order)
     order = latest(shop)
     assert order["commerce"]["status"] == "waiting_payment"
-    assert order["commerce"]["invoice_id"] == "invoice-1"
-    assert merchant["invoice"]["settings"]["transaction_type"] == "services"
+    assert merchant["invoice"] is None and not order["commerce"].get("invoice_id")
+    assert merchant["payment"]["resource_type"] == "Basket"
+    assert merchant["payment"]["items"][0]["type"] == "service"
+    assert order["commerce"]["queued"] and learning.status_view(order)["checkout_url"]
     assert not learning.entitled(order) and not order.get("activated_at")
     assert not any(m[0][0] in {"camille@example.test","alex@example.test"} for m in shop["mails"])
-    assert c.get(url+"/facture").status_code == 200
+    assert c.get(url+"/facture").status_code == 404
     assert c.get("/admin/manuels/commandes/" + order["id"]).status_code == 404
     assert c.get(url+"/statut").json["active"] is False
 
@@ -134,7 +150,7 @@ def test_incomplete_or_cancelled_payment_never_grants_access(status,paid,remaini
 
 def test_wrong_invoice_total_fails_closed(shop, merchant):
     order = submit(shop)
-    merchant["wrong_total"] = True
+    merchant.update(wrong_total=True, paid=True)
     run(order)
     order = latest(shop)
     assert order["commerce"]["status"] == "needs_review"
@@ -283,7 +299,7 @@ def test_personal_link_opens_only_purchased_curriculum(shop, code):
 
 
 def test_partial_payment_is_rechecked_until_fully_paid(shop, merchant):
-    order=submit(shop);run(order)
+    order=submit(shop);existing_invoice(order);run(order)
     merchant["invoice"].update(paid_amount={"value":"59.00","currency":"EUR"})
     retry(order)
     current=latest(shop)
@@ -387,3 +403,21 @@ def test_learner_sender_never_uses_unverified_partner_address_as_from(shop, monk
     assert access_page.status_code == 200
     assert current["centre"]["name"] in access_page.text
     assert "clement@integraleacademy.com" not in access_page.text
+
+def test_unbilled_old_order_migrates_and_retries_without_a_second_invoice(shop, merchant):
+    order = submit(shop)
+    commerce._mutate(host, order["partner_id"], order["id"],
+                     lambda current: current["commerce"].update(flow="elearning_invoice_first"))
+    run(order)
+    retry(order)
+    assert merchant["invoice"] is None and merchant["payment"]["resource_type"] == "Basket"
+    assert learning.status_view(latest(shop))["checkout_url"]
+    mark_paid(merchant)
+    retry(order)
+    retry(order)
+    current = latest(shop)
+    assert learning.entitled(current) and current["commerce"]["invoice_status"] == "paid"
+    assert current["commerce"]["flow"] == "payment_first"
+    assert merchant["invoice"]["settings"]["transaction_type"] == "services"
+    for path in ("/v2/payment_links", "/v2/client_invoices", "/v2/client_invoices/invoice-1/mark_as_paid"):
+        assert sum(m == "POST" and p == path for m,p,*_ in merchant["calls"]) == 1

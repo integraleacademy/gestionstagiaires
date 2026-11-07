@@ -16,7 +16,7 @@ from werkzeug.datastructures import MultiDict
 import app as host
 from manuals_public import TERMS_VERSION
 import elearning_orders as learning
-from test_elearning_orders import send_accesses, mark_paid, prepare
+from test_elearning_orders import existing_invoice, send_accesses, mark_paid, prepare
 from test_manuals_commerce import merchant, retry, run
 from test_manuals_shop import all_data, csrf, login, shop, signup
 
@@ -110,7 +110,7 @@ def test_a3p_group_uses_negotiated_price_and_the_full_current_curriculum(shop, m
     assert {m["course_version"] for m in order["modules"]} == {a3p.VERSION}
     assert all(m["course_id"].startswith("academy-a3p-") for m in order["modules"])
     run(order)
-    assert merchant["invoice"]["total_amount"] == {"value": "159.8", "currency": "EUR"}
+    assert merchant["invoice"] is None and merchant["payment"]["amount"] == {"value": "159.80", "currency":"EUR"}
     assert not learning.entitled(purchases(shop)[0])
     mark_paid(merchant)
     retry(order)
@@ -189,7 +189,7 @@ def test_quote_does_not_charge_and_paid_batch_waits_for_dispatch(shop, merchant)
     assert not any(m[0][0] in {"camille@example.test", "alex@example.test"} for m in shop["mails"])
     # A return URL and a partially paid invoice must both leave access blocked.
     client.get(url + "?paid=true")
-    merchant["invoice"].update(paid_amount={"value": "59.00", "currency": "EUR"})
+    merchant["payments"] = [{"id":"partial","status":"paid","amount":{"value":"59.00","currency":"EUR"},"paid_at":"2026-01-01T12:00:00Z"}]
     retry(order)
     assert not purchases(shop)[0].get("activated_at")
     mark_paid(merchant)
@@ -227,8 +227,8 @@ def test_default_vtc_price_is_public_and_billed_at_150_euros_per_learner(shop, m
     assert order["unit_cents"] == 15000 and order["total_cents"] == 30000
     assert order["free_snapshot"] is False
     run(order)
-    assert Decimal(merchant["invoice"]["total_amount"]["value"]) == Decimal("300.00")
-    assert merchant["invoice"]["total_amount"]["currency"] == "EUR"
+    assert merchant["invoice"] is None
+    assert merchant["payment"]["amount"] == {"value":"300.00","currency":"EUR"}
     current = purchases(shop)[0]
     assert current["commerce"]["status"] == "waiting_payment"
     assert not learning.entitled(current)
@@ -578,6 +578,7 @@ def billed_group(shop, merchant):
     url = create(shop["client"])
     save(shop, url, [person()])
     order = confirm(shop, url)
+    existing_invoice(order)
     run(order)
     return url, next(o for o in purchases(shop) if o["id"] == order["id"])
 
@@ -684,6 +685,7 @@ def test_multiple_batches_cancel_in_sequence_and_a_late_payment_preserves_the_gr
     # The shared merchant fixture represents one provider object. Give this
     # second real workflow a separate provider namespace for the race scenario.
     merchant.update(invoice=None, payment=None)
+    existing_invoice(second)
     run(second)
     invoices["invoice-2"] = {**copy.deepcopy(merchant["invoice"]), "id": "invoice-2"}
     links["link-2"] = {**copy.deepcopy(merchant["payment"]), "id": "link-2", "invoice_id": "invoice-2"}
@@ -795,7 +797,7 @@ def test_partner_amends_invoiced_roster_after_verified_cancellation(shop, mercha
     assert len(purchases(shop)) == 2
     merchant.update(invoice=None, payment=None)
     run(new)
-    assert merchant["invoice"]["total_amount_cents"] == 11800
+    assert merchant["invoice"] is None
     assert Decimal(merchant["payment"]["amount"]["value"]) == Decimal("118.00")
     assert not learning.entitled(purchases(shop)[1])
 
@@ -844,3 +846,27 @@ def test_amendment_requires_owner_revision_csrf_and_writable_access(shop, mercha
         current["admin_role"] = "viewer"
     assert client.post(edit, data=fields).status_code == 403
     assert purchases(shop) == [order]
+
+@pytest.mark.parametrize("in_flight", [False, True])
+def test_amend_basket_rechecks_payment_and_never_creates_an_invoice(shop, merchant, monkeypatch, in_flight):
+    prepare(shop)
+    url = create(shop["client"])
+    save(shop, url, [person()])
+    order = confirm(shop, url)
+    run(order)
+    assert merchant["invoice"] is None
+    cancellation_provider(monkeypatch, merchant)
+    people = [person("one@example.test", "Emma"), person("two@example.test", "Sara")]
+    fields = amendment_fields(shop, url, people)
+    response = shop["client"].post(url + "/commandes/" + order["id"] + "/modifier", data=fields)
+    assert response.status_code == 303
+    if in_flight:
+        merchant["payments"] = [{"id":"pending","status":"authorized"}]
+    run(order)
+    rows = purchases(shop)
+    if in_flight:
+        assert len(rows) == 1 and rows[0]["status"] != "cancelled" and merchant["payment"]["status"] == "open"
+    else:
+        assert len(rows) == 2 and rows[0]["status"] == "cancelled" and merchant["payment"]["status"] == "canceled"
+        assert rows[1]["commerce"]["flow"] == "payment_first" and rows[1]["total_cents"] == 11800
+    assert merchant["invoice"] is None

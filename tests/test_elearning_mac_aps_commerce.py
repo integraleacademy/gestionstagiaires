@@ -107,7 +107,7 @@ def test_direct_mac_checkout_uses_admin_price_and_ignores_posted_discounts(shop,
     assert shop["client"].post(created.location + "/confirmer", data={"csrf_token": csrf(shop["client"], created.location), "confirm": "yes", "terms_version": TERMS_VERSION}).status_code == 303
     assert latest(shop)["terms_acceptance"]["version"] == TERMS_VERSION
     run(order)
-    assert merchant["invoice"]["total_amount"] == {"value": "84", "currency": "EUR"}
+    assert merchant["invoice"] is None and merchant["payment"]["amount"] == {"value":"84.00", "currency":"EUR"}
     assert not latest(shop).get("activated_at") and not learning.entitled(latest(shop))
     mark_paid(merchant)
     retry(order)
@@ -156,11 +156,11 @@ def test_mac_group_paid_only_activation_and_centre_branded_learner_access(shop, 
     run(order)
     current = latest(shop)
     assert current["commerce"]["status"] == "waiting_payment"
-    assert Decimal(merchant["invoice"]["items"][0]["unit_price"]["value"]) == Decimal("40.83333333")
+    assert merchant["invoice"] is None
     assert merchant["payment"]["amount"] == {"value": "98.00", "currency": "EUR"}
     assert not any(mail[1].get("metadata", {}).get("purpose", "").startswith("elearning_learner_") for mail in shop["mails"])
     client.get(url + "?paid=true")
-    merchant["invoice"].update(paid_amount={"value": "49.00", "currency": "EUR"})
+    merchant["payments"] = [{"id":"partial","status":"paid","amount":{"value":"49.00","currency":"EUR"},"paid_at":"2026-01-01T12:00:00Z"}]
     retry(order)
     assert not learning.entitled(latest(shop)) and learner.get("/apprendre/" + token).status_code == 404
     mark_paid(merchant)

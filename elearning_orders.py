@@ -156,6 +156,12 @@ def entitled(order):
             return False
     if order.get("free_snapshot") is True and order.get("total_cents") == 0:
         return True
+    if state.get("flow") == "payment_first":
+        proof = state.get("confirmed_payment") or {}
+        if not (state.get("invoice_status") == "paid" and proof.get("id") and proof.get("verified_at")
+                and proof.get("link_id") and proof["link_id"] == state.get("payment_id")
+                and proof.get("amount_cents") == order.get("total_cents") and proof.get("currency") == "EUR"):
+            return False
     return bool(order.get("total_cents", 0) > 0 and state.get("invoice_id")
                 and state.get("invoice_status") in {"paid", "unpaid"}
                 and (state.get("invoice_status") == "paid" or verified_capture(order))
@@ -171,9 +177,12 @@ def status_view(order):
     requested = bool(order.get("access_dispatch_requested_at"))
     checkout_url = commerce.safe_payment_url(state.get("payment_url")) if (
         order.get("status") not in {"draft", "cancelled"} and not order.get("cancellation_requested_at")
-        and state.get("invoice_status") == "unpaid" and state.get("payment_status") == "unpaid"
+        and (state.get("invoice_status") == "unpaid" or (state.get("flow") == "payment_first" and not state.get("invoice_id")))
+        and state.get("status") not in {"needs_review", "needs_setup", "retry", "cancellation_pending"}
+        and state.get("payment_status") == "unpaid"
         and state.get("payment_link_status") == "open") else ""
-    return {"status": state.get("status"), "payment_status": state.get("payment_status"), "invoice_status": state.get("invoice_status"),
+    return {"status": state.get("status"), "cancelled": order.get("status") == "cancelled",
+            "payment_status": state.get("payment_status"), "invoice_status": state.get("invoice_status"),
             "paid": entitled(order), "checkout_url": checkout_url,
             "payment_url": bool(checkout_url), "payment_link_status": state.get("payment_link_status"),
             "active": bool(order.get("activated_at")), "mail_sent": sent,
@@ -375,7 +384,7 @@ def sync_invoice_payment(host, order):
 def cache_invoice(host, order):
     """Keep the PDF available without requiring an unpaid invoice e-mail."""
     state = order["commerce"]
-    if not state.get("invoice_id") or state.get("invoice_status") not in {"unpaid", "paid"}:
+    if (state.get("flow") == "payment_first" and not entitled(order)) or not state.get("invoice_id") or state.get("invoice_status") not in {"unpaid", "paid"}:
         return
     root = Path(host.get_partner_storage_path(order["partner_id"], "factures"))
     destination = root / ("elearning-" + order["id"] + ("-paid" if entitled(order) else "-due") + ".pdf")
@@ -399,11 +408,17 @@ def process_claimed(host, order):
     outcome, error = "ready", ""
     try:
         if not order.get("free_snapshot"):
-            invoice = commerce._ensure_invoice(host, order, commerce.settings_from(host.load_data(run_background_tasks=False)))
-            if not entitled(order):
-                commerce._ensure_payment_link(host, order, invoice)
-                sync_invoice_payment(host, order)
-                outcome = "ready" if entitled(order) else "waiting_payment"
+            state = order["commerce"]
+            settings = commerce.settings_from(host.load_data(run_background_tasks=False))
+            historical = any(state.get(k) for k in ("invoice_id", "invoice_creation_started", "payment_id", "payment_creation_started"))
+            if state.get("flow") == "payment_first" or not historical:
+                commerce.collect_then_invoice(host, order, settings)
+            else:
+                invoice = commerce._ensure_invoice(host, order, settings)
+                if not entitled(order):
+                    commerce._ensure_payment_link(host, order, invoice)
+                    sync_invoice_payment(host, order)
+            outcome = "ready" if entitled(order) else "waiting_payment"
         if entitled(order) and order.get("access_dispatch_requested_at"):
             activate(host, order)
     except commerce.PaymentPending as exc:
@@ -436,7 +451,8 @@ def process_claimed(host, order):
         for person in order["learners"]:
             sent = send_message(host, order, "learner_" + person["id"], person["email"], person=person) and sent
     state = order["commerce"]
-    tracking = bool(state.get("invoice_id") and not entitled(order) and state.get("invoice_status") != "canceled")
+    tracking = (not entitled(order) and state.get("invoice_status") != "canceled"
+                and (bool(state.get("invoice_id")) or outcome in {"waiting_payment", "payment_pending"}))
     # Keep email retries durable even after a transient mail outage. Sent keys are never replayed.
     queued = tracking or not sent or outcome == "retry"
     delay = (15 if outcome in {"ready", "waiting_payment"} else 60) if tracking else min(60 * 2 ** min(state.get("attempts", 1), 6), 3600)
@@ -556,7 +572,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
                 abort(409, "Votre tarif a changé. Préparez une nouvelle commande pour consulter le nouveau total.")
             order["terms_acceptance"] = terms
             order.update(status="received", reference="EL-" + str(dt.date.today().year) + "-" + oid[:8].upper(), submitted_at=host._now_iso(),
-                         commerce={"queued": True, "status": "pending", "flow": "elearning_invoice_first", "attempts": 0, "emails": {}})
+                         commerce={"queued": True, "status": "pending", "flow": "payment_first", "attempts": 0, "emails": {}})
             return {}
         host._atomic_update_data(confirm, partner_id=partner["id"])
         kick_worker()
@@ -616,7 +632,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         import io
         order = find(host.load_data(), oid)
         state = order.get("commerce", {})
-        if not state.get("invoice_id") or state.get("invoice_status") == "canceled":
+        if (state.get("flow") == "payment_first" and not entitled(order)) or not state.get("invoice_id") or state.get("invoice_status") == "canceled":
             abort(404)
         # Invoice files are downloaded in the merchant worker, never with a tenant's credentials.
         path = Path(host.get_partner_storage_path(order["partner_id"], "factures")) / ("elearning-" + oid + ("-paid" if entitled(order) else "-due") + ".pdf")

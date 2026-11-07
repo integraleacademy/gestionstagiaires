@@ -136,7 +136,7 @@ def _purchase(group, people, unit, free, terms, now, request_id, *, billing, cen
         "shipping_cents": 0, "items": [{"kind": "elearning", "code": code,
             "label": "Accès e-learning " + learning.course_label(code),
             "quantity": len(people), "unit_cents": unit, "total_cents": total}],
-        "commerce": {"queued": True, "status": "pending", "flow": "elearning_invoice_first", "attempts": 0, "emails": {}},
+        "commerce": {"queued": True, "status": "pending", "flow": "payment_first", "attempts": 0, "emails": {}},
     }
 
 
@@ -167,7 +167,9 @@ def process_cancellation(host, order):
     request; all invoice/link identities and amounts are checked before mutation.
     """
     def payment_guard(link):
-        if link.get("invoice_id") != order["commerce"].get("invoice_id") or commerce._money_cents(link.get("amount")) != order["total_cents"]:
+        if order["commerce"].get("flow") == "payment_first":
+            commerce._assert_basket(order["commerce"], order["total_cents"], commerce._basket_items(order), link)
+        elif link.get("invoice_id") != order["commerce"].get("invoice_id") or commerce._money_cents(link.get("amount")) != order["total_cents"]:
             raise commerce.ReviewRequired("Le lien de paiement ne correspond pas à cette commande.")
         if link.get("status") in {"paid", "processing"}:
             commerce._save(host, order, payment_status="processing", payment_url="")
@@ -224,6 +226,10 @@ def process_cancellation(host, order):
 
     try:
         state = order["commerce"]
+        if state.get("flow") == "payment_first" and _remote_billing(order):
+            commerce._payment_merchant(host, state, lambda **fields: commerce._save(host, order, **fields))
+        if state.get("confirmed_payment"):
+            raise CancellationBlocked("Le règlement a été confirmé. Votre commande reste disponible.")
         invoice = None
         if state.get("invoice_id"):
             try:
@@ -242,7 +248,7 @@ def process_cancellation(host, order):
             commerce._save(host, order, invoice_id=invoice["id"])
         if invoice:
             invoice_guard(invoice)
-        elif state.get("payment_id") or state.get("payment_creation_started"):
+        elif state.get("flow") != "payment_first" and (state.get("payment_id") or state.get("payment_creation_started")):
             raise commerce.ReviewRequired("Le paiement doit être rapproché de sa facture avant suppression.")
         links = []
         state = order["commerce"]
@@ -258,12 +264,17 @@ def process_cancellation(host, order):
                 if not isinstance(response, dict) or not isinstance(response.get("payment_links"), list) or any(not isinstance(link, dict) for link in response["payment_links"]):
                     raise commerce.ReviewRequired("La liste des liens de paiement n’a pas pu être vérifiée.")
                 page_links = response["payment_links"]
-                links.extend(link for link in page_links if link.get("invoice_id") == state.get("invoice_id"))
+                if state.get("flow") == "payment_first":
+                    marker = f"[{order['id']}]"
+                    links.extend(link for link in page_links if any(marker in item.get("description", "")
+                                 for item in link.get("items") or []))
+                else:
+                    links.extend(link for link in page_links if link.get("invoice_id") == state.get("invoice_id"))
                 if not host._qonto_invoice_list_has_next_page(response, page, len(page_links), 100):
                     break
             else:
                 raise commerce.ReviewRequired("La liste complète des liens de paiement n’a pas pu être vérifiée.")
-            if not links:
+            if (state.get("flow") == "payment_first" and len(links) != 1) or not links:
                 raise commerce.ReviewRequired("La création du lien de paiement doit être vérifiée avant suppression.")
         for link in links:
             payment_guard(link)
@@ -638,7 +649,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             return detail(data, partner, find(data, gid), errors=[result["error"]]), 409
         if result.get("pending"):
             kick_worker()
-            flash("La suppression est en cours. Nous vérifions l’absence de paiement et annulons la facture avant de supprimer le groupe.", "success")
+            flash("La suppression est en cours. Nous vérifions le règlement auprès de Qonto avant de supprimer le groupe.", "success")
             return redirect(url_for("manuals_shop.elearning_group", gid=gid), code=303)
         flash("Le groupe ou l’accès individuel a été supprimé. Aucun accès ne sera activé.", "success")
         return redirect(url_for("manuals_shop.elearning_soon"), code=303)
