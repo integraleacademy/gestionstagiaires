@@ -4,6 +4,7 @@ import os
 import time
 
 import cpf_provider
+import integrale_edof_crm_delivery
 
 from cpf_transfer_history import TARGETS, historical_delivery, receipt, receipts, respect_native_receipt
 
@@ -14,7 +15,7 @@ def transfer(store, legacy, row, target, official_url):
     # A name alone is not enough to create an external prospect.
     if not row.get("first_name") or not row.get("last_name") or not row.get("email"):
         raise ValueError("Relisez la fiche détaillée dans EDOF pour vérifier les coordonnées avant le transfert.")
-    if target == "crm" and not (os.getenv("CRM_WEDOF_WEBHOOK_SECRET") or os.getenv("WEDOF_WEBHOOK_SECRET") or "").strip():
+    if target == "crm" and not (os.getenv("CRM_INTEGRATION_API_TOKEN") or "").strip():
         raise ValueError("Le secret de transmission du CRM doit être configuré.")
     known = historical_delivery(legacy, folder, target)
     if cpf_provider.on_test_service() and known != "sent":
@@ -31,6 +32,10 @@ def transfer(store, legacy, row, target, official_url):
                 "attendee":{"firstName":row["first_name"],"lastName":row["last_name"],"email":row["email"]},
                 "trainingActionInfo":{"title":row.get("title"), "sessionStartDate":row.get("session_start_date"),
                                       "sessionEndDate":row.get("session_end_date")}}
+    if target == "crm":
+        from integrale_edof_crm import crm_folder
+        from integrale_edof_dashboard import category
+        complete = crm_folder(row, category, row.get("observed_at") or 0)
     # The CRM accepts a complete signed folder from its own management app.
     # Its receiver can persist this envelope locally, without calling WeDoF.
     entry = {"id":"IEDOF-" + folder, "folder_id":folder, "delivery_id":"integrale-edof-request-"+folder,
@@ -45,7 +50,7 @@ def transfer(store, legacy, row, target, official_url):
         if prior and prior[0] in {"processing","uncertain"}:
             raise ValueError(f"Réception à vérifier dans {label}. Le transfert ne sera pas répété.")
         db.execute("INSERT OR REPLACE INTO cpf_transfers VALUES (?,?,?,?)", (folder,target,"processing",time.time()))
-    delivery = legacy._send_wedof_entry_to_crm if target == "crm" else legacy._send_wedof_entry_to_salesforce
+    delivery = integrale_edof_crm_delivery.send if target == "crm" else legacy._send_wedof_entry_to_salesforce
     try:
         reply, code = delivery(entry)
         acknowledged = target != "crm" or entry.get("crm_processed") or entry.get("crm_duplicate")

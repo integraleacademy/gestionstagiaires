@@ -97,6 +97,15 @@ def synchronize(data, matches):
     return created
 
 
+def snapshot_owners(private):
+    owners = set()
+    with private.connect() as db:
+        for prefix in (record_key(""), accepted_key(""), pending_key("")):
+            owners.update(r[0][len(prefix):] for r in db.execute(
+                "SELECT name FROM private_records WHERE name GLOB ?", (prefix + "*",)))
+    return owners
+
+
 def nightly(store, now, snapshot, reconcile):
     """Called by the elected production scheduler. Replays after a restart are idempotent."""
     day = now.date().isoformat()
@@ -109,11 +118,7 @@ def nightly(store, now, snapshot, reconcile):
             return True
     # Dossiers synchronized manually also participate when the browser watch is closed.
     private = Vault(store.directory, store.connector_key)
-    owners = set()
-    with private.connect() as db:
-        for prefix in (record_key(""), accepted_key(""), pending_key("")):
-            owners.update(r[0][len(prefix):] for r in db.execute(
-                "SELECT name FROM private_records WHERE name GLOB ?", (prefix + "*",)))
+    owners = snapshot_owners(private)
     combined, stamps = {}, {}
     available = False
     for owner in owners:

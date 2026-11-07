@@ -1193,6 +1193,10 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         flash("Déclaration préparée. Vous pouvez la transmettre depuis cette fiche.", "success")
         return back(folder=folder)
 
+    if on_production_service():
+        from integrale_edof_crm import register_crm_feed
+        register_crm_feed(app, store, vault, snapshot, category, legacy._crm_integration_token_required,
+                          lambda: selection.state()["provider"] == "integrale")
     app.register_blueprint(bp)
     if on_production_service():
         # Previously saved links and the technical console still use this path.

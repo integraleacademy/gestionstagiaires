@@ -210,7 +210,7 @@ def test_simulate_at_actual_paris_cutoff_without_sending(site):
 @pytest.mark.parametrize("target", ["crm","salesforce"])
 def test_native_transfer_is_complete_and_idempotent_across_switches(site, target, monkeypatch):
     from integrale_edof_transfers import transfer, respect_native_receipt
-    monkeypatch.setenv("CRM_WEDOF_WEBHOOK_SECRET","fixture-only")
+    monkeypatch.setenv("CRM_INTEGRATION_API_TOKEN","fixture-only")
     sent = []
     def external(entry):
         envelope = entry["payload"]
@@ -219,6 +219,7 @@ def test_native_transfer_is_complete_and_idempotent_across_switches(site, target
         entry.update({target+"_sent":True, "crm_processed":True})
         return {"success":True}, 200
     legacy=SimpleNamespace(_send_wedof_entry_to_crm=external, _send_wedof_entry_to_salesforce=external, _load_wedof_webhooks=lambda:[])
+    monkeypatch.setattr("integrale_edof_crm_delivery.send", external)
     source={"folder_id":"100002","first_name":"Anne","last_name":"Exemple","email":"anne@example.invalid"}
     site.gate.switch("integrale",0,"admin")
     assert "accusé réception" in transfer(site.gate,legacy,source,target,"https://official.invalid/folder")
