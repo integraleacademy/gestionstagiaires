@@ -20,6 +20,8 @@ def test_authenticated_crm_feed_uses_verified_directory_only(monkeypatch):
     private = Mock()
     private.get.return_value = {"234567":{"first_name":"Anne","last_name":"Exemple","email":"anne@example.test"},
                                 "123456":{"first_name":"Else","last_name":"Exemple","email":"other@example.test"}}
+    monkeypatch.setattr(feed.details, "known_details", lambda vault, owner: set())
+    monkeypatch.setattr(feed.details, "request_read", Mock())
     monkeypatch.setattr(feed, "snapshot_owners", lambda vault: ["account"])
     monkeypatch.setattr(feed, "observed_rows", lambda store, owner, snapshot: snapshot["rows"])
     available = [True]

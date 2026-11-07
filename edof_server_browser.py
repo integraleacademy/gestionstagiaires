@@ -1522,7 +1522,16 @@ def _run_browser(spec, *, live=None, traffic=None):
                     live["pending_witness"] = witness
                 clock_event("verified", fresh=not reused)
                 progress("pending_verified")
+                coverage = []
+                if on_production_service() and not spec.get("full_sync"):
+                    from edof_crm_details import fill
+                    try:
+                        coverage = fill(context, witness, vault, spec["owner"], snapshot["rows"], EDOF_HOST, API_PREFIX)
+                    except (ValueError, TypeError, OSError, sqlite3.Error, BrowserError):
+                        # A failed optional detail must not undo the verified list.
+                        pass
                 return {"code":"requests_ready","stage":"directory","candidate_count":len(snapshot["rows"]),
+                        **({"diagnostics":{"crm_details":coverage}} if coverage else {}),
                         "fresh_session":not reused,"session_saved":True,"gmail_code_used":gmail_code_used}
 
             def poll_pending(witness):
