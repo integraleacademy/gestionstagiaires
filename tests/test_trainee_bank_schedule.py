@@ -86,3 +86,37 @@ def test_attached_collection_does_not_import_rest_of_an_external_plan():
         upcoming, history = gestion._trainee_bank_schedule([line])
     assert upcoming == []
     assert [row['id'] for row in history] == ['attached']
+
+
+def test_statement_dates_are_bijective_and_scoped_to_the_mandate():
+    def collection(date, rum='EXACT'):
+        return {'date': date, '_account': 'account', '_rum': rum, 'status': 'declined', 'amount_cents': 36750}
+    def transaction(tid, date, rum='EXACT'):
+        return {'id': tid, 'side': 'credit', 'status': 'declined', 'currency': 'EUR',
+                'amount_cents': 36750, 'emitted_at': date+'T08:00:00Z', 'bank_account_id': 'account',
+                'direct_debit_collection': {'unique_mandate_reference': rum}}
+    history = {str(i): collection(d) for i, d in enumerate(['2020-09-30', '2020-10-01', '2020-10-10', '2020-10-30'])}
+    txs = [transaction(str(i), d) for i, d in enumerate(['2020-09-30', '2020-10-02', '2020-10-12', '2020-10-30'])]
+    gestion._match_debit_transaction_dates(history, txs + [transaction('other', '2020-10-01', 'OTHER')])
+    assert [r['transaction_date'] for r in history.values()] == [
+        '2020-09-30', '2020-10-02', '2020-10-12', '2020-10-30']
+    ambiguous = {'a': collection('2020-10-10'), 'b': collection('2020-10-10')}
+    gestion._match_debit_transaction_dates(ambiguous, txs)
+    assert all('transaction_date' not in row for row in ambiguous.values())
+
+
+def test_scheduled_collections_stay_out_of_history_and_missing_statement_dates_are_honest():
+    sub = subscription('monthly', '2999-11-30', schedule_type='monthly', bank_account_id='A')
+    def op(cid, status, day):
+        return {'id': cid, 'direct_debit_subscription_id': 'monthly', 'collection_date': day,
+                'amount': {'value': '367.50'}, 'status': status, 'unique_mandate_reference': 'RUM'}
+    ops = [op('old','declined','2020-10-10'), op('future','scheduled','2999-11-30'),
+           op('hold','on_hold','2999-11-10'), op('future-cancel','canceled','2999-12-30')]
+    with patch.object(gestion, 'list_qonto_direct_debit_subscriptions', return_value={'items': [sub]}), \
+         patch.object(gestion, 'list_qonto_direct_debit_collections', return_value={'items': ops}), \
+         patch.object(gestion, '_qonto_request', side_effect=ValueError('unavailable')):
+        upcoming, history = gestion._trainee_bank_schedule([{'qonto_direct_debit_subscription_id': 'monthly'}])
+    assert [row['id'] for row in upcoming] == ['monthly']
+    assert [row['id'] for row in history] == ['old']
+    assert history[0]['date'] == '2020-10-10' and 'transaction_date' not in history[0]
+    assert '_rum' not in history[0] and '_account' not in history[0]
