@@ -120,6 +120,8 @@ def page(store, owner, snapshot, args):
                 "paused": "Traitement suspendu. Consultez le dossier avant toute reprise.",
             }.get(item["status"], "Consultez le dossier pour retrouver les informations de l’opération.")
         label = "Envoi différé · problème de connexion" if item["status"] == "queued" and item["result"] == "issues" else STATUS_LABELS.get(item["status"], "À vérifier")
+        if item["status"] == "review" and item["detail"] == "declaration_form_changed":
+            label = "Déclaration non transmise"
         kind_label = TYPES[item["kind"]]
         if item["status"] in {"confirmed", "observed"} and item["kind"] in RECEIPT_TYPES:
             kind_label = RECEIPT_TYPES[item["kind"]]

@@ -1205,6 +1205,8 @@ def _run_browser(spec, *, live=None, traffic=None):
     requested_at = None
     business_modes = {"declare", "reconcile"}
     entry_mode = spec["mode"] in business_modes and spec.get("intent", {}).get("action") == "entry_training"
+    from edof_entry_request import full_completion
+    full_service = spec["mode"] in business_modes and full_completion(spec.get("intent", {}))
     proposal_mode = spec["mode"] in {"proposal_read","proposal_send","proposal_check"}
     proposal_witness = None
     authenticated = proposal_mode or spec["mode"] in {"read", "directory", "inspect_forms"} | business_modes
@@ -1508,9 +1510,12 @@ def _run_browser(spec, *, live=None, traffic=None):
                     vault.put("pending-attempt:"+spec["owner"],time.time(),ttl=900)
                 return read_pending_with_private_session(context,witness,checkpoint)
 
-            def run_entry_request(witness):
-                from edof_entry_request import run_entry
-                result = run_entry(context, witness, spec, os.environ["EDOF_CONNECTOR_DIRECTORY"], EDOF_HOST, API_PREFIX)
+            def run_status_request(witness):
+                from edof_entry_request import run_entry, run_full_completion
+                submit = run_entry if entry_mode else run_full_completion
+                result = submit(context, witness, spec, os.environ["EDOF_CONNECTOR_DIRECTORY"], EDOF_HOST, API_PREFIX)
+                if result is None:
+                    return None
                 if result["code"] == "declaration_confirmed":
                     vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                     clock_event("verified", fresh=not reused)
@@ -1603,10 +1608,13 @@ def _run_browser(spec, *, live=None, traffic=None):
                             pending_result = save_pending(pending,witness,True)
                     return run_full(witness,True)
 
-            if warm and entry_mode and vault and gate and private_page(page.url) and live.get("pending_witness"):
+            if warm and (entry_mode or full_service) and vault and gate and private_page(page.url) and live.get("pending_witness"):
                 stage = "declaration"
                 reused = True
-                return run_entry_request(live["pending_witness"])
+                result = run_status_request(live["pending_witness"])
+                if result is not None:
+                    return result
+                full_service = False
 
             tried_proposal_read = False
             if warm and proposal_mode and vault and private_page(page.url):
@@ -1790,9 +1798,11 @@ def _run_browser(spec, *, live=None, traffic=None):
 
             if vault and signals.get("workspace_status") == 200:
                 vault.delete("efp-paused-day")
-            if entry_mode and vault and gate and private_witness is not None:
+            if (entry_mode or full_service) and vault and gate and private_witness is not None:
                 stage = "declaration"
-                return run_entry_request(private_witness)
+                result = run_status_request(private_witness)
+                if result is not None:
+                    return result
             if proposal_mode and vault and private_witness is not None and not tried_proposal_read:
                 stage = "dossier"
                 result = run_proposal(private_witness, reused, workspace_witness=True)

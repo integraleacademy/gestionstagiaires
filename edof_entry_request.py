@@ -1,4 +1,4 @@
-"""Declare a confirmed entry using the same status operation as the EDOF form."""
+"""Use the status operation sent by the official EDOF entry and full-completion forms."""
 import datetime as dt
 import json
 from urllib.parse import urlsplit
@@ -9,9 +9,28 @@ from edof_declarations import begin_send, is_recorded, verify_identity
 
 
 def run_entry(context, witness, spec, storage, origin, prefix):
+    if spec["intent"]["action"] != "entry_training":
+        return {"code": "declaration_changed"}
+    return _run_status(context, witness, spec, storage, origin, prefix)
+
+
+def full_completion(intent):
+    return (intent.get("action") == "service_done" and type(intent.get("rate")) is int
+            and intent["rate"] == 100 and not intent.get("exit_confirmed")
+            and not intent.get("pilot_ticket"))
+
+
+def run_full_completion(context, witness, spec, storage, origin, prefix):
+    if not full_completion(spec["intent"]):
+        return {"code": "declaration_changed"}
+    return _run_status(context, witness, spec, storage, origin, prefix)
+
+
+def _run_status(context, witness, spec, storage, origin, prefix):
     folder = spec["folder_id"]
     intent = spec["intent"]
-    if (spec["mode"] not in {"declare", "reconcile"} or intent["action"] != "entry_training"
+    entry = intent["action"] == "entry_training"
+    if (spec["mode"] not in {"declare", "reconcile"}
             or not directory.ID_RE.fullmatch(folder) or not witness or witness.method != "GET"):
         return {"code": "declaration_changed"}
     source = urlsplit(witness.url)
@@ -43,6 +62,9 @@ def run_entry(context, witness, spec, storage, origin, prefix):
             row["session_start_date"] = directory.session_date(info.get("sessionStartDate"))
             row["session_end_date"] = directory.session_date(info.get("sessionEndDate"))
             row["start_date"] = directory.session_date(raw.get("beginDate"))
+            row["end_date"] = directory.session_date(raw.get("endDate"))
+            row["completion_rate"] = info.get("trainingCompletionRate")
+            row["duration_hours"] = info.get("indicativeDuration")
             return row
         except (ValueError, TypeError):
             return None
@@ -56,11 +78,32 @@ def run_entry(context, witness, spec, storage, origin, prefix):
         return {"code": "declaration_changed"}
     if is_recorded(current, intent):
         return {"code": "declaration_confirmed", "confirmed_state": current["state"]}
+    state = directory.normalized(current["state"])
+    already_out = not entry and state in {"terminated", "sortie declaree"}
     if spec["mode"] == "reconcile":
+        if already_out and current["end_date"] == intent["actual_date"]:
+            return {"code": "declaration_exit_confirmed"}
         return {"code": "declaration_unverified"}
-    if directory.normalized(current["state"]) not in {"accepted", "accepte"}:
-        return {"code": "declaration_changed"}
-    payload = {"state": "IN_TRAINING", "date": dt.date.fromisoformat(intent["actual_date"]).strftime("%d/%m/%Y")}
+    if already_out:
+        # An existing exit uses the portal's remaining service-only form.
+        return None
+    date = dt.date.fromisoformat(intent["actual_date"]).strftime("%d/%m/%Y")
+    if entry:
+        if state not in {"accepted", "accepte"}:
+            return {"code": "declaration_changed"}
+        payload = {"state": "IN_TRAINING", "date": date}
+    else:
+        if (state not in {"intraining", "in training", "en formation", "entree declaree"}
+                or not current["start_date"] or current["start_date"] > intent["actual_date"]
+                or not current["session_start_date"] <= intent["actual_date"] <= current["session_end_date"]):
+            return {"code": "declaration_changed"}
+        from edof_declaration_form import completion_hours_match
+        if not completion_hours_match(intent, current):
+            return {"code": "declaration_evidence_changed"}
+        # The current portal sends both the exit and the full service in this one PUT.
+        payload = {"state": "TERMINATED", "terminatedDate": date, "completed": True,
+                   "achievementRate": 100, "terminatedReason": "8", "forceMajeureAbsence": False,
+                   "absenceUnit": "", "absenceDuration": 0}
     # Reserve at the same durable boundary as the form. Once claimed, a timeout
     # or process restart permits only a GET until the result can be reconciled.
     if not begin_send(storage, spec):
@@ -77,6 +120,9 @@ def run_entry(context, witness, spec, storage, origin, prefix):
     if fresh and verify_identity(fresh, spec):
         if is_recorded(fresh, intent):
             return {"code": "declaration_confirmed", "confirmed_state": fresh["state"]}
+        if (not entry and directory.normalized(fresh["state"]) in {"terminated", "sortie declaree"}
+                and fresh["end_date"] == intent["actual_date"]):
+            return {"code": "declaration_exit_confirmed"}
         if status in {400, 401, 403, 404, 422} and fresh["state"] == current["state"]:
             return {"code": "declaration_refused"}
     return {"code": "declaration_unverified"}

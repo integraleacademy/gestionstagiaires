@@ -98,3 +98,83 @@ def test_accepted_folder_on_6_november_is_sent_once_with_its_edof_date(tmp_path,
     assert ledger.discover(store, "owner", snapshot)["existing"] == 1
     assert ledger.next_job(store, 1) is None
     assert len(portal.writes) == 1
+
+
+class CompletionPortal(Portal):
+    def __init__(self, state="inTraining", rate=None, end=None):
+        super().__init__(state=state, effective=ROW["session_start_date"])
+        self.rate, self.end = rate, end
+        self.after_write = "serviceDoneDeclared"
+
+    def get(self, url, **options):
+        response = super().get(url, **options)
+        data = json.loads(response.body())
+        data["endDate"] = self.end
+        data["trainingActionInfo"]["trainingCompletionRate"] = self.rate
+        response.body = lambda: json.dumps(data).encode()
+        return response
+
+    def put(self, url, data, **options):
+        assert url == "https://" + EDOF_HOST + API_PREFIX + FOLDER + "/status"
+        assert options["max_redirects"] == 0
+        assert data == {"state": "TERMINATED", "terminatedDate": "29/01/2026", "completed": True,
+                        "absenceUnit": "", "absenceDuration": 0, "achievementRate": 100,
+                        "forceMajeureAbsence": False, "terminatedReason": "8"}
+        self.writes.append(data)
+        self.state, self.end, self.rate = self.after_write, data["terminatedDate"], 100
+        return SimpleNamespace(url=url, status=200, dispose=lambda: None)
+
+
+def complete_service(portal, spec, path):
+    from edof_entry_request import run_full_completion
+    witness = SimpleNamespace(url="https://" + EDOF_HOST + API_PREFIX, method="GET", all_headers=lambda: {})
+    return run_full_completion(portal, witness, spec, path, EDOF_HOST, API_PREFIX)
+
+
+def test_combined_exit_needs_official_date_rate_and_status_and_never_replays(tmp_path):
+    from test_edof_declarations import EXIT
+    spec = prepare(tmp_path, {**EXIT, "rate": 100, "motif": ""})
+    portal = CompletionPortal()
+    assert complete_service(portal, spec, tmp_path)["code"] == "declaration_confirmed"
+    assert complete_service(portal, spec, tmp_path)["code"] == "declaration_confirmed"
+    portal.state = "SERVICE_DONE_DECLARED"
+    assert complete_service(portal, {**spec, "mode": "reconcile"}, tmp_path)["code"] == "declaration_confirmed"
+    for end, rate in (("28/01/2026", 100), ("29/01/2026", None), ("29/01/2026", 90)):
+        portal.end, portal.rate = end, rate
+        assert complete_service(portal, {**spec, "mode": "reconcile"}, tmp_path)["code"] == "declaration_unverified"
+    assert len(portal.writes) == 1
+
+
+def test_exit_only_and_uncertain_receipts_are_not_full_confirmation(tmp_path):
+    from test_edof_declarations import EXIT
+    spec = prepare(tmp_path, {**EXIT, "rate": 100, "motif": ""})
+    portal = CompletionPortal()
+    portal.after_write = "terminated"
+    assert complete_service(portal, spec, tmp_path)["code"] == "declaration_exit_confirmed"
+    assert complete_service(portal, {**spec, "mode": "reconcile"}, tmp_path)["code"] == "declaration_exit_confirmed"
+    portal.state = "inTraining"
+    assert complete_service(portal, spec, tmp_path)["code"] == "declaration_blocked"
+    assert len(portal.writes) == 1
+
+
+@pytest.mark.parametrize("action", ["partial", "hold", "before_entry", "hours", "other_folder", "wrong_state"])
+def test_exit_request_rejects_ineligible_operations(tmp_path, action):
+    from test_edof_declarations import EXIT
+    from edof_declarations import hold_folder
+    spec = prepare(tmp_path, {**EXIT, "rate": 100, "motif": ""})
+    portal = CompletionPortal()
+    if action == "partial":
+        spec["intent"]["rate"] = 90
+    elif action == "hold":
+        hold_folder(tmp_path, FOLDER, True)
+    elif action == "before_entry":
+        portal.effective = "30/01/2026"
+    elif action == "hours":
+        spec["intent"].update(source="local", actual_hours="10")
+    elif action == "other_folder":
+        portal.folder = "987654321"
+    elif action == "wrong_state":
+        portal.state = "canceled"
+    assert complete_service(portal, spec, tmp_path)["code"] in {
+        "declaration_changed", "declaration_blocked", "declaration_evidence_changed"}
+    assert not portal.writes
