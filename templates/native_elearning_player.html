@@ -24,7 +24,7 @@
   {% macro render_block(block) %}
     <section class="native-block native-block--{{ block.type|lower }}{% if block.video and block.video.src %} native-block--with-video{% endif %}" data-native-block="{{ block.type }}">
       {% if block.video and block.video.src %}
-        {% if block.video.required or block.video.lesson_explainer %}<h2 class="native-video-title">{{ block.video.title }}</h2>{% endif %}
+        {% if block.video.required or block.video.lesson_explainer or course.training_label == 'VTC' %}<h2 class="native-video-title">{{ block.video.title }}</h2>{% endif %}
         {% if block.video.learning_purpose %}<p class="mac-video-note">{{ block.video.learning_purpose }}</p>{% endif %}
         {% set readable_video = course.training_label == 'VTC' and block.video.presentation %}
         <div class="native-video-shell{% if readable_video %} vtc-readable-video{% endif %}"{% if readable_video %} data-vtc-video-reader{% endif %}>
@@ -359,7 +359,7 @@
 {% if course.training_label == 'VTC' %}<script src="{{ url_for('static', filename='js/vtc-video-companion.js', v='20261013-vtc-normal-speed') }}" defer></script>{% endif %}
 {% if course.training_label == 'MAC APS' %}<script src="{{ url_for('static', filename='js/mac-aps-elearning.js', v='20261012-1') }}" defer></script>{% endif %}
 <script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-2') }}" defer></script>
-{% if paged_reading or (course.id.startswith('academy-aps62-') and activity.get('academy', {}).get('kind') == 'lesson') %}<script src="{{ url_for('static', filename='js/aps62-lesson.js', v='20261017-total-time') }}" defer></script>{% endif %}
+{% if paged_reading or (course.id.startswith('academy-aps62-') and activity.get('academy', {}).get('kind') == 'lesson') %}<script src="{{ url_for('static', filename='js/aps62-lesson.js', v='20261107-lecture-vtc') }}" defer></script>{% endif %}
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261102-completion') }}" defer></script>
 {% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261102-completion') }}" defer></script>{% endif %}

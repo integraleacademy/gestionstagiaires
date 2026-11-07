@@ -37,6 +37,7 @@
   const previous = root.querySelector('[data-aps-lesson-previous]');
   const next = root.querySelector('[data-aps-lesson-next]');
   const timing = window.nativeLessonTiming || null;
+  const freeReading = timing?.pages.every(page => !page.required_seconds && !page.video_id);
   const completion = root.querySelector('[data-aps-lesson-completion]');
   const activityNavigation = document.querySelector('.native-navigation-actions');
   const activityAction = document.getElementById('nativeActionButton')
@@ -126,6 +127,11 @@
 
   function renderTiming() {
     if (!timing || !timingNotice) return;
+    if (freeReading) {
+      next.disabled = false;
+      timingNotice.hidden = true;
+      return;
+    }
     if (timing.pages.length !== pages.length) {
       next.disabled = true;
       completion.hidden = true;
@@ -153,7 +159,7 @@
   }
   document.addEventListener('native-lesson-timing', renderTiming);
 
-  let initial = timing ? Math.min(timing.firstPending(), pages.length - 1) : 0;
+  let initial = timing && !freeReading ? Math.min(timing.firstPending(), pages.length - 1) : 0;
   try {
     const raw = sessionStorage.getItem(storageKey);
     const saved = Number(raw);

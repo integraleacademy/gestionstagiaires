@@ -76,6 +76,8 @@ def audit_catalog():
     for provider in (academy, mac_aps, a3p, vtc):
         for course_id in provider.curriculum_ids():
             course = provider.load_bundled_course(course_id)
+            if provider is vtc:
+                course = vtc.allow_free_viewing(course)
             if course.get('training_label') == 'A3P':
                 course = project_course(course, {'required_minutes': course['required_minutes']})
             reports.append(audit_course(course))

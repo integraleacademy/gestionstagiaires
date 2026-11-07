@@ -1,0 +1,19 @@
+<dialog id="vaeApsAccess" aria-labelledby="vaeApsTitle" style="width:min(560px,92vw);max-height:88vh;border:1px solid #cedbf1;border-radius:20px;padding:0;color:#172c50;box-shadow:0 20px 80px #172c5040">
+  <div style="padding:22px 26px;background:linear-gradient(120deg,#eef5ff,#f7f4fb);border-bottom:1px solid #dce5f2">
+    <div class="hint">DESP VAE · {{ trainee.first_name }} {{ trainee.last_name }}</div>
+    <h2 id="vaeApsTitle" style="margin:6px 0">{{ 'Gérer l’accès e-learning APS' if desp_vae_aps_active else 'Créer un accès e-learning APS' }}</h2>
+  </div>
+  <form style="padding:20px 26px" data-activate="{{ url_for('desp_vae_access.activate', session_id=session.id, trainee_id=trainee.id) }}" data-preview="{{ url_for('desp_vae_access.preview', session_id=session.id, trainee_id=trainee.id) }}">
+    <p style="margin:0 0 16px">{{ 'Le parcours APS est disponible dans son espace stagiaire.' if desp_vae_aps_active else 'Le parcours APS sera disponible immédiatement dans son espace stagiaire. Vous pourrez suivre sa progression depuis cette fiche.' }}</p>
+    <label style="display:flex;align-items:center;gap:10px"><input name="send" type="checkbox" disabled style="width:auto"> Envoyer les accès par e-mail</label>
+    <div class="hint" data-recipient></div>
+    <details style="margin:14px 0"><summary>Prévisualiser le mail</summary>
+      <p><strong data-subject></strong></p>
+      <iframe sandbox title="Aperçu du mail d’accès APS" style="width:100%;height:320px;border:1px solid #d6dfeb;border-radius:10px"></iframe>
+    </details>
+    <p role="status" aria-live="polite" data-status></p>
+    <div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-outline" type="button" data-dismiss>Fermer</button>
+      <button class="btn btn-primary" type="submit" disabled>{{ 'Confirmer' if desp_vae_aps_active else 'Créer l’accès' }}</button></div>
+  </form>
+</dialog>
+<script defer src="{{ url_for('static', filename='js/desp-vae-aps-access.js') }}"></script>

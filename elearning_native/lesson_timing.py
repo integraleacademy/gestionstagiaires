@@ -20,7 +20,10 @@ def _words(value):
 
 
 def lesson_pages(course, activity):
-    if course.get('id', '').startswith(('academy-macaps-', 'academy-a3p-', 'academy-vtc-')):
+    if course.get('id', '').startswith('academy-vtc-'):
+        # Keep stable page IDs so actual reading time can still be recorded.
+        return [{**page, 'required_seconds': 0, 'video_id': None} for page in reading_pages(activity)]
+    if course.get('id', '').startswith(('academy-macaps-', 'academy-a3p-')):
         return reading_pages(activity)
     lesson = activity.get('academy', {})
     if (not course.get('id', '').startswith('academy-aps62-')

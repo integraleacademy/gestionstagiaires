@@ -74,6 +74,10 @@ def test_real_learners_cannot_skip_reading_or_validate_early_and_can_resume(case
     config = case._player_config(case.client.get(url))
     pages = config['lessonPages']
     assert pages
+    if training == 'VTC':
+        assert all(not page['required_seconds'] and not page.get('video_id') for page in pages)
+        assert case._api_post(config['completeUrl'], config).status_code == 200
+        return
     assert case._api_post(config['completeUrl'], config).status_code == 409
     now = time.time()
     with patch('elearning_native.store.time.time', side_effect=lambda: now):

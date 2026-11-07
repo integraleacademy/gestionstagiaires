@@ -9,6 +9,7 @@ from flask import Response, abort, url_for, render_template
 from werkzeug.utils import secure_filename
 
 import elearning_orders as learning
+import desp_vae_elearning
 from elearning_reporting import ProgressReader, certificate_pdf, connections_csv
 from elearning_native.importer import CourseImportError
 from elearning_native.paths import assigned_modules
@@ -18,7 +19,7 @@ from vtc_elearning_activation import STATE_KEY, is_vtc
 
 
 def source_for(training, person):
-    native_aps = is_native_aps_session(training)
+    native_aps = is_native_aps_session(training) or desp_vae_elearning.active(training, person)
     if not native_aps and not is_vtc(training):
         return None
     activation = person.get(STATE_KEY)
@@ -39,7 +40,7 @@ def source_for(training, person):
 
 def has_summary(training, person):
     """Determine whether to offer the report without resolving course versions."""
-    if is_native_aps_session(training):
+    if is_native_aps_session(training) or desp_vae_elearning.active(training, person):
         return True
     if not is_vtc(training):
         return False
@@ -100,7 +101,7 @@ def register_routes(host, bp, *, page):
         partner, source, person, effective = context(session_id, trainee_id)
         report = ProgressReader(host).report(source, person, session_obj=effective)
         daily_preview = None
-        if source['course_code'] == 'aps' and partner['id'] == host.INTEGRALE_PARTNER_ID:
+        if is_native_aps_session(effective) and partner['id'] == host.INTEGRALE_PARTNER_ID:
             import aps_learning_followup as daily
             day = daily.clock().date()
             receipt = daily.delivery(host, session_id, trainee_id, day)
