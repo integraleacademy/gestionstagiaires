@@ -139,7 +139,10 @@ def test_recovery_has_no_cross_tenant_write(shop):
 def test_terms_keep_accepted_editions_and_serve_expanded_current_version(shop):
     client = shop['client']
     current = client.get('/conditions-de-vente')
-    assert current.status_code == 200 and '17/10/2026' in current.text
+    assert current.status_code == 200 and '07/11/2026' in current.text
+    assert 'la facture est émise après confirmation du règlement intégral' in current.text
+    previous = client.get('/conditions-de-vente?version=2026-10-17')
+    assert previous.status_code == 200 and 'la facture peut être établie avant paiement' in previous.text
     assert '19. Réclamations' in current.text and '6 mois' in current.text
     old = client.get('/conditions-de-vente?version=2026-10-16')
     assert old.status_code == 200 and '16/10/2026' in old.text

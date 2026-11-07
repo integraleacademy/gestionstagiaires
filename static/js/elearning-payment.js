@@ -103,7 +103,7 @@
         checking = false;
         parkTracking();
         openButton.textContent = 'Retrouver le paiement Qonto';
-        paint('Votre paiement est ouvert', 'Réglez votre facture dans la fenêtre Qonto, puis fermez-la pour retrouver votre commande.');
+        paint('Votre paiement est ouvert', 'Réglez votre commande dans la fenêtre Qonto, puis fermez-la pour retrouver votre commande.');
       } catch (_) {
         closePopup();
         paint('Votre paiement est prêt', 'Cliquez sur « Ouvrir le paiement Qonto » pour poursuivre.', false);
@@ -132,7 +132,7 @@
         if (state.paid === true) { finish(); return; }
         paymentUrl = state.checkout_url ? safePayment(state.checkout_url) : '';
         openButton.hidden = !paymentUrl;
-        if (state.invoice_status === 'canceled') {
+        if (state.cancelled || state.invoice_status === 'canceled') {
           stop(); closePopup();
           showTracking();
           paint('Commande annulée', 'Cette commande a été annulée. Retrouvez vos autres commandes dans votre espace.', false);

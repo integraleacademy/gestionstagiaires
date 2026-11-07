@@ -10,7 +10,7 @@ import elearning_orders as learning
 from manuals_shop import base_url
 from test_manuals_shop import shop, all_data, csrf, signup, login
 from test_manuals_commerce import merchant, run, retry
-from test_elearning_orders import submit, latest, prepare
+from test_elearning_orders import existing_invoice, submit, latest, prepare
 from test_elearning_groups import create, save, quote, person
 
 
@@ -20,6 +20,7 @@ def centre_messages(shop):
 
 def test_verified_card_capture_unlocks_before_invoice_reconciliation_and_only_one_email(shop, merchant):
     order = submit(shop)
+    existing_invoice(order)
     run(order)
     assert not centre_messages(shop)
     assert not learning.entitled(latest(shop))
@@ -73,13 +74,14 @@ def test_unverified_capture_never_unlocks_or_sends_confirmation(shop, merchant, 
     merchant['payments'] = [{'id': 'capture-1', 'status': status, 'amount': {'value': amount, 'currency': currency}, 'paid_at': paid_at}]
     retry(order)
     assert not learning.entitled(latest(shop))
-    assert not centre_messages(shop)
+    assert not centre_messages(shop) and merchant["invoice"] is None
     url = '/admin/organisme/e-learning/commandes/' + order['id']
     assert shop['client'].get(url + '/confirmation?paid=true').status_code == 303
 
 
 def test_partial_capture_reconciles_after_remaining_payment(shop, merchant):
     order = submit(shop)
+    existing_invoice(order)
     run(order)
     payment = {'id': 'part-1', 'status': 'paid', 'amount': {'value': '59.00', 'currency': 'EUR'}, 'paid_at': '2026-01-01T10:00:00Z'}
     merchant['payments'] = [payment]
@@ -167,6 +169,7 @@ def admin_messages(shop):
 def test_capture_stays_paid_during_every_invoice_sync_write(shop, merchant, monkeypatch):
     import manuals_commerce as commerce
     order = submit(shop)
+    existing_invoice(order)
     run(order)
     merchant['paid'] = True
     retry(order)
@@ -230,6 +233,7 @@ def test_admin_as_customer_receives_one_confirmation_only(shop, merchant):
 
 def test_capture_proof_is_bound_to_exact_invoice_link_amount_and_currency(shop, merchant):
     order = submit(shop)
+    existing_invoice(order)
     run(order)
     merchant['paid'] = True
     retry(order)

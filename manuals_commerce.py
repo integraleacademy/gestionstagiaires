@@ -331,9 +331,13 @@ def _basket_items(order):
             quantity, title = 1, f"{line['quantity']} × {line['label']}"
             if (unit * (1 + rate) * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP) != line["total_cents"]:
                 raise ReviewRequired("Le prix TTC ne peut pas être reproduit exactement dans le panier Qonto.")
+        service = line["kind"] == "elearning"
+        description = f"Commande {order['reference']} [{order['id']}]. {line['quantity']} × {Decimal(line['unit_cents']) / 100:.2f} EUR TTC."
+        if not service:
+            description += " Livraison et personnalisation incluses."
         items.append({"title": title, "quantity": quantity, "unit_price": {"value": f"{unit:.2f}", "currency": "EUR"},
-                      "vat_rate": str(rate), "type": "good", "measure_unit": "unit",
-                      "description": f"Commande {order['reference']} [{order['id']}]. {line['quantity']} × {Decimal(line['unit_cents']) / 100:.2f} EUR TTC. Livraison et personnalisation incluses."})
+                      "vat_rate": str(rate), "type": "service" if service else "good", "measure_unit": "unit",
+                      "description": description})
     return items
 
 
@@ -498,6 +502,17 @@ def _settle_invoice(host, order, invoice):
         raise ReviewRequired("Le paiement est confirmé, mais le statut de la facture doit être vérifié dans Qonto.")
     _save(host, order, invoice_status="paid", invoice_url=safe_payment_url(invoice.get("invoice_url")))
     return invoice
+
+
+def collect_then_invoice(host, order, settings):
+    """Return the settled invoice only after Qonto confirms the full basket payment."""
+    if not order["commerce"].get("taxes"):
+        _save(host, order, taxes=tax_snapshot(order, settings))
+    if order["commerce"].get("flow") != "payment_first":
+        _save(host, order, flow="payment_first")
+    if _ensure_checkout(host, order):
+        return _settle_invoice(host, order, _ensure_invoice(host, order, settings))
+    return None
 
 
 def _ensure_payment_link(host, order, invoice):
@@ -672,11 +687,8 @@ def process_order(host, pid, oid):
             # Every order not already invoiced uses payment before invoicing.
             prepaid = state.get("flow") == "payment_first" or not (state.get("invoice_id") or state.get("invoice_creation_started"))
             if prepaid:
-                if not state.get("taxes"):
-                    _save(host, order, taxes=tax_snapshot(order, settings))
-                _save(host, order, flow="payment_first")
-                if _ensure_checkout(host, order):
-                    invoice = _settle_invoice(host, order, _ensure_invoice(host, order, settings))
+                invoice = collect_then_invoice(host, order, settings)
+                if invoice:
                     invoice_ready = bool(order["commerce"].get("invoice_url")) and invoice["status"] == "paid"
                 else:
                     outcome = "waiting_payment"
