@@ -84,3 +84,21 @@ def test_legacy_rejection_stays_reviewed_when_bank_adds_its_id_once():
     assert 'collection:FIRST' in records
     row['qonto_direct_debit_collection_id']='SECOND'
     assert 'collection:SECOND' not in host._bind_legacy_debit_reviews(records,[row])
+
+
+def test_equal_total_legacy_estimate_uses_the_single_documented_original_bank_series():
+    estimate=[{'date':d,'amount':294} for d in ('2026-09-10','2026-10-10','2026-11-10','2026-12-10','2027-01-10')]
+    dates=['2026-'+m+'-30' for m in ('09','10','11','12')]
+    rows=[debit(d,'C'+str(i) if i<2 else '', 'failed' if i<2 else 'scheduled') for i,d in enumerate(dates)]
+    retries=[debit('2026-11-10',is_rejection_retry=True,qonto_direct_debit_subscription_id='retry'+str(i)) for i in range(3)]
+    line={'id':'L','amountTTC':1470,'paymentPlan':{'schedule':estimate},'directDebitInstallments':rows+retries,
+          'initialDebitSchedule':estimate}
+    assert [r['date'] for r in host._initial_debit_schedule(line)]==dates
+    data={'billing_lines':[deepcopy(line)]}
+    host._save_billing_line(data,line)
+    saved=data['billing_lines'][0]
+    assert saved['initialDebitScheduleVersion']==2
+    assert [r['date'] for r in saved['initialDebitSchedule']]==dates
+    assert host._initial_debit_schedule(dict(line,initialDebitScheduleVersion=2))==estimate
+    competing=[dict(row,qonto_direct_debit_subscription_id='another') for row in rows]
+    assert host._initial_debit_schedule(dict(line,directDebitInstallments=rows+competing))==estimate

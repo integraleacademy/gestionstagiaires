@@ -42776,6 +42776,12 @@ def _prepare_sepa_payment_plan(line: Dict[str, Any], payment_plan: Dict[str, Any
             'updated_at': now,
         })
         installments.append(current)
+    if not line.get('initialDebitSchedule'):
+        line['initialDebitSchedule'] = [
+            {'date': str(item.get('due_date') or item.get('date') or '')[:10], 'amount': _money(item.get('amount'))}
+            for item in payment_plan.get('schedule') or []
+        ]
+        line['initialDebitScheduleVersion'] = 2
     line['paymentPlan'] = payment_plan
     line['paymentMode'] = 'sepa_direct_debit'
     line['sepa_payment_plan'] = {'status': 'pending_signature', 'installments': installments}
@@ -43774,6 +43780,7 @@ def buildBillingLinesFromSessions(
                     'finalizedAt': persisted.get('finalizedAt'), 'sentAt': persisted.get('sentAt'), 'paidAt': persisted.get('paidAt'), 'cancelledAt': persisted.get('cancelledAt'), 'invoiceDownloadedAt': persisted.get('invoiceDownloadedAt'), 'invoicePdfUrl': persisted.get('invoicePdfUrl'), 'qontoPdfUrl': persisted.get('qontoPdfUrl') or persisted.get('invoicePdfUrl'),
                     'creditNoteStatus': persisted.get('creditNoteStatus'), 'qontoCreditNoteId': persisted.get('qontoCreditNoteId'),
                     'initialDebitSchedule': persisted.get('initialDebitSchedule') or [],
+                    'initialDebitScheduleVersion': persisted.get('initialDebitScheduleVersion'),
                     'reviewedDebitRejections': persisted.get('reviewedDebitRejections') or {},
                     'paymentPlan': persisted.get('paymentPlan') if isinstance(persisted.get('paymentPlan'), dict) else {},
                     'paymentMode': persisted.get('paymentMode') or 'cash',
@@ -44186,9 +44193,10 @@ def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
         normalize_qonto_invoice_storage_fields(line)
     persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','companyName','clientEmail','clientAddress','clientZipCode','clientCity','siret','invoiceNotes','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qontoDirectDebitSyncWarning','qontoDirectDebitLastSyncedAt','qontoAutoSyncAttemptedAt','qonto_rejected_collection_ids','sepa_payment_plan','financial_tracking_override','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError','qontoRemoteAmountPaidCents','qontoBankTransfers','qontoBankTransferSyncedAt','qontoBankTransferSyncWarning','amountPaid','amount_paid','manualPaymentInvoiceId')}
     previous = all_map.get(line['id']) or {}
-    original = previous.get('initialDebitSchedule') or line.get('initialDebitSchedule') or _initial_debit_schedule(previous) or _initial_debit_schedule(line)
+    original = _initial_debit_schedule(previous) or _initial_debit_schedule(line)
     if original:
         persisted['initialDebitSchedule'] = copy.deepcopy(original)
+        persisted['initialDebitScheduleVersion'] = 2
     reviews = {**(previous.get('reviewedDebitRejections') or {}), **(line.get('reviewedDebitRejections') or {})}
     if reviews:
         persisted['reviewedDebitRejections'] = _bind_legacy_debit_reviews(reviews, _sepa_installments(line))
@@ -46025,8 +46033,9 @@ def api_billing_session(session_id: str):
 
 def _initial_debit_schedule(line):
     frozen = line.get('initialDebitSchedule')
-    if frozen:
+    if frozen and line.get('initialDebitScheduleVersion') == 2:
         return frozen
+
     def terms(rows):
         return [{'date': str(r.get('qonto_original_due_date') or r.get('due_date') or r.get('date'))[:10],
                  'amount': _money(r.get('qonto_original_amount', r.get('amount')))}
@@ -46037,15 +46046,36 @@ def _initial_debit_schedule(line):
     if edits and 'before' in edits[0]:
         return terms(edits[0]['before'])
     plan = terms((line.get('paymentPlan') or {}).get('schedule') or [])
-    originals = terms(_sepa_installments(line))
+    rows = _sepa_installments(line)
+    originals = terms(rows)
     # Older imports can contain a stale installment count in paymentPlan. A
     # bank retry never constitutes a new contractual installment.
     target = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
     def total(rows):
         return sum(money_value_to_cents(r['amount']) for r in rows)
+    if frozen and frozen != plan:
+        return frozen
+    # A legacy estimate can have the exact invoice total but different dates
+    # and amounts. Recover the original recurring bank series only when it is
+    # uniquely identifiable, was actually presented, and covers that total.
+    series = {}
+    for row in rows:
+        sid = row.get('qonto_direct_debit_subscription_id')
+        if sid and not (row.get('is_rejection_retry') or row.get('manual_tracking_entry') or row.get('qonto_attachment')):
+            series.setdefault(sid, []).append(row)
+    confirmed = []
+    for group in series.values():
+        installments = terms(group)
+        dates = {item['date'] for item in installments}
+        if (len(dates) > 1 and len(dates) == len(group) and target > 0 and total(installments) == target
+                and any(row.get('qonto_direct_debit_collection_id') for row in group)
+                and not any(row.get('qonto_subscription_status') in {'canceled', 'cancelled'} for row in group)):
+            confirmed.append(sorted(installments, key=lambda item: item['date']))
+    if len(confirmed) == 1:
+        return confirmed[0]
     if originals and target and total(originals) == target and total(plan) != target:
         return originals
-    return plan or originals
+    return frozen or plan or originals
 
 
 def _debit_rejection_key(row):
