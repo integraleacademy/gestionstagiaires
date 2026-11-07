@@ -83,10 +83,10 @@ class AdminCashPaymentsTests(unittest.TestCase):
         with open("templates/admin_trainee.html", encoding="utf-8") as template_file:
             template = with_sheet_assets(template_file.read())
 
-        self.assertIn("label:'Espèces',icon:'💶'", template)
-        self.assertIn("réglés en espèces", template)
-        self.assertIn("Reste en espèces", template)
-        self.assertIn("cashPaymentCount", template)
+        self.assertIn("label:'Total encaissé'", template)
+        self.assertIn("Montant prévu en espèces", template)
+        self.assertNotIn("Reste en espèces", template)
+        self.assertNotIn("restants à régler en espèces", template)
         self.assertIn("window.refreshFinanceDashboard?.();", template)
 
     def test_dashboard_stats_and_rows_include_cash_details(self):

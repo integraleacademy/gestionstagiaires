@@ -210,7 +210,7 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         payment_end = template.index("\n    ];", payment_start)
         payment_cards = template[payment_start:payment_end]
         self.assertIn("...(showDirectDebitKpi?[{label:'Prélèvements'", payment_cards)
-        self.assertLess(payment_cards.index("{label:'Prélèvements'"), payment_cards.index("{label:'Payé'"))
+        self.assertLess(payment_cards.index("{label:'Total encaissé'"), payment_cards.index("{label:'Prélèvements'"))
 
     def test_direct_debit_kpi_is_hidden_when_cash_covers_personal_funding(self):
         node = shutil.which("node")

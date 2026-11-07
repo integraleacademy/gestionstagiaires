@@ -444,12 +444,11 @@ if(financementDetails){
       }else if(cashPaymentEnabled.checked && cashPaymentSettled?.checked){
         const settledDate = (cashPaymentSettledDate?.value || "").trim();
         const dateHint = settledDate ? ` le ${formatIsoDateFr(settledDate)}` : "";
-        cashPaymentHint.textContent = `${formatEuros(paid)} € réglés en espèces${dateHint}.`;
+        cashPaymentHint.textContent = `${formatEuros(amount)} € déclarés réglés en espèces${dateHint}.`;
         cashPaymentHint.style.color = "#16a34a";
       }else if(cashPaymentEnabled.checked){
-        const remaining = Math.max(amount - paid, 0);
-        cashPaymentHint.textContent = `${formatEuros(remaining)} € restants à régler en espèces (${formatEuros(paid)} € versés).`;
-        cashPaymentHint.style.color = "#d97706";
+        cashPaymentHint.textContent = `Prévision en espèces : ${formatEuros(amount)} € · Versements saisis : ${formatEuros(paid)} €.`;
+        cashPaymentHint.style.color = "#475569";
       }else{
         cashPaymentHint.textContent = "";
       }
@@ -1832,15 +1831,18 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     const montantCpf=parseMoneyValue(cpfAmount?.value), montantPersonnel=parseMoneyValue(personalAmount?.value), montantAutre=parseMoneyValue(otherAmount?.value);
     const totalFinancement=montantCpf+montantPersonnel+montantAutre;
     const objectifFacturation=(montantPersonnel+montantAutre)>0?(montantPersonnel+montantAutre):(totalFinancement>0?0:prixFormation);
-    const active=lines.filter(l=>!['cancelled','deleted'].includes(String(l.invoiceStatus||'')));
+    const active=lines.filter(l=>!['canceled','cancelled','deleted'].includes(String(l.invoiceStatus||'').toLowerCase()));
     const billable=active.filter(l=>!isCpfQontoLine(l));
     const invoiced=billable.filter(lineHasGeneratedInvoice);
     const totalFacture=invoiced.reduce((a,l)=>a+lineAmount(l),0);
     const qontoPaid=billable.reduce((a,l)=>a+linePaid(l),0);
     const cashInstallmentsTotal=window.getFinanceCashInstallmentsTotal?window.getFinanceCashInstallmentsTotal():0;
-    const cashPaid=(cashPaymentEnabled?.checked&&cashPaymentSettled?.checked)?parseMoneyValue(cashPaymentAmount?.value):cashInstallmentsTotal;
-    const cashInstallments=window.getFinanceCashInstallments?window.getFinanceCashInstallments():[];
-    const cashPaymentCount=cashInstallments.filter(item=>parseMoneyValue(item?.amount)>0).length||(cashPaid>0?1:0);
+    const cashPlanned=parseMoneyValue(cashPaymentAmount?.value);
+    let cashPaid=0;
+    if(cashPaymentEnabled?.checked){
+      cashPaid=cashPaymentSettled?.checked && cashPlanned>0 ? cashPlanned : cashInstallmentsTotal;
+      if(cashPlanned>0)cashPaid=Math.min(cashPaid,cashPlanned);
+    }
     const totalPaye=qontoPaid+cashPaid;
     const installments=allInstallments(lines),effectiveInstallments=installments.filter(i=>i.isCurrentScheduleAttempt);const paidStatuses=new Set(['completed','paid','succeeded','success']);const rejectStatuses=new Set(['failed','returned','rejected','refunded','declined']);
     const mensualitesPayees=effectiveInstallments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).length;
@@ -1849,11 +1851,12 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       installments.filter(it=>it.line===line && installmentRejectionTreated(it)).length),0);
     const today=isoToday();
     const upcoming=effectiveInstallments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())&&!rejectStatuses.has(String(i.status||'').toLowerCase())&&installmentDate(i)>=today).sort((a,b)=>installmentDate(a).localeCompare(installmentDate(b)))[0];
-    const computed={prixFormation,montantCpf,montantPersonnel,montantAutre,totalFinancement,objectifFacturation,totalFacture,totalPaye,resteAFacturer:objectifFacturation-totalFacture,resteAPayer:objectifFacturation-totalPaye,differenceFinancement:totalFinancement-prixFormation,progressFacturation:pct(totalFacture,objectifFacturation),progressPaiement:pct(totalPaye,objectifFacturation),cashPaymentEnabled:Boolean(cashPaymentEnabled?.checked),cashPlanned:parseMoneyValue(cashPaymentAmount?.value),cashPaid,cashPaymentCount,installments,effectiveInstallments,montantTotalEcheancier:effectiveInstallments.reduce((total,item)=>total+Number(item.amount||0),0),totalMensualites:effectiveInstallments.length,mensualitesPayees,mensualitesRestantes:Math.max(effectiveInstallments.length-mensualitesPayees,0),montantPreleve:effectiveInstallments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),montantRestantAPrelever:effectiveInstallments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),prochaineEcheance:upcoming,nombreRejets,nombreRejetsTraites,qontoPaymentEntries:[]};
+    const computed={prixFormation,montantCpf,montantPersonnel,montantAutre,totalFinancement,objectifFacturation,totalFacture,totalPaye,resteAFacturer:objectifFacturation-totalFacture,resteAPayer:objectifFacturation-totalPaye,differenceFinancement:totalFinancement-prixFormation,progressFacturation:pct(totalFacture,objectifFacturation),progressPaiement:pct(totalPaye,objectifFacturation),cashPaymentEnabled:Boolean(cashPaymentEnabled?.checked),cashPlanned,cashPaid,installments,effectiveInstallments,montantTotalEcheancier:effectiveInstallments.reduce((total,item)=>total+Number(item.amount||0),0),totalMensualites:effectiveInstallments.length,mensualitesPayees,mensualitesRestantes:Math.max(effectiveInstallments.length-mensualitesPayees,0),montantPreleve:effectiveInstallments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),montantRestantAPrelever:effectiveInstallments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),prochaineEcheance:upcoming,nombreRejets,nombreRejetsTraites,qontoPaymentEntries:[]};
     if(currentFinancialSummary){
       computed.objectifFacturation=Number(currentFinancialSummary.planned_total_cents||0)/100||computed.objectifFacturation;
       computed.totalFacture=Number(currentFinancialSummary.invoiced_total_cents||0)/100;
       computed.totalPaye=Number(currentFinancialSummary.paid_total_cents||0)/100;
+      computed.cashPaid=Number(currentFinancialSummary.cash_paid_total_cents??Math.round(cashPaid*100))/100;
       computed.resteAFacturer=computed.objectifFacturation-computed.totalFacture;
       computed.resteAPayer=Number(currentFinancialSummary.remaining_total_cents||0)/100;
       computed.progressFacturation=Number(currentFinancialSummary.invoicing_percentage||0);
@@ -1879,6 +1882,37 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     computed.otherFundingInvoiced=otherFunding.invoiced;
     computed.otherFundingRemainingToInvoice=otherFunding.remainingToInvoice;
     return computed;
+  }
+  function paymentMethodTotals(c, lines, summary){
+    const cash = Math.round(c.cashPaid * 100);
+    const total = Math.round(c.totalPaye * 100);
+    let debits = 0;
+    let transfers = 0;
+    for(const entry of c.qontoPaymentEntries){
+      const amount = Number(entry.paid_amount_cents || 0);
+      if(entry.source === 'qonto_direct_debit'){
+        debits += amount;
+      }else if(entry.source === 'qonto_bank_transfer'){
+        transfers += amount;
+      }else if(entry.source === 'qonto' && entry.invoice_id){
+        const line = lines.find(item => (item.qontoInvoiceId || item.qontoDraftId) === entry.invoice_id);
+        const debit = Number(line?.qontoCollectedAmountCents || 0);
+        const transfer = Number(line?.qontoBankTransferPaidCents || 0);
+        // An invoice can report a receipt without identifying its payment method.
+        if(debit + transfer <= amount){
+          debits += debit;
+          transfers += transfer;
+        }
+      }
+    }
+    const qonto = Number(summary?.qonto_paid_total_cents ?? total - cash);
+    return [
+      ['Espèces', cash],
+      ['Prélèvements Qonto', debits],
+      ['Virements bancaires', transfers],
+      ['Qonto · mode non précisé', qonto - debits - transfers],
+      ['Autres règlements saisis', total - cash - qonto],
+    ].filter(([, cents]) => cents > 0);
   }
   function cashCoversEntirePersonalFunding(c){const personalFunding=Number(c?.personalFundingPlanned||0),cashPlanned=Number(c?.cashPlanned||0);return Boolean(c?.cashPaymentEnabled)&&personalFunding>0&&cashPlanned+0.01>=personalFunding;}
   function renderSummary(c){
@@ -1913,7 +1947,14 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     const cpfInvoiceAmountHtml=cpfInvoiceId?`${fmtMoney(cpfInvoicePaid)} encaissé sur ${fmtMoney(cpfInvoiceTotal)}${cpfPaymentStatus==='paid'&&cpfInvoicePaidAt?` · Payée le ${formatIsoDateFr(cpfInvoicePaidAt.slice(0,10))}`:''}`:`Montant facturé : ${fmtMoney(cpfInvoiceTotal)}${cpfWedofBillingState==='paid'?' · Paiement confirmé par WEDOF':' · Paiement géré hors plateforme'}`;
     const cpfInvoiceLink=cpfInvoiceId?`<a class="finance-summary-card__cpf-invoice-link" href="/admin/qonto/invoices/${encodeURIComponent(cpfInvoiceId)}/pdf" target="_blank" rel="noopener"><span aria-hidden="true">👁</span> Visualiser la facture</a>`:(cpfWedofUrl?`<a class="finance-summary-card__cpf-invoice-link" href="${esc(cpfWedofUrl)}" target="_blank" rel="noopener"><span aria-hidden="true">↗</span> Ouvrir dans WEDOF</a>`:'');
     const cpfInvoiceHtml=hasCpfInvoice?`<div class="finance-summary-card__cpf-invoice"><div class="finance-summary-card__cpf-invoice-head"><strong>Facture CPF</strong>${badge(cpfInvoiceState[0],cpfInvoiceState[1])}</div><div class="finance-summary-card__cpf-invoice-number">${esc(cpfInvoiceNumber||'Référence non communiquée')}</div><div class="finance-summary-card__cpf-invoice-amount">${cpfInvoiceAmountHtml}</div>${cpfInvoiceLink}</div>`:'';
-    const cashStatus=statusFromRatio(c.cashPaid,c.cashPlanned,{none:'Montant à préciser',zero:'À encaisser',partial:'Espèces partielles',done:'Espèces réglées',over:'Trop-perçu espèces'});
+    const methods = paymentMethodTotals(c,currentLines,currentFinancialSummary);
+    const receiptsHtml = methods.map(([method,cents]) =>
+      `<div><dt>${esc(method)}</dt><dd>${fmtMoney(cents/100)}</dd></div>`
+    ).join('');
+    const surplus = Math.round((c.totalPaye - c.objectifFacturation) * 100) / 100;
+    const balanceLabel = surplus > 0 ? 'Trop-perçu' : 'Reste à payer';
+    const balance = surplus > 0 ? surplus : c.resteAPayer;
+    const receiptsDetail = `<dl class="finance-receipts">${receiptsHtml}<div class="finance-receipts__balance"><dt>${balanceLabel}</dt><dd>${fmtMoney(balance)}</dd></div></dl>`;
     const showDirectDebitKpi=!cashCoversEntirePersonalFunding(c);
     const personalFundingLines=currentLines.filter(line=>[line.financingType,line.financingLabel,line.financeurName].filter(Boolean).join(' ').toUpperCase().includes('PERSONNEL'));
     const otherFundingLines=currentLines.filter(line=>{const type=[line.financingType,line.financingLabel,line.financeurName].filter(Boolean).join(' ').toUpperCase();return type.includes('AUTRE')||type.includes('OTHER');});
@@ -1924,11 +1965,13 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       ...(hasOtherFundingAmount?[{label:'Autres financements',icon:'🏢',value:`${fmtMoney(c.otherFundingInvoiced)} / ${fmtMoney(c.otherFundingPlanned)}`,badge:badge(otherFundingFact[0],otherFundingFact[1])+invoiceOriginBadges(otherFundingLines),tone:(c.otherFundingPlanned>0&&c.otherFundingInvoiced<c.otherFundingPlanned)?'orange':otherFundingFact[1],meta:`Reste à facturer : ${fmtMoney(c.otherFundingRemainingToInvoice)}`}]:[])
     ];
     const paymentCards=[
-      ...(c.cashPaymentEnabled?[{label:'Espèces',icon:'💶',value:`${fmtMoney(c.cashPaid)} / ${fmtMoney(c.cashPlanned)}`,badge:badge(`${fmtMoney(c.cashPaid)} réglés en espèces`,cashStatus[1]),tone:cashStatus[1],meta:`${c.cashPaymentCount} versement${c.cashPaymentCount===1?'':'s'} enregistré${c.cashPaymentCount===1?'':'s'} · Reste en espèces : ${fmtMoney(Math.max(c.cashPlanned-c.cashPaid,0))}`}]:[]),
+      {label:'Total encaissé',icon:'€',value:fmtMoney(c.totalPaye),
+       badge:badge(pay[1]==='green'?'Soldé':pay[0],pay[1]),tone:pay[1],
+       meta:`Sur ${fmtMoney(c.objectifFacturation)} ${hasCpfAmount?'à encaisser hors CPF':'à encaisser'}`,
+       detail:receiptsDetail},
       ...(showDirectDebitKpi?[{label:'Prélèvements',icon:'↻',value:`${c.mensualitesPayees}/${c.totalMensualites}`,badge:[badge(inst[0],inst[1]),mandate.hasSigned?badge('✅ Mandat OK','green'):(mandate.hasSent?badge('⚠ Mandat de prélèvement en cours de validation','orange'):''),bankSnapshot?.upcoming?.length?badge(`${bankSnapshot.upcoming.length} programmation(s) Qonto`,'blue'):(qontoSchedule.needsQontoScheduling?badge('⚠ Échéancier à programmer dans Qonto','orange'):'')].filter(Boolean).join(''),tone:qontoSchedule.needsQontoScheduling?'orange':inst[1],meta:qontoSchedule.needsQontoScheduling?'Le mandat est validé, mais les échéances ne sont pas encore créées dans Qonto. Cliquez sur Programmer les échéances.':(c.prochaineEcheance?`Consulter l’échéancier actualisé`:'Aucune prochaine échéance au plan'),mandateAction:!mandate.hasSent,scheduleAction:qontoSchedule.needsQontoScheduling,rescheduleAction:c.nombreRejets>0}]:[]),
-      {label:'Payé',icon:(pay[1]==='green'?'✓':'✕'),iconTone:pay[1]==='green'?'green':'red',value:`${fmtMoney(c.totalPaye)} / ${fmtMoney(c.objectifFacturation)}`,badge:badge(pay[0],pay[1]),tone:(c.objectifFacturation>0&&c.totalPaye<c.objectifFacturation)?'orange':pay[1],meta:`Reste à payer : ${fmtMoney(Math.max(c.resteAPayer,0))}`}
     ];
-    const renderCard=card=>`<div class="finance-summary-card ${card.cpf?'finance-summary-card--cpf ':''}is-${card.tone}"><div class="finance-summary-card__top"><span>${card.label}</span><span class="finance-summary-card__icon ${card.iconTone?`finance-summary-card__icon--${card.iconTone}`:''}">${card.icon}</span></div><div class="finance-summary-card__value">${card.value}</div>${card.cpf?`<div class="finance-summary-card__cpf-meter"><span style="width:${cpfValidated?100:0}%"></span></div>`:''}<div class="finance-summary-card__cpf-actions"><span>${card.badge}</span>${card.cpf&&!readOnly?`<button class="finance-summary-card__cpf-btn ${cpfValidated?'finance-summary-card__cpf-btn--undo':''}" type="button" data-cpf-toggle="${cpfValidated?'0':'1'}" title="${cpfValidated?'Annuler validation CPF':'Valider le CPF'}" aria-label="${cpfValidated?'Annuler validation CPF':'Valider le CPF'}">${cpfValidated?'✕':'✅'}</button>`:''}</div><div class="finance-summary-card__meta">${card.meta}</div>${card.cpf?cpfFranceTravailHtml:''}${card.cpfInvoiceHtml||''}${card.rescheduleAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-reschedule-rejected-debit style="margin-top:8px;width:100%;justify-content:center">Reprogrammer un prélèvement</button>':''}${card.mandateAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-create-mandate style="margin-top:8px;width:100%;justify-content:center">Créer un mandat de prélèvement</button>':''}${card.scheduleAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-schedule-qonto style="margin-top:8px;width:100%;justify-content:center">Programmer les échéances</button>':''}</div>`;
+    const renderCard=card=>`<div class="finance-summary-card ${card.cpf?'finance-summary-card--cpf ':''}is-${card.tone}"><div class="finance-summary-card__top"><span>${card.label}</span><span class="finance-summary-card__icon ${card.iconTone?`finance-summary-card__icon--${card.iconTone}`:''}">${card.icon}</span></div><div class="finance-summary-card__value">${card.value}</div>${card.cpf?`<div class="finance-summary-card__cpf-meter"><span style="width:${cpfValidated?100:0}%"></span></div>`:''}<div class="finance-summary-card__cpf-actions"><span>${card.badge}</span>${card.cpf&&!readOnly?`<button class="finance-summary-card__cpf-btn ${cpfValidated?'finance-summary-card__cpf-btn--undo':''}" type="button" data-cpf-toggle="${cpfValidated?'0':'1'}" title="${cpfValidated?'Annuler validation CPF':'Valider le CPF'}" aria-label="${cpfValidated?'Annuler validation CPF':'Valider le CPF'}">${cpfValidated?'✕':'✅'}</button>`:''}</div><div class="finance-summary-card__meta">${card.meta}</div>${card.detail||''}${card.cpf?cpfFranceTravailHtml:''}${card.cpfInvoiceHtml||''}${card.rescheduleAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-reschedule-rejected-debit style="margin-top:8px;width:100%;justify-content:center">Reprogrammer un prélèvement</button>':''}${card.mandateAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-create-mandate style="margin-top:8px;width:100%;justify-content:center">Créer un mandat de prélèvement</button>':''}${card.scheduleAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-schedule-qonto style="margin-top:8px;width:100%;justify-content:center">Programmer les échéances</button>':''}</div>`;
     document.getElementById('financeSummaryCards').innerHTML=`<section class="finance-kpi-group finance-kpi-group--funding" aria-labelledby="financeFundingKpisTitle"><div class="finance-kpi-group__head"><div><span class="finance-kpi-group__eyebrow">Origine des fonds</span><h3 id="financeFundingKpisTitle">Financement</h3></div><span class="finance-kpi-group__count">${fundingCards.length} indicateur${fundingCards.length===1?'':'s'}</span></div><div class="finance-summary-grid" style="--finance-kpi-count:${fundingCards.length}">${fundingCards.map(renderCard).join('')}</div></section><section class="finance-kpi-group finance-kpi-group--payment" aria-labelledby="financePaymentKpisTitle"><div class="finance-kpi-group__head"><div><span class="finance-kpi-group__eyebrow">Encaissements</span><h3 id="financePaymentKpisTitle">Paiement</h3></div><span class="finance-kpi-group__count">${paymentCards.length} indicateur${paymentCards.length===1?'':'s'}</span></div><div class="finance-summary-grid" style="--finance-kpi-count:${paymentCards.length}">${paymentCards.map(renderCard).join('')}</div></section>`;
     document.querySelector('[data-reschedule-rejected-debit]')?.addEventListener('click',openRescheduleRejectedDebitModal);
     document.querySelector('[data-create-mandate]')?.addEventListener('click',()=>{const line=currentLines.find(l=>String(l.financingType||l.financingLabel||'').toLowerCase().includes('personnel'))||currentLines.find(l=>!isCpfQontoLine(l));if(line)openCreateMandateModal(line);else alert('Aucune ligne de financement compatible.');});
@@ -2000,11 +2043,14 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
         });
         if(Number(entry.paid_amount_cents)>representedAmount)rows.push({date:entry.last_synced_at||'',dateLabel:'Dernière synchronisation',amount:(Number(entry.paid_amount_cents)-representedAmount)/100,mode:'Qonto',status:paymentStatusLabel(entry.payment_status),invoice:entry.invoice_number||entry.invoice_id,remaining:Number(entry.remaining_amount_cents||0)/100,note:'Autres encaissements remontés par Qonto'});
       }else if(Number(entry.paid_amount_cents||0)>0){
-        rows.push({date:entry.last_synced_at||'',dateLabel:'Dernière synchronisation',amount:Number(entry.paid_amount_cents)/100,mode:'Qonto',status:paymentStatusLabel(entry.payment_status),invoice:entry.invoice_number||entry.invoice_id,remaining:Number(entry.remaining_amount_cents||0)/100,note:'Montant encaissé remonté par Qonto'});
+        const invoice = entry.invoice_id && lines.find(line=>(line.qontoInvoiceId||line.qontoDraftId)===entry.invoice_id);
+        const isDebit = entry.source==='qonto_direct_debit' || Number(invoice?.qontoCollectedAmountCents)===Number(entry.paid_amount_cents);
+        rows.push({date:entry.last_synced_at||'',dateLabel:'Dernière synchronisation',amount:Number(entry.paid_amount_cents)/100,mode:isDebit?'Prélèvement Qonto':'Qonto',status:paymentStatusLabel(entry.payment_status),invoice:entry.invoice_number||entry.invoice_id,remaining:Number(entry.remaining_amount_cents||0)/100,note:'Montant encaissé remonté par Qonto'});
       }
     });
+    if(c.qontoPaymentEntries?.length)return rows;
     lines.forEach(line=>{
-      if(line.qontoInvoiceId||line.qontoDraftId||linePaid(line)<=0)return;
+      if(isCpfQontoLine(line)||['cancelled','canceled','deleted'].includes(String(line.invoiceStatus||'').toLowerCase())||line.qontoInvoiceId||line.qontoDraftId||linePaid(line)<=0)return;
       if(Array.isArray(line.qontoBankTransfers)&&line.qontoBankTransfers.length){
         line.qontoBankTransfers.forEach(transfer=>{
           if(String(transfer.status||'').toLowerCase()!=='completed'||Number(transfer.amount_cents||0)<=0||representedTransfers.has(String(transfer.id)))return;
@@ -2022,7 +2068,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     const cashItems=window.getFinanceCashInstallments?window.getFinanceCashInstallments():[];
     const cashTotal=window.getFinanceCashInstallmentsTotal?window.getFinanceCashInstallmentsTotal():0;
     if(cashPaymentEnabled?.checked&&cashTotal>0)cashItems.forEach(item=>rows.push({date:item.date,dateLabel:'Reçu le',amount:item.amount,mode:'Espèces',status:'Encaissé',invoice:'',remaining:null}));
-    document.getElementById('financePayments').innerHTML=`<div class="finance-line ${c.resteAPayer<=0.01&&c.objectifFacturation>0?'finance-line--paid':'finance-line--unpaid'}"><strong>Total encaissé</strong><div>${fmtMoney(c.totalPaye)}</div><div><span class="finance-mini-label">Reste à payer</span>${fmtMoney(Math.max(c.resteAPayer,0))}</div><div><span class="finance-mini-label">Taux de paiement</span>${Math.round(c.progressPaiement)}%</div></div>`+(Number(c.totalPaye||0)>0?rows.map(row=>`<div class="finance-line"><strong>${esc(row.mode)}</strong><div><span class="finance-mini-label">Facture</span>${esc(row.invoice||'—')}</div><div><span class="finance-mini-label">Montant encaissé</span>${fmtMoney(row.amount)}</div><div><span class="finance-mini-label">Reste sur la facture</span>${row.remaining==null?'—':fmtMoney(Math.max(row.remaining,0))}</div><div>${badge(row.status,row.status==='Partiellement payé'?'orange':'green')}</div><div><span class="finance-mini-label">${esc(row.dateLabel)}</span>${formatIsoDateFr(String(row.date).slice(0,10))||'—'}${row.note?` · ${esc(row.note)}`:''}</div></div>`).join(''):'<div class="finance-empty">Aucun paiement enregistré pour le moment.</div>');
+    document.getElementById('financePayments').innerHTML=`<div class="finance-line ${c.resteAPayer<=0.01&&c.objectifFacturation>0?'finance-line--paid':'finance-line--unpaid'}"><strong>Total encaissé</strong><div>${fmtMoney(c.totalPaye)}</div><div><span class="finance-mini-label">Reste à payer</span>${fmtMoney(Math.max(c.resteAPayer,0))}</div><div><span class="finance-mini-label">Taux de paiement</span>${Math.round(c.progressPaiement)}%</div></div>`+(Number(c.totalPaye||0)>0?rows.map(row=>`<div class="finance-line"><strong>${esc(row.mode)}</strong><div><span class="finance-mini-label">Facture</span>${esc(row.invoice||'—')}</div><div><span class="finance-mini-label">Montant encaissé</span>${fmtMoney(row.amount)}</div><div><span class="finance-mini-label">Solde facture côté Qonto</span>${row.remaining==null?'—':fmtMoney(Math.max(row.remaining,0))}</div><div>${badge(row.status,row.status==='Partiellement payé'?'orange':'green')}</div><div><span class="finance-mini-label">${esc(row.dateLabel)}</span>${formatIsoDateFr(String(row.date).slice(0,10))||'—'}${row.note?` · ${esc(row.note)}`:''}</div></div>`).join(''):'<div class="finance-empty">Aucun paiement enregistré pour le moment.</div>');
   }
   function installmentEditSnapshot(line){
     return installmentScheduleContext(line).items.map((item,index)=>[
@@ -2395,7 +2441,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       const resendMandate = !cpfTrackingOnly && lineHasPendingMandate(l) && !readOnly ? `<button class="qonto-action-btn qonto-action-btn--primary qonto-desktop-secondary" data-mandate="${id}" data-action-control><span aria-hidden="true">✉</span> Renvoyer le mandat de prélèvement</button>` : '';
       const schedule = !cpfTrackingOnly && l.paymentMode==='sepa_direct_debit' ? `<button class="qonto-action-btn qonto-action-btn--secondary qonto-desktop-secondary" data-schedule="${id}" data-action-control><span aria-hidden="true">📅</span> Échéancier</button>` : '';
       const mobileActions = (sync || reset || send || resendMandate || schedule) ? `<details class="qonto-mobile-actions"><summary class="qonto-action-btn qonto-action-btn--secondary" aria-label="Actions secondaires">•••</summary><div class="qonto-mobile-actions__menu">${sync.replace(' qonto-desktop-secondary','')}${send.replace(' qonto-desktop-secondary','')}${resendMandate.replace(' qonto-desktop-secondary','')}${schedule.replace(' qonto-desktop-secondary','')}${reset.replace(' qonto-desktop-secondary','')}</div></details>` : '';
-      return `<div class="qonto-invoice-row ${rowTone}"><div class="qonto-invoice-row__type"><span class="qonto-invoice-row__icon" aria-hidden="true">💳</span><strong>${esc(l.financeurName||l.financingLabel||l.financingType)}</strong></div><div class="qonto-invoice-row__content"><div class="qonto-invoice-row__value"><span class="finance-mini-label">Facture</span>${esc(canonicalInvoiceEntry(l)?.invoice_number||l.qontoInvoiceNumber||(external?'Générée ailleurs':'—'))}${external?`<div style="margin-top:6px">${badge('Facture générée ailleurs','purple')}</div>`:''}</div><div class="qonto-invoice-row__value"><span class="finance-mini-label">Montant TTC</span>${fmtMoney(lineAmount(l))}</div><div class="qonto-invoice-row__value"><span class="finance-mini-label">Encaissé</span><span class="${linePaid(l)>0?'text-green':''}">${fmtMoney(linePaid(l))}</span></div><div class="qonto-invoice-row__value"><span class="finance-mini-label">Reste à payer</span><span class="${lineRemaining(l)>0?'text-orange':''}">${lineRemaining(l)>0?fmtMoney(lineRemaining(l)):(lineAmount(l)>0&&linePaid(l)>=lineAmount(l)?'Soldé':fmtMoney(0))}</span></div><div class="qonto-invoice-row__value"><span class="finance-mini-label">Créée le</span>${formatIsoDateFr(String(l.invoiceGeneratedAt||l.createdAt||'').slice(0,10))||'—'}</div><div class="qonto-invoice-row__value"><span class="finance-mini-label">Échéance</span>${formatIsoDateFr(String(l.dueDate||l.due_date||'').slice(0,10))||'—'}</div>${badge(paymentStatusLabel(linePaymentStatus(l)),linePaymentStatus(l)==='paid'?'green':(linePaymentStatus(l)==='partially_paid'?'orange':invoiceBadge(l)))}</div><div class="qonto-invoice-actions">${create}${view}${sync}${finalize}${send}${resendMandate}${schedule}${mobileActions}</div>${external?'<div class="muted" style="grid-column:1/-1">Facture déjà générée ailleurs : aucune nouvelle facture à créer. Le téléchargement sera disponible après rattachement de la facture Qonto.</div>':''}${l.syncWarning?`<div class="qonto-error" style="grid-column:1/-1">${esc(l.syncWarning)}</div>`:''}</div>`;
+      return `<div class="qonto-invoice-row ${rowTone}"><div class="qonto-invoice-row__type"><span class="qonto-invoice-row__icon" aria-hidden="true">💳</span><strong>${esc(l.financeurName||l.financingLabel||l.financingType)}</strong></div><div class="qonto-invoice-row__content"><div class="qonto-invoice-row__value"><span class="finance-mini-label">Facture</span>${esc(canonicalInvoiceEntry(l)?.invoice_number||l.qontoInvoiceNumber||(external?'Générée ailleurs':'—'))}${external?`<div style="margin-top:6px">${badge('Facture générée ailleurs','purple')}</div>`:''}</div><div class="qonto-invoice-row__value"><span class="finance-mini-label">Montant TTC</span>${fmtMoney(lineAmount(l))}</div><div class="qonto-invoice-row__value"><span class="finance-mini-label">Encaissé</span><span class="${linePaid(l)>0?'text-green':''}">${fmtMoney(linePaid(l))}</span></div><div class="qonto-invoice-row__value"><span class="finance-mini-label">${has?'Solde facture côté Qonto':'Solde de la facture'}</span><span class="${lineRemaining(l)>0?'text-orange':''}">${lineRemaining(l)>0?fmtMoney(lineRemaining(l)):(lineAmount(l)>0&&linePaid(l)>=lineAmount(l)?'Soldé':fmtMoney(0))}</span></div><div class="qonto-invoice-row__value"><span class="finance-mini-label">Créée le</span>${formatIsoDateFr(String(l.invoiceGeneratedAt||l.createdAt||'').slice(0,10))||'—'}</div><div class="qonto-invoice-row__value"><span class="finance-mini-label">Échéance</span>${formatIsoDateFr(String(l.dueDate||l.due_date||'').slice(0,10))||'—'}</div>${badge(paymentStatusLabel(linePaymentStatus(l)),linePaymentStatus(l)==='paid'?'green':(linePaymentStatus(l)==='partially_paid'?'orange':invoiceBadge(l)))}</div><div class="qonto-invoice-actions">${create}${view}${sync}${finalize}${send}${resendMandate}${schedule}${mobileActions}</div>${external?'<div class="muted" style="grid-column:1/-1">Facture déjà générée ailleurs : aucune nouvelle facture à créer. Le téléchargement sera disponible après rattachement de la facture Qonto.</div>':''}${l.syncWarning?`<div class="qonto-error" style="grid-column:1/-1">${esc(l.syncWarning)}</div>`:''}</div>`;
     }).join('');
   }
   window.refreshFinanceDashboard=()=>render(currentLines);

@@ -20,7 +20,7 @@
 {% set vtc_book_sent_at = trainee.vtc_book_sent_at or "" %}
 {% set vtc_book_address_complete = (trainee.address or "")|trim and (trainee.zip_code or "")|trim and (trainee.city or "")|trim %}
 
-<link rel="stylesheet" href="{{ url_for('static', filename='css/trainee-sheet.css', v='20261107-soldes-echeancier') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/trainee-sheet.css', v='20261107-encaissements-mixtes') }}">
 
 <div class="breadcrumbs">
   <a data-return-to-roster data-all-vtc="{{ url_for('admin_vtc_trainees_all') }}" href="{{ url_for('admin_trainees', session_id=session.id, **request.args) }}">← Retour stagiaires</a>
@@ -1766,7 +1766,7 @@
             <label class="finance-check"><input id="cashPaymentEnabled" type="checkbox" {% if trainee.cash_payment_enabled %}checked{% endif %} {{ financing_read_only_attr }}> Paiement en espèces</label>
           </div>
           <div id="cashPaymentAmountWrap" style="margin-top:12px;{% if trainee.cash_payment_enabled %}display:block;{% else %}display:none;{% endif %}">
-            <div class="finance-edit-grid finance-edit-grid--wide"><div class="finance-field"><div class="label">Montant à régler en espèces</div><input id="cashPaymentAmount" type="number" min="0" step="0.01" value="{{ trainee.cash_payment_amount or '' }}" placeholder="Ex : 300" {{ financing_read_only_attr }}></div><label class="finance-check" style="align-self:end;"><input id="cashPaymentSettled" type="checkbox" {% if trainee.cash_payment_settled %}checked{% endif %} {{ financing_read_only_attr }}> OK réglé</label></div>
+            <div class="finance-edit-grid finance-edit-grid--wide"><div class="finance-field"><div class="label">Montant prévu en espèces</div><input id="cashPaymentAmount" type="number" min="0" step="0.01" value="{{ trainee.cash_payment_amount or '' }}" placeholder="Ex : 300" {{ financing_read_only_attr }}></div><label class="finance-check" style="align-self:end;"><input id="cashPaymentSettled" type="checkbox" {% if trainee.cash_payment_settled %}checked{% endif %} {{ financing_read_only_attr }}> OK réglé</label></div>
             <div id="cashPaymentSettlementDetails" class="finance-edit-grid finance-edit-grid--wide" style="display:none;margin-top:10px;"><div class="finance-field"><div class="label">Date de règlement</div><input id="cashPaymentSettledDate" type="date" value="{{ trainee.cash_payment_settled_date or '' }}" {{ financing_read_only_attr }}></div><div class="finance-field"><div class="label">Commentaire</div><input id="cashPaymentSettledComment" type="text" value="{{ trainee.cash_payment_settled_comment or '' }}" {{ financing_read_only_attr }}></div></div>
             <div id="cashPaymentInstallmentsWrap" style="margin-top:10px;"><div class="label">Versements en espèces</div><div id="cashPaymentInstallmentsList" class="finance-list"></div>{% if not is_read_only and not financing_locked %}<button type="button" class="btn btn-ghost" id="cashPaymentAddInstallmentBtn" style="margin-top:8px;">+ Ajouter un versement</button>{% endif %}</div>
             <div id="cashPaymentHint" class="hint" style="margin-top:8px;"></div>
@@ -1788,7 +1788,7 @@
       </details>
 
       <details class="finance-detail-section">
-        <summary><span>Paiements reçus</span><span class="finance-accordion-hint" id="financePaymentsSummary">0,00 € encaissé</span></summary>
+        <summary><span>Paiements reçus</span><span class="finance-accordion-hint" id="financePaymentsSummary">Chargement…</span></summary>
         <div class="finance-detail-section__body"><div id="financePayments" class="finance-list"></div></div>
       </details>
 
@@ -2625,7 +2625,7 @@
   "afcEnabled": session.afc_enabled or false
 }|tojson }}
 </script>
-<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261107-soldes-echeancier') }}"></script>
+<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261107-encaissements-mixtes') }}"></script>
   
 
 <!-- ===================== -->
