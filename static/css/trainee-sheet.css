@@ -822,3 +822,43 @@
   }
   @keyframes yousignSpin{to{transform:rotate(360deg);}}
   body.yousign-sync-is-running{overflow:hidden;}
+
+/* Dossier stagiaire : échéancier local et opérations bancaires Qonto. */
+#financeInstallments { display:block; min-width:0; container-type:inline-size; }
+.schedule-totals { display:flex; flex-wrap:wrap; gap:12px 32px; margin:4px 0 18px; }
+.schedule-totals span,.schedule-totals strong,.schedule-table small,.schedule-operation span { display:block; }
+.schedule-totals span,.schedule-actions small,.schedule-help,.schedule-table small { color:#526079; }
+.schedule-totals strong { margin-top:3px; font-size:1.1rem; font-variant-numeric:tabular-nums; }
+.schedule-nav,.schedule-actions,.schedule-editor-head,.schedule-notice { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; }
+.schedule-notice { justify-content:space-between; background:#fff4df; color:#694706; border-radius:10px; padding:10px 14px; margin:8px 0; }
+.schedule-nav { gap:0 16px; border-bottom:1px solid #dbe1ea; }
+.schedule-nav button,.schedule-notice button,.schedule-actions button { font:inherit; color:#22446c; cursor:pointer; border:0; background:transparent; padding:8px 0; }
+.schedule-notice button,.schedule-actions button { text-decoration:underline; text-underline-offset:3px; }
+.schedule-nav button { font-weight:600; border-bottom:3px solid transparent; }
+.schedule-nav button[aria-pressed="true"] { color:#182844; border-bottom-color:#22446c; }
+.schedule-actions { margin-top:10px; }
+.schedule-actions small { margin-right:auto; }
+.schedule-actions button:disabled { opacity:.55; cursor:wait; }
+.schedule-table { width:100%; border-collapse:collapse; background:white; margin:6px 0; }
+.schedule-table th,.schedule-table td { text-align:left; padding:11px 8px; border:0; border-bottom:1px solid #e3e8ef; vertical-align:middle; }
+.schedule-table th { color:#526079; font-size:.86rem; font-weight:600; }
+.schedule-table td:last-child,.schedule-table th:last-child { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.schedule-table .schedule-month { display:inline-block; }
+.schedule-month::first-letter { text-transform:uppercase; }
+.schedule-table details summary,.schedule-local summary { color:#244774; cursor:pointer; }
+.schedule-operation { margin-top:6px; color:#526079; overflow-wrap:anywhere; font-size:.88rem; }
+.schedule-table del { color:#64748b; }
+.schedule-empty,.schedule-help { padding:8px 0; }
+.schedule-editor-head { justify-content:space-between; }
+#financeInstallments .schedule-edit-row { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:10px 0; padding:8px; border-bottom:1px solid #e3e8ef; }
+.schedule-edit-row label { display:grid; gap:3px; min-width:0; max-width:100%; }
+#financeInstallments [hidden] { display:none!important; }
+@container (max-width:490px) {
+  .schedule-table,.schedule-table tbody { display:block; }
+  .schedule-table thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(100%); }
+  .schedule-table tr { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 8px; padding:10px 0; border-bottom:1px solid #e3e8ef; }
+  .schedule-table td { grid-column:1; padding:0; border:0; overflow-wrap:anywhere; }
+  .schedule-table td:last-child { grid-column:2; grid-row:1; }
+  .schedule-actions { align-items:flex-start; }
+  .schedule-actions small { width:100%; }
+}

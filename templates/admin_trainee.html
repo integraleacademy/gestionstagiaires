@@ -20,7 +20,7 @@
 {% set vtc_book_sent_at = trainee.vtc_book_sent_at or "" %}
 {% set vtc_book_address_complete = (trainee.address or "")|trim and (trainee.zip_code or "")|trim and (trainee.city or "")|trim %}
 
-<link rel="stylesheet" href="{{ url_for('static', filename='css/trainee-sheet.css', v='20261104') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/trainee-sheet.css', v='20261107-echeancier') }}">
 
 <div class="breadcrumbs">
   <a data-return-to-roster data-all-vtc="{{ url_for('admin_vtc_trainees_all') }}" href="{{ url_for('admin_trainees', session_id=session.id, **request.args) }}">← Retour stagiaires</a>
@@ -1792,8 +1792,8 @@
         <div class="finance-detail-section__body"><div id="financePayments" class="finance-list"></div></div>
       </details>
 
-      <details class="finance-detail-section">
-        <summary><span>Échéancier / prélèvements</span><span class="finance-accordion-hint" id="financeInstallmentsSummary">Aucun échéancier</span></summary>
+      <details class="finance-detail-section" id="financeScheduleSection">
+        <summary><span>Échéancier et prélèvements</span><span class="finance-accordion-hint" id="financeInstallmentsSummary">Aucun échéancier</span></summary>
         <div class="finance-detail-section__body"><div id="financeInstallments" class="finance-list"></div></div>
       </details>
 
@@ -2625,7 +2625,7 @@
   "afcEnabled": session.afc_enabled or false
 }|tojson }}
 </script>
-<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261104-contract-type-3') }}"></script>
+<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261107-echeancier') }}"></script>
   
 
 <!-- ===================== -->

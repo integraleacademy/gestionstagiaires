@@ -45915,6 +45915,103 @@ def api_billing_session(session_id: str):
     return jsonify({'ok': True, 'lines': _billing_lines_for_session(data, session_id)})
 
 
+def _bank_view_pages(fetch, keys, **filters):
+    """Yield complete Qonto pages. An incomplete response must not look like an empty account."""
+    for page in range(1, 101):
+        response = fetch(page=page, per_page=100, **filters)
+        rows = next((response[k] for k in keys if isinstance(response.get(k), list)), None)
+        if rows is None:
+            raise ValueError('Liste Qonto incomplète.')
+        yield from rows
+        if not _qonto_invoice_list_has_next_page(response, page, len(rows), 100):
+            return
+        meta = response.get('meta') or {}
+        cursor = meta.get('next_page', meta.get('nextPage'))
+        if cursor not in (None, '', True) and str(cursor) != str(page + 1):
+            break
+    raise ValueError('Pagination Qonto incomplète.')
+
+
+def _trainee_bank_schedule(lines):
+    known_subscriptions, known_collections, references = set(), set(), set()
+    orphan_collections, attached_subscriptions = set(), set()
+    for line in lines:
+        rows = _sepa_installments(line)
+        for row in rows:
+            sid = row.get('qonto_direct_debit_subscription_id')
+            if sid:
+                if row.get('qonto_attachment'):
+                    attached_subscriptions.add(sid)
+                else:
+                    known_subscriptions.add(sid)
+        primary = line.get('qonto_direct_debit_subscription_id')
+        if primary and not any(row.get('qonto_attachment') and row.get('qonto_direct_debit_subscription_id') == primary for row in rows):
+            known_subscriptions.add(primary)
+        known_collections.update(row.get('qonto_direct_debit_collection_id') for row in rows)
+        orphan_collections.update(row['qonto_direct_debit_collection_id'] for row in rows
+                                  if row.get('qonto_direct_debit_collection_id') and not row.get('qonto_direct_debit_subscription_id'))
+        mandate = line.get('qonto_direct_debit_mandate_id')
+        if mandate:
+            for reference in (line.get('qontoInvoiceNumber'), line.get('qontoInvoiceId'), line.get('id')):
+                if reference:
+                    references.add((mandate, str(reference).strip().casefold()))
+    known_collections -= {None, ''}
+    subscriptions, history = {}, {}
+    if not (known_subscriptions or known_collections or references):
+        return [], []
+
+    for sub in _bank_view_pages(list_qonto_direct_debit_subscriptions, ('direct_debit_subscriptions', 'subscriptions', 'items')):
+        sid = sub.get('id')
+        reference = _qonto_subscription_reference(sub)
+        invoice = reference.split(' - ', 1)[0].strip().casefold()
+        if not sid or (sid not in known_subscriptions and (_qonto_subscription_mandate_id(sub), invoice) not in references):
+            continue
+        status = sub.get('status')
+        date = sub.get('schedule_next_collection_date')
+        if not date and sub.get('schedule_type') == 'one_off' and status == 'scheduled':
+            date = sub.get('initial_collection_date')
+        subscriptions[sid] = dict(id=sid, date=date, amount_cents=_qonto_collection_amount_cents(sub),
+                                  frequency=sub.get('schedule_type'), reference=reference, status=status)
+    # The list can omit a finished subscription. Its collections still belong
+    # to the dossier through the stored immutable subscription id.
+    allowed_ids = known_subscriptions.union(subscriptions)
+    # Read only this dossier's subscriptions for small plans. A single paged
+    # pass is cheaper for long plans and also covers legacy standalone IDs.
+    query_ids = allowed_ids.union(attached_subscriptions)
+    collection_queries = [{'subscription_id': sid} for sid in sorted(query_ids)]
+    if orphan_collections or len(query_ids) > 5:
+        collection_queries = [{}]
+    for filters in collection_queries:
+        for row in _bank_view_pages(list_qonto_direct_debit_collections, ('direct_debit_collections', 'collections', 'items'), **filters):
+            cid, sid = row.get('id'), row.get('direct_debit_subscription_id')
+            if not cid or (sid not in allowed_ids and cid not in known_collections):
+                continue
+            history[cid] = dict(id=cid, subscription_id=sid, date=row.get('collection_date'),
+                                amount_cents=_qonto_collection_amount_cents(row), status=row.get('status'),
+                                reason=row.get('status_reason') or row.get('status_reason_group'),
+                                reason_code=row.get('status_reason_code'),
+                                reference=subscriptions.get(sid, {}).get('reference', ''))
+    upcoming = [s for s in subscriptions.values() if s['status'] not in {'completed', 'canceled', 'cancelled'}]
+    upcoming.sort(key=lambda s: (s['date'] or '9999', s['id']))
+    return upcoming, sorted(history.values(), key=lambda r: (r['date'] or '', r['id']), reverse=True)
+
+
+@app.get('/api/billing/trainee/<trainee_id>/session/<session_id>/bank-schedule')
+@admin_login_required
+def api_trainee_bank_schedule(trainee_id, session_id):
+    if _is_partner_data_scope_session() or not _financing_partner_module_enabled():
+        return jsonify(ok=False, error='Consultation bancaire indisponible pour cet espace.'), 403
+    lines = _billing_lines_for_trainee_session(load_data(), trainee_id, session_id)
+    try:
+        upcoming, history = _trainee_bank_schedule([line for line in lines if not is_cpf_billing_context(line)])
+    except Exception as exc:
+        app.logger.warning('[QONTO] lecture de l’échéancier impossible : %s', _sanitize_qonto_error(str(exc)))
+        return jsonify(ok=False, error='Lecture Qonto incomplète. Vous pouvez réessayer.'), 502
+    response = jsonify(ok=True, upcoming=upcoming, history=history, checked_at=_now_iso())
+    response.headers['Cache-Control'] = 'private, no-store'
+    return response
+
+
 @app.get('/api/billing/trainee/<trainee_id>/session/<session_id>')
 @admin_login_required
 def api_billing_trainee_session(trainee_id: str, session_id: str):

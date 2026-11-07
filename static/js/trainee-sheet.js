@@ -1605,6 +1605,7 @@ function updateDocsRelanceState(status, plannedDateIso){
     currentFinancialSummary = j.financial_summary || null;
     currentCpfWedofInvoice = j.cpf_wedof_invoice || null;
     render(currentLines);
+    if (scheduleSection?.open) readBankSchedule();
     updateQuickInvoiceAction();
   }
   const billingSection = document.getElementById('conventionFinancementSection');
@@ -1726,7 +1727,10 @@ function updateDocsRelanceState(status, plannedDateIso){
   function installmentScheduleContext(line){const items=Array.isArray(line?.directDebitInstallments)?line.directDebitInstallments:[],effective=logicalInstallmentsForLine(line);return {items,effective,current:new Set(effective),total:installmentScheduleTotal(line,items)};}
   function installmentStatusLabel(installment){if(installment?.tracking_removed_at)return 'Supprimée du suivi';const value=String(installment?.status||'scheduled').toLowerCase();if(installmentIsRejected(installment)&&installmentRejectionTreated(installment))return 'Rejet traité';if(['completed','paid','succeeded','success'].includes(value))return 'Payé';if(installmentIsRejected(installment))return 'Rejeté';if(installment?.tracking_pending_qonto)return 'À mettre à jour dans Qonto';if(value==='scheduled'&&installment?.manual_tracking_entry)return 'Programmé';return installment?.qonto_direct_debit_subscription_id?'Programmé':'À venir';}
   function installmentFailureReasonLabel(reason){const value=String(reason||'').trim().toLowerCase();const labels={blocked_account:'Compte bancaire bloqué',insufficient_funds:'Solde insuffisant',closed_account:'Compte bancaire clôturé',invalid_account:'Coordonnées bancaires invalides',bank_account_closed:'Compte bancaire clôturé',revoked_mandate:'Mandat de prélèvement révoqué',no_mandate:'Mandat de prélèvement absent',mandate_not_found:'Mandat de prélèvement introuvable',refused_by_bank:'Prélèvement refusé par la banque',debtor_dispute:'Prélèvement contesté par le titulaire',duplicate:'Prélèvement en double',regulatory_reason:'Rejet pour raison réglementaire',technical_error:'Erreur technique bancaire'};return labels[value]||(value?'Motif bancaire non répertorié':'');}
-  function renderScheduleModal(line){const context=installmentScheduleContext(line),items=[...context.items].sort((a,b)=>installmentDate(a).localeCompare(installmentDate(b)));return `<div class="billing-modal-head"><div><h2>Échéancier Qonto</h2><div class="muted">${esc(line.qontoPaymentGlobalStatus||'')} · ${context.total} mensualités contractuelles</div></div><button class="billing-modal-close" type="button" data-modal-close aria-label="Fermer">✕</button></div><div class="billing-modal-grid">${items.map((it,i)=>{const dueDate=installmentDate(it),retry=Boolean(it.is_rejection_retry),treated=installmentRejectionTreated(it),current=context.current.has(it),position=installmentSchedulePosition(it,i+1),style=retry?(current?'border-color:#c4b5fd;background:#f5f3ff':'border-color:#cbd5e1;background:#f8fafc'):(treated?'border-color:#93c5fd;background:#eff6ff':'');return `<div class="kv" style="${style}">${retry?`<div class="finance-badge finance-badge--${current?'purple':'gray'}" style="margin-bottom:8px">${current?'Nouveau prélèvement suite à rejet':'Tentative précédente · non comptabilisée'}</div>`:''}<b>${position}/${context.total} · ${esc(formatIsoDateFr(dueDate)||dueDate)}</b><br>${fmtMoney(it.amount)} · ${esc(installmentStatusLabel(it))}${it.failureReason?`<br><span class="${treated||!current?'muted':'qonto-error'}">${esc(installmentFailureReasonLabel(it.failureReason))}</span>`:''}</div>`;}).join('')||'<div class="hint">Aucune échéance.</div>'}</div><div class="billing-modal-actions"><button type="button" class="btn btn-outline" data-modal-close>Fermer</button></div>`;}
+  function renderScheduleModal(line){
+    const items=allInstallments([line]).filter(item=>item.isCurrentScheduleAttempt);
+    return `<div class="billing-modal-head"><h2>Échéancier de la fiche</h2><button class="billing-modal-close" type="button" data-modal-close aria-label="Fermer">✕</button></div>${planTable(items)}<div class="billing-modal-actions"><button class="btn btn-outline" data-modal-close>Fermer</button></div>`;
+  }
   function closeBillingModal(){document.querySelectorAll('.billing-modal-overlay').forEach(m=>m.remove());currentLine=null;modalLoading=false;}
   function qontoInfoCompletionUrl(line=currentLine){const sid=line?.sessionId||sheetContext.sessionId,tid=line?.traineeId||line?.studentId||sheetContext.traineeId;return sid&&tid?`/admin/sessions/${encodeURIComponent(sid)}/stagiaires/${encodeURIComponent(tid)}#conventionFinancementSection`:'';}
 function isQontoIncompleteClientError(text){return /informations client incomplètes/i.test(String(text||''));}
@@ -1914,7 +1918,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     ];
     const paymentCards=[
       ...(c.cashPaymentEnabled?[{label:'Espèces',icon:'💶',value:`${fmtMoney(c.cashPaid)} / ${fmtMoney(c.cashPlanned)}`,badge:badge(`${fmtMoney(c.cashPaid)} réglés en espèces`,cashStatus[1]),tone:cashStatus[1],meta:`${c.cashPaymentCount} versement${c.cashPaymentCount===1?'':'s'} enregistré${c.cashPaymentCount===1?'':'s'} · Reste en espèces : ${fmtMoney(Math.max(c.cashPlanned-c.cashPaid,0))}`}]:[]),
-      ...(showDirectDebitKpi?[{label:'Prélèvements',icon:'↻',value:`${c.mensualitesPayees}/${c.totalMensualites}`,badge:[badge(inst[0],inst[1]),mandate.hasSigned?badge('✅ Mandat OK','green'):(mandate.hasSent?badge('⚠ Mandat de prélèvement en cours de validation','orange'):''),qontoSchedule.hasScheduledInQonto?badge('✅ Échéancier OK','green'):(qontoSchedule.needsQontoScheduling?badge('⚠ Échéancier à programmer dans Qonto','orange'):'')].filter(Boolean).join(''),tone:qontoSchedule.needsQontoScheduling?'orange':inst[1],meta:qontoSchedule.needsQontoScheduling?'Le mandat est validé, mais les échéances ne sont pas encore créées dans Qonto. Cliquez sur Programmer les échéances.':(c.prochaineEcheance?`Prochain : ${formatIsoDateFr(installmentDate(c.prochaineEcheance))} — ${fmtMoney(c.prochaineEcheance.amount)}`:'Aucune prochaine échéance'),mandateAction:!mandate.hasSent,scheduleAction:qontoSchedule.needsQontoScheduling,rescheduleAction:c.nombreRejets>0}]:[]),
+      ...(showDirectDebitKpi?[{label:'Prélèvements',icon:'↻',value:`${c.mensualitesPayees}/${c.totalMensualites}`,badge:[badge(inst[0],inst[1]),mandate.hasSigned?badge('✅ Mandat OK','green'):(mandate.hasSent?badge('⚠ Mandat de prélèvement en cours de validation','orange'):''),qontoSchedule.hasScheduledInQonto?badge('✅ Échéancier OK','green'):(qontoSchedule.needsQontoScheduling?badge('⚠ Échéancier à programmer dans Qonto','orange'):'')].filter(Boolean).join(''),tone:qontoSchedule.needsQontoScheduling?'orange':inst[1],meta:qontoSchedule.needsQontoScheduling?'Le mandat est validé, mais les échéances ne sont pas encore créées dans Qonto. Cliquez sur Programmer les échéances.':(c.prochaineEcheance?`Prochaine échéance du plan : ${formatIsoDateFr(installmentDate(c.prochaineEcheance))} — ${fmtMoney(c.prochaineEcheance.amount)}`:'Aucune prochaine échéance au plan'),mandateAction:!mandate.hasSent,scheduleAction:qontoSchedule.needsQontoScheduling,rescheduleAction:c.nombreRejets>0}]:[]),
       {label:'Payé',icon:(pay[1]==='green'?'✓':'✕'),iconTone:pay[1]==='green'?'green':'red',value:`${fmtMoney(c.totalPaye)} / ${fmtMoney(c.objectifFacturation)}`,badge:badge(pay[0],pay[1]),tone:(c.objectifFacturation>0&&c.totalPaye<c.objectifFacturation)?'orange':pay[1],meta:`Reste à payer : ${fmtMoney(Math.max(c.resteAPayer,0))}`}
     ];
     const renderCard=card=>`<div class="finance-summary-card ${card.cpf?'finance-summary-card--cpf ':''}is-${card.tone}"><div class="finance-summary-card__top"><span>${card.label}</span><span class="finance-summary-card__icon ${card.iconTone?`finance-summary-card__icon--${card.iconTone}`:''}">${card.icon}</span></div><div class="finance-summary-card__value">${card.value}</div>${card.cpf?`<div class="finance-summary-card__cpf-meter"><span style="width:${cpfValidated?100:0}%"></span></div>`:''}<div class="finance-summary-card__cpf-actions"><span>${card.badge}</span>${card.cpf&&!readOnly?`<button class="finance-summary-card__cpf-btn ${cpfValidated?'finance-summary-card__cpf-btn--undo':''}" type="button" data-cpf-toggle="${cpfValidated?'0':'1'}" title="${cpfValidated?'Annuler validation CPF':'Valider le CPF'}" aria-label="${cpfValidated?'Annuler validation CPF':'Valider le CPF'}">${cpfValidated?'✕':'✅'}</button>`:''}</div><div class="finance-summary-card__meta">${card.meta}</div>${card.cpf?cpfFranceTravailHtml:''}${card.cpfInvoiceHtml||''}${card.rescheduleAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-reschedule-rejected-debit style="margin-top:8px;width:100%;justify-content:center">Reprogrammer un prélèvement</button>':''}${card.mandateAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-create-mandate style="margin-top:8px;width:100%;justify-content:center">Créer un mandat de prélèvement</button>':''}${card.scheduleAction&&!readOnly?'<button type="button" class="qonto-action-btn qonto-action-btn--primary" data-schedule-qonto style="margin-top:8px;width:100%;justify-content:center">Programmer les échéances</button>':''}</div>`;
@@ -1935,7 +1939,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     document.getElementById('financeProgressPanel').innerHTML=`<div class="finance-progress-row"><strong>Facturation</strong><div class="finance-progress-track"><div class="finance-progress-fill" style="width:${Math.min(c.progressFacturation,100)}%"></div></div><strong>${Math.round(c.progressFacturation)}%</strong></div><div class="finance-progress-row"><strong>Paiement</strong><div class="finance-progress-track"><div class="finance-progress-fill ${c.progressPaiement>=100?'finance-progress-fill--green':'finance-progress-fill--orange'}" style="width:${Math.min(c.progressPaiement,100)}%"></div></div><strong>${Math.round(c.progressPaiement)}%</strong></div>`;
   }
   function setAccordionHint(id,text,tone='blue'){const el=document.getElementById(id);if(!el)return;el.textContent=text;el.className=`finance-accordion-hint finance-badge--${tone}`;}
-  function updateAccordionSummaries(lines,c){const invoiceCount=lines.filter(lineHasGeneratedInvoice).length;setAccordionHint('financeSettingsSummary',`CPF ${fmtMoney(c.montantCpf)} · Personnel ${fmtMoney(c.montantPersonnel)}`,'blue');setAccordionHint('financeInvoicesSummary',`${invoiceCount}/${lines.length} factures générées`,invoiceCount===lines.length&&lines.length?'green':(invoiceCount?'orange':'red'));setAccordionHint('financePaymentsSummary',`${fmtMoney(c.totalPaye)} encaissé · reste ${fmtMoney(Math.max(c.resteAPayer,0))}`,c.resteAPayer<=0.01&&c.objectifFacturation>0?'green':(c.totalPaye>0?'orange':'red'));const installmentHint=c.totalMensualites?`${c.mensualitesPayees} mensualités payées sur ${c.totalMensualites}${c.nombreRejetsTraites?' · rejet traité':''}`:'Aucun échéancier';setAccordionHint('financeInstallmentsSummary',installmentHint,c.nombreRejets?'red':(c.totalMensualites&&c.mensualitesPayees===c.totalMensualites?'green':(c.nombreRejetsTraites?'blue':(c.totalMensualites?'orange':'gray'))));}
+  function updateAccordionSummaries(lines,c){const invoiceCount=lines.filter(lineHasGeneratedInvoice).length;setAccordionHint('financeSettingsSummary',`CPF ${fmtMoney(c.montantCpf)} · Personnel ${fmtMoney(c.montantPersonnel)}`,'blue');setAccordionHint('financeInvoicesSummary',`${invoiceCount}/${lines.length} factures générées`,invoiceCount===lines.length&&lines.length?'green':(invoiceCount?'orange':'red'));setAccordionHint('financePaymentsSummary',`${fmtMoney(c.totalPaye)} encaissé · reste ${fmtMoney(Math.max(c.resteAPayer,0))}`,c.resteAPayer<=0.01&&c.objectifFacturation>0?'green':(c.totalPaye>0?'orange':'red'));const installmentHint=c.totalMensualites?`${c.mensualitesPayees} mensualités payées sur ${c.totalMensualites}${c.nombreRejets?' · impayé à vérifier':''}`:'Aucun échéancier';setAccordionHint('financeInstallmentsSummary',installmentHint,c.nombreRejets?'red':(c.totalMensualites&&c.mensualitesPayees===c.totalMensualites?'green':(c.nombreRejetsTraites?'blue':(c.totalMensualites?'orange':'gray'))));}
   function renderBreakdown(lines,c){
     const defs=[['CPF',c.montantCpf,'finance-line--cpf'],['Personnel',c.montantPersonnel,'finance-line--personal'],['Autre financement',c.montantAutre,'finance-line--other']];
     document.getElementById('financeBreakdown').innerHTML=defs.map(([name,planned,typeClass])=>{
@@ -2062,29 +2066,207 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       installmentEditFeedback('Modification enregistrée. Rechargez la page pour afficher le nouvel échéancier.',true);
     }
   }
+  const scheduleSection = document.getElementById('financeScheduleSection');
+  let scheduleView = 'plan';
+  let editingSchedule = false;
+  let bankSnapshot = null;
+  let bankLoading = false;
+  let bankError = '';
+  let bankChecked = 0;
+  const bankStates = {
+    scheduled:['Programmé','blue'], in_progress:['En cours','blue'],
+    pending_mandate_signature:['Mandat à signer','orange'], on_hold:['En attente','orange'],
+    completed:['Encaissé','green'], paid:['Encaissé','green'], succeeded:['Encaissé','green'],
+    failed:['Rejeté','red'], declined:['Rejeté','red'], rejected:['Rejeté','red'],
+    returned:['Retourné','red'], refunded:['Remboursé','red'],
+    canceled:['Annulé','gray'], cancelled:['Annulé','gray']
+  };
+  const frequencies = {one_off:'Une fois', daily:'Quotidienne', weekly:'Hebdomadaire', monthly:'Mensuelle',
+    quarterly:'Trimestrielle', yearly:'Annuelle', custom:'Personnalisée'};
+  function hasBankSchedule() {
+    return currentLines.some(line => !isCpfQontoLine(line) && (line.qonto_direct_debit_mandate_id ||
+      line.qonto_direct_debit_subscription_id || line.directDebitInstallments?.some(it => it.qonto_direct_debit_collection_id || it.qonto_direct_debit_subscription_id)));
+  }
+  async function readBankSchedule(force=false) {
+    if (!scheduleSection?.open || !hasBankSchedule() || bankLoading || (!force && Date.now()-bankChecked < 300000)) return;
+    bankLoading = true;
+    bankError = '';
+    bankChecked = Date.now();
+    renderInstallments(computeFinance(currentLines));
+    try {
+      const url = `/api/billing/trainee/${encodeURIComponent(traineeId)}/session/${encodeURIComponent(sessionId)}/bank-schedule`;
+      const response = await fetch(url,{headers:{Accept:'application/json'},cache:'no-store'});
+      const data = await parseJsonResponse(response,'Lecture Qonto impossible.');
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Lecture Qonto impossible.');
+      bankSnapshot = data;
+    } catch (error) {
+      bankError = error.message;
+    } finally {
+      bankLoading = false;
+      renderInstallments(computeFinance(currentLines));
+    }
+  }
+  scheduleSection?.addEventListener('toggle', () => { if (scheduleSection.open) readBankSchedule(); });
+
+  function scheduleDate(date) {
+    return esc(formatIsoDateFr(date) || 'Date inconnue');
+  }
+  function scheduleTable(headings, rows, empty) {
+    if (!rows.length) return `<p class="schedule-empty">${esc(empty)}</p>`;
+    return `<table class="schedule-table"><thead><tr>${headings.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  }
+  function contractualDate(item) {
+    if (!item.is_rejection_retry || item.tracking_pending_qonto) return installmentDate(item);
+    const original = item.line?.directDebitInstallments?.find((row,i) => !row.is_rejection_retry &&
+      installmentSchedulePosition(row,i+1) === item.index);
+    return installmentDate(original) || item.reprogrammed_from_due_date || installmentDate(item);
+  }
+  function planTable(items, multipleLines=false) {
+    const order = [...items].sort((a,b) => contractualDate(a).localeCompare(contractualDate(b)));
+    const rows = order.map(item => {
+      const date = contractualDate(item);
+      const validDate = new Date(date+'T12:00:00Z');
+      const label = Number.isFinite(validDate.getTime()) && /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Intl.DateTimeFormat('fr-FR',{month:'long',timeZone:'UTC'}).format(validDate) : 'Échéance';
+      let status = ['Prévue au plan','gray'];
+      const raw = item.qonto_collection_status_raw || item.status;
+      if (bankStates[raw] && !['scheduled','in_progress'].includes(raw)) status = bankStates[raw];
+      if (installmentIsRejected(item) && status[1]==='red') status=['Impayée','red'];
+      if (item.tracking_pending_qonto) status=['Suivi local','orange'];
+      const next = bankSnapshot?.upcoming.find(sub=>sub.id===item.qonto_direct_debit_subscription_id && sub.date===installmentDate(item));
+      if (next && !item.tracking_pending_qonto && status[1]==='gray') {
+        status=['scheduled','in_progress'].includes(next.status)?['Programmée dans Qonto','blue']:(bankStates[next.status] || status);
+      }
+      return `<tr><td><strong class="schedule-month">${esc(label)}</strong>${multipleLines?`<small>${esc(item.line.financeurName || item.line.financingType)}</small>`:''}</td><td>${scheduleDate(date)}</td><td>${badge(...status)}</td><td>${fmtMoney(item.amount)}</td></tr>`;
+    });
+    return scheduleTable(['Mensualité','Date prévue','Situation','Montant'],rows,'Aucune échéance active dans le suivi.');
+  }
+  function localBankRows(items) {
+    // With no fresh bank response, show only linked subscriptions. A removed
+    // local row can still be scheduled at its original date and amount.
+    const subscriptions = new Map();
+    const today = isoToday();
+    const terminal = new Set(['completed','paid','succeeded','success','failed','declined','rejected','returned','refunded','canceled','cancelled']);
+    const stopped = new Set();
+    for (const item of items) {
+      const sid = item.qonto_direct_debit_subscription_id;
+      const date = item.qonto_original_due_date || installmentDate(item);
+      if (!sid || item.qonto_attachment) continue;
+      if (terminal.has(item.qonto_collection_status_raw || item.status)) stopped.add(JSON.stringify([sid,date]));
+    }
+    for (const item of items) {
+      const id=item.qonto_direct_debit_subscription_id, date=item.qonto_original_due_date || installmentDate(item);
+      if (!id || item.qonto_attachment || !date || date<today || stopped.has(JSON.stringify([id,date])) || terminal.has(item.qonto_subscription_status)) continue;
+      if (subscriptions.has(id) && subscriptions.get(id).date<=date) continue;
+      subscriptions.set(id,{id,date,amount_cents:Math.round(Number(item.qonto_original_amount ?? item.amount)*100),
+        frequency:item.is_rejection_retry?'one_off':undefined,status:'scheduled',reference:item.reference || ''});
+    }
+    return [...subscriptions.values()].sort((a,b)=>a.date.localeCompare(b.date));
+  }
+  function sameDayNotices(upcoming) {
+    const groups = new Map();
+    for (const sub of upcoming) {
+      if (!sub.date || !['scheduled','in_progress'].includes(sub.status)) continue;
+      const day = groups.get(sub.date) || {count:0,cents:0};
+      day.count++;
+      day.cents+=sub.amount_cents;
+      groups.set(sub.date,day);
+    }
+    return [...groups].filter(([,d])=>d.count>1).map(([date,d]) =>
+      `<div class="schedule-notice"><span><strong>${scheduleDate(date)}</strong> · ${d.count} prélèvements ${bankSnapshot?'programmés':'dans le suivi'}, soit <strong>${fmtMoney(d.cents/100)}</strong></span>${scheduleView!=='bank'?'<button type="button" data-schedule-view="bank">Voir les opérations</button>':''}</div>`
+    ).join('');
+  }
+  function operationTable(records,history) {
+    const rows = records.map(row => {
+      const subscriptionStarted=!history && row.status==='in_progress' && row.date;
+      const [label,tone]=subscriptionStarted?bankStates.scheduled:(bankStates[row.status] || ['À vérifier','orange']);
+      const detail = [
+        row.reference && `<span>Libellé · ${esc(row.reference)}</span>`,
+        row.reason && `<span>Motif · ${esc(installmentFailureReasonLabel(row.reason)==='Motif bancaire non répertorié'?row.reason:installmentFailureReasonLabel(row.reason))}</span>`,
+        row.reason_code && `<span>Code bancaire · ${esc(row.reason_code)}</span>`,
+        `<span>Référence Qonto · ${esc(row.id)}</span>`
+      ].filter(Boolean).join('');
+      const amount = fmtMoney(row.amount_cents/100);
+      return `<tr><td><details data-operation-id="${esc(row.id)}"><summary>${scheduleDate(row.date)}</summary><div class="schedule-operation">${detail}</div></details></td>
+        ${history?'':`<td>${esc(frequencies[row.frequency] || 'Non renseignée')}</td>`}<td>${badge(label,tone)}</td><td>${tone==='red'||label==='Annulé'?`<del>${amount}</del>`:amount}</td></tr>`;
+    });
+    return scheduleTable(history?['Date d’opération Qonto','Statut','Montant présenté']:['Prochaine date','Fréquence','Statut','Montant'],rows,
+      history?'Aucune opération bancaire rattachée à ce dossier.':'Aucun prélèvement à encaisser rattaché à ce dossier.');
+  }
+  function localHistory(items) {
+    const rows=items.filter(it=>it.tracking_removed_at || installmentIsRejected(it) || ['paid','completed','succeeded','success','cancelled','canceled'].includes(it.status))
+      .sort((a,b)=>installmentDate(b).localeCompare(installmentDate(a))).map(it=>
+        `<tr><td>${scheduleDate(installmentDate(it))}</td><td>${esc(installmentStatusLabel(it))}</td><td>${fmtMoney(it.amount)}</td></tr>`);
+    return scheduleTable(['Date du suivi','Situation enregistrée','Montant'],rows,'Aucun événement enregistré dans le suivi local.');
+  }
+  function scheduleReadView(c, items, canEdit) {
+    const upcoming=bankSnapshot?.upcoming || localBankRows(c.installments);
+    const paid=[...new Set(c.installments.map(it=>it.line))].reduce((total,line)=>{
+      const tracked=items.filter(it=>it.line===line && ['completed','paid','succeeded','success'].includes(it.status));
+      return total+(line.qontoCollectedAmountCents ?? tracked.reduce((sum,it)=>sum+Math.round(it.amount*100),0));
+    },0)/100;
+    const sameAmount=items.length && items.every(it=>Number(it.amount)===Number(items[0].amount));
+    const planDescription=sameAmount?`${items.length} × ${fmtMoney(items[0].amount)}`:`${items.length} échéance${items.length===1?'':'s'} · ${fmtMoney(c.montantTotalEcheancier)}`;
+    const stats=items.length || paid?`<div class="schedule-totals"><div><span>Échéancier de la fiche</span><strong>${planDescription}</strong></div><div><span>Encaissé sur l’échéancier</span><strong>${fmtMoney(paid)}</strong></div><div><span>Reste à encaisser</span><strong>${fmtMoney(Math.max(0,c.montantTotalEcheancier-paid))}</strong></div></div>`:'';
+    const tabs=[['plan','Échéancier'],['bank','À encaisser'],['history','Historique']].map(([key,title])=>`<button type="button" aria-pressed="${key===scheduleView}" data-schedule-view="${key}">${title}</button>`).join('');
+    const stamp=bankSnapshot?new Date(bankSnapshot.checked_at).toLocaleString('fr-FR',{timeZone:'Europe/Paris',dateStyle:'short',timeStyle:'short'}):'';
+    const status=bankLoading?'Lecture de Qonto…':[bankError, stamp?`Lecture Qonto du ${stamp}`:'Données du suivi local'].filter(Boolean).join(' ');
+    let content;
+    if (scheduleView==='plan') content=planTable(items,new Set(items.map(it=>it.line.id)).size>1);
+    else if (scheduleView==='bank') content=!bankSnapshot && !upcoming.length ? '<p class="schedule-empty">Aucune programmation bancaire confirmée dans les données disponibles.</p>' : operationTable(upcoming,false);
+    else if (bankSnapshot) {
+      content=operationTable(bankSnapshot.history,true);
+      const remoteIds=new Set(bankSnapshot.history.map(row=>row.id));
+      const local=c.installments.filter(it=>it.tracking_removed_at ||
+        (!remoteIds.has(it.qonto_direct_debit_collection_id) && (installmentIsRejected(it) || ['completed','paid','succeeded','success','canceled','cancelled'].includes(it.status))));
+      if (local.length) content+=`<details class="schedule-local"><summary>Historique du suivi local</summary>${localHistory(local)}</details>`;
+    } else content=localHistory(c.installments);
+    return `${stats}${sameDayNotices(upcoming)}<div class="schedule-nav" role="group" aria-label="Vues de l’échéancier">${tabs}</div>
+      <div class="schedule-content">${content}</div><div class="schedule-actions"><small role="status">${esc(status)}</small>
+      ${hasBankSchedule()?`<button type="button" data-bank-refresh ${bankLoading?'disabled':''}>Actualiser Qonto</button>`:''}
+      ${canEdit && scheduleView==='plan'?'<button type="button" data-edit-schedule>Modifier l’échéancier de la fiche</button>':''}</div>`;
+  }
+
   function renderInstallments(c){
-    if(installmentDraftActive||installmentEditBusy)return;
-    const items=[...(c.installments||[])].sort((a,b)=>installmentDate(a).localeCompare(installmentDate(b))||Number(Boolean(a.is_rejection_retry))-Number(Boolean(b.is_rejection_retry)));
-    const equalAmounts=new Set((c.effectiveInstallments||[]).map(item=>Number(item.amount||0).toFixed(2)));
-    const planLabel=equalAmounts.size===1?`${c.totalMensualites} × ${fmtMoney(c.effectiveInstallments[0]?.amount)} = ${fmtMoney(c.montantTotalEcheancier)}`:`${c.totalMensualites} mensualités · ${fmtMoney(c.montantTotalEcheancier)}`;
-    const hasHistory=items.some(item=>!item.isCurrentScheduleAttempt);
-    const rows=items.map((it,i)=>{
-      const st=String(it.status||'scheduled').toLowerCase(),paid=['completed','paid','succeeded','success'].includes(st),treated=installmentRejectionTreated(it),rejected=installmentIsRejected(it)&&!treated,retry=Boolean(it.is_rejection_retry),current=Boolean(it.isCurrentScheduleAttempt),tone=retry&&!current?'gray':(paid?'green':(rejected?'red':(treated?'blue':(retry?'purple':'orange')))),rowClass=retry&&!current?'finance-line--retry-history':(retry?'finance-line--retry':(treated?'finance-line--treated':(paid?'finance-line--paid':(rejected?'finance-line--danger':'finance-line--unpaid')))),position=installmentSchedulePosition(it,i+1),retryLabel=current?'Nouveau prélèvement suite à rejet':'Tentative précédente · non comptabilisée';
-      const canRemove=!readOnly&&current&&!paid&&!['processing','in_progress','submitted'].includes(st)&&!it.line.registrationCancelled;
-      const canEdit=canRemove&&!installmentIsRejected(it);
-      const dateLabel=it.tracking_pending_qonto?'Date du suivi':(retry?'Nouvelle date':'Date prévue');
-      const date=canEdit?`<input type="date" data-edit-installment-date="${i}" value="${esc(installmentDate(it))}" aria-label="Date de l’échéance ${position}">`:(formatIsoDateFr(installmentDate(it))||'—');
-      const amount=canEdit?`<input type="number" data-edit-installment-amount="${i}" value="${Number(it.amount||0).toFixed(2)}" min="0.01" max="1000000" step="0.01" required inputmode="decimal" aria-label="Montant en euros de l’échéance ${position}">`:fmtMoney(it.amount);
-      const actions=canRemove?`<div class="finance-actions"><button type="button" class="qonto-action-btn qonto-action-btn--primary" data-save-installment="${i}" hidden>Enregistrer</button><button type="button" class="qonto-action-btn qonto-action-btn--secondary" data-cancel-installment="${i}" hidden>Annuler</button><button type="button" class="qonto-action-btn qonto-action-btn--danger" data-delete-installment="${i}">Supprimer</button></div>`:'';
-      return `<div class="finance-line finance-installment-row ${it.tracking_removed_at?'finance-line--retry-history':rowClass}"><div><strong>${it.duplicate_qonto_schedule?'Doublon Qonto à vérifier':(current?`${position}/${it.total||c.totalMensualites}`:'Historique')}</strong>${retry?`<div style="margin-top:7px">${badge(retryLabel,current?'purple':'gray')}</div>`:''}</div><div><span class="finance-mini-label">${dateLabel}</span>${date}</div><div><span class="finance-mini-label">Montant${canEdit?' (€)':''}</span>${amount}</div><div>${badge(installmentStatusLabel(it),it.tracking_removed_at?'gray':tone)}</div><div>${it.paidAt?formatIsoDateFr(String(it.paidAt).slice(0,10)):''}${it.failureReason?` <span class="${treated||!current?'muted':'qonto-error'}">${esc(installmentFailureReasonLabel(it.failureReason))}</span>`:''}</div>${actions}</div>`;
-    }).join('');
-    const duplicateNotice=currentLines.filter(line=>line.qontoDuplicateDebitWarning).map(line=>`<div class="finance-alert finance-alert--red"><strong>⚠</strong><span>${esc(line.qontoDuplicateDebitWarning)}</span></div>`).join('');
-    const historyNote=hasHistory?`<div class="finance-empty">Les lignes « Rejet traité », « Tentative précédente » et « Supprimée du suivi » restent dans l’historique et ne s’ajoutent pas aux ${c.totalMensualites} mensualités.</div>`:'';
-    const candidates=currentLines.filter(line=>!isCpfQontoLine(line)&&line.paymentMode==='sepa_direct_debit'&&!line.registrationCancelled&&!['cancelled','deleted'].includes(line.invoiceStatus));
-    const notice=!readOnly&&candidates.length?'<div class="finance-empty"><strong>Modification du suivi</strong><br>Les dates, les montants et les échéances modifiés ici mettent à jour cette fiche. Ces changements ne modifient, n’annulent et ne créent aucun prélèvement bancaire. Reportez-les dans Qonto.</div>':'';
-    const add=!readOnly&&candidates.length?`<div><button type="button" class="btn btn-outline" id="addTrackedInstallment">+ Ajouter une échéance</button><form id="newTrackedInstallment" class="finance-installment-add" hidden><label${candidates.length===1?' hidden':''}>Financement<select name="lineId">${candidates.map(line=>`<option value="${esc(line.id)}">${esc(line.financeurName||line.financingType)} · ${fmtMoney(line.amountTTC||line.amount)}</option>`).join('')}</select></label><label>Date<input name="date" type="date" required></label><label>Montant (€)<input name="amount" type="number" min="0.01" max="1000000" step="0.01" required inputmode="decimal"></label><div class="finance-actions"><button class="btn btn-primary" type="submit">Ajouter au suivi</button><button class="btn btn-outline" type="button" id="cancelNewInstallment">Annuler</button></div></form></div>`:'';
+    if (installmentDraftActive || installmentEditBusy) return;
+    const items=[...c.effectiveInstallments].sort((a,b)=>installmentDate(a).localeCompare(installmentDate(b)));
+    const candidates=currentLines.filter(line=>!isCpfQontoLine(line) && line.paymentMode==='sepa_direct_debit'
+      && !line.registrationCancelled && !['cancelled','deleted'].includes(line.invoiceStatus));
     const container=document.getElementById('financeInstallments');
-    container.innerHTML=duplicateNotice+notice+`<div id="installmentEditFeedback" role="status" aria-live="polite" hidden></div>`+(c.totalMensualites?`<div class="finance-line"><strong>${c.mensualitesPayees} mensualités payées sur ${c.totalMensualites}</strong><div><span class="finance-mini-label">Plan contractuel / suivi</span>${planLabel}</div><div><span class="finance-mini-label">Prochaine mensualité</span>${c.prochaineEcheance?`${formatIsoDateFr(installmentDate(c.prochaineEcheance))} — ${fmtMoney(c.prochaineEcheance.amount)}`:'—'}</div><div><span class="finance-mini-label">Reste dans l’échéancier</span>${fmtMoney(c.montantRestantAPrelever)}</div></div>`:'<div class="finance-empty">Aucune échéance active dans le suivi.</div>')+historyNote+rows+add;
+    if (!container) return;
+    const feedback='<div id="installmentEditFeedback" role="status" aria-live="polite" hidden></div>';
+    if (!editingSchedule || readOnly) {
+      const expanded = new Set([...container.querySelectorAll('[data-operation-id][open]')].map(el=>el.dataset.operationId));
+      container.innerHTML=feedback+scheduleReadView(c,items,!readOnly && candidates.length>0);
+      container.querySelectorAll('[data-operation-id]').forEach(el=>{ el.open=expanded.has(el.dataset.operationId); });
+      container.querySelectorAll('[data-schedule-view]').forEach(button=>button.onclick=()=>{
+        scheduleView=button.dataset.scheduleView;
+        renderInstallments(c);
+        container.querySelector('.schedule-nav [aria-pressed="true"]')?.focus();
+      });
+      container.querySelector('[data-edit-schedule]')?.addEventListener('click',()=>{
+        editingSchedule=true;
+        renderInstallments(c);
+        container.querySelector('[data-close-editor]')?.focus();
+      });
+      container.querySelector('[data-bank-refresh]')?.addEventListener('click',()=>readBankSchedule(true));
+      return;
+    }
+    const rows=items.map((it,i)=>{
+      const paid=['completed','paid','succeeded','success'].includes(it.status);
+      const canRemove=!paid && !['processing','in_progress','submitted','on_hold'].includes(it.qonto_collection_status_raw || it.status) && candidates.includes(it.line);
+      const canEdit=canRemove && !installmentIsRejected(it);
+      const date=canEdit?`<input type="date" data-edit-installment-date="${i}" value="${esc(installmentDate(it))}" aria-label="Date de l’échéance">`:scheduleDate(installmentDate(it));
+      const amount=canEdit?`<input type="number" data-edit-installment-amount="${i}" value="${Number(it.amount||0).toFixed(2)}" min="0.01" max="1000000" step="0.01" required aria-label="Montant de l’échéance en euros">`:fmtMoney(it.amount);
+      const actions=canRemove?`<div class="finance-actions"><button type="button" class="btn btn-primary" data-save-installment="${i}" hidden>Enregistrer</button><button type="button" class="btn btn-outline" data-cancel-installment="${i}" hidden>Annuler</button><button type="button" class="qonto-action-btn qonto-action-btn--danger" data-delete-installment="${i}">Retirer du suivi</button></div>`:'';
+      return `<div class="finance-installment-row schedule-edit-row"><label>Date du suivi${date}</label><label>Montant (€)${amount}</label><span>${esc(installmentStatusLabel(it))}</span>${actions}</div>`;
+    }).join('');
+    const add=!readOnly&&candidates.length?`<div><button type="button" class="btn btn-outline" id="addTrackedInstallment">+ Ajouter une échéance</button><form id="newTrackedInstallment" class="finance-installment-add" hidden><label${candidates.length===1?' hidden':''}>Financement<select name="lineId">${candidates.map(line=>`<option value="${esc(line.id)}">${esc(line.financeurName||line.financingType)} · ${fmtMoney(line.amountTTC||line.amount)}</option>`).join('')}</select></label><label>Date<input name="date" type="date" required></label><label>Montant (€)<input name="amount" type="number" min="0.01" max="1000000" step="0.01" required inputmode="decimal"></label><div class="finance-actions"><button class="btn btn-primary" type="submit">Ajouter au suivi</button><button class="btn btn-outline" type="button" id="cancelNewInstallment">Annuler</button></div></form></div>`:'';
+    container.innerHTML=feedback+'<div class="schedule-editor-head"><strong>Modifier l’échéancier de la fiche</strong><button type="button" class="btn btn-outline" data-close-editor>Terminer</button></div><p class="schedule-help">Ces modifications concernent le suivi local. Pour modifier ou annuler un prélèvement bancaire, utilisez Qonto.</p>'+rows+add;
+    container.querySelector('[data-close-editor]').onclick=()=>{
+      editingSchedule=false;
+      renderInstallments(c);
+      container.querySelector('[data-edit-schedule]')?.focus();
+    };
     container.querySelectorAll('[data-edit-installment-date],[data-edit-installment-amount]').forEach(input=>input.addEventListener('input',()=>{
       installmentDraftActive=true;
       const row=input.closest('.finance-installment-row');

@@ -27,12 +27,10 @@ class AdminTraineeRescheduleDebitTests(unittest.TestCase):
         self.assertIn("Reprogrammer la sélection", template)
         self.assertIn("Nouveau prélèvement en cours de transmission", template)
         self.assertIn("Nouveau prélèvement mis en place avec succès", template)
-        self.assertIn("Nouveau prélèvement suite à rejet", template)
         self.assertIn("Rejet traité", template)
-        self.assertIn("finance-line--retry", template)
         self.assertIn("logicalInstallmentsForLine", template)
-        self.assertIn("Plan contractuel", template)
-        self.assertIn("Tentative précédente · non comptabilisée", template)
+        self.assertIn("Échéancier de la fiche", template)
+        self.assertIn("Historique du suivi local", template)
         self.assertIn("montantTotalEcheancier", template)
 
     def test_endpoint_keeps_rejection_as_treated_and_adds_a_distinct_retry(self):
