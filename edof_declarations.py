@@ -13,7 +13,7 @@ import edof_automation_audit as audit
 
 from edof_directory import FIRST_SESSION, dated_snapshot, normalized
 from edof_readonly_test import ID_RE
-from edof_schedule import paper_entry, scheduled_at
+from edof_schedule import scheduled_at
 
 MOTIFS = {
     "trainee_absent": "Absence ou abandon du stagiaire sans force majeure",
@@ -73,6 +73,14 @@ def records(directory, folder=None):
         return [{**dict(row), "intent": json.loads(row["intent"])} for row in rows]
 
 
+def scheduled_draft(row, action):
+    date_key = "session_start_date" if action == "entry_training" else "session_end_date"
+    draft = {"action": action, "actual_date": row[date_key], "source": "edof_schedule"}
+    if action == "service_done":
+        draft["rate"] = 100
+    return draft
+
+
 def enqueue(directory, owner, revision, row, draft, actor, *, automatic=False):
     folder, action = row["folder_id"], draft["action"]
     if not ID_RE.fullmatch(folder) or action not in {"entry_training", "service_done"}:
@@ -85,11 +93,12 @@ def enqueue(directory, owner, revision, row, draft, actor, *, automatic=False):
     if not row["session_start_date"] <= date.isoformat() <= row["session_end_date"] or date > dt.datetime.now(ZoneInfo("Europe/Paris")).date():
         raise ValueError("Vérifiez la date de la déclaration.")
     if draft.get("source") == "edof_schedule":
-        from integrale_edof_dashboard import category
-        start = row["session_start_date"]
-        if not (automatic and category(row) == "accepted" and paper_entry(action, start)
-                and date.isoformat() == start and scheduled_at(action, start) <= dt.datetime.now(ZoneInfo("Europe/Paris"))):
-            raise ValueError("Cette entrée automatique doit être échue et correspondre au dossier CPF accepté.")
+        from integrale_edof_dashboard import ACTIONS, category
+        official_date = row["session_start_date" if action == "entry_training" else "session_end_date"]
+        if (not automatic or ACTIONS.get(category(row)) != action or date.isoformat() != official_date
+                or scheduled_at(action, official_date) > dt.datetime.now(ZoneInfo("Europe/Paris"))
+                or action == "service_done" and draft.get("rate") != 100):
+            raise ValueError("La déclaration automatique doit correspondre à l’échéance du dossier CPF.")
     elif not (draft.get("evidence") or draft.get("operator_confirmed") is True):
         raise ValueError("Confirmez la réalisation de la formation.")
     if action == "service_done" and (type(draft.get("rate")) is not int or not 0 <= draft["rate"] <= 100 or (draft["rate"] < 100 and draft.get("motif") not in MOTIFS)):
@@ -104,11 +113,21 @@ def enqueue(directory, owner, revision, row, draft, actor, *, automatic=False):
             if automatic:
                 return "paused"
             raise ValueError("L’automatisation est bloquée sur ce dossier.")
+        if draft.get("source") == "edof_schedule" and db.execute(
+                "SELECT 1 FROM sqlite_master WHERE name='dossier_work'").fetchone():
+            if db.execute("""SELECT 1 FROM dossier_work WHERE folder=? AND json_extract(draft,'$.source')='admin'
+                             AND json_extract(draft,'$.action')=?""", (folder, action)).fetchone():
+                return "paused"  # A specific operator draft won the race with discovery.
         old = db.execute("SELECT * FROM cpf_declarations WHERE folder=? AND action=?",
                          (folder, action)).fetchone()
-        if old and (old["status"] in {"sending", "uncertain", "confirmed"} or (old["status"] == "queued" and old["revision"] == revision)
-                    or (automatic and old["status"] == "review")):
-            return old["status"]
+        if old:
+            previous = json.loads(old["intent"])
+            replace_default = (not automatic and draft.get("operator_confirmed") and old["status"] == "queued"
+                               and previous.get("source") == "edof_schedule" and not previous.get("exit_confirmed"))
+            if (old["status"] in {"sending", "uncertain", "confirmed"}
+                    or old["status"] == "queued" and old["revision"] == revision and not replace_default
+                    or automatic and old["status"] == "review"):
+                return old["status"]
         db.execute("""INSERT INTO cpf_declarations(folder,action,token,owner,revision,actor,intent,status,created,changed)
             VALUES(?,?,?,?,?,?,?,'queued',?,?) ON CONFLICT(folder,action) DO UPDATE SET
             token=excluded.token, owner=excluded.owner, revision=excluded.revision, actor=excluded.actor,
@@ -134,9 +153,19 @@ def next_job(store, revision, *, provider="integrale"):
         if not row:
             return None
         intent = json.loads(row["intent"])
+        token = row["token"]
+        if (row["status"] == "queued" and row["actor"] == "Gestion Stagiaires"
+                and intent.get("source") in {"local", "production"} and intent.get("rate", 100) == 100
+                and not intent.get("pilot_ticket") and not intent.get("exit_confirmed")):
+            # Only replace an automatic intent that has never crossed the write fence.
+            intent = {key: intent[key] for key in ("first_name", "last_name", "session_start_date", "session_end_date", "title")}
+            intent.update(scheduled_draft(intent, row["action"]))
+            token = uuid.uuid4().hex
+            db.execute("UPDATE cpf_declarations SET token=?,intent=? WHERE token=? AND status='queued'",
+                       (token, json.dumps(intent, ensure_ascii=False), row["token"]))
         return {"mode": "declare" if row["status"] == "queued" else "reconcile", "folder_id": row["folder"],
                 "first_name": intent["first_name"], "last_name": intent["last_name"], "owner": row["owner"],
-                "operation": row["token"], "revision": row["revision"], "intent": intent}
+                "operation": token, "revision": row["revision"], "intent": intent}
 
 
 def begin_send(directory, spec):
@@ -258,6 +287,11 @@ def same_enrolment(row, proof):
                ("first_name", "last_name", "session_start_date", "session_end_date"))
 
 
+def conflicting_identity(row, proof):
+    return any(proof.get(key) and normalized(proof[key]) != normalized(row.get(key) or "")
+               for key in ("first_name", "last_name"))
+
+
 def matches_linked_proof(row, proof, draft):
     """Compare evidence returned for this exact CPF number to the individual EDOF period."""
     if same_enrolment(row, proof):
@@ -351,25 +385,18 @@ def discover(store, owner, snapshot, *, outcomes=None):
             if {action, "both"}.intersection([*proof.get("blocks", []), *local_proof.get("blocks", [])]):
                 record(folder, action, "blocked", "blocked")
                 continue
-            remote_draft = training_proof(row, proof, action)
-            local_draft = training_proof(row, local_proof, action)
             saved = drafts.get(folder, {}).get("draft") or {}
-            if paper_entry(action, row.get("session_start_date")):
-                draft = {"action": action, "actual_date": row["session_start_date"], "source": "edof_schedule"}
-            elif saved.get("source") == "admin" and saved.get("action") == action:
-                if (not same_enrolment(row, saved) or (proof.get("first_name") and not matches_linked_proof(row, proof, saved))
-                        or (saved.get("rate", 100) < 100 and saved.get("motif") not in MOTIFS)):
+            if any(conflicting_identity(row, item) for item in (proof, local_proof)):
+                record(folder, action, "review", "review")
+                continue
+            if saved.get("source") == "admin" and saved.get("action") == action:
+                if (not same_enrolment(row, saved)
+                        or saved.get("rate", 100) < 100 and saved.get("motif") not in MOTIFS):
                     record(folder, action, "review", "review")
                     continue
                 draft = saved
-            elif remote_draft and matches_linked_proof(row, proof, remote_draft):
-                draft = remote_draft
-            elif (not remote_draft and local_draft and matches_linked_proof(row, local_proof, local_draft)
-                  and (not proof.get("first_name") or matches_linked_proof(row, proof, local_draft))):
-                draft = {**local_draft, "source":"local"}
             else:
-                record(folder, action, "missing", "missing")
-                continue
+                draft = scheduled_draft(row, action)
             try:
                 status = enqueue(store.directory, owner, revision, row, draft, "Gestion Stagiaires", automatic=True)
             except ValueError:
@@ -421,14 +448,13 @@ def check_before_job(store, spec):
             complete(store.directory, spec, "declaration_blocked")
             return False
         source = spec["intent"].get("source")
-        if spec["intent"].get("operator_confirmed") and proof.get("first_name") and not matches_linked_proof(spec["intent"], proof, spec["intent"]):
+        if (source == "edof_schedule" or spec["intent"].get("operator_confirmed")) and conflicting_identity(spec["intent"], proof):
             complete(store.directory,spec,"declaration_changed")
             return False
         if source == "admin":
             from integrale_edof_dashboard import local_operations
             current = local_operations(ProviderStore(store.directory)).get(folder, {}).get("draft") or {}
-            if (not same_enrolment(spec["intent"],current) or any(spec["intent"].get(k) != v for k,v in current.items())
-                    or proof.get("first_name") and not matches_linked_proof(spec["intent"], proof, spec["intent"])):
+            if not same_enrolment(spec["intent"], current) or any(spec["intent"].get(k) != v for k, v in current.items()):
                 complete(store.directory, spec, "declaration_evidence_changed")
                 return False
         if source in {"production", "local"}:

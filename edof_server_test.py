@@ -309,7 +309,7 @@ class ServerTestStore:
             try:
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
-                return
+                return False
             with closing(self.connect()) as db, db:
                 for item in db.execute("SELECT owner FROM directory_activity UNION SELECT owner FROM manual_sessions WHERE until>?", (time.time(),)).fetchall():
                     recovery.mark(db, item["owner"], "server_restart")
@@ -317,10 +317,11 @@ class ServerTestStore:
                     vault = Vault(self.directory, self.connector_key)
                     owners = db.execute("SELECT owner FROM directory_activity UNION SELECT owner FROM manual_sessions UNION SELECT DISTINCT owner FROM jobs")
                     for item in owners:
-                        session_clock.record(vault, item["owner"], "interrupted")
+                        session_clock.record(vault, item["owner"], "server_restart")
                 db.execute("""UPDATE jobs SET finished=?, result=?
                     WHERE mode='directory' AND finished IS NULL""",
                     (time.time(), json.dumps({"code":"interrupted", "restart":True, "day_session":True})))
+            return True
 
     def queue_sync(self, owner, scope, *, catchup_revision=None):
         now = time.time()
@@ -578,7 +579,7 @@ class ServerTestStore:
         return {"clock":clock, "active": verified, "connection_state":connection_state, "connection_label":connection_label,
                 "pending": pending, "checked": checked, "sync": sync, "schedule": schedule, "manual_sync": self.manual_sync_status(owner, "all"),
                 "recovery": recovery.status(self, owner),
-                "login_budget": {k:budget[k] for k in ("used","limit","remaining","retry_at")} if budget else None,
+                "login_budget": {k:budget[k] for k in ("used","limit","remaining","retry_at","restarts")} if budget else None,
                 "last_read": dict(row) if row else None,
                 "new_sync": self.manual_sync_status(owner, "new"),
                 "phase": labels.get(phase.get("phase"), "") if private_at >= earliest and pending else "",
@@ -885,7 +886,8 @@ def register_edof_server_test(legacy):
             try:
                 fcntl.flock(leader, fcntl.LOCK_EX)
                 with dispatch.listen(store.directory) as inbox:
-                    store.recover_directory_reads()
+                    while not store.recover_directory_reads():
+                        dispatch.wait(inbox)
                     while True:
                         dispatch.wait(inbox)
                         try:

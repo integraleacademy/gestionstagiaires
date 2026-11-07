@@ -2,7 +2,7 @@
 from collections import Counter
 import datetime as dt
 
-from edof_schedule import paper_entry, scheduled_at
+from edof_schedule import scheduled_at
 
 GROUPS = {
     "requests": "Demandes",
@@ -97,7 +97,6 @@ def operation_rows(rows, dispatches, now, revision, outcomes=None):
     def append(row, action, dispatch=None, current=True):
         date = row.get("session_start_date" if action == "entry_training" else "session_end_date")
         scheduled = scheduled_at(action, date)
-        automatic_entry = bool(scheduled and paper_entry(action, date))
         status = dispatch.get("status") if dispatch else None
         outcome_action, outcome = outcomes.get(row["folder_id"], (None, None))
         outcome = outcome if current and outcome_action == action else None
@@ -118,13 +117,10 @@ def operation_rows(rows, dispatches, now, revision, outcomes=None):
             bucket, note = "attention", "Déclaration à vérifier" if outcome == "review" else "Date de formation à compléter"
         elif scheduled <= now:
             bucket = "overdue"
-            if automatic_entry:
-                note = "Envoi automatique prévu au prochain passage"
-            else:
-                note = "Déclaration préparée" if row.get("evaluation") == "ready" else "Confirmation ou justificatif à compléter"
+            note = "Envoi automatique prévu au prochain passage"
         else:
-            bucket, note = "planned", "Envoi automatique à 18 h" if automatic_entry else "Échéance à venir"
-        result.append({**row, "action": action, "scheduled": scheduled, "automatic_entry": automatic_entry, "block": block,
+            bucket, note = "planned", f"Envoi automatique à {scheduled.hour} h"
+        result.append({**row, "action": action, "scheduled": scheduled, "block": block,
                        "scheduled_today": bool(current and scheduled and scheduled.date() == now.date() and bucket != "history"),
                        "due": bool(scheduled and scheduled <= now and bucket not in {"history", "planned"}),
                        "dispatch_status": status, "catchup_outcome": outcome, "operation_bucket": bucket,

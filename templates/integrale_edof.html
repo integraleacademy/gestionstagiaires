@@ -51,7 +51,7 @@
         <span id="edof-full-sync" class="wedof-status-pill" data-stamp="{{ live.sync.full_stamp }}" {% if not live.sync.full_stamp or live.sync.stamp <= live.sync.full_stamp %}hidden{% endif %}>Liste générale · {{ live.sync.full_label }}</span>
         {% if not detail %}<span class="wedof-status-pill">{{ snapshot_count }} dossiers synchronisés</span>{% endif %}
         <span id="edof-reading" class="wedof-status-pill" role="status" {% if not live.pending %}hidden{% endif %}><i class="edof-spinner" aria-hidden="true"></i>Synchronisation EDOF en cours…</span>
-        <span id="edof-login-budget" class="wedof-status-pill" title="Jusqu’à 4 codes automatiques entre 7h et 19h, heure de Paris. Au moins 15 minutes entre deux tentatives automatiques." {% if not live.login_budget %}hidden{% endif %}>Tentatives EFP · {{ live.login_budget.used if live.login_budget else 0 }}/4 aujourd’hui</span>
+        <span id="edof-login-budget" class="wedof-status-pill" title="Quatre tentatives normales entre 7 h et 19 h. Une reconnexion après redémarrage est comptée séparément." {% if not live.login_budget %}hidden{% endif %}>EFP · {{ live.login_budget.used if live.login_budget else 0 }}/4 normales · {{ live.login_budget.restarts|default(0) if live.login_budget else 0 }} après redémarrage</span>
       </div>
       <small id="edof-connection-note">{{ live.schedule }}{% if live.pending %} · {{ live.phase or 'Lecture en cours…' }}{% elif live.error %} · {{ live.error }}{% endif %}{% if live.until %} · Activation manuelle jusqu’à {{ live.until }}{% endif %}{% if live.checked %} · Dernier contrôle le {{ live.checked }}{% endif %}</small>
       <p id="edof-recovery" class="edof-recovery" role="status" data-pending="{{ '1' if live.recovery and live.recovery.pending else '0' }}" {% if not live.recovery %}hidden{% endif %}>{{ live.recovery.message if live.recovery else '' }}</p>
@@ -131,7 +131,7 @@
 {% if section == 'automations' %}
 <section class="wedof-panel edof-catchup" id="rattrapage" data-phase="{{ catchup.phase if catchup else 'idle' }}">
   <div><span class="wedof-section-label">Rattrapage</span><h2>Déclarations en retard</h2>
-    <p>Pour les dossiers acceptés, l’entrée est transmise automatiquement à partir de 18 h le jour du début indiqué dans EDOF (heure de Paris). En cas d’absence ou de report, cochez « Bloquer l’automatisation » sur le dossier avant 18 h. Conservez l’émargement papier. La sortie et le service fait sont prévus le jour de fin à 18 h.</p>
+    <p>Pour les dossiers acceptés, l’entrée est transmise automatiquement à partir de 18 h le jour du début indiqué dans EDOF (heure de Paris). En cas d’absence ou de report, cochez « Bloquer l’automatisation » sur le dossier avant 18 h. Conservez l’émargement papier. À 18 h le jour de fin du dossier CPF, la sortie et le service fait sont déclarés à 100 %. En cas de parcours partiel, bloquez l’automatisation avant l’échéance.</p>
     {% if not active %}<p>Disponible lorsque <a href="{{ url_for('integrale_edof.index', section='technical') }}">Intégrale EDOF est actif</a>.</p>{% endif %}
   </div>
   {% if session.get('admin_role') != 'viewer' %}
@@ -255,7 +255,7 @@
       <div><span>Passage dans le statut</span><strong>{{ detail.display.stage_exact_label or detail.display.stage_unknown_label }}</strong>{% if detail.display.stage_observed and detail.display.stage_label %}<small>Statut observé le {{ detail.display.stage_label }}. EDOF ne fournit pas la date de ce changement.</small>{% endif %}</div>
       <div><span>Échéance de l’automatisation</span><strong>{{ action_labels.get(detail.display.action, 'Aucune action prévue') }}</strong>
         {% if detail.display.scheduled %}<time datetime="{{ detail.display.scheduled.isoformat() }}">{{ detail.display.scheduled.strftime('%d/%m/%Y à %H h %M') }}</time>{% endif %}
-        {% if detail.held or detail.display.block %}<span class="wedof-badge is-danger">Automatisation bloquée</span>{% elif active and detail.display.automatic_entry %}<span>Envoi automatique à partir de 18 h, heure de Paris.</span>{% endif %}
+        {% if detail.held or detail.display.block %}<span class="wedof-badge is-danger">Automatisation bloquée</span>{% elif active and detail.display.scheduled %}<span>Envoi automatique à partir de {{ detail.display.scheduled.hour }} h{% if detail.display.action == 'service_done' %} · 100 % selon les dates CPF{% endif %}.</span>{% endif %}
       </div>
       <div><span>Rattachement local</span><strong>{{ 'Associé' if detail.display.link else 'Non associé' }}</strong></div>
     </div>
@@ -312,7 +312,7 @@
 {% if not saved_date and planned and planned <= today %}<p>La date de session est préremplie. Modifiez-la si la date effective est différente.</p>{% endif %}
 <label>{{ 'Date effective d’entrée' if detail.action=='entry_training' else 'Date de sortie et de service fait' }}<input type="date" name="actual_date" value="{{ saved_date or (planned if planned and planned<=today else '') }}" min="{{ f.session_start_date or '' }}" max="{{ [today, f.session_end_date]|min if f.session_end_date else today }}" required></label>
 {% if pilot_send %}<label>Référence du justificatif<input type="text" name="evidence" value="{{ entry_draft.evidence if entry_draft else '' }}" maxlength="250" required></label>{% endif %}
-{% if detail.action == 'service_done' %}<label>Taux réalisé (%)<input type="number" name="rate" value="{{ detail.draft.rate if detail.draft and detail.draft.action==detail.action and detail.draft.rate is defined else '' }}" min="0" max="100" required></label><label>Motif en cas de réalisation partielle<select name="motif"><option value="">Parcours intégral ou motif à choisir</option>{% for key,label in motifs.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>{% endif %}
+{% if detail.action == 'service_done' %}<label>Taux réalisé (%)<input type="number" name="rate" value="{{ detail.draft.rate if detail.draft and detail.draft.action==detail.action and detail.draft.rate is defined else 100 }}" min="0" max="100" required></label><label>Motif en cas de réalisation partielle<select name="motif"><option value="">Parcours intégral ou motif à choisir</option>{% for key,label in motifs.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>{% endif %}
 <button class="btn btn-blue" type="submit" name="attested" value="yes">{{ 'Confirmer l’entrée effective et transmettre à EDOF' if detail.action=='entry_training' else 'Confirmer la sortie et le service fait à EDOF' }}</button></form>{% endif %}{% endif %}
   </div></section></details>
 {% endif %}
@@ -325,6 +325,6 @@
   <script nonce="{{ nonce }}" src="{{ url_for('static',filename='js/wedof-manual-links.js',v='20261106-association-feedback') }}" defer></script>
   {% include '_edof_feedback.html' %}
   <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-feedback.js',v='20261105-proposal-feedback') }}" defer></script>
-  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261105-connexion') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261107-restart') }}" defer></script>
   {% if detail %}<script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-proposal-feedback.js',v='20261105-proposal-feedback') }}" defer></script>{% endif %}
 {% endblock %}

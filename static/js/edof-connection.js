@@ -196,7 +196,7 @@
         const budget = document.getElementById('edof-login-budget');
         if (budget) {
           budget.hidden = !state.login_budget;
-          budget.textContent = state.login_budget ? `Tentatives EFP · ${state.login_budget.used}/${state.login_budget.limit} aujourd’hui` : '';
+          budget.textContent = state.login_budget ? `EFP · ${state.login_budget.used}/${state.login_budget.limit} normales · ${state.login_budget.restarts || 0} après redémarrage` : '';
         }
         const recovery = document.getElementById('edof-recovery');
         if (recovery) {

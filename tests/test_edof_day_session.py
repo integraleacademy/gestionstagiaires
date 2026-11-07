@@ -198,7 +198,8 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
         monkeypatch.setattr(runner, "open_workspace_or_login", require_login)
         monkeypatch.setattr(runner, "read_pending_with_private_session", lambda *a: None)
         vault.put("efp-login-day", {"date":dt.datetime.now(PARIS).date().isoformat(),"count":4})
-        result = runner.run_browser({"mode":"directory","day_session":True,"owner":"fixture"},live=live)
+        result = runner.run_browser({"mode":"directory","day_session":True,"owner":"fixture",
+                                    "manual_until":dt.datetime.now(PARIS).timestamp()+120},live=live)
         assert result["code"] == "day_login_used" and not result["gmail_code_used"]
         measured = runner.session_clock.read_clock(vault, "fixture")
         assert "current" not in measured and measured["previous"]["last"] == timing["current"]["last"]
