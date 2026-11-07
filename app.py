@@ -45620,7 +45620,7 @@ def _manual_bank_snapshot(line):
                                     sort_keys=True, default=str).encode()).hexdigest()
 
 
-def _manual_bank_reserved_cents(line):
+def _manual_bank_debit_totals(line):
     """Verify posted collections and reserve money still due by direct debit."""
     rows = _sepa_installments(line)
     pending = {'on_hold', 'pending', 'processing', 'scheduled', 'in_progress', 'active', 'pending_mandate_signature'}
@@ -45630,6 +45630,7 @@ def _manual_bank_reserved_cents(line):
     owned = set()
     attached = {}
     reserved = 0
+    verified_paid = 0
     for row in rows:
         sid = str(row.get('qonto_direct_debit_subscription_id') or '')
         cid = str(row.get('qonto_direct_debit_collection_id') or '')
@@ -45718,6 +45719,7 @@ def _manual_bank_reserved_cents(line):
                 if len(matches) != 1 or money_value_to_cents(matches[0].get('amount')) != amount:
                     raise ValueError(discrepancy)
                 paid_rows.remove(matches[0])
+                verified_paid += amount
             elif status in pending:
                 pending_cents += amount
             else:
@@ -45735,10 +45737,10 @@ def _manual_bank_reserved_cents(line):
     if any(row.get('qonto_direct_debit_collection_id') or row.get('qonto_direct_debit_subscription_id')
            for row in paid_rows):
         raise ValueError(discrepancy)
-    return reserved
+    return reserved, verified_paid
 
 
-def _manual_bank_check_remote_invoice(line):
+def _manual_bank_check_remote_invoice(line, verified_debits):
     """Read only: refuse mixed/ambiguous payments and changed invoice amounts."""
     invoice_id = line.get('qontoInvoiceId') or line.get('qontoDraftId')
     if not invoice_id:
@@ -45760,16 +45762,27 @@ def _manual_bank_check_remote_invoice(line):
                      if remote.get(key) not in (None, '')]
     if not raw_paid and not raw_remaining:
         raise ValueError('Le montant encaissé n’est pas confirmé par Qonto. Synchronisez la facture puis réessayez.')
-    # The shared display normalizer deliberately ignores inconsistent paid
-    # amounts. They are still a conflict here, never permission to add money.
-    if any(Decimal(str(_qonto_money_value(value))) != 0 for value in raw_paid):
-        raise ValueError('Qonto indique déjà un paiement sur cette facture. Synchronisez-la pour éviter de compter le règlement deux fois.')
-    if normalized['qonto_total_amount_cents'] != money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0):
+    total = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+    if normalized['qonto_total_amount_cents'] != total:
         raise ValueError('Le montant de la facture a changé. Synchronisez Qonto puis recommencez.')
-    if (normalized['qonto_amount_paid_cents'] or normalized['qonto_status'] == 'paid'
-            or normalized['qonto_remaining_amount_cents'] != normalized['qonto_total_amount_cents']):
-        raise ValueError('Qonto indique déjà un paiement sur cette facture. Synchronisez-la pour éviter de compter le règlement deux fois.')
-    return normalized['qonto_amount_paid_cents']
+    paid = normalized['qonto_amount_paid_cents']
+    # The display normalizer can discard malformed amounts. Validate the raw
+    # fields too, including monetary units and the separate remaining amount.
+    for key, expected in (('amount_paid', paid), ('paid_amount', paid),
+                          ('amount_paid_cents', paid), ('paid_amount_cents', paid),
+                          ('remaining_amount', total - paid), ('amount_due', total - paid),
+                          ('remaining_amount_cents', total - paid)):
+        value = remote.get(key)
+        if value in (None, ''):
+            continue
+        cents = Decimal(str(_qonto_money_value(value))) * (1 if key.endswith('_cents') else 100)
+        if cents != expected or (isinstance(value, dict) and value.get('currency', 'EUR') != 'EUR'):
+            raise ValueError('Les montants de la facture Qonto sont incohérents. Vérifiez le règlement.')
+    if normalized['qonto_status'] == 'paid' or paid >= total:
+        raise ValueError('Qonto indique que la facture est déjà soldée.')
+    if paid and (not verified_debits or paid != verified_debits):
+        raise ValueError('Le paiement indiqué sur la facture ne correspond pas aux prélèvements encaissés vérifiés. Vérifiez le règlement dans Qonto.')
+    return paid
 
 
 @app.post('/api/billing/bank-transfers/search')
@@ -45795,8 +45808,8 @@ def api_billing_bank_transfer_search():
     if payload.get('dateFrom') and (not since or since > datetime.date.today()):
         return jsonify(ok=False, error='Choisissez une date de début valide, antérieure ou égale à aujourd’hui.'), 400
     try:
-        reserved = _manual_bank_reserved_cents(line)
-        _manual_bank_check_remote_invoice(line)
+        reserved, verified_debits = _manual_bank_debit_totals(line)
+        remote_paid = _manual_bank_check_remote_invoice(line, verified_debits)
         transactions = _fetch_qonto_bank_transactions([line], since=since)
     except Exception as exc:
         return jsonify(ok=False, error=format_qonto_error_for_front(exc)), 400
@@ -45814,9 +45827,9 @@ def api_billing_bank_transfer_search():
                                         if candidate['amount_cents'] > available else ''))
         if not candidate['blocked_reason']:
             candidate['selection_token'] = signer.dumps({'line_id': line['id'], 'nonce': nonce,
-                'snapshot': _manual_bank_snapshot(line), 'record': verified_bank_transfer(candidate)})
+                'snapshot': _manual_bank_snapshot(line), 'invoice_paid': remote_paid, 'record': verified_bank_transfer(candidate)})
     return jsonify(ok=True, transactions=candidates[:100], remaining_cents=remaining,
-                   reserved_cents=reserved, available_cents=available,
+                   reserved_cents=reserved, available_cents=available, invoice_debits_cents=remote_paid,
                    truncated=len(candidates) > 100)
 
 
@@ -45843,8 +45856,12 @@ def api_billing_bank_transfer_assign():
     if error:
         return jsonify(ok=False, error=error), 409
     try:
-        reserved = _manual_bank_reserved_cents(line)
-        remote_paid = _manual_bank_check_remote_invoice(line)
+        reserved, verified_debits = _manual_bank_debit_totals(line)
+        remote_paid = _manual_bank_check_remote_invoice(line, verified_debits)
+        if remote_paid != selected.get('invoice_paid', 0):
+            raise ValueError('Le règlement de la facture a changé. Recherchez à nouveau le virement.')
+        if remote_paid and payload.get('confirmSeparateTransfer') is not True:
+            raise ValueError('Confirmez que le virement est distinct des prélèvements déjà comptabilisés.')
         response = _qonto_request('GET', '/v2/transactions/' + quote(selected['record']['id'], safe=''))
         transaction = response.get('transaction')
         if not isinstance(transaction, dict) or verified_bank_transfer(transaction) != selected['record']:

@@ -609,3 +609,31 @@ def test_whole_balance_reserved_shows_transfer_without_offering_assignment(third
     assert result['available_cents'] == 0
     assert result['transactions'][0]['blocked_reason']
     assert 'selection_token' not in result['transactions'][0]
+
+
+def test_remote_invoice_already_reflects_the_verified_debit(third_party, monkeypatch):
+    client, data, trainee, fetch, _ = third_party
+    remote = link_unpaid_invoice(third_party, monkeypatch)
+    remote.update(amount_paid={'value': '400.00'}, remaining_amount={'value': '850.00'})
+    data['billing_lines'][0]['directDebitInstallments'] = [
+        {'amount': 400, 'status': 'completed', 'qonto_direct_debit_subscription_id': 'sub',
+         'qonto_direct_debit_collection_id': 'cid'}]
+    monkeypatch.setattr(gestion_app, 'get_qonto_direct_debit_subscription', lambda sid: {'id': sid, 'status': 'completed'})
+    monkeypatch.setattr(gestion_app, 'list_qonto_direct_debit_collections', lambda **kw: {
+        'collections': [{'id': 'cid', 'status': 'completed', 'amount': {'value': '400.00'}}]})
+    fetch.return_value[0]['amount_cents'] = 85000
+    search = search_third_party(third_party)
+    assert search.status_code == 200, search.json
+    assert search.json['invoice_debits_cents'] == 40000
+    assert search.json['remaining_cents'] == 85000
+    assert assign_third_party(third_party, search).status_code == 409
+    assert not data['billing_lines'][0].get('qontoBankTransfers')
+    token = search.json['transactions'][0]['selection_token']
+    remote['amount_paid']['value'] = '399.99'
+    payload = {'selectionToken': token, 'confirmSeparateTransfer': True}
+    assert client.post('/api/billing/bank-transfers/assign', json=payload).status_code == 409
+    remote['amount_paid']['value'] = '400.00'
+    result = client.post('/api/billing/bank-transfers/assign', json=payload)
+    assert result.status_code == 200, result.json
+    assert result.json['paid_cents'] == 125000 and result.json['remaining_cents'] == 0
+    assert gestion_app.calculate_trainee_financial_summary(trainee, gestion_app._billing_lines(data))['paid_total_cents'] == 125000
