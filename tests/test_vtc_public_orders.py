@@ -1,5 +1,7 @@
 """Public entry points and real workflow with provider responses isolated."""
 from unittest.mock import Mock
+import copy
+import pytest
 from lxml import html
 from pypdf import PdfReader
 from test_exam_retakes import host, providers
@@ -46,18 +48,54 @@ def cycle(host,store,oid):
     return row
 
 
+def basket_providers(host, store, row):
+    signature, invoice = providers(host, store, row)
+    invoice["purchase_order"] = "VTC-" + row["id"]
+    original = host._qonto_request.side_effect
+    host._now_iso = exam_retakes.now
+    host.QontoApiError = type("QontoApiError", (Exception,), {})
+    def qonto(method, path, payload=None, **kwargs):
+        if path == "/v2/payment_links/connections":
+            return {"status":"enabled", "bank_account_id":"bank"}
+        if path == "/v2/organization":
+            return {"organization":{"id":"org-1","bank_accounts":[{"id":"bank"}]}}
+        if (method, path) == ("POST", "/v2/payment_links"):
+            basket = payload["payment_link"]
+            assert basket["reusable"] is False and "invoice_id" not in basket
+            assert basket["items"][0]["type"] == "service"
+            host.payment_link.update(basket, resource_type="Basket")
+            host.payment_link.pop("invoice_id", None)
+            return {"payment_link":copy.deepcopy(host.payment_link)}
+        if path == "/v2/client_invoices/invoice-1/mark_as_paid":
+            assert payload == {"paid_at":"2026-10-31"}
+            invoice["status"] = "paid"
+        return original(method, path, payload, **kwargs)
+    host._qonto_request.side_effect = qonto
+    return signature, invoice
+
+
+def capture(host, invoice, status="paid"):
+    host.card_payments = [{"id":"capture-1", "status":status, "paid_at":"2026-10-30T23:13:00Z",
+                           "amount":invoice["total_amount"].copy()}]
+
+
+def creations(host, endpoint):
+    return [call for call in host._qonto_request.call_args_list if call.args[:2] == ("POST", endpoint)]
+
+
 def test_vehicle_payment_and_documents(host,tmp_path):
     client,store,oid,path,csrf=begin(host,"vehicule")
     row=store.get(oid)
     assert (row["stage"], row["total_cents"])==("billing",15000)
-    _,invoice=providers(host,store,row)
+    _,invoice=basket_providers(host,store,row)
     invoice["purchase_order"]="VTC-"+oid
     orders.document(row,tmp_path/"provider.pdf")
     host.fetch_qonto_client_invoice_pdf=Mock(return_value=((tmp_path/"provider.pdf").read_bytes(),"invoice.pdf"))
     row=cycle(host,store,oid)
     assert row["payment_url"].startswith("https://pay.qonto.com")
     assert client.get(path+"/vehicle.pdf").status_code==404
-    invoice["status"]="paid"
+    assert not creations(host, "/v2/client_invoices")
+    capture(host, invoice)
     row=cycle(host,store,oid)
     assert row["stage"]=="paid"
     assert client.get(path+"/vehicle.pdf").mimetype=="application/pdf"
@@ -66,6 +104,7 @@ def test_vehicle_payment_and_documents(host,tmp_path):
     assert client.get(path+"/convention.pdf").status_code==404
     assert not host._yousign_json.called
     create=[call for call in host._qonto_request.call_args_list if call.args[:2]==("POST","/v2/client_invoices")]
+    assert "Règlement intégral reçu le 31/10/2026" in create[0].args[2]["terms_and_conditions"]
     assert create[0].args[2]["items"][0]["vat_rate"] == "0"
     assert len(create)==1 and create[0].args[2]["items"][0]["unit_price"]["value"]=="150.000000"
 
@@ -76,7 +115,7 @@ def test_training_contract_before_collection(host,monkeypatch):
     client,store,oid,path,csrf=begin(host,"formation",slot_id="slot")
     row=store.get(oid)
     assert row["stage"]=="contract" and not store.slots("2026-10-31")
-    signature,invoice=providers(host,store,row)
+    signature,invoice=basket_providers(host,store,row)
     invoice["purchase_order"]="VTC-"+oid
     row=cycle(host,store,oid)
     assert row["signature_url"].startswith("https://")
@@ -94,7 +133,8 @@ def test_training_contract_before_collection(host,monkeypatch):
     monkeypatch.setattr(exam_retakes,"today",lambda:"2026-12-15")
     client.post("/admin/commandes-vtc/"+oid,data=action)
     assert cycle(host,store,oid)["payment_url"]
-    invoice["status"]="paid"
+    assert not creations(host, "/v2/client_invoices")
+    capture(host, invoice)
     assert cycle(host,store,oid)["stage"]=="paid"
     assert client.get(path+"/completion.pdf").status_code==200
 
@@ -149,7 +189,7 @@ def test_payment_states_and_safe_redirect(host):
     assert client.get(path + "/etat-paiement").json == {"state": "preparing"}
     assert b'id="payment-wait"' in client.get(path).data
     assert client.get(path + "/payer").location == path
-    _, invoice = providers(host, store, row)
+    _, invoice = basket_providers(host, store, row)
     invoice["purchase_order"] = "VTC-" + oid
     row = cycle(host, store, oid)
     assert client.get(path + "/etat-paiement").json == {"state": "ready"}
@@ -182,10 +222,13 @@ def test_legacy_unbilled_vehicle_uses_zero_vat(host):
     row = store.get(oid)
     row["vat_rate"] = "20"
     store.save(row)
-    _, invoice = providers(host, store, row)
+    _, invoice = basket_providers(host, store, row)
     invoice["purchase_order"] = "VTC-" + oid
     cycle(host, store, oid)
-    calls = [c for c in host._qonto_request.call_args_list if c.args[:2] == ("POST", "/v2/client_invoices")]
+    assert not creations(host, "/v2/client_invoices")
+    capture(host, invoice)
+    orders.sync_card_billing(host, store, store.get(oid))
+    calls = creations(host, "/v2/client_invoices")
     item = calls[0].args[2]["items"][0]
     assert item["vat_rate"] == "0"
     assert item["unit_price"]["value"] == "150.000000"
@@ -207,3 +250,55 @@ def test_public_canonical_domain_and_gateway_do_not_redirect_in_loop(host):
             payment="preparing", key=orders.token(row), row={"offer":"vehicule"}, csrf="test")
     assert 'Nous préparons votre paiement' in rendered
     assert 'Votre paiement<br>se prépare' not in rendered
+
+@pytest.mark.parametrize("state", ["open", "authorized", "pending", "failed", "expired", "canceled"])
+def test_no_invoice_without_captured_payment(host, state):
+    _, store, oid, _, _ = begin(host, "vehicule")
+    row = store.get(oid)
+    _, invoice = basket_providers(host, store, row)
+    capture(host, invoice, state)
+    cycle(host, store, oid)
+    cycle(host, store, oid)
+    assert not creations(host, "/v2/client_invoices")
+    assert len(creations(host, "/v2/payment_links")) == 1
+
+
+def test_wrong_amount_and_lost_paid_response_do_not_duplicate_invoice(host):
+    _, store, oid, _, _ = begin(host, "vehicule")
+    row = store.get(oid)
+    _, invoice = basket_providers(host, store, row)
+    cycle(host, store, oid)
+    capture(host, invoice)
+    host.card_payments[0]["amount"]["value"] = "149.99"
+    with pytest.raises(orders.ReviewRequired):
+        orders.sync_card_billing(host, store, store.get(oid))
+    assert not creations(host, "/v2/client_invoices")
+    capture(host, invoice)
+    original = host._qonto_request.side_effect
+    def lose_response(method, path, *args, **kwargs):
+        result = original(method, path, *args, **kwargs)
+        if path.endswith("/mark_as_paid"):
+            raise TimeoutError("response lost")
+        return result
+    host._qonto_request.side_effect = lose_response
+    with pytest.raises(TimeoutError):
+        orders.sync_card_billing(host, store, store.get(oid))
+    host._qonto_request.side_effect = original
+    orders.sync_card_billing(host, store, store.get(oid))
+    assert len(creations(host, "/v2/client_invoices")) == 1
+    assert len(creations(host, "/v2/payment_links")) == 1
+    assert len(creations(host, "/v2/client_invoices/invoice-1/mark_as_paid")) == 1
+    assert store.get(oid)["payment_status"] == "paid"
+
+
+def test_existing_invoice_keeps_its_original_link(host):
+    _, store, oid, _, _ = begin(host, "vehicule")
+    row = store.get(oid)
+    _, invoice = providers(host, store, row)
+    invoice.update(purchase_order="VTC-"+oid, status="unpaid")
+    row.update(invoice_id=invoice["id"], client_id="client-1", payment_id="payment-1")
+    store.save(row)
+    cycle(host, store, oid)
+    assert store.get(oid)["billing_flow"] == "invoice_first"
+    assert store.get(oid)["payment_url"] == host.payment_link["url"]
+    assert not creations(host, "/v2/payment_links") and not creations(host, "/v2/client_invoices")
