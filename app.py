@@ -26364,7 +26364,7 @@ def _session_financial_report(
                 line.get("qontoAmountPaidCents"),
             )
             external_paid_is_known = bool(line.get("qontoBankTransfers")) or any(value is not None for value in external_paid_sources)
-            external_paid_value = bank_transfer_paid_cents(line) if line.get("qontoBankTransfers") else _cents_first_non_null(*external_paid_sources)
+            external_paid_value = _bank_line_paid_cents(line) if line.get("qontoBankTransfers") else _cents_first_non_null(*external_paid_sources)
             payment_known = (bool(invoice_id) and not external) or (external and external_paid_is_known)
             paid_cents = 0
             total_cents = money_value_to_cents(line.get("amount") or 0)
@@ -26375,7 +26375,7 @@ def _session_financial_report(
                 total_cents = int(_cents_first_non_null(
                     line.get("qonto_total_amount_cents"), line.get("total_amount_cents"), total_cents,
                 ) or total_cents)
-                remaining_cents = int(_cents_first_non_null(
+                remaining_cents = max(total_cents - paid_cents, 0) if line.get('qontoBankTransfers') else int(_cents_first_non_null(
                     line.get("qonto_remaining_amount_cents"), line.get("remaining_amount_cents"),
                     max(total_cents - paid_cents, 0),
                 ) or 0)
@@ -44378,7 +44378,6 @@ def calculate_trainee_financial_summary(
                     'reference': transfers[0].get('reference') if transfers else '',
                     'transactions': transfers,
                 })
-            continue
 
         # Direct-debit collections can be reported before (or independently
         # from) a client-invoice payment amount.  The schedule is then the only
@@ -44406,6 +44405,8 @@ def calculate_trainee_financial_summary(
                     'last_synced_at': line.get('qontoLastSyncedAt') or line.get('updatedAt') or '',
                 })
                 continue
+        if line.get('qontoBankTransfers'):
+            continue
         linked_manual_invoice = str(line.get('manualPaymentInvoiceId') or line.get('qontoInvoiceId') or '').strip()
         if linked_manual_invoice and linked_manual_invoice in linked_invoice_ids:
             continue
@@ -45551,13 +45552,14 @@ def _sync_qonto_bank_transfers(
                 line['qontoBankTransfers'] = matches[line_id]
             records = line.get('qontoBankTransfers') or []
             if records:
-                paid_cents = bank_transfer_paid_cents(line)
+                paid_cents = _bank_line_paid_cents(line)
                 total_cents = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
                 line['paymentStatus'] = 'paid' if paid_cents >= total_cents and total_cents else ('partially_paid' if paid_cents else 'unpaid')
                 if records != previous_records:
-                    matched += int(paid_cents > 0)
-                    _billing_log(line, 'Virement bancaire rapproché' if paid_cents else 'Virement bancaire annulé',
-                                 'success', f'{cents_to_money(paid_cents):.2f} EUR', str(records[0].get('id') or ''))
+                    transfer_cents = bank_transfer_paid_cents(line)
+                    matched += int(transfer_cents > 0)
+                    _billing_log(line, 'Virement bancaire rapproché' if transfer_cents else 'Virement bancaire annulé',
+                                 'success', f'{cents_to_money(transfer_cents):.2f} EUR', str(records[0].get('id') or ''))
             line['qontoBankTransferSyncedAt'] = _now_iso()
             line['qontoBankTransferSyncWarning'] = (
                 'Vérification des virements indisponible : ' + error if error else ''
@@ -45575,23 +45577,25 @@ def _sync_qonto_bank_transfers(
     return _atomic_update_data(persist)
 
 
+def _bank_line_paid_cents(line):
+    return bank_transfer_paid_cents(line) + sum(
+        money_value_to_cents(row.get('amount') or 0) for row in _paid_sepa_collections(line)
+    )
+
+
 def _manual_bank_line_error(line):
     if (not line or str(line.get('financingType') or '').upper() not in {'PERSONNEL', 'AUTRE'}
             or is_cpf_billing_context(line)):
         return 'Choisissez un financement personnel ou un autre financement hors CPF du stagiaire.'
     if line.get('registrationCancelled') or line.get('invoiceStatus') in {'draft', 'cancelled', 'canceled', 'deleted', 'control'}:
         return 'Cette ligne de facturation ne permet pas l’affectation d’un virement.'
-    installments = _sepa_installments(line)
-    if any(str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES for item in installments):
-        return 'Un prélèvement est déjà encaissé : synchronisez le suivi financier avant l’affectation.'
-    if any(_installment_counts_toward_schedule(item)
-           and str(item.get('status') or '').lower() not in {'cancelled', 'canceled'}
-           for item in installments):
-        return 'Un échéancier de prélèvements existe : vérifiez-le dans Qonto avant d’affecter un virement.'
+    if any(str(row.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES
+           and not _installment_counts_toward_schedule(row) for row in _sepa_installments(line)):
+        return 'Un prélèvement encaissé a été retiré du suivi. Vérifiez cet encaissement avant l’affectation.'
     if line.get('cashPaymentEnabled') or line.get('manualPaymentInvoiceId') or line.get('amountPaid') or line.get('amount_paid'):
         return 'Un autre règlement est déjà renseigné : vérifiez le suivi financier avant l’affectation.'
     total = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
-    if total <= bank_transfer_paid_cents(line):
+    if total <= _bank_line_paid_cents(line):
         return 'Ce financement est déjà soldé.'
     return ''
 
@@ -45602,50 +45606,135 @@ def _manual_bank_snapshot(line):
             'qontoInvoiceId', 'qontoDraftId', 'qontoBankTransfers', 'directDebitInstallments',
             'sepa_payment_plan', 'cashPaymentEnabled', 'manualPaymentInvoiceId',
             'amountPaid', 'amount_paid', 'registrationCancelled', 'qonto_amount_paid_cents',
-            'qontoRemoteAmountPaidCents', 'qonto_direct_debit_subscription_id')
+            'qontoRemoteAmountPaidCents', 'qonto_direct_debit_subscription_id',
+            'qonto_direct_debit_mandate_id', 'qontoInvoiceNumber')
     return hashlib.sha256(json.dumps({key: line.get(key) for key in keys},
                                     sort_keys=True, default=str).encode()).hexdigest()
 
 
-def _manual_bank_check_remote_installments(line):
-    """A removed tracking row is not evidence that its bank debit was canceled."""
-    subscription_ids = {str(line.get('qonto_direct_debit_subscription_id') or '').strip()}
-    for item in _sepa_installments(line):
-        sid = str(item.get('qonto_direct_debit_subscription_id') or '').strip()
-        if item.get('qonto_direct_debit_collection_id') and not sid:
-            raise ValueError('Un ancien prélèvement doit être vérifié dans Qonto avant l’affectation du virement.')
-        subscription_ids.add(sid)
-    inactive = {'canceled', 'cancelled', 'failed', 'rejected', 'declined', 'returned', 'refunded'}
-    for sid in sorted(subscription_ids - {''}):
-        subscription = _qonto_direct_debit_subscription_payload(get_qonto_direct_debit_subscription(sid))
-        if str(subscription.get('id') or '') != sid:
-            raise ValueError('L’annulation de l’ancien prélèvement n’a pas pu être vérifiée dans Qonto.')
-        if str(subscription.get('status') or '').lower() not in {'cancelled', 'canceled'}:
-            raise ValueError('Un ancien prélèvement reste actif ou non annulé dans Qonto. Vérifiez son annulation bancaire avant d’affecter le virement.')
-        for page in range(1, 21):
-            response = list_qonto_direct_debit_collections(sid, page=page, per_page=100)
-            if not any(isinstance(response.get(key), list) for key in ('direct_debit_collections', 'collections', 'items')):
-                raise ValueError('La réponse des anciens prélèvements Qonto est incomplète.')
-            collections = _qonto_collection_items(response)
-            for collection in collections:
-                if str(collection.get('status') or '').lower() not in inactive:
-                    raise ValueError('Qonto signale un prélèvement encaissé ou encore en cours sur cet ancien échéancier. Vérifiez-le avant d’affecter le virement.')
-            meta = response.get('meta') if isinstance(response.get('meta'), dict) else {}
-            next_page = meta.get('next_page', meta.get('nextPage'))
-            more = _qonto_invoice_list_has_next_page(response, page, len(collections), 100)
-            if not more:
-                break
-            if (page == 20 or (next_page not in (None, '', 0, False, True, '0')
-                              and str(next_page) != str(page + 1))):
-                raise ValueError('La vérification de l’ancien échéancier Qonto est incomplète. Réessayez après synchronisation.')
+def _manual_bank_reserved_cents(line):
+    """Verify posted collections and reserve money still due by direct debit."""
+    rows = _sepa_installments(line)
+    pending = {'on_hold', 'pending', 'processing', 'scheduled', 'in_progress', 'active', 'pending_mandate_signature'}
+    inactive = QONTO_REJECTED_COLLECTION_STATUSES | {'cancelled', 'canceled'}
+    paid_rows = list(_paid_sepa_collections(line))
+    subscriptions = {}
+    owned = set()
+    attached = {}
+    reserved = 0
+    for row in rows:
+        sid = str(row.get('qonto_direct_debit_subscription_id') or '')
+        cid = str(row.get('qonto_direct_debit_collection_id') or '')
+        if sid and row.get('qonto_attachment') and cid:
+            attached.setdefault(sid, set()).add(cid)
+        elif sid:
+            owned.add(sid)
+        elif cid:
+            attached.setdefault('', set()).add(cid)
+        elif (_installment_counts_toward_schedule(row)
+              and str(row.get('status') or '').lower() not in inactive | QONTO_PAID_COLLECTION_STATUSES
+              and not row.get('tracking_pending_qonto')):
+            amount = money_value_to_cents(row.get('amount') or 0)
+            if amount <= 0 or str(row.get('status') or '').lower() not in pending:
+                raise ValueError('Vérifiez le montant et le statut de l’échéance dans le suivi financier.')
+            reserved += amount
+
+    # An attached collection may belong to a shared subscription. Only its
+    # explicitly attached collection is ours unless another row owns the plan.
+    primary = line.get('qonto_direct_debit_subscription_id')
+    if primary and primary not in attached:
+        owned.add(primary)
+    mandate = line.get('qonto_direct_debit_mandate_id')
+    if mandate:
+        references = {str(line.get(key)).strip().casefold() for key in
+                      ('qontoInvoiceNumber', 'qontoInvoiceId', 'id') if line.get(key)}
+        for sub in _bank_view_pages(list_qonto_direct_debit_subscriptions,
+                                    ('direct_debit_subscriptions', 'subscriptions', 'items')):
+            sid = sub.get('id')
+            reference = _qonto_subscription_reference(sub).split(' - ', 1)[0].strip().casefold()
+            if sid and (sid in owned or (_qonto_subscription_mandate_id(sub) == mandate and reference in references)):
+                owned.add(sid)
+                subscriptions[sid] = sub
+
+    discrepancy = 'Les encaissements du suivi et de Qonto diffèrent. Synchronisez Qonto puis vérifiez les prélèvements.'
+    for sid in sorted(owned | set(attached)):
+        sub = {}
+        if sid in owned:
+            sub = subscriptions.get(sid) or _qonto_direct_debit_subscription_payload(get_qonto_direct_debit_subscription(sid))
+            if sub.get('id') != sid:
+                raise ValueError('Le prélèvement rattaché au dossier n’a pas pu être vérifié dans Qonto.')
+        count = unit_amount = 0
+        if sub and str(sub.get('status') or '').lower() not in {'completed', 'cancelled', 'canceled'}:
+            count = 1 if sub.get('schedule_type') == 'one_off' else _positive_installment_int(sub.get('schedule_total_collection_count'))
+            unit_amount = _qonto_collection_amount_cents(sub)
+            if (not count or unit_amount <= 0 or sub.get('status') not in pending
+                    or (isinstance(sub.get('amount'), dict) and sub['amount'].get('currency', 'EUR') != 'EUR')):
+                raise ValueError('Un échéancier Qonto reste actif et son montant restant est indéterminé. Vérifiez-le avant l’affectation.')
+        seen = set()
+        pending_cents = 0
+        # Legacy attachments may have only a collection id; scope the result
+        # locally in that case. Never count the rest of a shared subscription.
+        for item in _bank_view_pages(list_qonto_direct_debit_collections,
+                                     ('direct_debit_collections', 'collections', 'items'),
+                                     **({'subscription_id': sid} if sid else {})):
+            cid = item.get('id')
+            if sid not in owned and cid not in attached[sid]:
+                continue
+            if sid and item.get('direct_debit_subscription_id') not in (None, '', sid):
+                continue
+            status = str(item.get('status') or '').lower()
+            if not cid:
+                raise ValueError('La liste des prélèvements Qonto est incomplète.')
+            if cid in seen:
+                raise ValueError('Qonto a renvoyé plusieurs fois le même prélèvement. Relancez la recherche.')
+            seen.add(cid)
+            if status in inactive:
+                continue
+            amount = _qonto_collection_amount_cents(item)
+            if amount <= 0 or (isinstance(item.get('amount'), dict)
+                                          and item['amount'].get('currency', 'EUR') != 'EUR'):
+                raise ValueError(discrepancy)
+            if status in QONTO_PAID_COLLECTION_STATUSES:
+                matches = [row for row in paid_rows if row.get('qonto_direct_debit_collection_id') == cid]
+                if not matches:  # Older synchronized rows stored only the subscription and collection date.
+                    matches = [row for row in paid_rows if not row.get('qonto_direct_debit_collection_id')
+                               and row.get('qonto_direct_debit_subscription_id') == sid
+                               and (row.get('date') or row.get('due_date')) == _qonto_collection_date(item)]
+                if not matches and sid in owned and _qonto_collection_date(item):
+                    # Pre-migration rows may have neither bank ID. Match only a
+                    # unique settled receipt on this invoice, amount and date.
+                    matches = [row for row in paid_rows if not row.get('qonto_direct_debit_collection_id')
+                               and not row.get('qonto_direct_debit_subscription_id')
+                               and (row.get('date') or row.get('due_date')) == _qonto_collection_date(item)
+                               and money_value_to_cents(row.get('amount')) == amount]
+                if len(matches) != 1 or money_value_to_cents(matches[0].get('amount')) != amount:
+                    raise ValueError(discrepancy)
+                paid_rows.remove(matches[0])
+            elif status in pending:
+                pending_cents += amount
+            else:
+                raise ValueError('Qonto indique un statut de prélèvement inconnu. Vérifiez l’opération.')
+        expected = {row['qonto_direct_debit_collection_id'] for row in rows
+                    if row.get('qonto_direct_debit_subscription_id') == sid
+                    and row.get('qonto_direct_debit_collection_id')
+                    and str(row.get('status') or '').lower() not in inactive}
+        if (expected | attached.get(sid, set())) - seen:
+            raise ValueError(discrepancy)
+        # Each prior collection represents one occurrence of the subscription.
+        # Pending collections are reserved separately at their actual amount.
+        pending_cents += max(count - len(seen), 0) * unit_amount
+        reserved += pending_cents
+    if any(row.get('qonto_direct_debit_collection_id') or row.get('qonto_direct_debit_subscription_id')
+           for row in paid_rows):
+        raise ValueError(discrepancy)
+    return reserved
 
 
 def _manual_bank_check_remote_invoice(line):
     """Read only: refuse mixed/ambiguous payments and changed invoice amounts."""
-    _manual_bank_check_remote_installments(line)
     invoice_id = line.get('qontoInvoiceId') or line.get('qontoDraftId')
     if not invoice_id:
-        if line.get('qonto_amount_paid_cents'):
+        if int(line.get('qonto_amount_paid_cents') or 0) > _bank_line_paid_cents(line):
             raise ValueError('Un paiement est déjà renseigné. Actualisez le suivi financier.')
         return 0
     remote = _qonto_invoice_payload(get_qonto_invoice(invoice_id))
@@ -45698,6 +45787,7 @@ def api_billing_bank_transfer_search():
     if payload.get('dateFrom') and (not since or since > datetime.date.today()):
         return jsonify(ok=False, error='Choisissez une date de début valide, antérieure ou égale à aujourd’hui.'), 400
     try:
+        reserved = _manual_bank_reserved_cents(line)
         _manual_bank_check_remote_invoice(line)
         transactions = _fetch_qonto_bank_transactions([line], since=since)
     except Exception as exc:
@@ -45705,16 +45795,20 @@ def api_billing_bank_transfer_search():
     candidates = bank_transfer_candidates(list(_qonto_bank_matching_lines(data).values()), transactions, query)
     if since:
         candidates = [item for item in candidates if str(item['paid_at'])[:10] >= since.isoformat()]
-    remaining = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0) - bank_transfer_paid_cents(line)
+    remaining = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0) - _bank_line_paid_cents(line)
+    available = max(remaining - reserved, 0)
     nonce = session.setdefault('bank_transfer_allocation_nonce', secrets.token_urlsafe(24))
     signer = URLSafeTimedSerializer(app.secret_key, salt='bank-transfer-allocation')
     for candidate in candidates[:100]:
         candidate['blocked_reason'] = ('Virement déjà affecté à un dossier.' if candidate['assigned'] else
-                                       ('Montant supérieur au reste à payer.' if candidate['amount_cents'] > remaining else ''))
+                                       ('Montant supérieur au reste à payer.' if candidate['amount_cents'] > remaining else
+                                        'Ce montant est déjà couvert en partie ou en totalité par des prélèvements prévus.'
+                                        if candidate['amount_cents'] > available else ''))
         if not candidate['blocked_reason']:
             candidate['selection_token'] = signer.dumps({'line_id': line['id'], 'nonce': nonce,
                 'snapshot': _manual_bank_snapshot(line), 'record': verified_bank_transfer(candidate)})
     return jsonify(ok=True, transactions=candidates[:100], remaining_cents=remaining,
+                   reserved_cents=reserved, available_cents=available,
                    truncated=len(candidates) > 100)
 
 
@@ -45741,6 +45835,7 @@ def api_billing_bank_transfer_assign():
     if error:
         return jsonify(ok=False, error=error), 409
     try:
+        reserved = _manual_bank_reserved_cents(line)
         remote_paid = _manual_bank_check_remote_invoice(line)
         response = _qonto_request('GET', '/v2/transactions/' + quote(selected['record']['id'], safe=''))
         transaction = response.get('transaction')
@@ -45761,16 +45856,17 @@ def api_billing_bank_transfer_assign():
         if not target or _manual_bank_snapshot(target) != selected['snapshot']:
             return {'ok': False, 'error': 'Le dossier a changé. Recherchez à nouveau le virement.'}
         error = _manual_bank_line_error(target)
-        remaining = money_value_to_cents(target.get('amountTTC') or target.get('amount') or 0) - bank_transfer_paid_cents(target)
-        if error or proof['amount_cents'] > remaining:
-            return {'ok': False, 'error': error or 'Le virement dépasse le reste à payer.'}
+        remaining = money_value_to_cents(target.get('amountTTC') or target.get('amount') or 0) - _bank_line_paid_cents(target)
+        if error or proof['amount_cents'] > remaining - reserved:
+            return {'ok': False, 'error': error or 'Le virement dépasse le solde disponible après les prélèvements prévus.'}
         target['qontoRemoteAmountPaidCents'] = remote_paid
-        target['paymentMode'] = 'bank_transfer'
+        if not _sepa_installments(target) and not target.get('qonto_direct_debit_mandate_id'):
+            target['paymentMode'] = 'bank_transfer'
         target.setdefault('qontoBankTransfers', []).append(dict(proof, allocation_method='manual',
             allocated_at=_now_iso(), allocated_by=session.get('admin_username') or 'admin'))
         target['qontoBankTransferSyncedAt'] = _now_iso()
         target['qontoBankTransferSyncWarning'] = ''
-        paid = bank_transfer_paid_cents(target)
+        paid = _bank_line_paid_cents(target)
         target['paymentStatus'] = 'paid' if proof['amount_cents'] == remaining else 'partially_paid'
         _billing_log(target, 'Virement affecté manuellement', 'success',
                      f"{proof['payer_name']} · {cents_to_money(proof['amount_cents']):.2f} EUR", proof['id'])
