@@ -121,7 +121,7 @@ def test_all_media_and_pauses_are_bound_to_the_unchanged_narration():
     assert 'thirty minutes' in english_route and 'twenty minutes' not in english_route
 
 
-def test_preview_contains_slow_pacing_and_serves_corrected_media_only_with_access():
+def test_preview_has_no_forced_pauses_and_serves_corrected_media_only_with_access():
     case = web_tests.NativeElearningWebTests(methodName='runTest')
     case.setUp()
     try:
@@ -132,9 +132,10 @@ def test_preview_contains_slow_pacing_and_serves_corrected_media_only_with_acces
             assert response.status_code == 200
             body = response.get_data(as_text=True)
             assert 'native-video-pacing.js' in body
-            assert '0.85' in body and 'learning_pauses' in body
+            pacing = json.loads(re.search(r'data-video-pacing-config>(.*?)</script>', body, re.S)[1])
+            assert pacing['learning_pauses'] == []
             url = html.unescape(re.search(r'<source src="([^"]+lesson-'+letter+r'\.mp4[^"]*)"', body)[1])
-            assert f'/media/vtc/v9/lesson-{letter}.mp4' in url
+            assert f'/elearning/assets/academy-vtc-{letter}/media/vtc/' in url
             media = case.client.get(url, headers={'Range': 'bytes=0-31'})
             assert media.status_code == 206 and len(media.data) == 32
         with case.client.session_transaction() as session:

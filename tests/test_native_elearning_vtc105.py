@@ -115,11 +115,11 @@ class Vtc105WebTests(unittest.TestCase):
         self._public_login()
         url='/espace/public-token/elearning/academy-vtc-a'
         lesson, workshop, dossier=vtc.load_bundled_course('academy-vtc-a',VERSION)['sections'][0]['activities']
-        # A later dossier cannot be graded ahead of required work.
+        # A later dossier is accessible immediately, and grading requires an answer.
         config=self._player_config(self.client.get(url))
-        blocked=config['practiceUrl'].replace(lesson['id'],dossier['id'])
-        self.assertEqual(self._api_post(blocked,config,practice_answers={}).status_code,409)
-        # Resume a learner who has already spent the required time on the first lesson.
+        later_practice=config['practiceUrl'].replace(lesson['id'],dossier['id'])
+        self.assertEqual(self._api_post(later_practice,config,practice_answers={}).status_code,400)
+        # The reader accepts the lesson with zero compulsory seconds.
         page_seconds = {page['id']: page['required_seconds'] for page in config['lessonPages']}
         reading_seconds = sum(page_seconds.values())
         with sqlite3.connect(self.persist_dir / 'native_elearning' / 'tracking.sqlite3') as db:
