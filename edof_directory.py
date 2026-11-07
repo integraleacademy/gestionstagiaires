@@ -107,13 +107,19 @@ def project(row):
     # or accepted solicitation takes precedence over an older refused one.
     ft_refused = bool(ft_statuses & {"refused", "rejected", "denied", "refuse", "refusee"}) and not (
         ft_pending or ft_statuses & {"accepted", "approved", "validated", "granted"})
+    crm_ft = [{"fundingType": 9, "status": text_field(item.get("status"), 80),
+               "submissionDate": dates.stamp(item.get("submissionDate")),
+               "returnDate": dates.first(item, "returnDate", "decisionDate", "responseDate")}
+              for item in solicitations if isinstance(item, dict) and str(item.get("fundingType")) == "9"
+              and text_field(item.get("status"), 80)]
     proof = email_proof(os.environ.get("EDOF_CONNECTOR_KEY"), row["id"], attendee.get("email"))
     summary = {}
     if normalized(text_field(row.get("currentState"),80)) in {"notprocessed","not processed","non traite","a traiter","received","tobeprocessed"}:
         for key in ("indicativeDuration","weeklyDuration","hoursInCenter","hoursInCompany","totalIncl"):
             if isinstance(info.get(key), (str,int,float)) and not isinstance(info[key],bool):
                 summary["priceTotal" if key=="totalIncl" else key] = str(info[key])[:25]
-    return {**dates.project(row, info, solicitations, ft_pending, ft_refused, normalized, REQUEST_STATES),
+    return {**({"crm_ft_solicitations": crm_ft} if isinstance(info.get("solicitations"), list) else {}),
+            **dates.project(row, info, solicitations, ft_pending, ft_refused, normalized, REQUEST_STATES),
             **({"email_proof": proof} if proof else {}),
             **({"offer_summary":summary} if summary else {}), "request_date":session_date(row.get("changingStateDate")), "ft_pending": ft_pending, "ft_refused": ft_refused, "service_done_validated": info.get("validatedServiceDone") is True,
             "payment_state": text_field(row.get("paymentState"), 80), **({"billing_state": text_field(row["currentBillingState"], 80)} if row.get("currentBillingState") else {}),
@@ -322,6 +328,10 @@ def csv_snapshot(content, first, progress):
         item["state_at"] = dates.stamp(item.get("state_at"))
         item["created_at"] = dates.stamp(item.get("created_at"))
         funding = normalized(item.pop("funding_status", ""))
+        if funding in {"accepted", "approved", "accepte", "acceptee", "accorde", "accordee", "annule", "annulee", "cancelled", "canceled"}:
+            status = "cancelled" if funding.startswith(("annul", "cancel")) else "accepted"
+            item["crm_ft_solicitations"] = [{"fundingType": 9, "status": status,
+                                           "submissionDate": dates.stamp(item.get("ft_requested_at"))}]
         item["ft_pending"] = funding in {"inprogress", "en cours", "en cours de traitement", "demande en cours"}
         item["ft_refused"] = funding in {"refused", "refuse", "refusee", "refus", "demande refusee"}
         if item["ft_pending"] or item["ft_refused"]:

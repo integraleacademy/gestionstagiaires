@@ -423,6 +423,19 @@ def all_dossiers_link(page):
     return target
 
 
+def crm_request_contacts(items):
+    contacts = {}
+    for item in items:
+        attendee = item.get("attendee") or {}
+        email = directory.text_field(attendee.get("email"), 254)
+        phone = directory.text_field(attendee.get("phoneNumber") or attendee.get("phone"), 40)
+        if email or phone:
+            contacts[str(item["id"])] = {"first_name": directory.text_field(attendee.get("firstName"), 120),
+                                          "last_name": directory.text_field(attendee.get("lastName"), 120),
+                                          "email": email, "phone": phone}
+    return contacts
+
+
 def read_official_pending(page, checkpoint, timeout_error, api_context=None):
     """Read the dashboard's À traiter tab, requiring the displayed count and matching private rows."""
     target = LIST_URL.rsplit("/", 1)[0] + "/tous"
@@ -445,6 +458,7 @@ def read_official_pending(page, checkpoint, timeout_error, api_context=None):
         first = response.value.json()
         if isinstance(first.get("items"), list) and first.get("numberOfItems") == len(first["items"]):
             snapshot = directory.from_pages([first])
+            snapshot["crm_contacts"] = crm_request_contacts(first["items"])
             official_count = len(snapshot["rows"])
         else:
             report = {}
@@ -481,6 +495,7 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
         ordered, previous, index, size = saved["ordered"], saved["previous"], saved["index"], saved["size"]
         overlap_retry = saved.get("overlap_retry", False)
     batch_start = index
+    request_contacts = {}
     while len(seen) <= directory.MAX_ROWS:
         progress.update(method="session_desc", page=index+1, seen=len(rows), page_size=size,
                         overlap_retry=overlap_retry, private_list=False, http=None)
@@ -550,6 +565,8 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
         # in order and confirming that the entire next page is also archival.
         if archive_overlap and not (ordered and archive_only):
             raise directory.IncompleteDirectory("page_overlap")
+        if state == "notProcessed":
+            request_contacts.update(crm_request_contacts(items))
         if len(seen) > total or len(seen) > directory.MAX_ROWS:
             raise directory.IncompleteDirectory("count")
         progress.update(pages=index+1, seen=len(rows))
@@ -557,7 +574,7 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
         if len(seen) == total or (ordered and archive_only and state != "notProcessed" and not overlap_retry):
             if cursor:
                 cursor.clear()
-            return {"rows":rows, "checked":time.time(), "scope":{"all":"all", "accepted":"accepted"}.get(state,"pending")}
+            return {**({"crm_contacts": request_contacts} if state == "notProcessed" else {}), "rows":rows, "checked":time.time(), "scope":{"all":"all", "accepted":"accepted"}.get(state,"pending")}
         index += 1
         if cursor:
             cursor.save({"rows":rows, "seen":list(seen), "total":total, "ordered":ordered,
@@ -1494,6 +1511,9 @@ def _run_browser(spec, *, live=None, traffic=None):
                     raise
 
             def save_pending(snapshot, witness, reused):
+                contacts = snapshot.pop("crm_contacts", {})
+                vault.put("crm-pending-contacts:" + spec["owner"],
+                          {fid: contacts[fid] for fid in snapshot["rows"] if fid in contacts}, ttl=directory.TTL)
                 vault.put(directory.pending_key(spec["owner"]), snapshot, ttl=directory.TTL)
                 vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
                 if live is not None and witness is not None:
