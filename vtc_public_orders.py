@@ -12,7 +12,7 @@ from flask import Blueprint, abort, redirect, render_template, request, send_fil
 
 import exam_retakes
 import exam_retakes_workflow as provider
-from manuals_commerce import safe_payment_url
+from manuals_commerce import ReviewRequired, collect_basket, safe_payment_url
 from vtc_order_documents import AREA, BOOKING, CENTRES, CMA, CONTACT, OFFERS, document
 from vtc_order_store import Store
 
@@ -62,6 +62,44 @@ def receipt(store, row):
     return ("Attestation-vehicule-VTC.pdf", path)
 
 
+def sync_card_billing(host, store, row):
+    # A prior invoice or an ambiguous creation must keep its original payment route.
+    if not row.get("billing_flow"):
+        legacy = any(row.get(key) for key in ("invoice_id", "invoice_started", "payment_id", "payment_started", "payment_url"))
+        provider.checkpoint(store, row, billing_flow="invoice_first" if legacy else "payment_first")
+    if row["billing_flow"] == "invoice_first":
+        invoice = provider.ensure_invoice(host, store, row)
+        provider.ensure_payment(host, store, row, invoice)
+        return
+    if row["billing_flow"] != "payment_first":
+        raise ReviewRequired("Le mode de facturation VTC doit être vérifié.")
+
+    item = {"title": OFFERS[row["offer"]], "type": "service", "quantity": 1, "measure_unit": "unit",
+            "description": f"Réservation VTC [{row['id']}]", "vat_rate": "0",
+            "unit_price": {"value": f"{row['total_cents'] / 100:.2f}", "currency": "EUR"}}
+    captured = collect_basket(host, order_id=row["id"], total_cents=row["total_cents"], items=[item],
+                              state=row, save=lambda **fields: provider.checkpoint(store, row, **fields),
+                              idempotency_key="vtc-basket-" + row["id"], card_required=True)
+    if not captured:
+        return
+    capture = row["confirmed_payment"]
+    payment_time = dt.datetime.fromisoformat(capture["paid_at"].replace("Z", "+00:00")).astimezone(PARIS)
+    row["payment_terms"] = (f"Règlement intégral reçu le {payment_time:%d/%m/%Y}. "
+                            f"Référence du paiement Qonto : {capture['id']}.")
+    invoice = provider.ensure_invoice(host, store, row)
+    if invoice.get("organization_id") != row["merchant_id"]:
+        raise ReviewRequired("La facture VTC et le règlement ne correspondent pas au même organisme.")
+    if invoice["status"] == "unpaid":
+        host._qonto_request("POST", f"/v2/client_invoices/{invoice['id']}/mark_as_paid",
+                            {"paid_at": payment_time.date().isoformat()},
+                            idempotency_key="vtc-paid-" + row["id"])
+        invoice = host._qonto_invoice_payload(host.get_qonto_invoice(row["invoice_id"]))
+        provider.invoice_assert(row, invoice)
+    if invoice["status"] != "paid":
+        raise ReviewRequired("Règlement reçu. La confirmation de la facture acquittée est en attente.")
+    provider.record_payment(store, row, "paid", row["total_cents"])
+
+
 def advance(host, store, row):
     stage = row["stage"]
     if stage == "verify":
@@ -104,8 +142,7 @@ def advance(host, store, row):
         if not row.get("invoice_id") and not row.get("invoice_started"):
             row["vat_rate"] = "0"
         try:
-            invoice = provider.ensure_invoice(host, store, row)
-            provider.ensure_payment(host, store, row, invoice)
+            sync_card_billing(host, store, row)
         except Exception:
             row["billing_problem"] = True
             raise
@@ -122,7 +159,7 @@ def advance(host, store, row):
                    "Votre règlement est confirmé. Retrouvez votre facture et votre attestation pour l’examen dans votre dossier.",files)
             row["stage"] = "paid"
         else:
-            if row.get("payment_url"):
+            if payment_state(row) == "ready":
                 notify(host,store,row,"pay","Votre paiement par carte VTC","Votre lien sécurisé de règlement par carte est disponible dans votre dossier.")
             return 90 if time.time()-row["created"] < 3600 else 900
     elif stage == "funded":

@@ -337,7 +337,7 @@ def _basket_items(order):
     return items
 
 
-def _payment_merchant(host, order):
+def _payment_merchant(host, state, save):
     if not host._qonto_is_configured():
         raise SetupRequired("Configurez la connexion API Qonto dans les réglages de la plateforme.")
     try:
@@ -355,24 +355,23 @@ def _payment_merchant(host, order):
     account_id = connection.get("bank_account_id")
     if not merchant.get("id") or not account_id or not any(a.get("id") == account_id for a in merchant.get("bank_accounts", [])):
         raise ReviewRequired("La connexion de paiement Qonto ne correspond pas au compte de facturation.")
-    state = order["commerce"]
     if state.get("merchant_id") and (state["merchant_id"] != merchant["id"] or state.get("payment_bank_account_id") != account_id):
         raise ReviewRequired("Le compte Qonto de cette commande a changé. Vérifiez le paiement avant de poursuivre.")
-    _save(host, order, merchant_id=merchant["id"], payment_bank_account_id=account_id)
+    save(merchant_id=merchant["id"], payment_bank_account_id=account_id)
     if connection.get("status") == "pending":
         raise PaymentPending("Qonto valide l’activation du paiement en ligne. Vérification automatique toutes les quinze minutes ; aucune facture n’est émise avant paiement.")
     if connection.get("status") != "enabled" and not state.get("payment_id"):
         raise SetupRequired("Activez les liens de paiement dans votre compte Qonto.")
 
 
-def _assert_basket(order, link):
-    if not link.get("id") or (order["commerce"].get("payment_id") and link["id"] != order["commerce"]["payment_id"]):
+def _assert_basket(state, total_cents, items, link):
+    if not link.get("id") or (state.get("payment_id") and link["id"] != state["payment_id"]):
         raise ReviewRequired("L’identifiant du lien de paiement ne correspond pas à la commande.")
     if link.get("resource_type") != "Basket" or link.get("reusable") is not False or link.get("invoice_id"):
         raise ReviewRequired("La commande nécessite un lien Qonto à usage unique, sans facture préalable.")
-    if _money_cents(link.get("amount")) != order["total_cents"]:
+    if _money_cents(link.get("amount")) != total_cents:
         raise ReviewRequired("Le montant du lien de paiement ne correspond pas à la commande.")
-    expected, actual = _basket_items(order), link.get("items") or []
+    expected, actual = items, link.get("items") or []
     if len(expected) != len(actual):
         raise ReviewRequired("Le panier Qonto ne correspond pas à la commande.")
     for wanted, item in zip(expected, actual):
@@ -387,9 +386,9 @@ def _assert_basket(order, link):
             raise ReviewRequired("Les articles du lien de paiement ne correspondent pas à la commande.")
 
 
-def _ensure_checkout(host, order):
-    _payment_merchant(host, order)
-    state = order["commerce"]
+def collect_basket(host, *, order_id, total_cents, items, state, save, idempotency_key, card_required=False):
+    """Collect one exact payment on a single-use basket, persisting each remote step."""
+    _payment_merchant(host, state, save)
     link = None
     if state.get("payment_id"):
         response = host._qonto_request("GET", "/v2/payment_links/" + state["payment_id"])
@@ -400,7 +399,7 @@ def _ensure_checkout(host, order):
             response = host._qonto_request("GET", "/v2/payment_links", params={"page": page, "per_page": 100})
             links = response.get("payment_links", [])
             for candidate in links:
-                if any(f"[{order['id']}]" in str(item.get("description", "")) for item in candidate.get("items") or []):
+                if any(f"[{order_id}]" in str(item.get("description", "")) for item in candidate.get("items") or []):
                     matches.append(candidate)
             if not host._qonto_invoice_list_has_next_page(response, page, len(links), 100):
                 break
@@ -411,38 +410,51 @@ def _ensure_checkout(host, order):
         response = host._qonto_request("GET", "/v2/payment_links/" + matches[0]["id"])
         link = response.get("payment_link") or response
     if link is None:
-        available = host._qonto_request("GET", "/v2/payment_links/payment_methods", params={"amount": f"{Decimal(order['total_cents']) / 100:.2f}", "currency": "EUR"})
+        available = host._qonto_request("GET", "/v2/payment_links/payment_methods", params={"amount": f"{Decimal(total_cents) / 100:.2f}", "currency": "EUR"})
         methods = [m["name"] for m in available.get("payment_link_payment_methods", []) if isinstance(m, dict) and m.get("enabled") is True and m.get("name") in {"credit_card", "apple_pay", "paypal", "ideal"}]
+        if card_required:
+            methods = [method for method in methods if method in {"credit_card", "apple_pay"}]
+            if "credit_card" not in methods:
+                raise SetupRequired("Activez le paiement par carte bancaire dans Qonto.")
         if not methods:
             raise SetupRequired("Activez au moins un moyen de paiement dans votre compte Qonto.")
-        payload = {"payment_link": {"reusable": False, "items": _basket_items(order), "potential_payment_methods": methods}}
-        _save(host, order, payment_creation_started=host._now_iso())
+        payload = {"payment_link": {"reusable": False, "items": items, "potential_payment_methods": methods}}
+        save(payment_creation_started=host._now_iso())
         try:
-            response = host._qonto_request("POST", "/v2/payment_links", payload, idempotency_key="manuals-checkout-" + order["id"])
+            response = host._qonto_request("POST", "/v2/payment_links", payload, idempotency_key=idempotency_key)
             link = response.get("payment_link") or response
         except host.QontoApiError as exc:
             if exc.status_code in {400, 401, 403, 422, 429}:
-                _save(host, order, payment_creation_started="")
+                save(payment_creation_started="")
             raise
-    _assert_basket(order, link)
+    _assert_basket(state, total_cents, items, link)
     url = safe_payment_url(link.get("url"))
     if not url:
         raise ReviewRequired("Qonto n’a pas renvoyé de lien de paiement sécurisé.")
-    _save(host, order, payment_id=link["id"], payment_link_status=link.get("status"), payment_url=url,
+    save(payment_id=link["id"], payment_link_status=link.get("status"), payment_url=url,
           synced_at=host._now_iso())
     payments = []
     for page in range(1, 51):
         response = host._qonto_request("GET", f"/v2/payment_links/{link['id']}/payments", params={"page": page, "per_page": 100})
-        batch = response.get("payments", [])
+        batch = response.get("payments")
+        if not isinstance(batch, list) or any(not isinstance(p, dict) for p in batch):
+            raise ReviewRequired("La réponse des règlements Qonto doit être vérifiée.")
         payments.extend(batch)
         if not host._qonto_invoice_list_has_next_page(response, page, len(batch), 100):
             break
     else:
         raise ReviewRequired("La liste des paiements doit être vérifiée dans Qonto.")
-    paid = {p["id"]: p for p in payments if p.get("status") == "paid" and p.get("id")}
+    paid = {}
+    for payment in payments:
+        if payment.get("status") != "paid":
+            continue
+        payment_id = payment.get("id")
+        if not payment_id or (payment_id in paid and paid[payment_id] != payment):
+            raise ReviewRequired("Les références des règlements Qonto doivent être vérifiées.")
+        paid[payment_id] = payment
     if paid:
-        if len(paid) != 1 or _money_cents(next(iter(paid.values())).get("amount")) != order["total_cents"]:
-            _save(host, order, payment_url="", payment_status="partially_paid")
+        if len(paid) != 1 or _money_cents(next(iter(paid.values())).get("amount")) != total_cents:
+            save(payment_url="", payment_status="partially_paid")
             raise ReviewRequired("Le règlement reçu ne correspond pas au montant exact de la commande. Aucune facture n’a été créée.")
         payment = next(iter(paid.values()))
         try:
@@ -451,18 +463,28 @@ def _ensure_checkout(host, order):
                 raise ValueError
         except (KeyError, TypeError, ValueError, AttributeError):
             raise ReviewRequired("La date du règlement Qonto doit être vérifiée avant la facturation.")
-        _save(host, order, payment_status="paid", paid_cents=order["total_cents"], remaining_cents=0,
+        previous = state.get("confirmed_payment")
+        if previous and (previous["id"] != payment["id"] or previous["link_id"] != link["id"]):
+            raise ReviewRequired("La référence du règlement Qonto a changé. Vérifiez la commande.")
+        save(payment_status="paid", paid_cents=total_cents, remaining_cents=0,
               confirmed_payment={"id": payment["id"], "link_id": link["id"], "paid_at": payment["paid_at"],
-                                 "amount_cents": order["total_cents"], "currency": "EUR", "verified_at": host._now_iso()})
+                                 "amount_cents": total_cents, "currency": "EUR", "verified_at": host._now_iso()})
         return True
     if state.get("confirmed_payment"):
         raise ReviewRequired("Le paiement précédemment confirmé n’est plus retrouvé dans Qonto.")
     if link.get("status") in {"expired", "canceled"}:
-        _save(host, order, payment_url="")
+        save(payment_url="")
         raise ReviewRequired("Le lien de paiement a expiré ou a été désactivé. Aucune facture n’a été créée.")
     processing = link.get("status") in {"paid", "processing"} or any(p.get("status") in {"pending", "authorized"} for p in payments)
-    _save(host, order, payment_status="processing" if processing else "unpaid", paid_cents=0, remaining_cents=order["total_cents"])
+    save(payment_status="processing" if processing else "unpaid", paid_cents=0, remaining_cents=total_cents)
     return False
+
+
+def _ensure_checkout(host, order):
+    return collect_basket(host, order_id=order["id"], total_cents=order["total_cents"],
+                          items=_basket_items(order), state=order["commerce"],
+                          save=lambda **fields: _save(host, order, **fields),
+                          idempotency_key="manuals-checkout-" + order["id"])
 
 
 def _settle_invoice(host, order, invoice):
