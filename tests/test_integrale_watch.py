@@ -305,15 +305,3 @@ class IntegraleWatchTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-# Temporary PR-only check, removed from the delivery tree after CI.
-def test_schedule_patch_on_ci():
-    from pathlib import Path
-    import subprocess, sys
-    root = Path(__file__).resolve().parents[1]
-    subprocess.run([sys.executable, '-m', 'pytest', '-q', 'tests/test_trainee_bank_schedule.py',
-                    'tests/test_admin_trainee_installment_edit.py', 'tests/test_admin_trainee_reschedule_debit.py',
-                    'tests/test_qonto_sepa_guard_and_attachment.py'], cwd=root, check=True)
-    subprocess.run(['node', '--check', 'static/js/trainee-sheet.js'], cwd=root, check=True)
-    subprocess.run(['node', '--test', 'tests/test_trainee_schedule_views.cjs'], cwd=root, check=True)
