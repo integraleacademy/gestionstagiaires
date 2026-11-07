@@ -212,6 +212,22 @@ def load_bundled_course(course_id,version=None):
         return vtc_productions.compose_course(load_bundled_course(course_id, vtc_productions.BASE_VERSION))
     return repair_video_quality(enrich_lessons(_repair_video_pacing(_repair_english_listening(_repair_english_narration(copy.deepcopy(_course(course_id,version)))))))
 
+def allow_free_viewing(course):
+    """Apply current viewing rules to a course copy, including historical editions."""
+    for section in course['sections']:
+        for activity in section['activities']:
+            blocks = list(activity.get('blocks') or [])
+            while blocks:
+                block = blocks.pop()
+                blocks.extend(block.get('children') or [])
+                video = block.get('video')
+                if video:
+                    video['required'] = False
+                    video['learning_pauses'] = []
+    course['counts']['required_videos'] = 0
+    return course
+
+
 def bundled_asset(course_id,version,name):
     course=load_bundled_course(course_id,version)
     if not course or name not in course['assets']:return None

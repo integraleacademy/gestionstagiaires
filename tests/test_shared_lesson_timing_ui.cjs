@@ -25,7 +25,7 @@ test('all 322 MAC APS, A3P and VTC lessons match the server plan after real DOM 
   }
 });
 
-for (const family of ['macaps', 'a3p', 'vtc']) {
+for (const family of ['macaps', 'a3p']) {
   test(`${family}: countdown, no anchor skipping, confirmed unlock and rereading`, () => {
     const row = fixtures.find(r=>r.family === family);
     const dom = new JSDOM(shell(row.html), {url:'https://test.invalid/reader', runScripts:'outside-only'});
@@ -52,6 +52,23 @@ for (const family of ['macaps', 'a3p', 'vtc']) {
     } finally {window.close();}
   });
 }
+
+test('VTC opens on the first page and can advance immediately', () => {
+  const row = fixtures.find(item => item.family === 'vtc');
+  const dom = new JSDOM(shell(row.html), {url:'https://test.invalid/reader', runScripts:'outside-only'});
+  const {window} = dom;
+  let selected;
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  window.nativeLessonTiming = {pages:row.plan, firstPending:()=>row.plan.length, ready:()=>true, select:i=>selected=i};
+  try {
+    window.eval(script);
+    assert.equal(selected, 0);
+    const next = window.document.querySelector('[data-aps-lesson-next]');
+    assert.equal(next.disabled, false);
+    next.click();
+    assert.equal(selected, 1);
+  } finally { window.close(); }
+});
 
 test('the shared player waits for server receipts for both viewing and reading', async () => {
   const pages = [{id:'video', required_seconds:0, video_id:'clip', media:true},

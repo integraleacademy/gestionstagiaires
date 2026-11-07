@@ -132,9 +132,13 @@
         </a>
       {% endif %}
       {% if not is_read_only %}
+        {% if desp_vae_aps_action %}
+        <button class="btn btn-primary btn-uniform" id="openVaeApsAccess" type="button" {% if trainee.registration_cancelled %}disabled{% endif %}>{{ 'Gérer l’accès e-learning APS' if desp_vae_aps_active else 'Créer accès e-learning APS' }}</button>
+        {% else %}
         <button class="btn btn-outline btn-uniform" type="button" onclick="openModal('transferTraineeModal')">
           🔁 Transfert
         </button>
+        {% endif %}
         <button class="btn {% if financing_locked %}btn-disabled-muted{% else %}btn-financement{% endif %} btn-uniform" type="button" data-open-section="conventionFinancementSection" {% if financing_locked %}title="Module financement verrouillé pour ce partenaire"{% endif %}>
           {% if financing_locked %}🔒 {% endif %}Financement
         </button>
@@ -305,6 +309,7 @@
 </div>
 
 {% if not is_read_only %}
+{% if desp_vae_aps_action and not is_read_only %}{% include 'partials/desp_vae_aps_access.html' %}{% endif %}
 <div class="modal-backdrop" id="transferTraineeModal" aria-hidden="true">
   <div class="modal" style="max-width:560px;">
     <div class="modal-head">
@@ -917,10 +922,16 @@
 
 {% with uv_admin=true %}{% include 'partials/uv_questionnaires.html' %}{% endwith %}
 
-{% if ((session.training_type or "")|upper).startswith("APS") and session.aps_elearning_enabled and native_elearning_followup %}
+{% if desp_vae_aps_active or (((session.training_type or "")|upper).startswith("APS") and session.aps_elearning_enabled and native_elearning_followup) %}
 <div class="card" id="apsElearningFollowup" style="grid-column:1 / -1;margin-top:16px;border:1px solid #bfdbfe;background:linear-gradient(135deg,#eff6ff,#fff);">
   <h2 style="margin:0;font-size:20px;">E-learning APS</h2>
+  {% if desp_vae_aps_active %}
+  <p class="hint">Accès individuel ouvert le {{ trainee.desp_vae_aps_access.activated_at|frdatetime }}. Le stagiaire retrouve le parcours APS dans son espace personnel.</p>
+  {% set grant = trainee.desp_vae_aps_access %}
+  <p class="hint">{% if grant.email_status == 'sent' %}Accès envoyés le {{ grant.sent_at|frdatetime }} à {{ grant.sent_to }}.{% elif grant.email_status == 'failed' %}L’envoi a échoué. Ouvrez « Gérer l’accès e-learning APS » pour réessayer.{% elif grant.email_status in ['unconfirmed', 'sending'] %}Envoi en cours de vérification. Consultez Brevo avant tout nouvel envoi.{% else %}Accès créés sans envoi d’e-mail.{% endif %}</p>
+  {% else %}
   <p class="hint">Le parcours APS est attribué automatiquement à cette session. Le stagiaire y accède depuis son espace personnel à partir du {{ training_dates.date_start|frdate }}.</p>
+  {% endif %}
   {% if native_elearning_followup %}
     <details data-learning-summary="{{ url_for('manuals_shop.trainee_elearning_summary', session_id=session.id, trainee_id=trainee.id) }}">
       <summary>Suivi e-learning</summary>
@@ -1317,6 +1328,7 @@
       {% endif %}
       <div style="margin-top:8px;">
       {% if activation.email_status == 'sent' %}📧 Email envoyé le {{ activation.sent_at|frdatetime }} à {{ activation.sent_to }}.
+      {% elif activation.email_status == 'not_requested' %}Accès ouvert sans envoi d’e-mail.
       {% elif activation.email_status == 'missing_email' %}Renseignez une adresse email valide pour recevoir la notification automatique.
       {% elif activation.email_status == 'needs_review' %}⚠️ L’envoi du mail doit être vérifié dans Brevo. L’accès e-learning reste disponible.
       {% elif activation.email_status == 'retry_pending' %}Nouvelle tentative d’envoi du mail programmée.

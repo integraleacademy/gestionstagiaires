@@ -950,7 +950,7 @@ class CourseCatalog:
         if bundled := load_bundled_course(course_id, version):
             return bundled
         if bundled := vtc.load_bundled_course(course_id, version):
-            return bundled
+            return vtc.allow_free_viewing(bundled)
         if course_id in a3p.curriculum_ids():
             bundled = a3p.load_bundled_course(course_id, version)
             if bundled is None:

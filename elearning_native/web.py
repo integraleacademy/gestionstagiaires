@@ -503,9 +503,9 @@ def create_native_elearning_blueprint(
             session_obj = effective_learner_session(session_obj, trainee)
         except CourseImportError as exc:
             abort(403, str(exc))
-        if not is_aps_elearning_session(session_obj):
+        if not (session_obj.get("individual_aps_access") or is_aps_elearning_session(session_obj)):
             abort(403)
-        if not session.get("admin_logged_in") and not session_obj.get("vtc_auto_access_available"):
+        if not (session.get("admin_logged_in") or session_obj.get("vtc_auto_access_available") or session_obj.get("individual_aps_access")):
             start_date = session_start_date(session_obj)
             if start_date is None:
                 abort(403)

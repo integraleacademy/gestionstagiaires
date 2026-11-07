@@ -64,10 +64,13 @@ def schedule_new_enrolment(host, training, trainee, *, now=None):
     """Creation only: never infer eligibility from historical creation dates."""
     if STATE_KEY in trainee or not eligible(host, training, trainee):
         return
+    trainee[STATE_KEY] = new_assignment(clock(now))
+
+
+def new_assignment(now):
     from elearning_native.vtc import curriculum_manifest
     manifest = curriculum_manifest()
-    now = clock(now)
-    trainee[STATE_KEY] = {
+    return {
         "id": uuid.uuid4().hex, "revision": 1,
         "created_at": now.isoformat(), "due_at": (now + DELAY).isoformat(),
         "path_title": manifest["title"],
@@ -114,7 +117,7 @@ def preserve_state(payload, canonical, trainees):
 
 def _due(state, now):
     due = parse(state.get("due_at"))
-    if not due or due > now or state.get("email_status") in {"sent", "needs_review"}:
+    if not due or due > now or state.get("email_status") in {"sent", "needs_review", "not_requested"}:
         return False
     return all(not parse(state.get(k)) or parse(state[k]) <= now
                for k in ("next_attempt_at", "lease_until"))
@@ -229,6 +232,33 @@ def _process_one(host, session_id, trainee_id, now):
         "sent" if accepted else "retry_pending", code, error)
 
 
+# Explicitly authorised historical registration. Store only the fingerprint of
+# the session/trainee pair in the public repository.
+INDIVIDUAL_VTC_GRANT = "d407c8e25c2401c898652530d123a5b84b3f052b9d25723d4e6fd0424678f7da"
+
+
+def _individual_grant_requested(training, person):
+    pair = f"{training.get('id')}/{person.get('id')}"
+    return hashlib.sha256(pair.encode()).hexdigest() == INDIVIDUAL_VTC_GRANT
+
+
+def _activate_individual(host, sid, tid, now):
+    def activate(data):
+        training, person = _find(host, data, sid, tid)
+        if (not person or STATE_KEY in person or not _individual_grant_requested(training, person)
+                or not is_vtc(training) or host._trainee_registration_is_cancelled(person)
+                or training.get("partner_id") not in (None, "", host.INTEGRALE_PARTNER_ID)):
+            return {}
+        state = new_assignment(now)
+        state.update(activated_at=now.isoformat(), due_at="", email_status="not_requested")
+        person[STATE_KEY] = state
+        person["public_token"] = person.get("public_token") or person.get("token") or uuid.uuid4().hex
+        return {"activated": True}
+
+    if host._atomic_update_data(activate).get("activated"):
+        _logger(host).info("vtc_individual_access_activated")
+
+
 def process_due(host, *, now=None, data=None):
     now = clock(now)
     # Read the atomic JSON snapshot directly: no unrelated reminders, provider
@@ -236,6 +266,11 @@ def process_due(host, *, now=None, data=None):
     snapshot = data if data is not None else host._load_valid_json_payload(host.DATA_FILE)
     for training in (snapshot or {}).get("sessions", []):
         for trainee in host._session_trainees_list(training):
+            if (STATE_KEY not in trainee and is_vtc(training)
+                    and _individual_grant_requested(training, trainee)
+                    and not host._trainee_registration_is_cancelled(trainee)
+                    and training.get("partner_id") in (None, "", host.INTEGRALE_PARTNER_ID)):
+                _activate_individual(host, training["id"], trainee["id"], now)
             if eligible(host, training, trainee) and _due(trainee.get(STATE_KEY) or {}, now):
                 try:
                     _process_one(host, training["id"], trainee["id"], now)

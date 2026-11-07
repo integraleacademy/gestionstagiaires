@@ -138,6 +138,7 @@ from wedof_discovery import merge_verified_folders, parse_timestamp as parse_wed
 from cpf_tracking import build_cpf_view, build_cpf_financial_status, has_cpf_financing, has_generated_cpf_invoice
 from vtc_cpf_guidance import build_confirmation_content
 import vtc_elearning_activation
+import desp_vae_elearning
 import vtc_practice
 import trainee_elearning_reporting
 from elearning_native import aps_enrolments
@@ -10123,6 +10124,7 @@ def save_data(
         if isinstance(canonical, dict):
             vtc_practice.reconcile(payload, _registered_trainees, canonical)
             vtc_elearning_activation.preserve_state(payload, canonical, _session_trainees_list)
+            desp_vae_elearning.preserve_state(payload, canonical, _session_trainees_list)
             _preserve_aps_elearning_report_state(payload, canonical)
             desp_jury_projects.preserve_state(payload, canonical, _session_trainees_list, INTEGRALE_PARTNER_ID)
             _preserve_document_reminder_state(payload, canonical)
@@ -34545,13 +34547,14 @@ def public_trainee_space(token):
     } if show_vtc else {}
     is_aps_training = (training_type or "").strip().upper().startswith("APS")
     display_session = aps_enrolments.learner_session(vtc_elearning_activation.learner_session(s, t))
+    display_session = desp_vae_elearning.learner_session(display_session, t)
     display_session = {**display_session, **afc_schedule.view(s)}
     has_native_elearning = bool(display_session.get("aps_native_modules") or display_session.get("aps_native_course_id"))
-    aps_elearning_enabled = (is_aps_training or (show_vtc and has_native_elearning)) and bool(display_session.get("aps_elearning_enabled"))
+    aps_elearning_enabled = (is_aps_training or display_session.get("individual_aps_access") or (show_vtc and has_native_elearning)) and bool(display_session.get("aps_elearning_enabled"))
     aps_elearning_start_date = _session_start_date(display_session) if aps_elearning_enabled else None
     aps_elearning_available = bool(
         aps_elearning_enabled
-        and (display_session.get("vtc_auto_access_available")
+        and (display_session.get("individual_aps_access") or display_session.get("vtc_auto_access_available")
              or (aps_elearning_start_date and datetime.date.today() >= aps_elearning_start_date))
     )
 
@@ -40724,6 +40727,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         docs_reminder_schedule=_docs_relance_schedule(s, t, activated_on=(data.get("document_reminders_scheduler") or {}).get("activated_on")),
         ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
         aps_elearning_progress=aps_elearning_progress,
+        desp_vae_aps_action=desp_vae_elearning.is_vae(s) and s.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID),
+        desp_vae_aps_active=desp_vae_elearning.active(s, t),
         native_elearning_followup=trainee_elearning_reporting.has_summary(s, t),
         uv_questionnaires=uv_questionnaires.view(sys.modules[__name__], s, t),
     )
@@ -57403,6 +57408,7 @@ aps_learning_followup.register(sys.modules[__name__])
 import admin_learning_documents
 admin_learning_documents.register(sys.modules[__name__])
 manuals_shop.register(sys.modules[__name__])
+desp_vae_elearning.register_routes(sys.modules[__name__])
 import parcours_alternance
 parcours_alternance.register(sys.modules[__name__])
 import partner_workspace

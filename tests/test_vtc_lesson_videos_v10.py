@@ -3,7 +3,6 @@ import copy
 import html
 import json
 import re
-import time
 from unittest.mock import patch
 
 import pytest
@@ -88,8 +87,8 @@ def test_required_edition_fails_closed_if_media_is_incomplete_or_mismatched(chan
         assert not activities(old)[0]['blocks']
 
 
-@pytest.mark.parametrize('version,mandatory', [(lessons.COURSE_VERSION, False), (lessons.REQUIRED_VERSION, True)])
-def test_actual_learner_page_enforces_only_assigned_video_and_serves_authorized_assets(version, mandatory):
+@pytest.mark.parametrize('version', [lessons.COURSE_VERSION, lessons.REQUIRED_VERSION])
+def test_actual_learner_can_continue_without_viewing_and_assets_remain_private(version):
     case = web_tests.NativeElearningWebTests(methodName='runTest')
     case.setUp()
     try:
@@ -101,7 +100,7 @@ def test_actual_learner_page_enforces_only_assigned_video_and_serves_authorized_
         body = page.get_data(as_text=True)
         config = case._player_config(page)
         assert config['activityId'] == 'vtc-a-01-cours'
-        assert bool(config['requiredVideos']) is mandatory
+        assert not config['requiredVideos']
         assert 'Lire la transcription de cette leçon' in body and 'data-video-pacing-config' in body
         assert 'data-playback-rate' not in body
         assert 'data-video-pacing-config' in body
@@ -109,36 +108,7 @@ def test_actual_learner_page_enforces_only_assigned_video_and_serves_authorized_
         media = case.client.get(url, headers={'Range': 'bytes=0-31'})
         assert media.status_code == 206 and len(media.data) == 32
         complete = case._api_post(config['completeUrl'], config)
-        assert complete.status_code == (409 if mandatory else 200)
-        if mandatory:
-            video_id, duration = next(iter(config['requiredVideos'].items()))
-            clock = [time.time()]
-            with patch('elearning_native.store.time.time', side_effect=lambda: clock[0]):
-                tracking = case._api_post(config['startUrl'], config, activity_id=config['activityId'], tab_id='new-learner').json['tracking_session_id']
-                def ping(position, playing=True, ended=False):
-                    return case._api_post(config['heartbeatUrl'], config, tracking_session_id=tracking,
-                        activity_id=config['activityId'], visible=True, focused=True, recent_activity=True,
-                        media_playing=playing, videos=[dict(id=video_id, position=position, rate=1,
-                                                          playing=playing, ended=ended)])
-                ping(0)
-                clock[0] += 1
-                forged = ping(duration, False, True)
-                assert not forged.json['progress']['video_progress'][config['activityId']][video_id]['completed']
-                ping(0)
-                position = 0
-                current_video = activities(vtc.load_bundled_course('academy-vtc-a', version))[0]['blocks'][0]['video']
-                for pause in current_video['learning_pauses'] + [dict(at_seconds=duration, duration_seconds=0)]:
-                    target = pause['at_seconds']
-                    while position < target:
-                        step = min(3.4, target-position)
-                        clock[0] += step
-                        position = min(target, position+step)
-                        response = ping(position, position < target, position == duration)
-                        assert response.status_code == 200 and not response.json['video_resync']
-                    clock[0] += pause['duration_seconds']
-                    if position < duration: ping(position)
-                assert response.json['progress']['video_progress'][config['activityId']][video_id]['completed']
-                assert case._api_post(config['completeUrl'], config).status_code == 200
+        assert complete.status_code == 200
         with case.client.session_transaction() as session:
             session.clear()
         assert case.client.get(url).status_code in (401, 403)

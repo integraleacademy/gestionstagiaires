@@ -1,0 +1,9 @@
+{% extends 'emails/_base.html' %}
+{% block preheader %}Votre parcours APS est ouvert dans votre espace stagiaire.{% endblock %}
+{% block subtitle %}Votre parcours APS est ouvert{% endblock %}
+{% block email_content %}
+<p>Bonjour{% if first_name %} {{ first_name }}{% endif %},</p>
+<p>Dans le cadre de votre accompagnement DESP VAE, vous pouvez dès aujourd’hui consulter les modules e-learning APS dans votre espace stagiaire.</p>
+<p>Connectez-vous avec votre nom de famille et votre date de naissance, puis cliquez sur <strong>« Accéder à mon parcours APS »</strong>. Votre progression sera enregistrée à chaque séance.</p>
+<p style="margin:26px 0"><a href="{{ access_url }}" style="display:inline-block;padding:14px 22px;border-radius:10px;background:#234fa1;color:#fff;text-decoration:none;font-weight:700">Ouvrir mon espace stagiaire</a></p>
+{% endblock %}
