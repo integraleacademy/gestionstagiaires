@@ -4,14 +4,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const template = fs.readFileSync(path.join(__dirname, '../templates/admin_trainee.html'), 'utf8');
+const script = fs.readFileSync(path.join(__dirname, '../static/js/trainee-sheet.js'), 'utf8');
 
 function source(name) {
-  const start = template.search(new RegExp(`^  (?:async )?function ${name}\\(`, 'm'));
+  const start = script.search(new RegExp(`^  (?:async )?function ${name}\\(`, 'm'));
   assert.ok(start >= 0, name);
-  const rest = template.slice(start + 1);
+  const rest = script.slice(start + 1);
   const end = rest.search(/\n  (?:async )?function /);
-  return template.slice(start, end < 0 ? undefined : start + 1 + end);
+  return script.slice(start, end < 0 ? undefined : start + 1 + end);
 }
 
 function setup() {

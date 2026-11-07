@@ -246,10 +246,10 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("✅ Mandat OK", template)
         self.assertIn("⚠ Mandat de prélèvement en cours de validation", template)
         self.assertIn("mandateAction:!mandate.hasSent", template)
-        self.assertIn("✅ Échéancier OK", template)
+        self.assertIn("programmation(s) Qonto", template)
         self.assertIn("⚠ Échéancier à programmer dans Qonto", template)
         self.assertIn("Programmer les échéances", template)
-        self.assertIn("Échéancier non programmé", template)
+        self.assertIn("Aucune programmation Qonto rattachée à cette fiche.", template)
         self.assertIn("qonto_direct_debit_subscription_id", template)
         self.assertIn("value==='scheduled'&&installment?.manual_tracking_entry", template)
         self.assertIn("installment?.qonto_direct_debit_subscription_id?'Programmé':'À venir'", template)
@@ -260,7 +260,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
 
         self.assertIn("function lineHasValidatedMandate(line)", template)
         self.assertIn(
-            "if(!lineHasValidatedMandate(l))return [];",
+            "if(!lineHasValidatedMandate(l)&&l?.financial_tracking_override?.source!=='inline_schedule')return [];",
             template,
         )
         self.assertIn(

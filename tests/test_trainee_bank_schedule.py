@@ -29,10 +29,11 @@ def test_same_day_subscriptions_history_dates_and_invoice_scope():
         return {'direct_debit_collections': rows}
     with patch.object(gestion, 'list_qonto_direct_debit_subscriptions', side_effect=pages), \
          patch.object(gestion, 'list_qonto_direct_debit_collections', side_effect=fetch_collections):
-        upcoming, history = gestion._trainee_bank_schedule([line])
+        upcoming, history, changes = gestion._trainee_bank_schedule([line])
     assert [row['id'] for row in upcoming] == ['a', 'b', 'c', 'mensuel']
     assert sum(row['amount_cents'] for row in upcoming if row['date'] == '2026-11-10') == 110250
     assert upcoming[-1]['frequency'] == 'monthly'
+    assert [(change['id'], change['kind']) for change in changes] == [('annulé', 'subscription')]
     assert [(row['id'], row['date'], row['reason_code']) for row in history] == [('op-1', '2026-10-02', 'AM04')]
 
 
@@ -83,7 +84,7 @@ def test_attached_collection_does_not_import_rest_of_an_external_plan():
     with patch.object(gestion, 'list_qonto_direct_debit_subscriptions',
                       return_value={'items': [subscription('shared', '2026-11-10')]}), \
          patch.object(gestion, 'list_qonto_direct_debit_collections', return_value={'items': rows}):
-        upcoming, history = gestion._trainee_bank_schedule([line])
+        upcoming, history, changes = gestion._trainee_bank_schedule([line])
     assert upcoming == []
     assert [row['id'] for row in history] == ['attached']
 
@@ -115,9 +116,10 @@ def test_scheduled_collections_stay_out_of_history_and_missing_statement_dates_a
     with patch.object(gestion, 'list_qonto_direct_debit_subscriptions', return_value={'items': [sub]}), \
          patch.object(gestion, 'list_qonto_direct_debit_collections', return_value={'items': ops}), \
          patch.object(gestion, '_qonto_request', side_effect=ValueError('unavailable')):
-        upcoming, history = gestion._trainee_bank_schedule([{'qonto_direct_debit_subscription_id': 'monthly'}])
+        upcoming, history, changes = gestion._trainee_bank_schedule([{'qonto_direct_debit_subscription_id': 'monthly'}])
     assert [row['id'] for row in upcoming] == ['monthly']
     assert [row['id'] for row in history] == ['old']
+    assert [(change['id'], change['planned_date']) for change in changes] == [('future-cancel', '2999-12-30')]
     assert history[0]['date'] == '2020-10-10' and 'transaction_date' not in history[0]
     assert '_rum' not in history[0] and '_account' not in history[0]
 
@@ -129,9 +131,10 @@ def test_finite_recurrence_reserves_only_unissued_and_unsettled_collections():
            for i, (status, value) in enumerate([('completed', '367.50'), ('declined', '367.50'), ('on_hold', '200.00')])]
     with patch.object(gestion, 'list_qonto_direct_debit_subscriptions', return_value={'items': [sub]}), \
          patch.object(gestion, 'list_qonto_direct_debit_collections', return_value={'items': ops + [ops[-1]]}):
-        upcoming, history = gestion._trainee_bank_schedule([{'qonto_direct_debit_subscription_id': 'monthly'}])
+        upcoming, history, changes = gestion._trainee_bank_schedule([{'qonto_direct_debit_subscription_id': 'monthly'}])
     assert [(r['remaining_count'], r['remaining_cents']) for r in upcoming] == [(2, 56750)]
     assert len(history) == 2
+    assert [r['id'] for r in upcoming[0]['open_collections']] == ['2']
 
 
 def test_one_off_is_not_still_programmed_once_its_collection_is_returned():
@@ -140,6 +143,6 @@ def test_one_off_is_not_still_programmed_once_its_collection_is_returned():
                status='returned', amount={'value': '539.50'})
     with patch.object(gestion, 'list_qonto_direct_debit_subscriptions', return_value={'items': [sub]}), \
          patch.object(gestion, 'list_qonto_direct_debit_collections', return_value={'items': [row]}):
-        upcoming, history = gestion._trainee_bank_schedule([{'qonto_direct_debit_subscription_id': 'once'}])
+        upcoming, history, changes = gestion._trainee_bank_schedule([{'qonto_direct_debit_subscription_id': 'once'}])
     assert upcoming == []
     assert history[0]['status'] == 'returned'
