@@ -2398,11 +2398,13 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
         results.querySelectorAll('[data-bank-assign]').forEach(button=>button.onclick=async()=>{
           if(busy)return;
           const transfer=transfers[Number(button.dataset.bankAssign)];
-          if(!confirm(`Affecter le virement de ${fmtMoney(transfer.amount_cents/100)} reçu de ${transfer.payer_name||transfer.label} le ${formatIsoDateFr(String(transfer.paid_at).slice(0,10))} au dossier de ${name} (${bankTransferLabel(line)}) ?\n\nReste à payer après affectation : ${fmtMoney((response.remaining_cents-transfer.amount_cents)/100)}.`))return;
+          const alreadyPaid=response.invoice_debits_cents||0;
+          const separate=alreadyPaid?'\n\nLa facture Qonto indique '+fmtMoney(alreadyPaid/100)+', soit le total des prélèvements encaissés vérifiés. Confirmez que ce montant correspond à ces prélèvements et que le virement sélectionné est un règlement distinct.':'';
+          if(!confirm(`Affecter le virement de ${fmtMoney(transfer.amount_cents/100)} reçu de ${transfer.payer_name||transfer.label} le ${formatIsoDateFr(String(transfer.paid_at).slice(0,10))} au dossier de ${name} (${bankTransferLabel(line)}) ?\n\nReste à payer après affectation : ${fmtMoney((response.remaining_cents-transfer.amount_cents)/100)}.${separate}`))return;
           busy=true;overlay.querySelectorAll('button').forEach(item=>item.disabled=true);
           feedback.className='muted';feedback.textContent='Vérification du virement et affectation au dossier…';
           try{
-            const assigned=await billingApi('/api/billing/bank-transfers/assign',{selectionToken:transfer.selection_token});
+            const assigned=await billingApi('/api/billing/bank-transfers/assign',{selectionToken:transfer.selection_token,confirmSeparateTransfer:alreadyPaid>0});
             await load();overlay.remove();
             const payments=document.getElementById('financePayments');if(payments?.closest('details'))payments.closest('details').open=true;
             showQontoFeedback(`${assigned.message} ${assigned.remaining_cents===0?'Financement soldé.':`Reste à payer : ${fmtMoney(assigned.remaining_cents/100)}.`}`);
