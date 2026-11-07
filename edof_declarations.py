@@ -27,6 +27,7 @@ LABELS = {
     "confirmed": "Enregistrée dans EDOF", "paused": "Suspendue après un changement de système",
 }
 REASONS = {
+    "declaration_terms_mismatch": "Transmission suspendue. Vérifiez les dates du dossier EDOF et la réalisation intégrale du parcours. En cas de parcours partiel, bloquez l’automatisation.",
     "declaration_refused": "EDOF a refusé la déclaration. Son statut initial a été vérifié sur le dossier.",
     "declaration_form_changed": "Aucune déclaration transmise. Le connecteur s’est arrêté avant l’envoi du formulaire EDOF.",
     "declaration_read_unavailable": "EDOF n’a pas renvoyé la fiche. La déclaration est en attente. Une nouvelle lecture est prévue dans 15 minutes.",
@@ -81,6 +82,16 @@ def scheduled_draft(row, action):
     return draft
 
 
+def official_terms_match(row, intent):
+    action = intent.get("action")
+    if action not in {"entry_training", "service_done"}:
+        return False
+    expected_date = row.get("session_start_date" if action == "entry_training" else "session_end_date")
+    return (bool(expected_date) and intent.get("actual_date") == expected_date
+            and (action == "entry_training" or type(intent.get("rate")) is int
+                 and intent["rate"] == 100 and not intent.get("motif")))
+
+
 def enqueue(directory, owner, revision, row, draft, actor, *, automatic=False):
     folder, action = row["folder_id"], draft["action"]
     if not ID_RE.fullmatch(folder) or action not in {"entry_training", "service_done"}:
@@ -89,6 +100,8 @@ def enqueue(directory, owner, revision, row, draft, actor, *, automatic=False):
         raise ValueError("L’identité et les deux dates de session doivent être connues.")
     if row["session_start_date"] < FIRST_SESSION:
         raise ValueError("La session est antérieure au 1er janvier 2026.")
+    if (draft.get("operator_confirmed") or draft.get("source") == "admin") and not official_terms_match(row, draft):
+        raise ValueError(REASONS["declaration_terms_mismatch"])
     date = dt.date.fromisoformat(draft["actual_date"])
     if not row["session_start_date"] <= date.isoformat() <= row["session_end_date"] or date > dt.datetime.now(ZoneInfo("Europe/Paris")).date():
         raise ValueError("Vérifiez la date de la déclaration.")
@@ -156,7 +169,7 @@ def next_job(store, revision, *, provider="integrale"):
         token = row["token"]
         if (row["status"] == "queued" and row["actor"] == "Gestion Stagiaires"
                 and intent.get("source") in {"local", "production"} and intent.get("rate", 100) == 100
-                and not intent.get("pilot_ticket") and not intent.get("exit_confirmed")):
+                and not intent.get("pilot_ticket") and not intent.get("exit_confirmed") and not intent.get("motif")):
             # Only replace an automatic intent that has never crossed the write fence.
             intent = {key: intent[key] for key in ("first_name", "last_name", "session_start_date", "session_end_date", "title")}
             intent.update(scheduled_draft(intent, row["action"]))
@@ -391,8 +404,7 @@ def discover(store, owner, snapshot, *, outcomes=None):
                 record(folder, action, "review", "review")
                 continue
             if saved.get("source") == "admin" and saved.get("action") == action:
-                if (not same_enrolment(row, saved)
-                        or saved.get("rate", 100) < 100 and saved.get("motif") not in MOTIFS):
+                if not same_enrolment(row, saved) or not official_terms_match(row, saved):
                     record(folder, action, "review", "review")
                     continue
                 draft = saved
@@ -416,7 +428,13 @@ def check_before_job(store, spec):
     from cpf_provider import on_test_service
     if spec["mode"] != "declare":
         return True
-    folder, action = spec["folder_id"], spec["intent"]["action"]
+    intent = spec["intent"]
+    if not official_terms_match(intent, intent):
+        # Unsent legacy drafts may contain a different date or a partial completion.
+        # Reconciliation of previous transmissions remains read-only.
+        complete(store.directory, spec, "declaration_terms_mismatch")
+        return False
+    folder, action = spec["folder_id"], intent["action"]
     if store.data_file:
         with open(store.data_file, encoding="utf-8") as source:
             data = json.load(source)

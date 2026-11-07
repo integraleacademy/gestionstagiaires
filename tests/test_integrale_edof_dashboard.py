@@ -145,13 +145,15 @@ def test_full_switch_block_associate_prepare_resume(site):
     assert dashboard.local_operations(site.gate)["100000"]["draft"]["actual_date"] == "2026-02-02"
 
 
-def test_exit_requires_real_data_and_partial_reason():
+def test_exit_requires_the_official_date_and_full_completion():
     row={"state":"inTraining", "session_start_date":"2026-02-02", "session_end_date":"2026-02-06"}
     fields={"action":"service_done","actual_date":"2026-02-06","evidence":"Attestation signée","attested":"yes"}
     for values in ({}, {"rate":"65"}, {"rate":"101"}, {"rate":"100","actual_date":"2100-02-02"}):
         with pytest.raises(ValueError):
             dashboard.declaration_draft(row,{**fields,**values})
-    assert dashboard.declaration_draft(row,{**fields,"rate":"65","reason":"Interruption documentée"})["rate"] == 65
+    with pytest.raises(ValueError):
+        dashboard.declaration_draft(row,{**fields,"rate":"65","reason":"Interruption documentée"})
+    assert dashboard.declaration_draft(row,{**fields,"rate":"100"})["rate"] == 100
 
 
 def test_partner_and_viewer_cannot_switch(site):
@@ -265,7 +267,7 @@ def test_legacy_french_dates_work_in_live_simulation_and_declarations_without_re
     assert "Date à vérifier" not in row
     site.gate.switch("integrale",0,"admin")
     result=site.client.post("/admin/edof-test/dossiers/100000/prepare", data={
-        "action":"entry_training","actual_date":"2026-02-03","attested":"yes","evidence":"Présence signée","csrf":site.csrf}, follow_redirects=True)
+        "action":"entry_training","actual_date":"2026-02-02","attested":"yes","evidence":"Présence signée","csrf":site.csrf}, follow_redirects=True)
     assert "Déclaration préparée" in result.text
     assert edof_directory.session_date("31/02/2026") == ""
 

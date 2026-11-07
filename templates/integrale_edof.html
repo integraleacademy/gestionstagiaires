@@ -196,7 +196,7 @@
   {% if batch_entries %}<form id="edof-effective-entries" class="edof-entries-bar" method="post" action="{{ url_for('integrale_edof.confirm_entries') }}">{{ token() }}
     <input type="hidden" name="revision" value="{{ selection.revision }}"><input type="hidden" name="section" value="automations">
     <input type="hidden" name="page" value="{{ page }}"><input type="hidden" name="q" value="{{ query }}">
-    <div><strong>Déclarer plusieurs entrées</strong><p>Cochez les stagiaires qui ont commencé à la date indiquée sur leur ligne. Si la date diffère, modifiez-la dans la fiche.</p></div>
+    <div><strong>Déclarer plusieurs entrées</strong><p>Cochez les stagiaires qui ont commencé à la date indiquée sur leur ligne. Si la date est incorrecte, vérifiez le dossier EDOF avant de confirmer.</p></div>
     <button class="btn btn-blue" name="attested" value="yes" type="submit">Confirmer et transmettre <span data-entry-count>les entrées sélectionnées</span></button>
   </form>{% endif %}
   {% if section == 'automations' and not active %}<div class="wedof-notice is-warning">L’envoi automatique des déclarations nécessite l’activation d’Intégrale EDOF.</div>{% endif %}
@@ -304,16 +304,14 @@
 {% elif detail.pilot_ready %}<p>Entrée programmée par WeDoF{% if pilot.hour %} à {{ pilot.hour }}{% endif %}.</p><form method="post" action="{{ url_for('integrale_edof.pilot_entry',folder=f.folder_id) }}">{{ token() }}<input type="hidden" name="mode" value="reserve">{{ btn('Réserver uniquement cette entrée à Intégrale EDOF') }}</form>
 {% else %}<p>État ou dates à vérifier dans Gestion Stagiaires.</p>{% endif %}
 {% if detail.pilot_proof %}<p>Justificatif de production · {{ detail.pilot_proof.evidence }} · {{ date_fr(detail.pilot_proof.actual_date) }}.</p>{% endif %}{% endif %}
-{% if detail.action %}<h3>{{ action_labels[detail.action] }}</h3>{% if detail.draft and detail.draft.action == detail.action %}<p class="notice">Préparation enregistrée pour le {{ date_fr(detail.draft.actual_date) }}{% if detail.draft.rate is defined %}, taux de réalisation {{ detail.draft.rate }} %{% endif %}.{% if detail.draft.evidence %} {{ detail.draft.evidence }}.{% endif %} Vous pouvez transmettre cette déclaration depuis cette fiche.</p>{% endif %}
+{% if detail.action %}<h3>{{ action_labels[detail.action] }}</h3>{% if detail.draft and detail.draft.action == detail.action %}<p class="notice">Préparation enregistrée pour le {{ date_fr(detail.draft.actual_date) }}{% if detail.draft.rate is defined %}, taux de réalisation {{ detail.draft.rate }} %{% endif %}.{% if detail.draft.evidence %} {{ detail.draft.evidence }}.{% endif %} La transmission utilise les dates du dossier EDOF.</p>{% endif %}
 {% set pilot_send = pilot and detail.pilot_ready and pilot.reserved and detail.action == 'entry_training' %}
 {% if active or pilot_send %}{% set entry_draft = detail.pilot_proof if pilot_send else detail.draft %}<form class="draft" method="post" action="{{ url_for('integrale_edof.pilot_entry' if pilot_send else 'integrale_edof.submit',folder=f.folder_id) }}">{{ token() }}{% if pilot_send %}<input type="hidden" name="mode" value="submit">{% endif %}<input type="hidden" name="action" value="{{ detail.action }}">
 {% set planned = f.session_start_date if detail.action=='entry_training' else f.session_end_date %}
-{% set saved_date = entry_draft.actual_date if entry_draft and entry_draft.action==detail.action else none %}
-{% if not saved_date and planned and planned <= today %}<p>La date de session est préremplie. Modifiez-la si la date effective est différente.</p>{% endif %}
-<label>{{ 'Date effective d’entrée' if detail.action=='entry_training' else 'Date de sortie et de service fait' }}<input type="date" name="actual_date" value="{{ saved_date or (planned if planned and planned<=today else '') }}" min="{{ f.session_start_date or '' }}" max="{{ [today, f.session_end_date]|min if f.session_end_date else today }}" required></label>
+<label>{{ 'Date de début du dossier EDOF' if detail.action=='entry_training' else 'Date de fin du dossier EDOF (sortie et service fait)' }}<input type="date" name="actual_date" value="{{ planned or '' }}" readonly></label>
 {% if pilot_send %}<label>Référence du justificatif<input type="text" name="evidence" value="{{ entry_draft.evidence if entry_draft else '' }}" maxlength="250" required></label>{% endif %}
-{% if detail.action == 'service_done' %}<label>Taux réalisé (%)<input type="number" name="rate" value="{{ detail.draft.rate if detail.draft and detail.draft.action==detail.action and detail.draft.rate is defined else 100 }}" min="0" max="100" required></label><label>Motif en cas de réalisation partielle<select name="motif"><option value="">Parcours intégral ou motif à choisir</option>{% for key,label in motifs.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>{% endif %}
-<button class="btn btn-blue" type="submit" name="attested" value="yes">{{ 'Confirmer l’entrée effective et transmettre à EDOF' if detail.action=='entry_training' else 'Confirmer la sortie et le service fait à EDOF' }}</button></form>{% endif %}{% endif %}
+{% if detail.action == 'service_done' %}<label>Taux de réalisation (%)<input type="number" name="rate" value="100" readonly></label><p>En cas de parcours partiel, cochez « Bloquer l’automatisation sur le dossier ».</p>{% endif %}
+<button class="btn btn-blue" type="submit" name="attested" value="yes" {% if not planned or planned > today %}disabled{% endif %}>{{ 'Confirmer l’entrée effective et transmettre à EDOF' if detail.action=='entry_training' else 'Confirmer la sortie et le service fait à 100 % à EDOF' }}</button></form>{% endif %}{% endif %}
   </div></section></details>
 {% endif %}
 </div>
