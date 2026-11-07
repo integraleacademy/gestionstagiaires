@@ -862,3 +862,6 @@
   .schedule-actions { align-items:flex-start; }
   .schedule-actions small { width:100%; }
 }
+
+.schedule-content .schedule-totals { margin:16px 0; }
+.schedule-review-done { padding:8px 0; font-weight:600; color:#216947; }

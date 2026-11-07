@@ -29,7 +29,7 @@ class AdminTraineeRescheduleDebitTests(unittest.TestCase):
         self.assertIn("Nouveau prélèvement mis en place avec succès", template)
         self.assertIn("Rejet traité", template)
         self.assertIn("logicalInstallmentsForLine", template)
-        self.assertIn("Échéancier de la fiche", template)
+        self.assertIn("Échéancier initial", template)
         self.assertIn("Historique du suivi local", template)
         self.assertIn("montantTotalEcheancier", template)
 

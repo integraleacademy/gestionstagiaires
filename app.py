@@ -42969,9 +42969,10 @@ def _qonto_payment_global_status(line: Dict[str, Any]) -> str:
     statuses = [str(i.get('status') or '').lower() for i in installments]
     if not line.get('qonto_direct_debit_mandate_id') or mandate not in {'active', 'signed'}:
         return 'Mandat à signer'
-    if any(_installment_is_rejected(item) for item in installments): return 'Rejeté'
+    review = _reviewed_debit_rejections(line)
+    if review['pending']: return 'Rejeté'
     if statuses and all(s in QONTO_PAID_COLLECTION_STATUSES for s in statuses): return 'Payé'
-    if any(_installment_rejection_is_treated(item) for item in all_installments): return 'Rejet traité'
+    if review['treated']: return 'Rejet traité'
     if any(s in QONTO_PAID_COLLECTION_STATUSES for s in statuses): return 'Paiement partiel'
     return 'Prélèvements programmés'
 
@@ -43772,6 +43773,8 @@ def buildBillingLinesFromSessions(
                     'qontoCustomerId': persisted.get('qontoCustomerId') or persisted.get('qontoClientId'), 'qontoClientId': persisted.get('qontoClientId'), 'invoiceGeneratedAt': persisted.get('invoiceGeneratedAt'),
                     'finalizedAt': persisted.get('finalizedAt'), 'sentAt': persisted.get('sentAt'), 'paidAt': persisted.get('paidAt'), 'cancelledAt': persisted.get('cancelledAt'), 'invoiceDownloadedAt': persisted.get('invoiceDownloadedAt'), 'invoicePdfUrl': persisted.get('invoicePdfUrl'), 'qontoPdfUrl': persisted.get('qontoPdfUrl') or persisted.get('invoicePdfUrl'),
                     'creditNoteStatus': persisted.get('creditNoteStatus'), 'qontoCreditNoteId': persisted.get('qontoCreditNoteId'),
+                    'initialDebitSchedule': persisted.get('initialDebitSchedule') or [],
+                    'reviewedDebitRejections': persisted.get('reviewedDebitRejections') or {},
                     'paymentPlan': persisted.get('paymentPlan') if isinstance(persisted.get('paymentPlan'), dict) else {},
                     'paymentMode': persisted.get('paymentMode') or 'cash',
                     'qontoBankTransfers': copy.deepcopy(persisted.get('qontoBankTransfers') or []),
@@ -43894,6 +43897,8 @@ def buildBillingLinesFromSessions(
                     line['qontoLastSyncedAt'] = qonto_source.get('qontoLastSyncedAt') or ''
                 line['qontoDuplicateDebitWarning'] = _sepa_duplicate_warning(line)
                 line['directDebitInstallments'] = _sepa_installments(line)
+                line['initialDebitSchedule'] = _initial_debit_schedule(line)
+                line['debitRejectionReview'] = _reviewed_debit_rejections(line)
                 line['qontoCollectedAmountCents'] = sum(money_value_to_cents(row.get('amount') or 0) for row in _paid_sepa_collections(line))
                 out.append(line)
     return out
@@ -44180,6 +44185,13 @@ def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
         normalize_qonto_invoice_storage_fields(line)
     persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','companyName','clientEmail','clientAddress','clientZipCode','clientCity','siret','invoiceNotes','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qontoDirectDebitSyncWarning','qontoDirectDebitLastSyncedAt','qontoAutoSyncAttemptedAt','qonto_rejected_collection_ids','sepa_payment_plan','financial_tracking_override','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError','qontoRemoteAmountPaidCents','qontoBankTransfers','qontoBankTransferSyncedAt','qontoBankTransferSyncWarning','amountPaid','amount_paid','manualPaymentInvoiceId')}
+    previous = all_map.get(line['id']) or {}
+    original = previous.get('initialDebitSchedule') or line.get('initialDebitSchedule') or _initial_debit_schedule(previous) or _initial_debit_schedule(line)
+    if original:
+        persisted['initialDebitSchedule'] = copy.deepcopy(original)
+    reviews = {**(previous.get('reviewedDebitRejections') or {}), **(line.get('reviewedDebitRejections') or {})}
+    if reviews:
+        persisted['reviewedDebitRejections'] = _bind_legacy_debit_reviews(reviews, _sepa_installments(line))
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -45915,6 +45927,143 @@ def api_billing_session(session_id: str):
     return jsonify({'ok': True, 'lines': _billing_lines_for_session(data, session_id)})
 
 
+def _initial_debit_schedule(line):
+    frozen = line.get('initialDebitSchedule')
+    if frozen:
+        return frozen
+    def terms(rows):
+        return [{'date': str(r.get('qonto_original_due_date') or r.get('due_date') or r.get('date'))[:10],
+                 'amount': _money(r.get('qonto_original_amount', r.get('amount')))}
+                for r in rows if isinstance(r, dict) and (r.get('due_date') or r.get('date'))
+                and not (r.get('is_rejection_retry') or r.get('manual_tracking_entry') or r.get('qonto_attachment'))]
+    override = line.get('financial_tracking_override') or {}
+    edits = override.get('edit_history') or []
+    if edits and 'before' in edits[0]:
+        return terms(edits[0]['before'])
+    plan = terms((line.get('paymentPlan') or {}).get('schedule') or [])
+    originals = terms(_sepa_installments(line))
+    # Older imports can contain a stale installment count in paymentPlan. A
+    # bank retry never constitutes a new contractual installment.
+    target = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+    def total(rows):
+        return sum(money_value_to_cents(r['amount']) for r in rows)
+    if originals and target and total(originals) == target and total(plan) != target:
+        return originals
+    return plan or originals
+
+
+def _debit_rejection_key(row):
+    collection = row.get('qonto_direct_debit_collection_id')
+    if collection:
+        return 'collection:' + str(collection)
+    date = str(row.get('qonto_original_due_date') or row.get('due_date') or row.get('date') or '')[:10]
+    sid = row.get('qonto_direct_debit_subscription_id') or ''
+    amount = money_value_to_cents(row.get('qonto_original_amount', row.get('amount')) or 0)
+    return 'local:' + json.dumps([sid, date, amount, None if sid else row.get('index')], separators=(',', ':'))
+
+
+def _bind_legacy_debit_reviews(records, rows):
+    if not any(key.startswith('local:') and not record.get('linked_collection') for key, record in records.items()):
+        return records
+    resolved = dict(records)
+    candidates = {}
+    for row in rows:
+        if row.get('qonto_direct_debit_collection_id') and _installment_is_rejected(row):
+            local = _debit_rejection_key({**row, 'qonto_direct_debit_collection_id': ''})
+            candidates.setdefault(local, set()).add(_debit_rejection_key(row))
+    for key, ids in candidates.items():
+        if key in records and len(ids) == 1 and not records[key].get('linked_collection'):
+            cid = next(iter(ids))
+            resolved[key] = {**records[key], 'linked_collection': cid}
+            resolved.setdefault(cid, records[key])
+    return resolved
+
+
+def _reviewed_debit_rejections(line):
+    rows = _sepa_installments(line)
+    acknowledged = _bind_legacy_debit_reviews(line.get('reviewedDebitRejections') or {}, rows)
+    treated = set(acknowledged)
+    for row in rows:
+        source = row.get('reprogrammed_from_collection_id')
+        if source:
+            treated.add('collection:' + str(source))
+        if _installment_rejection_is_treated(row) or row.get('replaced_by_direct_debit_subscription_id'):
+            treated.add(_debit_rejection_key(row))
+    rejected = {_debit_rejection_key(row) for row in rows if _installment_is_rejected(row)
+                and not row.get('tracking_removed_at') and row.get('qonto_collection_status_raw') not in {'canceled', 'cancelled'}}
+    return {'pending': sorted(rejected - treated), 'treated': sorted((rejected & treated) | set(acknowledged)),
+            'treatedIndices': [idx for idx, row in enumerate(rows) if _installment_is_rejected(row)
+                               and _debit_rejection_key(row) in treated]}
+
+
+def _close_reviewed_debit_notifications(data, line, selected, now):
+    for notification in data.get('notifications_admin') or []:
+        meta = notification.get('meta') or {}
+        if meta.get('kind') != 'qonto_direct_debit_rejected' or str(meta.get('billing_line_id')) != str(line['id']):
+            continue
+        key = _debit_rejection_key({'qonto_direct_debit_collection_id': meta.get('collection_id'),
+                                    'qonto_direct_debit_subscription_id': meta.get('subscription_id'),
+                                    'date': meta.get('scheduled_date'), 'amount': meta.get('amount')})
+        if key in selected:
+            notification.update(done=True, done_at=notification.get('done_at') or now)
+            meta.update(rejection_status='treated', rejection_treated_at=now)
+
+
+@app.post('/api/billing/trainee/<trainee_id>/session/<session_id>/acknowledge-rejections')
+@admin_login_required
+@admin_write_required
+def api_acknowledge_debit_rejections(trainee_id, session_id):
+    if _is_partner_data_scope_session() or not _financing_partner_module_enabled():
+        return jsonify(ok=False, error='Action réservée à l’administration du financement.'), 403
+    payload = request.get_json(silent=True) or {}
+    selection = payload.get('rejections') if isinstance(payload, dict) else None
+    if not isinstance(selection, dict) or not selection or not all(
+        isinstance(keys, list) and keys and all(isinstance(k, str) and k for k in keys)
+        for keys in selection.values()
+    ):
+        return jsonify(ok=False, error='Sélection de rejets invalide.'), 400
+
+    verified = {}
+    if payload.get('bankProof'):
+        try:
+            proof = URLSafeTimedSerializer(app.secret_key, salt='debit-review').loads(payload['bankProof'], max_age=1800)
+            if proof['dossier'] != [session_id, trainee_id]:
+                raise BadSignature('dossier')
+            verified = proof['keys']
+        except (BadSignature, TypeError, KeyError):
+            return jsonify(ok=False, error='Actualisez Qonto puis réessayez.'), 409
+
+    def apply(current):
+        lines = {str(line['id']): line for line in _billing_lines_for_trainee_session(current, trainee_id, session_id)
+                 if not is_cpf_billing_context(line)}
+        pending = {}
+        for line_id, keys in selection.items():
+            line = lines.get(line_id)
+            if not line:
+                return {'ok': False, 'error': 'Financement introuvable sur cette fiche.'}
+            state = _reviewed_debit_rejections(line)
+            eligible = set(state['pending']) | set(verified.get(line_id, []))
+            if set(keys) - eligible - set(state['treated']):
+                return {'ok': False, 'error': 'Le suivi a changé. Actualisez la fiche.'}
+            pending[line_id] = set(keys) - set(state['treated'])
+        now = _now_iso()
+        for line_id, keys in pending.items():
+            if not keys:
+                continue
+            line = lines[line_id]
+            records = dict(line.get('reviewedDebitRejections') or {})
+            for key in keys:
+                records[key] = {'at': now, 'by': session.get('admin_username') or 'admin'}
+            line['reviewedDebitRejections'] = records
+            line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
+            _close_reviewed_debit_notifications(current, line, keys, now)
+            _billing_log(line, 'Rejet traité', 'success', f'{len(keys)} rejet(s) marqué(s) comme traité(s) sur la fiche.')
+            _save_billing_line(current, line)
+        return {'ok': True}
+    result = _atomic_update_data(apply)
+    return jsonify(result), 200 if result['ok'] else 409
+
+
 def _bank_view_pages(fetch, keys, **filters):
     """Yield complete Qonto pages. An incomplete response must not look like an empty account."""
     for page in range(1, 101):
@@ -46084,11 +46233,29 @@ def api_trainee_bank_schedule(trainee_id, session_id):
         return jsonify(ok=False, error='Consultation bancaire indisponible pour cet espace.'), 403
     lines = _billing_lines_for_trainee_session(load_data(), trainee_id, session_id)
     try:
-        upcoming, history = _trainee_bank_schedule([line for line in lines if not is_cpf_billing_context(line)])
+        lines = [line for line in lines if not is_cpf_billing_context(line)]
+        upcoming, history = _trainee_bank_schedule(lines)
     except Exception as exc:
         app.logger.warning('[QONTO] lecture de l’échéancier impossible : %s', _sanitize_qonto_error(str(exc)))
         return jsonify(ok=False, error='Lecture Qonto incomplète. Vous pouvez réessayer.'), 502
-    response = jsonify(ok=True, upcoming=upcoming, history=history, checked_at=_now_iso())
+    # The bank can report a new rejection before the regular billing sync.
+    # Sign only collection IDs assigned unambiguously to this dossier.
+    bank_keys = {}
+    for row in history:
+        if row.get('status') not in QONTO_REJECTED_COLLECTION_STATUSES:
+            continue
+        owners = [line for line in lines if any(
+            r.get('qonto_direct_debit_collection_id') == row['id'] or
+            (row.get('subscription_id') and r.get('qonto_direct_debit_subscription_id') == row['subscription_id'])
+            for r in _sepa_installments(line))]
+        if not owners and len(lines) == 1:
+            owners = lines
+        if len(owners) == 1:
+            bank_keys.setdefault(str(owners[0]['id']), []).append('collection:' + row['id'])
+    proof = URLSafeTimedSerializer(app.secret_key, salt='debit-review').dumps(
+        {'dossier': [session_id, trainee_id], 'keys': bank_keys}) if bank_keys else ''
+    response = jsonify(ok=True, upcoming=upcoming, history=history, checked_at=_now_iso(),
+                       rejectionKeys=bank_keys, rejectionProof=proof)
     response.headers['Cache-Control'] = 'private, no-store'
     return response
 
@@ -51941,10 +52108,11 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
                     "name": name,
                     "detail": f"{formation} · du {start_label} au {end_label} · Signature du mandat en attente",
                 }
+        treated_keys = set(_reviewed_debit_rejections(line)['treated'])
         for installment in _sepa_installments(line):
             if str(installment.get("status") or "").lower() not in {"failed", "rejected", "returned", "refunded", "declined"}:
                 continue
-            if _installment_rejection_is_treated(installment):
+            if _debit_rejection_key(installment) in treated_keys:
                 continue
             event_date = _daily_recap_date(installment.get("rejected_at") or installment.get("failed_at") or installment.get("updated_at") or installment.get("updatedAt") or installment.get("date") or installment.get("due_date"))
             if event_date == report_date:
