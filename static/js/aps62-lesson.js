@@ -48,6 +48,8 @@
   // Reuse the existing completion control and its tracking/validation handlers.
   // Turning a reading page never completes an activity or grants study time.
   completion.append(activityAction);
+  const skipLink = activityNavigation.querySelector('[data-vtc-skip]');
+  if (skipLink) navigation.append(skipLink);
   activityNavigation.hidden = true;
   activityNavigation.classList.add('aps-lesson-original-navigation');
   root.classList.add('is-paginated');

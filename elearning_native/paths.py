@@ -88,11 +88,10 @@ def project_course(course: Mapping[str, Any], module: Mapping[str, Any]) -> Dict
     activities = [activity for section in sections for activity in section.get("activities") or []]
     if not activities:
         raise CourseImportError("Le module doit contenir au moins une activité.")
-    if course.get('version') == '20261012-vtc-v12-cma-105h':
-        # Preserve the 105-hour study envelope, including practice chosen by the
-        # learner. Optional submissions are not completion requirements, and
-        # time still comes exclusively from active-time heartbeats.
-        required_minutes = max(required_minutes, sum(int(item.get('planned_minutes') or 0) for item in activities))
+    if course.get("source", {}).get("type") == "academy-vtc":
+        # Existing enrolments can contain the original 105-hour assignment.
+        # Keep its version, activities and history, and apply today's access rules.
+        required_minutes = 0
     required = [str(activity["id"]) for activity in activities if activity.get("optional") is not True]
     return {
         **course,

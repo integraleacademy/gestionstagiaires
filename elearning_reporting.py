@@ -493,9 +493,14 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
                       p(MAC_APS_NOTICE, "small"), Spacer(1, 3 * mm)])
     duration = report_duration(report)
     exams = exam_groups(report)
+    free_vtc = order["course_code"] == "vtc" and report.get("required_seconds") == 0
+    if free_vtc:
+        time_metric = [p("TEMPS ACTIF ENREGISTRÉ", "small"), p(report["active_time_label"], "heading")]
+    else:
+        time_metric = [p("TEMPS SUIVI / DURÉE PRÉVUE", "small"),
+                       TimeProgress(duration, width=96 * mm, font=regular_font, bold=bold_font, large=True)]
     metrics = [[
-        [p("TEMPS SUIVI / DURÉE PRÉVUE", "small"),
-         TimeProgress(duration, width=96 * mm, font=regular_font, bold=bold_font, large=True)],
+        time_metric,
         [p("MODULES TERMINÉS", "small"), p(f"{report['completed_modules']} / {report['total_modules']}", "heading"),
          p("ACTIVITÉS TERMINÉES", "small"), p(f"{report['completed_activities']} / {report['total_activities']}" if report["available"] else "Données partielles", "heading")]
     ]]
@@ -504,12 +509,14 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
                             ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 12),
                             ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 7)]))
     story.extend([box, Spacer(1, 3 * mm),
-                  p("Temps actif enregistré : " + report["active_time_label"] + " · Durée prévue : " + report["required_time_label"], "small"),
+                  p("Parcours VTC à navigation libre. Aucune durée minimale." if free_vtc else
+                    "Temps actif enregistré : " + report["active_time_label"] + " · Durée prévue : " + report["required_time_label"], "small"),
                   p(f"Première activité : {report['started_at_label']} · Dernière activité : {report['updated_at_label']}", "small"),
                   Spacer(1, 3 * mm)])
     if not exams and not report.get("cma_attempts"):
         story.append(p("Examens blancs : aucune tentative ni durée enregistrée.", "small"))
-    headers = ("MODULE / ÉDITION" if is_mac_aps else "MODULE", "TEMPS SUIVI / " + ("CIBLE" if is_mac_aps else "REQUIS"), "ACTIVITÉS", "ÉTAT")
+    time_heading = "TEMPS SUIVI" if free_vtc else "TEMPS SUIVI / " + ("CIBLE" if is_mac_aps else "REQUIS")
+    headers = ("MODULE / ÉDITION" if is_mac_aps else "MODULE", time_heading, "ACTIVITÉS", "ÉTAT")
     table_rows = [[p(value, "th") for value in headers]]
     for module in report["modules"]:
         activity_label = (f"{module['completed_activities']} / {module['total_activities']}"
@@ -520,7 +527,8 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
                  p("Activités à terminer" if module.get("status") == "in_progress" and module_duration(module)["fraction"] == 1 else
                    "Temps à compléter" if module.get("status") == "awaiting_time" else module["status_label"], "cell"))
         row = [p(module["title"] + ("\n" + (module.get("version") or "Édition inconnue") if is_mac_aps else ""), "cell"),
-               TimeProgress(module_duration(module), width=51 * mm, font=regular_font, bold=bold_font),
+               p(module.get("active_time_label", "Indisponible"), "cell") if free_vtc else
+                   TimeProgress(module_duration(module), width=51 * mm, font=regular_font, bold=bold_font),
                p(activity_label if module["available"] else "Indisponible", "cell"), state]
         table_rows.append(row)
     table = LongTable(table_rows, colWidths=[w * mm for w in [64, 55, 24, 31]], repeatRows=1, hAlign="LEFT")

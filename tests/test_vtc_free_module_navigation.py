@@ -87,7 +87,7 @@ def test_all_eight_assigned_vtc_modules_are_linked_before_any_completion(case, t
         assert f'href="{BASE}/exams/vtc-{letter}"' in body
         assert "Module verrouillé" not in body
     assert "0 / 8" in response.text
-    assert "Commencer le quiz final" not in response.text
+    assert "Commencer le quiz final" in response.text
     assert learner_rows(case) == {}
     assert case.data == before
     assert case.saved_data is None
@@ -117,7 +117,7 @@ def test_module_h_tracks_time_and_navigation_preserves_existing_results(case):
     before_assignment = copy.deepcopy(case.data)
     config = player(case, "academy-vtc-h")
     assert not config["initialModuleComplete"]
-    assert config["initialRemainingSeconds"] > 0
+    assert config["initialRemainingSeconds"] == 0
     clock = [time.time()]
     with patch("elearning_native.store.time.time", side_effect=lambda: clock[0]):
         started = case._api_post(config["startUrl"], config, activity_id=config["activityId"], tab_id="module-h")
@@ -145,26 +145,24 @@ def test_module_h_tracks_time_and_navigation_preserves_existing_results(case):
     assert first["initialActiveSeconds"] == 0
 
 
-def test_open_module_h_keeps_its_internal_activity_and_video_requirements(case):
+def test_later_vtc_lesson_opens_directly_and_completion_counts_no_fictitious_time(case):
     course = vtc.load_bundled_course("academy-vtc-h")
-    first_id, later_id = course["activity_order"][:2]
-    config = player(case, course["id"], activity=later_id)
-    assert config["activityId"] == first_id
-    assert config["requiredVideos"]
-    for url, payload in (
-        (config["startUrl"], {"activity_id": later_id, "tab_id": "skip-activity"}),
-        (f"/api/elearning/v1/activities/{later_id}/complete", {}),
-        (config["completeUrl"], {"active_seconds": 999999, "videos_completed": True}),
-    ):
-        denied = case._api_post(url, config, **payload)
-        assert denied.status_code == 409, denied.text
+    later_id = next(a["id"] for section in course["sections"][1:] for a in section["activities"]
+                    if a["id"].endswith("-cours"))
+    page = case.client.get(BASE + "/" + course["id"], query_string={"activity": later_id})
+    config = case._player_config(page)
+    assert config["activityId"] == later_id and not config["requiredVideos"]
+    assert "Passer cette activité" in page.text
+    assert case._api_post(config["startUrl"], config, activity_id=later_id, tab_id="later").status_code == 200
+    result = case._api_post(config["completeUrl"], config, active_seconds=999999, videos_completed=True)
+    assert result.status_code == 200, result.text
     row = learner_rows(case)["academy-vtc-h"]
-    assert row["completed_activity_ids"] == []
+    assert row["completed_activity_ids"] == [later_id]
     assert row["active_seconds"] == 0
-    assert not player(case, course["id"])["initialModuleComplete"]
+    assert not config["initialModuleComplete"]
 
 
-def test_module_h_exam_can_be_taken_but_never_unlocks_the_final_or_completes_courses(case):
+def test_module_h_exam_and_final_can_be_taken_without_completing_courses(case):
     config = exam_config(case.client.get(BASE + "/exams/vtc-h"))
     exam = load_exam("vtc-h", config["exam"]["version"])
     response = case.client.post(config["submitUrl"], json={
@@ -174,12 +172,14 @@ def test_module_h_exam_can_be_taken_but_never_unlocks_the_final_or_completes_cou
     assert response.status_code == 200, response.text
     assert response.json["result"]["score"] == len(exam["questions"])
     assert learner_rows(case) == {}
-    assert case.client.get(BASE + "/exams/vtc-final").status_code == 403
+    final = exam_config(case.client.get(BASE + "/exams/vtc-final"))
+    final_paper = load_exam("vtc-final", final["exam"]["version"])
     final_submit = case.client.post("/api/espace/public-token/elearning/exams/vtc-final", json={
-        "version": exam["version"], "attempt_id": config["attemptId"], "answers": {},
-    }, headers={"X-Elearning-CSRF": config["csrfToken"]})
-    assert final_submit.status_code == 403
-    assert "Commencer le quiz final" not in case.client.get(BASE).text
+        "version": final_paper["version"], "attempt_id": final["attemptId"],
+        "answers": {q["id"]: q["answer"] for q in final_paper["questions"]},
+    }, headers={"X-Elearning-CSRF": final["csrfToken"]})
+    assert final_submit.status_code == 200, final_submit.text
+    assert learner_rows(case) == {}
 
 
 @pytest.mark.parametrize("boundary", ["unassigned", "before_start", "disabled", "logged_out"])

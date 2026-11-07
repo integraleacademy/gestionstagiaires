@@ -165,7 +165,7 @@ class VtcWebTests(unittest.TestCase):
         response=self.client.post(config['saveUrl'],json={'revision':config['revision'],'title':'VTC complet','modules':modules},headers={'X-Elearning-CSRF':config['csrfToken']})
         self.assertEqual(response.status_code,200)
         self.assertEqual(len(self.saved_data['sessions'][0]['aps_native_modules']),8)
-        self.assertEqual(sum(m['required_minutes'] for m in response.json['modules']),3600)
+        self.assertEqual(sum(m['required_minutes'] for m in response.json['modules']),0)
         self.assertEqual(self.client.post(config['saveUrl'],json={'revision':config['revision'],'title':'Stale','modules':[]},headers={'X-Elearning-CSRF':config['csrfToken']}).status_code,409)
 
     def test_vtc_exam_and_final_gate_use_only_vtc_progress(self):
@@ -180,7 +180,7 @@ class VtcWebTests(unittest.TestCase):
         self.assertEqual(self.client.get('/espace/public-token/elearning/exams/vtc-final').status_code,403)
         modules=[{'course_id':m['id'],'course_version':VERSION,'required_minutes':vtc.load_bundled_course(m['id'],VERSION)['planned_minutes']} for m in vtc.curriculum_manifest()['modules']]
         self.data['sessions'][0]['aps_native_modules']=modules
-        self.assertEqual(self.client.get('/espace/public-token/elearning/exams/vtc-final').status_code,403)
+        self.assertEqual(self.client.get('/espace/public-token/elearning/exams/vtc-final').status_code,200)
         progress=[]
         for m in modules:
             c=vtc.load_bundled_course(m['course_id'],VERSION)

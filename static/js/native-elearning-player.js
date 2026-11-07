@@ -175,7 +175,7 @@
       ? 'Durée de cet objectif atteinte.'
       : `Encore ${formatSeconds(objective.remaining_seconds)} d’étude active sur cet objectif. Vous pouvez reprendre ses lectures et ses activités avant de valider le questionnaire de clôture.`;
     const blocked = actionButton.dataset.mode === "navigate" && config.isLastActivity
-      && config.hasNextModule && !state.progress.module_complete && !config.apsDepth;
+      && config.hasNextModule && !state.progress.module_complete && !config.apsDepth && !config.freeNavigation;
     const videoBlocked = requiredVideos.some((video) => !videoCompleted(video));
     const readingBlocked = lessonTiming && !lessonTiming.allReady();
     actionButton.disabled = state.saving || blocked || videoBlocked || Boolean(timedBlocked) || Boolean(readingBlocked);

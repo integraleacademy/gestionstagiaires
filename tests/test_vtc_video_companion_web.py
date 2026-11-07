@@ -64,7 +64,7 @@ def test_authorized_vtc_previews_render_readable_metadata_for_lessons_and_synthe
         case.tearDown()
 
 
-def test_learner_companion_is_authorized_and_does_not_relax_required_viewing():
+def test_learner_companion_is_authorized_and_viewing_is_optional():
     case = web_tests.NativeElearningWebTests(methodName='runTest')
     case.setUp()
     try:
@@ -90,8 +90,8 @@ def test_learner_companion_is_authorized_and_does_not_relax_required_viewing():
             assert response.status_code == 200
             assert companion_payload(response.get_data(as_text=True)) == PRESENTATION
             config = case._player_config(response)
-            assert config['requiredVideos']
-            assert case._api_post(config['completeUrl'], config).status_code == 409
+            assert not config['requiredVideos']
+            assert case._api_post(config['completeUrl'], config).status_code == 200
             other_course = case.client.get('/espace/public-token/elearning/academy-vtc-b')
             assert other_course.status_code in (403, 404)
             assert 'data-vtc-video-presentation' not in other_course.get_data(as_text=True)

@@ -59,7 +59,7 @@ def test_real_105_hour_transition_preserves_time_and_connections_in_read_only_re
     report = ProgressReader(SimpleNamespace(PERSIST_DIR=str(tmp_path))).report(order, person)
     assert order == original
     assert report['available'] is True
-    assert report['required_seconds'] == 105 * 3600
+    assert report['required_seconds'] == 0
     assert report['active_seconds'] == 60
     assert report['total_activities'] == 8 * 42
     assert report['optional_activity_count'] == 32
@@ -81,12 +81,13 @@ def test_unopened_report_does_not_create_database_or_migrate_purchased_path(tmp_
     assert report['active_seconds'] == 0
 
 
-def test_105_hour_assignments_enforce_work_minutes_without_crediting_time():
+def test_105_hour_assignments_retain_planned_minutes_without_minimum_time():
     for letter, minutes in MODULE_MINUTES.items():
         course = vtc.load_bundled_course('academy-vtc-' + letter.lower(), VERSION)
         selection = {'course_id': course['id'], 'course_version': VERSION,
                      'section_ids': [s['id'] for s in course['sections']], 'required_minutes': 1}
-        assert project_course(course, selection)['required_minutes'] == minutes
+        assert project_course(course, selection)['required_minutes'] == 0
+        assert course['planned_minutes'] == minutes
 
 
 @pytest.mark.parametrize(('optional_state', 'remaining_seconds'), [
@@ -148,11 +149,11 @@ def test_optional_vtc_productions_keep_evidence_but_do_not_count_toward_completi
     assert report['total_activities'] == report['completed_activities'] == 336
     assert report['optional_activity_count'] == 32
     assert report['progress_percent'] == 100
-    assert report['required_seconds'] == 105 * 3600
+    assert report['required_seconds'] == 0
     assert report['active_seconds'] == 105 * 3600 - remaining_seconds
-    assert report['complete'] is (remaining_seconds == 0)
-    assert report['completed_modules'] == (7 if remaining_seconds else 8)
-    assert report['modules'][0]['status'] == ('awaiting_time' if remaining_seconds else 'passed')
+    assert report['complete']
+    assert report['completed_modules'] == 8
+    assert report['modules'][0]['status'] == 'passed'
 
     reported_work = []
     for module in report['modules']:
@@ -190,6 +191,6 @@ def test_optional_vtc_productions_keep_evidence_but_do_not_count_toward_completi
         text = '\n'.join(page.extract_text() for page in document.pages)
         assert 'Parcours e-learning terminé' in text
         assert '336 / 336' in text and '105 h 00 min 00 s' in text
-        assert 'ACTIVITÉS OBLIGATOIRES TERMINÉES' in text
+        assert 'ACTIVITÉS TERMINÉES' in text and 'Aucune durée minimale' in text
     with store._connect() as db:
         assert list(db.iterdump()) == before
