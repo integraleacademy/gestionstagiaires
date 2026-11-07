@@ -614,3 +614,28 @@ def test_unsent_legacy_work_adopts_cpf_dates_then_manual_partial_can_replace_it(
     corrected = ledger.next_job(site.store, 1)
     assert corrected["intent"]["rate"] == 65
     assert ledger.begin_send(site.store.directory, corrected)
+
+
+def test_confirmed_service_projects_date_rate_and_state_until_next_official_read(site):
+    from integrale_edof_dashboard import apply_confirmed_entries, category
+    from edof_directory import dated_snapshot, record_key
+    snap = dated_snapshot(site.vault.get(record_key(site.owner)))
+    row = {**snap["rows"]["100000"], "state": "inTraining"}
+    folder = row["folder_id"]
+    draft = {**EXIT, "actual_date": row["session_end_date"], "rate": 100, "motif": ""}
+    site.gate.switch("integrale", 0, "admin")
+    ledger.enqueue(site.store.directory, site.owner, 1, row, draft, "admin")
+    spec = ledger.next_job(site.store, 1)
+    def present(data, checked=0):
+        return apply_confirmed_entries({"rows": {folder: data}, "checked": checked},
+                                       site.store.directory, site.owner)["rows"][folder]
+    assert present(row)["state"] == "inTraining"
+    assert ledger.begin_send(site.store.directory, spec)
+    assert present(row)["state"] == "inTraining"
+    ledger.complete(site.store.directory, spec, "declaration_confirmed", "serviceDoneDeclared")
+    result = present(row)
+    assert category(result) == "declared"
+    assert result["completion_rate"] == 100 and result["end_date"] == row["session_end_date"]
+    assert present(row, result["observed_at"] + 2) == row
+    advanced = {**row, "state": "paid"}
+    assert present(advanced) == advanced
