@@ -16,7 +16,7 @@
     </section>
     <section hidden data-exam-panel="scotia" data-desp-scotia-url="{{ url_for('api_desp_scotia', session_id=jury_session.id) }}">
       <div class="exam-summary"><div><h3>Dossier SCOTIA</h3><p class="exam-muted">Chaque dossier comprend une couverture et une page de garde nominative avant chaque document.</p></div><button type="button" class="btn btn-outline" data-scotia-refresh>Actualiser les pièces</button></div>
-      <p class="exam-note">Le téléchargement est disponible uniquement lorsque la fiche candidat, la fiche d’expérience professionnelle, l’attestation sur l’honneur, le projet de cadrage et l’attestation e-learning sont réunis.</p>
+      <p class="exam-note">Le PDF s’ouvre dans un nouvel onglet lorsque les cinq pièces sont réunies.</p>
       <p data-scotia-status role="status" aria-live="polite"></p>
       <div data-scotia-candidates></div>
     </section>
@@ -26,4 +26,4 @@
 </dialog>
 {% include '_exam_jury_mail_dialog.html' %}
 <script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261026-without-pv-1') }}" defer></script>
-{% if desp_scotia_enabled %}<script src="{{ url_for('static', filename='js/desp-scotia.js', v='20261106-1') }}" defer></script>{% endif %}
+{% if desp_scotia_enabled %}<script src="{{ url_for('static', filename='js/desp-scotia.js', v='20261108-onglet') }}" defer></script>{% endif %}

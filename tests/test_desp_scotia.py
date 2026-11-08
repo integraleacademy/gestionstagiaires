@@ -5,6 +5,7 @@ from pathlib import Path
 from PIL import Image
 from pypdf import PdfReader, PdfWriter
 import pytest
+from werkzeug.http import parse_options_header
 
 import app as host
 import desp_jury_projects as projects
@@ -62,8 +63,10 @@ def test_single_pdf_all_pages_in_order_and_no_duplicate_file_token(portal):
     client = seed(portal)
     row = first(client)
     assert row["ready"] and row["download_url"]
-    result = download(client)
+    result = client.get(row["download_url"])
     assert result.status_code == 200 and result.mimetype == "application/pdf"
+    disposition, options = parse_options_header(result.headers["Content-Disposition"])
+    assert disposition == "inline" and options["filename"] == "Dossier SCOTIA Élodie DUPRÉ.pdf"
     pages = PdfReader(BytesIO(result.data)).pages
     texts = [" ".join(page.extract_text().split()) for page in pages]
     assert "Dossier SCOTIA" in texts[0] and all(label in texts[0] for _, label in GROUPS)
@@ -101,6 +104,9 @@ def test_each_missing_component_blocks_ui_and_direct_download(portal, key):
     portal[1].write_text(json.dumps(data))
     assert not first(client)["ready"] and not first(client)["download_url"]
     assert download(client).status_code == 409
+    navigation = client.get("/admin/sessions/S1/stagiaires/T1/dossier-scotia.pdf", headers={"Accept": "text/html"})
+    assert navigation.status_code == 409 and navigation.mimetype == "text/plain"
+    assert "Dossier SCOTIA incomplet" in navigation.get_data(as_text=True)
 
 
 @pytest.mark.parametrize("mode", ["missing", "corrupt", "renamed", "encrypted"])
