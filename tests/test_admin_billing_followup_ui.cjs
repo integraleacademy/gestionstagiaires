@@ -60,10 +60,10 @@ function invoice(id, fields = {}) {
   };
 }
 
-test('the follow-up filter includes unpaid and partial invoices, with their exact remaining balance', () => {
+test('the follow-up filter excludes CPF invoices and includes personal balances, even for mixed financing', () => {
   const page = ui();
   page.setLines([
-    invoice('unpaid'),
+    invoice('unpaid', {traineeId: 'mixed-financing'}),
     invoice('partial', {paid_amount_cents: 40000, remaining_amount_cents: 60000}),
     invoice('cancelled-registration', {registrationCancelled: true, remaining_amount_cents: 25000,
       paid_amount_cents: 75000}),
@@ -75,6 +75,11 @@ test('the follow-up filter includes unpaid and partial invoices, with their exac
     invoice('unknown', {cpfPaymentUnknown: true}),
     invoice('control', {syncWarning: 'La synchronisation doit être vérifiée.'}),
     invoice('not-created', {qontoInvoiceId: '', invoiceStatus: 'not_invoiced'}),
+    invoice('cpf-unpaid', {financingType: 'CPF', traineeId: 'mixed-financing'}),
+    invoice('cpf-partial', {financingType: 'CPF', paid_amount_cents: 40000, remaining_amount_cents: 60000}),
+    invoice('cpf-legacy', {financingType: 'AUTRE', financeurName: 'Caisse des dépôts et consignations'}),
+    invoice('cpf-wedof', {financingType: '', cpfWedofInvoice: true}),
+    invoice('cpf-reference', {financingType: '', cpfWedofReferenceOnly: true}),
   ]);
   page.ctx.applyStatFilter('no_next_debit');
   assert.deepEqual(page.filteredIds(), ['unpaid', 'partial', 'cancelled-registration']);
@@ -85,9 +90,10 @@ test('the follow-up filter includes unpaid and partial invoices, with their exac
   assert.match(page.element('tbody').innerHTML, /billing-registration-cancelled/);
   assert.equal((page.element('tbody').innerHTML.match(/Aucun prélèvement confirmé/g) || []).length, 3);
   assert.equal((page.element('tbody').innerHTML.match(/Synchroniser paiement/g) || []).length, 3);
+  assert.doesNotMatch(page.ctx.paymentProgressCell(invoice('cpf', {financingType: 'CPF'})), /Aucun prélèvement confirmé/);
 
   page.ctx.applyStatFilter('no_next_debit');
-  assert.equal(page.filteredIds().length, 11, 'a second click clears the quick filter');
+  assert.equal(page.filteredIds().length, 16, 'a second click clears the quick filter and restores CPF invoices');
 });
 
 test('the filter respects search, training and financing filters, polling, reset and the CPF view', () => {
@@ -115,8 +121,9 @@ test('the filter respects search, training and financing filters, polling, reset
 
   page.ctx.setBillingView('cpf', {updateUrl: false});
   assert.deepEqual(page.filteredIds(), ['CPF-unpaid', 'CPF-unknown']);
+  assert.doesNotMatch(page.element('stats').innerHTML, /data-stat-filter="no_next_debit"/);
   page.ctx.applyStatFilter('no_next_debit');
-  assert.deepEqual(page.filteredIds(), ['CPF-unpaid']);
+  assert.deepEqual(page.filteredIds(), [], 'CPF invoices are never eligible for the no-debit filter');
   page.ctx.resetBillingFilters(); page.ctx.applyFilters();
   assert.deepEqual(page.filteredIds(), ['CPF-unpaid', 'CPF-unknown']);
 });
