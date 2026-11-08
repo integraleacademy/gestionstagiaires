@@ -59,6 +59,48 @@ class VtcConvocationAutomationTests(unittest.TestCase):
         self.assertFalse(sent)
         generate.assert_not_called()
 
+    def test_signature_does_not_schedule_or_expire_vtc_convocation(self):
+        self.session.update(
+            date_end="2000-09-11",
+            practice_training_date="2099-12-23",
+            trainees=[self.trainee],
+        )
+        with mock.patch.object(gestion_app.threading, "Timer") as timer:
+            gestion_app._schedule_convocation_after_convention_signed(
+                self.session, self.trainee, "S-VTC", "T-1"
+            )
+        timer.assert_not_called()
+        self.assertFalse(self.trainee.get("convocation_auto_scheduled_at"))
+
+        # Data recorded by older versions can still contain a signature-triggered timer.
+        self.trainee["convocation_auto_scheduled_at"] = "2000-09-10T10:05:00Z"
+        with mock.patch.object(gestion_app, "_send_convocation_after_convention_signed") as send:
+            changed = gestion_app._process_due_convocation_after_convention_signed(
+                {"sessions": [self.session]}
+            )
+        self.assertFalse(changed)
+        send.assert_not_called()
+        self.assertFalse(self.trainee.get("convocation_auto_last_error"))
+
+    def test_dashboard_shows_theory_wait_with_an_old_signature_expiry(self):
+        self.trainee.update(
+            convention_legacy_signed_at="2026-09-10T10:00:00Z",
+            convocation_auto_last_error="Envoi automatique expiré : session terminée le 11/09/2026.",
+        )
+        self.session["trainees"] = [self.trainee]
+        with gestion_app.app.test_request_context("/"):
+            dashboard = gestion_app._build_automations_dashboard({"sessions": [self.session]})
+            row = dashboard["rows"][0]
+            self.assertEqual(dashboard["stats"]["errors"], 0)
+            self.assertEqual(row["error"], "")
+            self.assertEqual(row["convocation_label"], "En attente de la théorie")
+            self.assertEqual(row["block_reason"], "En attente de réussite à l’examen théorique")
+
+            self.trainee["convocation_aps_last_error"] = "Échec d’envoi de la convocation pratique."
+            dashboard = gestion_app._build_automations_dashboard({"sessions": [self.session]})
+            self.assertEqual(dashboard["stats"]["errors"], 1)
+            self.assertEqual(dashboard["rows"][0]["error"], self.trainee["convocation_aps_last_error"])
+
     def test_automation_waits_for_theory_instead_of_convention(self):
         with gestion_app.app.test_request_context("/"):
             status = gestion_app._build_trainee_automation_status(
