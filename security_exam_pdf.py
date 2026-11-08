@@ -76,7 +76,8 @@ def _cover_illustration(c, root, training):
     c.rect(x - 1, y - 1, width + 2, height + 2, stroke=1, fill=0)
 
 
-def _cover(c, training, profile, trainee, context, root, photo_path):
+def draw_cover_identity(c, trainee, root, photo_path, *, title, acronym, qualification, first_name, last_name):
+    """Shared exam cover banner and candidate identity card."""
     c.setFillColor(colors.HexColor("#f7f9fb"))
     c.rect(0, 0, W, H, fill=1, stroke=0)
     c.setFillColor(NAVY)
@@ -88,20 +89,26 @@ def _cover(c, training, profile, trainee, context, root, photo_path):
         c.drawImage(logo, M, 756, 46, 46, preserveAspectRatio=True, mask="auto")
     paragraph(c, "INTÉGRALE ACADEMY", M + 62, 791, WIDTH - 62, 12, colors.white, bold=True)
     paragraph(c, "DOSSIER CANDIDAT · EXAMEN DE CERTIFICATION", M + 62, 770, WIDTH - 62, 7.5, GOLD)
-    paragraph(c, "Dossier examen", M + 18, 729, 280, 30, colors.white, bold=True)
-    paragraph(c, training, M + 18, 688, 265, 45, GOLD, bold=True)
-    paragraph(c, profile["cover_title"], M + 18, 622, 265, 10, colors.white, leading=15)
-    _cover_illustration(c, root, training)
+    paragraph(c, title, M + 18, 729, 280, 30, colors.white, bold=True)
+    paragraph(c, acronym, M + 18, 688, 265, 45, GOLD, bold=True)
+    paragraph(c, qualification, M + 18, 622, 265, 10, colors.white, leading=15)
 
     c.setFillColor(colors.white)
     c.setStrokeColor(colors.HexColor("#dce4ea"))
     c.roundRect(M, 411, WIDTH, 143, 10, fill=1, stroke=1)
     paragraph(c, "CANDIDAT", M + 18, 537, WIDTH - 156, 8, TEAL, bold=True)
-    _fitted(c, context["prenom"], M + 18, 517, WIDTH - 156, 22)
-    _fitted(c, context["nom"], M + 18, 485, WIDTH - 156, 22)
+    _fitted(c, first_name, M + 18, 517, WIDTH - 156, 22)
+    _fitted(c, last_name, M + 18, 485, WIDTH - 156, 22)
     paragraph(c, "Référence candidat · " + str(trainee.get("id") or ""),
               M + 18, 441, WIDTH - 156, 7.5, MUTED)
     candidate_portrait(c, photo_path, W - M - 112, 421, 102, 123)
+
+
+def _cover(c, training, profile, trainee, context, root, photo_path):
+    draw_cover_identity(c, trainee, root, photo_path, title="Dossier examen", acronym=training,
+                        qualification=profile["cover_title"], first_name=context["prenom"],
+                        last_name=context["nom"])
+    _cover_illustration(c, root, training)
     paragraph(c, "JOUR DE L’EXAMEN", M, 387, 240, 8, TEAL, bold=True)
     paragraph(c, context["date_examen"], M, 371, 240, 21, bold=True)
     paragraph(c, "08h00 – 18h00", M, 339, 240, 11, MUTED)

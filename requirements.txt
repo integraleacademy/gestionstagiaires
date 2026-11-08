@@ -11,6 +11,7 @@ pywebpush==2.3.0
 pypdf==5.2.0
 PyMuPDF==1.26.6
 reportlab==4.2.5
+WeasyPrint==69.0
 docxtpl
 openpyxl==3.1.5
 

@@ -8,10 +8,13 @@ from pypdf import PdfReader, PdfWriter
 from werkzeug.exceptions import HTTPException
 
 import desp_jury_projects as projects
+import desp_scotia_covers
+import desp_scotia_sheet
 from document_conversion import convert_upload, _validate_pdf
 
 GROUPS = (
     ("candidate_info_sheet", "Fiche de renseignement candidat"),
+    ("professional_experience_sheet", "Fiche d’expérience professionnelle"),
     ("desp_exam_sworn_statement", "Attestation sur l’honneur de prise en compte de l’examen DESP"),
     ("project", "Projet de cadrage"),
     ("elearning", "Attestation e-learning"),
@@ -53,7 +56,7 @@ def _read_file(host, training, trainee, token, *, project=None):
             raise ValueError("Remplacez ce projet par un PDF.")
         _validate_pdf(raw)
         return raw
-    # Historical candidate/attestation scans may be JPEG or PNG. Preserve every
+    # Historical attestation scans may be JPEG or PNG. Preserve every
     # page and convert them locally; never silently drop an unreadable attachment.
     if path.suffix.lower() not in {".pdf", ".jpg", ".jpeg", ".png"}:
         raise ValueError("Remplacez cette pièce par un PDF ou une image JPEG/PNG.")
@@ -69,11 +72,17 @@ def certificate_path(host, training, trainee):
 
 
 def inspect(host, training, trainee, *, include_content=False):
-    groups, parts, total = [], [], 0
+    groups, parts, total = [], {}, 0
     for key, label in GROUPS:
         error, content = "", []
         try:
-            if key == "elearning":
+            if key == "candidate_info_sheet":
+                if not _saved_sheet(trainee):
+                    raise ValueError("Fiche à compléter et à enregistrer dans l’espace stagiaire.")
+            elif key == "professional_experience_sheet":
+                if not host._professional_experience_sheet_is_submitted(trainee):
+                    raise ValueError("Fiche d’expérience à transmettre depuis l’espace stagiaire.")
+            elif key == "elearning":
                 path = certificate_path(host, training, trainee)
                 if not path.is_file():
                     raise ValueError("Attestation e-learning à déposer.")
@@ -92,17 +101,9 @@ def inspect(host, training, trainee, *, include_content=False):
                 content = [_read_file(host, training, trainee, row["file"], project=row) for row in entries]
             else:
                 tokens = _tokens(trainee, key)
-                if tokens:
-                    content = [_read_file(host, training, trainee, token) for token in tokens]
-                elif key == "candidate_info_sheet" and _saved_sheet(trainee):
-                    # This item is normally an online form, not an uploaded file.
-                    if include_content:
-                        from desp_scotia_sheet import build
-                        content = [build(host._build_candidate_sheet_data(training, trainee),
-                                         host, trainee)]
-                else:
-                    raise ValueError("Pièce manquante." if key != "candidate_info_sheet"
-                                     else "Fiche candidat à compléter et enregistrer.")
+                if not tokens:
+                    raise ValueError("Pièce manquante.")
+                content = [_read_file(host, training, trainee, token) for token in tokens]
             total += sum(len(raw) for raw in content)
             if total > MAX_DOSSIER_BYTES:
                 raise ValueError("Le dossier dépasse 75 Mo. Réduisez la taille des pièces.")
@@ -110,8 +111,33 @@ def inspect(host, training, trainee, *, include_content=False):
             error = str(exc) if isinstance(exc, ValueError) else "Fichier introuvable ou inaccessible."
         groups.append({"key": key, "label": label, "available": not error, "error": error})
         if include_content and not error:
-            parts.extend(content)
+            parts[key] = content
     return groups, parts
+
+
+def _assemble(host, training, trainee, parts):
+    photo = desp_scotia_sheet.portrait(host, trainee)
+    parts["candidate_info_sheet"] = [desp_scotia_sheet.candidate_pdf(host, training, trainee, photo)]
+    parts["professional_experience_sheet"] = [desp_scotia_sheet.experience_pdf(host, training, trainee)]
+    sections = [(label, parts[key]) for key, label in GROUPS]
+    if sum(len(raw) for _, files in sections for raw in files) > MAX_DOSSIER_BYTES:
+        raise ValueError("Le dossier dépasse 75 Mo. Réduisez la taille des pièces.")
+
+    covers = PdfReader(BytesIO(desp_scotia_covers.build(host, training, trainee, photo, sections)))
+    cover_pages = iter(covers.pages)
+    output = BytesIO()
+    with PdfWriter() as writer:
+        writer.add_page(next(cover_pages))
+        for group_index, (_, files) in enumerate(sections, 1):
+            for index, raw in enumerate(files, 1):
+                writer.add_page(next(cover_pages))
+                reader = PdfReader(BytesIO(raw))
+                # Field names must remain independent, including for two files of one project.
+                reader.add_form_topname(f"piece{group_index}_{index}")
+                writer.append(reader, import_outline=False)
+        writer.write(output)
+    output.seek(0)
+    return output
 
 
 def register(app, host):
@@ -214,15 +240,9 @@ def register(app, host):
         if missing:
             return jsonify(ok=False, error="Dossier SCOTIA incomplet. " + " · ".join(missing)), 409
         try:
-            with PdfWriter() as writer:
-                for index, raw in enumerate(parts):
-                    reader = PdfReader(BytesIO(raw))
-                    # Isolate interactive field names between separate attachments.
-                    reader.add_form_topname(f"piece{index + 1}")
-                    writer.append(reader, import_outline=False)
-                output = BytesIO()
-                writer.write(output)
-                output.seek(0)
+            output = _assemble(host, training, trainee, parts)
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 409
         except Exception:
             app.logger.exception("Could not assemble DESP SCOTIA dossier")
             return jsonify(ok=False, error="Une pièce ne peut pas être intégrée. Remplacez-la par un PDF lisible."), 409

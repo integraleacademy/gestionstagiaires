@@ -12,6 +12,7 @@ from flask import abort, flash, redirect, request, send_file, session, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
 from document_conversion import _validate_pdf
 
+INITIAL_TYPES = {"DIRIGEANT INITIAL", "DESP INITIAL", "DIRIGEANT", "DESP"}
 KEY = "desp_jury_project"
 MAX_BYTES = 15_000_000
 EXTENSIONS = {".pdf"}
@@ -21,7 +22,7 @@ SIZE_ERROR = "Le total de vos documents dépasse 15 Mo. Réduisez ou compressez 
 def supported(services, training):
     kind = str(services._session_get(training, "training_type", "") or "").strip().upper()
     name = str(services._session_get(training, "name", "") or "")
-    return kind in {"DIRIGEANT INITIAL", "DESP INITIAL", "DIRIGEANT", "DESP"} and not re.search(r"\b(VAE|MAC|RECYCLAGE)\b", name, re.I)
+    return kind in INITIAL_TYPES and not re.search(r"\b(VAE|MAC|RECYCLAGE)\b", name, re.I)
 
 
 def today():
