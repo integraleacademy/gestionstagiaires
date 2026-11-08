@@ -234,20 +234,26 @@ def register(app, host):
     @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/dossier-scotia.pdf")
     @host.admin_login_required
     def admin_desp_scotia_download(session_id, trainee_id):
+        def unavailable(message):
+            if request.accept_mimetypes.best_match(("application/json", "text/html")) == "text/html":
+                return app.response_class(message, status=409, mimetype="text/plain",
+                                          headers={"Cache-Control": "private, no-store"})
+            return jsonify(ok=False, error=message), 409
+
         training, trainee = candidate(session_id, trainee_id)
         groups, parts = inspect(host, training, trainee, include_content=True)
         missing = [group["label"] + " : " + group["error"] for group in groups if not group["available"]]
         if missing:
-            return jsonify(ok=False, error="Dossier SCOTIA incomplet. " + " · ".join(missing)), 409
+            return unavailable("Dossier SCOTIA incomplet. " + " · ".join(missing))
         try:
             output = _assemble(host, training, trainee, parts)
         except ValueError as exc:
-            return jsonify(ok=False, error=str(exc)), 409
+            return unavailable(str(exc))
         except Exception:
             app.logger.exception("Could not assemble DESP SCOTIA dossier")
-            return jsonify(ok=False, error="Une pièce ne peut pas être intégrée. Remplacez-la par un PDF lisible."), 409
+            return unavailable("Une pièce ne peut pas être intégrée. Remplacez-la par un PDF lisible.")
         filename = projects.base_name(host, trainee).replace("Projet de cadrage ", "Dossier SCOTIA ", 1)
-        response = send_file(output, mimetype="application/pdf", as_attachment=True,
+        response = send_file(output, mimetype="application/pdf", as_attachment=False,
                              download_name=filename + ".pdf")
         response.headers["Cache-Control"] = "private, no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
