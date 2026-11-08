@@ -2009,6 +2009,21 @@ def _reconciled_qonto_paid_cents(invoice: Dict[str, Any], fallback_cents: int) -
     return max(paid, 0) + bank_transfer_paid_cents(invoice)
 
 
+def _reconcile_billing_invoice_status(invoice: Dict[str, Any], payment_status: str) -> None:
+    """Keep the finalized document badge consistent with net receipts."""
+    status = _normalize_billing_invoice_status(invoice.get("invoiceStatus"))
+    if status not in {"finalized", "sent", "paid"}:
+        return
+    # Keep Qonto's raw document status for traceability. It can remain paid
+    # after a collected direct debit has been returned by the bank.
+    if not invoice.get("qonto_status"):
+        invoice["qonto_status"] = invoice.get("qontoStatus") or invoice.get("invoiceStatus")
+    if payment_status == "paid":
+        invoice["invoiceStatus"] = "paid"
+    elif status == "paid" and payment_status in {"unpaid", "partially_paid"}:
+        invoice["invoiceStatus"] = "sent" if invoice.get("sentAt") else "finalized"
+
+
 def normalize_qonto_invoice_storage_fields(invoice: Dict[str, Any]) -> None:
     serialized = serialize_qonto_invoice_for_frontend(invoice)
     # ``control`` is a deliberate local safety state (for a missing or
@@ -2022,6 +2037,7 @@ def normalize_qonto_invoice_storage_fields(invoice: Dict[str, Any]) -> None:
     invoice["payment_percentage"] = serialized["payment_percentage"]
     invoice["qonto_payment_status"] = serialized["payment_status"]
     invoice["paymentStatus"] = serialized["payment_status"]
+    _reconcile_billing_invoice_status(invoice, serialized["payment_status"])
 
 def _qonto_money_value(value: Any) -> Any:
     if isinstance(value, dict):
@@ -26103,7 +26119,7 @@ _TERMINAL_DIRECT_DEBIT_STATUSES = {
 def _next_direct_debit_date(
     line: Dict[str, Any], *, today: Optional[datetime.date] = None,
 ) -> Optional[str]:
-    """Return the earliest actionable SEPA instalment date for a billing line."""
+    """Return the next confirmed Qonto debit, never a contractual-only date."""
     current = today or datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
     stored_plan = line.get("sepa_payment_plan")
     plan_installments = (
@@ -26113,23 +26129,62 @@ def _next_direct_debit_date(
         plan_installments if isinstance(plan_installments, list) and plan_installments
         else line.get("directDebitInstallments")
     )
-    installments = [
-        dict(installment) for installment in raw_installments or []
-        if isinstance(installment, dict)
-    ] if isinstance(raw_installments, list) else []
-    canonical_line = dict(line)
-    canonical_line["directDebitInstallments"] = installments
-    canonical_plan = dict(stored_plan) if isinstance(stored_plan, dict) else {}
-    canonical_plan["installments"] = installments
-    canonical_line["sepa_payment_plan"] = canonical_plan
-    candidates: List[datetime.date] = []
-    for installment in _effective_sepa_installments(canonical_line):
-        status = str(installment.get("status") or "scheduled").strip().lower()
-        if status in _TERMINAL_DIRECT_DEBIT_STATUSES:
+    installments = raw_installments if isinstance(raw_installments, list) else []
+    bank_rows: Dict[Tuple[str, ...], Dict[str, Any]] = {}
+    for order, installment in enumerate(installments):
+        if not isinstance(installment, dict):
             continue
-        raw_date = str(installment.get("date") or installment.get("due_date") or "").strip()
+        subscription_id = str(installment.get("qonto_direct_debit_subscription_id") or "").strip()
+        collection_id = str(installment.get("qonto_direct_debit_collection_id") or "").strip()
+        # A signed mandate or contractual date alone does not prove that a
+        # debit exists. Local edits/deletions never cancel a real bank order.
+        if not (subscription_id or collection_id):
+            continue
+        raw_date = str(
+            installment.get("qonto_original_due_date")
+            if installment.get("tracking_pending_qonto")
+            else installment.get("date") or installment.get("due_date") or ""
+        ).strip()[:10]
+        status = str(
+            installment.get("qonto_collection_status_raw")
+            or installment.get("status") or "scheduled"
+        ).strip().lower()
+        key = ("collection", collection_id) if collection_id else ("subscription", subscription_id, raw_date)
+        rank = (
+            str(installment.get("updated_at") or ""),
+            status in _TERMINAL_DIRECT_DEBIT_STATUSES,
+            order,
+        )
+        previous = bank_rows.get(key)
+        if previous is None or rank > previous["rank"]:
+            bank_rows[key] = {
+                "subscription": subscription_id, "collection": collection_id,
+                "date": raw_date, "status": status, "rank": rank,
+                "subscription_status": str(installment.get("qonto_subscription_status") or "").strip().lower(),
+            }
+    # A real collection result supersedes the initial subscription-only copy
+    # of that occurrence. Distinct bank IDs remain distinct even for one slot.
+    collected_occurrences = {
+        (row["subscription"], row["date"])
+        for row in bank_rows.values() if row["collection"] and row["subscription"]
+    }
+    candidates: List[datetime.date] = []
+    for row in bank_rows.values():
+        if not row["collection"] and (row["subscription"], row["date"]) in collected_occurrences:
+            continue
+        if row["status"] not in {
+            "scheduled", "pending", "active", "in_progress", "processing", "on_hold",
+        }:
+            continue
+        if (
+            not row["collection"] and row["subscription_status"] in {
+                "cancelled", "canceled", "deleted", "expired", "suspended",
+                "pending_mandate_signature", "pending_signature",
+            }
+        ):
+            continue
         try:
-            installment_date = datetime.date.fromisoformat(raw_date[:10])
+            installment_date = datetime.date.fromisoformat(row["date"])
         except (TypeError, ValueError):
             continue
         if installment_date >= current:
@@ -43888,15 +43943,10 @@ def buildBillingLinesFromSessions(
                     line['payment_status'] = qonto_source['qonto_payment_status']
                     line['qonto_payment_status'] = qonto_source['qonto_payment_status']
                     line['paymentStatus'] = qonto_source['qonto_payment_status']
-                    # The payment totals are the business source of truth for a
-                    # finalized invoice.  A stale Qonto document status such as
-                    # "finalized" must not make a fully settled invoice appear
-                    # as merely "sent" in the billing dashboard.
-                    if (
-                        qonto_source['qonto_payment_status'] == 'paid'
-                        and line.get('invoiceStatus') in {'finalized', 'sent', 'paid'}
-                    ):
-                        line['invoiceStatus'] = 'paid'
+                    # Use the same reconciled status in both directions: a
+                    # settlement makes the invoice paid, while a return can
+                    # reopen its balance without changing Qonto's raw status.
+                    line['invoiceStatus'] = qonto_source['invoiceStatus']
                     line['qonto_status'] = qonto_source.get('qonto_status') or qonto_source.get('qontoStatus') or line.get('invoiceStatus') or ''
                     # ``updatedAt`` also changes for purely local edits. Only
                     # an explicit Qonto sync timestamp may throttle a remote
@@ -43907,6 +43957,7 @@ def buildBillingLinesFromSessions(
                 line['initialDebitSchedule'] = _initial_debit_schedule(line)
                 line['debitRejectionReview'] = _reviewed_debit_rejections(line)
                 line['qontoCollectedAmountCents'] = sum(money_value_to_cents(row.get('amount') or 0) for row in _paid_sepa_collections(line))
+                line['nextDirectDebitDate'] = _next_direct_debit_date(line)
                 out.append(line)
     return out
 
@@ -45071,12 +45122,12 @@ def _apply_qonto_invoice_payment_to_billing_line(line: Dict[str, Any], invoice: 
         normalized['qonto_total_amount_cents'] - reconciled_paid_cents,
         0,
     )
-    if normalized['qonto_status'] not in {'canceled', 'cancelled'}:
+    if normalized['qonto_status'] not in {'draft', 'canceled', 'cancelled'}:
         normalized['qonto_payment_status'] = (
             'paid'
             if normalized['qonto_total_amount_cents'] > 0
             and reconciled_paid_cents >= normalized['qonto_total_amount_cents']
-            else ('partially_paid' if reconciled_paid_cents > 0 else normalized['qonto_payment_status'])
+            else ('partially_paid' if reconciled_paid_cents > 0 else 'unpaid')
         )
     app.logger.info(
         "Qonto invoice sync: invoice_id=%s number=%s status=%s total_amount=%.2f amount_paid=%.2f",
@@ -45113,8 +45164,9 @@ def _apply_qonto_invoice_payment_to_billing_line(line: Dict[str, Any], invoice: 
         line['paymentStatus'] = normalized['qonto_payment_status']
         line['invoiceStatus'] = remote_status
     else:
-        line['paymentStatus'] = 'unpaid' if remote_status in {'draft', 'finalized', 'sent'} else 'control'
+        line['paymentStatus'] = 'unpaid' if remote_status in {'draft', 'finalized', 'sent', 'paid'} else 'control'
         line['invoiceStatus'] = remote_status
+    _reconcile_billing_invoice_status(line, line['paymentStatus'])
 
 
 def _sync_billing_line_with_qonto(data: Dict[str, Any], line: Dict[str, Any]) -> Tuple[bool, str]:
