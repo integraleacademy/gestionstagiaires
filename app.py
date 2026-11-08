@@ -35556,12 +35556,7 @@ APS_CONVOCATION_VARIABLES = [
 
 
 def _is_aps_session(session_obj: Dict[str, Any]) -> bool:
-    """Return whether the session has the full automated document suite.
-
-    The historical name is kept because routes, templates and stored fields still
-    use the APS suffix, but the same automation cards are also used for A3P,
-    DESP initial and SSIAP sessions. VTC intentionally remains convention-only.
-    """
+    """Return whether the session supports automated convocations, including VTC."""
     return bool(_automation_document_config(session_obj).get("convocation_template"))
 
 
@@ -38658,9 +38653,14 @@ def _send_scheduled_convocation_after_convention_signed_in_context(session_id: s
             _aps_convocation_auto_send_timers.discard(key)
 
 
+def _convention_triggers_convocation(session_obj: Dict[str, Any]) -> bool:
+    config = _automation_document_config(session_obj)
+    return bool(config.get("convocation_template")) and config.get("slug") != "vtc"
+
+
 def _schedule_convocation_after_convention_signed(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> None:
     """Planifie l’envoi automatique de la convocation 5 minutes après signature."""
-    if _trainee_registration_is_cancelled(trainee) or not _is_aps_session(session_obj) or trainee.get("convocation_aps_sent_at"):
+    if _trainee_registration_is_cancelled(trainee) or not _convention_triggers_convocation(session_obj) or trainee.get("convocation_aps_sent_at"):
         return
     key = f"{session_id}:{trainee_id}"
     with _aps_convocation_auto_send_timers_lock:
@@ -38685,7 +38685,7 @@ def _process_due_convocation_after_convention_signed(data: Dict[str, Any]) -> bo
     today_paris = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
     changed = False
     for sess in data.get("sessions", []):
-        if not _is_aps_session(sess):
+        if not _convention_triggers_convocation(sess):
             continue
         trainees = _session_trainees_list(sess)
         session_changed = False
@@ -40419,9 +40419,14 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         )
     else:
         convention_download_url = ""
+    config = _automation_document_config(session_obj)
+    automation_slug = str(config.get("slug") or "")
+    is_vtc_automation = automation_slug == "vtc"
     convocation_sent_at_raw = trainee.get("convocation_aps_sent_at") or ""
     convocation_error = trainee.get("convocation_aps_last_error") or ""
-    if not convocation_error and not convocation_sent_at_raw:
+    # Legacy post-signature timers could leave an expiry on VTC records.
+    # VTC generates the practical convocation when the theory exam is passed.
+    if not is_vtc_automation and not convocation_error and not convocation_sent_at_raw:
         convocation_error = trainee.get("convocation_auto_last_error") or ""
     if not convention_signed and convocation_error == "En attente de signature de la convention":
         convocation_error = ""
@@ -40438,9 +40443,6 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     else:
         convocation_status = "not_generated"
 
-    config = _automation_document_config(session_obj)
-    automation_slug = str(config.get("slug") or "")
-    is_vtc_automation = automation_slug == "vtc"
     theory_succeeded = bool(trainee.get("vtc_theory_exam_sent_at"))
     if is_vtc_automation and not theory_succeeded:
         convocation_block_reason = "En attente de réussite à l’examen théorique"
@@ -40513,6 +40515,8 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         "sent": ("Envoyée", "check", "complete", "done"),
         "error": ("Erreur", "alert", "error", "blocked"),
     }
+    if is_vtc_automation and not theory_succeeded:
+        convocation_labels["not_generated"] = ("En attente de la théorie", "hourglass", "waiting", "pending")
     v_label, v_icon, v_tone, v_card_tone = convocation_labels.get(convocation_status, convocation_labels["error"])
 
     total_documents = 2 if is_vae_automation else 2 + int(is_aps_automation) + int(has_entry_attestation) + int(has_end_attestation)
