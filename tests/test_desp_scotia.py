@@ -8,6 +8,7 @@ import pytest
 
 import app as host
 import desp_jury_projects as projects
+from desp_scotia import GROUPS
 from tests.test_desp_jury_projects import portal, person, upload, pdf, error
 
 
@@ -17,7 +18,7 @@ def admin(portal):
     return portal[0]
 
 
-def seed(portal, *, online=False):
+def seed(portal):
     upload(portal, {1: b"PROJECT ONE", 2: b"PROJECT TWO"})
     data = json.loads(portal[1].read_text())
     trainee = data["sessions"][0]["trainees"][0]
@@ -25,10 +26,16 @@ def seed(portal, *, online=False):
         path = portal[1].parent / (key + ".pdf")
         path.write_bytes(pdf(label))
         trainee["documents"].append({"key": key, "file": path.name, "files": [path.name]})
-    if online:
-        trainee["documents"] = trainee["documents"][1:]
-        trainee["candidate_sheet"] = {"first_names": "Élodie", "last_name": "DUPRÉ", "study_domain": "Sécurité"}
-        trainee["candidate_sheet_saved_at"] = "2026-11-04T10:00:00"
+    trainee["candidate_sheet"] = {"first_names": "Élodie", "last_name": "DUPRÉ", "study_domain": "Sécurité",
+                                 "financing": "France Travail", "situation": "Salarié"}
+    trainee["professional_experience_sheet"] = {
+        "first_name": "Élodie", "last_name": "DUPRÉ", "training_name": "DESP initial Paris",
+        "last_certification": "Bac professionnel", "current_situation": "employed",
+        "experiences": [{"job_title": "Cheffe de site", "company_name": "Société Exemple",
+                         "start_date": "2022-02-01", "current_job": True, "contract_type": "cdi",
+                         "work_time_percent": 100, "executive_status": "yes"}],
+        "validation_name": "Élodie DUPRÉ", "validation_date": "2026-11-04", "signature": "Élodie DUPRÉ",
+    }
     portal[1].write_text(json.dumps(data))
     client = admin(portal)
     assert client.post("/admin/sessions/S1/stagiaires/T1/attestation-elearning.pdf",
@@ -58,11 +65,24 @@ def test_single_pdf_all_pages_in_order_and_no_duplicate_file_token(portal):
     result = download(client)
     assert result.status_code == 200 and result.mimetype == "application/pdf"
     pages = PdfReader(BytesIO(result.data)).pages
-    assert [page.extract_text().strip() for page in pages] == ["CANDIDATE", "ATTESTATION", "PROJECT ONE", "PROJECT TWO", "ELEARNING"]
+    texts = [" ".join(page.extract_text().split()) for page in pages]
+    assert "Dossier SCOTIA" in texts[0] and all(label in texts[0] for _, label in GROUPS)
+    assert "DESP initial Paris" in texts[0] and "10/11/2026" in texts[0]
+    covers = [i for i, text in enumerate(texts) if "PIÈCE " in text]
+    content = ["DOSSIER CANDIDAT", "Fiche expérience professionnelle", "ATTESTATION",
+               "PROJECT ONE", "PROJECT TWO", "ELEARNING"]
+    labels = [GROUPS[i][1] for i in (0, 1, 2, 3, 3, 4)]
+    assert len(covers) == len(content)
+    for i, label, value in zip(covers, labels, content):
+        assert label in texts[i] and "Élodie" in texts[i] and "DUPRÉ" in texts[i]
+        assert value in texts[i + 1]
+    assert "Document 1 sur 2" in texts[covers[3]] and "Document 2 sur 2" in texts[covers[4]]
+    assert "Cheffe de site" in texts[covers[1] + 1]
+    assert "CANDIDATE" not in " ".join(texts)
     assert not next(row for row in rows(client) if row["id"] == "T2")["ready"]
 
 
-@pytest.mark.parametrize("key", ["candidate_info_sheet", "desp_exam_sworn_statement", "project", "elearning"])
+@pytest.mark.parametrize("key", [key for key, _ in GROUPS])
 def test_each_missing_component_blocks_ui_and_direct_download(portal, key):
     client = seed(portal)
     data = json.loads(portal[1].read_text())
@@ -72,6 +92,10 @@ def test_each_missing_component_blocks_ui_and_direct_download(portal, key):
         certificate_path(host, data["sessions"][0], trainee).unlink()
     elif key == "project":
         trainee.pop(projects.KEY)
+    elif key == "candidate_info_sheet":
+        trainee.pop("candidate_sheet")  # The old upload is still there.
+    elif key == "professional_experience_sheet":
+        trainee.pop(key)
     else:
         trainee["documents"] = [d for d in trainee["documents"] if d["key"] != key]
     portal[1].write_text(json.dumps(data))
@@ -98,20 +122,78 @@ def test_one_project_pdf_is_sufficient_and_late_deletion_is_rechecked(portal):
     client = seed(portal)
     upload(portal, remove_2="1")
     assert first(client)["ready"]
-    assert len(PdfReader(BytesIO(download(client).data)).pages) == 4
+    pages = PdfReader(BytesIO(download(client).data)).pages
+    assert sum("PIÈCE " in p.extract_text() for p in pages) == 5
+    assert not any("Document 1 sur 2" in p.extract_text() for p in pages)
     Path(host._detokenize_path(projects.documents(person(portal))[0]["file"])).unlink()
     assert download(client).status_code == 409
 
 
-def test_saved_online_sheet_is_exported_with_every_value(portal):
-    client = seed(portal, online=True)
+def test_saved_online_form_supplies_all_fields_even_with_a_stale_upload(portal):
+    from lxml import html
+
+    client = seed(portal)
+    form = html.fromstring(client.get("/espace/PUB-T1/fiche-candidat").data).forms[0]
+    values = {name: "Valeur" + str(i) for i, name in enumerate(form.fields.keys(), 1)}
+    values.update(financing="CPF + France Travail", situation="Salarié", interviewer="Clément VAILLANT")
+    assert client.post(form.action, data=values).status_code == 302
     assert first(client)["ready"]
     result = download(client)
     assert result.status_code == 200
     pages = PdfReader(BytesIO(result.data)).pages
-    assert "Élodie" in pages[0].extract_text() and "Sécurité" in pages[0].extract_text()
-    assert pages[-4].extract_text().strip() == "ATTESTATION"
-    assert pages[-2].extract_text().strip() == "PROJECT TWO"
+    text = " ".join(pages[2].extract_text().split())
+    for value in values.values():
+        assert value in text
+    assert "DOSSIER CANDIDAT" in text and "SCOTIA FORMATION" in text
+    assert "ENREGISTRER" not in text
+    assert "CANDIDATE" not in text
+
+
+def test_experience_and_project_keep_all_pages_and_the_saved_signature(portal):
+    from reportlab.pdfgen.canvas import Canvas
+
+    client = seed(portal)
+    data = json.loads(portal[1].read_text())
+    trainee = data["sessions"][0]["trainees"][0]
+    sheet = trainee["professional_experience_sheet"]
+    sheet["experiences"] = [dict(sheet["experiences"][0], job_title=f"Poste numéro {i}") for i in range(1, 6)]
+    sheet["signature"] = "Signature enregistrée"
+    portal[1].write_text(json.dumps(data))
+    path = Path(host._detokenize_path(projects.documents(trainee)[0]["file"]))
+    canvas = Canvas(str(path))
+    for value in ("PROJECT PAGE ONE", "PROJECT PAGE TWO"):
+        canvas.drawString(40, 700, value)
+        canvas.showPage()
+    canvas.save()
+    pages = [p.extract_text() for p in PdfReader(BytesIO(download(client).data)).pages]
+    experience = "".join(pages[next(i for i, txt in enumerate(pages) if "PIÈCE 02" in txt) + 1:
+                               next(i for i, txt in enumerate(pages) if "PIÈCE 03" in txt)])
+    assert all(f"Poste numéro {i}" in experience for i in range(1, 6))
+    assert "Signature enregistrée" in experience
+    index = next(i for i, text in enumerate(pages) if "Document 1 sur 2" in text)
+    assert [page.strip() for page in pages[index + 1:index + 3]] == ["PROJECT PAGE ONE", "PROJECT PAGE TWO"]
+
+
+def test_legacy_initial_session_can_complete_both_online_forms(portal):
+    data = json.loads(portal[1].read_text())
+    data["sessions"][0].update(training_type="DESP INITIAL", date_start="2026-05-01")
+    portal[1].write_text(json.dumps(data))
+    client = portal[0]
+    candidate_form = client.get("/espace/PUB-T1/fiche-candidat")
+    assert candidate_form.status_code == 200
+    assert 'value="FORMATION INITIALE"' in candidate_form.get_data(as_text=True)
+    assert client.post("/espace/PUB-T1/fiche-candidat/enregistrer", data={"last_name": "DUPRÉ"}).status_code == 302
+    assert "data-pro-sheet-open" in client.get("/espace/PUB-T1").get_data(as_text=True)
+    response = client.post("/espace/PUB-T1/fiche-experience-professionnelle", json={
+        "current_situation": "employed", "qualification_level": "bac", "qualification_since": "2016-01-01",
+        "last_certification": "Bac", "validation_name": "Élodie DUPRÉ", "validation_date": "2026-05-02",
+        "certified": True, "experiences": [{"job_title": "Cheffe de site", "company_name": "Exemple",
+            "start_date": "2017-01-01", "current_job": True, "work_time_percent": "100",
+            "contract_type": "cdi", "executive_status": "yes"}],
+    })
+    assert response.status_code == 200
+    states = {doc["key"]: doc["available"] for doc in first(admin(portal))["documents"]}
+    assert states["candidate_info_sheet"] and states["professional_experience_sheet"]
 
 
 def test_png_attestation_is_converted(portal):
@@ -122,7 +204,9 @@ def test_png_attestation_is_converted(portal):
     data["sessions"][0]["trainees"][0]["documents"][1].update(file=path.name, files=[])
     portal[1].write_text(json.dumps(data))
     assert first(client)["ready"]
-    assert len(PdfReader(BytesIO(download(client).data)).pages) == 5
+    pages = PdfReader(BytesIO(download(client).data)).pages
+    index = next(i for i, page in enumerate(pages) if "PIÈCE 03" in page.extract_text())
+    assert pages[index + 1].images and "Projet de cadrage" in pages[index + 2].extract_text()
 
 
 def test_auth_cancelled_other_training_and_tenant_access(portal, monkeypatch):

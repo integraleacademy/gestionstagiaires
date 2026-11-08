@@ -15,8 +15,8 @@
       <p data-certificate-list-status role="status"></p><div data-certificate-list></div>
     </section>
     <section hidden data-exam-panel="scotia" data-desp-scotia-url="{{ url_for('api_desp_scotia', session_id=jury_session.id) }}">
-      <div class="exam-summary"><div><h3>Dossier SCOTIA</h3><p class="exam-muted">Un seul PDF par stagiaire : fiche candidat, attestation sur l’honneur, projet de cadrage (1 ou 2 PDF) et attestation e-learning.</p></div><button type="button" class="btn btn-outline" data-scotia-refresh>Actualiser les pièces</button></div>
-      <p class="exam-note">Le téléchargement est disponible uniquement lorsque les quatre éléments sont présents et lisibles.</p>
+      <div class="exam-summary"><div><h3>Dossier SCOTIA</h3><p class="exam-muted">Chaque dossier comprend une couverture et une page de garde nominative avant chaque document.</p></div><button type="button" class="btn btn-outline" data-scotia-refresh>Actualiser les pièces</button></div>
+      <p class="exam-note">Le téléchargement est disponible uniquement lorsque la fiche candidat, la fiche d’expérience professionnelle, l’attestation sur l’honneur, le projet de cadrage et l’attestation e-learning sont réunis.</p>
       <p data-scotia-status role="status" aria-live="polite"></p>
       <div data-scotia-candidates></div>
     </section>

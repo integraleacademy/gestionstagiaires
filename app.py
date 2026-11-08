@@ -13286,13 +13286,13 @@ def required_docs_for_training(training_type: str, trainee: Optional[Dict[str, A
         docs += list(REQUIRED_DOCS["A3P_ONLY"])
     if tt.startswith("SSIAP"):
         docs += list(REQUIRED_DOCS["SSIAP_ONLY"])
-    if tt in {"DIRIGEANT INITIAL", "DIRIGEANT VAE"}:
+    if _is_dirigeant_candidate_sheet_training(tt):
         docs += list(REQUIRED_DOCS["DIRIGEANT_CANDIDATE_SHEET"])
     if tt.startswith("DIRIGEANT"):
         docs += list(REQUIRED_DOCS["DIRIGEANT_DIPLOMA"])
         if bool((trainee or {}).get("no_bac_diploma")):
             docs += list(REQUIRED_DOCS["DIRIGEANT_NO_BAC_PREREQUIS"])
-    if tt == "DIRIGEANT INITIAL":
+    if tt in {"DIRIGEANT INITIAL", "DESP INITIAL"}:
         docs += list(REQUIRED_DOCS["DIRIGEANT_INITIAL_ONLY"])
     if tt == "DIRIGEANT VAE":
         docs += list(REQUIRED_DOCS["DIRIGEANT_VAE_ONLY"])
@@ -13302,7 +13302,8 @@ def required_docs_for_training(training_type: str, trainee: Optional[Dict[str, A
 
 
 def _is_dirigeant_candidate_sheet_training(training_type: str) -> bool:
-    return (training_type or "").strip().upper() in {"DIRIGEANT INITIAL", "DIRIGEANT VAE"}
+    kind = (training_type or "").strip().upper()
+    return kind == "DIRIGEANT VAE" or kind in desp_jury_projects.INITIAL_TYPES
 
 
 def _is_adef_training(training_type: str) -> bool:
@@ -13525,6 +13526,12 @@ def _professional_experience_sheet_is_required(
     if not start_datetime:
         return False
     return start_datetime.date() > PROFESSIONAL_EXPERIENCE_SHEET_START_DATE
+
+
+def _professional_experience_sheet_is_available(session_obj: Dict[str, Any]) -> bool:
+    return _professional_experience_sheet_is_required(
+        _session_get(session_obj, "training_type", ""), _session_get(session_obj, "date_start", "")
+    ) or desp_jury_projects.supported(sys.modules[__name__], session_obj)
 
 
 def _professional_experience_sheet_is_submitted(trainee: Dict[str, Any]) -> bool:
@@ -34592,7 +34599,7 @@ def public_trainee_space(token):
 
     show_hosting = ((training_type or "").strip().upper() == "A3P")
     show_vae = ("VAE" in (training_type or "").upper())
-    show_professional_experience_sheet = _professional_experience_sheet_is_required(training_type, _session_get(s, "date_start", ""))
+    show_professional_experience_sheet = _professional_experience_sheet_is_available(s)
     show_vtc = ("VTC" in (training_type or "").upper())
     vtc_appointment = _vtc_practice_appointment(s, t) if show_vtc else {}
     vtc_dates = {
@@ -34833,7 +34840,7 @@ def public_professional_experience_sheet_submit(token: str):
         return jsonify({"ok": False, "message": "Votre session a expiré. Veuillez vous reconnecter."}), 401
 
     training_type = str(_session_get(session_obj, "training_type", "") or "")
-    if not _professional_experience_sheet_is_required(training_type, _session_get(session_obj, "date_start", "")):
+    if not _professional_experience_sheet_is_available(session_obj):
         abort(404)
     if _professional_experience_sheet_is_submitted(trainee):
         return jsonify({
@@ -35020,11 +35027,16 @@ def admin_professional_experience_sheet_print(session_id: str, trainee_id: str):
     if not session_obj or not trainee or not sheet:
         abort(404)
 
+    return _render_professional_experience_sheet(session_obj, trainee, sheet)
+
+
+def _render_professional_experience_sheet(session_obj, trainee, sheet, *, print_logo=""):
     return render_template(
         "admin_professional_experience_sheet_print.html",
         session=session_obj,
         trainee=trainee,
         sheet=sheet,
+        print_logo=print_logo,
         situation_labels={
             "training": "En formation",
             "employed": "En emploi",
@@ -40759,7 +40771,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         training_dates=_trainee_training_session(s, t),
         trainee=t,
         show_vae=show_vae,
-        show_professional_experience_sheet=_professional_experience_sheet_is_required(training_type, _session_get(s, "date_start", "")),
+        show_professional_experience_sheet=_professional_experience_sheet_is_available(s),
         show_candidate_sheet=show_candidate_sheet,
         vae_steps=vae_steps,
         vae_dossier=vae_dossier,
@@ -53399,7 +53411,7 @@ def _build_candidate_sheet_data(session_data: Dict[str, Any], trainee_data: Dict
         return str(value or "").strip()
 
     training_type = (_session_get(session_data, "training_type", "") or "").strip().upper()
-    default_formation_type = "FORMATION INITIALE" if training_type == "DIRIGEANT INITIAL" else "Validation des acquis de l'expérience (VAE)"
+    default_formation_type = "FORMATION INITIALE" if training_type in desp_jury_projects.INITIAL_TYPES else "Validation des acquis de l'expérience (VAE)"
 
     payload = {
         "formation_type": default_formation_type,
