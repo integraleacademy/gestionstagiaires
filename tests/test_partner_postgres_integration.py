@@ -74,6 +74,18 @@ class PartnerPostgresIntegrationTests(unittest.TestCase):
         self.assertEqual(version, 1)
         self.assertEqual(self.store.load_bundle(self.partner_a)[0], bundle)
 
+    def test_rejected_business_mutation_preserves_error_and_bundle(self):
+        self.store.create_bundle(self.partner_a, self.bundle(self.partner_a))
+        previous = self.store.load_bundle(self.partner_a)
+
+        def reject(current):
+            current["sessions"].clear()
+            raise ValueError("Le paiement est en cours de vérification.")
+
+        with self.assertRaisesRegex(ValueError, "paiement"):
+            self.store.mutate_bundle(self.partner_a, reject)
+        self.assertEqual(self.store.load_bundle(self.partner_a), previous)
+
     def test_stale_write_is_rejected_and_other_tenant_unchanged(self):
         for partner_id in (self.partner_a, self.partner_b):
             self.store.import_bundle(partner_id, self.bundle(partner_id), source_checksum="initial")

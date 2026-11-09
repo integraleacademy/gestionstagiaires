@@ -741,11 +741,17 @@ def process_order(host, pid, oid):
         _mutate(host, pid, oid, release)
 
 
-def queue_again(host, pid, oid, *, throttle=False):
+def queue_again(host, pid, oid, *, throttle=False, retry_cancellation=False):
     def change(order):
-        if order.get("status") in {"draft", "cancelled"} or order.get("cancellation_requested_at"):
+        if order.get("status") in {"draft", "cancelled"}:
             return {}
         state = order.setdefault("commerce", {})
+        if order.get("cancellation_requested_at"):
+            # Only staff may expedite the currently queued cancellation. The
+            # remaining batches of a group must wait for their predecessor.
+            if retry_cancellation and state.get("queued") and state.get("lease_until", 0) <= time.time():
+                state["next_attempt"] = 0
+            return {}
         if throttle and state.get("refresh_requested_at", 0) > time.time() - 60:
             return {}
         if state.get("lease_until", 0) <= time.time():

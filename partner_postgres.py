@@ -264,6 +264,9 @@ class PartnerPostgresStore:
     ) -> Iterator[Tuple[Any, Any]]:
         self.ensure_schema()
         pool = self._ensure_pool()
+        # Import only after the pool is available, just like the driver itself.
+        from psycopg import Error as DatabaseError
+
         try:
             with pool.connection(timeout=self.timeout_seconds) as connection:
                 with connection.transaction():
@@ -277,9 +280,9 @@ class PartnerPostgresStore:
                             (str(partner_id or ""),),
                         )
                         yield connection, cursor
-        except PartnerPostgresError:
-            raise
-        except Exception as exc:
+        except (DatabaseError, OSError) as exc:
+            # Validation errors and HTTP conflicts raised by business callbacks
+            # have already rolled back and must reach their caller unchanged.
             # Do not include the DSN or driver message: both can expose secrets.
             raise PartnerPostgresUnavailable(
                 "Opération PostgreSQL partenaires indisponible."

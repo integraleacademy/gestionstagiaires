@@ -50,7 +50,8 @@ def _unpaid_batch(order):
             and state.get("invoice_status") in (None, "", "draft", "unpaid")
             and state.get("payment_status") in (None, "", "unpaid")
             and state.get("payment_link_status") not in {"processing", "paid"}
-            and not state.get("paid_cents") and not state.get("confirmed_invoice_payment"))
+            and not state.get("paid_cents") and not state.get("confirmed_invoice_payment")
+            and not state.get("confirmed_payment"))
 
 
 def group_view(data, group):
@@ -162,9 +163,9 @@ class CancellationBlocked(Exception):
 def process_cancellation(host, order):
     """Cancel under the merchant lease; archive only after provider confirmation.
 
-    Qonto API: POST client_invoices/{id}/mark_as_canceled (unpaid only),
-    PATCH payment_links/{id}/deactivate. No provider call is made in a tenant
-    request; all invoice/link identities and amounts are checked before mutation.
+    Qonto closes invoice links when it cancels the unpaid invoice. Only a
+    standalone basket link is deactivated directly. Check for payments before
+    cancellation and re-read the closed links before replacing the order.
     """
     def payment_guard(link):
         if order["commerce"].get("flow") == "payment_first":
@@ -279,24 +280,16 @@ def process_cancellation(host, order):
         for link in links:
             payment_guard(link)
         for link in links:
-            if link.get("status") == "open":
+            if not link.get("invoice_id") and link.get("status") == "open":
                 commerce._save(host, order, status="cancellation_pending")
                 host._qonto_request("PATCH", f"/v2/payment_links/{link['id']}/deactivate", idempotency_key="elearning-cancel-link-" + link["id"])
-            response = host._qonto_request("GET", "/v2/payment_links/" + link["id"])
-            current_link = response.get("payment_link") or response
-            if current_link.get("id") != link["id"]:
-                raise commerce.ReviewRequired("Le lien annulé n’a pas pu être vérifié.")
-            payment_guard(current_link)
-            if current_link.get("status") not in {"canceled", "expired"}:
-                raise commerce.ReviewRequired("La désactivation du lien de paiement reste à confirmer.")
-            commerce._save(host, order, payment_url="", payment_link_status=current_link["status"])
         if invoice and invoice.get("status") == "draft":
             # Draft invoices have no accounting effect and cannot be marked canceled.
             commerce._save(host, order, invoice_deletion_started=host._now_iso())
             host._qonto_request("DELETE", "/v2/client_invoices/" + invoice["id"], idempotency_key="elearning-cancel-draft-" + order["id"])
             commerce._save(host, order, invoice_status="canceled", invoice_cancelled_at=host._now_iso())
         elif invoice:
-            # Re-read after closing checkout links to catch payment races.
+            # Recheck the invoice immediately before asking Qonto to close it.
             invoice = host._qonto_invoice_payload(host.get_qonto_invoice(invoice["id"]))
             invoice_guard(invoice)
             if invoice.get("status") == "unpaid":
@@ -306,6 +299,15 @@ def process_cancellation(host, order):
             invoice_guard(invoice)
             if invoice.get("status") != "canceled":
                 raise commerce.ReviewRequired("L’annulation de la facture reste à confirmer.")
+        for link in links:
+            response = host._qonto_request("GET", "/v2/payment_links/" + link["id"])
+            current_link = response.get("payment_link") or response
+            if current_link.get("id") != link["id"]:
+                raise commerce.ReviewRequired("Le lien annulé n’a pas pu être vérifié.")
+            payment_guard(current_link)
+            if current_link.get("status") not in {"canceled", "expired"}:
+                raise commerce.ReviewRequired("La désactivation du lien de paiement reste à confirmer.")
+            commerce._save(host, order, payment_url="", payment_link_status=current_link["status"])
         def finish(data):
             current = commerce._find(data, order["partner_id"], order["id"])
             if not current or current.get("commerce", {}).get("lease_token") != order["commerce"]["lease_token"] or not current.get("cancellation_requested_at"):
@@ -331,6 +333,8 @@ def process_cancellation(host, order):
     except CancellationBlocked as exc:
         terminate_request(str(exc))
     except Exception as exc:
+        host.app.logger.warning("elearning_cancellation_pending order=%s error=%s http_status=%s",
+                                order["id"], type(exc).__name__, getattr(exc, "status_code", None))
         message = str(exc) if isinstance(exc, commerce.ReviewRequired) else "La suppression est en attente de vérification du paiement. Elle sera réessayée automatiquement."
         commerce._save(host, order, status="cancellation_pending", error=message, queued=True,
                        next_attempt=time.time() + min(60 * 2 ** min(order["commerce"].get("attempts", 1), 6), 3600), lease_until=0)
