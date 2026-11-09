@@ -550,13 +550,14 @@ def test_previous_billing_never_leaks_across_organisms(shop):
     assert billing_fields(other, other_group) == {"address": "", "postal_code": "", "city": ""}
 
 
-def cancellation_provider(monkeypatch, merchant, *, lose_cancel_response=False):
+def cancellation_provider(monkeypatch, merchant, *, lose_cancel_response=False, close_invoice_link=True):
     """Extend the existing isolated merchant with the two cancellation calls."""
     original = host._qonto_request
     state = {"lost": False}
     def request(method, path, payload=None, params=None, **kwargs):
         if method == "PATCH" and path == "/v2/payment_links/link-1/deactivate":
             assert not host.has_request_context()
+            assert not merchant["payment"].get("invoice_id"), "Qonto closes invoice links through the invoice"
             merchant["calls"].append((method, path, copy.deepcopy(payload), copy.deepcopy(params), kwargs))
             merchant["payment"]["status"] = "canceled"
             return {"payment_link": copy.deepcopy(merchant["payment"])}
@@ -564,6 +565,8 @@ def cancellation_provider(monkeypatch, merchant, *, lose_cancel_response=False):
             assert not host.has_request_context()
             merchant["calls"].append((method, path, copy.deepcopy(payload), copy.deepcopy(params), kwargs))
             merchant["invoice"]["status"] = "canceled"
+            if close_invoice_link and merchant["payment"].get("invoice_id") == merchant["invoice"]["id"]:
+                merchant["payment"]["status"] = "canceled"
             if lose_cancel_response and not state["lost"]:
                 state["lost"] = True
                 raise RuntimeError("Provider accepted cancellation before response timeout")
@@ -599,6 +602,7 @@ def test_invoiced_group_is_visible_until_remote_invoice_and_payment_link_are_can
     assert cancelled["status"] == "cancelled" and not cancelled["commerce"]["queued"]
     assert record(shop, url).get("deleted_at") and shop["client"].get(url).status_code == 404
     assert merchant["invoice"]["status"] == merchant["payment"]["status"] == "canceled"
+    assert not any(path.endswith("/deactivate") for _, path, *_ in merchant["calls"])
     assert cancelled["commerce"]["invoice_id"] == order["commerce"]["invoice_id"]
     for key in ("learners", "modules", "billing", "total_cents", "reference"):
         assert cancelled[key] == order[key]
@@ -706,10 +710,14 @@ def test_multiple_batches_cancel_in_sequence_and_a_late_payment_preserves_the_gr
             if pieces[-1] == "payments" and method == "GET":
                 return {"payments": [], "meta": {"total_pages": 1}}
             if pieces[-1] == "deactivate" and method == "PATCH":
+                assert not resource.get("invoice_id")
                 resource["status"] = "canceled"
                 return {"payment_link": copy.deepcopy(resource)}
             if pieces[-1] == "mark_as_canceled" and method == "POST":
                 resource["status"] = "canceled"
+                for link in links.values():
+                    if link.get("invoice_id") == resource["id"]:
+                        link["status"] = "canceled"
                 return {"client_invoice": copy.deepcopy(resource)}
             raise AssertionError((method, path))
         return original(method, path, payload=payload, params=params, **kwargs)
@@ -760,6 +768,26 @@ def amendment_fields(shop, url, people):
     return fields
 
 
+def test_replacement_waits_until_qonto_confirms_the_invoice_link_closed(shop, merchant, monkeypatch):
+    url, order = billed_group(shop, merchant)
+    cancellation_provider(monkeypatch, merchant, close_invoice_link=False)
+    edit = url + "/commandes/" + order["id"] + "/modifier"
+    fields = amendment_fields(shop, url, [person("emma@example.test", "Emma")])
+    assert shop["client"].post(edit, data=fields).status_code == 303
+    run(order)
+    assert merchant["invoice"]["status"] == "canceled" and merchant["payment"]["status"] == "open"
+    assert len(purchases(shop)) == 1 and record(shop, url)["roster_amendment"]
+    assert not learning.status_view(purchases(shop)[0])["checkout_url"]
+    merchant["payment"]["status"] = "expired"
+    next_attempt = purchases(shop)[0]["commerce"]["next_attempt"]
+    monkeypatch.setattr(time, "time", lambda: next_attempt + 1)
+    run(order)
+    run(order)
+    old, new = purchases(shop)
+    assert old["replaced_by_order_id"] == new["id"]
+    assert sum(path.endswith("/mark_as_canceled") for _, path, *_ in merchant["calls"]) == 1
+
+
 def test_partner_amends_invoiced_roster_after_verified_cancellation(shop, merchant, monkeypatch):
     url, order = billed_group(shop, merchant)
     cancellation_provider(monkeypatch, merchant, lose_cancel_response=True)
@@ -778,11 +806,20 @@ def test_partner_amends_invoiced_roster_after_verified_cancellation(shop, mercha
     assert client.post(url + "/supprimer", data=deletion_fields(shop, url)).status_code == 409
     assert client.post(url + "/enregistrer", data=save_fields(shop, url, [])).status_code == 400
     assert len(purchases(shop)) == 1 and record(shop, url)["learners"] == before["learners"]
+    assert "La commande mise à jour comptera 2 accès" in client.get(url).text
     assert not learning.status_view(purchases(shop)[0])["checkout_url"]
     run(order)
     assert len(purchases(shop)) == 1
     state = purchases(shop)[0]["commerce"]
-    monkeypatch.setattr(time, "time", lambda: max(state["next_attempt"], state["lease_until"]) + 1)
+    order_url = ROOT + "/commandes/" + order["id"]
+    assert state["next_attempt"] > time.time()
+    assert client.post(order_url + "/actualiser", data={"csrf_token": csrf(client, order_url)}).status_code == 303
+    assert purchases(shop)[0]["commerce"]["next_attempt"] == state["next_attempt"]
+    staff = host.app.test_client()
+    with staff.session_transaction() as session:
+        session.update(admin_logged_in=True, admin_role="super_admin")
+    assert staff.post(order_url + "/actualiser", data={"csrf_token": csrf(staff, order_url)}).status_code == 303
+    assert purchases(shop)[0]["commerce"]["next_attempt"] == 0
     run(order)
     old, new = purchases(shop)
     assert old["status"] == "cancelled" and old["learners"] == order["learners"]

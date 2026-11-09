@@ -13,7 +13,9 @@
   {{ errors_box(errors) }}
   {% if group.get('roster_amendment') %}
     <section class="notice warning" role="status"><strong>Modification de la liste en cours</strong>
-      <p>Nous vérifions l’ancien paiement. La liste et le montant seront actualisés dès la fin de cette vérification.</p>
+      {% set count = group.roster_amendment.learners|length %}
+      <p>Votre modification est enregistrée. Le paiement est suspendu le temps de vérifier les règlements et de fermer l’ancienne commande.
+      {% if count %}La commande mise à jour comptera {{ count }} accès.{% else %}Tous les participants de cette commande ont été retirés. Aucune nouvelle commande ne sera créée.{% endif %}</p>
       <a class="text-link" href="{{ url_for('manuals_shop.elearning_group', gid=group.id) }}">Actualiser le groupe</a>
     </section>
   {% endif %}

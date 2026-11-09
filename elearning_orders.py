@@ -617,7 +617,8 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         if session.get("admin_role") == "viewer" or not (host._is_super_admin_session() or host._is_external_partner_session()):
             abort(403)
         order = find(host.load_data(), oid)
-        commerce.queue_again(host, order["partner_id"], oid, throttle=not host._is_super_admin_session())
+        staff = host._is_super_admin_session() and not session.get("assist_partner_id")
+        commerce.queue_again(host, order["partner_id"], oid, throttle=not staff, retry_cancellation=staff)
         kick_worker()
         if request.accept_mimetypes.best == "application/json":
             current = find(host.load_data(run_background_tasks=False), oid)
