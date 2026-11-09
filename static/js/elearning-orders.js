@@ -101,25 +101,37 @@
     const course = document.getElementById('el-course-code');
     const status = document.getElementById('el-save-status');
     const review = document.getElementById('el-review-button');
+    const draftEstimate = document.getElementById('el-draft-estimate');
+    const countLabel = document.getElementById('el-count');
+    const totalLabel = document.getElementById('el-total');
     const max = Number(roster.dataset.maxLearners) - Number(roster.dataset.lockedCount);
     let dirty = roster.dataset.unsaved === 'true';
     let submitting = false;
     const rows = () => people ? [...people.querySelectorAll('.el-person')] : [];
     const visibleInputs = row => [...row.querySelectorAll('input:not([type="hidden"])')];
     const filled = row => visibleInputs(row).some(input => input.value.trim());
-    const showDirty = () => { dirty = true; status.classList.add('is-dirty'); status.textContent = 'Modifications à enregistrer'; };
+    const showDirty = () => {
+      dirty = true;
+      status.hidden = false;
+      status.classList.add('is-dirty');
+      status.textContent = 'Modifications à enregistrer';
+    };
     const update = () => {
       const list = rows();
       const count = list.filter(filled).length;
       const selected = course?.selectedOptions[0];
       const rawPrice = selected ? selected.dataset.price : roster.dataset.price ?? '';
       const price = rawPrice === '' ? null : Number(rawPrice);
-      document.getElementById('el-count').textContent = String(count);
-      document.getElementById('el-total').textContent = price === null ? 'Tarif à définir' : price === 0 ? 'Gratuit' : money.format(price * count / 100);
+      if (countLabel) countLabel.textContent = String(count);
+      if (totalLabel) {
+        const estimate = price === null ? 'Tarif à définir' : price === 0 ? 'Gratuit' : money.format(price * count / 100);
+        totalLabel.textContent = draftEstimate && !count ? '—' : estimate;
+      }
+      if (draftEstimate) draftEstimate.hidden = !count;
       const counter = document.getElementById('el-roster-count');
       if (counter) counter.textContent = count + ' à préparer';
       if (add) { add.disabled = list.length >= max; add.title = add.disabled ? 'Ce groupe peut contenir jusqu’à 100 stagiaires.' : ''; }
-      review.disabled = review.dataset.salesPaused === 'true' || (count === 0 && roster.dataset.amendment !== 'true') || roster.dataset.conflict === 'true' || roster.dataset.pendingDeletion === 'true';
+      if (review) review.disabled = review.dataset.salesPaused === 'true' || (count === 0 && roster.dataset.amendment !== 'true') || roster.dataset.conflict === 'true' || roster.dataset.pendingDeletion === 'true';
       const seen = new Set();
       list.forEach((row, index) => {
         row.querySelector('.el-row-number').textContent = String(index + 1);
@@ -153,6 +165,7 @@
       update();
       if (!roster.checkValidity()) { event.preventDefault(); roster.reportValidity(); return; }
       submitting = true;
+      status.hidden = false;
       status.classList.remove('is-dirty'); status.textContent = 'Enregistrement en cours…';
       // Keep submit buttons enabled: the clicked name=next value belongs in the request.
     });

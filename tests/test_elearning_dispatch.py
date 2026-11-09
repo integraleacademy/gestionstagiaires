@@ -122,7 +122,8 @@ def test_group_distinguishes_paid_batch_from_new_unpaid_participants(shop, merch
     save(shop, group_url, [person()])
     first = confirm(shop, group_url)
     run(first)
-    assert "Envoyer les accès e-learning aux stagiaires" in client.get(group_url).text
+    waiting = client.get(group_url).text
+    assert 'data-el-pay ' in waiting and f'action="{ROOT}{first["id"]}/envoyer-acces"' not in waiting
     mark_paid(merchant)
     retry(first)
     ready = client.get(group_url).text

@@ -54,15 +54,48 @@ def _unpaid_batch(order):
             and not state.get("confirmed_payment"))
 
 
+def _group_order_summary(order):
+    delivery = learning.status_view(order)
+    commerce_state = order.get("commerce", {})
+    total = order.get("total_cents")
+    paid = commerce_state.get("paid_cents")
+    payment = delivery["payment_status"]
+    balance = None
+    if order.get("cancellation_requested_at"):
+        state = "suspended"
+    elif delivery["paid"]:
+        state = "free" if order.get("free_snapshot") else "paid"
+        balance = 0
+    elif type(total) is not int or total <= 0:
+        state = "unavailable"
+    elif payment == "partially_paid" or (type(paid) is int and 0 < paid < total):
+        state = "partial"
+        # A disputed basket capture may have no reliable amount yet.
+        if type(paid) is int and 0 < paid < total:
+            balance = total - paid
+    elif (payment in {"processing", "paid"} or delivery["invoice_status"] == "paid"
+          or delivery["payment_link_status"] in {"processing", "paid"}
+          or commerce_state.get("confirmed_payment") or (type(paid) is int and paid >= total)):
+        state = "verifying"
+    elif delivery["checkout_url"]:
+        state, balance = "available", total
+    elif (delivery["status"] in {"needs_setup", "needs_review", "retry"}
+          or delivery["payment_link_status"] in {"expired", "canceled"}):
+        state = "unavailable"
+    else:
+        state, balance = "preparing", total
+    return {"order": order, "delivery": delivery, "payment_state": state, "balance_cents": balance}
+
+
 def group_view(data, group):
     """Derive payment state from purchase snapshots, never from roster input."""
     orders = group_orders(data, group)
+    current_orders = [o for o in orders if o.get("status") not in {"draft", "cancelled"}
+                      and (o.get("cancellation_requested_at") or o.get("commerce", {}).get("invoice_status") != "canceled")]
     editable_orders = {o["id"] for o in orders if _unpaid_batch(o)} if not (
         group.get("deletion_requested_at") or group.get("roster_amendment")) else set()
     reservations = {}
-    for order in orders:
-        if order.get("status") in {"draft", "cancelled"} or (order.get("commerce", {}).get("invoice_status") == "canceled" and not order.get("cancellation_requested_at")):
-            continue
+    for order in current_orders:
         for person in order.get("learners", []):
             reservations.setdefault(person["id"], (order, person))
     result = copy.deepcopy(group)
@@ -81,8 +114,7 @@ def group_view(data, group):
     result.update(learners=people, pending_learners=pending, orders=orders, editable_orders=editable_orders,
                   pending_count=len(pending), active_count=sum(p["status"] == "active" for p in people),
                   waiting_count=sum(p["locked"] and p["status"] != "active" for p in people),
-                  dispatch_orders=[{"order": order, "delivery": learning.status_view(order)} for order in orders
-                                   if order.get("status") not in {"draft", "cancelled"} and order.get("commerce", {}).get("invoice_status") != "canceled"],
+                  dispatch_orders=[_group_order_summary(order) for order in current_orders],
                   total_count=len(people), can_change_course=not orders,
                   deletion_pending=bool(group.get("deletion_requested_at")), deletion_error=group.get("deletion_error", ""),
                   can_delete=not group.get("roster_amendment") and not group.get("deletion_requested_at") and not deletion_block_reason(orders),
@@ -468,8 +500,8 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         view["progress"] = group_progress(host, view)
         view["presence"] = presence(view)
         return page("elearning_group.html", partner=partner, courses=learning.prices(partner), group=view,
-                    errors=errors or [], values=values if values is not None else group,
-                    rows=rows if rows is not None else view["pending_learners"])
+                    is_read_only=session.get("admin_role") == "viewer", errors=errors or [],
+                    values=values if values is not None else group, rows=rows if rows is not None else view["pending_learners"])
 
     def review(data, partner, group, *, errors=None, values=None, status=200):
         view = group_view(data, group)
@@ -553,11 +585,14 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         group, order = selection(data)
         rows = order["learners"]
         removed = None
+        add_row = False
         error = None
         if request.method == "GET":
             removed = next((p for p in rows if p["id"] == request.args.get("retirer")), None)
             if removed:
                 rows = [p for p in rows if p["id"] != removed["id"]]
+            elif request.args.get("ajouter") == "1":
+                add_row = group.get("mode") != "individual" and len(group["learners"]) < learning.MAX_LEARNERS
         else:
             check_csrf()
             expected = _revision(request.form)
@@ -600,7 +635,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
                 flash(result["message"], "success")
                 return redirect(url_for("manuals_shop.elearning_group", gid=gid), code=303)
         return page("elearning_group_amend.html", group=group, order=order, partner=partner,
-                    rows=rows, removed=removed, errors=[error] if error else []), 400 if error else 200
+                    rows=rows, removed=removed, add_row=add_row, errors=[error] if error else []), 400 if error else 200
 
     @bp.post("/admin/organisme/e-learning/groupes/<gid>/supprimer")
     @customer

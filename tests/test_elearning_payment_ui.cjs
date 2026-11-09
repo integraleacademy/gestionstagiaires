@@ -22,7 +22,7 @@ class Element {
   close() { if (this.open) { this.open = false; this.trigger('close'); } }
   querySelector(selector) { return (this.nodes ||= {})[selector] ||= new Element(); }
 }
-function boot({free = false, failure = false, valid = true, blocked = false, payLink = false} = {}) {
+function boot({free = false, failure = false, valid = true, blocked = false, payLink = false, group = false} = {}) {
   const events = [], timers = new Map(), watchers = new Map();
   let timerId = 0;
   const form = new Element(); form.action = root + '/confirmer'; form.dataset.elFree = String(free); form.checkValidity = () => valid;
@@ -30,8 +30,20 @@ function boot({free = false, failure = false, valid = true, blocked = false, pay
   form.querySelector('[name="csrf_token"]').value = 'csrf-test';
   form.dataset.elStatus = urls.status_url; form.dataset.elConfirmation = urls.confirmation_url; form.dataset.elRefresh = urls.refresh_url;
   const link = new Element(); link.closest = () => form;
+  const groupLinks = group ? ['order-A', 'order-B'].map(id => {
+    const orderPath = root.replace('order-1', id);
+    const section = new Element();
+    section.dataset = {elOrder: orderPath, elStatusUrl: orderPath + '/statut', elConfirmation: orderPath + '/confirmation',
+      elRefresh: orderPath + '/actualiser', elCsrf: 'csrf-test'};
+    const pay = new Element();
+    pay.closest = () => section;
+    return pay;
+  }) : [];
   const document = new Element(); document.hidden = false; document.body = new Element(); document.activeElement = new Element();
-  document.querySelectorAll = selector => selector === '[data-el-checkout]' && !payLink ? [form] : selector === '[data-el-pay]' && payLink ? [link] : [];
+  document.querySelectorAll = selector => {
+    if (selector === '[data-el-pay]') return group ? groupLinks : payLink ? [link] : [];
+    return selector === '[data-el-checkout]' && !payLink && !group ? [form] : [];
+  };
   document.createElement = tag => new Element(tag);
   const state = {current: ready, blocked, auth: false, network: false};
   const popups = [];
@@ -58,7 +70,7 @@ function boot({free = false, failure = false, valid = true, blocked = false, pay
   vm.runInNewContext(source, {document, window, location, URL, Date, Object, FormData: class {constructor() { this.data = {}; } append(k, v) { this.data[k] = v; } get(k) { return this.data[k]; }}, fetch,
     clearTimeout(id) { timers.delete(id); }, setTimeout(fn) { timers.set(++timerId, fn); return timerId; },
     clearInterval(id) { watchers.delete(id); }, setInterval(fn) { watchers.set(++timerId, fn); return timerId; }});
-  return {form, link, events, timers, watchers, state, window, document, popups,
+  return {form, link, groupLinks, events, timers, watchers, state, window, document, popups,
     dialog: () => document.body.children.find(element => element.tag === 'dialog'),
     tick: async () => { const [id, fn] = timers.entries().next().value; timers.delete(id); await fn(); },
     watch: async () => { for (const fn of [...watchers.values()]) await fn(); }};
@@ -66,6 +78,24 @@ function boot({free = false, failure = false, valid = true, blocked = false, pay
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const navigate = page => page.events.filter(event => event[0] === 'navigate');
 const refreshed = page => page.events.some(event => event[0] === 'fetch' && event[1].endsWith('/actualiser'));
+
+test('each group payment button tracks its own order and preserves the group address', async () => {
+  const page = boot({group: true});
+  const [first, second] = page.groupLinks;
+  await first.trigger('click'); await flush();
+  await first.trigger('click'); await flush();
+  assert.equal(page.popups.length, 1);
+  await second.trigger('click'); await flush();
+  assert.equal(page.popups.length, 2);
+  assert.equal(page.popups[0].closed, true);
+  assert.equal(page.events.some(event => event[0] === 'history'), false);
+  assert.deepEqual(page.events.filter(event => event[0] === 'fetch').map(event => new URL(event[1]).pathname),
+    [root.replace('order-1', 'order-A') + '/statut', root.replace('order-1', 'order-B') + '/statut']);
+  page.state.current = {paid: true};
+  await page.window.trigger('focus'); await flush();
+  assert.ok(refreshed(page));
+  assert.deepEqual(navigate(page), [['navigate', 'https://www.integraleconnect.com' + root.replace('order-1', 'order-B') + '/confirmation']]);
+});
 
 test('Qonto opens centered without a second modal underneath; Connect stays open', async () => {
   const page = boot();

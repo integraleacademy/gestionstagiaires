@@ -78,8 +78,9 @@ function boot({rows = [{}], individual = false, locked = 0, price = '5900', unsa
   const status = new Element();
   const nodes = {
     'el-roster-form': roster, 'el-learners': people, 'el-add': add,
-    'el-course-code': amendment ? null : course, 'el-save-status': status, 'el-review-button': review,
-    'el-count': new Element(), 'el-total': new Element(), 'el-roster-count': people ? new Element() : null,
+    'el-course-code': amendment ? null : course, 'el-save-status': status, 'el-review-button': people ? review : null,
+    'el-count': people ? new Element() : null, 'el-total': people ? new Element() : null,
+    'el-roster-count': people ? new Element() : null, 'el-draft-estimate': people && !amendment ? new Element() : null,
   };
   const document = {querySelector: () => null, querySelectorAll: () => [], getElementById: id => nodes[id] || null};
   const window = new Element();
@@ -98,6 +99,7 @@ test('sales pause keeps checkout disabled when an existing roster is edited', ()
 test('add creates an empty learner without duplicating identity; removing updates totals and numbering', () => {
   const page = boot({rows: [complete()]});
   assert.equal(page.nodes['el-count'].textContent, '1');
+  assert.equal(page.nodes['el-draft-estimate'].hidden, false);
   page.add.dispatch('click');
   assert.equal(page.people.children.length, 2);
   const added = page.people.children[1];
@@ -123,6 +125,8 @@ test('removing the last saved learner clears its ID and keeps a usable empty row
   assert.equal(page.people.children.length, 1);
   assert.ok(page.people.children[0].inputs.every(input => input.value === '' && !input.required));
   assert.equal(page.nodes['el-count'].textContent, '0');
+  assert.equal(page.nodes['el-draft-estimate'].hidden, true);
+  assert.equal(page.nodes['el-total'].textContent, '—');
   assert.equal(page.review.disabled, true);
   assert.equal(page.roster.checkValidity(), true);
 });
@@ -181,8 +185,8 @@ test('one individual learner has no add button; a fully locked individual has no
   const paid = boot({individual: true, locked: 1, rows: null});
   assert.equal(paid.people, null);
   assert.equal(paid.add, null);
-  assert.equal(paid.nodes['el-count'].textContent, '0');
-  assert.equal(paid.review.disabled, true);
+  assert.equal(paid.nodes['el-count'], null);
+  assert.equal(paid.nodes['el-review-button'], null);
   assert.equal(paid.roster.dispatch('submit', {submitter: paid.save}).defaultPrevented, false);
 });
 

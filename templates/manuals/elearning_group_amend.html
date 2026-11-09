@@ -24,7 +24,8 @@
       <section class="form-card el-roster-card">
         <h2>Stagiaires de la commande</h2>
         <div id="el-learners">
-          {% for person in rows %}{{ learner_row(person, loop.index) }}{% else %}{{ learner_row({}, 1) }}{% endfor %}
+          {% for person in rows %}{{ learner_row(person, loop.index) }}{% endfor %}
+          {% if add_row or not rows %}{{ learner_row({}, rows|length + 1, autofocus=add_row) }}{% endif %}
         </div>
         {% if group.mode != 'individual' %}<button class="button secondary el-add-person" type="button" id="el-add">{{ icon('plus') }} Ajouter un stagiaire</button>{% endif %}
       </section>
