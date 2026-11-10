@@ -753,6 +753,11 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
             temporary.cleanup()
             if result.get("code") == "portal_throttled" and store.connector_key:
                 result["proposal_message"] = throttle.message(Vault(store.directory,store.connector_key))
+            financial = (result.get("diagnostics") or {}).get("directory") or {}
+            if "billing_checked" in financial:
+                logging.getLogger("gunicorn.error").info(
+                    "EDOF règlements : lecture=%s dossiers facturés=%s dont réglés=%s",
+                    financial["billing_checked"], financial.get("billed_folders"), financial.get("paid_folders"))
             for detail in (result.get("diagnostics") or {}).get("crm_details", []):
                 logging.getLogger("gunicorn.error").info(
                     "EDOF CRM détail %s : prix=%s durée=%s coordonnées=%s certification=%s événements=%s",

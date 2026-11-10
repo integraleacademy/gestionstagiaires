@@ -255,7 +255,7 @@
       <div><span>Passage dans le statut</span><strong>{{ detail.display.stage_exact_label or detail.display.stage_unknown_label }}</strong>{% if detail.display.stage_observed and detail.display.stage_label %}<small>Statut observé le {{ detail.display.stage_label }}. EDOF ne fournit pas la date de ce changement.</small>{% endif %}</div>
       <div><span>Échéance de l’automatisation</span><strong>{{ action_labels.get(detail.display.action, 'Aucune action prévue') }}</strong>
         {% if detail.display.scheduled %}<time datetime="{{ detail.display.scheduled.isoformat() }}">{{ detail.display.scheduled.strftime('%d/%m/%Y à %H h %M') }}</time>{% endif %}
-        {% if detail.held or detail.display.block %}<span class="wedof-badge is-danger">Automatisation bloquée</span>{% elif active and detail.display.scheduled %}<span>Envoi automatique à partir de {{ detail.display.scheduled.hour }} h{% if detail.display.action == 'service_done' %} · 100 % selon les dates CPF{% endif %}.</span>{% endif %}
+        {% if detail.held or detail.display.block %}<span class="wedof-badge is-danger">Automatisation bloquée</span>{% elif detail.display.identity_review %}<span class="wedof-badge is-warning">Identité à confirmer</span>{% elif active and detail.display.scheduled %}<span>Envoi automatique à partir de {{ detail.display.scheduled.hour }} h{% if detail.display.action == 'service_done' %} · 100 % selon les dates CPF{% endif %}.</span>{% endif %}
       </div>
       <div><span>Rattachement local</span><strong>{{ 'Associé' if detail.display.link else 'Non associé' }}</strong></div>
     </div>
@@ -292,6 +292,16 @@
 </div></section></details>
 <details class="edof-extra wedof-panel" id="declaration-edof" {% if not detail.request %}open{% endif %}><summary>Historique et déclarations EDOF</summary>
 <section class="edof-detail"><div class="wedof-panel-header"><div><span class="wedof-section-label">Historique EDOF</span><h2>Suivi des déclarations</h2></div></div><div class="edof-panel-body">
+{% if active and detail.display.identity_review %}
+<div class="notice"><strong>Identité à confirmer avant transmission</strong>
+<p>EDOF indique <b>{{ f.first_name }} {{ f.last_name }}</b>. L’inscription associée indique <b>{{ detail.display.identity_review.name }}</b>.</p>
+{% if detail.display.identity_review.key %}
+<form method="post" action="{{ url_for('integrale_edof.confirm_linked_identity', folder=f.folder_id) }}">{{ token() }}
+  <input type="hidden" name="identity_key" value="{{ detail.display.identity_review.key }}">
+  <label><input type="checkbox" name="verified" value="yes" required> J’ai vérifié qu’il s’agit de la même personne.</label>
+  {{ btn('Confirmer l’identité pour ce dossier') }}
+</form>
+{% endif %}</div>{% endif %}
 {% for d in detail.dispatches %}<p class="notice"><strong>{{ action_labels[d.action] }} · {{ dispatch_labels[d.status] }}</strong><br>{{ date_fr(d.intent.actual_date) }}{% if d.intent.rate is defined %} · {{ d.intent.rate }} %{% endif %}{% if d.intent.evidence %} · {{ d.intent.evidence }}{% elif d.intent.operator_confirmed %} · Déclaration de l’organisme{% endif %}
 {% if d.detail %}<br>{{ dispatch_reasons.get(d.detail, 'Consultez le contrôle de connexion.') }}{% endif %}</p>
 {% if (active or (detail.pilot.reserved if detail.pilot else false) and d.intent.pilot_ticket) and d.status in ['sending','uncertain'] %}<form method="post" action="{{ url_for('integrale_edof.recheck' if active else 'integrale_edof.pilot_entry',folder=f.folder_id) }}">{{ token() }}{% if not active %}<input type="hidden" name="mode" value="recheck">{% endif %}<input type="hidden" name="action" value="{{ d.action }}">{{ btn('Vérifier la réception dans EDOF') }}</form>{% endif %}

@@ -26,9 +26,8 @@ def hours(raw):
         return None
 
 
-def read_evidence(legacy, requested, *, data=None):
-    if data is None:
-        data = legacy.load_data()
+def linked_enrolments(data, requested):
+    """Resolve only unique two-way CPF links to an actual registration."""
     sessions = {str(s.get("id")): s for s in data.get("sessions", []) if isinstance(s, dict)}
     links = {}
     registrations = {}
@@ -37,6 +36,34 @@ def read_evidence(legacy, requested, *, data=None):
             links.setdefault(str(x.get("external_id")), []).append(x)
             pair = (str(x.get("session_id")), str(x.get("trainee_id")))
             registrations[pair] = registrations.get(pair, 0)+1
+    resolved = {}
+    for folder in requested:
+        matches = links.get(folder, [])
+        if len(matches) != 1:
+            continue
+        link = matches[0]
+        pair = str(link.get("session_id")), str(link.get("trainee_id"))
+        if registrations[pair] != 1:
+            continue
+        session = sessions.get(pair[0]) or {}
+        trainees = [t for t in (session.get("trainees") or session.get("stagiaires") or [])
+                    if isinstance(t, dict) and t.get("id") and str(t["id"]) == pair[1]]
+        if len(trainees) == 1:
+            resolved[folder] = (link, session, trainees[0])
+    return resolved
+
+
+def linked_identity(link, trainee):
+    return {"first_name": trainee.get("first_name") or trainee.get("prenom"),
+            "last_name": trainee.get("last_name") or trainee.get("nom"),
+            "linked_session": str(link.get("session_id") or ""), "linked_trainee": str(link.get("trainee_id") or ""),
+            "identity_confirmation": (link.get("edof_identity_confirmation") or {}).get("key")}
+
+
+def read_evidence(legacy, requested, *, data=None):
+    if data is None:
+        data = legacy.load_data()
+    enrolments = linked_enrolments(data, requested)
     blocks = {str(x["external_id"]): set() for x in data.get("wedof_automation_blocks", [])
               if isinstance(x, dict) and x.get("active") and x.get("external_id")}
     for x in data.get("wedof_automation_blocks", []):
@@ -55,22 +82,13 @@ def read_evidence(legacy, requested, *, data=None):
             item = {"blocks": sorted(k for k in blocks.get(folder, set()) if k in {
                                      "both", "entry_training", "service_done"})}
             result[folder] = item
-            matches = links.get(folder, [])
-            if len(matches) != 1:
+            if folder not in enrolments:
                 continue
-            link = matches[0]
-            if registrations[(str(link.get("session_id")), str(link.get("trainee_id")))] != 1:
-                continue
-            session = sessions.get(str(link.get("session_id"))) or {}
-            target = str(link.get("trainee_id") or "")
-            trainees = [t for t in (session.get("trainees") or session.get(
-                "stagiaires") or []) if isinstance(t, dict) and str(t.get("id")) == target]
-            if len(trainees) != 1:
-                continue
-            t = trainees[0]
+            link, session, t = enrolments[folder]
+            target = str(t["id"])
             start = iso(session.get("date_start") or session.get("date_debut"))
             end = iso(session.get("date_end") or session.get("date_fin"))
-            item.update(first_name=t.get("first_name") or t.get("prenom"), last_name=t.get("last_name") or t.get("nom"),
+            item.update(**linked_identity(link, t),
                         session_start_date=start, session_end_date=end)
             if not start or not end or start > today:
                 continue

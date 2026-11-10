@@ -113,6 +113,8 @@ def operation_rows(rows, dispatches, now, revision, outcomes=None):
         elif block or status in {"review", "paused", "queued"} or outcome == "blocked":
             bucket, note = "blocked", ("Blocage enregistré sur le dossier" if block else
                                       "Déclaration à vérifier" if status == "review" else "Action suspendue ou bloquée")
+        elif current and scheduled and scheduled <= now and row.get("identity_review"):
+            bucket, note = "attention", "Identité à confirmer. La fiche locale indique " + row["identity_review"]["name"] + "."
         elif outcome == "review" or not scheduled:
             bucket, note = "attention", "Déclaration à vérifier" if outcome == "review" else "Date de formation à compléter"
         elif scheduled <= now:

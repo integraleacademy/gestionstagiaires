@@ -1,6 +1,7 @@
 """Durable, one-per-folder/action declarations and verified EDOF receipts."""
 from contextlib import closing
 import datetime as dt
+import hashlib
 import json
 import time
 import uuid
@@ -301,9 +302,20 @@ def same_enrolment(row, proof):
                ("first_name", "last_name", "session_start_date", "session_end_date"))
 
 
+def identity_review_key(row, proof):
+    fields = [row.get("folder_id"), proof.get("linked_session"), proof.get("linked_trainee"),
+              row.get("session_start_date"), row.get("session_end_date")]
+    fields.extend(normalized(source.get(key) or "") for source in (row, proof) for key in ("first_name", "last_name"))
+    if not all(fields):
+        return ""
+    return hashlib.sha256(json.dumps(fields, ensure_ascii=False).encode()).hexdigest()
+
+
 def conflicting_identity(row, proof):
-    return any(proof.get(key) and normalized(proof[key]) != normalized(row.get(key) or "")
-               for key in ("first_name", "last_name"))
+    different = any(proof.get(key) and normalized(proof[key]) != normalized(row.get(key) or "")
+                    for key in ("first_name", "last_name"))
+    return bool(different and not (proof.get("identity_confirmation")
+                                   and proof["identity_confirmation"] == identity_review_key(row, proof)))
 
 
 def matches_linked_proof(row, proof, draft):
@@ -410,6 +422,8 @@ def discover(store, owner, snapshot, *, outcomes=None):
                 draft = saved
             else:
                 draft = scheduled_draft(row, action)
+            if proof.get("identity_confirmation") and proof["identity_confirmation"] == identity_review_key(row, proof):
+                draft = {**draft, "linked_identity_key": proof["identity_confirmation"]}
             try:
                 status = enqueue(store.directory, owner, revision, row, draft, "Gestion Stagiaires", automatic=True)
             except ValueError:
@@ -467,7 +481,14 @@ def check_before_job(store, spec):
             complete(store.directory, spec, "declaration_blocked")
             return False
         source = spec["intent"].get("source")
-        if (source == "edof_schedule" or spec["intent"].get("operator_confirmed")) and conflicting_identity(spec["intent"], proof):
+        identity_row = {**spec["intent"], "folder_id":folder}
+        approved_key = spec["intent"].get("linked_identity_key")
+        if approved_key and (proof.get("identity_confirmation") != approved_key
+                             or identity_review_key(identity_row, proof) != approved_key):
+            complete(store.directory, spec, "declaration_changed")
+            return False
+        if (source == "edof_schedule" or spec["intent"].get("operator_confirmed")) and conflicting_identity(
+                identity_row, proof):
             complete(store.directory,spec,"declaration_changed")
             return False
         if source == "admin":

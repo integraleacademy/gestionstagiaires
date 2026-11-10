@@ -22,6 +22,7 @@ from edof_readonly_test import (
 )
 from edof_gmail import Vault, GmailCodes, GmailError
 import edof_directory as directory
+import edof_billing
 import edof_session_clock as session_clock
 from edof_directory_batches import Cursor, BatchPending, PAGES_PER_BATCH
 from edof_traffic import Traffic, PacedContext
@@ -1615,6 +1616,20 @@ def _run_browser(spec, *, live=None, traffic=None):
                                 "diagnostics":{"directory":report}}
                     raise StopRun("directory_incomplete") from None
                 progress("saving_directory")
+                # The general list can omit the billing and payment fields.
+                # The portal's finance register identifies actual invoices by CPF number.
+                rows = snapshot["rows"]
+                endpoint = f"https://{EDOF_HOST}{WORKSPACE_API_PREFIX}organisms/current/factures"
+                try:
+                    invoices = edof_billing.read_invoices(context, witness, endpoint, rows, checkpoint)
+                except (ValueError, OSError, BrowserError):
+                    previous = vault.get(directory.record_key(spec["owner"]), keep=True) or {}
+                    edof_billing.apply_statements(rows, None, previous.get("rows", {}))
+                    signals["directory"]["billing_checked"] = False
+                else:
+                    edof_billing.apply_statements(rows, invoices, {})
+                    signals["directory"].update(billing_checked=True, billed_folders=len(invoices),
+                                                paid_folders=sum(invoices.values()))
                 vault.put(directory.record_key(spec["owner"]),snapshot)
                 # The complete list already contains accepted dossiers. A second scan is redundant.
                 vault.put(directory.accepted_key(spec["owner"]),{"checked":snapshot["checked"],"scope":"accepted",
