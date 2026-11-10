@@ -933,8 +933,7 @@ def test_group_shows_the_payable_order_instead_of_an_empty_draft(shop, merchant)
     payment, = card.xpath('.//a[@data-el-pay]')
     assert payment.get("href") == merchant["payment"]["url"]
     assert not card.xpath('.//form[contains(@action, "/envoyer-acces")]')
-    draft, = page.xpath('//details[.//*[@id="el-learners"]]')
-    assert "open" not in draft.attrib
+    assert not page.xpath('//*[@id="el-learners"]')
 
     edit = f'{url}/commandes/{order["id"]}/modifier'
     links = set(card.xpath('.//a/@href'))
@@ -962,6 +961,7 @@ def test_group_keeps_payment_and_dispatch_scoped_to_their_orders(shop, merchant)
     run(first)
     mark_paid(merchant)
     retry(first)
+    assert "Ajouter des stagiaires au groupe" in client.get(url).text
     merchant.update(paid=False, invoice=None, payment=None)
     save(shop, url, [person("alex@example.test", "Alex"), person("sam@example.test", "Sam")])
     second = confirm(shop, url)
@@ -980,6 +980,14 @@ def test_group_keeps_payment_and_dispatch_scoped_to_their_orders(shop, merchant)
     assert waiting.xpath('.//a[@data-el-pay]/@href') == [merchant["payment"]["url"]]
     assert waiting.xpath('.//*[@data-el-payment-context]/@data-el-status-url') == [ROOT + "/commandes/" + second["id"] + "/statut"]
     assert not waiting.xpath('.//form[contains(@action, "/envoyer-acces")]')
+    assert not page.xpath('//*[@id="el-learners"]')
+    assert page.xpath('//button[@name="next" and @value="settings"]')
+    edited = save(shop, url, [], next="settings", group_name="Groupe renommé")
+    assert any(p["email"] == "draft@example.test" for p in edited["learners"])
+    mark_paid(merchant)
+    retry(second)
+    page = group_page(client, url)
+    assert "Ajouter des stagiaires au groupe" in page.text_content()
     assert page.xpath('//*[@id="el-learners"]//input[@name="email"]/@value') == ["draft@example.test"]
 
 

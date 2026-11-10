@@ -15,6 +15,7 @@
 {% set progress = group.get('progress', {}) %}
 {% set limit = 1 if individual else 100 %}
 {% set locked_count = group.waiting_count + group.active_count %}
+{% set show_roster = (locked_count < limit or rows) and not group.dispatch_orders|rejectattr('delivery.paid')|list %}
 {% set locked = group.deletion_pending or group.get('roster_amendment') %}
 <div class="el-wrap el-group-detail" data-presence-url="{{ url_for('manuals_shop.elearning_group', gid=group.id, presence=1) }}">
   <a class="text-link el-back" href="{{ url_for('manuals_shop.elearning_soon') }}">← Mes espaces e-learning</a>
@@ -71,14 +72,14 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="revision" value="{{ group.revision }}">
     <fieldset class="el-form-fieldset" {% if locked %}disabled{% endif %}>
-      {% if locked_count < limit or rows %}
+      {% if show_roster %}
       <details class="eg-details eg-draft" {% if not has_orders or rows or errors %}open{% endif %}>
         <summary>{{ icon('folder') }}
-          <span>{{ 'Brouillon de commande' if rows else 'Préparer une commande séparée' if has_orders else 'Préparer ma commande' }}</span>
+          <span>{{ 'Ajouter des stagiaires au groupe' if has_orders else 'Brouillon de commande' if rows else 'Préparer ma commande' }}</span>
           {% if rows %}<small>{{ group.pending_count }} accès à préparer</small>{% endif %}
         </summary>
         <div class="eg-details-body">
-          <p class="muted">{{ 'Ces stagiaires feront l’objet d’une nouvelle commande.' if has_orders else 'Renseignez le nom, le prénom et l’adresse e-mail de chaque stagiaire.' }}</p>
+          <p class="muted">{{ 'Les accès supplémentaires feront l’objet d’une nouvelle commande.' if has_orders else 'Renseignez le nom, le prénom et l’adresse e-mail de chaque stagiaire.' }}</p>
           <div id="el-learners">
             {% for person in rows %}{{ learner_row(person, loop.index) }}{% else %}{{ learner_row({}, 1) }}{% endfor %}
           </div>
@@ -118,7 +119,7 @@
               {% if not group.can_change_course %}<input type="hidden" name="course_code" value="{{ group.course_code }}"><small>La formation est fixée pour les accès déjà commandés.</small>{% endif %}
             </div>
           </div>
-          <button class="button secondary" type="submit" name="next" value="save" {% if conflict|default(false) or locked %}disabled{% endif %}>{{ icon('save') }} Enregistrer les modifications</button>
+          <button class="button secondary" type="submit" name="next" value="{{ 'save' if show_roster else 'settings' }}" {% if conflict|default(false) or locked %}disabled{% endif %}>{{ icon('save') }} Enregistrer les modifications</button>
         </div>
       </details>
     </fieldset>
