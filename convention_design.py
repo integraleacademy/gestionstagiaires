@@ -12,7 +12,7 @@ from copy import deepcopy
 
 from docx import Document
 from docx.enum.style import WD_STYLE_TYPE
-from docx.enum.table import WD_TABLE_ALIGNMENT, WD_CELL_VERTICAL_ALIGNMENT
+from docx.enum.table import WD_TABLE_ALIGNMENT, WD_CELL_VERTICAL_ALIGNMENT, WD_ROW_HEIGHT_RULE
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -194,12 +194,17 @@ def _table(table):
     for col, width in zip(table.columns, widths):
         col.width = Cm(width)
     for ri, row in enumerate(table.rows):
-        row.height = None
-        row.height_rule = None
+        signature_row = signature and ri == len(table.rows) - 1
+        # Reserve the printed label, the 80pt Yousign seal and cell padding
+        # even when the PDF renderer compacts empty lines in the source model.
+        row.height = Cm(4.8) if signature_row else None
+        row.height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST if signature_row else None
         _property(row._tr.get_or_add_trPr(), "w:cantSplit")
         for ci, cell in enumerate(row.cells):
             cell.width = Cm(widths[ci])
             cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            if signature_row and ANCHOR.search(cell.text):
+                cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
             cp = cell._tc.get_or_add_tcPr()
             _remove(cp, "w:tcBorders", "w:shd")
             borders = _property(cp, "w:tcBorders")
@@ -247,11 +252,6 @@ def _table(table):
                     fmt.alignment = WD_ALIGN_PARAGRAPH.CENTER
             if ri == 0 and not financing:
                 _property(borders, "w:bottom", val="single", sz=8, color=GOLD)
-            if signature and ri == len(table.rows) - 1:
-                # Minimum, never exact: longer names and signature images can grow.
-                row.height = Cm(3.5)
-                from docx.enum.table import WD_ROW_HEIGHT_RULE
-                row.height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST
 
 
 def _panel(table, fill, accent=GOLD, *, prominent=False):
