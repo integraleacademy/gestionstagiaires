@@ -88,6 +88,23 @@ class AutomationDateTimeFormatTests(unittest.TestCase):
         self.assertEqual(status["progress_percent"], 100)
 
 
+    def test_failed_replacement_does_not_show_previous_signature_as_current(self):
+        session = {"id": "new-session", "training_type": "A3P"}
+        trainee = {"id": "T1", "convention_signature": {
+            "status": "error", "last_error": gestion_app.CONVENTION_SIGNATURE_FRAME_TOO_SMALL,
+            "signature_request_id": "old-request", "signed_at": "2026-10-27T08:46:00Z",
+            "activated_at": "2026-10-27T08:44:00Z", "unsigned_pdf_path": "/old.pdf",
+        }, "convocation_aps_status": "sent"}
+        with gestion_app.app.test_request_context():
+            status = gestion_app._build_trainee_automation_status(session, trainee, "new-session", "T1")
+
+        convention = status["convention"]
+        self.assertEqual([step["state"] for step in status["timeline"][:3]], ["error", "blocked", "complete"])
+        self.assertEqual(status["ready_documents"], 1)
+        self.assertEqual(convention["previous_signed_at"], "27/10/2026 à 09h46")
+        self.assertFalse(any(convention[key] for key in ("signed_at", "sent_at", "signature_request_id", "download_url")))
+        self.assertEqual(trainee["convention_signature"]["signature_request_id"], "old-request")
+
     def test_aps_automation_splits_convention_sent_and_signed_steps(self):
         trainee = {
             "id": "T-APS",

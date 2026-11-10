@@ -63,3 +63,30 @@ def test_real_convention_signature_cells(model, tmp_path):
             assert labels and all(box.y0 > rect.y1 + 5 for rect in labels)
             visible_text = host.YOUSIGN_TECHNICAL_ANCHOR_PATTERN.sub("", page.get_text(clip=box))
             assert not visible_text.strip(), "The signature must not overlap printed text"
+
+
+def test_signature_row_reserves_space_even_when_blank_lines_collapse(tmp_path):
+    binary = shutil.which('libreoffice') or shutil.which('soffice')
+    if not binary:
+        pytest.skip('LibreOffice is required to verify the Word/PDF layout')
+    document = Document()
+    table = document.add_table(rows=2, cols=2)
+    table.cell(0, 0).text = 'Pour le stagiaire'
+    table.cell(0, 1).text = 'Pour l’organisme de formation'
+    signer = table.cell(1, 0)
+    signer.text = 'Signature'
+    signer.add_paragraph('{{s1|signature|160|60}}')
+    target = tmp_path / 'compact.docx'
+    style_document(document).save(target)
+    subprocess.run([binary, '-env:UserInstallation=' + (tmp_path / 'profile').as_uri(),
+                    '--headless', '--convert-to', 'pdf', '--outdir', str(tmp_path), str(target)],
+                   check=True, capture_output=True, timeout=90)
+    source = target.with_suffix('.pdf')
+    _, (field,) = host._prepare_yousign_pdf_and_fields(str(source))
+    with fitz.open(source) as pdf:
+        page = pdf[field['page'] - 1]
+        label, = [fitz.Rect(word[:4]) for word in page.get_text('words') if word[4] == 'Signature']
+        seal = fitz.Rect(field['x'], field['y'], field['x'] + field['width'], field['y'] + field['height'])
+        assert seal.height >= 80 and seal.y0 > label.y1 + 5
+        assert any(d['type'] == 'f' and 200 < d['rect'].width < 300 and d['rect'].contains(label)
+                   and d['rect'].contains(seal) and d['rect'].y1 >= seal.y1 + 4 for d in page.get_drawings())

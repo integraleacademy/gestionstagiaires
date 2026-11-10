@@ -81,6 +81,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
 from PIL import Image, ImageOps
 import tempfile
+from pathlib import Path
 import fcntl
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -35659,6 +35660,8 @@ YOUSIGN_BASE_URL_DEFAULT = "https://api-sandbox.yousign.app/v3"
 YOUSIGN_SMART_ANCHOR_PATTERN = re.compile(r"\{\{\s*s(\d+)\|signature\|(\d+)\|(\d+)\s*\}\}")
 YOUSIGN_TECHNICAL_ANCHOR_PATTERN = re.compile(r"\{\{\s*s(\d+)\|([A-Za-z0-9_\-]+)\|([^{}]*)\}\}")
 YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE = "Aucune zone de signature trouvée dans le modèle Word. Ajoutez {{s1|signature|160|60}} à l’endroit souhaité."
+CONVENTION_SIGNATURE_FRAME_TOO_SMALL = "Le cadre de signature est trop petit. Vérifiez le modèle de convention."
+CONVENTION_SIGNATURE_OUTSIDE_PAGE = "La zone de signature dépasse la page. Vérifiez le modèle de convention."
 YOUSIGN_SMART_ANCHOR_PLACEHOLDER_PREFIX = "__YOUSIGN_SMART_ANCHOR_"
 YOUSIGN_SMS_AUTHENTICATION_MODE = "otp_sms"
 YOUSIGN_SMS_PHONE_ERROR_MESSAGE = "Impossible d’envoyer la convention : numéro de téléphone manquant ou invalide pour l’authentification SMS Yousign."
@@ -36022,7 +36025,7 @@ def _prepare_yousign_pdf_and_fields(pdf_path: str, signer_index: int = 1) -> Tup
                     # below the printed label, with room for the full 80pt seal.
                     anchor["field_y"] = int(max(rect.y1 for rect in labels) + 10.5)
                     if anchor["field_y"] + max(80, anchor["height"]) > cell.y1 - 4:
-                        raise ValueError("Le cadre de signature est trop petit. Vérifiez le modèle de convention.")
+                        raise ValueError(CONVENTION_SIGNATURE_FRAME_TOO_SMALL)
     for anchor in anchors:
         if anchor.get("type") != "signature":
             continue
@@ -36031,7 +36034,7 @@ def _prepare_yousign_pdf_and_fields(pdf_path: str, signer_index: int = 1) -> Tup
         page = pages[anchor["page"] - 1]
         if (anchor["x"] + anchor["width"] > float(page.mediabox.width)
                 or anchor["y"] + anchor["height"] > float(page.mediabox.height)):
-            raise ValueError("La zone de signature dépasse la page. Vérifiez le modèle de convention.")
+            raise ValueError(CONVENTION_SIGNATURE_OUTSIDE_PAGE)
     return clean_path, anchors
 
 
@@ -37082,6 +37085,12 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
 
     now = _now_iso()
     state = _yousign_state(trainee)
+    if has_existing_request and not force_new:
+        history = trainee.get("convention_signature_history") or []
+        if not any(isinstance(item, dict) and item.get("signature_request_id") == state["signature_request_id"] for item in history):
+            _archive_yousign_convention_state(trainee, "replaced")
+    # A new request has its own email, signature and PDF recovery history.
+    state.clear()
     state.update({
         "status": "ongoing",
         "signature_request_id": signature_request_id,
@@ -40167,7 +40176,7 @@ def _replace_docx_xml_placeholders(docx_path: str, replacements: Dict[str, str])
             _docx_replace_in_paragraph(paragraph, replacements)
     document.save(docx_path)
 
-def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
+def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "", *, output_dir: Optional[str] = None) -> Tuple[str, str]:
     """Generate the APS training convention used exclusively for Yousign."""
     config = _automation_document_config(session_obj)
     if not config.get("enabled"):
@@ -40179,11 +40188,13 @@ def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[st
     template_size = os.path.getsize(template_path)
     template_sha256 = _sha256_file(template_path)
     app.logger.info("Convention APS template utilisé : %s taille=%s sha256=%s", template_path, template_size, template_sha256)
-    os.makedirs(YOUSIGN_CONVENTION_DIR, exist_ok=True)
+    if output_dir is None:
+        os.makedirs(YOUSIGN_CONVENTION_DIR, exist_ok=True)
+        output_dir = tempfile.mkdtemp(prefix="convention-", dir=YOUSIGN_CONVENTION_DIR)
     base = _aps_convention_base_filename(trainee, trainee_id)
     base = _ssiap_document_filename(base, session_obj, trainee)
-    final_docx_path = os.path.join(YOUSIGN_CONVENTION_DIR, base + ".docx")
-    final_pdf_path = os.path.join(YOUSIGN_CONVENTION_DIR, base + ".pdf")
+    final_docx_path = os.path.join(output_dir, base + ".docx")
+    final_pdf_path = os.path.join(output_dir, base + ".pdf")
     shutil.copyfile(template_path, final_docx_path)
     replacements = _aps_convention_replacements(session_obj, trainee)
     app.logger.info("Variables convention APS attendues : %s", APS_CONVENTION_VARIABLES)
@@ -40205,11 +40216,11 @@ def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[st
     if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
         raise RuntimeError("Le DOCX final de convention APS est introuvable ou vide.")
     lo_binary = _find_libreoffice_binary()
-    command = [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", YOUSIGN_CONVENTION_DIR, final_docx_path]
-    if os.path.exists(final_pdf_path):
-        os.remove(final_pdf_path)
     try:
-        subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
+        with tempfile.TemporaryDirectory(prefix="convention-office-") as profile:
+            command = [lo_binary, "-env:UserInstallation=" + Path(profile).as_uri(), "--headless",
+                       "--convert-to", "pdf", "--outdir", output_dir, final_docx_path]
+            subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
     except subprocess.CalledProcessError as exc:
         raise RuntimeError(f"Conversion LibreOffice impossible : {(exc.stderr or exc.stdout or '').strip()}") from exc
     if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
@@ -40400,6 +40411,17 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     if "son PDF n’est pas présent dans Yousign" in convention_error:
         convention_error = _signed_convention_recovery_message(trainee)
     convention_status = _convention_automation_status_key(trainee)
+    preparation_failed = convention_status == "error" and state.get("last_error") in (
+        CONVENTION_SIGNATURE_FRAME_TOO_SMALL, CONVENTION_SIGNATURE_OUTSIDE_PAGE,
+    )
+    previous_signed_at = ""
+    if preparation_failed:
+        # These failures happen before creating a Yousign request. A transferred
+        # or regenerated dossier can still carry the previous request's dates.
+        previous_signed_at = signed_at
+        generated_at = sent_at = signed_at = ""
+        has_generated_convention = has_signature_request = False
+        convention_error = "Le dernier PDF ne permettait pas de placer la signature. Utilisez « Réessayer » pour préparer la convention de cette session."
 
     convention_signed = convention_status == "signed"
     convention_sent = convention_status in {"sent", "waiting_signature", "signed"}
@@ -40477,7 +40499,10 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     entry_sent = bool(trainee.get("attestation_entree_aps_sent_at"))
     end_sent = bool(trainee.get("attestation_fin_aps_sent_at"))
     convention_sent_step = {"label": "Convention envoyée", "state": "complete" if convention_sent else ("error" if convention_status == "error" else "pending" if has_generated_convention else "blocked")}
-    convention_signed_step = {"label": "Convention signée", "state": "complete" if convention_signed else ("error" if convention_status in {"error", "refused", "expired"} else "pending" if has_signature_request else "blocked")}
+    convention_signed_step = {"label": "Convention signée", "state": "complete" if convention_signed else ("error" if convention_status in {"refused", "expired"} or (convention_status == "error" and has_signature_request) else "pending" if has_signature_request else "blocked")}
+    if preparation_failed:
+        convention_sent_step["label"] = "Envoi à reprendre"
+        convention_signed_step["label"] = "Signature en attente d’envoi"
     if is_vtc_automation:
         timeline = [
             convention_sent_step,
@@ -40558,7 +40583,8 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
             "status": convention_status, "label": c_label, "icon": c_icon, "icon_class": "automation-icon--hourglass" if c_icon == "hourglass" else "", "tone": c_tone, "card_tone": c_card_tone,
             "primary_action": c_primary_action, "can_send": True, "can_download": bool(convention_download_url),
             "generated_at": generated_at, "sent_at": sent_at, "signed_at": signed_at,
-            "recipient_email": trainee.get("email") or "", "signature_request_id": state.get("signature_request_id") or "",
+            "preparation_failed": preparation_failed, "previous_signed_at": previous_signed_at,
+            "recipient_email": trainee.get("email") or "", "signature_request_id": state.get("signature_request_id") if has_signature_request else "",
             "signed_pdf_request_id": state.get("signed_pdf_request_id") or "",
             "view_url": convention_view_url,
             "download_url": convention_download_url,
@@ -51374,15 +51400,14 @@ def admin_preview_convention(session_id: str, trainee_id: str):
     if t.get("company_convention"):
         return redirect(url_for("admin_view_original_convention", session_id=session_id, trainee_id=trainee_id))
     try:
-        _, pdf_path = _generate_aps_convention_files(s, t, session_id, trainee_id)
+        with tempfile.TemporaryDirectory(prefix="convention-preview-") as preview_dir:
+            _, pdf_path = _generate_aps_convention_files(s, t, session_id, trainee_id, output_dir=preview_dir)
+            clean_path, _ = _prepare_yousign_pdf_and_fields(pdf_path)
+            return send_file(BytesIO(Path(clean_path).read_bytes()), mimetype="application/pdf",
+                             download_name=os.path.basename(pdf_path))
     except Exception as exc:
         flash(f"Aperçu convention : {_sanitize_yousign_error(str(exc))}", "error")
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
-    abs_path = os.path.abspath(pdf_path) if pdf_path else ""
-    root = os.path.abspath(YOUSIGN_CONVENTION_DIR)
-    if not abs_path or not abs_path.startswith(root + os.sep) or not os.path.exists(abs_path):
-        abort(404)
-    return send_file(abs_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(abs_path))
 
 
 CONVENTION_FINANCING_FIELDS = ("training_price", "cpf_amount", "personal_amount", "other_amount")
