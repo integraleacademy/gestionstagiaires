@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %}</title>
+  <meta name="description" content="{% block description %}{% endblock %}">
+  <link rel="canonical" href="{{ canonical_url }}">
+  {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
+  {% include "manuals/_connect_favicon.html" %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/connect-brand.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/edof-public.css') }}">
+</head>
+<body>
+  <a class="skip" href="#contenu">Aller au contenu</a>
+  <header>
+    <div class="wrap masthead">
+      {% include "manuals/_connect_brand.html" %}
+      <nav aria-label="Intégrale EDOF">
+        <a href="{{ url_for('manuals_shop.edof_home') }}"{% if request.endpoint == 'manuals_shop.edof_home' %} aria-current="page"{% endif %}>Présentation</a>
+        <a href="{{ url_for('manuals_shop.edof_privacy') }}"{% if request.endpoint == 'manuals_shop.edof_privacy' %} aria-current="page"{% endif %}>Confidentialité</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap" id="contenu">{% block content %}{% endblock %}</main>
+  <footer>
+    <div class="wrap footer-inner">
+      <span>Intégrale Sécurité Formations · Intégrale Academy</span>
+      <a href="/mentions-legales">Mentions légales</a>
+    </div>
+  </footer>
+</body>
+</html>

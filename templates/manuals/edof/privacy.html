@@ -1,0 +1,42 @@
+{% extends "manuals/edof/base.html" %}
+{% block title %}Règles de confidentialité · Intégrale EDOF{% endblock %}
+{% block description %}Données Google utilisées par Intégrale EDOF, accès Gmail en lecture seule, conservation et retrait de l’autorisation.{% endblock %}
+{% block content %}
+<div class="reading">
+  <div class="intro">
+    <p class="date">Mise à jour du <time datetime="2026-11-10">10 novembre 2026</time></p>
+    <h1>Règles de confidentialité d’Intégrale EDOF</h1>
+    <p class="lead">Cette page explique comment <a href="{{ url_for('manuals_shop.edof_home') }}">Intégrale EDOF</a> utilise les données du compte Google que l’établissement associe à EFP Connect.</p>
+  </div>
+  <section>
+    <h2>Qui est responsable du traitement ?</h2>
+    <p>Intégrale Sécurité Formations, SASU exerçant sous l’enseigne Intégrale Academy, exploite l’application pour le suivi de ses propres dossiers CPF. Vous pouvez lui écrire au 54 chemin du Carréou, 83480 Puget-sur-Argens, ou à <a href="mailto:clement@integraleacademy.com">clement@integraleacademy.com</a>.</p>
+  </section>
+  <section>
+    <h2>Quelles données Google sont lues et pourquoi ?</h2>
+    <p>Le titulaire choisit son compte sur la page d’autorisation de Google. L’application vérifie que l’adresse Gmail de ce compte correspond au compte EFP de l’établissement. Son accord permet ensuite au serveur de récupérer les codes nécessaires aux connexions, y compris lorsque le navigateur de l’administrateur est fermé.</p>
+    <p>L’autorisation <code>gmail.readonly</code> permet techniquement de lire la boîte Gmail. À chaque demande de code, l’application filtre les messages récents par expéditeur EFP, destinataire et date. Elle examine les en-têtes, l’objet et le contenu des messages correspondants pour identifier le code à usage unique. Cette autorisation ne permet ni d’envoyer, ni de modifier, ni de supprimer des e-mails.</p>
+  </section>
+  <section>
+    <h2>À qui les données sont-elles transmises ?</h2>
+    <p>Google fournit les messages sélectionnés au serveur de l’application, hébergé par Render pour Intégrale Sécurité Formations. Le serveur saisit le code sur EFP Connect pour ouvrir la session de l’établissement. Les messages et codes Gmail ne sont pas transmis aux stagiaires ou au CRM.</p>
+    <p>Les données Google servent exclusivement à cette authentification. Elles ne sont ni vendues, ni utilisées à des fins publicitaires ou pour entraîner des modèles d’intelligence artificielle. Leur utilisation et leur transfert respectent les exigences d’utilisation limitée de la <a href="https://developers.google.com/terms/api-services-user-data-policy">politique relative aux données utilisateur des services d’API Google</a>.</p>
+  </section>
+  <section>
+    <h2>Que conserve l’application ?</h2>
+    <dl>
+      <dt>Messages et codes Gmail</dt>
+      <dd>Ils sont traités en mémoire pendant la tentative de connexion. Leur contenu et la valeur du code ne sont pas enregistrés dans les résultats ni dans les journaux de l’application.</dd>
+      <dt>Autorisation Google</dt>
+      <dd>Le jeton qui permet de renouveler l’accès à Gmail est conservé chiffré sur le serveur tant que la connexion est maintenue. La déconnexion depuis l’application l’efface. Le mot de passe Google est saisi uniquement auprès de Google.</dd>
+      <dt>Session EFP</dt>
+      <dd>Les cookies de session réutilisables sont conservés chiffrés pour une durée maximale de 24 heures après leur dernier enregistrement. Les résultats techniques d’une tentative indiquent son issue et si un code a été utilisé, sans révéler sa valeur.</dd>
+    </dl>
+  </section>
+  <section>
+    <h2>Comment retirer l’accès ou demander l’effacement ?</h2>
+    <p>Dans les paramètres d’Intégrale EDOF, ouvrez <strong>Gérer la connexion EFP Connect</strong>, puis <strong>Déconnecter Gmail et effacer la connexion EFP</strong>. L’application efface son autorisation enregistrée et ses cookies de connexion. Vous pouvez également retirer l’autorisation d’Intégrale EDOF depuis les <a href="https://myaccount.google.com/connections">connexions de votre compte Google</a>.</p>
+    <p>Pour exercer vos droits sur vos données, notamment l’accès, la rectification ou l’effacement, écrivez à <a href="mailto:clement@integraleacademy.com">clement@integraleacademy.com</a> ou à l’adresse postale ci-dessus. Vous pouvez aussi adresser une réclamation à la <a href="https://www.cnil.fr/fr/plaintes">CNIL</a>.</p>
+  </section>
+</div>
+{% endblock %}

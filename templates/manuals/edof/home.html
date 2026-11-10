@@ -1,0 +1,26 @@
+{% extends "manuals/edof/base.html" %}
+{% block title %}Intégrale EDOF · Intégrale Academy{% endblock %}
+{% block description %}Découvrez comment Intégrale Academy suit ses dossiers CPF et utilise Gmail pour authentifier son équipe auprès d’EFP Connect.{% endblock %}
+{% block content %}
+<section class="hero" aria-labelledby="titre">
+  <h1 id="titre">Intégrale EDOF</h1>
+  <p class="lead">L’application de suivi des dossiers du compte personnel de formation (CPF) d’Intégrale Academy.</p>
+  <a class="action" href="https://gestionstagiaires-r5no.onrender.com/admin/integrale-edof">Accéder à l’espace équipe <span aria-hidden="true">→</span></a>
+</section>
+<div class="reading">
+  <section>
+    <h2>À quoi sert l’application ?</h2>
+    <p>Les collaborateurs habilités d’Intégrale Academy consultent les demandes d’inscription à leurs formations, suivent les dossiers CPF et transmettent les déclarations d’entrée, de sortie et de service fait à l’Espace des organismes de formation (EDOF).</p>
+  </section>
+  <section>
+    <h2>Pourquoi l’application demande-t-elle accès à Gmail ?</h2>
+    <p>Lors d’une connexion à EDOF, EFP Connect envoie un code de sécurité à l’adresse de l’établissement. Avec l’accord du titulaire du compte Google, Intégrale EDOF recherche le message attendu, en extrait le code à usage unique et le saisit sur EFP Connect.</p>
+    <p>Google accorde un accès en lecture à la boîte Gmail. L’application limite ses recherches aux messages récents des expéditeurs EFP et n’envoie aucun e-mail. Les stagiaires n’ont pas à connecter leur messagerie.</p>
+    <p><a href="{{ url_for('manuals_shop.edof_privacy') }}">Lire les règles de confidentialité d’Intégrale EDOF</a></p>
+  </section>
+  <section>
+    <h2>Qui contacter ?</h2>
+    <p>Intégrale Sécurité Formations édite cette application sous l’enseigne Intégrale Academy. Pour toute question sur son fonctionnement ou l’accès Gmail, écrivez à <a href="mailto:clement@integraleacademy.com">clement@integraleacademy.com</a>.</p>
+  </section>
+</div>
+{% endblock %}
