@@ -69,7 +69,7 @@ class VtcCreateCarteProTests(unittest.TestCase):
         normalize_start = template.index("  function normalizeTrainingChoice(value){")
         normalize_end = template.index("\n\n  function closeQuickCreateMenu", normalize_start)
         refresh_start = template.index("  function refreshTrainingSpecificFields(){")
-        refresh_end = template.index("\n\n  function refreshSessionChoices", refresh_start)
+        refresh_end = template.index("\n  }", refresh_start) + len("\n  }")
         javascript = template[normalize_start:normalize_end] + "\n" + template[refresh_start:refresh_end]
 
         script = r'''
@@ -127,6 +127,8 @@ if (elements.sessionCarteProField.style.display !== "flex" ||
 
         self.assertEqual(vtc_response.status_code, 200)
         self.assertEqual(aps_response.status_code, 200)
+        self.assertEqual([t["id"] for t in self.data["sessions"][0]["trainees"]], [vtc_response.json["id"]])
+        self.assertEqual([t["id"] for t in self.data["sessions"][1]["trainees"]], [aps_response.json["id"]])
         self.assertEqual(self.data["sessions"][0]["trainees"][0]["cnaps"], "INCONNU")
         self.assertEqual(self.data["sessions"][1]["trainees"][0]["cnaps"], "CARTE PROFESSIONNELLE OK")
 

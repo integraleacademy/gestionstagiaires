@@ -141,6 +141,7 @@ from vtc_cpf_guidance import build_confirmation_content
 import vtc_elearning_activation
 import desp_vae_elearning
 import vtc_practice
+from trainee_recovery import collapse_registration_copies
 import trainee_elearning_reporting
 from elearning_native import aps_enrolments
 from partner_postgres import (
@@ -5559,6 +5560,8 @@ def _write_json_with_backups(
                 # value and replacing the JSON file.
                 if payload_transform is not None:
                     payload = payload_transform(payload)
+                if path == DATA_FILE and isinstance(payload, dict):
+                    collapse_registration_copies(payload, _archive_registration_copy)
                 now_ts = datetime.datetime.utcnow().timestamp()
                 base_name = os.path.basename(path)
                 prefix = base_name.replace(".", "_")
@@ -5637,6 +5640,14 @@ def _iter_corrupt_candidates(path: str) -> Iterable[str]:
     return [os.path.join(parent, name) for name in names]
 
 
+def _archive_registration_copy(training: dict, trainee: dict) -> None:
+    record = {"partner_id": training.get("partner_id"), "session_id": training.get("id"), "trainee": trainee}
+    digest = hashlib.sha256(json.dumps(record, sort_keys=True).encode()).hexdigest()
+    path = os.path.join(BACKUP_DIR, "registration-copies", digest + ".json")
+    if not os.path.isfile(path):
+        _write_json_with_backups(path, record, _data_lock)
+
+
 def _load_valid_json_payload(path: str) -> Optional[Dict[str, Any]]:
     # Writers fsync a separate file then atomically replace the path. An open
     # reader therefore sees one complete committed snapshot, even during a save.
@@ -5645,11 +5656,15 @@ def _load_valid_json_payload(path: str) -> Optional[Dict[str, Any]]:
     try:
         with open(path, "r", encoding="utf-8") as f:
             loaded = json.load(f)
-        if isinstance(loaded, dict):
-            return loaded
     except Exception:
         return None
-    return None
+    if not isinstance(loaded, dict):
+        return None
+    if path == DATA_FILE:
+        # Read the same active record in admin, public and background jobs.
+        # The next regular locked write also repairs the stored roster.
+        collapse_registration_copies(loaded, _archive_registration_copy)
+    return loaded
 
 
 def _recover_data_file(path: str) -> Optional[str]:
@@ -11952,7 +11967,8 @@ def session_is_conform(session: Dict[str, Any]) -> bool:
     return all(trainee_is_conform(t, training_type) for t in trainees)
 
 def normalize_sessions_schema(data: Dict[str, Any]) -> bool:
-    changed = False
+    # PostgreSQL partner bundles and restored snapshots can also contain old copies.
+    changed = collapse_registration_copies(data, _archive_registration_copy)
     for s in data.get("sessions", []):
         # Si pas de trainees, on convertit depuis stagiaires
         if "trainees" not in s or not isinstance(s.get("trainees"), list):
@@ -27663,9 +27679,6 @@ def api_create_trainee(session_id: str):
         t["crm_source"] = str(crm_payload.get("source") or "")
         t["crm_parcours"] = str(crm_payload.get("parcours") or "")
         t["comment"] = str(crm_payload.get("commentaires") or "")
-
-    trainees = _session_trainees_list(s)
-    trainees.insert(0, t)
 
     enrolled_at = ""
     if afc_candidate_id:
