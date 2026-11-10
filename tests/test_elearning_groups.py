@@ -11,6 +11,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
+from lxml import html
 from werkzeug.datastructures import MultiDict
 
 import app as host
@@ -907,3 +908,87 @@ def test_amend_basket_rechecks_payment_and_never_creates_an_invoice(shop, mercha
         assert len(rows) == 2 and rows[0]["status"] == "cancelled" and merchant["payment"]["status"] == "canceled"
         assert rows[1]["commerce"]["flow"] == "payment_first" and rows[1]["total_cents"] == 11800
     assert merchant["invoice"] is None
+
+
+def group_page(client, url):
+    response = client.get(url)
+    assert response.status_code == 200
+    return html.fromstring(response.text)
+
+
+def test_group_shows_the_payable_order_instead_of_an_empty_draft(shop, merchant):
+    partner_id = prepare(shop)
+    # The agreed rate is deliberately different from the public price.
+    host._atomic_update_data(lambda data: host._partner_or_404(data, partner_id).update(
+        elearning_pricing={"aps": {"unit_cents": 4750, "free": False}}), partner_id=partner_id)
+    client = shop["client"]
+    url = create(client)
+    people = [person(email=f"learner{n}@example.test", first=f"Camille {n}") for n in range(6)]
+    save(shop, url, people)
+    order = confirm(shop, url)
+    run(order)
+    page = group_page(client, url)
+    card, = page.xpath('//*[@data-order-id=$id]', id=order["id"])
+    assert "285,00 €" in card.text_content() and "0,00 €" not in card.text_content()
+    payment, = card.xpath('.//a[@data-el-pay]')
+    assert payment.get("href") == merchant["payment"]["url"]
+    assert not card.xpath('.//form[contains(@action, "/envoyer-acces")]')
+    draft, = page.xpath('//details[.//*[@id="el-learners"]]')
+    assert "open" not in draft.attrib
+
+    edit = f'{url}/commandes/{order["id"]}/modifier'
+    links = set(card.xpath('.//a/@href'))
+    add_url = edit + "?ajouter=1"
+    assert add_url in links
+    for learner in order["learners"]:
+        assert edit + "?retirer=" + learner["id"] in links
+    add_page = group_page(client, add_url)
+    assert len(add_page.xpath('//input[@name="email"]')) == 7
+    assert add_page.xpath('//input[@name="email"]')[-1].get("value", "") == ""
+    assert len(record(shop, url)["learners"]) == 6
+    with client.session_transaction() as state:
+        state["admin_role"] = "viewer"
+    read_only, = group_page(client, url).xpath('//*[@data-order-id=$id]', id=order["id"])
+    assert "285,00 €" in read_only.text_content()
+    assert not read_only.xpath('.//a[@data-el-pay] | .//a[contains(@href, "/modifier")]')
+
+
+def test_group_keeps_payment_and_dispatch_scoped_to_their_orders(shop, merchant):
+    prepare(shop)
+    client = shop["client"]
+    url = create(client)
+    save(shop, url, [person()])
+    first = confirm(shop, url)
+    run(first)
+    mark_paid(merchant)
+    retry(first)
+    merchant.update(paid=False, invoice=None, payment=None)
+    save(shop, url, [person("alex@example.test", "Alex"), person("sam@example.test", "Sam")])
+    second = confirm(shop, url)
+    run(second)
+    save(shop, url, [person("draft@example.test", "Nina")])
+
+    page = group_page(client, url)
+    paid, = page.xpath('//*[@data-order-id=$id]', id=first["id"])
+    waiting, = page.xpath('//*[@data-order-id=$id]', id=second["id"])
+    assert "camille@example.test" in paid.text_content() and "alex@example.test" not in paid.text_content()
+    assert "59,00 €" in paid.text_content()
+    assert not paid.xpath('.//a[@data-el-pay] | .//a[contains(@href, "/modifier")]')
+    assert paid.xpath('.//form[contains(@action, "/envoyer-acces")]/@action') == [ROOT + "/commandes/" + first["id"] + "/envoyer-acces"]
+    assert "alex@example.test" in waiting.text_content() and "camille@example.test" not in waiting.text_content()
+    assert "118,00 €" in waiting.text_content()
+    assert waiting.xpath('.//a[@data-el-pay]/@href') == [merchant["payment"]["url"]]
+    assert waiting.xpath('.//*[@data-el-payment-context]/@data-el-status-url') == [ROOT + "/commandes/" + second["id"] + "/statut"]
+    assert not waiting.xpath('.//form[contains(@action, "/envoyer-acces")]')
+    assert page.xpath('//*[@id="el-learners"]//input[@name="email"]/@value') == ["draft@example.test"]
+
+
+def test_group_shows_the_outstanding_amount_on_a_partially_paid_invoice(shop, merchant):
+    url, order = billed_group(shop, merchant)
+    merchant["invoice"].update(paid_amount={"value": "20.00", "currency": "EUR"})
+    retry(order)
+    page = group_page(shop["client"], url)
+    card, = page.xpath('//*[@data-order-id=$id]', id=order["id"])
+    assert "39,00 €" in card.text_content() and "59,00 €" in card.text_content()
+    assert not card.xpath('.//a[@data-el-pay] | .//a[contains(@href, "/modifier")]')
+    assert not card.xpath('.//form[contains(@action, "/envoyer-acces")]')

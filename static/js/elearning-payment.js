@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   let active = false;
+  let groupCheckout = null;
   const safeLocal = value => {
     const url = new URL(value, location.href);
     if (url.origin !== location.origin || !url.pathname.startsWith('/admin/organisme/e-learning/commandes/')) throw new Error('Adresse de commande invalide.');
@@ -121,6 +122,7 @@
           if (!refreshResponse.ok || refreshResponse.redirected) throw new Error('refresh');
         }
         const response = await fetch(urls.status_url, {credentials: 'same-origin', cache: 'no-store', headers: {'Accept': 'application/json'}});
+        if (disposed) return;
         if (response.redirected || response.status === 401 || response.status === 403) {
           stop(); closePopup(); openButton.hidden = true;
           paint('Retrouvez votre commande', 'Reconnectez-vous à votre espace pour consulter la confirmation.', false);
@@ -129,6 +131,7 @@
         }
         if (!response.ok) throw new Error('status');
         const state = await response.json();
+        if (disposed) return;
         if (state.paid === true) { finish(); return; }
         paymentUrl = state.checkout_url ? safePayment(state.checkout_url) : '';
         openButton.hidden = !paymentUrl;
@@ -149,7 +152,7 @@
           paint('Votre commande est enregistrée', 'La préparation du paiement demande une vérification. Retrouvez son suivi dans votre espace.', false);
         }
       } catch (_) {
-        paint('Vérification momentanément indisponible', 'Votre commande est enregistrée. Nous réessayons automatiquement ; vous pouvez aussi la retrouver dans votre espace.', false);
+        if (!disposed) paint('Vérification momentanément indisponible', 'Votre commande est enregistrée. Nous réessayons automatiquement ; vous pouvez aussi la retrouver dans votre espace.', false);
       } finally {
         busy = false;
         if (!stopped && pendingRefresh) { pendingRefresh = false; poll(true); }
@@ -181,10 +184,11 @@
       verify();
       fallback.querySelector('[data-payment-resume]').focus();
     });
-    fallback.querySelector('[data-payment-resume]').addEventListener('click', () => {
+    function resume() {
       if (popup && !popup.closed) { popup.focus(); return; }
       showTracking(); poll();
-    });
+    }
+    fallback.querySelector('[data-payment-resume]').addEventListener('click', resume);
     openButton.addEventListener('click', () => {
       if (popup && !popup.closed && launched) { popup.focus(); return; }
       launch();
@@ -193,10 +197,11 @@
       button.addEventListener('click', () => { closePopup(); verify(true); });
     }
     return {
-      start(value) {
+      resume,
+      start(value, {updateHistory = true} = {}) {
         urls = Object.fromEntries(['order_url', 'status_url', 'confirmation_url', 'refresh_url'].map(key => [key, safeLocal(value[key])]));
         const link = fallback.querySelector('[data-order-open]'); link.href = urls.order_url; link.hidden = false;
-        window.history.replaceState(null, '', urls.order_url);
+        if (updateHistory) window.history.replaceState(null, '', urls.order_url);
         checkButton.hidden = false;
         fallback.querySelector('[data-payment-check]').hidden = false;
         const refresh = pendingRefresh; pendingRefresh = false;
@@ -234,13 +239,25 @@
     });
   });
   document.querySelectorAll('[data-el-pay]').forEach(link => link.addEventListener('click', event => {
-    event.preventDefault();
-    if (active) return;
-    const container = link.closest('[data-el-status]');
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    const container = link.closest('[data-el-payment-context], [data-el-status]');
     if (!container) return;
-    const flow = checkout(container, container.querySelector('[name="csrf_token"]').value, true);
+    event.preventDefault();
+    if (groupCheckout) {
+      if (groupCheckout.container === container) { groupCheckout.flow.resume(); return; }
+      groupCheckout.flow.dispose();
+      groupCheckout = null;
+    } else if (active) return;
+    const data = container.dataset;
+    const flow = checkout(container, data.elCsrf || container.querySelector('[name="csrf_token"]').value, true);
     try {
-      flow.start({order_url: location.pathname, status_url: container.dataset.elStatus, confirmation_url: container.dataset.elConfirmation, refresh_url: container.dataset.elRefresh});
+      flow.start({
+        order_url: data.elOrder || location.pathname,
+        status_url: data.elStatusUrl || data.elStatus,
+        confirmation_url: data.elConfirmation,
+        refresh_url: data.elRefresh
+      }, {updateHistory: !data.elOrder});
+      if (data.elOrder) groupCheckout = {container, flow};
     } catch (_) { flow.dispose(); }
   }));
 })();
