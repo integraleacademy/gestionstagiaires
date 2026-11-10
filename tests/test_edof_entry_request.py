@@ -183,3 +183,74 @@ def test_exit_request_rejects_ineligible_operations(tmp_path, action):
     assert complete_service(portal, spec, tmp_path)["code"] in {
         "declaration_changed", "declaration_blocked", "declaration_evidence_changed", "declaration_terms_mismatch"}
     assert not portal.writes
+
+
+@pytest.mark.parametrize(("action", "state"), [("entry_training", "accepted"), ("service_done", "inTraining")])
+def test_linked_dossier_replays_unsent_name_failure_and_reads_receipt(tmp_path, monkeypatch, action, state):
+    import cpf_provider
+    from cpf_production_evidence import read_evidence
+    import edof_declarations as ledger
+
+    monkeypatch.setattr(cpf_provider, "on_test_service", lambda: True)
+    cpf_provider.ProviderStore(tmp_path).switch("integrale", 0, "admin")
+    path = tmp_path / "data.json"
+    data = {"sessions": [{"id":"s1", "date_start":"2026-01-07", "date_end":"2026-02-10",
+                          "trainees":[{"id":"t1", "first_name":"Autre prénom", "last_name":"Nom local"}]}],
+            "wedof_links":[{"external_id":FOLDER, "session_id":"s1", "trainee_id":"t1", "active":True}]}
+    path.write_text(json.dumps(data))
+    store = SimpleNamespace(directory=tmp_path, data_file=path)
+    monkeypatch.setattr(ledger, "authoritative_proofs", lambda ids:
+                        read_evidence(SimpleNamespace(DATA_FILE=path), ids, data=data))
+    row = {**ROW, "state":state}
+    snapshot = {"rows": {FOLDER:row}}
+    actual = row["session_start_date" if action == "entry_training" else "session_end_date"]
+    manual = {"action":action, "actual_date":actual, "operator_confirmed":True}
+    if action == "service_done":
+        manual["rate"] = 100
+    assert ledger.enqueue(tmp_path, "account", 1, row, manual, "admin") == "queued"
+    old = ledger.next_job(store, 1)
+    ledger.complete(tmp_path, old, "declaration_changed")
+    ledger.hold_folder(tmp_path, FOLDER, True)
+    assert ledger.discover(store, "account", snapshot)["blocked"] == 1
+    ledger.hold_folder(tmp_path, FOLDER, False)
+    assert ledger.discover(store, "account", snapshot)[action] == 1
+    job = ledger.next_job(store, 1)
+    assert job["operation"] != old["operation"]
+    assert job["intent"]["linked_registration"] == ["s1", "t1"]
+    assert ledger.check_before_job(store, job)
+    # A discrepancy in the spelling returned by the list and full EDOF file
+    # does not change the target. Another CPF number or period does.
+    assert not ledger.verify_identity({**row,"folder_id":"99999999"}, job)
+    assert not ledger.verify_identity({**row,"session_end_date":"2026-02-10"}, job)
+    portal = Portal() if action == "entry_training" else CompletionPortal()
+    portal.row = {**row, "first_name":"Prénom du titulaire", "last_name":"Autre graphie"}
+    code = run(portal, job, tmp_path) if action == "entry_training" else complete_service(portal, job, tmp_path)["code"]
+    assert code == "declaration_confirmed"
+    ledger.complete(tmp_path, job, code, portal.state)
+    assert ledger.records(tmp_path)[0]["intent"]["actual_date"] == actual
+    assert ledger.discover(store, "account", snapshot)["existing"] == 1
+    assert ledger.next_job(store, 1) is None and len(portal.writes) == 1
+
+
+def test_bound_review_is_not_retried_indefinitely_or_after_uncertain_write(tmp_path, monkeypatch):
+    import cpf_provider
+    import edof_declarations as ledger
+
+    monkeypatch.setattr(cpf_provider, "on_test_service", lambda: True)
+    cpf_provider.ProviderStore(tmp_path).switch("integrale", 0, "admin")
+    proof = {"linked_session":"s1", "linked_trainee":"t1", "last_name":"Local"}
+    monkeypatch.setattr(ledger, "authoritative_proofs", lambda ids: {FOLDER:proof})
+    store = SimpleNamespace(directory=tmp_path, data_file=None)
+    snap = {"rows":{FOLDER:{**ROW, "state":"accepted"}}}
+    assert ledger.discover(store, "account", snap)["entry_training"] == 1
+    ledger.complete(tmp_path, ledger.next_job(store, 1), "declaration_changed")
+    assert ledger.discover(store, "account", snap)["review"] == 1
+    assert ledger.next_job(store, 1) is None
+    proof["linked_trainee"] = "t2"
+    assert ledger.discover(store, "account", snap)["entry_training"] == 1
+    job = ledger.next_job(store, 1)
+    assert ledger.check_before_job(store, job) and ledger.begin_send(tmp_path, job)
+    ledger.complete(tmp_path, job, "declaration_unverified")
+    proof["linked_trainee"] = "t3"
+    assert ledger.discover(store, "account", snap)["review"] == 1
+    assert ledger.records(tmp_path)[0]["status"] == "uncertain"

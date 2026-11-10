@@ -721,30 +721,3 @@ def test_ignore_preference_protects_access_and_nightly_reconciliation(site):
     assert site.client.post(url,data={'csrf':site.csrf}).status_code==303
     site.nightly(dt.datetime(2026,11,8,18,tzinfo=dashboard.PARIS))
     assert len(json.loads(site.local.read_text())['wedof_links'])==1
-
-
-def test_identity_review_is_bound_to_the_exact_link_and_names(site, monkeypatch):
-    import edof_declarations as ledger
-    from cpf_production_evidence import read_evidence
-
-    site.gate.switch("integrale", 0, "admin")
-    data = json.loads(site.local.read_text())
-    person = data["sessions"][0]["trainees"][0]
-    person["last_name"] = "Autre nom"
-    data["wedof_links"] = [{"active": True, "external_id":"100000", "session_id":"s1", "trainee_id":"t1"}]
-    site.local.write_text(json.dumps(data))
-    url = "/admin/edof-test"
-    listed = site.client.get(url, query_string={"section":"automations", "tab":"attention"})
-    assert "La fiche locale indique Anne Autre nom" in listed.text
-    detail = site.client.get(url, query_string={"folder":"100000"})
-    key = re.search(r'name="identity_key" value="([a-f0-9]{64})"', detail.text)[1]
-    verify = url + "/dossiers/100000/confirm-linked-identity"
-    form = {"csrf":site.csrf, "verified":"yes", "identity_key":key}
-    assert site.client.post(verify, data={**form, "identity_key":"stale"}, headers={"Accept":"application/json"}).status_code == 409
-    assert site.client.post(verify, data=form).status_code == 303
-    proof = read_evidence(SimpleNamespace(DATA_FILE=site.local), ["100000"], data=json.loads(site.local.read_text()))["100000"]
-    row = site.vault.get(edof_directory.record_key(site.owner))["rows"]["100000"]
-    assert not ledger.conflicting_identity(row, proof)
-    assert ledger.conflicting_identity({**row, "last_name":"Troisième nom"}, proof)
-    assert ledger.conflicting_identity(row, {**proof, "linked_trainee":"t2"})
-    assert ledger.conflicting_identity({**row, "folder_id":"100099"}, proof)

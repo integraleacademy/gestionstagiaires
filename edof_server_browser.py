@@ -1942,7 +1942,9 @@ def _run_browser(spec, *, live=None, traffic=None):
             if folder_id not in details:
                 raise StopRun("response_unrecognized" if invalid_response else "read_unconfirmed")
             fields = details[folder_id]
-            if spec.get("first_name") and (identity(fields["first_name"]) != identity(spec["first_name"]) or identity(fields["last_name"]) != identity(spec["last_name"])):
+            # Declarations validate the CPF number, contract period and binding
+            # in transmit(). Other read modes still validate the requested person.
+            if spec["mode"] not in business_modes and spec.get("first_name") and (identity(fields["first_name"]) != identity(spec["first_name"]) or identity(fields["last_name"]) != identity(spec["last_name"])):
                 raise StopRun("identity_mismatch")
             if vault:
                 # Save only after a real authorised dossier response; never
