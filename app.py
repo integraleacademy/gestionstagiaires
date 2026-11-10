@@ -18783,6 +18783,8 @@ CONVENTIONS_SIGNED_TRACKING_START_DATE = datetime.date(2026, 7, 15)
 def _public_trainee_convention_is_signed(trainee: Dict[str, Any]) -> bool:
     """Match the signed convention state displayed in the public journey card."""
     convention_signature = trainee.get("convention_signature") or trainee.get("convocation_signature") or {}
+    if _convention_preparation_failed(convention_signature):
+        return False
     return (
         convention_signature.get("status") in {"signed", "done"}
         or trainee.get("convention_status") == "signed"
@@ -34654,6 +34656,7 @@ def public_trainee_space(token):
 
     return render_template(
         "public_trainee.html",
+        convention_preparation_failed=_convention_preparation_failed(convention_signature),
         desp_project=desp_jury_projects.view(sys.modules[__name__], s, t, token=token),
         exam_retakes=exam_retakes.views(sys.modules[__name__], s['id'], t['id'], public=True, token=token),
         session=_trainee_training_session(display_session, t),
@@ -36352,9 +36355,18 @@ def _has_legacy_signed_convention(trainee: Dict[str, Any]) -> bool:
     return bool(trainee.get("convention_legacy_signed") or trainee.get("legacy_convention_signed"))
 
 
+def _convention_preparation_failed(state: Dict[str, Any]) -> bool:
+    """Identify layout failures stored before a new Yousign request existed."""
+    return _normalize_yousign_status(state.get("status")) == "error" and state.get("last_error") in (
+        CONVENTION_SIGNATURE_FRAME_TOO_SMALL, CONVENTION_SIGNATURE_OUTSIDE_PAGE,
+    )
+
+
 def _trainee_convention_is_signed(trainee: Dict[str, Any]) -> bool:
     """Return the persisted signature state without building request-bound UI URLs."""
     state = _yousign_state(trainee)
+    if _convention_preparation_failed(state):
+        return False
     signed_at = (
         state.get("signed_at")
         or trainee.get("convention_aps_signed_at")
@@ -36370,6 +36382,9 @@ def _trainee_convention_is_signed(trainee: Dict[str, Any]) -> bool:
 
 def _sync_convention_status_from_yousign(trainee: Dict[str, Any]) -> bool:
     """Keep the admin trainees convention dot aligned with the Yousign automation state."""
+    if trainee.get("convention_status") == "signed" and _convention_preparation_failed(_yousign_state(trainee)):
+        trainee["convention_status"] = "soon"
+        return True
     if not _trainee_convention_is_signed(trainee):
         return False
     if trainee.get("convention_status") == "signed":
@@ -40411,9 +40426,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     if "son PDF n’est pas présent dans Yousign" in convention_error:
         convention_error = _signed_convention_recovery_message(trainee)
     convention_status = _convention_automation_status_key(trainee)
-    preparation_failed = convention_status == "error" and state.get("last_error") in (
-        CONVENTION_SIGNATURE_FRAME_TOO_SMALL, CONVENTION_SIGNATURE_OUTSIDE_PAGE,
-    )
+    preparation_failed = _convention_preparation_failed(state)
     previous_signed_at = ""
     if preparation_failed:
         # These failures happen before creating a Yousign request. A transferred
@@ -40585,7 +40598,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
             "generated_at": generated_at, "sent_at": sent_at, "signed_at": signed_at,
             "preparation_failed": preparation_failed, "previous_signed_at": previous_signed_at,
             "recipient_email": trainee.get("email") or "", "signature_request_id": state.get("signature_request_id") if has_signature_request else "",
-            "signed_pdf_request_id": state.get("signed_pdf_request_id") or "",
+            "signed_pdf_request_id": "" if preparation_failed else state.get("signed_pdf_request_id") or "",
             "view_url": convention_view_url,
             "download_url": convention_download_url,
             "signed_pdf_available": bool(signed_pdf_path),
@@ -52906,7 +52919,7 @@ def public_convention_signature_redirect(token: str):
         return redirect(url_for("public_trainee_login", token=token))
     state = _yousign_state(t)
     link = str(state.get("signature_link") or "").strip()
-    if not link or _is_yousign_signature_done(state):
+    if not link or _is_yousign_signature_done(state) or _convention_preparation_failed(state):
         flash("Aucune convention n’est en attente de signature.", "error")
         return redirect(url_for("public_trainee_space", token=token))
     app.logger.info("[YOUSIGN] public signature redirect trainee_id=%s", t.get("id"))

@@ -1192,8 +1192,8 @@
     {% endif %}
 
     <!-- Composition SaaS compacte : formation, suivi et documents -->
-    {% set conv_sig = trainee.convention_signature or trainee.convocation_signature or {} %}
-    {% set convention_state = trainee.convention_status %}
+    {% set conv_sig = {} if convention_preparation_failed else trainee.convention_signature or trainee.convocation_signature or {} %}
+    {% set convention_state = 'soon' if convention_preparation_failed else trainee.convention_status %}
     {% if conv_sig.status in ['signed', 'done'] %}{% set convention_state = 'signed' %}{% endif %}
     {% set convention_action_required = conv_sig.signature_link and conv_sig.status not in ['signed', 'done'] %}
     {% set convention_pdf_token = conv_sig.signed_pdf_token or conv_sig.unsigned_pdf_token %}
