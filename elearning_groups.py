@@ -714,9 +714,11 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
                 raise ValueError("Choisissez un parcours APS, MAC APS ou VTC.")
             if code != group["course_code"] and not view["can_change_course"]:
                 raise ValueError("Le parcours d’un groupe déjà commandé ne peut plus être modifié.")
-            locked = [p for p in group["learners"] if p["id"] in {r["id"] for r in view["learners"] if r["locked"]}]
-            people = _roster(request.form, group, locked)
-            group.update(group_name=name, course_code=code, learners=locked + people,
+            if request.form.get("next") != "settings":
+                locked_ids = {r["id"] for r in view["learners"] if r["locked"]}
+                locked = [p for p in group["learners"] if p["id"] in locked_ids]
+                group["learners"] = locked + _roster(request.form, group, locked)
+            group.update(group_name=name, course_code=code,
                          revision=expected + 1, updated_at=host._now_iso())
             return {"id": gid}
         try:
