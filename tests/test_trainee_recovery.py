@@ -18,6 +18,44 @@ def backup(tmp_path):
     return payload
 
 
+def test_repeated_creation_preserves_first_record_and_archives_divergent_copy(tmp_path, monkeypatch):
+    import app
+    data_file = tmp_path / "data.json"
+    monkeypatch.setattr(app, "DATA_FILE", str(data_file))
+    monkeypatch.setattr(app, "BACKUP_DIR", str(tmp_path / "backups"))
+    current = {**TRAINEE, "created_at": "2026-11-01T10:00:00", "comment": "",
+               "sent_email_history": [{"id": "receipt"}], "financement_status": "validated"}
+    old = {**current, "comment": "Old note", "documents": [], "financement_status": "soon"}
+    namesake = {**current, "id": "TRN-87654321", "public_token": "another-token"}
+    reset = {**current, "public_token": "different-portal"}
+    training = {"id": "S1", "partner_id": PARTNER,
+                "trainees": [current, current, old, namesake, reset]}
+    data = {"sessions": [training, {"id": "S2", "trainees": [current]}],
+            "wedof_links": [{"session_id": "S1", "trainee_id": current["id"]}]}
+    data_file.write_text(json.dumps(data))
+    loaded = app._load_valid_json_payload(str(data_file))
+    assert loaded["sessions"][0]["trainees"] == [current, namesake, reset]
+    assert loaded["sessions"][1]["trainees"] == [current]
+    assert loaded["wedof_links"] == data["wedof_links"]
+    app._write_json_with_backups(str(data_file), data, app._data_lock)
+    assert json.loads(data_file.read_text()) == loaded
+    archives = list((tmp_path / "backups" / "registration-copies").glob("*.json"))
+    assert len(archives) == 1
+    assert json.loads(archives[0].read_text()) == {"session_id": "S1", "partner_id": PARTNER, "trainee": old}
+
+
+def test_copy_is_retained_when_recovery_storage_fails():
+    from trainee_recovery import collapse_registration_copies
+    current = {**TRAINEE, "created_at": "2026-11-01"}
+    rows = [current, {**current, "comment": "older copy"}]
+
+    def unavailable(training, row):
+        raise OSError("Storage unavailable")
+
+    assert not collapse_registration_copies({"sessions": [{"trainees": rows}]}, unavailable)
+    assert len(rows) == 2
+
+
 def test_search_finds_latest_valid_copy_despite_later_absence_and_corruption(tmp_path):
     backup(tmp_path)
     (tmp_path / "data_json.20260909T132000.json").write_text('{"sessions": []}')

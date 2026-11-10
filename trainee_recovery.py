@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import json
+import logging
 import mmap
 import re
 import unicodedata
@@ -46,6 +47,48 @@ def find_original_conventions(persist_dir, query):
 def _trainees(session):
     rows = session.get("trainees", session.get("stagiaires", []))
     return rows if isinstance(rows, list) else []
+
+
+def _creation_key(training, row):
+    if isinstance(row, dict):
+        partner = row.get("partner_id") or training.get("partner_id") or ""
+        values = (row.get("id"), row.get("public_token"), row.get("created_at"))
+        if isinstance(partner, str) and all(isinstance(value, str) and value for value in values):
+            return (partner, *values)
+    return None
+
+
+def collapse_registration_copies(data, archive_copy):
+    """Keep the row addressed by the existing trainee URL for a repeated creation."""
+    if not isinstance(data.get("sessions"), list):
+        return False
+    changed = False
+    for training in data["sessions"]:
+        if not isinstance(training, dict):
+            continue
+        rows = _trainees(training)
+        if len(rows) < 2:
+            continue
+        originals = {}
+        retained = []
+        for row in rows:
+            key = _creation_key(training, row)
+            if key is None or key not in originals:
+                if key is not None:
+                    originals[key] = row
+                retained.append(row)
+            elif row != originals[key]:
+                # Admin edits address the first row. Preserve divergent copies
+                # separately so clearing a field on the active file stays effective.
+                try:
+                    archive_copy(training, row)
+                except OSError:
+                    logging.getLogger(__name__).exception("Could not archive duplicate registration")
+                    retained.append(row)
+        if len(retained) != len(rows):
+            rows[:] = retained
+            changed = True
+    return changed
 
 
 def find_backup(backup_dir, trainee_id, partner_id, source=None):
