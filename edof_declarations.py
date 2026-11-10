@@ -1,7 +1,6 @@
 """Durable, one-per-folder/action declarations and verified EDOF receipts."""
 from contextlib import closing
 import datetime as dt
-import hashlib
 import json
 import time
 import uuid
@@ -33,10 +32,12 @@ REASONS = {
     "declaration_form_changed": "Aucune déclaration transmise. Le connecteur s’est arrêté avant l’envoi du formulaire EDOF.",
     "declaration_read_unavailable": "EDOF n’a pas renvoyé la fiche. La déclaration est en attente. Une nouvelle lecture est prévue dans 15 minutes.",
     "declaration_changed": "Le statut, l’identité ou les dates du dossier ont changé sur EDOF.",
+    "declaration_link_changed": "L’association locale a changé. Le prochain contrôle vérifiera le rattachement actuel.",
     "declaration_unverified": "La relecture du dossier ne confirme pas encore toutes les valeurs.",
     "declaration_blocked": "Un blocage a été enregistré pour ce dossier.",
     "declaration_evidence_changed": "Le justificatif de production a changé ou n’est plus disponible.",
 }
+LINK_REVIEW_CODES = {"declaration_changed", "identity_mismatch", "declaration_link_changed"}
 
 
 def database(directory):
@@ -93,11 +94,27 @@ def official_terms_match(row, intent):
                  and intent["rate"] == 100 and not intent.get("motif")))
 
 
+def same_period(row, intent):
+    return all(row.get(k) and row[k] == intent.get(k) for k in ("session_start_date", "session_end_date"))
+
+
+def can_resume_linked_review(old, previous, intent, owner):
+    # These failures preceded the EDOF write fence. Only retry after a new
+    # registration binding or a change to the authoritative CPF period.
+    return (old["owner"] == owner and old["detail"] in LINK_REVIEW_CODES
+            and intent.get("linked_registration") and not previous.get("pilot_ticket")
+            and previous.get("rate", 100) == 100 and not previous.get("motif")
+            and (not previous.get("exit_confirmed") or previous.get("actual_date") == intent["actual_date"])
+            and (previous.get("linked_registration") != intent["linked_registration"]
+                 or not same_period(intent, previous)))
+
+
 def enqueue(directory, owner, revision, row, draft, actor, *, automatic=False):
     folder, action = row["folder_id"], draft["action"]
     if not ID_RE.fullmatch(folder) or action not in {"entry_training", "service_done"}:
         raise ValueError("Opération EDOF inconnue.")
-    if not all(row.get(k) for k in ("first_name", "last_name", "session_start_date", "session_end_date")):
+    if not (row.get("session_start_date") and row.get("session_end_date")
+            and (draft.get("linked_registration") or row.get("first_name") and row.get("last_name"))):
         raise ValueError("L’identité et les deux dates de session doivent être connues.")
     if row["session_start_date"] < FIRST_SESSION:
         raise ValueError("La session est antérieure au 1er janvier 2026.")
@@ -118,7 +135,7 @@ def enqueue(directory, owner, revision, row, draft, actor, *, automatic=False):
     if action == "service_done" and (type(draft.get("rate")) is not int or not 0 <= draft["rate"] <= 100 or (draft["rate"] < 100 and draft.get("motif") not in MOTIFS)):
         raise ValueError("Confirmez la réalisation et, pour une sortie, le taux et le motif éventuel.")
     stamp = time.time()
-    intent = {**{k: row[k]
+    intent = {**{k: row.get(k) or ""
                  for k in ("first_name", "last_name", "session_start_date", "session_end_date")},
               "title": row.get("title", ""), **draft}
     with closing(database(directory)) as db, db:
@@ -140,8 +157,10 @@ def enqueue(directory, owner, revision, row, draft, actor, *, automatic=False):
                                and previous.get("source") == "edof_schedule" and not previous.get("exit_confirmed"))
             if (old["status"] in {"sending", "uncertain", "confirmed"}
                     or old["status"] == "queued" and old["revision"] == revision and not replace_default
-                    or automatic and old["status"] == "review"):
+                    or automatic and old["status"] == "review" and not can_resume_linked_review(old, previous, intent, owner)):
                 return old["status"]
+            if old["status"] == "review" and previous.get("exit_confirmed"):
+                intent["exit_confirmed"] = True
         db.execute("""INSERT INTO cpf_declarations(folder,action,token,owner,revision,actor,intent,status,created,changed)
             VALUES(?,?,?,?,?,?,?,'queued',?,?) ON CONFLICT(folder,action) DO UPDATE SET
             token=excluded.token, owner=excluded.owner, revision=excluded.revision, actor=excluded.actor,
@@ -245,9 +264,10 @@ def request_recheck(directory, folder, action):
 def verify_identity(fields, spec):
     intent = spec["intent"]
     return (fields.get("folder_id") == spec["folder_id"]
-            and all(normalized(fields.get(k) or "") == normalized(intent.get(k) or "") and intent.get(k)
-                    for k in ("first_name", "last_name"))
-            and all(fields.get(k) == intent.get(k) and intent.get(k) for k in ("session_start_date", "session_end_date")))
+            and same_period(fields, intent)
+            and (bool(intent.get("linked_registration")) or
+                 all(intent.get(k) and normalized(fields.get(k) or "") == normalized(intent[k])
+                     for k in ("first_name", "last_name"))))
 
 
 def is_recorded(fields, intent):
@@ -302,25 +322,20 @@ def same_enrolment(row, proof):
                ("first_name", "last_name", "session_start_date", "session_end_date"))
 
 
-def identity_review_key(row, proof):
-    fields = [row.get("folder_id"), proof.get("linked_session"), proof.get("linked_trainee"),
-              row.get("session_start_date"), row.get("session_end_date")]
-    fields.extend(normalized(source.get(key) or "") for source in (row, proof) for key in ("first_name", "last_name"))
-    if not all(fields):
-        return ""
-    return hashlib.sha256(json.dumps(fields, ensure_ascii=False).encode()).hexdigest()
+def linked_registration(proof):
+    if proof.get("linked_session") and proof.get("linked_trainee"):
+        return [proof["linked_session"], proof["linked_trainee"]]
+    return None
 
 
 def conflicting_identity(row, proof):
-    different = any(proof.get(key) and normalized(proof[key]) != normalized(row.get(key) or "")
-                    for key in ("first_name", "last_name"))
-    return bool(different and not (proof.get("identity_confirmation")
-                                   and proof["identity_confirmation"] == identity_review_key(row, proof)))
+    return any(proof.get(key) and normalized(proof[key]) != normalized(row.get(key) or "")
+               for key in ("first_name", "last_name"))
 
 
 def matches_linked_proof(row, proof, draft):
     """Compare evidence returned for this exact CPF number to the individual EDOF period."""
-    if same_enrolment(row, proof):
+    if same_enrolment(row, proof) or (linked_registration(proof) and same_period(row, proof)):
         return True
     # A participant can join an existing group on the first day of their CPF
     # contract. The group's earlier start alone neither proves nor disproves entry.
@@ -331,8 +346,8 @@ def matches_linked_proof(row, proof, draft):
                 and group_start and group_start < start <= (row.get("session_end_date") or "")
                 and row["session_end_date"] == proof.get("session_end_date")
                 and (not recorded_start or recorded_start == start)
-                and all(row.get(k) and normalized(row[k]) == normalized(proof.get(k) or "")
-                        for k in ("first_name", "last_name")))
+                and (linked_registration(proof) or all(row.get(k) and normalized(row[k]) == normalized(proof.get(k) or "")
+                        for k in ("first_name", "last_name"))))
 
 
 def training_proof(row, proof, action):
@@ -370,7 +385,9 @@ def discover(store, owner, snapshot, *, outcomes=None):
     revision = selection["revision"]
     held = folder_holds(store.directory)
     existing = {(r["folder"], r["action"]):r["status"] for r in records(store.directory)
-                if r["status"] in {"confirmed","sending","uncertain","review"} or r["status"] == "queued" and r["revision"] == revision}
+                if r["status"] in {"confirmed","sending","uncertain"}
+                or r["status"] == "review" and r["detail"] not in LINK_REVIEW_CODES
+                or r["status"] == "queued" and r["revision"] == revision}
 
     report = dict(entry_training=0, service_done=0, existing=0, blocked=0, missing=0, review=0)
 
@@ -412,18 +429,20 @@ def discover(store, owner, snapshot, *, outcomes=None):
                 record(folder, action, "blocked", "blocked")
                 continue
             saved = drafts.get(folder, {}).get("draft") or {}
-            if any(conflicting_identity(row, item) for item in (proof, local_proof)):
+            registration = linked_registration(proof)
+            if not registration and any(conflicting_identity(row, item) for item in (proof, local_proof)):
                 record(folder, action, "review", "review")
                 continue
             if saved.get("source") == "admin" and saved.get("action") == action:
-                if not same_enrolment(row, saved) or not official_terms_match(row, saved):
+                if (not (same_period(row, saved) if registration else same_enrolment(row, saved))
+                        or not official_terms_match(row, saved)):
                     record(folder, action, "review", "review")
                     continue
                 draft = saved
             else:
                 draft = scheduled_draft(row, action)
-            if proof.get("identity_confirmation") and proof["identity_confirmation"] == identity_review_key(row, proof):
-                draft = {**draft, "linked_identity_key": proof["identity_confirmation"]}
+            if registration:
+                draft = {**draft, "linked_registration": registration}
             try:
                 status = enqueue(store.directory, owner, revision, row, draft, "Gestion Stagiaires", automatic=True)
             except ValueError:
@@ -481,20 +500,28 @@ def check_before_job(store, spec):
             complete(store.directory, spec, "declaration_blocked")
             return False
         source = spec["intent"].get("source")
-        identity_row = {**spec["intent"], "folder_id":folder}
-        approved_key = spec["intent"].get("linked_identity_key")
-        if approved_key and (proof.get("identity_confirmation") != approved_key
-                             or identity_review_key(identity_row, proof) != approved_key):
-            complete(store.directory, spec, "declaration_changed")
+        registration = linked_registration(proof)
+        bound = intent.get("linked_registration")
+        if (bound and registration != bound) or (intent.get("linked_identity_key") and not registration):
+            complete(store.directory, spec, "declaration_link_changed")
             return False
-        if (source == "edof_schedule" or spec["intent"].get("operator_confirmed")) and conflicting_identity(
-                identity_row, proof):
+        if registration and not bound:
+            # Manual submissions and already queued jobs receive the same durable
+            # binding. Reconciliation after a restart reads it from the journal.
+            with closing(database(store.directory)) as db, db:
+                if not db.execute("""UPDATE cpf_declarations SET intent=json_set(intent,'$.linked_registration',json(?))
+                        WHERE token=? AND folder=? AND status='queued'""",
+                        (json.dumps(registration), spec["operation"], folder)).rowcount:
+                    return False
+            intent["linked_registration"] = registration
+        if not registration and (source == "edof_schedule" or intent.get("operator_confirmed")) and conflicting_identity(intent, proof):
             complete(store.directory,spec,"declaration_changed")
             return False
         if source == "admin":
             from integrale_edof_dashboard import local_operations
             current = local_operations(ProviderStore(store.directory)).get(folder, {}).get("draft") or {}
-            if not same_enrolment(spec["intent"], current) or any(spec["intent"].get(k) != v for k, v in current.items()):
+            names = {"first_name", "last_name"} if registration else set()
+            if not same_period(intent, current) or any(intent.get(k) != v for k, v in current.items() if k not in names):
                 complete(store.directory, spec, "declaration_evidence_changed")
                 return False
         if source in {"production", "local"}:

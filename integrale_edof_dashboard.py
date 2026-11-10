@@ -25,7 +25,6 @@ import edof_proposal as proposal_form
 import edof_proposal_jobs as proposals
 from cpf_provider import PROVIDERS, ProviderStore, ProviderUnavailable, on_test_service, on_production_service, provider_operation
 from cpf_entry_pilot import active_holds, blocks_pilot
-from cpf_production_evidence import linked_enrolments, linked_identity
 from cpf_provider_bridge import coordinated_switch, production_request
 from edof_matching import build_comparison, manual_options
 from edof_readonly_test import ID_RE
@@ -123,7 +122,7 @@ def apply_confirmed_entries(snapshot, directory_path, owner):
     for record in verified:
         row = rows.get(record["folder"])
         intent = json.loads(record["intent"])
-        if (not row or not declarations.same_enrolment(row, intent)
+        if (not row or not declarations.verify_identity(row, {"folder_id":record["folder"], "intent":intent})
                 or (row.get("observed_at") or 0) > record["changed"]):
             continue
         kind = category(row)
@@ -176,7 +175,6 @@ def simulate(kind, date, block, draft, now):
 def dashboard_rows(snapshot, data, operations, now):
     links = {str(x.get("external_id")): x for x in data.get("wedof_links", []) if isinstance(x, dict) and x.get("active")}
     blocked = active_blocks(data)
-    enrolments = linked_enrolments(data, (snapshot or {}).get("rows", {}))
     rows, counts = [], Counter()
     for record in (snapshot or {}).get("rows", {}).values():
         folder = record["folder_id"]
@@ -185,13 +183,6 @@ def dashboard_rows(snapshot, data, operations, now):
         date = (record.get("session_start_date") if kind == "accepted" else record.get("session_end_date")) or ""
         block = blocked.get((folder, action)) or blocked.get((folder, "both"))
         flags = operations.get(folder, {})
-        identity_review = None
-        if action and folder in enrolments:
-            link, _, trainee = enrolments[folder]
-            proof = linked_identity(link, trainee)
-            if declarations.conflicting_identity(record, proof):
-                identity_review = {"name": " ".join(filter(None, (proof["first_name"], proof["last_name"]))),
-                                   "key": declarations.identity_review_key(record, proof)}
         evaluation = simulate(kind, date, block, flags.get("draft"), now)
         due = evaluation in {"unconfirmed","ready"}
         tags = {kind, "all"}
@@ -214,7 +205,7 @@ def dashboard_rows(snapshot, data, operations, now):
         rows.append({**record, "kind": kind, "label": LABELS[kind] if kind != "unknown" else record.get("state") or LABELS[kind],
                      "scheduled": scheduled_time(kind, date), "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": links.get(folder),
                      "associable": associable(record), "association_ignored": bool(flags.get("association_ignored")), "handled": bool(flags.get("handled")), "archived": bool(flags.get("archived")),
-                     "draft": flags.get("draft"), "identity_review": identity_review, "official_url": DETAIL_PREFIX + folder})
+                     "draft": flags.get("draft"), "official_url": DETAIL_PREFIX + folder})
     return rows, counts
 
 
@@ -797,26 +788,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
     @bp.post("/dossiers/<folder>/confirm-linked-identity")
     @native_action
     def confirm_linked_identity(owner, folder):
-        row = folder_record(owner, folder)
-        supplied = request.form.get("identity_key", "")
-        if not supplied or request.form.get("verified") != "yes" or category(row) not in ACTIONS:
-            raise ValueError("Vérifiez les deux identités avant de confirmer.")
-        def confirm(data):
-            scoped = {**data, "sessions": associations.eligible_groups(data, partner_id, is_cancelled)}
-            linked = linked_enrolments(scoped, [folder]).get(folder)
-            if not linked:
-                raise ValueError("Cette association a changé. Rouvrez le dossier.")
-            link, _, trainee = linked
-            key = declarations.identity_review_key(row, linked_identity(link, trainee))
-            if not key or not hmac.compare_digest(key.encode(), supplied.encode()):
-                raise ValueError("Les informations ont changé. Rouvrez le dossier.")
-            link["edof_identity_confirmation"] = {"key":key, "by":session.get("admin_username") or owner,
-                                                  "at":dt.datetime.now(PARIS).isoformat()}
-            return {}
-        legacy._atomic_update_data(confirm)
-        from edof_dispatch import wake
-        wake(store.directory)
-        flash("Identité confirmée pour cette inscription. Le prochain contrôle reprendra la déclaration arrivée à échéance.", "success")
+        # Older open tabs can still submit the previous identity form.
+        folder_record(owner, folder)
         return back(folder=folder)
 
     @bp.post("/dossiers/<folder>/associate")

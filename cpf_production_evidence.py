@@ -53,13 +53,6 @@ def linked_enrolments(data, requested):
     return resolved
 
 
-def linked_identity(link, trainee):
-    return {"first_name": trainee.get("first_name") or trainee.get("prenom"),
-            "last_name": trainee.get("last_name") or trainee.get("nom"),
-            "linked_session": str(link.get("session_id") or ""), "linked_trainee": str(link.get("trainee_id") or ""),
-            "identity_confirmation": (link.get("edof_identity_confirmation") or {}).get("key")}
-
-
 def read_evidence(legacy, requested, *, data=None):
     if data is None:
         data = legacy.load_data()
@@ -88,7 +81,8 @@ def read_evidence(legacy, requested, *, data=None):
             target = str(t["id"])
             start = iso(session.get("date_start") or session.get("date_debut"))
             end = iso(session.get("date_end") or session.get("date_fin"))
-            item.update(**linked_identity(link, t),
+            item.update(first_name=t.get("first_name") or t.get("prenom"), last_name=t.get("last_name") or t.get("nom"),
+                        linked_session=str(session["id"]), linked_trainee=target,
                         session_start_date=start, session_end_date=end)
             if not start or not end or start > today:
                 continue
