@@ -8,6 +8,24 @@ from manuals_presentation import presentation_books
 from test_manuals_shop import shop, signup, login, order_form, all_data
 
 
+def test_edof_consent_pages_are_public_but_workspace_requires_login(shop, monkeypatch):
+    origin = 'https://www.integraleconnect.com'
+    monkeypatch.setenv('MANUALS_PUBLIC_URL', origin)
+    monkeypatch.setenv('MANUALS_INDEXABLE', 'true')
+    client = shop['client']
+    for path in ('/edof', '/edof/confidentialite'):
+        response = client.get(path, base_url=origin)
+        assert response.status_code == 200
+        assert f'rel="canonical" href="{origin}{path}"' in response.text
+        assert 'href="/edof/confidentialite"' in response.text
+        assert 'X-Robots-Tag' not in response.headers
+    assert 'gmail.readonly' in client.get('/edof/confidentialite', base_url=origin).text
+    assert client.get('/edof', base_url='https://integraleconnect.com').location == origin + '/edof'
+    private = client.get('/admin/integrale-edof', base_url=origin)
+    assert private.status_code == 302
+    assert '/admin/login' in private.location
+
+
 def test_anonymous_discovery_and_private_ordering(shop):
     client = shop["client"]
     for path in ("/", "/manuels"):

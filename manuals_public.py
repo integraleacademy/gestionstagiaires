@@ -21,7 +21,12 @@ TERMS_TEMPLATES = {
     '2026-10-17': 'manuals/legal/conditions_2026-10-17.html',
     TERMS_VERSION: 'manuals/legal/conditions_2026-11-07.html',
 }
-PUBLIC_ENDPOINTS = {'manuals_shop.usb_catalogue', 'manuals_shop.usb_detail', 'manuals_shop.public_elearning', 'manuals_shop.public_course', 'manuals_shop.public_course_programme', 'manuals_shop.legal_page', 'manuals_shop.robots', 'manuals_shop.sitemap', 'manuals_shop.favicon'}
+PUBLIC_ENDPOINTS = {
+    'manuals_shop.usb_catalogue', 'manuals_shop.usb_detail', 'manuals_shop.public_elearning',
+    'manuals_shop.public_course', 'manuals_shop.public_course_programme', 'manuals_shop.legal_page',
+    'manuals_shop.edof_home', 'manuals_shop.edof_privacy',
+    'manuals_shop.robots', 'manuals_shop.sitemap', 'manuals_shop.favicon',
+}
 CACHEABLE = PUBLIC_ENDPOINTS | {'home', 'manuals_shop.public_presentation', 'manuals_shop.public_manual_detail'}
 
 
@@ -122,6 +127,14 @@ def register_routes(host, bp, *, page):
     def public_course_programme(code):
         return programme_download(code)
 
+    @bp.get('/edof')
+    def edof_home():
+        return page('edof/home.html', public=True)
+
+    @bp.get('/edof/confidentialite')
+    def edof_privacy():
+        return page('edof/privacy.html', public=True)
+
     @bp.get('/mentions-legales')
     @bp.get('/confidentialite')
     @bp.get('/conditions-de-vente')
@@ -146,6 +159,7 @@ def register_routes(host, bp, *, page):
     @bp.get('/sitemap.xml')
     def sitemap():
         paths = ['/', '/manuels', '/supports-formateurs', '/e-learning', '/personnalisation-livraison', '/mentions-legales', '/confidentialite', '/conditions-de-vente']
+        paths.extend([url_for('manuals_shop.edof_home'), url_for('manuals_shop.edof_privacy')])
         paths += ['/manuels/' + b['code'] for b in CATALOGUE]
         paths += ['/supports-formateurs/' + b['code'] for b in CATALOGUE if b['usb_price']]
         paths += ['/e-learning/' + code for code in elearning_orders.COURSES]
