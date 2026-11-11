@@ -930,3 +930,20 @@
 #financeInstallments .schedule-financial-lines dl > div { display:flex; gap:12px; justify-content:space-between; align-items:baseline; padding:5px 0; }
 #financeInstallments .schedule-financial-lines dt, #financeInstallments .schedule-financial-lines p { color:#51647a; font-size:.85rem; }
 #financeInstallments .schedule-financial-lines dd { margin:0; color:#253b52; font-size:.88rem; font-weight:620; }
+
+/* Native CPF lookup stays inside the trainee sheet. */
+.cpf-sync.is-pending{background:#fff7ed;color:#9a3412}
+.cpf-native-search{border-style:solid;border-color:#dbe2f9;background:linear-gradient(135deg,#fff,#fafaff)}
+.cpf-native-search .cpf-match-status{margin-top:18px;gap:18px;padding:18px}
+.cpf-native-search .cpf-empty__head p{max-width:850px}
+.cpf-native-result-heading{display:flex;justify-content:space-between;gap:12px;margin-top:22px;color:#334155;font-size:13px}
+.cpf-native-result-heading>span{color:#64748b;font-size:12px}
+.cpf-native-associate{display:grid;gap:10px;max-width:290px}
+.cpf-native-associate label{display:flex;align-items:flex-start;gap:8px;color:#475569;font-size:12px;line-height:1.5}
+.cpf-native-associate input{width:auto;flex-shrink:0;accent-color:#4f46e5;margin-top:3px}
+.cpf-native-pagination{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:16px}
+.cpf-native-search [hidden]{display:none!important}
+.cpf-native-notice{margin-top:16px;color:#64748b;font-size:13px}
+.cpf-native-search[aria-busy="true"] .cpf-native-results{opacity:.6;pointer-events:none}
+@media(max-width:760px){.cpf-native-search .cpf-match-status{flex-wrap:wrap}.cpf-native-search .cpf-match-status>button{width:100%}.cpf-native-search .cpf-suggestion{grid-template-columns:1fr}.cpf-native-associate{max-width:none}.cpf-native-result-heading{flex-direction:column;gap:4px}}
+@media(prefers-reduced-motion:reduce){.cpf-native-search .cpf-match-spinner{animation:none}}

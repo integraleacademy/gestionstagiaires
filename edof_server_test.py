@@ -889,7 +889,6 @@ def register_edof_server_test(legacy):
     def refresh_active_directories():
         worker = DayWorker()
         inspected = None
-        associated_day = None
         next_association_attempt = 0
         # Gunicorn can have several schedulers. Only one owns the in-memory tab.
         store.directory.mkdir(parents=True, exist_ok=True)
@@ -910,14 +909,12 @@ def register_edof_server_test(legacy):
                             store.process_catchups(active)
                             if active["pending"]:
                                 continue
-                            if (daily and now.hour >= 18 and associated_day != now.date()
-                                    and now.timestamp() >= next_association_attempt):
+                            if daily and now.timestamp() >= next_association_attempt:
                                 next_association_attempt = now.timestamp() + 300
                                 try:
-                                    if nightly_associations(now):
-                                        associated_day = now.date()
+                                    nightly_associations(now)
                                 except Exception:
-                                    legacy.app.logger.exception("EDOF: échec du rapprochement du soir")
+                                    legacy.app.logger.exception("EDOF: échec du rapprochement automatique")
                             recovery.prepare(store, active, now)
                             # Explicit dossier actions take the next free slot before background reads.
                             proposal = proposals.next_job(store.directory, active)
