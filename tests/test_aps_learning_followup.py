@@ -66,11 +66,11 @@ def test_only_completed_activity_and_required_time_get_the_blue_validation():
     assert not daily.summary(report, person, set())['complete']
 
 
-def test_urgent_email_requests_help_instead_of_an_impossible_daily_workload(learner):
+def test_critical_email_requests_help_instead_of_an_impossible_daily_workload(learner):
     _, training, person = learner
     report = daily.read_summary(host, training, person)
     content = daily.message(host, training, person, report, dt.date(2026, 11, 29))
-    assert content['tone'] == 'urgent'
+    assert content['tone'] == 'critical'
     assert '62 h 00 min 00 s par jour' not in content['html']
     assert 'Objectif indicatif par jour' not in content['text']
     assert 'contactez-nous dès aujourd’hui' in content['html']
@@ -255,7 +255,7 @@ def test_personalization_changes_with_progress_and_day(learner):
     early = daily.message(host, training, person, report, NOW.date())
     advanced = daily.message(host, training, person, {**report, 'overall_percent':80,'remaining_seconds':3600}, NOW.date())
     complete = daily.message(host, training, person, {**report,'overall_percent':100,'complete':True,'remaining_seconds':0}, NOW.date())
-    assert early['tone'] == 'behind' and advanced['tone'] == 'advanced' and complete['tone'] == 'complete'
+    assert early['tone'] == 'steady' and advanced['tone'] == 'advanced' and complete['tone'] == 'complete'
     assert 'Bravo' in advanced['html'] and 'Félicitations' in complete['html']
     assert len({daily.message(host,training,person,report,NOW.date()+dt.timedelta(days=i))['html'] for i in range(20)}) == 20
 
@@ -271,21 +271,22 @@ def test_cron_requires_secret_even_if_not_configured(learner, monkeypatch):
         run.assert_called_once()
 
 
-def test_yesterday_delta_praises_time_even_without_completed_activity_and_prompts_restart(learner):
+def test_yesterday_delta_reports_time_even_without_completed_activity_and_prompts_restart(learner):
     _, training, person = learner
     report = daily.read_summary(host, training, person)
     first_point = daily.message(host, training, person, {**report, 'active_seconds': 3600,
                                 'active_time_label': '01 h 00 min 00 s'}, NOW.date())
-    assert 'Bravo pour cet engagement' in first_point['html']
+    assert 'Votre temps de suivi enregistré à ce jour' in first_point['html']
     assert 'Depuis le point d’hier' not in first_point['html']
     with patch.object(host, 'brevo_send_email', return_value={'ok': True}):
         daily.run(host, now=NOW)
     day = NOW.date() + dt.timedelta(days=1)
     advanced = daily.message(host, training, person, {**report, 'active_seconds': 3600}, day)
     assert '01 h 00 min 00 s de suivi' in advanced['html']
-    assert any(word in advanced['html'] for word in ('Bravo pour', 'Félicitations,', 'Belle avancée'))
+    assert 'Votre progression depuis hier est prise en compte' in advanced['html']
     idle = daily.message(host, training, person, report, day)
-    assert 'depuis' in idle['html'] and any(word in idle['html'] for word in ('reprenez', 'Reprenons', 'reprendre'))
+    assert 'Aucune nouvelle activité ni durée de suivi' in idle['html']
+    assert 'prochain créneau de travail' in idle['html']
     assert daily.progress_since_yesterday(host, training, person, report, day)['advanced'] is False
     assert daily.progress_since_yesterday(host, training, person, report, day + dt.timedelta(days=1)) is None
     assert daily.progress_since_yesterday(host, training, person, {**report, 'versions':['changed']}, day) is None
@@ -305,3 +306,156 @@ def test_existing_ledger_migration_preserves_receipts(learner):
     with patch.object(host, 'brevo_send_email') as send:
         assert daily.run(host, now=NOW)['sent'] == 0
         send.assert_not_called()
+
+
+@pytest.mark.parametrize('delta', [None,
+    {'advanced': True, 'seconds': 3986, 'time_label': '01 h 06 min 26 s', 'activities': 1},
+    {'advanced': False, 'seconds': 0, 'time_label': '00 h 00 min 00 s', 'activities': 0},
+])
+def test_low_progress_six_days_before_deadline_never_receives_congratulations(learner, delta):
+    _, training, person = learner
+    training.update(aps_remote_start='2026-11-03', aps_remote_end='2026-11-15', aps_in_person_start='2026-11-16')
+    report = {**daily.read_summary(host, training, person), 'overall_percent': 16.5,
+              'remaining_seconds': 50 * 3600 + 43 * 60 + 43, 'active_seconds': 52513,
+              'active_time_label': '14 h 35 min 13 s'}
+    peers = {str(i): {**report, 'overall_percent': value, 'complete': value == 100}
+             for i, value in enumerate((100, 100, 80, 85))}
+    with patch.object(daily, 'progress_since_yesterday', return_value=delta):
+        content = daily.message(host, training, person, report, dt.date(2026, 11, 10), cohort=peers)
+    assert content['tone'] == 'critical' and 'ALERTE CRITIQUE' in content['subject']
+    for body in (content['html'], content['text']):
+        assert '16,5 %' in body and '50 h 43 min 43 s' in body
+        assert '6 jours, aujourd’hui inclus' in body and 'plus de 8 heures par jour' in body
+        assert '15/11/2026' in body and '16/11/2026' in body
+        assert '2 ont validé leur parcours à 100 % et 2 autres ont atteint au moins 80 %' in body
+        assert 'progression médiane est de 92,5 %' in body
+        assert 'contactez-nous dès aujourd’hui' in body
+        assert not any(praise in body.lower() for praise in ('bravo', 'félicitations', 'belle avancée', 'chaque étape compte'))
+    if delta and delta['advanced']:
+        assert 'ne suffit pas à lever l’alerte' in content['text']
+        assert '01 h 06 min 26 s' in content['text']
+        assert content['html'].index('réaction immédiate') < content['html'].index('Depuis le point d’hier')
+        assert 'background:#eaf7f0' not in content['html']
+    elif delta:
+        assert 'Le délai se réduit sans que le travail restant diminue' in content['text']
+
+
+@pytest.mark.parametrize('day,percent,hours,tone', [
+    ('2026-11-03', 0, 62, 'steady'),  # First day is not automatically a failure.
+    ('2026-11-10', 80, 10, 'advanced'),
+    ('2026-11-10', 60, 25, 'steady'),  # A planned intensive pace is not a delay.
+    ('2026-11-10', 16.5, 30, 'urgent'),
+    ('2026-11-10', 16.5, 51, 'critical'),
+    ('2026-11-14', 80, 8, 'urgent'),
+    ('2026-11-14', 95, 20, 'critical'),  # Activities alone cannot hide hours owed.
+    ('2026-11-15', 99.9, 0, 'urgent'),  # Still incomplete on the final day.
+    ('2026-11-16', 99.9, 0, 'critical'),
+])
+def test_tone_reflects_deadline_and_hours_even_with_high_activity_progress(learner, day, percent, hours, tone):
+    _, training, person = learner
+    training.update(aps_remote_start='2026-11-03', aps_remote_end='2026-11-15', aps_in_person_start='2026-11-16')
+    report = {**daily.read_summary(host, training, person), 'overall_percent': percent, 'remaining_seconds': hours * 3600}
+    content = daily.message(host, training, person, report, dt.date.fromisoformat(day))
+    assert content['tone'] == tone
+    if tone in ('behind', 'urgent', 'critical'):
+        assert 'Bravo' not in content['text'] and 'Félicitations' not in content['text']
+
+
+def test_earlier_remote_deadline_is_respected_and_missing_dates_are_not_invented(learner):
+    _, training, person = learner
+    report = daily.read_summary(host, training, person)
+    training.update(aps_remote_end='2026-11-12', aps_in_person_start='2026-11-16')
+    state = daily.assessment(training, report, dt.date(2026, 11, 10))
+    assert state['days'] == 3 and state['deadline'] == dt.date(2026, 11, 12)
+    content = daily.message(host, training, person, report, dt.date(2026, 11, 13))
+    assert 'L’échéance est dépassée' in content['html']
+    assert 'Il reste 1 jour' not in content['text']
+    training['aps_remote_end'] = '2026-11-30'
+    assert daily.assessment(training, report, dt.date(2026, 11, 10))['deadline'] == dt.date(2026, 11, 15)
+    training.update(aps_remote_end='', aps_in_person_start='')
+    content = daily.message(host, training, person, report, dt.date(2026, 11, 10))
+    assert 'doit être confirmée' in content['text'] and 'Objectif indicatif par jour' not in content['text']
+    assert content['tone'] == 'steady'
+
+
+def test_cohort_is_anonymous_comparable_and_excludes_self_unavailable_and_cancelled(learner):
+    _, training, person = learner
+    report = {**daily.read_summary(host, training, person), 'overall_percent': 50, 'remaining_seconds': 3600}
+    for key in ('finished', 'advanced', 'middle', 'cancelled', 'unavailable', 'different', 'failed'):
+        training['trainees'].append({**person, 'id': key, 'first_name': 'PRIVATE-' + key,
+                                     'registration_cancelled': key == 'cancelled'})
+    reports = {
+        person['id']: report,
+        'finished': {**report, 'complete': True, 'overall_percent': 100},
+        'advanced': {**report, 'overall_percent': 80},
+        'middle': {**report, 'overall_percent': 70},
+        'unavailable': {**report, 'available': False, 'overall_percent': 0},
+        'different': {**report, 'versions': ['other-version'], 'overall_percent': 0},
+    }
+    def read(_host, _training, peer, **kwargs):
+        if peer['id'] == 'failed':
+            raise sqlite3.OperationalError('temporary read failure')
+        return reports[peer['id']]
+    with patch.object(daily, 'read_summary', side_effect=read) as read_mock:
+        cohort = daily.cohort_reports(host, training, NOW.date())
+    assert read_mock.call_count == 7
+    assert 'cancelled' not in cohort and 'failed' not in cohort
+    assert daily.cohort_comparison(cohort, person, report) == {'count': 3, 'median': 80, 'completed': 1, 'advanced': 1}
+    content = daily.message(host, training, person, report, NOW.date(), cohort=cohort)
+    assert content['tone'] == 'behind'
+    for body in (content['html'], content['text']):
+        assert '3 autres stagiaires' in body and 'progression médiane est de 80 %' in body
+        assert 'PRIVATE-' not in body and person['email'] not in body
+    cohort.pop('middle')
+    assert daily.cohort_comparison(cohort, person, report) is None
+    assert 'Où en est votre groupe' not in daily.message(host, training, person, report, NOW.date(), cohort=cohort)['text']
+
+
+def test_group_cannot_downgrade_a_deadline_alert_or_alarm_a_completed_learner(learner):
+    _, training, person = learner
+    report = {**daily.read_summary(host, training, person), 'overall_percent': 40}
+    peers = {str(i): {**report, 'overall_percent': 0} for i in range(3)}
+    day = dt.date(2026, 11, 29)
+    assert daily.message(host, training, person, report, day, cohort=peers)['tone'] == 'critical'
+    report.update(complete=True, overall_percent=100, remaining_seconds=0)
+    content = daily.message(host, training, person, report, day, cohort=peers)
+    assert content['tone'] == 'complete' and 'ALERTE' not in content['subject']
+    assert 'Félicitations' in content['text'] and 'aucun rattrapage' in content['text']
+    assert 'Où en est votre groupe' not in content['text']
+
+
+def test_preview_and_dispatch_use_same_cohort_once_and_preserve_sent_snapshot(learner):
+    case, training, person = learner
+    report = {**daily.read_summary(host, training, person), 'overall_percent': 50, 'remaining_seconds': 3600}
+    for i in range(3):
+        training['trainees'].append({**person, 'id': 'peer-' + str(i), 'first_name': 'Peer',
+                                     'email': f'peer-{i}@example.test'})
+    def read(_host, _training, peer, **kwargs):
+        return report if peer['id'] == person['id'] else {**report, 'overall_percent': 80}
+    with patch.object(daily, 'read_summary', side_effect=read) as read_mock, \
+         patch.object(daily, 'clock', return_value=NOW), \
+         patch.object(host, 'brevo_send_email', return_value={'ok': True}) as send:
+        preview = case.client.get(case.report_url + '/mail-du-jour')
+        assert preview.status_code == 200 and '3 autres stagiaires' in preview.text
+        assert read_mock.call_count == 4
+        send.assert_not_called()
+        read_mock.reset_mock()
+        assert daily.run(host, now=NOW)['sent'] == 4
+        assert read_mock.call_count == 4  # One report per person, not N squared.
+        assert send.call_args_list[0].args[2] == preview.text
+        report.update(overall_percent=100, complete=True, remaining_seconds=0)
+        assert case.client.get(case.report_url + '/mail-du-jour').text == preview.text
+        assert daily.run(host, now=NOW)['sent'] == 0
+        assert send.call_count == 4
+
+
+def test_unavailable_report_cannot_generate_alarm_or_a_delivery(learner):
+    _, training, person = learner
+    report = {**daily.read_summary(host, training, person), 'available': False, 'overall_percent': None}
+    with pytest.raises(ValueError):
+        daily.message(host, training, person, report, NOW.date())
+    with patch.object(daily, 'read_summary', return_value=report), patch.object(host, 'brevo_send_email') as send:
+        result = daily.run(host, now=NOW)
+    assert result['failed'] == 1 and result['sent'] == 0
+    assert not daily.ledger_path(host).exists()
+    send.assert_not_called()
