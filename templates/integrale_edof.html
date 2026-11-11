@@ -5,7 +5,7 @@
   {% endif %}
   {% if detail and detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'] %}<noscript><meta http-equiv="refresh" content="10"></noscript>{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261106-association-preferences') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261111-enrolment') }}">
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
@@ -225,7 +225,7 @@
             {{ token() }}<label><input type="checkbox" name="ignore" value="1" {% if r.association_ignored %}checked{% endif %}> Ne plus afficher dans À associer</label>
             <button type="submit" class="btn btn-outline" data-preference-submit>Enregistrer</button><small role="status" data-preference-status></small>
           </form>{% endif %}
-          {% if r.kind == "accepted" and not r.link %}<a class="btn btn-blue" href="{{ url_for('integrale_edof.index', section='state', group='training', tab='accepted', folder=r.folder_id, _anchor='creer-stagiaire') }}">Créer le stagiaire</a>{% endif %}
+          {% if r.kind == "accepted" and not r.link %}<a class="btn btn-blue" href="{{ url_for('integrale_edof.index', section='state', group='training', tab='accepted', folder=r.folder_id, enroll=1, _anchor='proposition-edof') }}">Inscrire sur une session</a>{% endif %}
 {% if r.action and active and r.block and r.block.action != "both" %}<form method="post" action="{{ url_for('integrale_edof.block', folder=r.folder_id) }}">{{ token() }}
 <input type="hidden" name="action" value="{{ r.block.action }}"><input type="hidden" name="release" value="yes">{{ btn('Lever le blocage de cette action') }}</form>{% endif %}
 {% if r.kind == 'request' %}<small>{{ 'Archivée localement' if r.archived else ('Traitée localement' if r.handled else 'À traiter') }}</small>{% if active %}<form class="actions" method="post" action="{{ url_for('integrale_edof.follow_up',folder=r.folder_id) }}">{{ token() }}
@@ -247,7 +247,7 @@
   </div>
 </header>
 <div class="edof-case-layout">
-  {% if detail.request or detail.proposal_job %}{% include "_edof_proposal.html" %}{% endif %}
+  {% if detail.request or detail.proposal_job or detail.followable %}{% include "_edof_proposal.html" %}{% endif %}
   <aside class="wedof-panel edof-detail edof-case-side"><h2>Suivi du dossier</h2><div class="edof-panel-body">
     <div class="edof-summary">
       <div><span>État EDOF</span><strong>{{ detail.display.label }}</strong></div>
@@ -273,13 +273,13 @@
 {% if delivered=='sent' %}<p>{{ label }} · Réception confirmée.</p>{% elif delivered in ['uncertain','processing'] %}<p>{{ label }} · Vérifier la réception avant tout nouvel envoi.</p>
 {% elif active %}<form class="actions" method="post" action="{{ url_for('integrale_edof.send_request',folder=f.folder_id,target=key) }}">{{ token() }}
 <label><input type="checkbox" name="verified" value="yes" required> J’ai vérifié que {{ label }} n’a pas déjà reçu cette demande.</label>{{ btn('Transmettre à ' ~ label) }}</form>{% endif %}{% endfor %}{% endif %}
-{% if detail.accepted %}<section id="creer-stagiaire"><h3>Créer le stagiaire</h3>
+{% if detail.accepted %}<noscript><section id="creer-stagiaire"><h3>Inscrire sur une session</h3>
 {% if detail.link %}<p>Ce dossier est déjà associé à une inscription. <a href="{{ url_for('admin_trainee_page',session_id=detail.link.session_id,trainee_id=detail.link.trainee_id) }}">Ouvrir la fiche stagiaire</a></p>
 {% else %}{% if detail.import_error %}<p class="warning">{{ detail.import_error }}</p>{% endif %}
 <form method="post" action="{{ url_for('integrale_edof.create_trainee',folder=f.folder_id) }}">{{ token() }}
 <label>Session de formation<select name="session_id" required><option value="">Choisir une session</option>
 {% for group in detail.sessions %}<option value="{{ group.id }}">{{ group.name }} · {{ group.date_start or group.date_debut }} au {{ group.date_end or group.date_fin }}</option>{% endfor %}</select></label>
-<p>L’identité, les coordonnées disponibles et les informations CPF sont reprises de la fiche EDOF.</p>{{ btn('Créer le stagiaire dans cette session') }}</form>{% endif %}</section>{% endif %}
+<p>L’identité, les coordonnées disponibles et les informations CPF sont reprises de la fiche EDOF.</p>{{ btn('Créer le stagiaire dans cette session') }}</form>{% endif %}</section></noscript>{% endif %}
 </div></aside></div>
 <details class="edof-extra wedof-panel" {% if detail.query %}open{% endif %}><summary>Association à Gestion Stagiaires</summary>
 <section class="edof-detail"><div class="wedof-panel-header"><div><span class="wedof-section-label">Rattachement local</span><h2>Association à Gestion Stagiaires</h2></div></div><div class="edof-panel-body">
@@ -322,7 +322,7 @@
   <script nonce="{{ nonce }}" src="{{ url_for('static',filename='js/wedof-loading.js') }}" defer></script>
   <script nonce="{{ nonce }}" src="{{ url_for('static',filename='js/wedof-manual-links.js',v='20261106-association-feedback') }}" defer></script>
   {% include '_edof_feedback.html' %}
-  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-feedback.js',v='20261105-proposal-feedback') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-feedback.js',v='20261111-enrolment') }}" defer></script>
   <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-connection.js',v='20261107-restart') }}" defer></script>
-  {% if detail %}<script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-proposal-feedback.js',v='20261105-proposal-feedback') }}" defer></script>{% endif %}
+  {% if detail %}<script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/edof-proposal-feedback.js',v='20261111-enrolment') }}" defer></script>{% endif %}
 {% endblock %}

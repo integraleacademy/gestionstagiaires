@@ -135,10 +135,20 @@ def test_modal_follows_actual_success_and_never_double_sends(screen):
     row = official(); row['currentState']='validated'
     import edof_directory
     jobs.complete(screen.site.store.directory,work,{'code':'proposal_confirmed','proposal_receipt':edof_directory.project(row)},'Réception confirmée par EDOF.')
-    page.locator('#edof-action-resume[data-state="success"]').wait_for()
+    page.locator('#edof-action-resume[data-state="waiting"]').wait_for()
     page.locator('#edof-action-resume').click()
-    assert page.locator('#edof-action-title').inner_text()=='Transmission confirmée par EDOF'
-    assert screen.posts==[BASE+'submit']
+    assert page.locator('#edof-action-title').inner_text()=='En attente d’acceptation du titulaire'
+    assert 'Dossier transmis à EDOF, en attente d’acceptation par le titulaire.' in page.locator('#edof-action-message').inner_text()
+    assert not page.get_by_role('button',name='Inscrire sur une session',exact=True).is_visible()
+    # The dossier evolves independently from the delivery receipt.
+    import time
+    row['currentState']='accepted'
+    screen.site.vault.put(edof_directory.record_key(screen.site.owner), {
+        'checked':time.time()+1,'rows':{FOLDER:edof_directory.project(row)}})
+    page.locator('#edof-action-dialog[data-journey="accepted"]').wait_for()
+    assert page.get_by_role('button',name='Inscrire sur une session',exact=True).is_visible()
+    assert screen.posts.count(BASE+'submit')==1
+    assert all(path in {BASE+'submit', f'/admin/edof-test/dossiers/{FOLDER}/journey/watch'} for path in screen.posts)
 
 
 @pytest.mark.parametrize('width',[1440,390])
@@ -214,3 +224,53 @@ def test_failed_initial_read_shows_that_nothing_was_sent(screen):
     assert 'lecture autonome' not in page.locator('#edof-action-dialog').inner_text()
     assert not page.get_by_role('button', name='Revoir les informations').is_visible()
     assert screen.posts == [BASE+'submit']
+
+
+@pytest.mark.parametrize('width',[1440,390])
+def test_accepted_dossier_prefills_filters_and_registers_in_the_same_dialog(screen,width):
+    import json
+    import time
+    import edof_directory as directory
+    import edof_enrolment_watch as watch
+    from unittest.mock import Mock
+    from test_edof_enrolment import catalogue
+    site, page = screen.site, screen.page
+    site.local.write_text(json.dumps(catalogue()))
+    row = {'folder_id':FOLDER,'first_name':'Anne','last_name':'Exemple','state':'accepted',
+           'title':'Formation VTC tout inclus','session_start_date':'2027-01-04','session_end_date':'2027-02-04'}
+    site.vault.put(directory.record_key(site.owner), {'checked':time.time()-1,'rows':{FOLDER:row}})
+    watch.watch(site.vault,site.owner,row)
+    site.vault.put(watch.key(site.owner,FOLDER), {'checked':time.time(),'row':row,'fields':{
+        **row,'birth_date':'1988-02-12','email':'anne@example.invalid','phone':'0600000000','total_incl':'1500.00'}})
+    site.legacy.INTEGRALE_PARTNER_ID='integrale'
+    site.legacy._session_trainees_list=lambda group:group['trainees']
+    site.legacy._new_session_trainee=lambda group,fields:{**fields,'id':'new-trainee'}
+    site.legacy._apply_pending_cnaps_imports_for_trainee=Mock()
+    site.legacy.increment_partner_trainee_usage=Mock()
+    page.set_viewport_size({'width':width,'height':950})
+    page.goto('http://fixture.local'+DETAIL)
+    page.get_by_role('button',name='Inscrire sur une session',exact=True).click()
+    dialog=page.locator('#edof-action-dialog')
+    page.locator('#edof-action-dialog[data-journey="choosing"]').wait_for()
+    assert dialog.get_by_text('anne@example.invalid',exact=True).is_visible()
+    assert dialog.locator('[data-session-option]').count()==2
+    assert 'APS janvier' not in dialog.inner_text()
+    submit=dialog.get_by_role('button',name='Confirmer l’inscription dans cette session',exact=True)
+    assert not submit.is_enabled()
+    dialog.locator('[data-session-search]').fill('février')
+    assert dialog.locator('[data-session-option]:visible').count()==1
+    dialog.locator('[data-session-search]').fill('')
+    dialog.locator('[name="session_id"][value="v1"]').check()
+    assert submit.is_enabled()
+    page.screenshot(path=f'/tmp/edof-enrolment-{width}.png')
+    assert dialog.evaluate('(el)=>el.scrollWidth<=el.clientWidth')
+    page.keyboard.press('Escape')
+    assert not dialog.is_visible()
+    page.locator('#edof-action-resume').click()
+    assert dialog.locator('[name="session_id"][value="v1"]').is_checked()
+    submit.click()
+    page.locator('#edof-action-dialog[data-journey="registered"]').wait_for()
+    assert dialog.get_by_role('button',name='Ouvrir la fiche stagiaire',exact=True).is_visible()
+    saved=json.loads(site.local.read_text())
+    assert len(saved['sessions'][0]['trainees'])==len(saved['wedof_links'])==1
+    assert screen.posts==[f'/admin/edof-test/dossiers/{FOLDER}/create-trainee']

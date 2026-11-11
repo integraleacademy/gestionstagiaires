@@ -105,7 +105,7 @@ def site(tmp_path, monkeypatch):
                for i,state in enumerate(("Accepté", "Entrée déclarée", "A traiter", "Annulé par le titulaire"))]
     vault = Vault(tmp_path, store.connector_key)
     vault.put(edof_directory.record_key(owner), {"checked":10000,"rows":{r["folder_id"]:r for r in records}})
-    return SimpleNamespace(client=client, gate=gate, csrf=csrf, store=store, local=datafile, vault=vault, owner=owner, nightly=nightly)
+    return SimpleNamespace(client=client, gate=gate, csrf=csrf, store=store, local=datafile, vault=vault, owner=owner, nightly=nightly, legacy=legacy)
 
 
 def test_tabs_render_native_data_and_read_only_efp(site):
