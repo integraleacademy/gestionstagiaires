@@ -1,0 +1,39 @@
+{% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else 'À préciser' }}{% endmacro %}
+<div class="edof-enrolment">
+  <div class="edof-enrolment-person">
+    <span class="edof-enrolment-avatar" aria-hidden="true">{{ (record.first_name or '')[:1] }}{{ (record.last_name or '')[:1] }}</span>
+    <div><span class="edof-kicker">Informations récupérées depuis EDOF</span><h3>{{ record.first_name }} {{ record.last_name }}</h3>
+      <p>{{ record.title }}</p></div>
+  </div>
+  {% if fields %}
+  <dl class="edof-enrolment-contact">
+    {% for key,label in [('email','E-mail'),('phone','Téléphone'),('birth_date','Date de naissance'),('address','Adresse')] %}
+    <div><dt>{{ label }}</dt><dd>{{ date_fr(fields[key]) if key == 'birth_date' and fields.get(key) else fields.get(key) or 'Non renseigné dans EDOF' }}</dd></div>
+    {% endfor %}
+  </dl>
+  {% else %}<p class="edof-enrolment-loading" role="status">Récupération de la fiche complète EDOF… Vous pourrez confirmer l’inscription dès que les informations seront disponibles.</p>{% endif %}
+  {% if options %}
+  <form method="post" action="{{ url_for('integrale_edof.create_trainee',folder=folder) }}" data-registration-form>
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="edof-enrolment-heading"><h3>Choisir une session</h3><span>{{ family or 'Formation correspondante' }} · {{ options|length }} session{{ 's' if options|length > 1 }}</span></div>
+    <label class="edof-session-search">Rechercher une session<input type="search" data-session-search placeholder="Nom, ville ou date…" autocomplete="off"></label>
+    <fieldset class="edof-session-options"><legend class="edof-visually-hidden">Sessions de formation compatibles</legend>
+    {% for group in options %}
+      <label class="edof-session-option" data-session-option>
+        <input type="radio" name="session_id" value="{{ group.id }}" required data-dates-match="{{ '1' if group.dates_match else '0' }}">
+        <span><strong>{{ group.name }}</strong><small>{{ date_fr(group.registration_start) }} → {{ date_fr(group.registration_end) }}</small>
+          {% if group.dates_match %}<em>Dates identiques au dossier EDOF</em>{% endif %}</span>
+        <span class="edof-session-check" aria-hidden="true">✓</span>
+      </label>
+    {% endfor %}
+    </fieldset>
+    <p data-session-empty hidden>Aucune session ne correspond à votre recherche.</p>
+    <p class="edof-session-dates" data-session-dates hidden>Les dates de cette session diffèrent de celles du dossier EDOF. Les dates EDOF restent utilisées pour le suivi CPF.</p>
+    <p class="edof-enrolment-error" data-registration-error role="alert" hidden></p>
+    <button class="btn btn-blue edof-enrolment-submit" type="submit" {% if not fields %}disabled{% endif %}>Confirmer l’inscription dans cette session</button>
+    <small class="edof-enrolment-note">L’identité, les coordonnées disponibles et les informations CPF sont reprises automatiquement. Le dossier EDOF est associé à l’inscription.</small>
+  </form>
+  {% else %}
+    <div class="edof-enrolment-empty"><h3>Aucune session compatible disponible</h3><p>Aucune session {{ family }} en cours ou à venir n’a été trouvée pour cette formation. Créez la session dans Gestion Stagiaires, puis rouvrez ce choix.</p></div>
+  {% endif %}
+</div>

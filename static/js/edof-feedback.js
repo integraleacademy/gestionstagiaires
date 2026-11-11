@@ -18,6 +18,8 @@
   const reload = dialog.querySelector('[data-action-reload]');
   const correct = dialog.querySelector('[data-action-correct]');
   const issues = dialog.querySelector('[data-action-issues]');
+  const content = dialog.querySelector('[data-action-content]');
+  const next = dialog.querySelector('[data-action-next]');
   function timerText() {
     const seconds = Math.floor((Date.now() - current.started) / 1000);
     dialog.querySelector('[data-action-elapsed]').textContent = 'Depuis ' +
@@ -63,10 +65,16 @@
   banner.addEventListener('click', show);
   reload.addEventListener('click', () => location.reload());
   correct.addEventListener('click', () => { current.dismissed = true; hide(); current.correct?.(); });
+  next.addEventListener('click', () => current?.next?.());
   window.edofFeedback = {
     begin(kind, text, button, dossier='') {
       clearInterval(timer);
       current = {id: ++sequence, kind, busy:true, started:Date.now(), dismissed:false};
+      content.replaceChildren(); content.hidden = true; next.hidden = true;
+      delete dialog.dataset.journey;
+      [...dialog.querySelectorAll('[data-action-step] b')].forEach((label, index) => {
+        label.textContent = (kind === 'proposal' ? ['Transmission','Acceptation','Inscription'] : ['Demande','Traitement','Résultat'])[index];
+      });
       trigger = button || document.activeElement;
       dialog.dataset.kind = kind;
       dialog.querySelector('[data-action-brand]').hidden = kind !== 'proposal';
@@ -91,6 +99,7 @@
     finish(id, status, text, refresh=false, options={}) {
       if (current?.id !== id || !current.busy) return;
       current.busy = false;
+      next.hidden = true;
       clearInterval(timer);
       title.textContent = options.title || (status === 'success' ? titles[current.kind][1] :
         status === 'warning' ? 'Traitement à vérifier' : current.kind === 'proposal' ? 'Transmission non aboutie' : 'Traitement non terminé');
@@ -110,6 +119,37 @@
       if (!dialog.open) banner.hidden = false;
       restoreRefresh();
     },
+    journey(id, state, options) {
+      if (current?.id !== id) return;
+      current.busy = state !== 'registered';
+      current.dismissed = false;
+      current.next = options.action;
+      clearInterval(timer);
+      title.textContent = options.title;
+      subtitle.textContent = options.subtitle || 'Un seul parcours, jusqu’à l’inscription du stagiaire.';
+      phase.textContent = options.phase || options.title;
+      message.textContent = options.message;
+      help.textContent = options.help || 'Vous pouvez fermer cette fenêtre et reprendre le suivi depuis le dossier.';
+      correct.hidden = reload.hidden = true;
+      issues.hidden = true; issues.replaceChildren();
+      next.hidden = !options.action;
+      next.textContent = options.actionLabel || 'Inscrire sur une session';
+      paint(state === 'waiting' ? 'waiting' : state === 'accepted' || state === 'registered' ? 'success' : state === 'error' ? 'warning' : 'running');
+      dialog.dataset.journey = state;
+      const stepIndex = state === 'waiting' ? 1 : 2;
+      [...dialog.querySelectorAll('[data-action-step]')].forEach((step, index) => {
+        step.classList.toggle('is-current', index === stepIndex);
+        step.classList.toggle('is-done', index < stepIndex || state === 'registered');
+        if (index === stepIndex) step.setAttribute('aria-current','step'); else step.removeAttribute('aria-current');
+      });
+      dialog.querySelector('.edof-action-status').setAttribute('aria-busy', String(['loading','saving'].includes(state)));
+      dialog.querySelector('.edof-action-footer [data-action-close]').textContent = 'Fermer';
+      dialog.querySelector('[data-action-elapsed]').textContent = state === 'waiting' ? 'Suivi automatique' : 'Dossier CPF';
+      banner.querySelector('[data-action-banner]').textContent = options.title;
+      if (!dialog.open) banner.hidden = false;
+    },
+    content(id) { return current?.id === id ? content : null; },
+    isCurrent(id) { return current?.id === id; },
     show(id) { if (current?.id === id) show(); },
     get blockingReload() { return Boolean(dialog.open || current?.busy); }
   };

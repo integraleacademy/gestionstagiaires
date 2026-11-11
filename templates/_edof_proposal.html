@@ -1,11 +1,20 @@
 {% set work = detail.proposal_job %}
-<section id="proposition-edof" class="edof-proposal edof-case-form" data-folder="{{ f.folder_id }}" data-holder="{{ f.first_name }} {{ f.last_name }}" {% if work %}data-transmission-url="{{ detail.proposal_status_url }}" data-transmission-state="{{ work.status }}"{% endif %} {% if detail.proposal_reading %}data-poll-url="{{ detail.proposal_poll_url }}"{% endif %}>
+<section id="proposition-edof" class="edof-proposal edof-case-form" data-folder="{{ f.folder_id }}" data-holder="{{ f.first_name }} {{ f.last_name }}" data-csrf="{{ csrf }}" data-journey-url="{{ url_for('integrale_edof.journey_status',folder=f.folder_id) }}" data-watch-url="{{ url_for('integrale_edof.watch_journey',folder=f.folder_id) }}" data-registration-url="{{ url_for('integrale_edof.registration_options',folder=f.folder_id) }}" data-followable="{{ '1' if detail.followable else '0' }}" {% if work %}data-transmission-url="{{ detail.proposal_status_url }}" data-transmission-state="{{ work.status }}"{% endif %} {% if detail.proposal_reading %}data-poll-url="{{ detail.proposal_poll_url }}"{% endif %}>
   <header class="edof-form-heading"><span class="edof-kicker">Demande d’inscription</span>
-    <h2>Proposition de commande EDOF</h2></header>
+    <h2>{{ 'Proposition de commande EDOF' if detail.request else 'Suivi du dossier CPF' }}</h2></header>
+  {% if detail.followable %}
+    <div class="edof-journey-summary">
+      <span class="edof-journey-badge">{{ 'Acceptation confirmée' if detail.accepted else 'Proposition transmise' }}</span>
+      <h3>{{ 'Le dossier est accepté par le titulaire' if detail.accepted else 'En attente d’acceptation par le titulaire' }}</h3>
+      <p>{{ 'Retrouvez les informations du candidat et choisissez la session de formation.' if detail.accepted else 'Dossier transmis à EDOF, en attente d’acceptation par le titulaire.' }}</p>
+      {% if detail.link %}<a class="btn btn-blue" href="{{ url_for('admin_trainee_page',session_id=detail.link.session_id,trainee_id=detail.link.trainee_id) }}">Ouvrir la fiche stagiaire</a>
+      {% elif detail.accepted and session.get('admin_role') != 'viewer' %}<button type="button" class="btn btn-blue" data-registration-open>Inscrire sur une session</button>
+      {% else %}<button type="button" class="btn btn-blue" data-journey-follow>Voir le suivi du dossier</button>{% endif %}
+    </div>
+  {% endif %}
   {% if work %}
     <div class="wedof-notice {{ 'is-danger' if work.status in ['error','uncertain'] else 'is-info' }}" role="status">
       <strong>{{ proposal_status[work.status] }}</strong>
-      {% if work.status == 'confirmed' %}<a href="{{ url_for('integrale_edof.index',section='requests',tab='waiting') }}">Voir les dossiers en attente d’acceptation</a>{% endif %}
       {% if work.message %}<span>{{ work.message }}</span>{% endif %}
       <button type="button" class="btn btn-outline" data-proposal-follow>{{ 'Voir le problème' if work.status in ['error','uncertain'] else 'Voir le suivi de transmission' }}</button>
       {% if work.status == 'uncertain' and session.get('admin_role') != 'viewer' %}

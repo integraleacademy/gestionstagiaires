@@ -8,6 +8,7 @@ import hmac
 import math
 from pathlib import Path
 import secrets
+import time
 from zoneinfo import ZoneInfo
 
 from flask import g, jsonify, Blueprint, abort, flash, get_flashed_messages, redirect, render_template, request, session, url_for
@@ -23,13 +24,14 @@ import edof_throttle as throttle
 import edof_declarations as declarations
 import edof_proposal as proposal_form
 import edof_proposal_jobs as proposals
+import edof_enrolment_watch as enrolment_watch
 from cpf_provider import PROVIDERS, ProviderStore, ProviderUnavailable, on_test_service, on_production_service, provider_operation
 from cpf_entry_pilot import active_holds, blocks_pilot
 from cpf_provider_bridge import coordinated_switch, production_request
 from edof_matching import build_comparison, manual_options
 from edof_readonly_test import ID_RE
 from edof_server_browser import DETAIL_PREFIX
-from integrale_edof_registration import create_registration, eligible_sessions
+from integrale_edof_registration import create_registration, matching_sessions, training_family
 from integrale_edof_transfers import TARGETS, receipt, transfer
 from wedof_links import save_manual_wedof_link
 
@@ -341,7 +343,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         pending = vault().get(directory.pending_key(owner)) if store.connector_key else None
         accepted = vault().get(directory.accepted_key(owner)) if store.connector_key else None
         combined = directory.with_accepted(directory.with_pending(saved, pending), accepted)
-        return proposals.with_receipts(store.directory, owner, apply_confirmed_entries(combined, store.directory, owner))
+        combined = proposals.with_receipts(store.directory, owner, apply_confirmed_entries(combined, store.directory, owner))
+        return enrolment_watch.with_watched(vault(), owner, combined) if store.connector_key else combined
 
     def folder_record(owner, folder):
         if not ID_RE.fullmatch(folder):
@@ -395,6 +398,81 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
     def find_matches(data, records):
         ignored = ignored_associations(selection)
         return associations.match_unlinked(data, {k:r for k,r in records.items() if associable(r) and k not in ignored}, partner_id, is_cancelled, folder_for_matching, store.connector_key)
+
+    def registration_fields(owner, row):
+        saved = vault().get(enrolment_watch.key(owner, row["folder_id"])) if store.connector_key else None
+        # A recently read full fiche is preferred to the directory's limited fields.
+        fields = saved["fields"] if saved and saved["checked"] > time.time()-600 else None
+        if not fields:
+            job = store.successful_read(owner, spec={"folder_id":row["folder_id"], "first_name":"", "last_name":""})
+            fields = job["fields"] if job else None
+        if (fields and fields.get("folder_id") == row["folder_id"] and "birth_date" in fields
+                and category(fields) == "accepted" and declarations.same_enrolment(row, fields)):
+            return fields
+        return None
+
+    def registration_link(folder, data):
+        links = [r for r in data.get("wedof_links", []) if r.get("active") and str(r.get("external_id")) == folder]
+        if len(links) != 1:
+            return None
+        link = links[0]
+        group = next((s for s in data.get("sessions", []) if str(s.get("id")) == str(link.get("session_id"))), None)
+        if not group or not any(str(t.get("id")) == str(link.get("trainee_id")) for t in group.get("trainees", [])):
+            return None
+        return {"url":url_for("admin_trainee_page", session_id=link["session_id"], trainee_id=link["trainee_id"]),
+                "session_name":group.get("name") or "Session de formation"}
+
+    def journey_progress(owner, folder, row=None):
+        row = row or folder_record(owner, folder)
+        link = registration_link(folder, local_data())
+        return dict(state=category(row), label=LABELS.get(category(row), "État à vérifier"), link=link,
+                    can_register=category(row) == "accepted" and not link and session.get("admin_role") != "viewer",
+                    can_watch=session.get("admin_role") != "viewer" and selection.state()["provider"] == "integrale",
+                    poll_url=url_for("integrale_edof.journey_status", folder=folder),
+                    watch_url=url_for("integrale_edof.watch_journey", folder=folder),
+                    registration_url=url_for("integrale_edof.registration_options", folder=folder),
+                    detail_url=url_for("integrale_edof.index", section="state", group="all", tab="all", folder=folder))
+
+    @bp.get("/dossiers/<folder>/journey")
+    @admin_required
+    def journey_status(folder):
+        try:
+            progress = journey_progress(results_owner(), folder)
+        except ValueError:
+            abort(404)
+        response = jsonify(progress)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @bp.post("/dossiers/<folder>/journey/watch")
+    @native_action
+    def watch_journey(owner, folder):
+        row = folder_record(owner, folder)
+        if not store.connector_key:
+            raise ValueError("La connexion EDOF est indisponible.")
+        if category(row) in {"waiting", "ft", "ft_refused", "accepted"}:
+            enrolment_watch.watch(vault(), owner, row)
+            store.use_directory(owner)
+        return jsonify(journey_progress(owner, folder, row))
+
+    @bp.get("/dossiers/<folder>/registration")
+    @admin_required
+    def registration_options(folder):
+        owner = results_owner()
+        try:
+            row = folder_record(owner, folder)
+        except ValueError:
+            abort(404)
+        progress = journey_progress(owner, folder, row)
+        if not progress["can_register"]:
+            return jsonify(**progress, message="Le dossier doit être accepté et disponible pour une inscription."), 409
+        fields = registration_fields(owner, row)
+        options = matching_sessions(local_data(), partner_id, row)
+        response = jsonify(**progress, ready=bool(fields), html=render_template("_edof_registration.html",
+            folder=folder, record=row, fields=fields, options=options, family=training_family(row.get("title")),
+            csrf=session.get("edof_server_csrf")))
+        response.headers["Cache-Control"] = "no-store"
+        return response
 
     def reconcile(records, *, pair=None):
         def matching(data):
@@ -584,6 +662,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             detail["draft"] = local_operations(selection).get(folder, {}).get("draft")
             detail["action"] = ACTIONS.get(category(record))
             detail["request"] = category(record) == "request"
+            detail["followable"] = category(record) in {"waiting", "ft", "ft_refused", "accepted"}
             detail["proposal_job"] = proposals.record(store.directory,folder,owner)
             if detail["proposal_job"] and detail["proposal_job"].get("result_code") == "portal_throttled" and store.connector_key:
                 detail["proposal_job"]["message"] = throttle.message(vault())
@@ -619,11 +698,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             if detail["accepted"]:
                 job = store.successful_read(owner, spec={"folder_id":folder,"first_name":"","last_name":""})
                 detail["import_error"] = job and job.get("import_error")
-                options = eligible_sessions(data, getattr(legacy, "INTEGRALE_PARTNER_ID", "integrale"))
-                def session_order(group):
-                    day = directory.session_date(group.get("date_start") or group.get("date_debut"))
-                    return (day != record.get("session_start_date"), day, group.get("name") or "")
-                detail["sessions"] = sorted(options, key=session_order)
+                detail["sessions"] = matching_sessions(data, partner_id, record)
                 detail["link"] = next((r for r in data.get("wedof_links", []) if r.get("active") and str(r.get("external_id")) == folder), None)
         gmail = gmail_status()
         selected = selection.state()
@@ -893,6 +968,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         stopped_before_send = status == "error" and not work["phase"] and (
             work["result_code"] in {"read_unconfirmed", "proposal_read_unavailable"} or message == proposals.read_failure_message(""))
         return dict(status=status, label=proposals.LABELS[status], message=message, updated=work["updated"],
+                    journey=journey_progress(owner, folder) if status == "confirmed" else None,
                     stopped_before_send=stopped_before_send,
                     poll_url=url_for("integrale_edof.proposal_send_status",folder=folder,ticket=work["token"]),
                     detail_url=url_for("integrale_edof.index",section="requests",tab="waiting" if status=="confirmed" else "request",folder=folder))
@@ -1026,18 +1102,27 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         try:
             row = folder_record(owner, folder)
             sid = request.form.get("session_id", "")
-            if category(row) != "accepted" or not any(str(s["id"]) == sid for s in
-                    eligible_sessions(local_data(), getattr(legacy, "INTEGRALE_PARTNER_ID", "integrale"))):
+            existing = registration_link(folder, local_data())
+            if existing and request.accept_mimetypes.best == "application/json":
+                return jsonify(registered=True, link=existing, message="Ce dossier est déjà inscrit sur une session.")
+            if category(row) != "accepted" or not any(str(s["id"]) == sid for s in matching_sessions(local_data(), partner_id, row)):
                 raise ValueError("Choisissez une session disponible pour ce dossier accepté.")
-            job = store.successful_read(owner, spec={"folder_id":folder, "first_name":"", "last_name":""})
-            if job and "birth_date" in job["fields"] and declarations.same_enrolment(row, job["fields"]) and category(job["fields"]) == "accepted":
-                create_registration(legacy, folder, sid, job["fields"])
+            fields = registration_fields(owner, row)
+            if fields:
+                create_registration(legacy, folder, sid, fields)
+                if request.accept_mimetypes.best == "application/json":
+                    return jsonify(registered=True, link=registration_link(folder, local_data()),
+                                   message="Le stagiaire est inscrit et son dossier CPF est associé à la session.")
                 flash("Stagiaire enregistré et associé au dossier EDOF.", "success")
             else:
+                if request.accept_mimetypes.best == "application/json":
+                    raise ValueError("La fiche complète EDOF doit être récupérée avant l’inscription. Reprenez le choix de session.")
                 start_job(store, owner, {"mode":"read", "folder_id":folder, "owner":owner, "first_name":row["first_name"],
                                          "last_name":row["last_name"], "import_session":sid})
                 flash("Lecture de la fiche complète lancée. Le stagiaire sera créé dans la session choisie dès la lecture confirmée. Actualisez cette fiche pour vérifier le résultat.", "success")
         except (ValueError, ProviderUnavailable) as exc:
+            if request.accept_mimetypes.best == "application/json":
+                return jsonify(message=str(exc)), 409
             flash(str(exc), "error")
         return back("requests", tab="accepted", folder=folder, _anchor="dossier")
 
