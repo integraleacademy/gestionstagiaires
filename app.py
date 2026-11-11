@@ -40086,6 +40086,25 @@ def _session_period_replacements(session_obj: Dict[str, Any]) -> Dict[str, str]:
         "periode_presentiel": presentiel_period,
     }
 
+def _convention_training_session(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, Any]:
+    """Use the trainee's real dates exclusively for VTC training conventions."""
+    effective = _trainee_training_session(session_obj, trainee)
+    if _automation_document_config(session_obj).get("slug") != "vtc":
+        return effective
+    raw = str(trainee.get("vtc_real_training_dates") or "").strip()
+    matches = re.findall(r"(?<!\d)(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{4})(?!\d)", raw)
+    dates = [_parse_flexible_date(value) for value in matches]
+    if len(dates) != 2 or any(value is None for value in dates):
+        raise ValueError(
+            "Renseignez les « Dates réelles de formation VTC » sur la fiche stagiaire "
+            "au format JJ/MM/AAAA au JJ/MM/AAAA avant de prévisualiser ou générer la convention."
+        )
+    start, end = dates
+    if end < start:
+        raise ValueError("Les « Dates réelles de formation VTC » doivent se terminer après leur date de début.")
+    return {**effective, "date_start": start.isoformat(), "date_end": end.isoformat()}
+
+
 def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
     """Return values allowed for APS convention ``{{ variable }}`` placeholders.
 
@@ -40111,7 +40130,8 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
     if personal_amount in (None, ""):
         personal_amount = "0"
     other_amount = _first_non_empty(trainee.get("other_amount"), trainee.get("montant_autre"), default="0")
-    session_periods = _session_period_replacements(_trainee_training_session(session_obj, trainee))
+    convention_session = _convention_training_session(session_obj, trainee)
+    session_periods = _session_period_replacements(convention_session)
     date_start = session_periods["date_debut_formation"]
     date_end = session_periods["date_fin_formation"]
     periode = session_periods["periode_formation"]
@@ -40147,7 +40167,7 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
         "montant_autre_eur": _format_euro_amount(other_amount),
         "date_debut_formation": date_start,
         "date_fin_formation": date_end,
-        "date_un_mois_avant_debut_formation": _fr_date_offset(_session_get(_trainee_training_session(session_obj, trainee), "date_start", ""), months=-1),
+        "date_un_mois_avant_debut_formation": _fr_date_offset(_session_get(convention_session, "date_start", ""), months=-1),
         "date_15_jours_avant_examen": _fr_date_offset(_first_non_empty(trainee.get("date_examen"), _session_get(session_obj, "exam_date", "")), days=-15),
         "periode_formation": periode,
         "periode_elearning": _first_non_empty(elearning_period, trainee.get("periode_elearning"), _session_get(session_obj, "periode_elearning", ""), periode),
@@ -51415,7 +51435,7 @@ def _company_convention_form(session_id, trainee_id):
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/preview")
 @admin_login_required
 def admin_preview_convention(session_id: str, trainee_id: str):
-    data = load_data()
+    data = load_data(run_background_tasks=False)
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         abort(404)
@@ -51430,7 +51450,7 @@ def admin_preview_convention(session_id: str, trainee_id: str):
             _, pdf_path = _generate_aps_convention_files(s, t, session_id, trainee_id, output_dir=preview_dir)
             clean_path, _ = _prepare_yousign_pdf_and_fields(pdf_path)
             return send_file(BytesIO(Path(clean_path).read_bytes()), mimetype="application/pdf",
-                             download_name=os.path.basename(pdf_path))
+                             as_attachment=False, download_name=os.path.basename(pdf_path), max_age=0)
     except Exception as exc:
         flash(f"Aperçu convention : {_sanitize_yousign_error(str(exc))}", "error")
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
