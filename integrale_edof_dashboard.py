@@ -557,6 +557,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 issues = [issue for issue in checks["issues"] if issue != "Cette session est archivée."]
                 items.append({**{k: row.get(k, "") for k in
                     ("folder_id", "first_name", "last_name", "title", "state", "session_start_date", "session_end_date")},
+                    "state": LABELS.get(category(row), "État à vérifier"),
                     "checks": checks["checks"], "issues": issues,
                     "can_associate": active and not hit["linked"] and not issues,
                     "linked": hit["linked"],

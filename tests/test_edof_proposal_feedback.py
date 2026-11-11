@@ -105,7 +105,7 @@ def screen(site):
                 if fixture.drop: return route.abort()
                 if fixture.reject: return route.fulfill(status=409,json={'message':fixture.reject})
             if url.path=='/templates/cpf.jpg':
-                return route.fulfill(path='/tmp/edof-cpf-logo.jpg',content_type='image/jpeg') if Path('/tmp/edof-cpf-logo.jpg').exists() else route.fulfill(status=404)
+                return route.fulfill(path=str(root/'templates/cpf.jpg'),content_type='image/jpeg')
             response = site.client.open(url.path,query_string=url.query,method=req.method,
                 data=req.post_data_buffer,content_type=req.headers.get('content-type'),headers={'Accept':req.headers.get('accept','')})
             route.fulfill(status=response.status_code,headers=dict(response.headers),body=response.data)
@@ -133,6 +133,8 @@ def test_modal_follows_actual_success_and_never_double_sends(screen):
     assert not page.get_by_role('button',name='Valider et envoyer la proposition à EDOF').is_enabled()
     work = jobs.record(screen.site.store.directory,FOLDER,screen.site.owner)
     row = official(); row['currentState']='validated'
+    values = terms(row)
+    row['trainingActionInfo'].update(sessionStartDate=values['sessionStartDate'],sessionEndDate=values['sessionEndDate'])
     import edof_directory
     jobs.complete(screen.site.store.directory,work,{'code':'proposal_confirmed','proposal_receipt':edof_directory.project(row)},'Réception confirmée par EDOF.')
     page.locator('#edof-action-resume[data-state="waiting"]').wait_for()
@@ -145,6 +147,7 @@ def test_modal_follows_actual_success_and_never_double_sends(screen):
     row['currentState']='accepted'
     screen.site.vault.put(edof_directory.record_key(screen.site.owner), {
         'checked':time.time()+1,'rows':{FOLDER:edof_directory.project(row)}})
+    assert screen.site.client.get(f'/admin/edof-test/dossiers/{FOLDER}/journey').json['state']=='accepted'
     page.locator('#edof-action-dialog[data-journey="accepted"]').wait_for()
     assert page.get_by_role('button',name='Inscrire sur une session',exact=True).is_visible()
     assert screen.posts.count(BASE+'submit')==1
