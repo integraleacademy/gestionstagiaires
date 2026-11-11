@@ -1,4 +1,4 @@
-"""Read-only APS roster summaries and durable daily learner encouragement."""
+"""Read-only APS roster summaries and contextual, durable daily follow-up."""
 from __future__ import annotations
 
 import datetime as dt
@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+import statistics
 import uuid
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -204,77 +205,200 @@ TIPS = ('Installez-vous au calme et prévoyez un créneau sans interruption.',
         'Terminez les activités et vérifiez les objectifs de temps de chaque module.')
 
 
-def message(host, training, person, report, day):
+def cohort_reports(host, training, day, *, reader=None, known=None):
+    """Read each eligible learner once, including those already finished.
+
+    A failed report is omitted, never interpreted as zero progress. The mapping
+    remains internal; only anonymous aggregates reach an individual email.
+    """
+    reader = reader or ProgressReader(host)
+    reports = dict(known or {})
+    for peer in host._session_trainees_list(training):
+        key = str(peer.get('id') or '')
+        if not key or key in reports or not eligible(host, training, peer, day):
+            continue
+        try:
+            reports[key] = read_summary(host, training, peer, reader=reader)
+        except Exception:
+            host.app.logger.exception('APS_DAILY cohort_report_unavailable session=%s trainee=%s', training['id'], key)
+    return reports
+
+
+def cohort_comparison(reports, person, report):
+    comparable = []
+    for key, peer in (reports or {}).items():
+        if str(key) == str(person['id']) or not peer.get('available'):
+            continue
+        if any(peer.get(k) != report.get(k) for k in ('versions', 'required_seconds', 'total_activities')):
+            continue
+        value = peer.get('overall_percent')
+        if not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 <= value <= 100:
+            continue
+        comparable.append(peer)
+    # Avoid individual comparisons or disclosing a lone peer's progress.
+    if len(comparable) < 3:
+        return None
+    return {'count': len(comparable),
+            'median': statistics.median(p['overall_percent'] for p in comparable),
+            'completed': sum(bool(p.get('complete')) for p in comparable),
+            'advanced': sum(p['overall_percent'] >= 80 and not p.get('complete') for p in comparable)}
+
+
+def percent_label(value):
+    return f'{value:g}'.replace('.', ',')
+
+
+def assessment(training, report, day, cohort=None):
+    """Deadline/workload outrank the cohort and any improvement since yesterday."""
     start, onsite = period(training)
-    days = max(1, (onsite - day).days) if onsite else 1
+    deadline = date(training.get('aps_remote_end'))
+    if onsite:
+        latest = onsite - dt.timedelta(days=1)
+        deadline = min(deadline, latest) if deadline else latest
+    valid_period = bool(start and deadline and start <= deadline)
+    days = max(0, (deadline - day).days + 1) if valid_period else None
+    not_started = bool(valid_period and day < start)
+    first_day = bool(valid_period and day == start)
     remaining = max(0, math.ceil(report.get('remaining_seconds', 0)))
-    percent = report.get('overall_percent') or 0
-    elapsed = max(0, (day - start).days) if start else 0
-    expected = elapsed / max(1, (onsite - start).days) * 100 if onsite and start else 0
-    daily_seconds = math.ceil(remaining / days / 60) * 60
+    percent = report.get('overall_percent')
+    if not report.get('available') or percent is None or not math.isfinite(percent):
+        raise ValueError('Le suivi est indisponible : aucun diagnostic ne peut être calculé.')
+    expected = min(100, max(0, (day - start).days) / ((deadline - start).days + 1) * 100) if valid_period else None
+    daily_seconds = math.ceil(remaining / days / 60) * 60 if days and not not_started else None
+    lag = max(0, expected - percent) if expected is not None else 0
+    peer_gap = cohort['median'] - percent if cohort else 0
+    if report['complete']:
+        tone = 'complete'
+    elif days == 0 or (daily_seconds or 0) > 8 * 3600 or (days is not None and days <= 3 and percent < 50):
+        tone = 'critical'
+    elif not not_started and ((daily_seconds or 0) > 6 * 3600
+            or (days is not None and (days <= 1 or (days <= 3 and percent < 90)
+                                     or (days <= 7 and percent < 50) or (days <= 14 and lag >= 30)))):
+        tone = 'urgent'
+    elif not not_started and not first_day and (lag > 10 or peer_gap >= 20):
+        tone = 'behind'
+    elif percent >= 75 and valid_period and not not_started:
+        tone = 'advanced'
+    else:
+        tone = 'steady'
+    return {'tone': tone, 'deadline': deadline if valid_period else None, 'days': days,
+            'remaining': remaining, 'expected': expected, 'lag': lag, 'peer_gap': peer_gap,
+            'daily_seconds': daily_seconds, 'not_started': not_started,
+            'daily_feasible': daily_seconds is not None and daily_seconds <= 8 * 3600}
+
+
+def message(host, training, person, report, day, *, cohort=None):
+    _, onsite = period(training)
+    comparison = cohort_comparison(cohort, person, report)
+    state = assessment(training, report, day, comparison)
+    tone, days, remaining = state['tone'], state['days'], state['remaining']
+    percent = report['overall_percent']
     complete = report['complete']
+    at_risk = tone in ('critical', 'urgent', 'behind')
     delta = progress_since_yesterday(host, training, person, report, day)
     if complete:
-        tone, headline = 'complete', 'Bravo, votre parcours est terminé !'
+        headline = 'Bravo, votre parcours est terminé !'
         encouragement = 'Vous avez validé les activités et les temps de suivi requis. Félicitations pour votre engagement ! Profitez des jours à venir pour revoir les notions qui vous seront utiles en présentiel.'
-    elif (days <= 3 and percent < 90) or daily_seconds > 6 * 3600:
-        tone, headline = 'urgent', 'Le présentiel approche : avançons ensemble'
-        encouragement = 'Il est important de vous mobiliser dès aujourd’hui pour terminer votre e-learning à temps. Réservez des créneaux réguliers et contactez-nous rapidement si vous avez besoin d’aide pour organiser la suite.'
-    elif percent < max(10, expected - 10):
-        tone, headline = 'behind', 'Chaque journée compte pour votre formation'
-        encouragement = 'Votre e-learning demande une progression régulière. Commencez ou reprenez une séquence aujourd’hui, puis gardez ce rendez-vous chaque jour : c’est essentiel pour être prêt avant les cours en présentiel.'
-    elif percent >= 75:
-        tone, headline = 'advanced', 'Belle progression, gardez cet élan !'
+    elif tone == 'critical':
+        headline = 'Alerte critique : votre e-learning risque de ne pas être terminé à temps'
+        encouragement = ('L’échéance de votre e-learning est dépassée et votre parcours n’est pas validé. '
+                         if days == 0 else
+                         'Votre situation nécessite une réaction immédiate : le travail restant est très important au regard du délai disponible. ')
+        encouragement += 'Reprenez votre parcours et contactez-nous dès aujourd’hui pour faire le point sur ce qui vous bloque et sur la suite de votre formation.'
+    elif tone == 'urgent':
+        headline = 'Alerte : votre e-learning doit devenir une priorité'
+        encouragement = 'Vous risquez de ne pas terminer votre e-learning dans le délai prévu. Vous devez augmenter votre rythme de travail dès aujourd’hui et réserver des créneaux suffisants. Contactez-nous aujourd’hui si vous ne pouvez pas tenir ce rythme.'
+    elif tone == 'behind':
+        headline = 'Point de vigilance : votre progression demande une accélération'
+        encouragement = 'Votre avancement demande davantage de travail pour atteindre la validation complète dans le délai prévu. Reprenez votre parcours aujourd’hui et planifiez les créneaux nécessaires. Signalez-nous rapidement toute difficulté.'
+    elif tone == 'advanced':
+        headline = 'Belle progression, gardez cet élan !'
         encouragement = 'Vous avez déjà accompli une grande partie du parcours. Bravo pour votre travail ! Continuez avec la même régularité et prenez le temps de finaliser les dernières activités et les objectifs de chaque module.'
     else:
-        tone, headline = 'steady', 'Gardez un rendez-vous quotidien avec votre formation'
-        encouragement = 'Les séquences réalisées construisent vos compétences pour le métier d’agent de prévention et de sécurité. Votre travail compte : gardez ce rythme et faites aujourd’hui un pas de plus vers la fin du parcours.'
+        headline = 'Organisez votre travail jusqu’à la validation complète'
+        encouragement = 'Consultez les activités et les temps requis de votre parcours, puis réservez des créneaux réguliers pour les terminer. Votre objectif reste la validation à 100 %.'
     offset = int(hashlib.sha256(str(person['id']).encode()).hexdigest()[:8], 16)
     ordinal = day.toordinal() + offset
     daily_note = ''
     if delta is None and not complete and report.get('active_seconds', 0) > 0:
-        daily_note = (f"Vous avez déjà consacré {report['active_time_label']} à votre parcours. "
-                      'Bravo pour cet engagement ! Continuez à construire vos compétences, une séquence après l’autre.')
+        daily_note = f"Votre temps de suivi enregistré à ce jour est de {report['active_time_label']}."
     if delta and not complete:
-        if delta['advanced']:
-            praise = ('Bravo pour le travail accompli depuis hier ! Chaque effort vous rapproche de votre objectif.',
-                      'Félicitations, votre travail depuis hier porte ses fruits ! Continuez à avancer avec régularité.',
-                      'Belle avancée depuis notre dernier point ! Vous construisez vos compétences, étape après étape.')
-            daily_note = praise[ordinal % len(praise)]
+        if delta['advanced'] and at_risk:
+            daily_note = 'Une progression a été enregistrée depuis hier. Elle est prise en compte, mais elle ne suffit pas à lever l’alerte sur votre situation actuelle.'
+        elif delta['advanced']:
+            daily_note = 'Votre progression depuis hier est prise en compte. Poursuivez les activités et vérifiez les temps restant à valider dans chaque module.'
         else:
-            restart = ('Aucune nouvelle activité ni durée de suivi n’a été enregistrée depuis le point d’hier. Reprenons aujourd’hui : choisissez un créneau au calme et relancez votre prochaine séquence. Je suis là pour vous aider si quelque chose vous bloque.',
-                       'Votre suivi n’a pas évolué depuis le point d’hier. C’est le bon moment pour reprendre : un créneau réservé aujourd’hui vous aidera à retrouver votre rythme. Contactez-moi si vous rencontrez une difficulté.',
-                       'Nous n’avons pas enregistré de nouvelle avancée depuis hier. Ne laissez pas les séquences s’accumuler : reprenez votre parcours dès aujourd’hui, puis prévoyez un temps de travail chaque jour. Nous pouvons faire le point ensemble.')
-            daily_note = restart[ordinal % len(restart)]
-            if tone not in ('urgent', 'behind'):
-                headline = 'Retrouvons votre rythme, une étape à la fois'
-                encouragement = 'Vous avez déjà construit des acquis. Reprenez votre parcours aujourd’hui pour les consolider et poursuivre jusqu’à la validation complète avant le présentiel.'
-    tip = TIPS[(ordinal + ordinal // len(TIPS)) % len(TIPS)]
+            daily_note = 'Aucune nouvelle activité ni durée de suivi n’a été enregistrée depuis le point d’hier.'
+            daily_note += (' Le délai se réduit sans que le travail restant diminue : reprenez dès aujourd’hui et contactez-nous si vous êtes bloqué.'
+                           if at_risk else ' Réservez votre prochain créneau de travail pour poursuivre votre parcours.')
+            if tone == 'advanced':
+                headline = 'Votre parcours est avancé : reprenez pour le finaliser'
+                encouragement = 'Il reste des activités ou des temps de suivi à valider. Reprenez votre parcours pour les terminer avant l’échéance.'
+    tip = ('Ouvrez votre parcours, identifiez les modules non validés et contactez-nous aujourd’hui pour convenir des prochaines étapes.'
+           if tone in ('critical', 'urgent') else
+           'Planifiez dès aujourd’hui vos prochains créneaux en tenant compte du temps restant à valider.' if tone == 'behind' else
+           TIPS[(ordinal + ordinal // len(TIPS)) % len(TIPS)])
+    evidence = []
+    if not complete:
+        evidence.append(f"Votre progression est de {percent_label(percent)} % ; il reste {time_label(remaining)} de temps requis à valider, ainsi que les activités non terminées.")
+        if state['expected'] is not None and state['lag'] > 10:
+            evidence.append(f"À cette date, une répartition régulière du parcours depuis le début de la session correspondrait à environ {percent_label(round(state['expected'], 1))} % d’avancement. Ce repère de calendrier est indicatif.")
+    group_note = ''
+    if comparison and not complete:
+        group_note = (f"Parmi les {comparison['count']} autres stagiaires de votre session disposant d’un suivi comparable, "
+                      f"{comparison['completed']} {'a validé son' if comparison['completed'] == 1 else 'ont validé leur'} parcours à 100 % "
+                      f"et {comparison['advanced']} {'autre a' if comparison['advanced'] == 1 else 'autres ont'} atteint au moins 80 %. "
+                      f"La progression médiane est de {percent_label(round(comparison['median'], 1))} %.")
+        if state['peer_gap'] >= 20:
+            group_note += ' Votre avancement se situe nettement en dessous de ce repère collectif.'
+        group_note += ' Ce repère collectif ne remplace pas votre échéance personnelle.'
+    deadline_label = state['deadline'].strftime('%d/%m/%Y') if state['deadline'] else 'à confirmer'
+    if complete:
+        workload_note = 'Votre parcours est validé à 100 % : aucun rattrapage n’est nécessaire.'
+    elif state['not_started']:
+        workload_note = 'La période de formation n’a pas encore commencé. Préparez vos créneaux de travail dès l’ouverture du parcours.'
+    elif days is None:
+        workload_note = 'La date limite doit être confirmée avec notre équipe ; aucun rythme quotidien fiable ne peut être calculé pour le moment.'
+    elif days == 0:
+        workload_note = 'L’échéance est dépassée : contactez-nous dès aujourd’hui. Un nouveau délai ne peut pas être considéré comme acquis.'
+    elif not state['daily_feasible']:
+        workload_note = (f"Il reste {days} jour{'s' if days > 1 else ''}, aujourd’hui inclus. Le calcul du temps restant représente plus de 8 heures par jour, "
+                         'sans compter un éventuel temps supplémentaire pour les activités. Ce rythme ne constitue pas un planning raisonnable : contactez-nous dès aujourd’hui pour faire le point.')
+    else:
+        workload_note = (f"Il reste {days} jour{'s' if days > 1 else ''}, aujourd’hui inclus. Objectif indicatif par jour : {time_label(state['daily_seconds'])} de temps requis, "
+                         'à compléter par toutes les activités non terminées. Ce calcul ne garantit pas à lui seul la validation du parcours.')
     origin = host.PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')
     access_url = origin + '/espace/' + quote(str(person.get('public_token') or ''), safe='') + '/elearning'
     training_label = 'Votre formation agent de prévention et de sécurité (APS)'
-    subject = f"{training_label} · Votre point du {day:%d/%m}"
+    subject_note = {'critical': 'ALERTE CRITIQUE — action requise aujourd’hui',
+                    'urgent': 'ALERTE — risque de ne pas terminer à temps',
+                    'behind': 'VIGILANCE — progression à accélérer',
+                    'complete': 'Parcours validé à 100 %'}.get(tone, 'Votre point de progression')
+    subject = f"E-learning APS · {subject_note} · {day:%d/%m}"
     context = dict(first_name=str(person.get('first_name') or person.get('prenom') or '').strip(),
                    session_name=training.get('name') or training.get('nom') or 'Formation APS',
                    day_label=day.strftime('%d/%m/%Y'), onsite_label=onsite.strftime('%d/%m/%Y') if onsite else 'à confirmer',
-                   encouragement=encouragement, tip=tip, tone=tone,
+                   encouragement=encouragement, tip=tip, tone=tone, at_risk=at_risk,
+                   headline=headline, evidence=evidence, group_note=group_note,
+                   deadline_label=deadline_label, workload_note=workload_note,
                    delta=delta, daily_note=daily_note,
-                   report=report, remaining_label=time_label(remaining), daily_label=time_label(daily_seconds),
-                   days=days, access_url=access_url, complete=complete,
-                   daily_feasible=daily_seconds <= 8 * 3600)
+                   report=report, percent_label=percent_label(percent), remaining_label=time_label(remaining),
+                   days=days, access_url=access_url, complete=complete)
     fragment = host.app.jinja_env.get_template('emails/aps_daily_followup.html').render(**context)
     html = render_email(fragment, title=MAIL_TITLE, eyebrow=training_label,
-                        subtitle=headline, signature='cassandre', preheader=f"Votre progression : {percent:g} %. Présentiel le {context['onsite_label']}.")
+                        subtitle=headline, signature='cassandre', preheader=f"{subject_note}. Progression : {percent_label(percent)} %. Échéance : {deadline_label}.")
     text = (f"{MAIL_TITLE}\n{headline}\n\nBonjour {context['first_name']},\n\n"
-            + (f"{daily_note}\n\n" if daily_note else '')
             + f"{encouragement}\n\n"
+            + '\n'.join(evidence) + '\n'
+            + (f"{daily_note}\n\n" if daily_note else '')
             + (f"Depuis le point d’hier : {delta['time_label']} de suivi supplémentaire, {delta['activities']} activité(s) terminée(s).\n" if delta and delta['advanced'] else '')
             + f"{context['session_name']} — Point du {context['day_label']}\n"
-            f"Progression : {percent:g} %\nTemps suivi : {report['active_time_label']}\n"
+            f"Progression : {percent_label(percent)} %\nTemps suivi : {report['active_time_label']}\n"
             f"Temps restant requis : {context['remaining_label']}\n"
-            f"Le e-learning doit être terminé avant le début du présentiel le {context['onsite_label']}.\n"
-            + ('' if complete else f"Objectif indicatif par jour : {context['daily_label']}, sur {days} jour(s).\n"
-               if context['daily_feasible'] else "Le volume restant est important au regard du délai : contactez-nous dès aujourd’hui pour faire le point et organiser la suite de votre parcours.\n")
+            f"Échéance e-learning : {deadline_label}. Présentiel le {context['onsite_label']}.\n"
+            'Votre e-learning doit être terminé à 100 % avant le début des cours en présentiel.\n'
+            + f"{workload_note}\n"
+            + (f"\nOù en est votre groupe ?\n{group_note}\n" if group_note else '')
             + f"\n{tip}\nReprendre mon parcours : {access_url}\n\n"
             "Vous pouvez répondre à ce mail, m’appeler sur ma ligne directe au 04 87 83 06 16 "
             "ou sur mon portable au 07 43 58 22 64.\n"
@@ -293,6 +417,7 @@ def run(host, *, now=None):
     reader = ProgressReader(host)
     counts = {'ok': True, 'eligible': 0, 'sent': 0, 'skipped': 0, 'failed': 0, 'uncertain': 0}
     for training in data.get('sessions', []):
+        reports = None
         for person in host._session_trainees_list(training):
             if not eligible(host, training, person, now.date()):
                 continue
@@ -308,11 +433,16 @@ def run(host, *, now=None):
                 counts['failed'] += 1
                 continue
             try:
-                report = read_summary(host, training, person, reader=reader)
+                if reports is None:
+                    reports = cohort_reports(host, training, now.date(), reader=reader)
+                report = reports.get(tid)
+                if report is None:
+                    counts['failed'] += 1
+                    continue
                 if not report['available']:
                     counts['failed'] += 1
                     continue
-                content = message(host, training, person, report, now.date())
+                content = message(host, training, person, report, now.date(), cohort=reports)
                 if not claim(host, training, person, now.date(), content, now):
                     counts['skipped'] += 1
                     continue
@@ -418,7 +548,8 @@ def register(host):
             report = read_summary(host, training, person)
             if not report['available']:
                 abort(409, 'Le suivi est indisponible : aucun mail ne sera envoyé avec des données incomplètes.')
-            html = message(host, training, person, report, today)['html']
+            reports = cohort_reports(host, training, today, known={str(person['id']): report})
+            html = message(host, training, person, report, today, cohort=reports)['html']
         return mail_response(html)
 
     @app.post('/internal/cron/aps-daily-followup')
