@@ -362,7 +362,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         for group in associations.eligible_groups(data, partner_id, is_cancelled, include_cancelled=True):
             summary = {key:group[key] for key in ("id", "name", "training_type", "date_start", "date_end",
                   "date_debut", "date_fin", "partner_id", "archived", "is_archived", "status") if key in group}
-            summary["trainees"] = [{**{key:t[key] for key in ("id","first_name","last_name","prenom","nom","email","mail")
+            summary["trainees"] = [{**{key:t[key] for key in ("id","first_name","last_name","prenom","nom","email","mail","vtc_real_training_dates")
                                     if key in t}, "registration_cancelled": is_cancelled(t)} for t in (group.get("trainees") or group.get("stagiaires") or []) if isinstance(t,dict)]
             sessions.append(summary)
         return {"sessions": sessions, "wedof_links": data.get("wedof_links", []),
@@ -474,14 +474,20 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         response.headers["Cache-Control"] = "no-store"
         return response
 
-    def reconcile(records):
-        matches = find_matches(local_data(), records)
+    def reconcile(records, *, pair=None):
+        def matching(data):
+            # Evaluate every dossier first so two possible dossiers for the same
+            # registration remain ambiguous, even from a single trainee's sheet.
+            matches = find_matches(data, records)
+            return {folder: match for folder, match in matches.items()
+                    if pair is None or (match.get("session_id"), match.get("trainee_id")) == pair}
+        matches = matching(local_data())
         if not any(m["status"] == "exact_match" for m in matches.values()):
             return len(matches), 0
         # Recheck both sides of every association under the application's write lock.
         outcome = {}
         def apply(data):
-            current = find_matches(data, records)
+            current = matching(data)
             outcome.update(examined=len(current), created=associations.synchronize(data, current))
             return {}
         legacy._atomic_update_data(apply)
@@ -491,15 +497,33 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         with provider_operation("integrale"):
             return associations.nightly(store, now, snapshot, reconcile)
 
-    @bp.get("/inscriptions/<session_id>/<trainee_id>/recherche-cpf")
-    @admin_required
-    def trainee_search(session_id, trainee_id):
-        owner = results_owner()
+    def trainee_context(session_id, trainee_id):
         data = local_data()
         group = next((g for g in data.get("sessions", []) if str(g.get("id")) == session_id), None)
         trainee = next((t for t in (group or {}).get("trainees", []) if str(t.get("id")) == trainee_id), None)
         if not trainee:
             abort(404)
+        return data, group, trainee
+
+    @bp.post("/inscriptions/<session_id>/<trainee_id>/rapprocher-cpf")
+    @native_action
+    def trainee_match(owner, session_id, trainee_id):
+        trainee_context(session_id, trainee_id)
+        snap = snapshot(owner)
+        if snap:
+            reconcile(associations.observed_rows(store, owner, snap), pair=(session_id, trainee_id))
+        linked = next((link for link in local_data().get("wedof_links", [])
+                       if link.get("active") and str(link.get("session_id")) == session_id
+                       and str(link.get("trainee_id")) == trainee_id), None)
+        return jsonify(ok=True, status="associated" if linked else "unlinked",
+                       message="Le dossier CPF est associé à cette inscription." if linked else "",
+                       external_id=linked.get("external_id") if linked else None)
+
+    @bp.get("/inscriptions/<session_id>/<trainee_id>/recherche-cpf")
+    @admin_required
+    def trainee_search(session_id, trainee_id):
+        owner = results_owner()
+        data, group, trainee = trainee_context(session_id, trainee_id)
         snap = snapshot(owner)
         records = associations.observed_rows(store, owner, snap)
         csrf = session.setdefault("edof_server_csrf", secrets.token_urlsafe(32))
@@ -515,7 +539,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             if not associable(row) or folder in ignored:
                 continue
             words = directory.normalized(" ".join(str(row.get(k) or "") for k in ("folder_id","first_name","last_name","title")))
-            if query and not all(w in words.split() for w in directory.normalized(query).split()):
+            if query and not all(w in words for w in directory.normalized(query).split()):
                 continue
             observed = {**row, "email": associations.verified_email(row, [trainee], store.connector_key)}
             checks = manual_options(subset, observed, pair=(session_id, trainee_id))[0]
@@ -525,6 +549,25 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                                     not r["checks"]["dates_match"], r["row"]["folder_id"]))
         pages = max(1, math.ceil(len(results) / 25))
         page = max(1, min(request.args.get("page", 1, type=int) or 1, pages))
+        if request.accept_mimetypes.best == "application/json":
+            active = selection.state()["provider"] == "integrale"
+            items = []
+            for hit in results[(page-1)*25:page*25]:
+                row, checks = hit["row"], hit["checks"]
+                issues = [issue for issue in checks["issues"] if issue != "Cette session est archivée."]
+                items.append({**{k: row.get(k, "") for k in
+                    ("folder_id", "first_name", "last_name", "title", "state", "session_start_date", "session_end_date")},
+                    "checks": checks["checks"], "issues": issues,
+                    "can_associate": active and not hit["linked"] and not issues,
+                    "linked": hit["linked"],
+                    "confirm_dates": checks["dates_match"] is not True or checks["archived"],
+                    "associate_url": url_for("integrale_edof.associate", folder=row["folder_id"])})
+            message = ("La liste EDOF n’a pas encore été synchronisée." if not snap else
+                       "Aucun dossier correspondant. Essayez un nom ou un numéro de dossier." if not results else
+                       "Vérifiez le dossier proposé avant de l’associer." if len(results) == 1 else
+                       "Plusieurs dossiers correspondent : choisissez celui de cette inscription.")
+            return jsonify(ok=True, candidates=items, message=message, csrf=csrf, active=active,
+                           synced=bool(snap), page=page, pages=pages, total=len(results))
         return render_template("edof_trainee_search.html", title="Recherche CPF · Intégrale EDOF",
             group=group, trainee=trainee, results=results[(page-1)*25:page*25], page=page, pages=pages,
             query=query, csrf=csrf, synced=bool(snap), active=selection.state()["provider"]=="integrale")

@@ -1,0 +1,36 @@
+<div class="cpf-empty cpf-native-search" data-cpf-native-search
+     data-search-url="{{ url_for('integrale_edof.trainee_search', session_id=session.id, trainee_id=trainee.id) }}"
+     data-match-url="{{ url_for('integrale_edof.trainee_match', session_id=session.id, trainee_id=trainee.id) }}"
+     data-refresh-url="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id) }}"
+     data-session-id="{{ session.id }}" data-trainee-id="{{ trainee.id }}">
+  <div class="cpf-empty__head">
+    <h3>Retrouver le dossier CPF</h3>
+    <p>Retrouvez et associez le bon dossier sans quitter cette fiche. Les dossiers synchronisés sont aussi rapprochés automatiquement toutes les 5 minutes.</p>
+  </div>
+  <div class="cpf-match-status is-neutral" data-native-status role="status" aria-live="polite">
+    <span class="cpf-match-spinner" aria-hidden="true"></span>
+    <span class="cpf-match-status__text">
+      <strong>Recherche Intégrale EDOF</strong>
+      <span data-native-message>Comparaison du nom, du prénom, de l’e-mail et des dates de formation.</span>
+    </span>
+    <button class="btn btn-primary cpf-match-live" type="button" data-native-search {% if is_read_only %}disabled{% endif %}>Rechercher dans Intégrale EDOF</button>
+  </div>
+  <div class="cpf-native-results" data-native-results hidden>
+    <div class="cpf-native-result-heading"><strong data-native-count></strong><span>Résultats dans cette fiche</span></div>
+    <div class="cpf-suggestions" data-native-candidates></div>
+    <nav class="cpf-native-pagination" data-native-pagination aria-label="Pages des dossiers CPF" hidden>
+      <button class="btn btn-outline" type="button" data-native-previous>Précédent</button>
+      <span data-native-page></span>
+      <button class="btn btn-outline" type="button" data-native-next>Suivant</button>
+    </nav>
+  </div>
+  <details class="cpf-manual-search">
+    <summary>Rechercher par nom ou numéro de dossier</summary>
+    <form class="cpf-search" data-native-query>
+      <label><span class="label">Nom, prénom ou numéro CPF</span><input type="search" name="q" autocomplete="off" maxlength="120" placeholder="Ex. : nom du stagiaire ou numéro CPF"></label>
+      <button class="btn btn-outline" type="submit" {% if is_read_only %}disabled{% endif %}>Rechercher</button>
+    </form>
+  </details>
+  <div class="cpf-native-notice" data-native-notice hidden></div>
+  <noscript><a href="{{ url_for('integrale_edof.trainee_search', session_id=session.id, trainee_id=trainee.id) }}">Ouvrir la recherche CPF</a></noscript>
+</div>

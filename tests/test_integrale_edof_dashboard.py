@@ -570,7 +570,7 @@ def test_native_lookup_and_home_kpi_include_only_eligible_states(site):
     assert "Dossier déjà associé" in site.client.get(path, query_string={"q":"100000"}).text
 
 
-def test_nightly_eligible_statuses_after_18_paris_handles_duplicates_and_restart(site, monkeypatch):
+def test_automatic_associations_retry_every_five_minutes_and_survive_restart(site, monkeypatch):
     site.gate.switch("integrale", 0, "admin")
     saved = site.vault.get(edof_directory.record_key(site.owner))
     monkeypatch.setenv("EDOF_CONNECTOR_KEY", site.store.connector_key)
@@ -585,18 +585,48 @@ def test_nightly_eligible_statuses_after_18_paris_handles_duplicates_and_restart
         row["email_proof"] = projected["email_proof"]
     site.vault.put(edof_directory.record_key(site.owner), saved)
     summer = dt.datetime(2026, 7, 6, 15, 59, tzinfo=dt.timezone.utc)
-    assert not site.nightly(summer.astimezone(dashboard.PARIS))
-    assert site.nightly((summer + dt.timedelta(minutes=1)).astimezone(dashboard.PARIS))
+    assert site.nightly(summer.astimezone(dashboard.PARIS))
     assert not json.loads(site.local.read_text()).get("wedof_links")
     del saved["rows"]["100003"]
     site.vault.put(edof_directory.record_key(site.owner), saved)
-    assert site.nightly((summer + dt.timedelta(hours=1)).astimezone(dashboard.PARIS))
+    assert site.nightly((summer + dt.timedelta(minutes=1)).astimezone(dashboard.PARIS))
     assert not json.loads(site.local.read_text()).get("wedof_links")
+    assert site.nightly((summer + dt.timedelta(minutes=5)).astimezone(dashboard.PARIS))
+    assert len(json.loads(site.local.read_text())["wedof_links"]) == 1
     winter = dt.datetime(2026, 11, 6, 17, 0, tzinfo=dt.timezone.utc).astimezone(dashboard.PARIS)
     assert site.nightly(winter)
     assert site.nightly(winter)
     links = json.loads(site.local.read_text())["wedof_links"]
     assert [(link["external_id"],link["trainee_id"],link["provider"]) for link in links] == [("100002","t1","integrale")]
+
+
+def test_automatic_associations_catch_new_morning_registrations_and_retry_failures(site):
+    import integrale_edof_associations as associations
+    site.gate.switch("integrale", 0, "admin")
+    key = edof_directory.record_key(site.owner)
+    saved = site.vault.get(key)
+    saved["rows"] = {"100000": {**saved["rows"]["100000"], "email":"anne@example.invalid"}}
+    site.vault.put(key, saved)
+    now = dt.datetime(2026, 11, 11, 7, tzinfo=dashboard.PARIS)
+    # A deployment must not let the old daily audit block the morning catch-up.
+    with site.store.connect() as db:
+        db.execute("CREATE TABLE edof_association_runs (day TEXT PRIMARY KEY, examined INTEGER NOT NULL, created INTEGER NOT NULL)")
+        db.execute("INSERT INTO edof_association_runs VALUES ('2026-11-11', 0, 0)")
+    assert site.nightly(now)
+    data = json.loads(site.local.read_text())
+    data["sessions"][0]["trainees"].append({"id":"t2", "first_name":"Paul", "last_name":"Exemple", "email":"paul@example.invalid"})
+    site.local.write_text(json.dumps(data))
+    saved["rows"]["100004"] = {**saved["rows"]["100000"], "folder_id":"100004", "first_name":"Paul", "email":"paul@example.invalid"}
+    site.vault.put(key, saved)
+    assert site.nightly(now + dt.timedelta(minutes=5))
+    assert len(json.loads(site.local.read_text())["wedof_links"]) == 2
+    later = now + dt.timedelta(minutes=10)
+    failure = Mock(side_effect=RuntimeError("temporary write failure"))
+    with pytest.raises(RuntimeError):
+        associations.nightly(site.store, later, lambda _: saved, failure)
+    success = Mock(return_value=(0, 0))
+    assert associations.nightly(site.store, later, lambda _: saved, success)
+    success.assert_called_once()
 
 @pytest.mark.parametrize('state,eligible', [
     ('À traiter',False), ('Accepté',True), ('En formation',True),

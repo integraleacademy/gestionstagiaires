@@ -3,8 +3,9 @@ from collections import defaultdict
 from contextlib import closing
 import json
 
-from edof_directory import accepted_key, email_proof, normalized, pending_key, record_key, session_date
+from edof_directory import accepted_key, email_proof, normalized, pending_key, record_key
 from edof_gmail import Vault
+from edof_matching import registration_dates
 from wedof_links import save_manual_wedof_link
 from wedof_matching import match_folder
 
@@ -59,9 +60,12 @@ def match_unlinked(data, rows, partner_id, is_cancelled, as_folder, key):
                  for h in l.get("association_history", []) if isinstance(h, dict))}
     by_dates = defaultdict(list)
     for group in eligible_groups(data, partner_id, is_cancelled):
-        dates = (session_date(group.get("date_start") or group.get("date_debut")),
-                 session_date(group.get("date_end") or group.get("date_fin")))
-        by_dates[dates].append(group)
+        periods = defaultdict(list)
+        for trainee in group["trainees"]:
+            periods[registration_dates(group, trainee)].append(trainee)
+        for dates, trainees in periods.items():
+            if all(dates):
+                by_dates[dates].append({**group, "date_start":dates[0], "date_end":dates[1], "trainees":trainees})
     results = {}
     exact = defaultdict(list)
     for folder, row in rows.items():
@@ -107,14 +111,21 @@ def snapshot_owners(private):
 
 
 def nightly(store, now, snapshot, reconcile):
-    """Called by the elected production scheduler. Replays after a restart are idempotent."""
+    """Reconcile synchronized dossiers every five minutes, including after restart.
+
+    This only reads the local directory: it never opens EDOF or sends a declaration.
+    Keep the daily audit, but do not let the first run hide new dossiers all day.
+    """
     day = now.date().isoformat()
-    if now.hour < 18 or not store.connector_key:
+    if not store.connector_key:
         return False
-    with closing(store.connect()) as db:
+    with closing(store.connect()) as db, db:
         db.execute("""CREATE TABLE IF NOT EXISTS edof_association_runs
                    (day TEXT PRIMARY KEY, examined INTEGER NOT NULL, created INTEGER NOT NULL)""")
-        if db.execute("SELECT 1 FROM edof_association_runs WHERE day=?", (day,)).fetchone():
+        db.execute("""CREATE TABLE IF NOT EXISTS edof_association_checkpoint
+                   (id INTEGER PRIMARY KEY CHECK(id=1), completed REAL NOT NULL)""")
+        previous = db.execute("SELECT completed FROM edof_association_checkpoint WHERE id=1").fetchone()
+        if previous and 0 <= now.timestamp() - previous[0] < 300:
             return True
     # Dossiers synchronized manually also participate when the browser watch is closed.
     private = Vault(store.directory, store.connector_key)
@@ -134,5 +145,8 @@ def nightly(store, now, snapshot, reconcile):
         return False
     examined, created = reconcile(combined)
     with closing(store.connect()) as db, db:
-        db.execute("INSERT OR IGNORE INTO edof_association_runs VALUES(?,?,?)", (day, examined, created))
+        db.execute("""INSERT INTO edof_association_runs VALUES(?,?,?) ON CONFLICT(day) DO UPDATE SET
+                   examined=edof_association_runs.examined+excluded.examined,
+                   created=edof_association_runs.created+excluded.created""", (day, examined, created))
+        db.execute("INSERT OR REPLACE INTO edof_association_checkpoint VALUES(1,?)", (now.timestamp(),))
     return True
