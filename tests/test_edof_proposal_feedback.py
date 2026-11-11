@@ -141,6 +141,7 @@ def test_modal_follows_actual_success_and_never_double_sends(screen):
     page.locator('#edof-action-resume').click()
     assert page.locator('#edof-action-title').inner_text()=='En attente d’acceptation du titulaire'
     assert 'Dossier transmis à EDOF, en attente d’acceptation par le titulaire.' in page.locator('#edof-action-message').inner_text()
+    page.screenshot(path='/tmp/edof-enrolment-waiting.png')
     assert not page.get_by_role('button',name='Inscrire sur une session',exact=True).is_visible()
     # The dossier evolves independently from the delivery receipt.
     import time
@@ -149,7 +150,8 @@ def test_modal_follows_actual_success_and_never_double_sends(screen):
         'checked':time.time()+1,'rows':{FOLDER:edof_directory.project(row)}})
     assert screen.site.client.get(f'/admin/edof-test/dossiers/{FOLDER}/journey').json['state']=='accepted'
     page.locator('#edof-action-dialog[data-journey="accepted"]').wait_for()
-    assert page.get_by_role('button',name='Inscrire sur une session',exact=True).is_visible()
+    assert page.locator('#edof-action-dialog').get_by_role('button',name='Inscrire sur une session',exact=True).is_visible()
+    page.screenshot(path='/tmp/edof-enrolment-accepted.png')
     assert screen.posts.count(BASE+'submit')==1
     assert all(path in {BASE+'submit', f'/admin/edof-test/dossiers/{FOLDER}/journey/watch'} for path in screen.posts)
 
