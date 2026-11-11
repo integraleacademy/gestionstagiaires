@@ -3,8 +3,9 @@ from collections import defaultdict
 from contextlib import closing
 import json
 
-from edof_directory import accepted_key, email_proof, normalized, pending_key, record_key, session_date
+from edof_directory import accepted_key, email_proof, normalized, pending_key, record_key
 from edof_gmail import Vault
+from edof_matching import registration_dates
 from wedof_links import save_manual_wedof_link
 from wedof_matching import match_folder
 
@@ -59,9 +60,12 @@ def match_unlinked(data, rows, partner_id, is_cancelled, as_folder, key):
                  for h in l.get("association_history", []) if isinstance(h, dict))}
     by_dates = defaultdict(list)
     for group in eligible_groups(data, partner_id, is_cancelled):
-        dates = (session_date(group.get("date_start") or group.get("date_debut")),
-                 session_date(group.get("date_end") or group.get("date_fin")))
-        by_dates[dates].append(group)
+        periods = defaultdict(list)
+        for trainee in group["trainees"]:
+            periods[registration_dates(group, trainee)].append(trainee)
+        for dates, trainees in periods.items():
+            if all(dates):
+                by_dates[dates].append({**group, "date_start":dates[0], "date_end":dates[1], "trainees":trainees})
     results = {}
     exact = defaultdict(list)
     for folder, row in rows.items():

@@ -31,7 +31,7 @@ def _email(value):
 
 
 def _date(value):
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
         try:
             return dt.datetime.strptime(_text(value), fmt).date().isoformat()
         except ValueError:
@@ -65,9 +65,24 @@ def _session(group):
     }
 
 
+def registration_dates(group, trainee):
+    """VTC enrolments can have their own period within a shared exam group."""
+    text = _text(trainee.get("vtc_real_training_dates"))
+    is_vtc = re.search(r"\bvtc\b", _name(group.get("training_type")) + " " + _name(group.get("name")))
+    if text and is_vtc:
+        values = re.findall(r"\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/-]\d{1,2}[/-]\d{4})\b", text)
+        dates = tuple(_date(value) for value in values)
+        # An explicit but invalid period must not fall back to unrelated group dates.
+        return dates if len(dates) == 2 and all(dates) and dates[0] <= dates[1] else (None, None)
+    return (_date(group.get("date_start") or group.get("date_debut")),
+            _date(group.get("date_end") or group.get("date_fin")))
+
+
 def _registration(group, trainee):
+    start, end = registration_dates(group, trainee)
     return {
         **_session(group),
+        "start_date": start, "end_date": end,
         "trainee_id": _id(trainee.get("id")),
         "cancelled": str(trainee.get("registration_cancelled", trainee.get("registration_canceled", trainee.get("inscription_annulee", "")))).lower() in {"true", "1", "yes", "on", "oui", "annulee", "annulée", "cancelled", "canceled"},
         "first_name": _text(trainee.get("first_name") or trainee.get("prenom")),
