@@ -11,8 +11,10 @@ diagnostic. Les mails envoyés restent archivés sans régénération.
   présentiel. Sans fin du distanciel, utiliser la veille du présentiel.
 - Nombre de jours : jours calendaires disponibles, journée courante comprise.
   Une échéance passée donne zéro jour, jamais un jour fictif.
-- Repère indicatif d'avancement : fraction de la période écoulée, plafonnée à
-  100 %. Il ne s'agit pas d'une nouvelle condition de validation.
+- Repère interne d'avancement : fraction de la période écoulée, plafonnée à
+  100 %. Il reste utilisé pour le diagnostic, sans être affiché dans le mail.
+  Le message indique directement l'avancement réel, le temps restant et la
+  date limite. Il ne s'agit pas d'une nouvelle condition de validation.
 - Charge quotidienne : temps encore requis par les modules divisé par les jours
   disponibles, arrondi à la minute supérieure. Les activités doivent aussi être
   terminées ; cette estimation n'est pas une garantie de validation.

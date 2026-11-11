@@ -334,7 +334,7 @@ def test_low_progress_six_days_before_deadline_never_receives_congratulations(le
     if delta and delta['advanced']:
         assert 'ne suffit pas à lever l’alerte' in content['text']
         assert '01 h 06 min 26 s' in content['text']
-        assert content['html'].index('réaction immédiate') < content['html'].index('Depuis le point d’hier')
+        assert content['html'].index('Vous avez pris du retard') < content['html'].index('Depuis le point d’hier')
         assert 'background:#eaf7f0' not in content['html']
     elif delta:
         assert 'Le délai se réduit sans que le travail restant diminue' in content['text']

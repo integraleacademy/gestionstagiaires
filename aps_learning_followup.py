@@ -297,6 +297,15 @@ def message(host, training, person, report, day, *, cohort=None):
     complete = report['complete']
     at_risk = tone in ('critical', 'urgent', 'behind')
     delta = progress_since_yesterday(host, training, person, report, day)
+    deadline_label = state['deadline'].strftime('%d/%m/%Y') if state['deadline'] else 'à confirmer'
+    progress_note = f"Vous avez terminé {percent_label(percent)} % de votre e-learning"
+    if remaining:
+        progress_note += f" et il vous reste {time_label(remaining)} de formation à effectuer"
+    else:
+        progress_note += '. Il vous reste des activités à terminer'
+    if state['deadline'] and days and days > 0:
+        progress_note += f' au plus tard le {deadline_label}'
+    progress_note += '.'
     if complete:
         headline = 'Bravo, votre parcours est terminé !'
         encouragement = 'Vous avez validé les activités et les temps de suivi requis. Félicitations pour votre engagement ! Profitez des jours à venir pour revoir les notions qui vous seront utiles en présentiel.'
@@ -304,8 +313,8 @@ def message(host, training, person, report, day, *, cohort=None):
         headline = 'Alerte critique : votre e-learning risque de ne pas être terminé à temps'
         encouragement = ('L’échéance de votre e-learning est dépassée et votre parcours n’est pas validé. '
                          if days == 0 else
-                         'Votre situation nécessite une réaction immédiate : le travail restant est très important au regard du délai disponible. ')
-        encouragement += 'Reprenez votre parcours et contactez-nous dès aujourd’hui pour faire le point sur ce qui vous bloque et sur la suite de votre formation.'
+                         'Vous avez pris du retard dans votre formation. ')
+        encouragement += progress_note + ' Contactez-nous dès aujourd’hui pour faire le point sur votre situation.'
     elif tone == 'urgent':
         headline = 'Alerte : votre e-learning doit devenir une priorité'
         encouragement = 'Vous risquez de ne pas terminer votre e-learning dans le délai prévu. Vous devez augmenter votre rythme de travail dès aujourd’hui et réserver des créneaux suffisants. Contactez-nous aujourd’hui si vous ne pouvez pas tenir ce rythme.'
@@ -340,10 +349,8 @@ def message(host, training, person, report, day, *, cohort=None):
            'Planifiez dès aujourd’hui vos prochains créneaux en tenant compte du temps restant à valider.' if tone == 'behind' else
            TIPS[(ordinal + ordinal // len(TIPS)) % len(TIPS)])
     evidence = []
-    if not complete:
-        evidence.append(f"Votre progression est de {percent_label(percent)} % ; il reste {time_label(remaining)} de temps requis à valider, ainsi que les activités non terminées.")
-        if state['expected'] is not None and state['lag'] > 10:
-            evidence.append(f"À cette date, une répartition régulière du parcours depuis le début de la session correspondrait à environ {percent_label(round(state['expected'], 1))} % d’avancement. Ce repère de calendrier est indicatif.")
+    if not complete and tone != 'critical':
+        evidence.append(progress_note)
     group_note = ''
     if comparison and not complete:
         group_note = (f"Parmi les {comparison['count']} autres stagiaires de votre session disposant d’un suivi comparable, "
@@ -353,7 +360,6 @@ def message(host, training, person, report, day, *, cohort=None):
         if state['peer_gap'] >= 20:
             group_note += ' Votre avancement se situe nettement en dessous de ce repère collectif.'
         group_note += ' Ce repère collectif ne remplace pas votre échéance personnelle.'
-    deadline_label = state['deadline'].strftime('%d/%m/%Y') if state['deadline'] else 'à confirmer'
     if complete:
         workload_note = 'Votre parcours est validé à 100 % : aucun rattrapage n’est nécessaire.'
     elif state['not_started']:
