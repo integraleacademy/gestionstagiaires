@@ -269,7 +269,8 @@ def assessment(training, report, day, cohort=None):
     peer_gap = cohort['median'] - percent if cohort else 0
     if report['complete']:
         tone = 'complete'
-    elif days == 0 or (daily_seconds or 0) > 8 * 3600 or (days is not None and days <= 3 and percent < 50):
+    elif not not_started and (days == 0 or (daily_seconds or 0) > 8 * 3600
+                             or (days is not None and days <= 3 and percent < 50)):
         tone = 'critical'
     elif not not_started and ((daily_seconds or 0) > 6 * 3600
             or (days is not None and (days <= 1 or (days <= 3 and percent < 90)
