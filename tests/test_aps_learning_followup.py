@@ -378,6 +378,16 @@ def test_earlier_remote_deadline_is_respected_and_missing_dates_are_not_invented
     assert content['tone'] == 'steady'
 
 
+def test_short_future_session_does_not_alarm_before_access_opens(learner):
+    _, training, person = learner
+    report = daily.read_summary(host, training, person)
+    training.update(aps_remote_start='2026-11-12', aps_remote_end='2026-11-12', aps_in_person_start='2026-11-13')
+    content = daily.message(host, training, person, report, dt.date(2026, 11, 11))
+    assert content['tone'] == 'steady' and 'ALERTE' not in content['subject']
+    assert 'La période de formation n’a pas encore commencé' in content['text']
+    assert 'Objectif indicatif par jour' not in content['text']
+
+
 def test_cohort_is_anonymous_comparable_and_excludes_self_unavailable_and_cancelled(learner):
     _, training, person = learner
     report = {**daily.read_summary(host, training, person), 'overall_percent': 50, 'remaining_seconds': 3600}
