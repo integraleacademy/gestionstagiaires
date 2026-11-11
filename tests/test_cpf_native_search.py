@@ -86,3 +86,39 @@ def test_json_search_bounds_results_and_reports_occupied_registration(site):
     site.local.write_text(json.dumps(data))
     occupied = site.client.get(SEARCH, headers=HEADERS).json
     assert all(not item["can_associate"] and item["issues"] for item in occupied["candidates"])
+
+
+def test_vtc_uses_each_trainees_real_period_without_changing_the_group(site):
+    site.gate.switch("integrale", 0, "admin")
+    row = exact_row(site, session_start_date="2026-11-26", session_end_date="2026-12-26")
+    records(site, {"100000":row})
+    data = json.loads(site.local.read_text())
+    group = data["sessions"][0]
+    group.update(training_type="VTC", date_start="2026-09-12", date_end="2026-11-20")
+    group["trainees"][0]["vtc_real_training_dates"] = "26/11/2026 au 26/12/2026"
+    group["trainees"].append({"id":"other", "first_name":"Anne", "last_name":"Exemple", "email":"anne@example.invalid",
+                              "vtc_real_training_dates":"01/12/2026 au 31/12/2026"})
+    site.local.write_text(json.dumps(data))
+    candidate = site.client.get(SEARCH, headers=HEADERS).json["candidates"][0]
+    assert not candidate["confirm_dates"]
+    assert next(c["matches"] for c in candidate["checks"] if c["key"] == "dates") is True
+    reply = site.client.post(MATCH, data={"csrf":site.csrf}, headers=HEADERS)
+    assert reply.json["status"] == "associated"
+    after = json.loads(site.local.read_text())
+    assert after["sessions"] == data["sessions"]
+    assert after["wedof_links"][0]["trainee_id"] == "t1"
+
+
+def test_invalid_vtc_period_or_missing_contact_never_becomes_automatic_match(site):
+    site.gate.switch("integrale", 0, "admin")
+    row = exact_row(site)
+    data = json.loads(site.local.read_text())
+    data["sessions"][0]["training_type"] = "VTC"
+    for period, email in [("06/02/2026 au 02/02/2026", row["email"]), ("à définir", row["email"]),
+                          ("02/02/2026 au 06/02/2026", "")]:
+        data["sessions"][0]["trainees"][0]["vtc_real_training_dates"] = period
+        site.local.write_text(json.dumps(data))
+        records(site, {"100000":{**row, "email":email}})
+        reply = site.client.post(MATCH, data={"csrf":site.csrf}, headers=HEADERS)
+        assert reply.json["status"] == "unlinked"
+        assert not json.loads(site.local.read_text()).get("wedof_links")

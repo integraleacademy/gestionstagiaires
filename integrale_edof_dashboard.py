@@ -359,7 +359,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         for group in associations.eligible_groups(data, partner_id, is_cancelled, include_cancelled=True):
             summary = {key:group[key] for key in ("id", "name", "training_type", "date_start", "date_end",
                   "date_debut", "date_fin", "partner_id", "archived", "is_archived", "status") if key in group}
-            summary["trainees"] = [{**{key:t[key] for key in ("id","first_name","last_name","prenom","nom","email","mail")
+            summary["trainees"] = [{**{key:t[key] for key in ("id","first_name","last_name","prenom","nom","email","mail","vtc_real_training_dates")
                                     if key in t}, "registration_cancelled": is_cancelled(t)} for t in (group.get("trainees") or group.get("stagiaires") or []) if isinstance(t,dict)]
             sessions.append(summary)
         return {"sessions": sessions, "wedof_links": data.get("wedof_links", []),
