@@ -619,6 +619,11 @@ dialog.edof-action-dialog { width:min(580px,calc(100vw - 32px)); max-width:calc(
 .edof-action-dialog[data-journey] .edof-action-brand { display:none; }
 .edof-action-dialog[data-journey="choosing"] { width:min(760px,calc(100vw - 24px)); }
 .edof-action-dialog[data-journey="choosing"] .edof-action-hero { padding:22px 30px 18px; }
+.edof-action-dialog[data-journey="choosing"] [data-action-subtitle],
+.edof-action-dialog[data-journey="choosing"] [data-action-case],
+.edof-action-dialog[data-journey="choosing"] [data-action-phase] { display:none; }
+.edof-action-dialog[data-journey="choosing"] .edof-action-hero h2 { margin-bottom:0; }
+.edof-action-dialog[data-journey="choosing"] .edof-action-status p { margin-top:0; }
 .edof-action-dialog[data-journey="choosing"] .edof-action-symbol { display:none; }
 .edof-action-dialog[data-journey="choosing"] .edof-action-status { background:transparent; border:0; padding:0 0 16px; }
 .edof-action-dialog[data-journey="choosing"] .edof-action-steps { margin-bottom:18px; }
@@ -670,7 +675,7 @@ dialog.edof-action-dialog { width:min(580px,calc(100vw - 32px)); max-width:calc(
 @media(max-width:540px) {
   .edof-action-dialog[data-journey="choosing"] .edof-action-hero { padding:24px 18px 18px; }
   .edof-enrolment-person { padding:14px; gap:10px; }
-  .edof-enrolment-contact { grid-template-columns:1fr; gap:12px; }
+  .edof-enrolment-contact { grid-template-columns:1fr 1fr; gap:12px; }
   .edof-session-option { padding:12px; }
   .edof-action-footer > div { width:100%; }
   .edof-action-footer [data-action-next] { flex:1; }
