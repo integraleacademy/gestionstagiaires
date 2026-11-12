@@ -2,6 +2,7 @@
 {% from 'partners/_ui.html' import icon, assist, empty %}
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/partner-workspace.css', v='20261016-1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/elearning-contacts.css', v='20261112') }}">
 <div class="pw" data-partner-workspace>
   <a class="pw-back" href="{{ url_for('admin_partners') }}">{{ icon('back') }} Organismes de formation</a>
   {% for category,message in get_flashed_messages(with_categories=true) %}<div class="pw-notice {{ 'error' if category == 'error' }}" role="status">{{ message }}</div>{% endfor %}
@@ -25,4 +26,4 @@
   <dialog class="pw-dialog" id="partner-document" aria-labelledby="partner-document-title"><header><div><span class="pw-eyebrow">{{ partner.name }}</span><h2 id="partner-document-title">Détail</h2></div><button class="pw-button" type="button" data-dialog-close>Fermer {{ icon('close') }}</button></header><p class="pw-dialog-loading" role="status">Chargement du dossier…</p><iframe title="Détail du dossier partenaire"></iframe></dialog>
 </div>
 {% endblock %}
-{% block scripts %}<script src="{{ url_for('static', filename='js/partner-workspace.js', v='20261016-1') }}" defer></script>{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/partner-workspace.js', v='20261112-contacts') }}" defer></script>{% endblock %}

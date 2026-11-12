@@ -47,6 +47,7 @@
     }
   }
   root.querySelectorAll('[data-roster-url]').forEach(card => {
+    if (card.open) loadRoster(card, false);
     card.addEventListener('toggle', () => { if (card.open) loadRoster(card, false); });
     card.querySelector('[data-roster-refresh]').addEventListener('click', () => loadRoster(card, true));
   });

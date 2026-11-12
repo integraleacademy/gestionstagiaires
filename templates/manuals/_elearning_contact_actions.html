@@ -1,0 +1,27 @@
+{# Shared by the partner roster, order and administrator dossier. #}
+{% if session.get('admin_role') != 'viewer' and contact_enabled %}
+<div class="el-contact-actions">
+  <details class="el-contact-editor">
+    <summary aria-label="Modifier l’e-mail de {{ person.first_name }} {{ person.last_name }}">Modifier l’e-mail</summary>
+    <form method="post" action="{{ url_for('manuals_shop.elearning_learner_contact', record_id=contact_record_id, learner_id=person.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ contact_csrf }}">
+      <input type="hidden" name="action" value="save_email">
+      <input type="hidden" name="expected_email" value="{{ person.email }}">
+      <input type="hidden" name="return_to" value="{{ contact_return }}">
+      <label for="contact-email-{{ contact_record_id }}-{{ person.id }}">Adresse e-mail</label>
+      <input id="contact-email-{{ contact_record_id }}-{{ person.id }}" name="email" type="email" value="{{ person.email }}" maxlength="254" required autocomplete="off" spellcheck="false">
+      <p>{{ 'La progression est conservée. Le lien sera envoyé à cette adresse.' if contact_active else 'Cette adresse sera utilisée lors de l’envoi des accès.' }}</p>
+      <button type="submit">{{ 'Enregistrer et renvoyer le lien' if contact_active else 'Enregistrer l’e-mail' }}</button>
+    </form>
+  </details>
+  {% if contact_active %}
+  <form method="post" action="{{ url_for('manuals_shop.elearning_learner_contact', record_id=contact_record_id, learner_id=person.id) }}" class="el-contact-resend">
+    <input type="hidden" name="csrf_token" value="{{ contact_csrf }}">
+    <input type="hidden" name="action" value="resend">
+    <input type="hidden" name="expected_email" value="{{ person.email }}">
+    <input type="hidden" name="return_to" value="{{ contact_return }}">
+    <button type="submit" aria-label="Renvoyer le lien à {{ person.first_name }} {{ person.last_name }}">Renvoyer le lien</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}

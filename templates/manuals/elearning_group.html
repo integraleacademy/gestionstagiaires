@@ -1,7 +1,7 @@
 {% extends 'manuals/layout.html' %}
 {% from 'manuals/_elearning_ui.html' import icon, group_title, errors_box, learner_row %}
 {% block title %}{{ group_title(group) }} · E-learning{% endblock %}
-{% block extra_styles %}
+{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static',filename='css/elearning-contacts.css',v='20261112') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/elearning-orders.css', v='20261017-followup') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/elearning-group-detail.css', v='20261109-group') }}">
 <script defer src="{{ url_for('static', filename='js/elearning-orders.js', v='20261109-group') }}"></script>
