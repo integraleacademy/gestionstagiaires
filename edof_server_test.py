@@ -196,7 +196,10 @@ class ServerTestStore:
                        AND NOT EXISTS(SELECT 1 FROM jobs j2 WHERE j2.created>jobs.created AND j2.owner=jobs.owner
                        AND json_extract(j2.result,'$.code') NOT IN ('proposal_loaded','directory_ready','directory_progress','requests_ready','read_success'))
                        LIMIT 1""", (owner, time.time()-300)).fetchone() and Vault(self.directory,self.connector_key).get("browser")
-                if remaining > 0 and not (day_session or reuse or shared_session and mode in PROPOSAL_MODES):
+                # The same live worker can send the next declaration without a new
+                # login. Its EFP login budget and portal throttling still apply.
+                shared_reuse = shared_session and mode in PROPOSAL_MODES | {"declare", "reconcile"}
+                if remaining > 0 and not (day_session or reuse or shared_reuse):
                     raise JobCooldown(remaining)
                 if mode == "directory":
                     db.execute("DELETE FROM directory_requested WHERE owner=?", (owner,))
