@@ -32,6 +32,7 @@ COURSES = {
     "vtc": {"name": "VTC", "title": "Chauffeur VTC", "color": "#7951a8", "default_cents": 15000, "folder": "vtc"},
 }
 CUSTOMER_ENDPOINTS = {"manuals_shop.elearning_checkout", "manuals_shop.elearning_order", "manuals_shop.elearning_confirm", "manuals_shop.elearning_refresh", "manuals_shop.elearning_status", "manuals_shop.elearning_invoice", "manuals_shop.elearning_send_accesses", "manuals_shop.elearning_confirmation"}
+CUSTOMER_ENDPOINTS.add("manuals_shop.elearning_learner_contact")
 MAX_LEARNERS = 100
 
 
@@ -248,6 +249,8 @@ def learner_context(data, token, host=None):
 def access_token(host, order, person):
     # Stable, unguessable per enrolment; only its hash is stored in the order.
     message = "elearning-order-v1:" + order["id"] + ":" + person["id"]
+    if person.get("access_token_version"):
+        message += ":" + person["access_token_version"]
     return "el_" + hmac.new(str(host.app.secret_key).encode(), message.encode(), hashlib.sha256).hexdigest()
 
 
@@ -279,7 +282,7 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False, sta
         return True
     if not entitled(order):
         return False
-    if person and (not person.get("activated_at") or not order.get("access_dispatch_requested_at")):
+    if person and (not person.get("activated_at") or not (order.get("access_dispatch_requested_at") or person.get("access_resend_requested_at"))):
         return False
     emails[key] = {"status": "sending", "attempted_at": host._now_iso()}
     commerce._save(host, order, emails=emails)
@@ -447,9 +450,10 @@ def process_claimed(host, order):
     if entitled(order) and order["centre"]["email"].strip().casefold() != commerce.ADMIN_EMAIL.casefold():
         # Independent retry key: a failed internal notice never resends the customer receipt.
         sent = send_message(host, order, "invoice_paid_admin", commerce.ADMIN_EMAIL, staff=True) and sent
-    if entitled(order) and order.get("access_dispatch_requested_at") and order.get("activated_at"):
+    if entitled(order):
         for person in order["learners"]:
-            sent = send_message(host, order, "learner_" + person["id"], person["email"], person=person) and sent
+            if person.get("activated_at") and (order.get("access_dispatch_requested_at") or person.get("access_resend_requested_at")):
+                sent = send_message(host, order, "learner_" + person["id"], person["email"], person=person) and sent
     state = order["commerce"]
     tracking = (not entitled(order) and state.get("invoice_status") != "canceled"
                 and (bool(state.get("invoice_id")) or outcome in {"waiting_payment", "payment_pending"}))
@@ -471,6 +475,9 @@ def process_claimed(host, order):
 
 
 def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_worker):
+    from elearning_learner_contacts import register_routes as register_contacts
+    register_contacts(host, bp, partner_data=partner_data, check_csrf=check_csrf, kick_worker=kick_worker)
+
     @bp.errorhandler(elearning_sales.SalesUnavailable)
     def sales_unavailable(error):
         return page("elearning_sales_unavailable.html", elearning_sales_enabled=False, elearning_sales_notice=False), 409

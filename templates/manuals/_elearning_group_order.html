@@ -94,6 +94,12 @@
                   <span class="eg-avatar" aria-hidden="true">{{ (person.first_name[:1] ~ person.last_name[:1])|upper }}</span>
                   <span><strong>{{ person.first_name }} {{ person.last_name }}</strong><small>{{ person.email }}</small></span>
                 </div>
+                {% with contact_record_id=order.id, contact_csrf=csrf_token, contact_return='group',
+                        contact_active=person.status == 'active', contact_enabled=not locked and state != 'suspended' %}
+                  {% include 'manuals/_elearning_contact_actions.html' %}
+                {% endwith %}
+                {% set contact_mail = order.get('commerce',{}).get('emails',{}).get('learner_' ~ person.id,{}) %}
+                {% if contact_mail.get('status') in ['pending','sending','failed'] %}<small role="status">{{ {'pending':'Renvoi demandé','sending':'E-mail en cours d’envoi','failed':'Envoi à vérifier · nouvel essai programmé'}[contact_mail.status] }}</small>{% endif %}
               </td>
               {% if delivery.paid %}
               <td data-label="Accès">
@@ -128,7 +134,7 @@
           </tbody>
         </table>
       </div>
-      {% if tracking %}<p class="small el-table-note">{{ icon('lock') }} Pour corriger les coordonnées d’un stagiaire déjà activé, <a href="mailto:clement@integraleacademy.com">contactez-nous</a>.</p>{% endif %}
+      {% if tracking and not is_read_only %}<p class="small el-table-note">Vous pouvez corriger un e-mail ou renvoyer un lien d’accès sans modifier la progression du stagiaire.</p>{% endif %}
     </div>
   </div>
 </section>

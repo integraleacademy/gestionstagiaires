@@ -30,6 +30,8 @@ ACTIVITY_LABELS = {
     "invitation_sent": "Invitation envoyée", "invitation_send_failed": "Échec d’envoi de l’invitation",
     "invitation_cancelled": "Invitation annulée", "partner_activated": "Compte activé",
     "partner_status_changed": "Statut de l’organisme modifié",
+    "elearning_learner_email_updated": "E-mail d’un stagiaire corrigé",
+    "elearning_learner_link_requested": "Renvoi d’un lien e-learning demandé",
 }
 
 
@@ -168,7 +170,7 @@ def platform_context(host, data):
 
 
 def register(host):
-    from manuals_shop import check_csrf
+    from manuals_shop import check_csrf, csrf_token
     import partner_campaigns
     partner_campaigns.register(host)
 
@@ -191,7 +193,8 @@ def register(host):
                 report = reader.report(order, person, detailed=False)
             mail = (order or {}).get("commerce", {}).get("emails", {}).get("learner_" + str(row.get("id")), {})
             people.append({"person": row, "report": report, "order": order, "mail": mail})
-        response = make_response(render_template("partners/_learners.html", partner=partner, people=people, access_labels=ACCESS_LABELS))
+        response = make_response(render_template("partners/_learners.html", partner=partner, people=people, card=card,
+                                                 contact_csrf=csrf_token(), access_labels=ACCESS_LABELS))
         response.headers["Cache-Control"] = "private, no-store"
         return response
 
