@@ -353,10 +353,19 @@ def message(host, training, person, report, day, *, cohort=None):
         evidence.append(progress_note)
     group_note = ''
     if comparison and not complete:
-        group_note = (f"Parmi les {comparison['count']} autres stagiaires de votre session disposant d’un suivi comparable, "
-                      f"{comparison['completed']} {'a validé son' if comparison['completed'] == 1 else 'ont validé leur'} parcours à 100 % "
-                      f"et {comparison['advanced']} {'autre a' if comparison['advanced'] == 1 else 'autres ont'} atteint au moins 80 %. "
-                      f"La progression médiane est de {percent_label(round(comparison['median'], 1))} %.")
+        milestones = []
+        if comparison['completed']:
+            milestones.append(f"{comparison['completed']} {'a validé son' if comparison['completed'] == 1 else 'ont validé leur'} parcours à 100 %")
+        if comparison['advanced']:
+            other = ('autre ' if comparison['advanced'] == 1 else 'autres ') if milestones else ''
+            milestones.append(f"{comparison['advanced']} {other}{'a' if comparison['advanced'] == 1 else 'ont'} atteint au moins 80 %")
+        peers_label = f"les {comparison['count']} autres stagiaires de votre session disposant d’un suivi comparable"
+        median_label = percent_label(round(comparison['median'], 1))
+        if milestones:
+            group_note = (f"Parmi {peers_label}, {' et '.join(milestones)}. "
+                          f"La progression médiane est de {median_label} %.")
+        else:
+            group_note = f"Pour {peers_label}, la progression médiane est de {median_label} %."
         if state['peer_gap'] >= 20:
             group_note += ' Votre avancement se situe nettement en dessous de ce repère collectif.'
         group_note += ' Ce repère collectif ne remplace pas votre échéance personnelle.'
