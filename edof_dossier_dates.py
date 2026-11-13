@@ -21,16 +21,17 @@ def enrich_refusals(context, witness, vault, owner, host, prefix):
     if not snapshot:
         return
     rows=dict(snapshot['rows'])
-    attempts_key='refusal-date-attempts-v2:'+owner
+    attempts_key='refusal-date-attempts-v3:'+owner
     attempts=vault.get(attempts_key) or {}
     candidates=[r for r in rows.values() if r.get('ft_refused') and (not r.get('funding_at') or not r.get('filed_at'))
-                and time.time()-attempts.get(r['folder_id'],0)>3600][:2]
+                and (attempts.get(r['folder_id'],{}).get('snapshot',-1)!=snapshot['checked']
+                     or time.time()-attempts.get(r['folder_id'],{}).get('at',0)>3600)][:2]
     changed=False
     for old in candidates:
         folder=old['folder_id']
         if not directory.ID_RE.fullmatch(folder):
             continue
-        attempts[folder]=time.time()
+        attempts[folder]={'at':time.time(),'snapshot':snapshot['checked']}
         vault.put(attempts_key,attempts,ttl=86400)
         url='https://'+host+prefix+folder
         response=context.request.get(url,headers={**directory.private_headers(witness),'Current-Siret':directory.SIRET},
