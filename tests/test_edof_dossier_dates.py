@@ -172,3 +172,9 @@ def test_missing_refusal_dates_are_enriched_from_exact_dossier(site):
     assert saved['rows']['123456']['filed_at']=='2026-10-01'
     dates.enrich_refusals(NS(request=NS(get=read)),witness,site.vault,site.owner,host,prefix)
     assert len(calls)==1
+    # A new general list may omit the detail dates again. Its enrichment must
+    # not be delayed by the hourly retry throttle of the previous list.
+    site.vault.put(directory.record_key(site.owner),{'checked':2,'rows':{'123456':old}})
+    dates.enrich_refusals(NS(request=NS(get=read)),witness,site.vault,site.owner,host,prefix)
+    saved=site.vault.get(directory.record_key(site.owner),keep=True)
+    assert len(calls)==2 and saved['rows']['123456']['funding_at']=='2026-10-04'
