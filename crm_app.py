@@ -5,6 +5,7 @@ import app as legacy_app
 from maintenance_recovery import register_maintenance_recovery
 
 from bts_workspace import register_bts_workspace
+from bts_cnaps_tracking_api import register_bts_cnaps_tracking_api
 from cnaps_notification_recovery import register_cnaps_notification_recovery
 from crm_cnaps_tracking_api import register_crm_cnaps_tracking_api
 from elearning_native.integration import register_native_elearning
@@ -19,6 +20,9 @@ register_maintenance_recovery(app)
 register_native_elearning(legacy_app)
 register_wedof_invoice_reconciliation(legacy_app)
 register_bts_workspace(legacy_app)
+register_bts_cnaps_tracking_api(
+    app, annuaire_fetcher=legacy_app.fetch_cnaps_public_annuaire,
+)
 register_cnaps_notification_recovery(legacy_app)
 register_crm_cnaps_tracking_api(
     app,
