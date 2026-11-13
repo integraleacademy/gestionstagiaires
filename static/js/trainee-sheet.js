@@ -1530,6 +1530,7 @@ function updateDocsRelanceState(status, plannedDateIso){
   const readOnly = card.dataset.readOnly === "1";
   const box = document.getElementById("qontoInvoiceHistory");
   const syncBtn = document.getElementById("btnSyncQontoTrainee");
+  const scheduleQontoDebitBtn = document.getElementById("btnScheduleQontoDebit");
   const resetFinancialTrackingBtn = document.getElementById("btnResetFinancialTracking");
   const quickGenerateBtn = document.getElementById("btnQuickGenerateInvoice");
   const financeNotificationsBtn = document.getElementById("btnToggleFinanceNotifications");
@@ -1585,7 +1586,7 @@ function updateDocsRelanceState(status, plannedDateIso){
   async function billingApi(url, body){
     const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body||{})});
     const j=await parseJsonResponse(r,'Action impossible');
-    if(!r.ok||!j.ok) throw new Error(j.error||j.message||'Action impossible');
+    if(!r.ok||!j.ok){const error=new Error(j.error||j.message||'Action impossible');error.details=j;throw error;}
     return j;
   }
   let billingLoadPromise = null;
@@ -1642,7 +1643,8 @@ function updateDocsRelanceState(status, plannedDateIso){
     return hasMandate && hasSignUrl && pendingStatuses.has(status) && !lineHasValidatedMandate(line);
   }
   function qontoScheduleState(lines){
-    const sepaLines = lines.filter(l=>l.paymentMode === 'sepa_direct_debit' && lineHasValidatedMandate(l));
+    const sepaLines = lines.filter(l=>l.paymentMode === 'sepa_direct_debit' && lineHasValidatedMandate(l)
+      &&(!l.paymentPlan?.qontoSchedulingOperation||l.paymentPlan.qontoSchedulingOperation.state==='completed'));
     const schedules = sepaLines
       .map(l=>Array.isArray(l.directDebitInstallments) ? l.directDebitInstallments : [])
       .filter(installments=>installments.length);
@@ -1818,6 +1820,24 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     return e?Number(e.paid_amount_cents ?? 0)/100:installmentPaid;
   }
   function lineRemaining(l){return Math.max(lineAmount(l)-linePaid(l),0)}
+  function pendingQontoDebitScheduling(line){
+    const operation=line.paymentPlan?.qontoSchedulingOperation;
+    return operation&&['in_progress','partial','failed'].includes(operation.state)
+      &&Array.isArray(operation.schedule)&&operation.schedule.length?operation:null;
+  }
+  function canScheduleFirstQontoDebit(line){
+    const mandateStatus=String(line.qonto_mandate_status||line.mandateStatus||'').toLowerCase();
+    const invoiceStatus=String(line.invoiceStatus||'').toLowerCase();
+    const schedules=[line.directDebitInstallments,line.sepa_payment_plan?.installments,line.paymentPlan?.schedule,line.initialDebitSchedule];
+    return !readOnly&&!isCpfQontoLine(line)&&['PERSONNEL','AUTRE'].includes(String(line.financingType||'').toUpperCase())
+      &&!line.registrationCancelled&&Boolean(line.qontoInvoiceId)&&Boolean(line.qontoInvoiceNumber)
+      &&!line.cashPaymentEnabled&&!line.manualPaymentInvoiceId&&!line.amountPaid&&!line.amount_paid
+      &&!line.financial_tracking_override?.enabled
+      &&['finalized','sent','unpaid','partially_paid','overdue'].includes(invoiceStatus)
+      &&Boolean(line.qonto_direct_debit_mandate_id)&&['active','signed'].includes(mandateStatus)
+      &&(Boolean(pendingQontoDebitScheduling(line))||(!line.paymentPlan?.qontoSchedulingOperation&&Math.round(lineRemaining(line)*100)>0
+      &&!line.qonto_direct_debit_subscription_id&&!schedules.some(rows=>Array.isArray(rows)&&rows.length)));
+  }
   function linePaymentStatus(l){const e=canonicalInvoiceEntry(l),amount=lineAmount(l),paid=linePaid(l),raw=String(e?.payment_status||'unpaid').toLowerCase();if(['canceled','cancelled','control'].includes(raw))return raw;if(amount>0&&paid>=amount)return 'paid';if(paid>0)return 'partially_paid';return raw;}
   // The payment plan is persisted while the mandate is awaiting signature so
   // subscriptions can be created afterwards.  It must not be presented as a
@@ -2801,6 +2821,13 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     };
   }
   function render(lines){
+    if(scheduleQontoDebitBtn){
+      const candidates=lines.filter(canScheduleFirstQontoDebit);
+      scheduleQontoDebitBtn.hidden=!candidates.length;
+      scheduleQontoDebitBtn.style.display=candidates.length?'':'none';
+      scheduleQontoDebitBtn.disabled=readOnly;
+      scheduleQontoDebitBtn.textContent=candidates.some(pendingQontoDebitScheduling)?'Reprendre la programmation':'Programmer un prélèvement';
+    }
     const c=computeFinance(lines); renderFinancingValidation(c, lines); renderSummary(c); renderBreakdown(lines,c); renderAlerts(lines,c); renderPayments(lines,c); renderInstallments(c);
     if(!lines.length){ box.innerHTML = '<div class="finance-empty">Aucune ligne de facturation disponible. Vérifiez les montants de financement.</div>'; return; }
     box.innerHTML = lines.map(l=>{
@@ -2910,6 +2937,148 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     };
   }
   document.getElementById('btnAssignBankTransfer')?.addEventListener('click',openBankTransferModal);
+  async function openFirstQontoDebitModal(){
+    if(readOnly||document.getElementById('qontoFirstDebitModal'))return;
+    const overlay=document.createElement('div');
+    overlay.id='qontoFirstDebitModal';
+    overlay.className='billing-modal-overlay no-print';
+    overlay.tabIndex=-1;
+    overlay.setAttribute('role','dialog');
+    overlay.setAttribute('aria-modal','true');
+    overlay.setAttribute('aria-labelledby','qontoFirstDebitTitle');
+    overlay.innerHTML='<div class="billing-modal"><div class="billing-modal-head"><div><h2 id="qontoFirstDebitTitle">Programmer un prélèvement</h2><p>Définissez les échéances à prélever sur le mandat déjà signé.</p><span class="billing-modal-step" data-debit-step>Étape 1 · Préparer les échéances</span></div><button class="billing-modal-close" type="button" data-debit-close aria-label="Fermer">✕</button></div><div data-debit-content role="status" aria-live="polite">Chargement du dossier…</div></div>';
+    document.body.appendChild(overlay);
+    const content=overlay.querySelector('[data-debit-content]');
+    let busy=false;
+    function close(){
+      if(busy)return;
+      overlay.remove();
+      (scheduleQontoDebitBtn&&!scheduleQontoDebitBtn.hidden?scheduleQontoDebitBtn:syncBtn)?.focus();
+    }
+    function setBusy(value){
+      busy=value;
+      overlay.setAttribute('aria-busy',value?'true':'false');
+      overlay.querySelectorAll('button,input,select').forEach(control=>control.disabled=value||control.hasAttribute('data-debit-locked'));
+    }
+    overlay.addEventListener('click',event=>{if(event.target.closest('[data-debit-close]'))close();});
+    overlay.addEventListener('keydown',event=>{
+      if(event.key==='Escape'){event.preventDefault();close();}
+      if(event.key==='Tab'){
+        const controls=Array.from(overlay.querySelectorAll('button:not(:disabled),input:not(:disabled):not([type="hidden"]),select:not(:disabled)'));
+        const first=controls[0],last=controls[controls.length-1];
+        if(!controls.length){event.preventDefault();overlay.focus();}
+        else if(!controls.includes(document.activeElement)){event.preventDefault();(event.shiftKey?last:first).focus();}
+        else if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+        else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+      }
+    });
+    overlay.querySelector('[data-debit-close]').focus();
+    // Use UTC calendar arithmetic so a browser timezone cannot move a debit
+    // to the previous date while constructing the proposed schedule.
+    function dayOffset(value,days){const date=new Date(value+'T12:00:00Z');date.setUTCDate(date.getUTCDate()+days);return date.toISOString().slice(0,10);}
+    function monthOffset(value,months){
+      const [year,month,day]=value.split('-').map(Number),target=month-1+months;
+      const lastDay=new Date(Date.UTC(year,target+1,0,12)).getUTCDate();
+      return new Date(Date.UTC(year,target,Math.min(day,lastDay),12)).toISOString().slice(0,10);
+    }
+    try{
+      await load();
+      if(!overlay.isConnected)return;
+      const lines=currentLines.filter(canScheduleFirstQontoDebit);
+      if(!lines.length){content.textContent='Aucun financement à programmer : vérifiez la facture, le mandat actif et les échéances déjà présentes sur la fiche.';return;}
+      let line=lines.find(pendingQontoDebitScheduling)||lines[0],draft=[];
+      const minimumDate=dayOffset(isoToday(),1);
+      function cutoffDate(){const limit=line.examDate||line.dateEnd;return limit?dayOffset(String(limit).slice(0,10),-3):'';}
+      function resetDraft(){
+        const operation=pendingQontoDebitScheduling(line);
+        if(operation){draft=operation.schedule.map(row=>({date:String(row.date||row.due_date||'').slice(0,10),amount:Number(row.amount??Number(row.amount_cents)/100)}));return;}
+        const cutoff=cutoffDate(),recommended=dayOffset(isoToday(),7);
+        draft=[{date:cutoff&&cutoff>=minimumDate&&recommended>cutoff?cutoff:recommended,amount:Math.round(lineRemaining(line)*100)/100}];
+      }
+      function dossierSummary(){
+        const name=`${line.traineeFirstName||''} ${line.traineeLastName||''}`.trim();
+        return `<div class="billing-modal-summary"><p><strong>Stagiaire :</strong> ${esc(name)}</p><p><strong>Facture :</strong> ${esc(line.qontoInvoiceNumber||line.qontoInvoiceId)} · ${esc(bankTransferLabel(line))}</p><p><strong>Mandat signé :</strong> ${esc(line.qonto_mandate_rum||line.qonto_direct_debit_mandate_id)}</p><p><strong>Reste à payer :</strong> ${fmtMoney(lineRemaining(line))}</p></div>`;
+      }
+      function renderEditor(){
+        const resuming=Boolean(pendingQontoDebitScheduling(line)),cutoff=cutoffDate(),locked=resuming?' disabled data-debit-locked':'';
+        overlay.querySelector('[data-debit-step]').textContent=resuming?'Étape 1 · Vérifier la reprise':'Étape 1 · Préparer les échéances';
+        overlay.querySelector('#qontoFirstDebitTitle').textContent=resuming?'Reprendre la programmation':'Programmer un prélèvement';
+        content.removeAttribute('role');content.removeAttribute('aria-live');
+        content.innerHTML=`${dossierSummary()}${resuming?'<div class="billing-modal-existing">Une programmation est déjà engagée. La reprise conserve ses dates et ses montants et vérifie les échéances déjà transmises à Qonto.</div>':''}<form data-debit-form>${lines.length>1?`<div class="billing-modal-grid"><label>Financement<select name="lineId">${lines.map(item=>`<option value="${esc(item.id)}"${item.id===line.id?' selected':''}>${esc(bankTransferLabel(item))} · ${esc(item.qontoInvoiceNumber||'Facture Qonto')}${pendingQontoDebitScheduling(item)?' · Reprise':''}</option>`).join('')}</select></label></div>`:''}<div class="billing-modal-grid"><label>Nombre d’échéances<input name="count" type="number" min="1" max="60" step="1" value="${draft.length}" required${locked}></label><label>Date du premier prélèvement<input name="firstDate" type="date" min="${minimumDate}"${cutoff?` max="${esc(cutoff)}"`:''} value="${esc(draft[0].date)}" required${locked}></label></div><p class="hint">${resuming?'Les échéances de cette programmation sont conservées pour la reprise.':'Les dates proposées sont mensuelles. Vous pouvez adapter chaque date et chaque montant.'}${cutoff?` Date limite : ${esc(formatIsoDateFr(cutoff))}.`:''}</p><div class="billing-modal-grid" data-debit-rows></div><p data-debit-total role="status" aria-live="polite"></p><p data-debit-feedback role="status" aria-live="polite"></p><div class="billing-modal-actions"><button class="btn btn-outline" type="button" data-debit-close>Annuler</button><button class="btn btn-primary" type="submit">${resuming?'Vérifier la reprise':'Vérifier avant programmation'}</button></div></form>`;
+        const form=content.querySelector('form'),rowsBox=form.querySelector('[data-debit-rows]'),feedback=form.querySelector('[data-debit-feedback]');
+        function readRows(){return Array.from(rowsBox.querySelectorAll('[data-debit-row]')).map(row=>({date:row.querySelector('[data-debit-date]').value,amount:Number(row.querySelector('[data-debit-amount]').value)}));}
+        function updateTotal(){
+          const total=readRows().reduce((sum,row)=>sum+Math.round((Number.isFinite(row.amount)?row.amount:0)*100),0),remaining=Math.round(lineRemaining(line)*100),difference=remaining-total;
+          const message=resuming?'Programmation à reprendre':difference===0?'Reste à payer entièrement réparti':difference>0?`Reste à répartir : ${fmtMoney(difference/100)}`:`Dépassement : ${fmtMoney(-difference/100)}`;
+          const totalElement=form.querySelector('[data-debit-total]');
+          totalElement.className=!resuming&&difference!==0?'qonto-error':'muted';
+          totalElement.textContent=`Total des échéances : ${fmtMoney(total/100)} · ${message}`;
+        }
+        function renderRows(){
+          rowsBox.innerHTML=draft.map((row,index)=>`<div class="kv" data-debit-row><strong>Échéance ${index+1}</strong><label><span class="label">Date</span><input data-debit-date type="date" min="${minimumDate}"${cutoff?` max="${esc(cutoff)}"`:''} value="${esc(row.date)}" aria-label="Date de l’échéance ${index+1}" required${locked}></label><label><span class="label">Montant (€)</span><input data-debit-amount type="number" min="0.01" step="0.01" value="${Number(row.amount).toFixed(2)}" inputmode="decimal" aria-label="Montant de l’échéance ${index+1}" required${locked}></label></div>`).join('');
+          rowsBox.querySelectorAll('input').forEach(input=>input.addEventListener('input',()=>{draft=readRows();if(input===rowsBox.querySelector('[data-debit-date]'))form.elements.firstDate.value=draft[0].date;feedback.textContent='';updateTotal();}));
+          updateTotal();
+        }
+        function rebuildRows(){
+          if(resuming||!form.elements.count.reportValidity()||!form.elements.firstDate.reportValidity())return;
+          const count=Number(form.elements.count.value),first=form.elements.firstDate.value;
+          draft=splitInstallments(lineRemaining(line),count).map((amount,index)=>({date:monthOffset(first,index),amount}));
+          feedback.textContent='';renderRows();
+        }
+        form.elements.count.addEventListener('change',rebuildRows);
+        form.elements.firstDate.addEventListener('change',rebuildRows);
+        form.elements.lineId?.addEventListener('change',()=>{line=lines.find(item=>item.id===form.elements.lineId.value)||line;resetDraft();renderEditor();});
+        form.onsubmit=async event=>{
+          event.preventDefault();
+          if(busy||!form.reportValidity())return;
+          draft=readRows();
+          const total=draft.reduce((sum,row)=>sum+Math.round(row.amount*100),0);
+          if(!resuming&&total!==Math.round(lineRemaining(line)*100)){feedback.className='qonto-error';feedback.textContent='Le total des échéances doit correspondre exactement au reste à payer.';return;}
+          if(!resuming&&draft.some((row,index)=>index>0&&row.date<=draft[index-1].date)){feedback.className='qonto-error';feedback.textContent='Chaque échéance doit avoir une date distincte, après la précédente.';return;}
+          setBusy(true);feedback.className='muted';feedback.textContent='Vérification du mandat, de la facture et des échéances dans Qonto…';
+          try{
+            const preview=await billingApi('/api/billing/direct-debit/preview',{lineId:line.id,schedule:draft});
+            if(!preview.selectionToken||!preview.summary||!Array.isArray(preview.schedule)||!preview.schedule.length||!Number.isSafeInteger(preview.summary.totalCents)||preview.summary.totalCents<=0)throw new Error('Le récapitulatif reçu ne permet pas de confirmer cette programmation. Relancez la vérification.');
+            renderConfirmation(preview);
+          }catch(error){feedback.className='qonto-error';feedback.textContent=error.message||'Vérification impossible.';}
+          finally{setBusy(false);}
+        };
+        renderRows();
+        (resuming?form.querySelector('button[type="submit"]'):form.elements.count).focus();
+      }
+      function renderConfirmation(preview){
+        const summary=preview.summary,count=preview.schedule.length;
+        overlay.querySelector('[data-debit-step]').textContent='Étape 2 · Confirmer dans Qonto';
+        content.innerHTML=`<div class="billing-modal-summary"><p><strong>Stagiaire :</strong> ${esc(summary.traineeName)}</p><p><strong>Facture :</strong> ${esc(summary.invoiceNumber)}</p><p><strong>Mandat signé :</strong> ${esc(summary.mandateRum)}</p><p><strong>Reste à payer vérifié :</strong> ${fmtMoney(summary.remainingCents/100)}</p><p><strong>Total de la programmation :</strong> ${fmtMoney(summary.totalCents/100)} en ${count} prélèvement${count>1?'s':''}</p></div><div class="billing-modal-grid">${preview.schedule.map((row,index)=>`<div class="kv"><strong>Échéance ${index+1}</strong><p>${esc(formatIsoDateFr(row.date))} · ${fmtMoney(row.amount)}</p></div>`).join('')}</div><p class="hint">${preview.resuming?'La reprise vérifie les échéances déjà transmises avant de compléter la programmation. ':''}Ces prélèvements utilisent le mandat déjà signé. Qonto notifiera le client de leur programmation.</p><p data-debit-confirm-feedback role="status" aria-live="polite"></p><div class="billing-modal-actions"><button class="btn btn-outline" type="button" data-debit-back>${preview.resuming?'Retour':'Modifier les échéances'}</button><button class="btn btn-primary" type="button" data-debit-confirm>${preview.resuming?'Confirmer et reprendre':'Confirmer et programmer'} dans Qonto</button></div>`;
+        content.querySelector('[data-debit-back]').onclick=()=>{if(!busy)renderEditor();};
+        const confirmButton=content.querySelector('[data-debit-confirm]');
+        confirmButton.onclick=async()=>{
+          if(busy)return;
+          setBusy(true);
+          const feedback=content.querySelector('[data-debit-confirm-feedback]');
+          feedback.textContent='Transmission de la programmation à Qonto. Attendez sa confirmation…';
+          try{
+            const result=await billingApi('/api/billing/direct-debit/schedule',{selectionToken:preview.selectionToken});
+            bankChecked=0;
+            let refreshFailed=false;
+            try{await load();}catch(error){refreshFailed=true;}
+            setBusy(false);close();
+            showQontoFeedback(`${result.message||'La programmation a été confirmée par Qonto.'}${refreshFailed?' Rechargez la page pour afficher le suivi actualisé.':''}`);
+          }catch(error){
+            let refreshFailed=false;
+            try{await load();}catch(refreshError){refreshFailed=true;}
+            const confirmed=Number(error.details?.confirmedCount||0);
+            const confirmedMessage=confirmed?`${confirmed} échéance${confirmed>1?'s':''} déjà confirmée${confirmed>1?'s':''} dans Qonto. `:'';
+            const nextStep=refreshFailed?'Rechargez la page pour vérifier le suivi de la programmation.':currentLines.some(pendingQontoDebitScheduling)?'Utilisez « Reprendre la programmation » sur la fiche pour compléter les mêmes échéances.':'Vérifiez le suivi de la fiche avant toute nouvelle demande.';
+            content.innerHTML=`<div class="billing-modal-error" role="alert">${esc(error.message||'La programmation n’a pas pu être confirmée.')}</div><p>${esc(confirmedMessage+nextStep)}</p><div class="billing-modal-actions"><button class="btn btn-outline" type="button" data-debit-close>Revenir à la fiche</button></div>`;
+          }finally{setBusy(false);}
+        };
+        confirmButton.focus();
+      }
+      resetDraft();renderEditor();
+    }catch(error){content.textContent=error.message||'Chargement impossible.';}
+  }
+  scheduleQontoDebitBtn?.addEventListener('click',openFirstQontoDebitModal);
   document.getElementById('btnAttachQontoInvoice')?.addEventListener('click',async()=>{
     if(readOnly || document.getElementById('qontoInvoiceAttachmentModal'))return;
     const trigger=document.getElementById('btnAttachQontoInvoice');
