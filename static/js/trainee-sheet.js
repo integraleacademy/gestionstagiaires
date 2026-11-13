@@ -2028,7 +2028,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       quickGenerateBtn.title='Aucune facture à générer';
     }
   }
-  function renderAlerts(lines,c){const alerts=[];lines.filter(l=>l.qontoBankTransferSyncWarning).forEach(l=>alerts.push([esc(l.qontoBankTransferSyncWarning),'orange','⚠️']));lines.filter(l=>l.qontoDirectDebitSyncWarning).forEach(l=>alerts.push([esc(l.qontoDirectDebitSyncWarning),'red','⚠️']));if(c.nombreRejets)alerts.push(['Un prélèvement a été rejeté. Action requise.','red','⚠️']);if(c.resteAFacturer>0.01)alerts.push([`Reste ${fmtMoney(c.resteAFacturer)} à facturer.`,'orange','💳']);lines.filter(l=>!isCpfQontoLine(l)&&!lineHasGeneratedInvoice(l)).forEach(l=>alerts.push([`Facture à générer pour ${esc(l.financeurName||l.financingLabel||l.financingType)}.`,'orange','🧾']));if(Math.abs(c.differenceFinancement)>=0.01)alerts.push([`Total financé ${c.differenceFinancement<0?'inférieur':'supérieur'} au prix formation de ${fmtMoney(Math.abs(c.differenceFinancement))}.`,'orange','ℹ️']);if(c.resteAPayer<-0.01)alerts.push([`Trop-perçu : ${fmtMoney(Math.abs(c.resteAPayer))}.`,'red','⚠️']);const box=document.getElementById('financeAlerts');if(financeNotificationsCount) financeNotificationsCount.textContent=String(alerts.length);financeNotificationsBtn?.classList.toggle('has-alerts', alerts.length>0);financeNotificationsBtn?.toggleAttribute('disabled', alerts.length===0);financeNotificationsBtn?.setAttribute('aria-expanded', financeNotificationsOpen&&alerts.length?'true':'false');box.style.display=alerts.length&&financeNotificationsOpen?'':'none';box.innerHTML=alerts.length?`<div class="finance-notifications__head"><div class="finance-notifications__title"><span aria-hidden="true">🔔</span><span>Notifications</span></div><span class="finance-notifications__count">${alerts.length}</span></div><div class="finance-notifications__list">${alerts.map(a=>`<div class="finance-alert finance-alert--${a[1]}"><strong>${a[2]}</strong><span>${a[0]}</span></div>`).join('')}</div>`:'';}
+  function renderAlerts(lines,c){const alerts=[];lines.filter(l=>l.qontoBankTransferSyncWarning).forEach(l=>alerts.push([esc(l.qontoBankTransferSyncWarning),'orange','⚠️']));lines.filter(l=>l.qontoDirectDebitSyncWarning).forEach(l=>alerts.push([esc(l.qontoDirectDebitSyncWarning),'red','⚠️']));if(c.nombreRejets)alerts.push(['Un prélèvement a été rejeté. Action requise.','red','⚠️']);if(c.resteAFacturer>0.01)alerts.push([`Reste ${fmtMoney(c.resteAFacturer)} à facturer.`,'orange','💳']);lines.filter(l=>!isCpfQontoLine(l)&&!lineHasGeneratedInvoice(l)).forEach(l=>alerts.push(l.generationInProgress?[`Génération engagée pour ${esc(l.financeurName||l.financingLabel||l.financingType)} : vérifiez la facture dans Qonto. Si elle existe, utilisez « Rattacher une facture Qonto ».`,'orange','⚠️']:[`Facture à générer pour ${esc(l.financeurName||l.financingLabel||l.financingType)}.`,'orange','🧾']));if(Math.abs(c.differenceFinancement)>=0.01)alerts.push([`Total financé ${c.differenceFinancement<0?'inférieur':'supérieur'} au prix formation de ${fmtMoney(Math.abs(c.differenceFinancement))}.`,'orange','ℹ️']);if(c.resteAPayer<-0.01)alerts.push([`Trop-perçu : ${fmtMoney(Math.abs(c.resteAPayer))}.`,'red','⚠️']);const box=document.getElementById('financeAlerts');if(financeNotificationsCount) financeNotificationsCount.textContent=String(alerts.length);financeNotificationsBtn?.classList.toggle('has-alerts', alerts.length>0);financeNotificationsBtn?.toggleAttribute('disabled', alerts.length===0);financeNotificationsBtn?.setAttribute('aria-expanded', financeNotificationsOpen&&alerts.length?'true':'false');box.style.display=alerts.length&&financeNotificationsOpen?'':'none';box.innerHTML=alerts.length?`<div class="finance-notifications__head"><div class="finance-notifications__title"><span aria-hidden="true">🔔</span><span>Notifications</span></div><span class="finance-notifications__count">${alerts.length}</span></div><div class="finance-notifications__list">${alerts.map(a=>`<div class="finance-alert finance-alert--${a[1]}"><strong>${a[2]}</strong><span>${a[0]}</span></div>`).join('')}</div>`:'';}
   function financePaymentRows(lines,c){
     const rows=[];
     const representedTransfers=new Set();
@@ -2910,6 +2910,104 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     };
   }
   document.getElementById('btnAssignBankTransfer')?.addEventListener('click',openBankTransferModal);
+  document.getElementById('btnAttachQontoInvoice')?.addEventListener('click',async()=>{
+    if(readOnly || document.getElementById('qontoInvoiceAttachmentModal'))return;
+    const trigger=document.getElementById('btnAttachQontoInvoice');
+    const overlay=document.createElement('div');
+    overlay.id='qontoInvoiceAttachmentModal';
+    overlay.className='billing-modal-overlay no-print';
+    overlay.setAttribute('role','dialog');
+    overlay.setAttribute('aria-modal','true');
+    overlay.setAttribute('aria-labelledby','qontoInvoiceAttachmentTitle');
+    overlay.innerHTML='<div class="billing-modal"><div class="billing-modal-head"><div><h2 id="qontoInvoiceAttachmentTitle">Rattacher une facture Qonto</h2><p>Retrouvez une facture existante grâce à son numéro, puis vérifiez son rattachement au dossier.</p></div><button type="button" class="billing-modal-close" data-invoice-close aria-label="Fermer">✕</button></div><div data-invoice-content role="status" aria-live="polite">Chargement des financements…</div><div class="billing-modal-actions"><button type="button" class="btn btn-outline" data-invoice-close>Fermer</button></div></div>';
+    document.body.appendChild(overlay);
+    let busy=false;
+    function close(){if(!busy){overlay.remove();trigger?.focus();}}
+    function setBusy(value){
+      busy=value;
+      overlay.setAttribute('aria-busy',value?'true':'false');
+      overlay.querySelectorAll('button,input,select').forEach(control=>control.disabled=value);
+    }
+    overlay.querySelectorAll('[data-invoice-close]').forEach(button=>button.onclick=close);
+    overlay.addEventListener('keydown',event=>{
+      if(event.key==='Escape'){event.preventDefault();close();}
+      if(event.key==='Tab'){
+        const controls=Array.from(overlay.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled)'));
+        if(!controls.length)return;
+        const first=controls[0],last=controls[controls.length-1];
+        if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+        else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+      }
+    });
+    overlay.querySelector('[data-invoice-close]').focus();
+    const content=overlay.querySelector('[data-invoice-content]');
+    try{
+      await load();
+      if(!overlay.isConnected)return;
+      const lines=currentLines.filter(line=>['PERSONNEL','AUTRE'].includes(String(line.financingType||'').toUpperCase())&&!isCpfQontoLine(line)&&!line.registrationCancelled&&!line.qontoInvoiceId&&!line.qontoDraftId);
+      if(!lines.length){
+        content.textContent='Aucun financement personnel ou autre financement à rattacher. Les financements de ce dossier ont déjà leur facture Qonto, ou ne sont pas éligibles.';
+        return;
+      }
+      content.removeAttribute('role');
+      content.removeAttribute('aria-live');
+      content.innerHTML=`<div class="billing-modal-summary" data-invoice-dossier></div><form data-invoice-search><div class="billing-modal-grid"><label>Financement<select name="lineId">${lines.map(line=>`<option value="${esc(line.id)}">${esc(bankTransferLabel(line))} · ${fmtMoney(lineAmount(line))}</option>`).join('')}</select></label><label>Numéro exact de la facture<input name="invoiceNumber" type="text" maxlength="80" placeholder="Ex. : FL-2026-123" autocomplete="off" required></label></div><div class="billing-modal-actions"><button class="btn btn-primary" type="submit">Rechercher la facture</button></div></form><p data-invoice-feedback role="status" aria-live="polite"></p><div data-invoice-result></div>`;
+      const form=content.querySelector('form');
+      const feedback=content.querySelector('[data-invoice-feedback]');
+      const result=content.querySelector('[data-invoice-result]');
+      let line=lines[0];
+      function updateDossier(){
+        const name=`${line.traineeFirstName||''} ${line.traineeLastName||''}`.trim();
+        const dates=[line.dateStart,line.dateEnd].filter(Boolean).map(formatIsoDateFr).join(' → ');
+        content.querySelector('[data-invoice-dossier]').innerHTML=`<strong>Dossier : ${esc(name)}</strong><p>${esc(line.formationName||line.sessionName||'')} ${dates?`· ${esc(dates)}`:''}</p><p>${esc(bankTransferLabel(line))} · ${fmtMoney(lineAmount(line))}</p>`;
+      }
+      function clearResult(){result.replaceChildren();feedback.textContent='';}
+      updateDossier();
+      form.elements.lineId.onchange=()=>{
+        line=lines.find(item=>item.id===form.elements.lineId.value)||line;
+        clearResult();updateDossier();
+      };
+      form.elements.invoiceNumber.addEventListener('input',clearResult);
+      form.elements.invoiceNumber.focus();
+      form.onsubmit=async event=>{
+        event.preventDefault();
+        if(busy||!form.reportValidity())return;
+        const invoiceNumber=form.elements.invoiceNumber.value.trim();
+        if(!invoiceNumber){form.elements.invoiceNumber.focus();return;}
+        setBusy(true);result.replaceChildren();
+        feedback.className='muted';
+        feedback.textContent='Recherche de la facture et vérification du client et du montant…';
+        try{
+          const response=await billingApi('/api/billing/invoices/search',{lineId:line.id,invoiceNumber});
+          const invoice=response.invoice;
+          if(!invoice?.id||!invoice.number||!Number.isFinite(Number(invoice.total_amount_cents))||!response.selectionToken)throw new Error('La réponse de Qonto ne permet pas de vérifier cette facture. Réessayez la recherche.');
+          const status=({finalized:'Finalisée',sent:'Envoyée',paid:'Payée',unpaid:'Non payée',partially_paid:'Partiellement payée',overdue:'En retard'})[String(invoice.status||'').toLowerCase()]||invoice.status||'Statut non renseigné';
+          const dateLabel=value=>value?formatIsoDateFr(String(value).slice(0,10)):'—';
+          const performance=invoice.performance_start_date||invoice.performance_end_date?`${dateLabel(invoice.performance_start_date)} → ${dateLabel(invoice.performance_end_date)}`:'';
+          feedback.textContent='Facture vérifiée. Confirmez le client, le montant et la période avant de la rattacher.';
+          result.innerHTML=`<div class="qonto-invoice-card"><h3>${esc(invoice.number)}</h3><div class="billing-modal-summary"><p><strong>Client :</strong> ${esc(invoice.client_name||line.clientName||'Non renseigné')}</p><p><strong>Montant TTC :</strong> ${fmtMoney(Number(invoice.total_amount_cents)/100)} · ${esc(status)}</p><p><strong>Formation du dossier :</strong> ${esc(line.formationName||line.sessionName||'Non renseignée')}</p><p><strong>Période facturée :</strong> ${performance?esc(performance):'Période non renseignée dans Qonto'}</p><p><strong>Émise le :</strong> ${esc(dateLabel(invoice.issue_date))} · <strong>Échéance :</strong> ${esc(dateLabel(invoice.due_date))}</p></div><div class="billing-modal-actions"><button type="button" class="btn btn-primary" data-invoice-attach>Rattacher au dossier</button></div></div>`;
+          const attachButton=result.querySelector('[data-invoice-attach]');
+          attachButton.onclick=async()=>{
+            if(busy)return;
+            setBusy(true);
+            feedback.className='muted';feedback.textContent='Rattachement de la facture au dossier…';
+            try{
+              const attached=await billingApi('/api/billing/invoices/attach',{selectionToken:response.selectionToken});
+              let refreshFailed=false;
+              try{await load();}catch(error){refreshFailed=true;}
+              overlay.remove();trigger?.focus();
+              showQontoFeedback(`${attached.message||'Facture Qonto rattachée au dossier.'}${refreshFailed?' Rechargez la page pour afficher le suivi actualisé.':''}`);
+            }catch(error){
+              feedback.className='qonto-error';feedback.textContent=error.message||'Rattachement impossible. Relancez la recherche.';
+              result.replaceChildren();
+            }finally{setBusy(false);}
+          };
+        }catch(error){
+          feedback.className='qonto-error';feedback.textContent=error.message||'Recherche impossible.';
+        }finally{setBusy(false);}
+      };
+    }catch(error){content.textContent=error.message||'Chargement impossible.';}
+  });
   document.getElementById('btnAttachQontoDebit')?.addEventListener('click',async()=>{
     if(readOnly)return;
     const overlay=document.createElement('div');

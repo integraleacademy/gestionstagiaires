@@ -5,6 +5,8 @@ import company_convention
 import convention_design
 import company_signature
 import admin_trainee_wedof_refresh
+import billing_invoice_recovery
+import billing_persistence
 import re
 import zlib
 import hashlib
@@ -9754,6 +9756,7 @@ def _request_data_cache_key(run_background_tasks: bool) -> Tuple[str, str, bool]
 
 
 def _cache_request_data(cache_key: Tuple[str, str, bool], data: Dict[str, Any]) -> Dict[str, Any]:
+    data = billing_persistence.track_payload(data)
     if has_request_context():
         cache = getattr(g, "data_payload_cache", None)
         if not isinstance(cache, dict):
@@ -9838,6 +9841,11 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
                 result = _filter_data_for_partner(base, _current_partner_id()) if _is_partner_data_scope_session() else base
                 return _cache_request_data(cache_key, result)
         data = _overlay_partner_postgres_for_platform(data)
+
+    # Normalization below can save before the request-cache return. Capture
+    # the financial baseline now so that save cannot erase an invoice which
+    # another request attaches after this initial read.
+    data = billing_persistence.track_payload(data)
 
     # Compatibilité ascendante : exposer une collection vide sans provoquer à
     # elle seule une réécriture du fichier lors d'une simple lecture.
@@ -10154,6 +10162,8 @@ def save_data(
                 canonical if isinstance(canonical, dict) else _empty_data_payload(),
             )
         if isinstance(canonical, dict):
+            if not scoped_partner_id:
+                billing_persistence.merge_billing_state(payload, canonical)
             vtc_practice.reconcile(payload, _registered_trainees, canonical)
             vtc_elearning_activation.preserve_state(payload, canonical, _session_trainees_list)
             desp_vae_elearning.preserve_state(payload, canonical, _session_trainees_list)
@@ -10181,6 +10191,7 @@ def save_data(
         _data_lock,
         payload_transform=preserve_canonical_secure_state,
     )
+    billing_persistence.mark_saved(data)
     _invalidate_request_data_cache()
     if _partner_postgres_shadow():
         canonical = _load_valid_json_payload(DATA_FILE)
@@ -45412,6 +45423,9 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
             _billing_log(current, 'Génération facture bloquée', 'ignored', 'Facture déjà existante', current.get('qontoInvoiceId') or '')
             _save_billing_line(data, current); save_data(data)
             return False, {'error': 'Facture déjà créée', 'message': 'Facture déjà créée', 'line': current, 'ignored': True}
+        if current.get('generationInProgress'):
+            message = 'Une génération a déjà été engagée. Vérifiez la facture dans Qonto et rattachez son numéro avant toute nouvelle création.'
+            return False, {'error': message, 'message': message, 'line': current, 'ignored': True}
         if not _qonto_is_configured():
             _billing_log(current, 'Erreur création facture Qonto', 'error', 'Qonto non configuré')
             _save_billing_line(data, current); save_data(data)
@@ -48685,6 +48699,153 @@ def api_billing_create_draft():
     _save_billing_line(data, line)
     ok, result = _create_invoice_for_billing_line(data, line, payload.get('paymentPlan') if isinstance(payload.get('paymentPlan'), dict) else payload)
     return jsonify({'ok': ok, **result}), (200 if ok else 400)
+
+
+def _invoice_attachment_line_error(line):
+    if not line or is_cpf_billing_context(line) or str(line.get('financingType') or '').upper() not in {'PERSONNEL', 'AUTRE'}:
+        return 'Choisissez un financement personnel ou un autre financement hors CPF.'
+    if line.get('registrationCancelled'):
+        return 'Cette inscription est annulée. Vérifiez son suivi avant de rattacher une facture.'
+    if not _financing_partner_module_enabled():
+        return 'Le module financement est verrouillé.'
+    return ''
+
+
+def _invoice_attachment_snapshot(line):
+    keys = ('id', 'sessionId', 'traineeId', 'financingType', 'amount', 'amountTTC',
+            'qontoClientId', 'qontoCustomerId', 'qonto_mandate_client_id',
+            'qontoInvoiceId', 'qontoDraftId', 'qontoInvoiceNumber',
+            'registrationCancelled', 'dateStart', 'dateEnd')
+    return hashlib.sha256(json.dumps({key: line.get(key) for key in keys},
+                                    sort_keys=True, default=str).encode()).hexdigest()
+
+
+def _invoice_attachment_known_lines(data):
+    # Include stored rows that are no longer generated from the active sessions.
+    known = dict(_billing_existing_map(data))
+    known.update({line['id']: line for line in _billing_lines(data)})
+    # Legacy trainee invoices can fall outside today's billable dates or amounts.
+    # Keep their ownership visible even when the normal billing bridge skips them.
+    for session_obj in data.get('sessions') or []:
+        for trainee in _session_trainees_list(session_obj):
+            legacy = trainee.get('qonto_invoice')
+            if not isinstance(legacy, dict) or not legacy:
+                continue
+            legacy_id = legacy.get('qonto_invoice_id') or legacy.get('qontoInvoiceId')
+            legacy_number = legacy.get('qonto_invoice_number') or legacy.get('qontoInvoiceNumber')
+            if not (legacy_id or legacy_number):
+                continue
+            represented = any(
+                str(row.get('sessionId') or '') == str(session_obj.get('id') or '')
+                and str(row.get('traineeId') or '') == str(trainee.get('id') or '')
+                and ((legacy_id and legacy_id in (row.get('qontoInvoiceId'), row.get('qontoDraftId')))
+                     or (legacy_number and legacy_number == row.get('qontoInvoiceNumber')))
+                for row in known.values())
+            if not represented:
+                key = f"legacy:{session_obj.get('id')}:{trainee.get('id')}"
+                known[key] = {'id': key, 'sessionId': str(session_obj.get('id') or ''),
+                              'traineeId': str(trainee.get('id') or ''), 'qonto_invoice': legacy}
+    return list(known.values())
+
+
+@app.post('/api/billing/invoices/search')
+@admin_login_required
+@admin_write_required
+def api_billing_invoice_search():
+    if _is_partner_data_scope_session():
+        return jsonify(ok=False, error='Rattachement réservé à l’administration Intégrale.'), 403
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify(ok=False, error='Requête JSON requise.'), 400
+    number = str(payload.get('invoiceNumber') or '').strip()
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._/-]{0,79}', number):
+        return jsonify(ok=False, error='Indiquez le numéro exact de la facture Qonto.'), 400
+    data = load_data()
+    line = _find_billing_line(data, str(payload.get('lineId') or ''))
+    error = _invoice_attachment_line_error(line)
+    if error:
+        return jsonify(ok=False, error=error), 409
+    if not _qonto_is_configured():
+        return jsonify(ok=False, error='Qonto n’est pas connecté.'), 400
+    try:
+        found = find_qonto_invoice_by_number(number)
+        if not found or not found.get('id'):
+            return jsonify(ok=False, error='Facture introuvable dans Qonto avec ce numéro exact.'), 404
+        invoice = _qonto_invoice_payload(get_qonto_invoice(str(found['id'])))
+        if str(invoice.get('id') or '') != str(found['id']):
+            return jsonify(ok=False, error='La référence Qonto a changé. Recherchez à nouveau la facture.'), 409
+        checked = billing_invoice_recovery.validate_invoice_attachment(
+            invoice, line, _invoice_attachment_known_lines(data), requested_number=number)
+    except billing_invoice_recovery.InvoiceRecoveryError as exc:
+        return jsonify(ok=False, error=str(exc)), 409
+    except Exception as exc:
+        return jsonify(ok=False, error=format_qonto_error_for_front(exc)), 502
+    nonce = session.setdefault('invoice_attachment_nonce', secrets.token_urlsafe(24))
+    selected = {'line_id': line['id'], 'invoice_id': str(invoice['id']),
+                'number': number, 'nonce': nonce, 'snapshot': _invoice_attachment_snapshot(line)}
+    token = URLSafeTimedSerializer(app.secret_key, salt='invoice-attachment').dumps(selected)
+    return jsonify(ok=True, invoice=checked['summary'], selectionToken=token)
+
+
+@app.post('/api/billing/invoices/attach')
+@admin_login_required
+@admin_write_required
+def api_billing_invoice_attach():
+    if _is_partner_data_scope_session():
+        return jsonify(ok=False, error='Rattachement réservé à l’administration Intégrale.'), 403
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify(ok=False, error='Requête JSON requise.'), 400
+    try:
+        selected = URLSafeTimedSerializer(app.secret_key, salt='invoice-attachment').loads(
+            str(payload.get('selectionToken') or ''), max_age=600)
+        if not session.get('invoice_attachment_nonce') or selected.get('nonce') != session['invoice_attachment_nonce']:
+            raise BadSignature('Session changed')
+    except BadSignature:
+        return jsonify(ok=False, error='La sélection a expiré. Recherchez à nouveau la facture.'), 409
+    line = _find_billing_line(load_data(), selected['line_id'])
+    error = _invoice_attachment_line_error(line)
+    if error or _invoice_attachment_snapshot(line) != selected['snapshot']:
+        return jsonify(ok=False, error=error or 'Le dossier a changé. Recherchez à nouveau la facture.'), 409
+    try:
+        # Qonto is only read here. The transaction below never performs network I/O.
+        invoice = _qonto_invoice_payload(get_qonto_invoice(selected['invoice_id']))
+        if str(invoice.get('id') or '') != selected['invoice_id']:
+            return jsonify(ok=False, error='La référence Qonto a changé. Recherchez à nouveau la facture.'), 409
+        billing_invoice_recovery.validate_invoice_attachment(
+            invoice, line, _invoice_attachment_known_lines(load_data()), requested_number=selected['number'])
+    except billing_invoice_recovery.InvoiceRecoveryError as exc:
+        return jsonify(ok=False, error=str(exc)), 409
+    except Exception as exc:
+        return jsonify(ok=False, error=format_qonto_error_for_front(exc)), 502
+
+    def persist(current):
+        target = _find_billing_line(current, selected['line_id'])
+        error = _invoice_attachment_line_error(target)
+        if error or _invoice_attachment_snapshot(target) != selected['snapshot']:
+            return {'ok': False, 'error': error or 'Le dossier a changé. Recherchez à nouveau la facture.'}
+        try:
+            checked = billing_invoice_recovery.validate_invoice_attachment(
+                invoice, target, _invoice_attachment_known_lines(current), requested_number=selected['number'])
+        except billing_invoice_recovery.InvoiceRecoveryError as exc:
+            return {'ok': False, 'error': str(exc)}
+        target.update(checked['updates'])
+        target['invoiceGeneratedAt'] = (invoice.get('created_at') or checked['summary']['issue_date']
+                                        or target.get('invoiceGeneratedAt'))
+        if invoice.get('public_url') or invoice.get('url'):
+            target['invoicePdfUrl'] = invoice.get('public_url') or invoice.get('url')
+            target['qontoPdfUrl'] = target['invoicePdfUrl']
+        _apply_qonto_invoice_payment_to_billing_line(target, invoice)
+        target['generationInProgress'] = False
+        target['syncWarning'] = ''
+        _billing_log(target, 'Facture Qonto existante rattachée au dossier', 'success',
+                     selected['number'], selected['invoice_id'])
+        _save_billing_line(current, target)
+        return {'ok': True, 'line': _find_billing_line(current, target['id']),
+                'message': f"La facture {selected['number']} est rattachée au dossier."}
+
+    result = _atomic_update_data(persist)
+    return jsonify(result), (200 if result.get('ok') else 409)
 
 
 @app.post('/api/billing/finalize')
