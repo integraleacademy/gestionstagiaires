@@ -3,15 +3,15 @@ name: EDOF acceptance and enrolment
 on:
   pull_request:
     paths:
-      - 'edof_enrolment_watch.py'
-      - 'edof_server_browser.py'
+      - 'edof*.py'
+      - 'cpf_provider.py'
       - 'integrale_edof_registration.py'
       - 'integrale_edof_dashboard.py'
       - 'static/js/edof*feedback.js'
       - 'static/css/integrale-edof.css'
       - 'templates/_edof*.html'
       - 'templates/integrale_edof.html'
-      - 'tests/test_edof_enrolment.py'
+      - 'tests/test_edof*.py'
       - 'tests/test_edof_proposal_feedback.py'
       - '.github/workflows/edof-enrolment-checks.yml'
 
