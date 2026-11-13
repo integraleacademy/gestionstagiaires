@@ -7,6 +7,7 @@ import company_signature
 import admin_trainee_wedof_refresh
 import billing_invoice_recovery
 import billing_persistence
+import billing_debit_scheduling
 import re
 import zlib
 import hashlib
@@ -43066,6 +43067,11 @@ def _find_existing_qonto_schedule_slot(line, installment, index):
 
 
 def ensure_qonto_sepa_installments_for_line(line: Dict[str, Any]) -> Dict[str, Any]:
+    operation = (line.get('paymentPlan') or {}).get('qontoSchedulingOperation') or {}
+    if operation and operation.get('state') != 'completed':
+        # The explicit existing-mandate flow owns these slots, including an
+        # uncertain POST. A background sync must never start a second writer.
+        return {'created': 0, 'skipped': True, 'explicit_scheduling': True}
     if line.get('registrationCancelled'):
         _sync_sepa_aliases(line)
         return {'created': 0, 'skipped': True, 'registration_cancelled': True}
@@ -49782,6 +49788,347 @@ def api_billing_resend_mandate():
     _billing_log(line, 'Lien mandat SEPA renvoyé', 'success' if sent else 'error', 'Email envoyé' if sent else 'Email non envoyé')
     _save_billing_line(data, line); save_data(data)
     return jsonify({'ok': bool(sent), 'message': 'Lien de mandat renvoyé' if sent else 'Email non envoyé'}), (200 if sent else 400)
+
+
+def _existing_mandate_operation(line):
+    return (line.get('paymentPlan') or {}).get('qontoSchedulingOperation') or {}
+
+
+def _existing_mandate_line_check(line):
+    """Only the initial schedule of an existing invoice and signed mandate."""
+    error = _invoice_attachment_line_error(line)
+    if error:
+        raise ValueError(error)
+    if not line.get('qontoInvoiceId') or not line.get('qontoInvoiceNumber'):
+        raise ValueError('Rattachez d’abord la facture définitive Qonto à ce financement.')
+    if str(line.get('invoiceStatus') or '').lower() in {'draft', 'cancelled', 'canceled', 'deleted', 'paid'}:
+        raise ValueError('La facture doit être définitive, active et non soldée.')
+    if not line.get('qonto_direct_debit_mandate_id') or _map_mandate_status(
+            line.get('qonto_mandate_status') or line.get('mandateStatus')) not in {'active', 'signed'}:
+        raise ValueError('Ce financement doit disposer d’un mandat Qonto signé.')
+    if (line.get('financial_tracking_override') or {}).get('enabled'):
+        raise ValueError('Ce financement dispose déjà d’un suivi manuel. Vérifiez son échéancier.')
+    if any(line.get(key) for key in ('cashPaymentEnabled', 'manualPaymentInvoiceId', 'amountPaid', 'amount_paid')):
+        raise ValueError('Un autre règlement est renseigné. Vérifiez le suivi financier avant de programmer.')
+    operation = _existing_mandate_operation(line)
+    if operation:
+        if operation.get('state') not in {'in_progress', 'partial', 'failed'}:
+            raise ValueError('Ce financement possède déjà un échéancier programmé.')
+        if operation.get('snapshot') != billing_debit_scheduling.snapshot(line):
+            raise ValueError('Le financement a changé depuis la programmation. Vérifiez les prélèvements dans Qonto.')
+        rows = _sepa_installments(line)
+        expected = operation.get('schedule') or []
+        if len(rows) != len(expected) or any(
+                str(row.get('due_date') or row.get('date') or '') != item.get('date')
+                or money_value_to_cents(row.get('amount')) != money_value_to_cents(item.get('amount'))
+                or _installment_schedule_position(row, index) != index
+                for index, (row, item) in enumerate(zip(rows, expected), start=1)):
+            raise ValueError('L’échéancier réservé a changé. Vérifiez les prélèvements avant de reprendre.')
+    elif (_sepa_installments(line) or line.get('qonto_direct_debit_subscription_id')
+          or (line.get('paymentPlan') or {}).get('schedule') or line.get('initialDebitSchedule')):
+        raise ValueError('Un échéancier existe déjà. Vérifiez son suivi avant toute nouvelle programmation.')
+
+
+def _existing_mandate_remote_check(data, line):
+    """Read the exact invoice and mandate; never create or send either one."""
+    invoice = _qonto_invoice_payload(get_qonto_invoice(line['qontoInvoiceId']))
+    if str(invoice.get('id') or '') != str(line['qontoInvoiceId']):
+        raise ValueError('La facture Qonto n’a pas pu être vérifiée.')
+    checked = billing_invoice_recovery.validate_invoice_attachment(
+        invoice, line, _invoice_attachment_known_lines(data), requested_number=line['qontoInvoiceNumber'])
+    total = checked['summary']['total_amount_cents']
+    normalized = normalize_qonto_invoice_payment_data(invoice, {})
+    paid = normalized['qonto_amount_paid_cents']
+    fields = (('amount_paid', paid), ('paid_amount', paid), ('amount_paid_cents', paid),
+              ('paid_amount_cents', paid), ('remaining_amount', total - paid),
+              ('amount_due', total - paid), ('remaining_amount_cents', total - paid))
+    if not any(invoice.get(key) not in (None, '') for key, _ in fields):
+        raise ValueError('Le solde de la facture n’est pas confirmé par Qonto. Synchronisez la facture.')
+    for key, expected in fields:
+        value = invoice.get(key)
+        if value in (None, ''):
+            continue
+        try:
+            cents = Decimal(str(_qonto_money_value(value))) * (1 if key.endswith('_cents') else 100)
+            valid = cents.is_finite() and cents == expected and 0 <= cents <= total
+        except (InvalidOperation, TypeError, ValueError):
+            valid = False
+        if not valid or (isinstance(value, dict) and value.get('currency', 'EUR') != 'EUR'):
+            raise ValueError('Les montants de la facture Qonto sont incohérents. Vérifiez le règlement.')
+    if invoice.get('status') == 'paid' or paid >= total:
+        raise ValueError('Qonto indique que cette facture est déjà soldée.')
+    transfers = bank_transfer_paid_cents(line)
+    if paid and transfers and paid != transfers:
+        raise ValueError('Plusieurs règlements doivent être rapprochés avant de programmer le solde.')
+    already_paid = max(paid, transfers)
+    if int(line.get('qonto_amount_paid_cents') or 0) > already_paid or already_paid >= total:
+        raise ValueError('Le solde local diffère des règlements vérifiés. Synchronisez le suivi financier.')
+    mandate_id = str(line['qonto_direct_debit_mandate_id'])
+    mandate = _qonto_direct_debit_mandate_payload(get_qonto_direct_debit_mandate(mandate_id))
+    if str(mandate.get('id') or '') != mandate_id:
+        raise ValueError('Le mandat Qonto rattaché à ce financement n’a pas pu être vérifié.')
+    if _map_mandate_status(mandate.get('status')) not in {'active', 'signed'}:
+        raise ValueError('Le mandat n’est plus actif dans Qonto. Aucune programmation possible.')
+    client_ids = {str(value) for value in (mandate.get('client_id'), (mandate.get('client') or {}).get('id')) if value}
+    if client_ids != {checked['updates']['qontoClientId']}:
+        raise ValueError('Le mandat Qonto ne correspond pas au client de la facture.')
+    rum = mandate.get('unique_mandate_reference') or mandate.get('rum') or ''
+    if rum and line.get('qonto_mandate_rum') and rum != line['qonto_mandate_rum']:
+        raise ValueError('La référence du mandat a changé. Vérifiez le mandat dans Qonto.')
+    bank_account_id = get_qonto_bank_account_id()
+    if not bank_account_id:
+        raise ValueError('Le compte Qonto de destination n’est pas disponible.')
+    return {'total_cents': total, 'remaining_cents': total - already_paid,
+            'remote_paid_cents': paid, 'bank_account_id': bank_account_id,
+            'mandate_rum': rum or line.get('qonto_mandate_rum') or ''}
+
+
+def _existing_mandate_schedule(line, rows, remaining):
+    end = _parse_date_safe(str(line.get('examDate') or line.get('dateEnd') or line.get('dateStart') or ''))
+    cutoff = end - datetime.timedelta(days=3) if end else None
+    schedule = billing_debit_scheduling.validate_schedule(
+        rows, remaining, today=datetime.datetime.now(ZoneInfo('Europe/Paris')).date(), cutoff=cutoff)
+    operation = _existing_mandate_operation(line)
+    if operation and schedule != operation.get('schedule'):
+        raise ValueError('Reprenez exactement l’échéancier déjà réservé, sans modifier ses dates ni ses montants.')
+    return schedule
+
+
+def _existing_mandate_remote_slots(line, schedule, bank_account_id):
+    """An unexplained active debit blocks creation, even on another date."""
+    mandate_id = str(line['qonto_direct_debit_mandate_id'])
+    tokens = {str(value).removesuffix('-PROFORMA').casefold() for value in (
+        line.get('id'), line.get('qontoInvoiceNumber'), line.get('qontoInvoiceId')) if value}
+    slots = {}
+    rows = _bank_view_pages(lambda **kwargs: list_qonto_direct_debit_subscriptions(mandate_id, **kwargs),
+                            ('direct_debit_subscriptions', 'subscriptions', 'items'))
+    for sub in rows:
+        if not isinstance(sub, dict) or not _qonto_subscription_mandate_id(sub):
+            raise ValueError('La vérification des prélèvements Qonto est incomplète.')
+        if _qonto_subscription_mandate_id(sub) != mandate_id:
+            continue
+        status = str(sub.get('status') or '').lower()
+        reference = _qonto_subscription_reference(sub)
+        position, count, retry = _qonto_reference_schedule_position(reference)
+        owned = reference.split(' - ', 1)[0].strip().removesuffix('-PROFORMA').casefold() in tokens
+        if status in {'canceled', 'cancelled'} and not owned:
+            continue
+        if not owned or not 1 <= position <= len(schedule) or count != len(schedule) or retry:
+            raise ValueError('Un prélèvement existe déjà sur ce mandat. Vérifiez son rattachement avant de programmer.')
+        expected = schedule[position - 1]
+        due = str(sub.get('initial_collection_date') or sub.get('collection_date') or sub.get('start_date') or '')[:10]
+        amount = sub.get('amount') or {}
+        if (status not in {'pending', 'active', 'scheduled', 'in_progress', 'pending_mandate_signature'}
+                or sub.get('schedule_type') != 'one_off' or not sub.get('id')
+                or due != expected['date'] or money_value_to_cents(amount) != money_value_to_cents(expected['amount'])
+                or (isinstance(amount, dict) and amount.get('currency', 'EUR') != 'EUR')
+                or sub.get('bank_account_id') not in (None, '', bank_account_id)
+                or sub.get('client_id') not in (None, '', line.get('qontoClientId') or line.get('qontoCustomerId'))):
+            raise ValueError('Une échéance existe dans Qonto avec des paramètres différents. Vérifiez son suivi.')
+        if position in slots and slots[position] != str(sub['id']):
+            raise ValueError('Plusieurs prélèvements Qonto correspondent à une même échéance. Vérifiez leur suivi.')
+        slots[position] = str(sub['id'])
+    for index, installment in enumerate(_sepa_installments(line), start=1):
+        sid = installment.get('qonto_direct_debit_subscription_id')
+        if sid and slots.get(index) != sid:
+            raise ValueError('Un prélèvement déjà programmé n’est pas confirmé par Qonto. Vérifiez son suivi.')
+    return slots
+
+
+@app.post('/api/billing/direct-debit/preview')
+@admin_login_required
+@admin_write_required
+def api_billing_direct_debit_preview():
+    if _is_partner_data_scope_session():
+        return jsonify(ok=False, error='Programmation réservée à l’administration Intégrale.'), 403
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify(ok=False, error='Requête JSON requise.'), 400
+    data = load_data()
+    line = _find_billing_line(data, str(payload.get('lineId') or ''))
+    try:
+        _existing_mandate_line_check(line)
+        if not _qonto_is_configured():
+            raise ValueError('Qonto n’est pas connecté.')
+        remote = _existing_mandate_remote_check(data, line)
+        schedule = _existing_mandate_schedule(line, payload.get('schedule'), remote['remaining_cents'])
+        _existing_mandate_remote_slots(line, schedule, remote['bank_account_id'])
+        operation = _existing_mandate_operation(line)
+        if operation and any(operation.get(key) != remote[value] for key, value in (
+                ('remainingCents', 'remaining_cents'), ('remotePaidCents', 'remote_paid_cents'),
+                ('bankAccountId', 'bank_account_id'))):
+            raise ValueError('La situation bancaire a changé depuis la programmation. Vérifiez Qonto avant de reprendre.')
+    except ValueError as exc:
+        return jsonify(ok=False, error=str(exc)), 409
+    except Exception as exc:
+        return jsonify(ok=False, error=format_qonto_error_for_front(exc)), 502
+    selected = {'line_id': line['id'], 'schedule': schedule, 'remote': remote,
+                'snapshot': billing_debit_scheduling.snapshot(line),
+                'operation_id': operation.get('id') or uuid.uuid4().hex,
+                'resuming': bool(operation),
+                'nonce': session.setdefault('direct_debit_schedule_nonce', secrets.token_urlsafe(24))}
+    token = URLSafeTimedSerializer(app.secret_key, salt='direct-debit-scheduling').dumps(selected)
+    return jsonify(ok=True, selectionToken=token, schedule=schedule, resuming=bool(operation), summary={
+        'invoiceNumber': line['qontoInvoiceNumber'],
+        'traineeName': ' '.join(str(line.get(key) or '') for key in ('traineeFirstName', 'traineeLastName')).strip(),
+        'mandateRum': remote['mandate_rum'], 'totalCents': remote['remaining_cents'],
+        'invoiceTotalCents': remote['total_cents'],
+        'remainingCents': remote['remaining_cents'], 'firstDebitDate': schedule[0]['date'],
+        'lastDebitDate': schedule[-1]['date']})
+
+
+def _confirm_existing_mandate_schedule(selected):
+    line_id, schedule = selected['line_id'], selected['schedule']
+    data = load_data()
+    line = _find_billing_line(data, line_id)
+    _existing_mandate_line_check(line)
+    if billing_debit_scheduling.snapshot(line) != selected['snapshot']:
+        raise ValueError('Le dossier a changé. Vérifiez à nouveau le récapitulatif.')
+    remote = _existing_mandate_remote_check(data, line)
+    if remote != selected['remote']:
+        raise ValueError('La situation bancaire a changé. Vérifiez à nouveau le récapitulatif.')
+    _existing_mandate_schedule(line, schedule, remote['remaining_cents'])
+    _existing_mandate_remote_slots(line, schedule, remote['bank_account_id'])
+
+    def reserve(current):
+        target = _find_billing_line(current, line_id)
+        _existing_mandate_line_check(target)
+        if billing_debit_scheduling.snapshot(target) != selected['snapshot']:
+            raise ValueError('Le dossier a changé pendant la vérification. Recommencez le récapitulatif.')
+        operation = _existing_mandate_operation(target)
+        if bool(operation) != selected['resuming'] or (operation and operation.get('id') != selected['operation_id']):
+            raise ValueError('Une autre programmation existe déjà. Rechargez la fiche.')
+        if not operation:
+            plan = {'mode': 'sepa_direct_debit', 'label': f'Prélèvement {len(schedule)}x',
+                    'installments': len(schedule), 'frequency': 'custom',
+                    'firstDebitDate': schedule[0]['date'], 'schedule': copy.deepcopy(schedule)}
+            _prepare_sepa_payment_plan(target, plan)
+            operation = {'id': selected['operation_id'], 'schedule': copy.deepcopy(schedule),
+                         'snapshot': selected['snapshot'], 'remainingCents': remote['remaining_cents'],
+                         'remotePaidCents': remote['remote_paid_cents'], 'bankAccountId': remote['bank_account_id'],
+                         'createdAt': _now_iso()}
+            target['paymentPlan']['qontoSchedulingOperation'] = operation
+        operation.update(state='in_progress', updatedAt=_now_iso())
+        target['qontoDirectDebitSyncWarning'] = ''
+        _save_billing_line(current, target)
+        return {'ok': True}
+
+    _atomic_update_data(reserve)
+    try:
+        for index, item in enumerate(schedule, start=1):
+            _invalidate_request_data_cache()
+            fresh = _find_billing_line(load_data(), line_id)
+            _existing_mandate_line_check(fresh)
+            if _existing_mandate_operation(fresh).get('id') != selected['operation_id']:
+                raise ValueError('La programmation a changé. Vérifiez son suivi avant de poursuivre.')
+            installment = _sepa_installments(fresh)[index - 1]
+            if installment.get('qonto_direct_debit_subscription_id'):
+                continue
+            mandate_id = str(fresh['qonto_direct_debit_mandate_id'])
+            bank_payload = {'client_id': fresh.get('qontoClientId') or fresh.get('qontoCustomerId'),
+                'bank_account_id': remote['bank_account_id'], 'initial_collection_date': item['date'],
+                'amount': {'value': f"{item['amount']:.2f}", 'currency': 'EUR'},
+                'reference': f'{line_id} - échéance {index}/{len(schedule)}', 'notify_client': True,
+                'schedule_type': 'one_off', 'direct_debit_mandate_id': mandate_id,
+                'send_mandate_signature_email': False}
+            def create_checked(payload):
+                # The listing above can be slow. Recheck local authorization
+                # after that network wait, immediately before the bank POST.
+                _invalidate_request_data_cache()
+                target = _find_billing_line(load_data(), line_id)
+                _existing_mandate_line_check(target)
+                if _existing_mandate_operation(target).get('id') != selected['operation_id']:
+                    raise ValueError('Le dossier a changé avant la programmation. Vérifiez son suivi.')
+                return create_qonto_direct_debit_subscription(payload)
+            sid, created = ensure_sepa_subscription(
+                PERSIST_DIR, f'{mandate_id}:{line_id}:{index}', bank_payload,
+                lambda: _existing_mandate_remote_slots(fresh, schedule, remote['bank_account_id']).get(index, ''),
+                create_checked)
+            if not created and _existing_mandate_remote_slots(
+                    fresh, schedule, remote['bank_account_id']).get(index) != sid:
+                raise ValueError('Le prélèvement enregistré n’est plus confirmé par Qonto. Vérifiez son suivi.')
+
+            def save_slot(current):
+                target = _find_billing_line(current, line_id)
+                if (not target or _existing_mandate_operation(target).get('id') != selected['operation_id']
+                        or target.get('qontoInvoiceId') != fresh.get('qontoInvoiceId')
+                        or target.get('qonto_direct_debit_mandate_id') != mandate_id):
+                    raise ValueError('Le dossier a changé. Le prélèvement créé doit être vérifié dans Qonto.')
+                rows = _sepa_installments(target)
+                row = rows[index - 1]
+                if (row.get('qonto_direct_debit_subscription_id') not in (None, '', sid)
+                        or str(row.get('due_date') or row.get('date')) != item['date']
+                        or money_value_to_cents(row.get('amount')) != money_value_to_cents(item['amount'])):
+                    raise ValueError('L’échéancier a changé. Le prélèvement créé doit être vérifié dans Qonto.')
+                row['qonto_direct_debit_subscription_id'] = sid
+                if str(row.get('status') or '') in {'', 'pending', 'scheduled', 'pending_signature'}:
+                    row['status'] = 'scheduled'
+                row['updated_at'] = _now_iso()
+                target['qonto_direct_debit_subscription_id'] = next(
+                    (r.get('qonto_direct_debit_subscription_id') for r in rows if r.get('qonto_direct_debit_subscription_id')), '')
+                _billing_log(target, f'Prélèvement {index}/{len(schedule)} ' + ('programmé' if created else 'retrouvé dans Qonto'),
+                             'success', item['date'], sid)
+                _sync_sepa_aliases(target)
+                _save_billing_line(current, target)
+                return {'ok': True}
+            _atomic_update_data(save_slot)
+
+        def finish(current):
+            target = _find_billing_line(current, line_id)
+            _existing_mandate_line_check(target)
+            operation = _existing_mandate_operation(target)
+            if operation.get('id') != selected['operation_id']:
+                raise ValueError('La programmation a changé. Vérifiez son suivi.')
+            ids = [r.get('qonto_direct_debit_subscription_id') for r in _sepa_installments(target)]
+            if len(ids) != len(schedule) or not all(ids) or len(set(ids)) != len(ids):
+                raise ValueError('Qonto n’a pas confirmé toutes les échéances. Reprenez la programmation.')
+            operation.update(state='completed', updatedAt=_now_iso())
+            target['qontoDirectDebitSyncWarning'] = ''
+            _sync_sepa_aliases(target)
+            _save_billing_line(current, target)
+            return {'ok': True, 'message': f'{len(ids)} prélèvement(s) programmé(s) dans Qonto.',
+                    'count': len(ids), 'subscriptionIds': ids, 'line': _find_billing_line(current, line_id)}
+        return _atomic_update_data(finish), 200
+    except Exception as exc:
+        message = str(exc) if isinstance(exc, ValueError) else format_qonto_error_for_front(exc)
+        def fail(current):
+            target = _find_billing_line(current, line_id)
+            if not target or _existing_mandate_operation(target).get('id') != selected['operation_id']:
+                return {'ok': False, 'error': message}
+            count = sum(bool(row.get('qonto_direct_debit_subscription_id')) for row in _sepa_installments(target))
+            _existing_mandate_operation(target).update(state='partial' if count else 'failed', updatedAt=_now_iso())
+            target['qontoDirectDebitSyncWarning'] = message
+            _billing_log(target, 'Programmation des prélèvements à reprendre', 'error', message)
+            _save_billing_line(current, target)
+            return {'ok': False, 'error': message, 'partial': bool(count), 'confirmedCount': count,
+                    'line': _find_billing_line(current, line_id)}
+        return _atomic_update_data(fail), (409 if isinstance(exc, ValueError) else 502)
+
+
+@app.post('/api/billing/direct-debit/schedule')
+@admin_login_required
+@admin_write_required
+def api_billing_direct_debit_schedule():
+    if _is_partner_data_scope_session():
+        return jsonify(ok=False, error='Programmation réservée à l’administration Intégrale.'), 403
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify(ok=False, error='Requête JSON requise.'), 400
+    try:
+        selected = URLSafeTimedSerializer(app.secret_key, salt='direct-debit-scheduling').loads(
+            str(payload.get('selectionToken') or ''), max_age=600)
+        if not session.get('direct_debit_schedule_nonce') or selected.get('nonce') != session['direct_debit_schedule_nonce']:
+            raise BadSignature('Session changed')
+    except BadSignature:
+        return jsonify(ok=False, error='Le récapitulatif a expiré. Vérifiez à nouveau les prélèvements.'), 409
+    try:
+        with billing_debit_scheduling.exclusive_operation(PERSIST_DIR, selected['line_id']):
+            result, status = _confirm_existing_mandate_schedule(selected)
+        return jsonify(result), status
+    except ValueError as exc:
+        return jsonify(ok=False, error=str(exc)), 409
+    except Exception as exc:
+        return jsonify(ok=False, error=format_qonto_error_for_front(exc)), 502
 
 
 @app.post('/api/billing/create-mandate')

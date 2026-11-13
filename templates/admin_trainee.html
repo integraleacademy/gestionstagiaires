@@ -1721,6 +1721,7 @@
           <button class="btn btn-outline" type="button" id="btnSyncQontoTrainee" {{ financing_read_only_attr }}>Synchroniser Qonto</button>
           {% if not is_read_only and not financing_locked %}
             {% if not is_partner_space %}
+            <button class="btn btn-primary" type="button" id="btnScheduleQontoDebit" hidden style="display:none;">Programmer un prélèvement</button>
             <button class="btn btn-outline" type="button" id="btnAttachQontoInvoice">Rattacher une facture Qonto</button>
             {% endif %}
             <button class="btn btn-outline" type="button" id="btnAssignBankTransfer">Affecter un virement</button>
