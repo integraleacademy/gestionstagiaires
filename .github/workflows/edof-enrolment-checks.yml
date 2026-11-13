@@ -39,7 +39,7 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install Flask==3.0.0 pytest cryptography requests python-dotenv beautifulsoup4 playwright==1.64.1
       - run: python -m playwright install --with-deps chromium
-      - run: python -m pytest -q tests/test_edof_enrolment.py tests/test_integrale_edof_dashboard.py tests/test_edof_proposals.py tests/test_edof_proposal_feedback.py tests/test_edof_feedback.py tests/test_cpf_native_search.py tests/test_edof_matching.py
+      - run: python -m pytest -q tests/test_edof_enrolment.py tests/test_integrale_edof_dashboard.py tests/test_edof_proposals.py tests/test_edof_proposal_feedback.py tests/test_edof_feedback.py tests/test_cpf_native_search.py tests/test_edof_matching.py tests/test_edof_invoicing.py tests/test_edof_dossier_dates.py tests/test_edof_day_session.py tests/test_edof_billing.py tests/test_edof_declarations.py tests/test_edof_server_test.py tests/test_edof_history.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
