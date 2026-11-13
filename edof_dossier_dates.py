@@ -21,7 +21,8 @@ def enrich_refusals(context, witness, vault, owner, host, prefix):
     if not snapshot:
         return
     rows=dict(snapshot['rows'])
-    attempts=vault.get('refusal-date-attempts:'+owner) or {}
+    attempts_key='refusal-date-attempts-v2:'+owner
+    attempts=vault.get(attempts_key) or {}
     candidates=[r for r in rows.values() if r.get('ft_refused') and (not r.get('funding_at') or not r.get('filed_at'))
                 and time.time()-attempts.get(r['folder_id'],0)>3600][:2]
     changed=False
@@ -30,9 +31,10 @@ def enrich_refusals(context, witness, vault, owner, host, prefix):
         if not directory.ID_RE.fullmatch(folder):
             continue
         attempts[folder]=time.time()
-        vault.put('refusal-date-attempts:'+owner,attempts,ttl=86400)
+        vault.put(attempts_key,attempts,ttl=86400)
         url='https://'+host+prefix+folder
-        response=context.request.get(url,headers=directory.private_headers(witness),max_redirects=0,timeout=12000)
+        response=context.request.get(url,headers={**directory.private_headers(witness),'Current-Siret':directory.SIRET},
+                                     max_redirects=0,timeout=12000)
         try:
             directory.check_throttling(response)
             if response.status!=200 or response.url!=url:
@@ -43,7 +45,8 @@ def enrich_refusals(context, witness, vault, owner, host, prefix):
             fresh=directory.project(json.loads(body))
         finally:
             response.dispose()
-        if fresh['folder_id']!=folder or any(fresh[k]!=old[k] for k in ('first_name','last_name')):
+        if fresh['folder_id']!=folder or any(not old.get(k) or directory.normalized(fresh[k])!=directory.normalized(old[k])
+                                           for k in ('first_name','last_name')):
             continue
         rows[folder]={**fresh,'observed_at':time.time()}
         changed=True

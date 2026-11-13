@@ -155,6 +155,7 @@ def test_missing_refusal_dates_are_enriched_from_exact_dossier(site):
          'states':{'notProcessed':{'date':'2026-10-01'}},'trainingActionInfo':{'sessionStartDate':'2026-12-01',
          'solicitations':[{'fundingType':9,'status':'refused','submissionDate':'2026-10-02','returnDate':'2026-10-04','refusalReason':'Motif officiel'}]}}
     old=directory.project(raw)
+    old['last_name']='EXEMPLE'
     for k in ('funding_at','filed_at','funding_refusal_reason'):old.pop(k,None)
     site.vault.put(directory.record_key(site.owner),{'checked':1,'rows':{'123456':old}})
     host='of.moncompteformation.gouv.fr'
@@ -162,6 +163,7 @@ def test_missing_refusal_dates_are_enriched_from_exact_dossier(site):
     witness=NS(method='GET',url='https://'+host+prefix+'pad',all_headers=lambda:{})
     calls=[]
     def read(url,**kwargs):
+        assert kwargs['headers']['Current-Siret']==directory.SIRET
         calls.append(url)
         return NS(url=url,status=200,body=lambda:json.dumps(raw).encode(),dispose=lambda:None)
     dates.enrich_refusals(NS(request=NS(get=read)),witness,site.vault,site.owner,host,prefix)
