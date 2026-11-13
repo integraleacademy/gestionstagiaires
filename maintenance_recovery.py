@@ -7,7 +7,7 @@ from flask import request
 
 PRODUCTION_SERVICE_ID = "srv-d5oss66id0rc73avvne0"
 REGISTRATION_SCRIPT = (
-    b'<script defer src="/static/maintenance-register.js?v=20261106-1"></script>'
+    b'<script defer src="/static/maintenance-register.js?v=20261113-2"></script>'
 )
 
 
