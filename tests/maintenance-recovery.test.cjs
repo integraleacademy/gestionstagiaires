@@ -65,6 +65,9 @@ const server = http.createServer((req, res) => {
     return res.end(JSON.stringify({ ok: res.statusCode === 200 }));
   }
   const navigation = req.headers['sec-fetch-mode'] === 'navigate';
+  if (req.headers['sec-fetch-dest'] === 'document') {
+    assert.ok(navigation, 'service worker must preserve navigation metadata');
+  }
   if (navigation) {
     navigationRequests += 1;
     if (navigationDown || transientNavigationFailures > 0) {

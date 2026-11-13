@@ -113,7 +113,9 @@ self.addEventListener('fetch', (event) => {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       if (attempt) await new Promise(resolve => setTimeout(resolve, 400));
       try {
-        response = await fetch(event.request, { cache: 'no-store' });
+        // Keep the original navigation metadata (mode/destination). Passing
+        // RequestInit would turn it into a fetch and bypass page-only hooks.
+        response = await fetch(event.request);
         if (![502, 503, 504].includes(response.status)) return response;
       } catch (error) {
         // An abandoned navigation must not start a recovery cycle.
