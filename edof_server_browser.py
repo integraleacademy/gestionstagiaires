@@ -1527,7 +1527,7 @@ def _run_browser(spec, *, live=None, traffic=None):
                 progress("pending_verified")
                 # Read the official billing tab periodically in the same session,
                 # so validation of a service does not wait for the next full scan.
-                if not spec.get("full_sync") and time.time()-(vault.get("billing-attempt:"+spec["owner"]) or 0)>=300:
+                if on_production_service() and not spec.get("full_sync") and time.time()-(vault.get("billing-attempt:"+spec["owner"]) or 0)>=300:
                     vault.put("billing-attempt:"+spec["owner"],time.time(),ttl=900)
                     try:
                         billing=read_recent_directory(context,witness,"billing",checkpoint,{})
