@@ -1525,6 +1525,12 @@ def _run_browser(spec, *, live=None, traffic=None):
                     live["pending_witness"] = witness
                 clock_event("verified", fresh=not reused)
                 progress("pending_verified")
+                if on_production_service() and not spec.get("full_sync"):
+                    from edof_funding_watch import refresh as refresh_funding
+                    try:
+                        refresh_funding(context, witness, vault, spec["owner"], checkpoint)
+                    except (ValueError, TypeError, OSError, BrowserError):
+                        pass  # Keep the verified new-request list and previous funding evidence.
                 # Read the official billing tab periodically in the same session,
                 # so validation of a service does not wait for the next full scan.
                 if on_production_service() and not spec.get("full_sync") and time.time()-(vault.get("billing-attempt:"+spec["owner"]) or 0)>=300:

@@ -344,6 +344,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         pending = vault().get(directory.pending_key(owner)) if store.connector_key else None
         accepted = vault().get(directory.accepted_key(owner)) if store.connector_key else None
         combined = directory.with_accepted(directory.with_pending(saved, pending), accepted)
+        combined = directory.with_validated(combined, vault().get(directory.validated_key(owner))) if store.connector_key else combined
         combined = invoicing.watched(combined, vault(), owner) if store.connector_key else combined
         combined = proposals.with_receipts(store.directory, owner, apply_confirmed_entries(combined, store.directory, owner))
         combined = invoicing.with_receipts(combined, store.directory, owner)
