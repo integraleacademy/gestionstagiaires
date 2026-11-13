@@ -88,13 +88,14 @@ def install_jobs(db):
     def values(prefix):
         code = f"COALESCE(json_extract({prefix}result,'$.code'),'browser_error')"
         return (f"'job:'||{prefix}id||':'||{prefix}finished||':'||{code},{prefix}owner,CASE WHEN {prefix}mode='directory' THEN 'sync' ELSE 'control' END,"
-                f"CASE WHEN {code} IN ('directory_ready','requests_ready','read_success','proposal_loaded','declaration_inspected','login_reachable') "
+                f"CASE WHEN {code} IN ('directory_ready','requests_ready','read_success','proposal_loaded','declaration_inspected','login_reachable','invoice_prepared','invoice_confirmed','invoice_external') "
                 f"THEN 'confirmed' ELSE 'error' END,{prefix}finished,{code},'connector'")
     scope = "mode NOT IN ('declare','reconcile','proposal_send','proposal_check')"
     db.execute(f"""INSERT OR IGNORE INTO edof_automation_events({columns}) SELECT {values('')} FROM jobs
         WHERE finished IS NOT NULL AND {scope} AND json_extract(result,'$.code')!='directory_progress'""")
     db.execute("DROP TRIGGER IF EXISTS edof_job_audit")
-    db.execute(f"""CREATE TRIGGER IF NOT EXISTS edof_job_audit_v2 AFTER UPDATE ON jobs
+    db.execute("DROP TRIGGER IF EXISTS edof_job_audit_v2")
+    db.execute(f"""CREATE TRIGGER IF NOT EXISTS edof_job_audit_v3 AFTER UPDATE ON jobs
         WHEN NEW.finished IS NOT NULL AND NEW.{scope} AND json_extract(NEW.result,'$.code')!='directory_progress' BEGIN
         INSERT OR IGNORE INTO edof_automation_events({columns}) VALUES({values('NEW.')}); END""")
 

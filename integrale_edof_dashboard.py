@@ -22,6 +22,7 @@ from integrale_edof_sync import dates_for_view
 from edof_schedule import scheduled_at
 import edof_throttle as throttle
 import edof_declarations as declarations
+import edof_invoicing as invoicing
 import edof_proposal as proposal_form
 import edof_proposal_jobs as proposals
 import edof_enrolment_watch as enrolment_watch
@@ -343,7 +344,9 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         pending = vault().get(directory.pending_key(owner)) if store.connector_key else None
         accepted = vault().get(directory.accepted_key(owner)) if store.connector_key else None
         combined = directory.with_accepted(directory.with_pending(saved, pending), accepted)
+        combined = invoicing.watched(combined, vault(), owner) if store.connector_key else combined
         combined = proposals.with_receipts(store.directory, owner, apply_confirmed_entries(combined, store.directory, owner))
+        combined = invoicing.with_receipts(combined, store.directory, owner)
         return enrolment_watch.with_watched(vault(), owner, combined) if store.connector_key else combined
 
     def folder_record(owner, folder):
@@ -766,6 +769,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             selection=selected, production=production, bridge_error=bridge_error, aligned=aligned, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=tabs, tab=tab,
             unlinked_count=unlinked_count, ignored_count=ignored_count, has_snapshot=bool(snap), groups=views.GROUPS, group=group, group_counts=groups_count, course=course, courses=courses,
             period=period, periods=periods, operation_tabs=views.AUTOMATION_TABS,
+            invoice_records={r["folder"]:r for r in invoicing.records(store.directory, owner)},
             dispatch_labels=declarations.LABELS, dispatch_reasons=MESSAGES, motifs=declarations.MOTIFS,
             inspection=check, dispatches=dispatches, csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
             match_counts=Counter(m["status"] for m in matches.values()), total=len(rows), counts=counts,
@@ -812,6 +816,14 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             store.request_directory(owner)
         flash(f"{PROVIDERS[target]} est actif pour votre établissement. Bascule confirmée.", "success")
         return back("technical")
+
+    @bp.post("/dossiers/<folder>/facturation/verifier")
+    @native_action
+    def review_invoice(owner, folder):
+        if not invoicing.request_review(store.directory, owner, folder):
+            raise ValueError("La facture ne peut pas être relancée : vérifiez le blocage ou le système CPF actif.")
+        flash("La facture existante sera vérifiée avant toute reprise.", "success")
+        return back("state", tab="all", folder=folder, _anchor="dossier")
 
     @bp.post("/automatisations/rattraper")
     @native_action

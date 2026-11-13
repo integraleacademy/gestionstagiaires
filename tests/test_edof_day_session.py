@@ -100,7 +100,9 @@ def test_working_tab_sees_next_request_without_another_code(monkeypatch, tmp_pat
     from unittest.mock import Mock
     def private_read(_context, url, *, params, **_kw):
         reply = Mock(status=200, url=url)
-        items = folders if params["state"] == "all" else []
+        assert url in {"https://"+runner.EDOF_HOST+runner.API_PREFIX+"pad",
+                       "https://"+runner.EDOF_HOST+runner.WORKSPACE_API_PREFIX+"organisms/current/factures"}
+        items = folders if url.endswith("/pad") and params.get("state") == "all" else []
         reply.body.return_value = json.dumps({"items":items, "numberOfItems":len(items)}).encode()
         return reply
     monkeypatch.setattr(APIRequestContext, "get", private_read)

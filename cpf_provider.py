@@ -89,6 +89,10 @@ class ProviderStore:
                 outstanding = db.execute("SELECT folder FROM cpf_declarations WHERE status IN ('sending','uncertain') LIMIT 1").fetchone()
                 if outstanding:
                     raise ProviderUnavailable(f"Vérifiez d’abord la réception du dossier {outstanding[0]} avant la bascule.")
+            if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='cpf_invoices'").fetchone():
+                outstanding = db.execute("SELECT folder FROM cpf_invoices WHERE status NOT IN ('confirmed','external') AND (create_started>0 OR qonto_id!='' OR send_started>0) LIMIT 1").fetchone()
+                if outstanding:
+                    raise ProviderUnavailable(f"Vérifiez d’abord la facture du dossier {outstanding[0]} avant la bascule.")
         if record or state["provider"] != target:
             db.execute("INSERT INTO selections VALUES (?, ?, ?, ?)", (revision + 1, target, time.time(), actor))
         return self.state(db)
