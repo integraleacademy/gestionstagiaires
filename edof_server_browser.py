@@ -23,6 +23,7 @@ from edof_readonly_test import (
 from edof_gmail import Vault, GmailCodes, GmailError
 import edof_directory as directory
 import edof_billing
+import edof_invoicing as invoicing
 import edof_session_clock as session_clock
 from edof_directory_batches import Cursor, BatchPending, PAGES_PER_BATCH
 from edof_traffic import Traffic, PacedContext
@@ -1227,7 +1228,8 @@ def _run_browser(spec, *, live=None, traffic=None):
     full_service = spec["mode"] in business_modes and full_completion(spec.get("intent", {}))
     proposal_mode = spec["mode"] in {"proposal_read","proposal_send","proposal_check"}
     proposal_witness = None
-    authenticated = proposal_mode or spec["mode"] in {"read", "directory", "inspect_forms"} | business_modes
+    invoice_mode = spec["mode"] in invoicing.MODES
+    authenticated = invoice_mode or proposal_mode or spec["mode"] in {"read", "directory", "inspect_forms"} | business_modes
     gate = None
     if authenticated and os.environ.get("EDOF_CONNECTOR_KEY"):
         try:
@@ -1523,6 +1525,23 @@ def _run_browser(spec, *, live=None, traffic=None):
                     live["pending_witness"] = witness
                 clock_event("verified", fresh=not reused)
                 progress("pending_verified")
+                # Read the official billing tab periodically in the same session,
+                # so validation of a service does not wait for the next full scan.
+                if not spec.get("full_sync") and time.time()-(vault.get("billing-attempt:"+spec["owner"]) or 0)>=300:
+                    vault.put("billing-attempt:"+spec["owner"],time.time(),ttl=900)
+                    try:
+                        billing=read_recent_directory(context,witness,"billing",checkpoint,{})
+                        previous=vault.get(directory.record_key(spec["owner"]),keep=True) or {}
+                        edof_billing.apply_statements(billing["rows"],None,previous.get("rows",{}))
+                        vault.put("billing-watch:"+spec["owner"],billing,ttl=directory.TTL)
+                    except (ValueError,TypeError,OSError,BrowserError):
+                        pass
+                try:
+                    from edof_dossier_dates import enrich_refusals
+                    if not spec.get("full_sync"):
+                        enrich_refusals(context,witness,vault,spec["owner"],EDOF_HOST,API_PREFIX)
+                except (ValueError,TypeError,OSError,BrowserError):
+                    pass
                 coverage = []
                 from edof_enrolment_watch import fill as follow_enrolments
                 try:
@@ -1556,6 +1575,19 @@ def _run_browser(spec, *, live=None, traffic=None):
                     clock_event("verified", fresh=not reused)
                 return {**result, "stage": "declaration", "fresh_session": not reused,
                         "session_saved": result["code"] == "declaration_confirmed", "gmail_code_used": gmail_code_used}
+
+            def run_invoice(witness, reused):
+                try:
+                    result = invoicing.perform(context, witness, spec, os.environ["EDOF_CONNECTOR_DIRECTORY"],
+                                               vault, EDOF_HOST, API_PREFIX)
+                except invoicing.Review as exc:
+                    return {"code":"invoice_review", "invoice_message":str(exc)}
+                except (ValueError, TypeError, KeyError):
+                    return {"code":"invoice_review", "invoice_message":"Les informations de facturation EDOF sont incomplètes."}
+                vault.put("browser", session_cookies(context.storage_state()), ttl=86400)
+                clock_event("verified", fresh=not reused)
+                return {**result, "stage":"facturation", "session_saved":True,
+                        "fresh_session":not reused, "gmail_code_used":gmail_code_used}
 
             def run_proposal(witness, reused, *, workspace_witness=False):
                 from edof_proposal_jobs import perform, FolderUnavailable, FolderIdentityMismatch
@@ -1636,6 +1668,11 @@ def _run_browser(spec, *, live=None, traffic=None):
                     signals["directory"].update(billing_checked=True, billed_folders=len(invoices),
                                                 paid_folders=sum(invoices.values()))
                 vault.put(directory.record_key(spec["owner"]),snapshot)
+                try:
+                    from edof_dossier_dates import enrich_refusals
+                    enrich_refusals(context,witness,vault,spec["owner"],EDOF_HOST,API_PREFIX)
+                except (ValueError,TypeError,OSError,BrowserError):
+                    pass
                 # The complete list already contains accepted dossiers. A second scan is redundant.
                 vault.put(directory.accepted_key(spec["owner"]),{"checked":snapshot["checked"],"scope":"accepted",
                           "rows":{k:r for k,r in snapshot["rows"].items() if directory.normalized(r["state"]) in {"accepted","accepte"}}},ttl=directory.TTL)
@@ -1656,6 +1693,9 @@ def _run_browser(spec, *, live=None, traffic=None):
                         if pending is not None:
                             pending_result = save_pending(pending,witness,True)
                     return run_full(witness,True)
+
+            if warm and invoice_mode and vault and private_page(page.url) and live.get("pending_witness"):
+                return run_invoice(live["pending_witness"], True)
 
             if warm and (entry_mode or full_service) and vault and gate and private_page(page.url) and live.get("pending_witness"):
                 stage = "declaration"
@@ -1847,6 +1887,8 @@ def _run_browser(spec, *, live=None, traffic=None):
 
             if vault and signals.get("workspace_status") == 200:
                 vault.delete("efp-paused-day")
+            if invoice_mode and vault and private_witness is not None:
+                return run_invoice(private_witness, reused)
             if (entry_mode or full_service) and vault and gate and private_witness is not None:
                 stage = "declaration"
                 result = run_status_request(private_witness)

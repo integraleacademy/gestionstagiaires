@@ -135,3 +135,38 @@ def test_undated_ft_refusal_explicitly_labels_observation_in_list_and_detail(sit
         assert "Date du refus inconnue" in page.text
         assert "Statut observé le" in page.text
         assert "Constaté le" not in page.text
+
+
+def test_official_nested_states_return_date_and_reason(site):
+    row = folder(states={'notProcessed': {'date':'2026-09-10T08:00:00Z'}, 'validated':{'date':'2026-09-12'}},
+                 trainingActionInfo={'sessionStartDate':'2026-12-01','solicitations':[{'fundingType':9,'status':'refused','submissionDate':'2026-10-01',
+                                                      'returnDate':'2026-10-03T14:30:00Z','refusalReason':'Projet non retenu'}]})
+    assert dates.source_dates(row,category)==('2026-09-10T10:00:00+02:00','2026-10-03T16:30:00+02:00')
+    site.vault.put(directory.record_key(site.owner),{'checked':1,'rows':{'123456':row}})
+    page=site.client.get('/admin/edof-test?folder=123456&group=requests&tab=ft_refused')
+    assert page.status_code==200 and 'Projet non retenu' in page.text and '03/10/2026 à 16 h 30' in page.text
+    assert '01/10/2026' in page.text
+
+
+def test_missing_refusal_dates_are_enriched_from_exact_dossier(site):
+    from types import SimpleNamespace as NS
+    import json
+    raw={'id':'123456','currentState':'validated','attendee':{'firstName':'Anne','lastName':'Exemple'},
+         'states':{'notProcessed':{'date':'2026-10-01'}},'trainingActionInfo':{'sessionStartDate':'2026-12-01',
+         'solicitations':[{'fundingType':9,'status':'refused','submissionDate':'2026-10-02','returnDate':'2026-10-04','refusalReason':'Motif officiel'}]}}
+    old=directory.project(raw)
+    for k in ('funding_at','filed_at','funding_refusal_reason'):old.pop(k,None)
+    site.vault.put(directory.record_key(site.owner),{'checked':1,'rows':{'123456':old}})
+    host='of.moncompteformation.gouv.fr'
+    prefix=f'/edof-api/v1/api/private/siret/{directory.SIRET}/organisms/current/registration-folders/'
+    witness=NS(method='GET',url='https://'+host+prefix+'pad',all_headers=lambda:{})
+    calls=[]
+    def read(url,**kwargs):
+        calls.append(url)
+        return NS(url=url,status=200,body=lambda:json.dumps(raw).encode(),dispose=lambda:None)
+    dates.enrich_refusals(NS(request=NS(get=read)),witness,site.vault,site.owner,host,prefix)
+    saved=site.vault.get(directory.record_key(site.owner),keep=True)
+    assert saved['checked']==1 and saved['rows']['123456']['funding_at']=='2026-10-04'
+    assert saved['rows']['123456']['filed_at']=='2026-10-01'
+    dates.enrich_refusals(NS(request=NS(get=read)),witness,site.vault,site.owner,host,prefix)
+    assert len(calls)==1

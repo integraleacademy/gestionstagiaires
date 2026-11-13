@@ -200,6 +200,7 @@
     <button class="btn btn-blue" name="attested" value="yes" type="submit">Confirmer et transmettre <span data-entry-count>les entrées sélectionnées</span></button>
   </form>{% endif %}
   {% if section == 'automations' and not active %}<div class="wedof-notice is-warning">L’envoi automatique des déclarations nécessite l’activation d’Intégrale EDOF.</div>{% endif %}
+  {% if section == 'state' and group == 'billing' and active %}<div class="wedof-notice is-info">Facturation automatique active : dès la validation du service fait, la facture Caisse des Dépôts est préparée dans Qonto, puis son numéro et son montant sont transmis à EDOF. Le suivi apparaît dans chaque dossier.</div>{% endif %}
   {% if not checked %}<div class="wedof-notice is-info">La liste EDOF de votre compte n’est pas disponible. <a href="{{ url_for('edof_server_test.index', _anchor='directory-status') }}">Ouvrir la synchronisation</a></div>{% endif %}
   {% if rows %}
   {% if section == 'automations' %}{% include "_edof_operations.html" %}{% else %}
@@ -209,9 +210,9 @@
       <tbody>{% for r in rows %}
       {% set href = url_for('integrale_edof.index', section=section, tab=tab, folder=r.folder_id, page=page, q=query, group=group, course=course, period=period, prepare=(1 if r.kind=='request' else none), simulation=(1 if testing else none), matching=(1 if previewing else none), _anchor='dossier') %}
       <tr data-edof-folder="{{ r.folder_id }}">
-        <td data-label="Dossier"><div class="wedof-folder-ref"><strong><a href="{{ href }}">{{ r.folder_id }}</a></strong><small>{{ ("Créé le " if r.creation_only else "Demande du ") ~ r.filed_label if r.filed_label else "Date de demande inconnue" }}</small><span class="wedof-state-label">{{ r.label }}</span></div></td>
+        <td data-label="Dossier"><div class="wedof-folder-ref"><strong><a href="{{ href }}">{{ r.folder_id }}</a></strong><small>{{ ("Créé le " if r.creation_only else "Demande du ") ~ r.filed_label if r.filed_label else "Date de demande inconnue" }}</small><span class="wedof-state-label">{{ r.label }}</span>{% if invoice_records.get(r.folder_id) %}<small>{{ invoice_records[r.folder_id].label }}{% if invoice_records[r.folder_id].invoice_number %} · {{ invoice_records[r.folder_id].invoice_number }}{% endif %}</small>{% endif %}</div></td>
         <td data-label="Candidat EDOF"><div class="wedof-person-cell"><strong>{{ r.first_name }} {{ r.last_name }}</strong><span>{{ r.title or 'Formation non renseignée' }}</span></div></td>
-        <td data-label="Passage dans le statut">{% if r.stage_exact_label %}{{ r.stage_exact_label }}{% else %}<strong>{{ r.stage_unknown_label }}</strong>{% if r.stage_label %}<div><small>Statut observé le {{ r.stage_label }}</small></div>{% endif %}<small>EDOF ne fournit pas la date de ce changement.</small>{% endif %}</td>
+        <td data-label="Passage dans le statut">{% if r.stage_exact_label %}{{ r.stage_exact_label }}{% else %}<strong>{{ r.stage_unknown_label }}</strong>{% if r.stage_label %}<div><small>Statut observé le {{ r.stage_label }}</small></div>{% endif %}<small>Cette date n’a pas encore été récupérée depuis EDOF.</small>{% endif %}{% if r.funding_refusal_reason %}<div><small>Motif : {{ r.funding_refusal_reason }}</small></div>{% endif %}</td>
         <td data-label="Période"><div class="wedof-date-range"><span>Du {{ date_fr(r.session_start_date) }}</span><span>au {{ date_fr(r.session_end_date) }}</span>{% if r.entry_confirmed_on %}<small>Entrée confirmée le {{ date_fr(r.entry_confirmed_on) }}</small>{% endif %}</div></td>
         {% if testing %}<td data-label="Simulation">{{ simulation_labels.get(r.evaluation, 'Aucune action prévue') }}</td>{% endif %}
         <td data-label="Rattachement local"><div class="wedof-link-cell">
@@ -247,12 +248,24 @@
   </div>
 </header>
 <div class="edof-case-layout">
+  {% set invoice = invoice_records.get(detail.record.folder_id) %}
+  {% if invoice %}<section class="wedof-panel edof-case-form"><div class="edof-panel-body">
+    <h2>Facturation Caisse des Dépôts</h2><p><strong>{{ invoice.label }}</strong></p>
+    {% if invoice.terms.amount %}<p>Montant validé par EDOF : {{ invoice.terms.amount }} € · TVA 0 %</p>{% endif %}
+    {% if invoice.invoice_number %}<p>Facture Qonto : <strong>{{ invoice.invoice_number }}</strong></p>{% endif %}
+    {% if invoice.qonto_id %}<a class="btn btn-outline" href="{{ url_for('admin_qonto_invoice_pdf', invoice_id=invoice.qonto_id) }}" target="_blank" rel="noopener">Voir la facture Qonto</a>{% endif %}
+    {% if invoice.message %}<p class="wedof-notice is-warning">{{ invoice.message }}</p>{% endif %}
+    {% if invoice.status == 'review' and active %}<form method="post" action="{{ url_for('integrale_edof.review_invoice', folder=detail.record.folder_id) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn btn-outline" type="submit">Réexaminer la facturation</button></form>{% endif %}
+    {% if invoice.status == 'confirmed' %}<p>Le numéro et le montant ont été relus dans EDOF après la transmission.</p>{% endif %}
+  </div></section>{% endif %}
   {% if detail.request or detail.proposal_job or detail.followable %}{% include "_edof_proposal.html" %}{% endif %}
   <aside class="wedof-panel edof-detail edof-case-side"><h2>Suivi du dossier</h2><div class="edof-panel-body">
     <div class="edof-summary">
       <div><span>État EDOF</span><strong>{{ detail.display.label }}</strong></div>
       <div><span>{{ "Création du dossier" if detail.display.creation_only else "Date de la demande" }}</span><strong>{{ detail.display.filed_label or 'Inconnue' }}</strong></div>
-      <div><span>Passage dans le statut</span><strong>{{ detail.display.stage_exact_label or detail.display.stage_unknown_label }}</strong>{% if detail.display.stage_observed and detail.display.stage_label %}<small>Statut observé le {{ detail.display.stage_label }}. EDOF ne fournit pas la date de ce changement.</small>{% endif %}</div>
+      <div><span>Passage dans le statut</span><strong>{{ detail.display.stage_exact_label or detail.display.stage_unknown_label }}</strong>{% if detail.display.stage_observed and detail.display.stage_label %}<small>Statut observé le {{ detail.display.stage_label }}. Cette date n’a pas encore été récupérée depuis EDOF.</small>{% endif %}</div>
+      {% if detail.display.funding_request_at %}<div><span>Demande France Travail</span><strong>{{ date_fr(detail.display.funding_request_at[:10]) }}</strong></div>{% endif %}
+      {% if detail.display.funding_refusal_reason %}<div><span>Motif du refus France Travail</span><strong>{{ detail.display.funding_refusal_reason }}</strong></div>{% endif %}
       <div><span>Échéance de l’automatisation</span><strong>{{ action_labels.get(detail.display.action, 'Aucune action prévue') }}</strong>
         {% if detail.display.scheduled %}<time datetime="{{ detail.display.scheduled.isoformat() }}">{{ detail.display.scheduled.strftime('%d/%m/%Y à %H h %M') }}</time>{% endif %}
         {% if detail.held or detail.display.block %}<span class="wedof-badge is-danger">Automatisation bloquée</span>{% elif active and detail.display.scheduled %}<span>Envoi automatique à partir de {{ detail.display.scheduled.hour }} h{% if detail.display.action == 'service_done' %} · 100 % selon les dates CPF{% endif %}.</span>{% endif %}

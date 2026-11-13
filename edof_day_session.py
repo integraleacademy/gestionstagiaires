@@ -19,7 +19,7 @@ OPEN_HOUR = 7
 CLOSE_HOUR = 19
 MAX_DAILY_LOGINS = 4
 LOGIN_RETRY_SECONDS = 15 * 60
-SHARED_JOB_MODES = frozenset({"declare","reconcile","proposal_read","proposal_check","proposal_send"})
+SHARED_JOB_MODES = frozenset({"declare","reconcile","proposal_read","proposal_check","proposal_send","invoice_prepare","invoice_send","invoice_check"})
 
 
 def working_hours(now=None, *, daily=True):

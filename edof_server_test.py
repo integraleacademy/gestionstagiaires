@@ -25,7 +25,7 @@ from zoneinfo import ZoneInfo
 from contextlib import closing
 from flask import flash, Blueprint, abort, jsonify, redirect, request, send_file, session, url_for
 
-from cpf_provider import ProviderStore, acquire_provider, provider_operation, production_edof_ready
+from cpf_provider import ProviderStore, acquire_provider, provider_operation, production_edof_ready, on_production_service
 from edof_readonly_test import TEST_SERVICE_ID, ID_RE, STATE_LABELS
 from edof_day_session import DayWorker, OPEN_HOUR, POLL_SECONDS, PARIS, working_hours, awaiting_edof_return, login_policy
 import edof_recovery as recovery
@@ -35,6 +35,7 @@ import edof_throttle as throttle
 import edof_session_clock as session_clock
 import edof_proposal_jobs as proposals
 import edof_declarations as declarations
+import edof_invoicing as invoicing
 import edof_automation_audit as automation_audit
 from edof_gmail import Vault, GmailError, connector_key, oauth_configured, authorization_url, finish_authorization
 
@@ -43,9 +44,10 @@ DIRECTORY_TIMEOUT = 420
 DECLARATION_TIMEOUT = 360
 RETENTION = 86400
 PROPOSAL_MODES = {"proposal_read", "proposal_send", "proposal_check"}
-AUTH_MODES = PROPOSAL_MODES | {"read", "directory", "declare", "reconcile", "inspect_forms"}
+AUTH_MODES = invoicing.MODES | PROPOSAL_MODES | {"read", "directory", "declare", "reconcile", "inspect_forms"}
 MESSAGES = {
     **declarations.REASONS,
+    **invoicing.MESSAGES,
     "day_login_used": "Le quota de codes EFP autorisé est atteint. La reconnexion automatique est en pause. Un administrateur peut autoriser une tentative supplémentaire.",
     "day_login_wait": "Une authentification EFP a été tentée récemment. La reconnexion reprendra automatiquement après le délai de 15 minutes.",
     "portal_throttled": "EDOF ou EFP limite temporairement les requêtes. Le délai du portail est respecté ; sans délai indiqué, une pause progressive est appliquée.",
@@ -198,7 +200,7 @@ class ServerTestStore:
                        LIMIT 1""", (owner, time.time()-300)).fetchone() and Vault(self.directory,self.connector_key).get("browser")
                 # The same live worker can send the next declaration without a new
                 # login. Its EFP login budget and portal throttling still apply.
-                shared_reuse = shared_session and mode in PROPOSAL_MODES | {"declare", "reconcile"}
+                shared_reuse = shared_session and mode in invoicing.MODES | PROPOSAL_MODES | {"declare", "reconcile"}
                 if remaining > 0 and not (day_session or reuse or shared_reuse):
                     raise JobCooldown(remaining)
                 if mode == "directory":
@@ -739,7 +741,7 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
             parsed = json.loads(output) if process.returncode == 0 and len(output) < 32768 else {}
         if isinstance(parsed, dict) and parsed.get("code") in MESSAGES:
             # The runner emits only the explicitly normalized dossier schema.
-            result = {key: parsed[key] for key in ("code", "stage", "fields", "confirmed_state", "fresh_session", "gmail_code_used", "session_saved", "candidate_count", "blocked_writes", "diagnostics", "proposal_receipt", "proposal_message", "traffic") if key in parsed}
+            result = {key: parsed[key] for key in ("code", "stage", "fields", "confirmed_state", "fresh_session", "gmail_code_used", "session_saved", "candidate_count", "blocked_writes", "diagnostics", "proposal_receipt", "proposal_message", "invoice_message", "traffic") if key in parsed}
     except subprocess.TimeoutExpired:
         result = {"code": "timeout"}
     except Exception:
@@ -793,6 +795,10 @@ def execute_job(store, job_id, spec, lock_fd, provider_fd=None, day_worker=None)
                     # Keep the verified source snapshot. The next full sync
                     # can retry local analysis without replaying external work.
                     result.setdefault("diagnostics", {})["local_analysis_pending"] = True
+            if spec["mode"] in invoicing.MODES:
+                invoicing.complete(store, spec, result)
+                if result["code"] == "invoice_confirmed":
+                    store.request_directory(spec["owner"])
             if spec["mode"] == "proposal_read":
                 proposals.finish_read(store.directory,spec,result.get("proposal_message") or MESSAGES.get(result["code"],"Vérifiez la connexion EDOF."))
             if spec["mode"] in {"proposal_send","proposal_check"}:
@@ -962,6 +968,22 @@ def register_edof_server_test(legacy):
                                             continue
                                         except JobCooldown:
                                             pass  # Keep the watch running between dossier jobs.
+                            if daily and on_production_service() and not manual_sync and working_hours(now) and store.connector_key:
+                                private = Vault(store.directory, store.connector_key)
+                                with closing(store.connect()) as db:
+                                    billing_owners = [r[0] for r in db.execute("SELECT owner FROM directory_activity")]
+                                for owner in billing_owners:
+                                    snapshot = directory.dated_snapshot(private.get(directory.record_key(owner), keep=True))
+                                    snapshot = invoicing.watched(snapshot, private, owner)
+                                    if snapshot:
+                                        invoicing.discover(store, owner, snapshot)
+                                billing_job = invoicing.next_job(store, active)
+                                if billing_job:
+                                    try:
+                                        start_job(store, billing_job["owner"], billing_job, day_worker=worker)
+                                        continue
+                                    except JobCooldown:
+                                        pass
                             if manual_sync:
                                 user = manual_sync["owner"]
                                 start_job(store, user, {"mode":"directory", "owner":user, "provider":active["provider"],

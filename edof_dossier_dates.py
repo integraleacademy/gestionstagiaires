@@ -5,6 +5,52 @@ from zoneinfo import ZoneInfo
 PARIS = ZoneInfo("Europe/Paris")
 
 
+def enrich_refusals(context, witness, vault, owner, host, prefix):
+    """The list omits some history: read the exact refused dossier in the same session."""
+    import json
+    import time
+    from urllib.parse import urlsplit
+    import edof_directory as directory
+    scope=f'/edof-api/v1/api/private/siret/{directory.SIRET}/'
+    source=urlsplit(witness.url) if witness else None
+    if (host!='of.moncompteformation.gouv.fr' or not source or witness.method!='GET'
+        or source.scheme!='https' or source.netloc!=host or not source.path.startswith(scope)
+        or prefix!=scope+'organisms/current/registration-folders/'):
+        return
+    snapshot=vault.get(directory.record_key(owner),keep=True)
+    if not snapshot:
+        return
+    rows=dict(snapshot['rows'])
+    attempts=vault.get('refusal-date-attempts:'+owner) or {}
+    candidates=[r for r in rows.values() if r.get('ft_refused') and (not r.get('funding_at') or not r.get('filed_at'))
+                and time.time()-attempts.get(r['folder_id'],0)>3600][:2]
+    changed=False
+    for old in candidates:
+        folder=old['folder_id']
+        if not directory.ID_RE.fullmatch(folder):
+            continue
+        attempts[folder]=time.time()
+        vault.put('refusal-date-attempts:'+owner,attempts,ttl=86400)
+        url='https://'+host+prefix+folder
+        response=context.request.get(url,headers=directory.private_headers(witness),max_redirects=0,timeout=12000)
+        try:
+            directory.check_throttling(response)
+            if response.status!=200 or response.url!=url:
+                continue
+            body=response.body()
+            if len(body)>2_000_000:
+                continue
+            fresh=directory.project(json.loads(body))
+        finally:
+            response.dispose()
+        if fresh['folder_id']!=folder or any(fresh[k]!=old[k] for k in ('first_name','last_name')):
+            continue
+        rows[folder]={**fresh,'observed_at':time.time()}
+        changed=True
+    if changed:
+        vault.put(directory.record_key(owner),{**snapshot,'rows':rows})
+
+
 def stamp(value):
     if not isinstance(value, str) or not 8 <= len(value.strip()) <= 40:
         return ""
@@ -47,13 +93,14 @@ def from_history(raw, normalize):
     for field in ("states", "history", "stateDates"):
         history = raw.get(field)
         if isinstance(history, dict):
-            history = [{"state": key, "date": val} for key, val in history.items()]
+            history = [{**val, "state": key} if isinstance(val, dict) else {"state": key, "date": val}
+                       for key, val in history.items()]
         if not isinstance(history, list):
             continue
         for item in history:
             if not isinstance(item, dict):
                 continue
-            state = item.get("state") or item.get("currentState") or item.get("status")
+            state = item.get("state") or item.get("currentState") or item.get("status") or item.get("label")
             when = first(item, "changingStateDate", "stateDate", "date", "timestamp")
             if isinstance(state, str) and when:
                 events.append((normalize(state), when))
@@ -78,11 +125,13 @@ def project(raw, info, solicitations, pending, refused, normalize, request_state
                       and isinstance(s.get("status"), str) and normalize(s["status"]) in statuses]
         def funding_date(item):
             return first(item, "changingStateDate", "inProgressDate", "submissionDate") if pending else first(
-                item, "refusalDate", "rejectionDate", "decisionDate", "responseDate", "answerDate", "changingStateDate")
+                item, "refusalDate", "rejectionDate", "returnDate", "decisionDate", "responseDate", "answerDate", "changingStateDate")
         # A previous refusal must not date a newer, undated solicitation.
         if len(candidates) == 1:
             dates["funding_at"] = funding_date(candidates[0])
             dates["funding_request_at"] = first(candidates[0], "submissionDate")
+            if refused and isinstance(candidates[0].get("refusalReason"), str):
+                dates["funding_refusal_reason"] = candidates[0]["refusalReason"].strip()[:1000]
         elif candidates and all(first(s, "submissionDate") for s in candidates):
             newest = max(instant(first(s, "submissionDate")) for s in candidates)
             latest = [s for s in candidates if instant(first(s, "submissionDate")) == newest]
@@ -90,6 +139,9 @@ def project(raw, info, solicitations, pending, refused, normalize, request_state
             same = {funding_date(s) for s in latest}
             if len(same) == 1:
                 dates["funding_at"] = same.pop()
+            reasons = {s.get("refusalReason", "") for s in latest if isinstance(s.get("refusalReason", ""), str)}
+            if refused and len(reasons) == 1:
+                dates["funding_refusal_reason"] = reasons.pop().strip()[:1000]
     return {key: value for key, value in dates.items() if value}
 
 
