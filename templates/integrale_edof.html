@@ -9,6 +9,7 @@
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
+{% macro refusal_reason(value) %}{% if value.isdigit() %}Libellé non communiqué par EDOF (code {{ value }}){% else %}{{ value }}{% endif %}{% endmacro %}
 {% macro token() %}<input type="hidden" name="csrf" value="{{ csrf }}">{% endmacro %}
 {% macro btn(label) %}<button class="btn btn-outline" type="submit">{{ label }}</button>{% endmacro %}
 {% macro link(section, tab='all', page=1) %}{{ url_for('integrale_edof.index', section=section, tab=tab, page=page, q=query, group=group, course=course, period=period, simulation=(1 if testing else none), matching=(1 if previewing else none)) }}{% endmacro %}
@@ -212,7 +213,7 @@
       <tr data-edof-folder="{{ r.folder_id }}">
         <td data-label="Dossier"><div class="wedof-folder-ref"><strong><a href="{{ href }}">{{ r.folder_id }}</a></strong><small>{{ ("Créé le " if r.creation_only else "Demande du ") ~ r.filed_label if r.filed_label else "Date de demande inconnue" }}</small><span class="wedof-state-label">{{ r.label }}</span>{% if invoice_records.get(r.folder_id) %}<small>{{ invoice_records[r.folder_id].label }}{% if invoice_records[r.folder_id].invoice_number %} · {{ invoice_records[r.folder_id].invoice_number }}{% endif %}</small>{% endif %}</div></td>
         <td data-label="Candidat EDOF"><div class="wedof-person-cell"><strong>{{ r.first_name }} {{ r.last_name }}</strong><span>{{ r.title or 'Formation non renseignée' }}</span></div></td>
-        <td data-label="Passage dans le statut">{% if r.stage_exact_label %}{{ r.stage_exact_label }}{% else %}<strong>{{ r.stage_unknown_label }}</strong>{% if r.stage_label %}<div><small>Statut observé le {{ r.stage_label }}</small></div>{% endif %}<small>Cette date n’a pas encore été récupérée depuis EDOF.</small>{% endif %}{% if r.funding_refusal_reason %}<div><small>Motif : {{ r.funding_refusal_reason }}</small></div>{% endif %}</td>
+        <td data-label="Passage dans le statut">{% if r.stage_exact_label %}{{ r.stage_exact_label }}{% else %}<strong>{{ r.stage_unknown_label }}</strong>{% if r.stage_label %}<div><small>Statut observé le {{ r.stage_label }}</small></div>{% endif %}<small>Cette date n’a pas encore été récupérée depuis EDOF.</small>{% endif %}{% if r.funding_refusal_reason %}<div><small>Motif : {{ refusal_reason(r.funding_refusal_reason) }}</small></div>{% endif %}</td>
         <td data-label="Période"><div class="wedof-date-range"><span>Du {{ date_fr(r.session_start_date) }}</span><span>au {{ date_fr(r.session_end_date) }}</span>{% if r.entry_confirmed_on %}<small>Entrée confirmée le {{ date_fr(r.entry_confirmed_on) }}</small>{% endif %}</div></td>
         {% if testing %}<td data-label="Simulation">{{ simulation_labels.get(r.evaluation, 'Aucune action prévue') }}</td>{% endif %}
         <td data-label="Rattachement local"><div class="wedof-link-cell">
@@ -265,7 +266,7 @@
       <div><span>{{ "Création du dossier" if detail.display.creation_only else "Date de la demande" }}</span><strong>{{ detail.display.filed_label or 'Inconnue' }}</strong></div>
       <div><span>Passage dans le statut</span><strong>{{ detail.display.stage_exact_label or detail.display.stage_unknown_label }}</strong>{% if detail.display.stage_observed and detail.display.stage_label %}<small>Statut observé le {{ detail.display.stage_label }}. Cette date n’a pas encore été récupérée depuis EDOF.</small>{% endif %}</div>
       {% if detail.display.funding_request_at %}<div><span>Demande France Travail</span><strong>{{ date_fr(detail.display.funding_request_at[:10]) }}</strong></div>{% endif %}
-      {% if detail.display.funding_refusal_reason %}<div><span>Motif du refus France Travail</span><strong>{{ detail.display.funding_refusal_reason }}</strong></div>{% endif %}
+      {% if detail.display.funding_refusal_reason %}<div><span>Motif du refus France Travail</span><strong>{{ refusal_reason(detail.display.funding_refusal_reason) }}</strong></div>{% endif %}
       <div><span>Échéance de l’automatisation</span><strong>{{ action_labels.get(detail.display.action, 'Aucune action prévue') }}</strong>
         {% if detail.display.scheduled %}<time datetime="{{ detail.display.scheduled.isoformat() }}">{{ detail.display.scheduled.strftime('%d/%m/%Y à %H h %M') }}</time>{% endif %}
         {% if detail.held or detail.display.block %}<span class="wedof-badge is-danger">Automatisation bloquée</span>{% elif active and detail.display.scheduled %}<span>Envoi automatique à partir de {{ detail.display.scheduled.hour }} h{% if detail.display.action == 'service_done' %} · 100 % selon les dates CPF{% endif %}.</span>{% endif %}
