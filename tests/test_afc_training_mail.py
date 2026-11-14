@@ -1,4 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor
+import json
+import re
+import sqlite3
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -71,10 +75,15 @@ def test_preview_post_and_worker_recheck_actual_recipients(setup):
     args, kwargs = sender.call_args
     assert args[:2] == ("un@example.test", mail.SUBJECT)
     assert "Bonjour &lt;Luc&gt;," in args[2]
-    assert "du 4 au 14 janvier 2027" in kwargs["text_content"]
+    assert "4 au 14 janvier 2027" in kwargs["text_content"]
     assert "moins de 29 ans" in args[2] and "26 ans" not in args[2]
     assert "9 février 2027" in args[2] and "1 700 €" in args[2]
     assert kwargs["reply_to"] == mail.CONTACT
+    assert host.EDOF_TRAININGS["APS"]["calendly"] in args[2] and host.EDOF_TRAININGS["APS"]["calendly"] in kwargs["text_content"]
+    assert "Aurélie" not in args[2] and "aurelie@" not in kwargs["text_content"]
+    assert all(f"{n}. {title}" in kwargs["text_content"] for n, title in enumerate(
+        (mail.DEFAULT_COPY["cpf_title"], mail.DEFAULT_COPY["employer_title"], mail.DEFAULT_COPY["personal_title"]), 1))
+    assert "data-copy" not in args[2]
     assert client.get("/api/admin/afc/formations-2027/suivi").json["counts"] == {"accepted": 1, "skipped": 2}
     with mail.ledger(host) as db:
         assert set(mail.selection(db, mail.audience(host))[0]) == {"nouveau@example.test"}
@@ -118,8 +127,66 @@ def test_authentication_and_read_only_role(setup):
     with client.session_transaction() as session:
         session["admin_role"] = "viewer"
     assert client.post(endpoint).status_code == 403
+    assert client.post("/admin/afc/formations-2027/texte").status_code == 403
+    assert "Modifier le texte" not in client.get("/admin/afc/formations-2027").get_data(as_text=True)
     with client.session_transaction() as session:
         session.clear()
     assert client.post(endpoint).status_code == 302
     assert client.get("/api/admin/afc/formations-2027/suivi").status_code == 401
     sender.assert_not_called()
+
+
+def test_edit_save_preview_and_version_sent(setup):
+    people, sender, client = setup
+    people.append(candidate("luc", prenom="Luc"))
+    path = "/admin/afc/formations-2027"
+    preview = client.get(path).get_data(as_text=True)
+    assert "Modifier le texte" in preview
+    with client.session_transaction() as session:
+        csrf = session["manuals_csrf"]
+    with mail.ledger(host) as db:
+        first_digest = mail.selection(db, mail.audience(host))[1]
+    text = {**mail.DEFAULT_COPY, "subject": "Notre rendez-vous APS",
+            "intro": "Préparez votre appel\navec <Cassandre>.", "greeting": "Bienvenue {prenom} !"}
+    edit = {"csrf_token": csrf, "version": 0, "fields": json.dumps(text)}
+    assert client.post(path + "/texte", data={**edit, "csrf_token": ""}).status_code == 400
+    assert client.post(path + "/texte", data={**edit, "fields": json.dumps({**text, "booking_label": ""})}).status_code == 400
+    assert client.post(path + "/texte", data=edit).json == {"ok": True}
+    assert client.post(path + "/texte", data=edit).status_code == 409
+    assert client.post(path + "/envoyer", data={"csrf_token": csrf, "audience": first_digest}).status_code == 409
+    assert "Notre rendez-vous APS" in client.get(path).get_data(as_text=True)
+    with mail.ledger(host) as db:
+        _, digest = mail.selection(db, mail.audience(host))
+    assert client.post(path + "/envoyer", data={"csrf_token": csrf, "audience": digest}).status_code == 303
+    third = {**text, "subject": "Pour les prochains destinataires"}
+    assert client.post(path + "/texte", data={**edit, "version": 1, "fields": json.dumps(third)}).status_code == 200
+    sender.assert_not_called()
+    with host.app.app_context():
+        mail.process_queue(host)
+        rendered, plain = mail.render_message(host, text, "Luc", preview=True)
+        editable = set(re.findall('data-copy="([a-z0-9_]+)"', rendered))
+        assert editable | {"subject", "preheader"} == text.keys()
+        assert "avec <Cassandre>." in plain
+    args, kwargs = sender.call_args
+    assert args[1] == text["subject"]
+    assert "Bienvenue Luc !" in args[2] and "avec &lt;Cassandre&gt;." in args[2]
+    assert text["intro"] in kwargs["text_content"]
+    assert "data-copy" not in args[2]
+    assert "{prenom}" not in args[2]
+
+
+def test_pending_delivery_from_before_editor_keeps_its_approved_message(setup):
+    people, sender, _ = setup
+    person = candidate("legacy")
+    people.append(person)
+    # The original campaign schema has no version or draft tables.
+    path = Path(host.PERSIST_DIR) / "afc_formations_janvier_2027.sqlite3"
+    with sqlite3.connect(path) as old_db:
+        old_db.execute("""CREATE TABLE deliveries (email TEXT PRIMARY KEY, candidate TEXT NOT NULL,
+            status TEXT NOT NULL, error TEXT DEFAULT '', message_id TEXT DEFAULT '', updated INTEGER DEFAULT 0)""")
+        old_db.execute("INSERT INTO deliveries(email,candidate,status) VALUES (?,?,'pending')", (person["email"], person["id"]))
+    old_db.close()
+    with host.app.app_context():
+        mail.process_queue(host)
+    args, _ = sender.call_args
+    assert args[1] == mail.SUBJECT and "aurelie@" in args[2]

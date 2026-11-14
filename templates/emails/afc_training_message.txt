@@ -1,0 +1,41 @@
+{{ words.heading }}
+{{ words.subtitle }}
+{{ words.eyebrow }}
+
+{{ greeting }}
+
+{{ words.intro }}
+
+{{ words.collective }} {{ words.transition }}
+
+{{ words.aps_kicker }}
+{{ words.aps_title }}
+{{ words.aps_description }}
+
+{{ words.remote_label }} · {{ words.remote_dates }}
+{{ words.onsite_label }} · {{ words.onsite_dates }}
+{{ words.exam_label }} · {{ words.exam_date }}
+
+{{ words.funding_title }}
+{% for prefix in ['cpf','employer','personal'] %}
+{{ loop.index }}. {{ words[prefix ~ '_title'] }}
+{{ words[prefix ~ '_text'] }}
+{% endfor %}
+{{ words.booking_intro }}
+{{ words.booking_label }}
+{{ booking_url }}
+
+{{ words.apprentice_kicker }}
+{{ words.apprentice_title }}
+{{ words.apprentice_age }} {{ words.apprentice_description }}
+{% for key in ['qualification_aps','qualification_a3p','qualification_ssiap'] %}
+• {{ words[key] }}{% endfor %}
+
+{{ words.contract }}
+
+{{ words.closing }}
+
+Cassandre Ménard
+Responsable commerciale · Intégrale Academy
+cassandre@integraleacademy.com · 04 22 47 07 68
+54 chemin du Carreou, 83480 Puget-sur-Argens

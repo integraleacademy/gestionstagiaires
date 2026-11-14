@@ -15,6 +15,13 @@
   .afc-mail-side dd{margin:0;font-weight:700}.afc-mail-side hr{border:0;border-top:1px solid #dce4ed;margin:19px 0}
   .afc-mail-preview{padding:0;overflow:hidden}.afc-mail-preview header{padding:16px 20px}
   .afc-mail-preview header h2{margin-bottom:5px;font-size:16px}.afc-mail-preview header p{margin:0;font-size:14px}
+  .afc-edit-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .afc-edit-bar button[hidden],.afc-mail-preview [hidden]{display:none!important}
+  .afc-mail-preview .afc-editor-meta{padding-top:6px}
+  .afc-editor-meta label{display:block;margin:7px 0 3px;font-size:13px;font-weight:700}
+  .afc-editor-meta input{width:100%;box-sizing:border-box;border:1px solid #a6b7cb;border-radius:6px;padding:8px 9px;font:inherit}
+  .afc-editor-meta p{margin-top:10px!important;color:#425a77}
+  .afc-edit-result{color:#8c3029;font-size:14px;line-height:1.4}
   .afc-mail-preview iframe{display:block;width:100%;height:1500px;border:0;background:#eef2f7}
   @media(max-width:780px){.afc-mail-grid{grid-template-columns:1fr}.afc-mail-panel{padding:16px}.afc-mail-preview{padding:0}}
 </style>
@@ -31,7 +38,7 @@
         </details>
       {% else %}<p><strong>Aucun destinataire supplémentaire à contacter.</strong></p>{% endif %}
       {% if recipients and not is_read_only and not report.active %}
-        <form method="post" action="{{ url_for('admin_afc_training_mail_send') }}">
+        <form id="afc-send-form" method="post" action="{{ url_for('admin_afc_training_mail_send') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf }}">
           <input type="hidden" name="audience" value="{{ digest }}">
           <button class="btn btn-primary" type="submit">Envoyer à {{ recipients|length }} destinataire{{ 's' if recipients|length > 1 }}</button>
@@ -47,7 +54,28 @@
       {% endif %}
     </section>
     <section class="afc-mail-panel afc-mail-preview">
-      <header><h2>Aperçu du message</h2><p><strong>Objet</strong> · {{ subject }}</p></header>
+      <header>
+        <h2>Aperçu du message</h2><p id="afc-subject-preview"><strong>Objet</strong> · {{ subject }}</p>
+        {% if not is_read_only %}
+          <form id="afc-mail-editor" method="post" action="{{ url_for('admin_afc_training_mail_edit') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <input type="hidden" name="version" value="{{ version }}">
+            <div class="afc-editor-meta" id="afc-editor-meta" hidden>
+              <label for="afc-edit-subject">Objet du mail</label>
+              <input id="afc-edit-subject" type="text" maxlength="200" required value="{{ subject }}">
+              <label for="afc-edit-preheader">Texte d’aperçu dans la boîte de réception</label>
+              <input id="afc-edit-preheader" type="text" value="{{ fields.preheader }}" maxlength="6000">
+              <p>Cliquez sur le texte du mail ci-dessous pour le modifier. Le prénom de chaque destinataire remplacera <strong>{prenom}</strong>.</p>
+            </div>
+            <div class="afc-edit-bar">
+              <button class="btn btn-outline" id="afc-edit" type="button">Modifier le texte</button>
+              <button class="btn btn-primary" id="afc-save" type="submit" hidden>Enregistrer les modifications</button>
+              <button class="btn btn-outline" id="afc-cancel" type="button" hidden>Annuler</button>
+              <span class="afc-edit-result" id="afc-edit-result" role="status"></span>
+            </div>
+          </form>
+        {% endif %}
+      </header>
       <iframe id="afc-mail-preview" sandbox="allow-same-origin" title="Aperçu de l’e-mail formations 2027" srcdoc="{{ message|forceescape }}"></iframe>
     </section>
   </div>
@@ -61,6 +89,83 @@
   mailFrame.addEventListener('load', sizeMailPreview);
   window.addEventListener('resize', sizeMailPreview);
   sizeMailPreview();
+  let editingMail = false;
+  {% if not is_read_only %}
+  const copy = {{ fields|tojson }};
+  const mailEditor = document.getElementById('afc-mail-editor');
+  const editMail = document.getElementById('afc-edit');
+  const saveMail = document.getElementById('afc-save');
+  const cancelMail = document.getElementById('afc-cancel');
+  const subjectInput = document.getElementById('afc-edit-subject');
+  const preheaderInput = document.getElementById('afc-edit-preheader');
+  const editResult = document.getElementById('afc-edit-result');
+  const sendMail = document.querySelector('#afc-send-form button[type=submit]');
+  function setEditing(on) {
+    editingMail = on;
+    document.getElementById('afc-editor-meta').hidden = !on;
+    document.getElementById('afc-subject-preview').hidden = on;
+    editMail.hidden = on;
+    saveMail.hidden = !on;
+    cancelMail.hidden = !on;
+    if (sendMail) sendMail.disabled = on;
+    editResult.textContent = '';
+    if (on) {
+      const doc = mailFrame.contentDocument;
+      doc.body.classList.add('afc-editing');
+      for (const field of doc.querySelectorAll('[data-copy]')) {
+        field.textContent = copy[field.dataset.copy];
+        field.contentEditable = 'plaintext-only';
+        field.setAttribute('role', 'textbox');
+        field.tabIndex = 0;
+      }
+      subjectInput.focus();
+    } else {
+      subjectInput.value = copy.subject;
+      preheaderInput.value = copy.preheader;
+      mailFrame.srcdoc = mailFrame.getAttribute('srcdoc');
+      editMail.focus();
+    }
+    sizeMailPreview();
+  }
+  function bindMailPreview() {
+    const doc = mailFrame.contentDocument;
+    if (!doc?.querySelector('[data-copy]') || doc.body.dataset.editorReady) return;
+    doc.body.dataset.editorReady = 'true';
+    doc.addEventListener('click', event => {
+      const link = event.target.closest('a');
+      if (!link) return;
+      event.preventDefault();
+      if (!editingMail) window.open(link.href, '_blank', 'noopener,noreferrer');
+    });
+    doc.addEventListener('input', sizeMailPreview);
+    editMail.disabled = false;
+  }
+  editMail.disabled = true;
+  mailFrame.addEventListener('load', bindMailPreview);
+  bindMailPreview();
+  editMail.addEventListener('click', () => setEditing(true));
+  cancelMail.addEventListener('click', () => setEditing(false));
+  mailEditor.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!editingMail || saveMail.disabled) return;
+    const values = {...copy, subject:subjectInput.value, preheader:preheaderInput.value};
+    for (const field of mailFrame.contentDocument.querySelectorAll('[data-copy]')) {
+      values[field.dataset.copy] = field.innerText;
+    }
+    const payload = new FormData(mailEditor);
+    payload.set('fields', JSON.stringify(values));
+    saveMail.disabled = cancelMail.disabled = true;
+    try {
+      const response = await fetch(mailEditor.action, {method:'POST', body:payload, headers:{Accept:'application/json'}});
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || 'L’enregistrement a échoué.');
+      window.location.reload();
+    } catch (error) {
+      editResult.textContent = error instanceof SyntaxError ? 'La session a expiré ou le serveur est indisponible. Vos modifications restent affichées.' : error.message;
+      saveMail.disabled = cancelMail.disabled = false;
+    }
+  });
+  {% endif %}
   {% if report.active %}
   async function updateMailProgress() {
     try {
@@ -74,7 +179,7 @@
           row.style.display = count ? 'flex' : 'none';
           row.querySelector('dd').textContent = String(count);
         }
-        if (!state.active) { window.location.reload(); return; }
+        if (!state.active && !editingMail) { window.location.reload(); return; }
       }
     } catch { /* Retry on a transient network interruption. */ }
     window.setTimeout(updateMailProgress, 5000);
