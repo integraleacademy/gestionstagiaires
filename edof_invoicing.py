@@ -97,6 +97,14 @@ def fence(path, record, before, after):
                           (after,time.time(),record['token'],before)).rowcount==1
 
 
+def record_creation_rejection(path, token, message):
+    """Only a definitive validation refusal releases the Qonto creation fence."""
+    with closing(database(path)) as db, db:
+        db.execute("""UPDATE cpf_invoices SET status='review', message=?, changed=?, create_started=0
+                      WHERE token=? AND status='creating' AND qonto_id='' AND send_started=0""",
+                   (message, time.time(), token))
+
+
 def discover(store, owner, snapshot):
     from integrale_edof_dashboard import category
     state = ProviderStore(store.directory).state()
