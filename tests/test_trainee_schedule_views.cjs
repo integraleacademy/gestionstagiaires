@@ -72,6 +72,34 @@ test('planned, paid, scheduled and uncovered amounts stay distinct',()=>{
   assert.match(ctx.scheduleReadView(finance(ctx),true),/Programmation indisponible/);
 });
 
+test('one remaining monthly debit covers one installment in both the next view and the summary',()=>{
+  const ctx=ui();
+  ctx.currentLines=[{id:'L',paymentMode:'sepa_direct_debit',amountTTC:150}];
+  const pending={id:'issued',subscription_id:'series',frequency:'one_off',date:'2026-12-03',status:'pending',amount_cents:7500};
+  const series={id:'series',frequency:'monthly',date:pending.date,end_date:pending.date,status:'scheduled',
+    amount_cents:7500,remaining_count:1,remaining_cents:7500,open_collections:[pending]};
+  ctx.bankSnapshot={checked_at:'2026-11-07',upcoming:[series],history:[]};
+  const totals={...finance(ctx),qontoPaymentEntries:[],prixFormation:150,montantCpf:0,personalFundingPlanned:150,
+    otherFundingPlanned:0,totalFacture:150,resteAFacturer:0};
+  const next=ctx.nextBankOperations([series],'2026-11-07');
+  assert.equal(next.length,1);
+  assert.equal(next[0].date,pending.date);
+  assert.equal(next[0].frequency,'monthly');
+  for (const view of ['next','summary']) {
+    ctx.scheduleView=view;
+    const html=ctx.scheduleReadView(totals,false);
+    assert.match(html,/Reste à payer<\/span><strong>150.00/);
+    assert.match(html,/Programmé chez Qonto<\/span><strong>75.00/);
+    assert.match(html,/75.00<\/strong> à programmer/);
+    assert.doesNotMatch(html,/entièrement programmé|2 échéances restantes/);
+  }
+  series.remaining_cents=null; series.confirmed_cents=7500;
+  series.amount_cents=10000;
+  const uncertain=ctx.scheduleReadView(totals,false);
+  assert.match(uncertain,/Au moins 75.00/);
+  assert.doesNotMatch(uncertain,/à programmer|entièrement programmé/);
+});
+
 test('six tabs share the hors-CPF balance, including cash and transfers without a SEPA plan',()=>{
   const ctx=ui();
   ctx.currentLines=[{id:'L',financingType:'PERSONNEL',qontoBankTransferPaidCents:10000,qontoBankTransfers:[

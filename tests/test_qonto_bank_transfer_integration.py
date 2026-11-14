@@ -582,12 +582,13 @@ def test_transfer_after_partial_debit_keeps_both_receipts_and_reversal(third_par
 def test_only_unreserved_balance_is_available_and_is_rechecked(third_party, monkeypatch):
     client, data, trainee, fetch, detail = third_party
     sub = {'id': 'plan', 'status': 'scheduled', 'schedule_type': 'monthly',
+           'initial_collection_date': '2999-01-10', 'schedule_next_collection_date': '2999-02-10',
            'schedule_total_collection_count': 3, 'amount': {'value': '300.00', 'currency': 'EUR'}}
     data['billing_lines'][0].update(qonto_direct_debit_subscription_id='plan',
         directDebitInstallments=[{'amount': 300, 'status': 'completed',
                                  'qonto_direct_debit_subscription_id': 'plan', 'qonto_direct_debit_collection_id': 'paid'}])
-    ops = [{'id': 'paid', 'status': 'completed', 'amount': {'value': '300'}},
-           {'id': 'in-flight', 'status': 'on_hold', 'amount': {'value': '300'}}]
+    ops = [{'id': 'paid', 'status': 'completed', 'collection_date': '2999-01-10', 'amount': {'value': '300'}},
+           {'id': 'in-flight', 'status': 'on_hold', 'collection_date': '2999-02-10', 'amount': {'value': '300'}}]
     monkeypatch.setattr(gestion_app, 'get_qonto_direct_debit_subscription', lambda sid: sub)
     monkeypatch.setattr(gestion_app, 'list_qonto_direct_debit_collections', lambda **kw: {'collections': ops})
     fetch.return_value[0]['amount_cents'] = 35001

@@ -1,3 +1,4 @@
+from datetime import date
 from unittest.mock import patch
 
 import pytest
@@ -125,8 +126,8 @@ def test_scheduled_collections_stay_out_of_history_and_missing_statement_dates_a
 
 
 def test_finite_recurrence_reserves_only_unissued_and_unsettled_collections():
-    sub = subscription('monthly', '2026-12-04', schedule_type='monthly', schedule_total_collection_count=4)
-    ops = [dict(id=str(i), direct_debit_subscription_id='monthly', collection_date='2026-10-04',
+    sub = subscription('monthly', '2999-12-04', schedule_type='monthly', schedule_total_collection_count=4)
+    ops = [dict(id=str(i), direct_debit_subscription_id='monthly', collection_date='2020-10-04',
                 status=status, amount={'value': value})
            for i, (status, value) in enumerate([('completed', '367.50'), ('declined', '367.50'), ('on_hold', '200.00')])]
     with patch.object(gestion, 'list_qonto_direct_debit_subscriptions', return_value={'items': [sub]}), \
@@ -135,6 +136,50 @@ def test_finite_recurrence_reserves_only_unissued_and_unsettled_collections():
     assert [(r['remaining_count'], r['remaining_cents']) for r in upcoming] == [(2, 56750)]
     assert len(history) == 2
     assert [r['id'] for r in upcoming[0]['open_collections']] == ['2']
+
+
+@pytest.mark.parametrize('last_date', ['2999-04-10', None])
+def test_missed_first_date_is_not_counted_as_a_future_debit_or_reserved_again(last_date):
+    # The first of two monthly slots was never presented. Only the last slot was issued.
+    sub = subscription('new', '2999-04-10', schedule_type='monthly', initial_collection_date='2999-03-10',
+                       schedule_end_date=last_date, schedule_total_collection_count=2)
+    issued = dict(id='only', direct_debit_subscription_id='new', status='pending', collection_date='2999-04-10',
+                  amount=sub['amount'])
+    line = {'qonto_direct_debit_subscription_id': 'new'}
+    with patch.object(gestion, 'list_qonto_direct_debit_subscriptions', return_value={'items': [sub]}), \
+         patch.object(gestion, 'get_qonto_direct_debit_subscription', return_value={'direct_debit_subscription': sub}), \
+         patch.object(gestion, 'list_qonto_direct_debit_collections', return_value={'items': [issued, issued]}):
+        schedule, history, _ = gestion._trainee_bank_schedule([line])
+        assert not history and len(schedule) == 1
+        assert (schedule[0]['remaining_count'], schedule[0]['remaining_cents']) == (1, 36750)
+        assert [item['id'] for item in schedule[0]['open_collections']] == ['only']
+        assert '_calendar' not in schedule[0]
+        with patch.object(gestion, 'list_qonto_direct_debit_collections', return_value={'items': [issued]}):
+            assert gestion._manual_bank_debit_totals(line) == (36750, 0)
+
+
+@pytest.mark.parametrize(('calendar', 'issued', 'unissued'), [
+    # Initial month-end remains the anchor after a short month.
+    ({'schedule_type':'monthly', 'initial_collection_date':'2028-01-31', 'schedule_next_collection_date':'2028-02-29',
+      'schedule_end_date':'2028-04-30', 'schedule_total_collection_count':4}, ['2028-02-29'], 2),
+    # An already issued past collection is counted separately from future dates.
+    ({'schedule_type':'monthly', 'initial_collection_date':'2028-01-31', 'schedule_next_collection_date':'2028-02-29',
+      'schedule_total_collection_count':4}, ['2028-01-31', '2028-02-29'], 2),
+    ({'schedule_type':'custom', 'schedule_custom_interval':2, 'schedule_custom_unit':'weeks',
+      'initial_collection_date':'2028-01-24', 'schedule_next_collection_date':'2028-02-21',
+      'schedule_total_collection_count':4}, ['2028-02-21'], 1),
+    ({'schedule_type':'monthly', 'initial_collection_date':'2027-11-10', 'schedule_end_date':'2027-12-10',
+      'schedule_total_collection_count':2}, [], 0),
+    ({'schedule_type':'monthly', 'schedule_next_collection_date':'2028-03-10', 'schedule_total_collection_count':4},
+     ['2028-03-10'], None),
+    ({'schedule_type':'monthly', 'schedule_next_collection_date':'2028-03-10'}, ['2028-03-10'], None),
+    ({'schedule_type':'monthly', 'initial_collection_date':'2028-01-10', 'schedule_next_collection_date':'2028-03-10',
+      'schedule_total_collection_count':3}, [None], None),
+    ({'schedule_type':'one_off', 'initial_collection_date':'2028-01-10'}, [], None),
+    ({'schedule_type':'one_off', 'initial_collection_date':'2028-03-10'}, [], 1),
+])
+def test_confirmed_unissued_slots_use_qontos_dates(calendar, issued, unissued):
+    assert gestion._qonto_unissued_count(calendar, issued, date(2028, 2, 15)) == unissued
 
 
 def test_one_off_is_not_still_programmed_once_its_collection_is_returned():
