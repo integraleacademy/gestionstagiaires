@@ -224,7 +224,7 @@
 <div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
     <h1 style="margin:0;">{{ 'Candidats AFC archivés' if show_archived else 'Gestion des AFC' }}</h1>
-    <div style="display:flex;gap:8px;">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
       {% if show_archived %}
       <a class="btn btn-outline" href="{{ url_for('admin_afc') }}">← Retour aux candidats actifs</a>
       {% else %}
@@ -234,6 +234,7 @@
       <button class="btn btn-danger" id="btnDeleteAllCandidates" type="button">Supprimer toutes les lignes</button>
       <button class="btn btn-primary" id="btnAddCandidate">Ajouter un candidat</button>
       <button class="btn" id="btnNotifyPending" type="button">Notifier tous les candidats</button>
+      <a class="btn btn-primary" href="{{ url_for('admin_afc_training_mail') }}">Préparer l’e-mail formations 2027</a>
       <button class="btn btn-orange" id="btnImportCandidates" type="button">↥ Importer</button>
       <a class="btn btn-outline" href="{{ url_for('admin_afc_export') }}" target="_blank" rel="noopener">Export</a>
       {% endif %}

@@ -48,6 +48,7 @@ import exam_retakes
 import training_convocations
 import afc_documents
 import afc_enrolments
+import afc_training_mail
 import afc_hours
 import exam_context
 from exam_jury_overview import summary as exam_jury_summary
@@ -16827,6 +16828,9 @@ PARTNER_SPACE_FORBIDDEN_ENDPOINTS = {
     "admin_positioning_test_detail",
     "admin_financement_refuse_submit",
     "admin_afc",
+    "admin_afc_training_mail",
+    "admin_afc_training_mail_send",
+    "api_afc_training_mail_status",
     "api_admin_afc_create_candidate",
     "api_admin_afc_import_image_preview",
     "api_admin_afc_import_image_confirm",
@@ -58651,6 +58655,7 @@ ssiap_exam.register(app, sys.modules[__name__])
 import identity_photos
 identity_photos.register(app, sys.modules[__name__])
 afc_enrolments.register(app, sys.modules[__name__])
+afc_training_mail.register(sys.modules[__name__])
 afc_hours.register(app, sys.modules[__name__])
 uv_questionnaires.register(app, sys.modules[__name__])
 aps_kickoff.register(app, sys.modules[__name__])

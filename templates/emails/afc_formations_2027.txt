@@ -1,0 +1,26 @@
+Bonjour{% if first_name %} {{ first_name }}{% endif %},
+
+Vous nous avez contactés pour la formation d’agent de sécurité privée et d’agent de sécurité incendie. En raison des restrictions budgétaires, France Travail ne financera pas de nouvelle session collective APS + SSIAP 1 chez Intégrale Academy en 2027. Deux parcours s’offrent à vous à Puget-sur-Argens.
+
+FORMATION COURTE — AGENT DE PRÉVENTION ET DE SÉCURITÉ
+
+En 175 heures, vous préparez le TFP APS et apprenez à contrôler les accès, à surveiller un site et à intervenir en cas d’incident.
+À distance du 4 au 14 janvier 2027. En centre du 15 janvier au 8 février. Examen le 9 février 2027.
+
+Trois possibilités pour financer cette session :
+• Votre compte personnel de formation (CPF) peut couvrir tout ou partie des frais. Vous pouvez consulter vos droits et le reste à payer dans votre espace personnel sur Mon Compte Formation.
+• Si une entreprise souhaite vous embaucher après la formation, une promesse d’embauche peut permettre d’étudier avec elle et votre conseiller une préparation opérationnelle à l’emploi individuelle (POEI). La prise en charge dépend de l’accord préalable de France Travail.
+• En financement personnel, le tarif est de 1 700 € TTC. Vous pouvez demander un devis et les modalités de règlement.
+
+PARCOURS SÉCURITÉ EN ALTERNANCE — MOINS DE 29 ANS
+
+De janvier à décembre 2027, vous alternez les cours à Puget-sur-Argens et les missions chez votre employeur. Vous préparez trois qualifications : agent de prévention et de sécurité (APS), agent de protection physique des personnes (A3P, protection rapprochée) et agent de sécurité incendie et d’assistance à personnes (SSIAP 1).
+Avec un contrat d’apprentissage, vos frais de formation sont pris en charge et vous percevez un salaire en centre comme en entreprise.
+Pour le calendrier ou la recherche d’un employeur, écrivez à Aurélie à aurelie@integraleacademy.com.
+
+Vous hésitez entre les deux parcours ou vous avez déjà une promesse d’embauche ? Répondez simplement à ce mail ou appelez-moi. Nous pourrons regarder ensemble ce qui convient à votre situation.
+
+Cassandre Ménard
+Responsable commerciale · Intégrale Academy
+cassandre@integraleacademy.com · 04 22 47 07 68
+54 chemin du Carreou, 83480 Puget-sur-Argens

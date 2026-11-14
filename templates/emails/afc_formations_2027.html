@@ -1,0 +1,43 @@
+{% extends "emails/_base.html" %}
+{% set email_signature = 'cassandre' %}
+{% block email_title %}{{ subject }}{% endblock %}
+{% block preheader %}Votre dossier AFC à Puget-sur-Argens, les dates de l’APS et la rentrée en apprentissage.{% endblock %}
+{% block eyebrow %}Côte d’Azur &nbsp;·&nbsp; Janvier 2027{% endblock %}
+{% block heading %}Se former à la sécurité{% endblock %}
+{% block subtitle %}Deux parcours à Puget-sur-Argens{% endblock %}
+{% block email_content %}
+<p style="margin:0 0 12px;color:#142e51;font-weight:bold">Bonjour{% if first_name %} {{ first_name }}{% endif %},</p>
+<p style="margin:0 0 12px">Vous nous avez contactés pour la formation d’agent de sécurité privée et d’agent de sécurité incendie. Nous revenons vers vous pour vous permettre d’organiser la suite de votre projet.</p>
+<p style="margin:0 0 28px">En raison des restrictions budgétaires, <strong>France Travail ne financera pas de nouvelle session collective APS + SSIAP 1 chez Intégrale Academy en 2027.</strong> Deux parcours s’offrent à vous en janvier, selon le métier que vous visez et votre situation.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#f1f5fc;border-top:4px solid #305ab0;border-radius:8px"><tr><td style="padding:20px 22px">
+  <p style="margin:0 0 6px;font:14px/1.4 Georgia,serif;font-style:italic;color:#36578a">La formation courte &nbsp;·&nbsp; 175 heures</p>
+  <h2 style="margin:0 0 10px;font:700 23px/1.2 Arial,sans-serif;color:#132f56">Agent de prévention et de sécurité</h2>
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.55">Vous préparez le titre à finalité professionnelle d’agent de prévention et de sécurité (TFP APS). Vous apprenez à contrôler les accès, à surveiller un site et à intervenir en cas d’incident.</p>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font:15px/1.45 Arial,sans-serif;color:#233d60">
+    <tr><td style="padding:6px 8px 6px 0;border-top:1px solid #cfdaeb">À distance</td><td style="padding:6px 0;border-top:1px solid #cfdaeb"><strong>4 au 14 janvier 2027</strong></td></tr>
+    <tr><td style="padding:6px 8px 6px 0;border-top:1px solid #cfdaeb">À Puget-sur-Argens</td><td style="padding:6px 0;border-top:1px solid #cfdaeb"><strong>15 janvier au 8 février</strong></td></tr>
+    <tr><td style="padding:6px 8px 6px 0;border-top:1px solid #cfdaeb">Examen</td><td style="padding:6px 0;border-top:1px solid #cfdaeb"><strong>9 février 2027</strong></td></tr>
+  </table>
+</td></tr></table>
+
+<h3 style="margin:19px 0 12px;font:700 17px/1.4 Arial,sans-serif;color:#132f56">Comment financer l’APS ?</h3>
+<p style="margin:0 0 12px;font-size:15px;line-height:1.6"><strong style="color:#183a69">Votre compte personnel de formation (CPF).</strong> Vos droits peuvent couvrir tout ou partie des frais. Vous pouvez consulter vos droits et le reste à payer dans votre espace personnel sur Mon Compte Formation.</p>
+<p style="margin:0 0 12px;font-size:15px;line-height:1.6"><strong style="color:#183a69">Une entreprise prête à vous embaucher.</strong> Si un employeur vous propose un poste après la formation, une promesse d’embauche peut servir de point de départ. Avec l’entreprise et votre conseiller France Travail, nous pouvons étudier une préparation opérationnelle à l’emploi individuelle (POEI). La prise en charge dépend de l’accord de France Travail avant l’entrée en formation.</p>
+<p style="margin:0 0 26px;font-size:15px;line-height:1.6"><strong style="color:#183a69">Un financement personnel.</strong> Le tarif de la session est de <strong>1 700 € TTC</strong>. Si vous envisagez de la financer vous-même, vous pouvez nous demander un devis et les modalités de règlement avant de vous décider.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#eef6f2;border-top:4px solid #427764;border-radius:8px"><tr><td style="padding:20px 22px">
+  <p style="margin:0 0 6px;font:14px/1.4 Georgia,serif;font-style:italic;color:#376452">L’alternance &nbsp;·&nbsp; Rentrée de janvier 2027</p>
+  <h2 style="margin:0 0 10px;font:700 23px/1.2 Arial,sans-serif;color:#173f34">Un an pour préparer trois qualifications</h2>
+  <p style="margin:0 0 12px;font-size:15px;line-height:1.55">Ce parcours est ouvert aux <strong>moins de 29 ans</strong>. De janvier à décembre 2027, vous alternez les cours à Puget-sur-Argens et les missions chez votre employeur.</p>
+  <ul style="margin:0 0 13px;padding-left:20px;font-size:15px;line-height:1.55">
+    <li><strong>APS</strong> · Agent de prévention et de sécurité</li>
+    <li><strong>A3P</strong> · Agent de protection physique des personnes (protection rapprochée)</li>
+    <li><strong>SSIAP 1</strong> · Agent de sécurité incendie et d’assistance à personnes</li>
+  </ul>
+  <p style="margin:0;font-size:15px;line-height:1.55">Avec un <strong>contrat d’apprentissage</strong>, les frais de formation sont pris en charge et vous percevez un salaire, en centre comme en entreprise.</p>
+</td></tr></table>
+<p style="margin:14px 0 7px;font-size:15px;line-height:1.6">Pour l’alternance, Aurélie peut vous renseigner sur le calendrier et vous accompagner dans la recherche d’un employeur.</p>
+<p style="margin:0 0 24px"><a href="mailto:aurelie@integraleacademy.com?subject=Parcours%20s%C3%A9curit%C3%A9%20en%20alternance%20-%20janvier%202027" style="display:inline-block;padding:10px 16px;background:#205844;border-radius:6px;color:#ffffff;font:700 14px/1.4 Arial,sans-serif;text-decoration:none">Écrire à Aurélie pour l’alternance</a></p>
+<p style="margin:0;font-size:15px;line-height:1.6">Vous hésitez entre les deux parcours ou vous avez déjà une promesse d’embauche ? Répondez simplement à ce mail ou appelez-moi au <a href="tel:+33422470768" style="color:#193e7f;font-weight:bold;white-space:nowrap">04 22 47 07 68</a>. Nous pourrons regarder ensemble ce qui convient à votre situation.</p>
+{% endblock %}
