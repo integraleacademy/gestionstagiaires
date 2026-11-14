@@ -42,6 +42,16 @@ def test_unrelated_stale_save_preserves_completed_invoice_and_plan():
     assert stale["sessions"][0]["comment"] == "edited administrator comment"
 
 
+def test_two_concurrent_collection_returns_survive_a_mandate_replacement():
+    stale = track_payload(document(line(qonto_direct_debit_mandate_id="old")))
+    stale["billing_lines"][0]["qontoReturnedCollections"] = {"a": {"id": "a", "status": "returned"}}
+    current = document(line(qonto_direct_debit_mandate_id="new",
+                            qontoReturnedCollections={"b": {"id": "b", "status": "returned"}}))
+    merge_billing_state(stale, current)
+    assert stale["billing_lines"][0]["qonto_direct_debit_mandate_id"] == "new"
+    assert set(stale["billing_lines"][0]["qontoReturnedCollections"]) == {"a", "b"}
+
+
 def test_stale_mandate_attachment_keeps_invoice_and_all_bank_ids():
     stale = track_payload(document())
     stale["billing_lines"][0].update(

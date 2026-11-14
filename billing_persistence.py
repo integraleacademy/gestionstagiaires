@@ -77,7 +77,7 @@ _GROUPS = {
 }
 _HISTORIES = frozenset(("logs", "billingHistory"))
 _METADATA = frozenset(("createdAt", "updatedAt", "qontoAutoSyncAttemptedAt"))
-_MANAGED = frozenset().union(*_GROUPS.values(), _HISTORIES, _METADATA)
+_MANAGED = frozenset().union(*_GROUPS.values(), _HISTORIES, _METADATA, {"qontoReturnedCollections"})
 _MISSING = object()
 _DEFAULTS = {
     "invoiceStatus": "not_invoiced",
@@ -182,6 +182,13 @@ def _merge_row(line_id, base, incoming, current):
     for key in _HISTORIES:
         if key in current or key in incoming:
             result[key] = _history(current.get(key), incoming.get(key))
+    if current.get("qontoReturnedCollections") or incoming.get("qontoReturnedCollections"):
+        # Returns belong to the billing line across mandate replacements.
+        # Concurrent observations of different collection IDs both survive.
+        result["qontoReturnedCollections"] = deepcopy({
+            **(incoming.get("qontoReturnedCollections") or {}),
+            **(current.get("qontoReturnedCollections") or {}),
+        })
     if result != current and incoming.get("updatedAt"):
         result["updatedAt"] = incoming["updatedAt"]
     if not result.get("createdAt") and incoming.get("createdAt"):
