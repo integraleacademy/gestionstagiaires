@@ -55,6 +55,32 @@ def test_authenticated_crm_feed_uses_verified_directory_only(monkeypatch):
     assert client.get(url+"/dossiers", headers=headers).status_code == 503
 
 
+def test_requests_match_dashboard_even_with_stale_account_and_repeated_candidate(monkeypatch):
+    from integrale_edof_dashboard import dashboard_rows
+    import datetime as dt
+
+    def row(number, state="notProcessed"):
+        return {"folder_id": number, "state": state, "first_name": "Alice", "last_name": "Exemple"}
+
+    old = {"checked": 100, "rows": {k: row(k) for k in ("100001", "100002", "100003", "100004")}}
+    current = {"checked": 110, "pending_checked": 200, "pending_ids": {"100002", "100003", "100005"},
+               "rows": {**{k: row(k) for k in ("100002", "100003", "100004")}, "100005": row("100005", "accepted")}}
+    snapshots = {"z-older": old, "a-newer": current}
+    app, private = Flask(__name__), Mock()
+    private.get.return_value = {}
+    monkeypatch.setattr(feed, "snapshot_owners", lambda _: snapshots)
+    monkeypatch.setattr(feed, "observed_rows", lambda store, owner, snapshot: snapshot["rows"])
+    monkeypatch.setattr(feed.details, "known_details", lambda vault, owner: set())
+    feed.register_crm_feed(app, Mock(connector_key="ok"), lambda: private, snapshots.get, category, lambda f: f, lambda: True)
+    client = app.test_client()
+    response = client.get("/api/integrations/crm/integrale-edof/dossiers?scope=requests")
+    rows, counts = dashboard_rows(current, {}, {}, dt.datetime.now(dt.timezone.utc))
+    assert response.headers["X-Total-Count"] == str(counts["request"]) == "2"
+    assert {r["externalId"] for r in response.json["items"]} == {r["folder_id"] for r in rows if "request" in r["tags"]}
+    all_folders = client.get("/api/integrations/crm/integrale-edof/dossiers").json["items"]
+    assert "100001" in {r["externalId"] for r in all_folders}
+
+
 def test_crm_transfer_signs_native_body_and_checks_receipt(monkeypatch):
     import hmac
     import integrale_edof_crm_delivery as delivery

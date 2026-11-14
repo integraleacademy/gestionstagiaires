@@ -193,7 +193,7 @@ def dashboard_rows(snapshot, data, operations, now):
             tags.add("training")
         if kind in {"declared", "billable"}:
             tags.add("service")
-        if kind == "request" and "pending_ids" in snapshot and folder not in snapshot["pending_ids"]:
+        if kind == "request" and not views.in_pending_requests(folder, kind, snapshot):
             tags.discard("request")
         if evaluation in {"planned", "unconfirmed", "ready"}:
             tags.add("due")

@@ -10,6 +10,7 @@ from flask import Blueprint, jsonify, request
 from edof_directory import normalized
 from edof_readonly_test import ID_RE
 from integrale_edof_associations import observed_rows, snapshot_owners
+from integrale_edof_views import in_pending_requests
 
 
 CRM_STATES = {
@@ -75,6 +76,7 @@ def register_crm_feed(app, store, vault, snapshot, category, authorized, active)
 
     def load_directory():
         rows, checked = {}, None
+        pending_ids, pending_revision = None, None
         private = vault()
         for owner in sorted(snapshot_owners(private)):
             saved = snapshot(owner)
@@ -84,6 +86,13 @@ def register_crm_feed(app, store, vault, snapshot, category, authorized, active)
             checked = max(checked or 0, base, *(saved.get(k) or 0 for k in (
                 "pending_checked", "accepted_checked", "receipt_checked")))
             subset = saved.get("rows", {})
+            # All owners observe the same academy. A newer complete request
+            # list supersedes missing folders from older browser histories.
+            revision = max(base, saved.get("pending_checked") or 0)
+            if (base or "pending_ids" in saved) and (pending_revision is None or revision >= pending_revision):
+                pending_ids = {ident for ident, row in subset.items()
+                               if in_pending_requests(ident, category(row), saved)}
+                pending_revision = revision
             saved_details = details.known_details(private, owner)
             pending_contacts = private.get("crm-pending-contacts:" + owner) or {}
             for ident, row in observed_rows(store, owner, {"rows":subset}).items():
@@ -94,7 +103,7 @@ def register_crm_feed(app, store, vault, snapshot, category, authorized, active)
                 stamp = row.get("observed_at") or base
                 if ident not in rows or stamp >= rows[ident][0]:
                     rows[ident] = (stamp, row, owner, ident in saved_details)
-        return rows, checked
+        return rows, checked, pending_ids
 
     def current_directory():
         nonlocal cached, expires
@@ -118,7 +127,7 @@ def register_crm_feed(app, store, vault, snapshot, category, authorized, active)
             return jsonify(error="Page invalide"), 400
         page = int(page)
         status_only = request.path.endswith("/status")
-        rows, checked = current_directory()
+        rows, checked, pending_ids = current_directory()
         if checked is None:
             return jsonify(error="Aucune liste EDOF synchronisée"), 503
         if status_only:
@@ -144,7 +153,9 @@ def register_crm_feed(app, store, vault, snapshot, category, authorized, active)
             return jsonify(export(folder_id))
         ids = sorted(rows, reverse=True)
         if request.args.get("scope") == "requests":
-            ids = [ident for ident in ids if category(rows[ident][1]) == "request"]
+            if pending_ids is None:
+                return jsonify(error="Aucune liste de demandes EDOF synchronisée"), 503
+            ids = [ident for ident in ids if ident in pending_ids and category(rows[ident][1]) == "request"]
         size = 100
         items = [export(i) for i in ids[(page-1)*size:page*size]]
         return jsonify(items=items), 200, {"X-Current-Page": str(page), "X-Item-Per-Page": str(size),

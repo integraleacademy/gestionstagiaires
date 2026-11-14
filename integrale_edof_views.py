@@ -84,6 +84,10 @@ def in_group(row, group):
     return group == "all" or KIND_GROUP.get(row["kind"]) == group
 
 
+def in_pending_requests(folder, kind, snapshot):
+    return kind == "request" and ("pending_ids" not in snapshot or folder in snapshot["pending_ids"])
+
+
 def period_key(row):
     return (row.get("session_start_date") or "") + "/" + (row.get("session_end_date") or "")
 
