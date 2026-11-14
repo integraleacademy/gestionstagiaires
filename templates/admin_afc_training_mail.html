@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .afc-mail{max-width:1180px;margin:0 auto;color:#162e4f}
+  .afc-mail-back{display:inline-block;margin-bottom:14px;color:#425a77;font-size:14px}
+  .afc-mail h1{margin:0 0 20px;font-size:clamp(25px,3vw,34px)}
+  .afc-mail-grid{display:grid;grid-template-columns:minmax(255px,.72fr) minmax(0,1.65fr);align-items:start;gap:20px}
+  .afc-mail-panel{background:#fff;border:1px solid #dce4ed;border-radius:15px;padding:21px;min-width:0}
+  .afc-mail h2{margin:0 0 12px;font-size:20px}
+  .afc-mail-side p,.afc-mail-side summary{font-size:14px;line-height:1.55}
+  .afc-mail-side summary{cursor:pointer;color:#254d80;font-weight:650}
+  .afc-mail-side ul{max-height:260px;overflow:auto;margin:10px 0;padding-left:20px;overflow-wrap:anywhere}
+  .afc-mail-side form{margin-top:18px}.afc-mail-side .btn{white-space:normal;width:100%}
+  .afc-mail-side dl{margin:0 0 14px}.afc-mail-side dl div{display:flex;justify-content:space-between;gap:12px;padding:5px 0}
+  .afc-mail-side dd{margin:0;font-weight:700}.afc-mail-side hr{border:0;border-top:1px solid #dce4ed;margin:19px 0}
+  .afc-mail-preview{padding:0;overflow:hidden}.afc-mail-preview header{padding:16px 20px}
+  .afc-mail-preview header h2{margin-bottom:5px;font-size:16px}.afc-mail-preview header p{margin:0;font-size:14px}
+  .afc-mail-preview iframe{display:block;width:100%;height:1500px;border:0;background:#eef2f7}
+  @media(max-width:780px){.afc-mail-grid{grid-template-columns:1fr}.afc-mail-panel{padding:16px}.afc-mail-preview{padding:0}}
+</style>
+<main class="afc-mail">
+  <a class="afc-mail-back" href="{{ url_for('admin_afc') }}">← Gestion des AFC</a>
+  <h1>E-mail formations 2027</h1>
+  <div class="afc-mail-grid">
+    <section class="afc-mail-panel afc-mail-side">
+      <h2>Destinataires</h2>
+      <p>Les candidats de la liste AFC active sont inclus, quelle que soit leur présence à l’ICOP. Les dossiers retenus et les refus du CNAPS sont exclus.</p>
+      {% if recipients %}
+        <details><summary>Voir les {{ recipients|length }} destinataire{{ 's' if recipients|length > 1 }} à contacter</summary>
+          <ul>{% for email, person in recipients.items() %}<li><strong>{{ person.prenom }} {{ person.nom }}</strong><br>{{ email }}</li>{% endfor %}</ul>
+        </details>
+      {% else %}<p><strong>Aucun destinataire supplémentaire à contacter.</strong></p>{% endif %}
+      {% if recipients and not is_read_only and not report.active %}
+        <form method="post" action="{{ url_for('admin_afc_training_mail_send') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf }}">
+          <input type="hidden" name="audience" value="{{ digest }}">
+          <button class="btn btn-primary" type="submit">Envoyer à {{ recipients|length }} destinataire{{ 's' if recipients|length > 1 }}</button>
+        </form>
+      {% endif %}
+      {% if report.counts %}
+        <hr><h2>Suivi des envois</h2>
+        <dl aria-live="polite">{% for key, label in labels.items() %}<div data-mail-count="{{ key }}" {% if not report.counts.get(key) %}hidden style="display:none"{% endif %}><dt>{{ label }}</dt><dd>{{ report.counts.get(key, 0) }}</dd></div>{% endfor %}</dl>
+        {% if report.active %}<p>L’envoi continue si vous quittez cette page.</p>{% endif %}
+        {% if issues %}<details><summary>Voir les envois à vérifier</summary><ul>{% for row in issues %}
+          <li><strong>{{ row.email }}</strong><br>{{ labels[row.status] }}{% if row.error %} · {{ row.error }}{% endif %}</li>
+        {% endfor %}</ul></details>{% endif %}
+      {% endif %}
+    </section>
+    <section class="afc-mail-panel afc-mail-preview">
+      <header><h2>Aperçu du message</h2><p><strong>Objet</strong> · {{ subject }}</p></header>
+      <iframe id="afc-mail-preview" sandbox="allow-same-origin" title="Aperçu de l’e-mail formations 2027" srcdoc="{{ message|forceescape }}"></iframe>
+    </section>
+  </div>
+</main>
+<script>
+  const mailFrame = document.getElementById('afc-mail-preview');
+  function sizeMailPreview() {
+    const body = mailFrame.contentDocument?.body;
+    if (body?.firstElementChild) mailFrame.style.height = Math.ceil(body.getBoundingClientRect().height) + 'px';
+  }
+  mailFrame.addEventListener('load', sizeMailPreview);
+  window.addEventListener('resize', sizeMailPreview);
+  sizeMailPreview();
+  {% if report.active %}
+  async function updateMailProgress() {
+    try {
+      const response = await fetch({{ url_for('api_afc_training_mail_status')|tojson }}, {cache:'no-store'});
+      if (response.status === 401 || response.status === 403) return;
+      if (response.ok) {
+        const state = await response.json();
+        for (const row of document.querySelectorAll('[data-mail-count]')) {
+          const count = state.counts[row.dataset.mailCount] || 0;
+          row.hidden = !count;
+          row.style.display = count ? 'flex' : 'none';
+          row.querySelector('dd').textContent = String(count);
+        }
+        if (!state.active) { window.location.reload(); return; }
+      }
+    } catch { /* Retry on a transient network interruption. */ }
+    window.setTimeout(updateMailProgress, 5000);
+  }
+  window.setTimeout(updateMailProgress, 3000);
+  {% endif %}
+</script>
+{% endblock %}

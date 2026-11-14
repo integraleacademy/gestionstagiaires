@@ -37,11 +37,12 @@ def post_worker_init(worker):
     parcours_alternance.start_worker(legacy_app)
     import exam_retakes
     exam_retakes.start_worker(legacy_app)
+    legacy_app.afc_training_mail.start_worker(legacy_app)
 
 
 def worker_exit(server, worker):
     import app as legacy_app
-    for name in ("vtc_elearning_worker", "parcours_alternance_worker", "exam_retakes_worker"):
+    for name in ("vtc_elearning_worker", "parcours_alternance_worker", "exam_retakes_worker", "afc_training_mail_worker"):
         state = legacy_app.app.extensions.get(name)
         if state:
             state["stop"].set()
