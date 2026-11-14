@@ -30,7 +30,8 @@ class AdminTraineeRescheduleDebitTests(unittest.TestCase):
         self.assertIn("Rejet traité", template)
         self.assertIn("logicalInstallmentsForLine", template)
         self.assertIn("Échéancier initial", template)
-        self.assertIn("Historique du suivi local", template)
+        self.assertIn("Historique complet", template)
+        self.assertIn("scheduleAuditEvents(lines)", template)
         self.assertIn("montantTotalEcheancier", template)
 
     def test_endpoint_keeps_rejection_as_treated_and_adds_a_distinct_retry(self):

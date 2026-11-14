@@ -45884,14 +45884,15 @@ def _manual_bank_debit_totals(line):
             sub = subscriptions.get(sid) or _qonto_direct_debit_subscription_payload(get_qonto_direct_debit_subscription(sid))
             if sub.get('id') != sid:
                 raise ValueError('Le prélèvement rattaché au dossier n’a pas pu être vérifié dans Qonto.')
-        count = unit_amount = 0
-        if sub and str(sub.get('status') or '').lower() not in {'completed', 'cancelled', 'canceled'}:
-            count = 1 if sub.get('schedule_type') == 'one_off' else _positive_installment_int(sub.get('schedule_total_collection_count'))
+        active_subscription = sub and str(sub.get('status') or '').lower() not in {'completed', 'cancelled', 'canceled'}
+        unit_amount = 0
+        if active_subscription:
             unit_amount = _qonto_collection_amount_cents(sub)
-            if (not count or unit_amount <= 0 or sub.get('status') not in pending
+            if (unit_amount <= 0 or sub.get('status') not in pending
                     or (isinstance(sub.get('amount'), dict) and sub['amount'].get('currency', 'EUR') != 'EUR')):
                 raise ValueError('Un échéancier Qonto reste actif et son montant restant est indéterminé. Vérifiez-le avant l’affectation.')
         seen = set()
+        collection_dates = []
         pending_cents = 0
         # Legacy attachments may have only a collection id; scope the result
         # locally in that case. Never count the rest of a shared subscription.
@@ -45909,6 +45910,7 @@ def _manual_bank_debit_totals(line):
             if cid in seen:
                 raise ValueError('Qonto a renvoyé plusieurs fois le même prélèvement. Relancez la recherche.')
             seen.add(cid)
+            collection_dates.append(item.get('collection_date'))
             if status in inactive:
                 continue
             amount = _qonto_collection_amount_cents(item)
@@ -45942,9 +45944,11 @@ def _manual_bank_debit_totals(line):
                     and str(row.get('status') or '').lower() not in inactive}
         if (expected | attached.get(sid, set())) - seen:
             raise ValueError(discrepancy)
-        # Each prior collection represents one occurrence of the subscription.
-        # Pending collections are reserved separately at their actual amount.
-        pending_cents += max(count - len(seen), 0) * unit_amount
+        if active_subscription:
+            unissued = _qonto_unissued_count(sub, collection_dates, datetime.datetime.now(ZoneInfo('Europe/Paris')).date())
+            if unissued is None:
+                raise ValueError('Un échéancier Qonto reste actif et son montant restant est indéterminé. Vérifiez-le avant l’affectation.')
+            pending_cents += unissued * unit_amount
         reserved += pending_cents
     if any(row.get('qonto_direct_debit_collection_id') or row.get('qonto_direct_debit_subscription_id')
            for row in paid_rows):
@@ -46509,7 +46513,72 @@ def _read_debit_statement_dates(history):
     _match_debit_transaction_dates(history, transactions)
 
 
-def _bank_schedule_upcoming(subscriptions, collections):
+def _qonto_unissued_count(subscription, collection_dates, today):
+    """Count future slots not already issued. None means the bank calendar is insufficient."""
+    frequency = subscription.get('schedule_type')
+    start = _parse_date_safe(subscription.get('initial_collection_date'))
+    next_day = _parse_date_safe(subscription.get('schedule_next_collection_date'))
+    end = _parse_date_safe(subscription.get('schedule_end_date'))
+    if frequency == 'one_off':
+        if collection_dates:
+            return 0
+        due = next_day or start
+        # A one-off can still be presented after its initial date.
+        return 1 if due and due >= today else None
+    total = _positive_installment_int(subscription.get('schedule_total_collection_count'))
+    ceiling = max(0, total - len(collection_dates)) if total else None
+    if ceiling == 0:
+        return 0
+    if end and end < today:
+        return 0
+    if not next_day:
+        return None
+    cutoff = max(today, next_day)
+    if end and next_day > end:
+        return None
+    dated = [_parse_date_safe(value) for value in collection_dates]
+    if any(day is None for day in dated):
+        return None
+    issued_ahead = {day for day in dated if day >= cutoff}
+    # A dated next occurrence can account for the last unissued slot even when
+    # a legacy response omits the start or end of the original series.
+    if ceiling == 1 and next_day >= today and next_day not in issued_ahead:
+        return 1
+    if next_day == end:
+        return int(next_day not in issued_ahead)
+
+    unit, step = {
+        'weekly': ('weeks', 1), 'monthly': ('months', 1),
+        'quarterly': ('months', 3), 'yearly': ('months', 12),
+    }.get(frequency, (None, 0))
+    if frequency == 'custom':
+        unit = subscription.get('schedule_custom_unit')
+        step = _positive_installment_int(subscription.get('schedule_custom_interval'))
+        if unit == 'years':
+            unit, step = 'months', 12 * step
+    if not start or not step or unit not in {'weeks', 'months'} or (not total and not end):
+        return None
+
+    def slot_count(day, inclusive=False):
+        if day <= start:
+            return int(inclusive and day == start)
+        if unit == 'weeks':
+            days = (day - start).days
+            return 1 + (days if inclusive else days - 1) // (7 * step)
+        months = (day.year - start.year) * 12 + day.month - start.month
+        index = months // step
+        slot = _add_months(start, index * step)
+        return index + int(slot < day or (inclusive and slot == day))
+
+    if end:
+        through_end = slot_count(end, inclusive=True)
+        total = min(total, through_end) if total else through_end
+    slots = max(0, total - slot_count(cutoff))
+    unissued = max(0, slots - len(issued_ahead))
+    return min(unissued, ceiling) if ceiling is not None else unissued
+
+
+def _bank_schedule_upcoming(subscriptions, collections, today):
     """Count remaining occurrences once, including collections already issued by Qonto."""
     terminal = QONTO_PAID_COLLECTION_STATUSES | QONTO_REJECTED_COLLECTION_STATUSES | {'canceled', 'cancelled'}
     by_subscription = {}
@@ -46523,17 +46592,25 @@ def _bank_schedule_upcoming(subscriptions, collections):
         if finished:
             upcoming.extend(pending)
             continue
-        count = sub.pop('total_count')
-        # Qonto can leave a subscription in progress after its final collection.
-        # An open-ended recurrence has no reliable remaining total.
-        if count is not None:
-            unissued = max(0, count - len(issued))
+        calendar = sub.pop('_calendar')
+        unissued = _qonto_unissued_count(calendar, [row['date'] for row in issued], today)
+        if unissued is not None:
             if not unissued and not pending:
                 continue
             sub['remaining_count'] = unissued + len(pending)
             sub['remaining_cents'] = unissued * sub['amount_cents'] + sum(r['amount_cents'] for r in pending)
-        if any(row['status'] not in {'scheduled', 'pending', 'processing', 'in_progress', 'on_hold'} for row in pending):
+        known = [row for row in pending if row['status'] in {'scheduled', 'pending', 'processing', 'in_progress', 'on_hold'}
+                 and row['amount_cents'] > 0]
+        if len(known) != len(pending) or (unissued != 0 and sub['amount_cents'] <= 0):
             sub['remaining_cents'] = None
+        if sub.get('remaining_cents') is None:
+            confirmed = sum(row['amount_cents'] for row in known)
+            next_day = _parse_date_safe(sub['date'])
+            issued_days = [_parse_date_safe(row['date']) for row in issued]
+            if (next_day and next_day >= today and next_day not in issued_days and None not in issued_days
+                    and sub['amount_cents'] > 0 and unissued != 0):
+                confirmed += sub['amount_cents']
+            sub['confirmed_cents'] = confirmed
         if pending:
             # Keep issued collections visible by date, even when the next date
             # on the parent subscription has moved to a later month.
@@ -46601,8 +46678,8 @@ def _trainee_bank_schedule(lines):
             )
         subscriptions[sid] = dict(id=sid, date=date, amount_cents=_qonto_collection_amount_cents(sub),
                                   frequency=sub.get('schedule_type'), reference=reference, status=status,
-                                  total_count=1 if sub.get('schedule_type') == 'one_off' else
-                                  (_positive_installment_int(sub.get('schedule_total_collection_count')) or None))
+                                  start_date=sub.get('initial_collection_date'), end_date=sub.get('schedule_end_date'),
+                                  _calendar=sub)
     # The list can omit a finished subscription. Its collections still belong
     # to the dossier through the stored immutable subscription id.
     allowed_ids = known_subscriptions.union(subscriptions)
@@ -46649,7 +46726,7 @@ def _trainee_bank_schedule(lines):
     for cid, saved in returned.items():
         if cid not in history or history[cid]['status'] not in {'returned', 'refunded'}:
             history[cid] = saved
-    upcoming = _bank_schedule_upcoming(subscriptions, collections)
+    upcoming = _bank_schedule_upcoming(subscriptions, collections, datetime.date.fromisoformat(today))
     return upcoming, sorted(history.values(), key=lambda r: (r.get('transaction_date') or r['date'] or '', r['id']), reverse=True), list(changes.values())
 
 

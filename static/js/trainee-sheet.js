@@ -2210,7 +2210,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       const issued=row.open_collections || [];
       const dated=issued.filter(item=>!item.date || item.date>=today);
       if (issued.length && issued.length===row.remaining_count) {
-        next.push(...dated);
+        next.push(...dated.map(item=>({...item,frequency:row.frequency,reference:row.reference,end_date:row.end_date})));
         continue;
       }
       if (row.date && row.date<today && !issued.length) continue;
@@ -2221,11 +2221,14 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     }
     return next.sort((a,b)=>(a.date || '9999').localeCompare(b.date || '9999'));
   }
-  function operationTable(records) {
+  function operationTable(records,today) {
     const rows = records.map(row => {
-      const state = !row.subscription_id && row.status==='in_progress' && row.date ? bankStates.scheduled : bankStates[row.status];
+      const scheduled=(!row.subscription_id && row.status==='in_progress' && row.date) ||
+        (row.status==='pending' && row.date>today);
+      const state=scheduled?bankStates.scheduled:bankStates[row.status];
       const detail = [
         ...(row.open_collections || []).map(item=>`<span>Prélèvement émis · ${scheduleDate(item.date,'Date de présentation non communiquée')} · ${fmtMoney(item.amount_cents/100)} · ${esc(bankStates[item.status]?.[0] || 'Statut à confirmer')}</span>`),
+        row.end_date && row.frequency!=='one_off' && `<span>Fin de la programmation Qonto · ${scheduleDate(row.end_date)}</span>`,
         row.reference && `<span>Libellé · ${esc(row.reference)}</span>`,
         row.id && `<span>Référence Qonto · ${esc(row.id)}</span>`
       ].filter(Boolean).join('');
@@ -2289,7 +2292,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     const {planned,paid,outstanding}=scheduleBalances(activeLines);
     const confirmed=upcoming.filter(row=>['scheduled','in_progress','processing','pending','on_hold'].includes(row.status));
     const exact=confirmed.every(row=>Number.isSafeInteger(row.remaining_cents) && row.remaining_cents>0);
-    const scheduled=confirmed.reduce((sum,row)=>sum+(row.remaining_cents ?? row.amount_cents),0);
+    const scheduled=confirmed.reduce((sum,row)=>sum+(row.remaining_cents ?? row.confirmed_cents ?? (row.date>=today?row.amount_cents:0)),0);
     const history=bankSnapshot?.history || [];
     const bankPaid=history.filter(row=>['paid','completed','succeeded','success'].includes(row.status)).reduce((sum,row)=>sum+row.amount_cents,0);
     const reversedIds=new Set(history.filter(installmentIsRejected).map(row=>row.id));
@@ -2684,7 +2687,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
         const local=debitActivity(lines,today).localUpcoming;
         const coverage=updatedScheduleSummary(lines,upcoming,c,today);
         content=coverage+sameDayNotices(next);
-        if (bankSnapshot) content+='<div class="schedule-view-head"><h4>Calendrier Qonto</h4></div>'+operationTable(next);
+        if (bankSnapshot) content+='<div class="schedule-view-head"><h4>Calendrier Qonto</h4></div>'+operationTable(next,today);
         else if (!coverage && !local.length) content+=`<p class="schedule-empty">${bankLoading?'Chargement des programmations Qonto…':hasBankSchedule()?'Programmations Qonto indisponibles.':'Aucune programmation Qonto rattachée à cette fiche.'}</p>`;
         if (local.length) content+='<div class="schedule-view-head"><h4>Prévisions de la fiche</h4></div>'+scheduleEventsTable(local,'',true);
         break;
