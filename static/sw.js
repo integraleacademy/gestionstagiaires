@@ -43,7 +43,7 @@ self.addEventListener('notificationclick', (event) => {
 
 
 // Cache only this public maintenance document: never user pages or API data.
-const MAINTENANCE_CACHE = 'integrale-maintenance-20261106-v1';
+const MAINTENANCE_CACHE = 'integrale-maintenance-20261113-v2';
 const MAINTENANCE_URL = '/static/maintenance.html';
 
 self.addEventListener('install', (event) => {
@@ -107,14 +107,22 @@ self.addEventListener('fetch', (event) => {
   if (!maintenanceNavigation(event.request)) return;
   event.respondWith((async () => {
     let response;
-    try {
-      response = await fetch(event.request);
-    } catch (error) {
-      return maintenanceResponse(null, error);
+    let networkError;
+    // A single transient failure need not replace the page with the fallback.
+    // Only document GETs reach here: never retry a form submission or an API.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      if (attempt) await new Promise(resolve => setTimeout(resolve, 400));
+      try {
+        // Keep the original navigation metadata (mode/destination). Passing
+        // RequestInit would turn it into a fetch and bypass page-only hooks.
+        response = await fetch(event.request);
+        if (![502, 503, 504].includes(response.status)) return response;
+      } catch (error) {
+        // An abandoned navigation must not start a recovery cycle.
+        if (event.request.signal.aborted || error.name === 'AbortError') throw error;
+        networkError = error;
+      }
     }
-    if ([502, 503, 504].includes(response.status)) {
-      return maintenanceResponse(response);
-    }
-    return response;
+    return maintenanceResponse(response, networkError);
   })());
 });
