@@ -104,6 +104,47 @@ def test_full_flow_exact_amount_details_and_receipt(tmp_path):
 @pytest.mark.parametrize(('course', 'heading'), [
     ("Formation VTC tout inclus : théorie en e-learning + pratique + frais d'examen "
      "+ mise à disposition d'un véhicule doubles commandes", "Formation VTC tout inclus"),
+    ("Formation Agent de Protection rapprochée (APR) - Agent de protection physique des personnes (A3P) "
+     "- Garde du corps (bodyguard)", "Agent de protection rapprochée (A3P/APR)"),
+    ("Formation Agent de Sécurité - CQP Agent de prévention et de sécurité (APS)",
+     "Agent de prévention et de sécurité (APS)"),
+    ("Formation Assurer les missions de chef de poste en sécurité privée (CPSP) - Encadrement (chef de poste)",
+     "Chef de poste en sécurité privée (CPSP)"),
+    ("Formation Dirigeant d'une entreprise sécurité privée - CQP dirigeant "
+     "- Titre Dirigeant d'entreprise de sécurité privée (DESP)", "DESP – Formation initiale"),
+    ("VAE TOTALE Dirigeant d'une entreprise sécurité privée - CQP dirigeant "
+     "- Titre Dirigeant d'entreprise de sécurité privée (DESP) - Validation des acquis de l'expérience",
+     "DESP – VAE totale"),
+    ("VAE Titre Dirigeant d'entreprise de sécurité privée (DESP) - CQP dirigeant", "DESP – VAE"),
+    ("Formation SSIAP 1 - Service de Sécurité Incendie et d'Assistance aux Personnes (SSIAP) niveau 1",
+     "Formation SSIAP 1"),
+    ("Formation SSIAP 2 - Service de sécurité incendie et d'assistance aux personnes de niveau 2 (SSIAP 2) "
+     "- diplôme de chef d'équipe", "Formation SSIAP 2"),
+    ("Formation SSIAP 3 - Service de sécurité incendie et d'assistance aux personnes de niveau 3 (SSIAP 3) "
+     "- diplôme de chef de service", "Formation SSIAP 3"),
+    ("Formation SSIAP 1 (agent de sécurité incendie) + SST (Sauveteur Secouriste du Travail)",
+     "Formation SSIAP 1 + SST"),
+    ("Pack Formation agent de sécurité : CQP Agent de Prévention et de sécurité (APS) "
+     "+ Agent de sécurité incendie SSIAP 1 + SST + habilitation électrique",
+     "Pack APS + SSIAP 1 + SST + habil. élec."),
+    ("Module complémentaire SSIAP 1 agent de sécurité incendie - spécial pompiers - SSIAP 1 par équivalence",
+     "SSIAP 1 par équivalence – Pompiers"),
+    ("Recyclage SSIAP 1 agent de service de sécurité incendie et d'assistance aux personnes (formation continue)",
+     "Recyclage SSIAP 1"),
+    ("Recyclage SSIAP 2 chef d'équipe de sécurité incendie et d'assistance aux personnes (SSIAP 2)",
+     "Recyclage SSIAP 2"),
+    ("Recyclage SSIAP 3 chef de service de sécurité incendie et d'assistance aux personnes (formation continue)",
+     "Recyclage SSIAP 3"),
+    ("Remise à niveau SSIAP 1  agent de service de sécurité incendie et d'assistance aux personnes (formation continue)",
+     "Remise à niveau SSIAP 1"),
+    ("Remise à niveau SSIAP 2 chef d'équipe de sécurité incendie et d'assistance aux personnes (SSIAP 2)",
+     "Remise à niveau SSIAP 2"),
+    ("Remise à niveau SSIAP 3 chef de service de sécurité incendie et d'assistance aux personnes (formation continue)",
+     "Remise à niveau SSIAP 3"),
+    ("VAE TOTALE Dirigeant d’une entreprise sécurité privée – CQP dirigeant "
+     "– Titre Dirigeant d’entreprise de sécurité privée (DESP) – Validation des acquis de l’expérience",
+     "DESP – VAE totale"),
+    ("Formation SSIAP 1 (agent de sécurité incendie) sans SST", "Formation professionnelle"),
     ("Formation e-learning – préparation à l'examen pratique", "Formation e-learning"),
     ("Agent de Prévention et de Sécurité (APS)", "Agent de Prévention et de Sécurité (APS)"),
     ("Accompagnement individuel à la création et à la reprise d’une entreprise", "Formation professionnelle"),
@@ -115,6 +156,7 @@ def test_invoice_item_uses_complete_heading_and_keeps_edof_description(course, h
     item = qonto.invoice_body(terms, 'cdc-test')['items'][0]
 
     assert item['title'] == heading
+    assert len(item['title']) <= 40
     assert item['description'] == f"{FOLDER} - Exemple Anne - du 02/01/2026 au 30/01/2026 - {course}"
 
 
