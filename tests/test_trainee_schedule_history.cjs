@@ -5,11 +5,11 @@ const {join}=require('node:path');
 const vm=require('node:vm');
 const source=readFileSync(join(__dirname,'../static/js/trainee-sheet.js'),'utf8');
 function setup(snapshot={}) {
-  const ctx=vm.createContext({bankSnapshot:snapshot,fmtMoney:n=>n+' EUR',formatIsoDateFr:s=>s,scheduleDate:s=>s,
+  const ctx=vm.createContext({bankSnapshot:snapshot,bankLoading:false,bankError:'',fmtMoney:n=>n+' EUR',formatIsoDateFr:s=>s,scheduleDate:s=>s,
     esc:s=>String(s).replaceAll('<','&lt;'),installmentDate:r=>r?.date || r?.due_date || '',
-    installmentFailureReasonLabel:()=>'',badge:s=>s,bankStates:{returned:['Retourné','red'],scheduled:['Programmé','blue'],
+    installmentFailureReasonLabel:()=>'',badge:s=>s,bankStates:{returned:['Retourné','red'],scheduled:['Programmé','blue'],pending:['En cours','blue'],
       canceled:['Annulé','gray'],completed:['Encaissé','green']}});
-  for (const name of ['scheduleTable','scheduleEventDate','scheduleEventsTable','scheduleAuditEvents','debitActivity']) {
+  for (const name of ['nextBankOperations','scheduleTable','scheduleEventDate','scheduleEventsTable','scheduleAuditEvents','debitActivity']) {
     const start=source.indexOf('  function '+name+'('),end=source.indexOf('\n  function ',start+4);
     assert.notEqual(start,-1);
     vm.runInContext(source.slice(start,end),ctx);
@@ -60,4 +60,54 @@ test('two verified returns remain two distinct attempts; related undated one-off
   assert.ok(html.indexOf('Annulations sans date')<html.indexOf('2026-12-04'));
   ctx.bankSnapshot.changes[0].date='2026-11-06';
   assert.equal(ctx.debitActivity([],'2026-11-07').history.length,4);
+});
+
+test('a past local forecast between two returns and the next bank debit is not another presentation',()=>{
+  const today='2026-03-16', due='2026-03-10', next='2026-04-10';
+  const pending={id:'issued',subscription_id:'new',date:next,status:'pending',amount_cents:7500};
+  const program={id:'new',date:next,status:'scheduled',amount_cents:7500,remaining_count:2,open_collections:[pending]};
+  const ctx=setup({checked_at:today,upcoming:[program],history:['old-a','old-b'].map(id=>({
+    id,subscription_id:id+'-plan',date:'2026-03-03',amount_cents:7500,status:'returned'}))});
+  const forecast={date:due,amount:75,status:'scheduled',qonto_direct_debit_subscription_id:'new'};
+  const line={id:'line',directDebitInstallments:[forecast,{...forecast,date:next,qonto_direct_debit_collection_id:'issued'}]};
+  for (const view of ['past','history']) {
+    const events=ctx.debitActivity([line],today)[view];
+    assert.equal(events.length,3);
+    assert.equal(events.filter(row=>row.state[0]==='Retourné').length,2);
+    const local=events.find(row=>row.plannedDate===due);
+    assert.equal(local.state[0],'Aucun prélèvement présenté à cette date');
+    assert.match(local.context,/Prochaine date indiquée par Qonto · 2026-04-10/);
+    assert.equal(local.terminal,false);
+  }
+  program.open_collections.push({...pending,id:'issued-march',date:due});
+  const past=ctx.debitActivity([line],today).past;
+  assert.equal(past.length,3);
+  assert.equal(past.find(row=>row.plannedDate===due).source,'Qonto');
+});
+
+test('absence of a presentation needs a current read of the same program and enough information to match the date',()=>{
+  const today='2026-03-16', due='2026-03-10';
+  const program={id:'program',date:'2026-04-10',status:'scheduled',amount_cents:5000,remaining_count:2};
+  const ctx=setup({checked_at:today,upcoming:[program]});
+  const row={date:due,amount:50,status:'scheduled',qonto_direct_debit_subscription_id:'program'};
+  const line={id:'line',directDebitInstallments:[row]};
+  const result=()=>ctx.debitActivity([line],today).past.find(event=>event.key==='local-line-0');
+  const localOnly=()=>assert.equal(result().state[0],'Prévue sur la fiche');
+  ctx.bankError='indisponible'; localOnly();
+  ctx.bankError=''; ctx.bankLoading=true; localOnly();
+  ctx.bankLoading=false; ctx.bankSnapshot.checked_at='2026-03-15'; localOnly();
+  ctx.bankSnapshot.checked_at=today; row.qonto_direct_debit_subscription_id='other'; localOnly();
+  row.qonto_direct_debit_subscription_id='program';
+  row.tracking_pending_qonto=true; assert.equal(result().state[0],'Prévision locale');
+  delete row.tracking_pending_qonto;
+  row.qonto_direct_debit_collection_id='unlisted'; row.qonto_collection_status_raw='pending';
+  assert.equal(result().state[0],'En cours'); assert.match(result().context,/Dernier statut/);
+  delete row.qonto_direct_debit_collection_id; delete row.qonto_collection_status_raw;
+  program.open_collections=[{id:'undated',subscription_id:'program',status:'pending',amount_cents:5000}];
+  localOnly();
+  program.open_collections=[];
+  ctx.bankSnapshot.changes=[{id:'cancelled',kind:'collection',subscription_id:'program',planned_date:due,amount_cents:5000}];
+  const past=ctx.debitActivity([line],today).past;
+  assert.equal(past.length,1); assert.equal(past[0].state[0],'Annulé');
+  ctx.bankSnapshot=null; localOnly();
 });

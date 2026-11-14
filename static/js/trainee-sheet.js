@@ -2463,6 +2463,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     const overdue=upcoming.filter(row=>!row.subscription_id && row.date && row.date<today &&
       !(row.open_collections || []).some(item=>item.date===row.date));
     const remoteDates=new Set([...remote.values(),...overdue].map(row=>(row.subscription_id || row.id)+'/'+row.date));
+    const undatedCollections=new Set([...remote.values()].filter(row=>!row.date).map(row=>row.subscription_id));
     const collectionIds=new Set(remote.keys());
     const events=[], pastCancellations=[];
     for (const row of [...remote.values(),...overdue]) {
@@ -2496,6 +2497,8 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     for (const change of changes.filter(item=>item.kind==='collection')) {
       collectionIds.add(change.id);
       if (!change.subscription_id) continue;
+      if (change.planned_date) remoteDates.add(change.subscription_id+'/'+change.planned_date);
+      else undatedCollections.add(change.subscription_id);
       if (!bySubscription.has(change.subscription_id)) bySubscription.set(change.subscription_id,[]);
       bySubscription.get(change.subscription_id).push(change);
     }
@@ -2523,6 +2526,8 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       }
     }
     const subscriptions=new Set(upcoming.map(row=>row.subscription_id || row.id));
+    const programs=new Map(upcoming.filter(row=>!row.subscription_id).map(row=>[row.id,row]));
+    const bankReadToday=!bankLoading && !bankError && scheduleEventDate(bankSnapshot?.checked_at)?.day===today;
     const localUpcoming=[];
     for (const line of lines) {
       const saved=line.directDebitInstallments || [];
@@ -2540,9 +2545,24 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
             ((date>=today && subscriptions.has(sid)) || remoteDates.has(sid+'/'+date))) continue;
         const cancelled=state?.[1]==='gray';
         const actionDate=cancelled?(item.canceled_at || item.cancelled_at):(terminal && date>today?null:date);
+        let situation=state, context='';
+        if (!terminal) {
+          situation=[saved.length?'Prévue sur la fiche':'Prévue au plan initial','gray'];
+          const program=sid && programs.get(sid);
+          if (item.tracking_pending_qonto) {
+            situation=['Prévision locale','blue'];
+          } else if (cid && item.qonto_collection_status_raw && state) {
+            situation=state;
+            context='Dernier statut Qonto enregistré';
+          } else if (bankReadToday && program && !cid && date && date<today && !undatedCollections.has(sid)) {
+            situation=['Aucun prélèvement présenté à cette date','gray'];
+            const next=nextBankOperations([program],today).find(row=>row.date);
+            if (next) context='Prochaine date indiquée par Qonto · '+formatIsoDateFr(next.date);
+          }
+        }
         const local={key:'local-'+line.id+'-'+index,date:actionDate,plannedDate:date,
-          dateRole:cancelled?'Annulation':'Échéance prévue',label:'Échéance de la fiche',source:'Suivi local',
-          amount:Number(item.amount),state:terminal?state:[saved.length?'À confirmer dans Qonto':'Prévue au plan initial','orange'],
+          dateRole:cancelled?'Annulation':'Échéance prévue',label:'Échéance de la fiche',source:'Suivi local',context,
+          amount:Number(item.amount),state:situation,
           details:[line.qontoInvoiceNumber,cid && 'Référence Qonto · '+cid],terminal};
         if (!terminal && !item.excluded_from_schedule_totals && (!date || date>=today)) localUpcoming.push(local);
         else if (terminal || !item.excluded_from_schedule_totals) events.push(local);
@@ -2666,7 +2686,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
         content=coverage+sameDayNotices(next);
         if (bankSnapshot) content+='<div class="schedule-view-head"><h4>Calendrier Qonto</h4></div>'+operationTable(next);
         else if (!coverage && !local.length) content+=`<p class="schedule-empty">${bankLoading?'Chargement des programmations Qonto…':hasBankSchedule()?'Programmations Qonto indisponibles.':'Aucune programmation Qonto rattachée à cette fiche.'}</p>`;
-        if (local.length) content+='<div class="schedule-view-head"><h4>Prévisions de la fiche à confirmer</h4></div>'+scheduleEventsTable(local,'',true);
+        if (local.length) content+='<div class="schedule-view-head"><h4>Prévisions de la fiche</h4></div>'+scheduleEventsTable(local,'',true);
         break;
       }
       case 'history':
