@@ -51,6 +51,69 @@ def invoice(paid=950):
     }}
 
 
+def test_replaced_mandate_retains_two_distinct_returns_in_receipts_and_history(finance, monkeypatch):
+    client, data = finance
+    trainee = data['sessions'][0]['trainees'][0]
+    trainee['personal_amount'] = 1079
+    line = data['billing_lines'][0]
+    returned = [
+        {'qonto_direct_debit_collection_id': cid, 'qonto_direct_debit_subscription_id': 'old',
+         'date': '2020-11-04', 'amount': 539.50, 'status': 'returned', 'qonto_collection_status_raw': 'returned'}
+        for cid in ('return-1', 'return-2')
+    ]
+    scheduled = [{'qonto_direct_debit_subscription_id': 'new', 'index': i, 'date': day,
+                  'amount': 539.50, 'status': 'scheduled'}
+                 for i, day in enumerate(('2020-11-11', '2020-12-11'), 1)]
+    line.update(paymentMode='sepa_direct_debit', qonto_total_amount_cents=107900,
+                qonto_amount_paid_cents=53950, qontoRemoteAmountPaidCents=53950,
+                sepa_payment_plan={'installments': scheduled}, directDebitInstallments=scheduled,
+                financial_tracking_override={'enabled': True, 'source': 'inline_schedule', 'edit_history': [
+                    {'before': returned, 'after': deepcopy(returned)},
+                ]})
+    monkeypatch.setattr(gestion_app, 'list_qonto_direct_debit_subscriptions', lambda **_: {'items': []})
+    monkeypatch.setattr(gestion_app, 'list_qonto_direct_debit_collections', lambda **_: {'items': []})
+    response = client.get(URL + '?local=1').get_json()
+    assert response['financial_summary']['paid_total_cents'] == 0
+    assert response['financial_summary']['remaining_total_cents'] == 107900
+    assert response['financial_summary']['qonto_payment_entries'] == []
+    assert response['financial_summary']['by_financer']['PERSONNEL']['payment_status'] == 'unpaid'
+    saved = response['lines'][0]
+    assert saved['qonto_invoice']['paid_amount_cents'] == 0
+    assert len(saved['directDebitInstallments']) == 2
+    history = client.get(URL + '/bank-schedule').get_json()['history']
+    assert {(r['id'], r['status'], r['amount_cents']) for r in history} == {
+        ('return-1', 'returned', 53950), ('return-2', 'returned', 53950)}
+
+    # Even a subsequent plan replacement that drops the edit log must retain both facts.
+    saved.pop('financial_tracking_override')
+    gestion_app._save_billing_line(data, saved)
+    fresh = client.get(URL + '?local=1').get_json()
+    assert fresh['financial_summary']['paid_total_cents'] == 0
+    assert set(fresh['lines'][0]['qontoReturnedCollections']) == {'return-1', 'return-2'}
+
+
+def test_historical_return_is_not_a_pending_subscription_or_a_different_payment():
+    archive = {'qonto_direct_debit_collection_id': 'first', 'amount': 30, 'status': 'returned',
+               'qonto_collection_status_raw': 'returned'}
+    line = {'qontoInvoiceId': 'invoice', 'amountTTC': 100, 'qonto_amount_paid_cents': 5000,
+            'financial_tracking_override': {'edit_history': [{'before': [archive], 'after': [archive]}]}}
+    for _ in range(2):
+        gestion_app.normalize_qonto_invoice_storage_fields(line)
+        assert line['qonto_amount_paid_cents'] == 2000
+        assert line['qontoRemoteAmountPaidCents'] == 5000
+    line['directDebitInstallments'] = [dict(archive, status='completed', qonto_collection_status_raw='completed'),
+                                       dict(archive, qonto_direct_debit_collection_id='retry', status='completed',
+                                            qonto_collection_status_raw='completed')]
+    line['qontoBankTransfers'] = [{'id': 'transfer', 'status': 'completed', 'amount_cents': 1000,
+                                   'paid_at': '2020-11-10', 'operation_type': 'transfer',
+                                   'currency': 'EUR', 'side': 'credit'}]
+    assert gestion_app.serialize_qonto_invoice_for_frontend(line)['paid_amount_cents'] == 4000
+    unconfirmed = dict(archive, status='failed', qonto_collection_status_raw='pending')
+    unrelated = {'qonto_total_amount_cents': 10000, 'qonto_amount_paid_cents': 5000,
+                 'financial_tracking_override': {'edit_history': [{'before': [unconfirmed]}]}}
+    assert gestion_app.serialize_qonto_invoice_for_frontend(unrelated)['paid_amount_cents'] == 5000
+
+
 def test_personal_payment_refreshes_again_after_five_minutes_in_same_browser(finance, monkeypatch):
     client, data = finance
     get_invoice = Mock(side_effect=[invoice(300), invoice(950)])

@@ -1996,14 +1996,21 @@ def _reconciled_qonto_paid_cents(invoice: Dict[str, Any], fallback_cents: int) -
     # The presence of a real SEPA schedule is sufficient proof that these are
     # direct-debit collections and prevents a later-created invoice from
     # hiding them.
-    if not all_installments:
+    returned_collections = _qonto_returned_collections(invoice)
+    terminal = QONTO_PAID_COLLECTION_STATUSES | QONTO_REJECTED_COLLECTION_STATUSES
+    active_terminal = any(str(item.get("status") or "").lower() in terminal for item in all_installments)
+    if not active_terminal and not returned_collections:
         return fallback_cents
-    terminal = {"completed", "paid", "succeeded", "success", "failed", "returned", "rejected", "refunded"}
-    if not any(str(item.get("status") or "").lower() in terminal for item in all_installments):
-        return fallback_cents
+    if not active_terminal:
+        # Only the archived returns are known here. Cap the deduction at their
+        # value and keep separately verified transfers or other invoice receipts.
+        remote = invoice.get('qontoRemoteAmountPaidCents')
+        gross = int(remote) if remote is not None else fallback_cents
+        returned_cents = sum(row['amount_cents'] for row in returned_collections.values())
+        return max(gross - returned_cents, bank_transfer_paid_cents(invoice))
     # Distinct completed collection IDs represent real cash even when two
     # subscriptions accidentally collected the same contractual installment.
-    installments = _paid_sepa_collections(invoice)
+    installments = _paid_sepa_collections(invoice, returned_collections)
     paid = sum(
         money_value_to_cents(item.get("amount") or 0)
         for item in installments
@@ -2030,6 +2037,11 @@ def _reconcile_billing_invoice_status(invoice: Dict[str, Any], payment_status: s
 
 
 def normalize_qonto_invoice_storage_fields(invoice: Dict[str, Any]) -> None:
+    if invoice.get('qontoRemoteAmountPaidCents') is None and _qonto_returned_collections(invoice):
+        invoice['qontoRemoteAmountPaidCents'] = _cents_first_non_null(
+            invoice.get('qonto_amount_paid_cents'), invoice.get('paid_amount_cents'),
+            invoice.get('qontoAmountPaidCents'), invoice.get('paidAmountCents'),
+        )
     serialized = serialize_qonto_invoice_for_frontend(invoice)
     # ``control`` is a deliberate local safety state (for a missing or
     # unverifiable remote invoice), not a Qonto payment state.  Do not erase it
@@ -42110,6 +42122,31 @@ QONTO_REJECTED_COLLECTION_STATUSES = {'failed', 'returned', 'rejected', 'refunde
 QONTO_PAID_COLLECTION_STATUSES = {'completed', 'paid', 'succeeded', 'success'}
 
 
+def _qonto_returned_collections(line: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """Keep bank-confirmed reversals by collection ID, independently of the current mandate."""
+    returned = dict(line.get('qontoReturnedCollections') or {})
+    override = line.get('financial_tracking_override') or {}
+    # Older dossiers kept the replaced schedule only in the local edit journal.
+    batches = [rows for edit in override.get('edit_history') or [] if isinstance(edit, dict)
+               for rows in (edit.get('before'), edit.get('after')) if isinstance(rows, list)]
+    for rows in [*batches, _sepa_installments(line)]:
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            cid = row.get('qonto_direct_debit_collection_id')
+            status = str(row.get('qonto_collection_status_raw') or row.get('status') or '').strip().lower()
+            if not cid or status not in {'returned', 'refunded'}:
+                continue
+            returned[cid] = {
+                'id': cid, 'status': status,
+                'subscription_id': row.get('qonto_direct_debit_subscription_id'),
+                'date': row.get('qonto_original_due_date') or row.get('due_date') or row.get('date'),
+                'amount_cents': money_value_to_cents(row.get('qonto_original_amount') or row.get('amount') or 0),
+                'reference': row.get('reference'), 'reason': row.get('status_reason') or row.get('failureReason'),
+            }
+    return returned
+
+
 def _positive_installment_int(value: Any) -> int:
     """Return a positive integer for permissive legacy billing values."""
     try:
@@ -42223,8 +42260,10 @@ def _effective_sepa_installments(line: Dict[str, Any]) -> List[Dict[str, Any]]:
     ]
 
 
-def _paid_sepa_collections(line: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _paid_sepa_collections(line: Dict[str, Any], returned_collections=None) -> List[Dict[str, Any]]:
     """Count real collections, including distinct payments of the same slot."""
+    if returned_collections is None:
+        returned_collections = _qonto_returned_collections(line)
     rows = {}
     for order, item in enumerate(_sepa_installments(line)):
         collection_id = str(item.get('qonto_direct_debit_collection_id') or '')
@@ -42239,6 +42278,7 @@ def _paid_sepa_collections(line: Dict[str, Any]) -> List[Dict[str, Any]]:
             rows[key] = item
     return [item for item in rows.values()
             if str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES
+            and item.get('qonto_direct_debit_collection_id') not in returned_collections
             and _installment_counts_toward_schedule(item)]
 
 
@@ -43977,6 +44017,7 @@ def buildBillingLinesFromSessions(
                     'qonto_rejected_collection_ids': persisted.get('qonto_rejected_collection_ids') if isinstance(persisted.get('qonto_rejected_collection_ids'), list) else [],
                     'sepa_payment_plan': persisted.get('sepa_payment_plan') if isinstance(persisted.get('sepa_payment_plan'), dict) else {},
                     'financial_tracking_override': persisted.get('financial_tracking_override') if isinstance(persisted.get('financial_tracking_override'), dict) else {},
+                    'qontoReturnedCollections': persisted.get('qontoReturnedCollections') or {},
                     'generationInProgress': bool(persisted.get('generationInProgress')), 'syncWarning': persisted.get('syncWarning') or '', 'externalInvoiceMarkedAt': persisted.get('externalInvoiceMarkedAt') or '', 'externalInvoiceNote': persisted.get('externalInvoiceNote') or '', 'createdAt': persisted.get('createdAt') or _now_iso(),
                     'updatedAt': persisted.get('updatedAt') or _now_iso(), 'logs': persisted.get('logs') if isinstance(persisted.get('logs'), list) else [],
                     'traineeLastName': trainee.get('last_name') or '', 'traineeFirstName': trainee.get('first_name') or '',
@@ -44035,8 +44076,9 @@ def buildBillingLinesFromSessions(
                         )
                     else:
                         raw_paid_cents = money_value_to_cents(qonto_source.get('qontoInvoiceAmountPaid') or 0)
-                    qonto_source['qonto_amount_paid_cents'] = _reconciled_qonto_paid_cents(qonto_source, raw_paid_cents)
+                    qonto_source['qonto_amount_paid_cents'] = raw_paid_cents
                     normalize_qonto_invoice_storage_fields(qonto_source)
+                    line['qontoRemoteAmountPaidCents'] = qonto_source.get('qontoRemoteAmountPaidCents')
                     line['qonto_invoice'] = serialize_qonto_invoice_for_frontend(qonto_source)
                     line['qonto_total_amount_cents'] = qonto_source['qonto_total_amount_cents']
                     line['qonto_amount_paid_cents'] = qonto_source['qonto_amount_paid_cents']
@@ -44345,10 +44387,16 @@ def _cpf_wedof_invoice_lines(
 
 def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
+    previous = all_map.get(line['id']) or {}
+    returned = _qonto_returned_collections(previous)
+    returned.update(_qonto_returned_collections(line))
+    if returned:
+        line['qontoReturnedCollections'] = returned
     if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
         normalize_qonto_invoice_storage_fields(line)
     persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','companyName','clientEmail','clientAddress','clientZipCode','clientCity','siret','invoiceNotes','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qontoDirectDebitSyncWarning','qontoDirectDebitLastSyncedAt','qontoAutoSyncAttemptedAt','qonto_rejected_collection_ids','sepa_payment_plan','financial_tracking_override','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError','qontoRemoteAmountPaidCents','qontoBankTransfers','qontoBankTransferSyncedAt','qontoBankTransferSyncWarning','amountPaid','amount_paid','manualPaymentInvoiceId')}
-    previous = all_map.get(line['id']) or {}
+    if returned:
+        persisted['qontoReturnedCollections'] = returned
     original = _initial_debit_schedule(previous) or _initial_debit_schedule(line)
     if original:
         persisted['initialDebitSchedule'] = copy.deepcopy(original)
@@ -45209,7 +45257,7 @@ def _refresh_billing_line_invoice_from_qonto(line: Dict[str, Any], fallback_invo
 
 def _apply_qonto_invoice_payment_to_billing_line(line: Dict[str, Any], invoice: Dict[str, Any]) -> None:
     remote_context = dict(line)
-    if line.get('qontoBankTransfers') and line.get('qontoRemoteAmountPaidCents') is not None:
+    if line.get('qontoRemoteAmountPaidCents') is not None:
         remote_context['qonto_amount_paid_cents'] = line['qontoRemoteAmountPaidCents']
     normalized = normalize_qonto_invoice_payment_data(invoice, remote_context)
     line['qontoRemoteAmountPaidCents'] = normalized['qonto_amount_paid_cents']
@@ -46497,7 +46545,9 @@ def _bank_schedule_upcoming(subscriptions, collections):
 def _trainee_bank_schedule(lines):
     known_subscriptions, known_collections, references = set(), set(), set()
     orphan_collections, attached_subscriptions = set(), set()
+    returned = {}
     for line in lines:
+        returned.update(_qonto_returned_collections(line))
         rows = _sepa_installments(line)
         for row in rows:
             sid = row.get('qonto_direct_debit_subscription_id')
@@ -46522,7 +46572,8 @@ def _trainee_bank_schedule(lines):
     changes = {}
     today = datetime.datetime.now(ZoneInfo('Europe/Paris')).date().isoformat()
     if not (known_subscriptions or known_collections or references):
-        return [], [], []
+        past_returns = sorted(returned.values(), key=lambda r: (r.get('date') or '', r['id']), reverse=True)
+        return [], past_returns, []
 
     for sub in _bank_view_pages(list_qonto_direct_debit_subscriptions, ('direct_debit_subscriptions', 'subscriptions', 'items')):
         sid = sub.get('id')
@@ -46589,6 +46640,11 @@ def _trainee_bank_schedule(lines):
     for row in history.values():
         row.pop('_rum')
         row.pop('_account')
+    # A replaced mandate need not be present in the list of current subscriptions.
+    # Its confirmed returns are historical events, never upcoming installments.
+    for cid, saved in returned.items():
+        if cid not in history or history[cid]['status'] not in {'returned', 'refunded'}:
+            history[cid] = saved
     upcoming = _bank_schedule_upcoming(subscriptions, collections)
     return upcoming, sorted(history.values(), key=lambda r: (r.get('transaction_date') or r['date'] or '', r['id']), reverse=True), list(changes.values())
 
@@ -46611,7 +46667,7 @@ def api_trainee_bank_schedule(trainee_id, session_id):
     for row in history:
         if row.get('status') not in QONTO_REJECTED_COLLECTION_STATUSES:
             continue
-        owners = [line for line in lines if any(
+        owners = [line for line in lines if row['id'] in _qonto_returned_collections(line) or any(
             r.get('qonto_direct_debit_collection_id') == row['id'] or
             (row.get('subscription_id') and r.get('qonto_direct_debit_subscription_id') == row['subscription_id'])
             for r in _sepa_installments(line))]
@@ -49709,7 +49765,9 @@ def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) 
         for inst in matching:
             previous_status = inst.get('status')
             inst['qonto_direct_debit_collection_id'] = collection_id or inst.get('qonto_direct_debit_collection_id') or ''
-            inst['status'] = _map_collection_status(item.get('status') or item.get('event'))
+            raw_status = str(item.get('status') or item.get('event') or '').strip().lower()
+            inst['qonto_collection_status_raw'] = raw_status
+            inst['status'] = _map_collection_status(raw_status)
             _reconcile_tracked_installment_with_qonto(inst, item)
             if inst['status'] == 'completed':
                 inst['paidAt'] = item.get('paid_at') or item.get('completed_at') or _now_iso()
