@@ -189,6 +189,29 @@ def accepted_key(owner):
     return "edof-accepted-v1-" + owner
 
 
+def validated_key(owner):
+    return "edof-validated-v1-" + owner
+
+
+def with_validated(snapshot, validated):
+    """Merge verified application updates without certifying a new full list."""
+    validated = dated_snapshot(validated)
+    if not validated:
+        return snapshot
+    combined = dict(snapshot or {"checked": 0, "rows": {}, "scope": "validated"})
+    rows = dict(combined["rows"])
+    for folder, row in validated["rows"].items():
+        checked = row.get("observed_at") or validated["checked"]
+        previous = rows.get(folder, {})
+        if checked <= max(combined["checked"], previous.get("observed_at") or 0):
+            continue
+        if previous and any(normalized(previous.get(k) or "") != normalized(row.get(k) or "")
+                            for k in ("first_name", "last_name")):
+            continue
+        rows[folder] = {**row, "observed_at": checked}
+    return {**combined, "rows": rows, "validated_checked": validated["checked"]}
+
+
 def with_accepted(snapshot, accepted):
     """Apply a complete accepted tab without moving the general-list timestamp."""
     accepted = dated_snapshot(accepted)

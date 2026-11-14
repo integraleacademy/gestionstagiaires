@@ -73,7 +73,7 @@
         <p class="hint">« Consulter le dossier » recherche dans la liste EDOF synchronisée ou les lectures conservées 24 heures. « Relire sur EDOF » ouvre directement la fiche sur le portail et peut prendre plusieurs minutes.</p>
         {% if gmail.connected and config.credentials_configured %}{% if session.get('admin_role') != 'viewer' %}<button class="button" data-sync-scope="new" type="button">Synchro manuelle nouveaux dossiers</button>
         <button class="button secondary" data-sync-scope="all" type="button">Synchro manuelle tous les dossiers</button>{% endif %}
-        <p class="hint">La veille consulte EDOF tous les jours de 7 h à 19 h (heure de Paris), pour lire uniquement les nouveaux dossiers « À traiter » toutes les deux minutes. Elle privilégie la session existante. Après une tentative de connexion automatique dans la journée, tout code supplémentaire nécessite une autorisation explicite.</p>{% endif %}
+        <p class="hint">La veille consulte EDOF tous les jours de 7 h à 19 h (heure de Paris), pour lire les nouveaux dossiers « À traiter » toutes les deux minutes et vérifier régulièrement les demandes transmises ainsi que leurs financements France Travail. Elle privilégie la session existante. Après une tentative de connexion automatique dans la journée, tout code supplémentaire nécessite une autorisation explicite.</p>{% endif %}
         {% if directory_enabled %}<form method="post" action="{{ url_for('edof_server_test.pause_directory') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="button secondary" type="submit">Suspendre les actualisations automatiques</button></form>{% endif %}
       </section>
     </div>
