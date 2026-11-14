@@ -7,6 +7,17 @@ from zoneinfo import ZoneInfo
 from edof_invoicing import Review, fence, get, money, record_creation_rejection, update
 
 CDC_SIRET='18002002600019'
+QONTO_ITEM_TITLE_LIMIT = 40
+
+
+def invoice_item_title(course_title):
+    title = ' '.join(course_title.split())
+    if len(title) <= QONTO_ITEM_TITLE_LIMIT:
+        return title
+    heading = re.split(r':|\s+[-–—]\s+', title, maxsplit=1)[0].strip()
+    if heading and len(heading) <= QONTO_ITEM_TITLE_LIMIT:
+        return heading
+    return 'Formation professionnelle'
 
 
 def invoice_body(terms,client_id):
@@ -24,7 +35,7 @@ def invoice_body(terms,client_id):
             'performance_start_date':terms['actual_start'],'performance_end_date':terms['actual_end'],
             'purchase_order':terms['folder_id'],'header':f"Dossier CPF {terms['folder_id']}",
             'terms_and_conditions':notes,
-            'items':[{'title':terms['title'][:40],'description':description,'quantity':'1',
+            'items':[{'title':invoice_item_title(terms['title']),'description':description,'quantity':'1',
                       'unit_price':{'value':terms['amount'],'currency':'EUR'},'vat_rate':'0'}]}
 
 

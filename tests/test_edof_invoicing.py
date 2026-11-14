@@ -101,6 +101,23 @@ def test_full_flow_exact_amount_details_and_receipt(tmp_path):
     assert ledger.with_receipts(snap,tmp_path,'admin')['rows'][FOLDER]['billing_state']=='billed'
 
 
+@pytest.mark.parametrize(('course', 'heading'), [
+    ("Formation VTC tout inclus : théorie en e-learning + pratique + frais d'examen "
+     "+ mise à disposition d'un véhicule doubles commandes", "Formation VTC tout inclus"),
+    ("Formation e-learning – préparation à l'examen pratique", "Formation e-learning"),
+    ("Agent de Prévention et de Sécurité (APS)", "Agent de Prévention et de Sécurité (APS)"),
+    ("Accompagnement individuel à la création et à la reprise d’une entreprise", "Formation professionnelle"),
+])
+def test_invoice_item_uses_complete_heading_and_keeps_edof_description(course, heading):
+    raw = deepcopy(RAW)
+    raw['trainingActionInfo']['title'] = course
+    terms = ledger.project(raw, BILL, directory.project(raw))
+    item = qonto.invoice_body(terms, 'cdc-test')['items'][0]
+
+    assert item['title'] == heading
+    assert item['description'] == f"{FOLDER} - Exemple Anne - du 02/01/2026 au 30/01/2026 - {course}"
+
+
 def test_lost_qonto_response_reconciles_one_invoice(tmp_path):
     store,spec=init(tmp_path);portal=Portal();app=Qonto();app.timeout=True
     run(tmp_path,spec,portal)
