@@ -4,12 +4,12 @@ from decimal import Decimal
 import re
 from zoneinfo import ZoneInfo
 
-from edof_invoicing import Review, fence, get, money, update
+from edof_invoicing import Review, fence, get, money, record_creation_rejection, update
 
 CDC_SIRET='18002002600019'
 
 
-def invoice_body(terms,client_id,iban):
+def invoice_body(terms,client_id):
     today=datetime.now(ZoneInfo('Europe/Paris')).date()
     french=lambda value:datetime.fromisoformat(value).strftime('%d/%m/%Y')
     description=(f"{terms['folder_id']} - {terms['last_name']} {terms['first_name']} - "
@@ -20,7 +20,7 @@ def invoice_body(terms,client_id,iban):
     if terms['actual_start']!=terms['session_start_date'] or terms['actual_end']!=terms['session_end_date']:
         notes+=f" Période réalisée : du {french(terms['actual_start'])} au {french(terms['actual_end'])}."
     return {'client_id':client_id,'currency':'EUR','status':'draft','issue_date':today.isoformat(),
-            'due_date':(today+timedelta(days=30)).isoformat(),'payment_methods':{'iban':iban},
+            'due_date':(today+timedelta(days=30)).isoformat(),'payment_methods':{'iban':terms['iban']},
             'performance_start_date':terms['actual_start'],'performance_end_date':terms['actual_end'],
             'purchase_order':terms['folder_id'],'header':f"Dossier CPF {terms['folder_id']}",
             'terms_and_conditions':notes,
@@ -50,6 +50,16 @@ def validate(inv,terms,client_id):
     amount=inv.get('total_amount')
     if not isinstance(amount,dict) or amount.get('currency',inv.get('currency'))!='EUR' or money(amount.get('value'))!=terms['amount']:
         raise Review('Le montant de la facture Qonto ne correspond pas au montant validé par EDOF.')
+    methods = inv.get('payment_methods') or []
+    if isinstance(methods, dict):
+        methods = [methods]
+    transfer_ibans = {
+        re.sub(r'\s+', '', str(method.get('iban') or '')).upper()
+        for method in methods
+        if isinstance(method, dict) and method.get('type', 'transfer') == 'transfer'
+    }
+    if transfer_ibans != {terms['iban']}:
+        raise Review('Le compte de virement indiqué sur la facture Qonto ne correspond pas au compte de règlement du dossier EDOF.')
     if not has_reference(inv,terms['folder_id']):
         raise Review('Le numéro CPF manque sur la facture Qonto.')
     text=invoice_text(inv).casefold()
@@ -108,9 +118,6 @@ def prepare(app,path,record):
     terms=record['terms']
     if not app._qonto_is_configured():
         raise Review('Qonto n’est pas connecté pour la facturation.')
-    iban=re.sub(r'\s+','',app.get_qonto_invoice_iban()).upper()
-    if iban!=terms['iban']:
-        raise Review('Le compte de règlement EDOF est différent du compte Qonto configuré. Vérifiez les coordonnées bancaires.')
     client=app.find_qonto_client_by_tax_identification_number(CDC_SIRET)
     if not client:
         client=app.get_or_create_cpf_qonto_client()
@@ -126,8 +133,18 @@ def prepare(app,path,record):
             raise Review('La facturation a été suspendue avant la création Qonto.')
         # Persist the fence BEFORE the POST. Qonto idempotency expires after 30min;
         # the durable local fence is therefore the primary duplicate protection.
-        inv=unwrap(app._qonto_request('POST','/v2/client_invoices',invoice_body(terms,client_id,iban),
-                                     idempotency_key=record['token']))
+        try:
+            result = app._qonto_request('POST', '/v2/client_invoices', invoice_body(terms, client_id),
+                                        idempotency_key=record['token'])
+        except RuntimeError as exc:
+            if getattr(exc, 'status_code', None) != 422:
+                raise
+            message = 'Qonto a refusé les données du brouillon de facture. Vérifiez les informations avant de relancer.'
+            if 'iban' in str(getattr(exc, 'body', '')).casefold():
+                message = 'Qonto a refusé le compte de règlement EDOF. Vérifiez que ce compte est utilisable pour les factures Qonto, puis réexaminez le dossier.'
+            record_creation_rejection(path, record['token'], message)
+            raise Review(message) from None
+        inv = unwrap(result)
         if not inv.get('id'):
             raise RuntimeError('Qonto invoice response incomplete')
         update(path,record['token'],qonto_id=str(inv['id']),status='draft')

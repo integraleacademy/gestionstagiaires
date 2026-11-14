@@ -59,7 +59,7 @@ def run(path,spec,portal):
 class Qonto:
     def __init__(self):self.invoices={};self.creates=0;self.finals=0;self.timeout=False
     def _qonto_is_configured(self):return True
-    def get_qonto_invoice_iban(self):return IBAN
+    def get_qonto_invoice_iban(self):return 'DE89370400440532013000'
     def find_qonto_client_by_tax_identification_number(self,_):return {'id':'cdc-test','tax_identification_number':qonto.CDC_SIRET}
     def list_qonto_invoices(self,params):return {'client_invoices':list(self.invoices.values()),'meta':{'total_pages':1}}
     def get_qonto_invoice(self,id):return {'client_invoice':deepcopy(self.invoices[id])}
@@ -85,6 +85,7 @@ def test_full_flow_exact_amount_details_and_receipt(tmp_path):
     app,portal=Qonto(),Portal()
     store,spec=prepare(tmp_path,app,portal)
     inv=app.invoices['invoice-test']
+    assert inv['payment_methods']['iban']==portal.bill['paymentInfo']['iban']
     assert inv['total_amount']['value']=='1260.00' # EDOF CGU, not 1700 contractual amount.
     assert inv['items'][0]['quantity']=='1' and inv['items'][0]['vat_rate']=='0'
     assert all(value in inv['items'][0]['description'] for value in [FOLDER,'Anne','Exemple','02/01/2026','30/01/2026',RAW['trainingActionInfo']['title']])
@@ -92,6 +93,7 @@ def test_full_flow_exact_amount_details_and_receipt(tmp_path):
     assert spec['mode']=='invoice_send'
     assert run(tmp_path,spec,portal)['code']=='invoice_confirmed'
     assert portal.sent[0]['amountToInvoice']==1260 and portal.sent[0]['billNumber']=='FL-TEST-001'
+    assert portal.sent[0]['iBAN']==inv['payment_methods']['iban']
     assert portal.sent[0]['dateInvoice']==inv['issue_date']
     assert ledger.next_job(store,cpf_provider.ProviderStore(tmp_path).state()) is None
     assert ledger.get(tmp_path,spec['token'])['status']=='confirmed'
@@ -106,6 +108,32 @@ def test_lost_qonto_response_reconciles_one_invoice(tmp_path):
     assert ledger.get(tmp_path,spec['token'])['create_started']
     qonto.prepare(app,tmp_path,ledger.get(tmp_path,spec['token']))
     assert app.creates==1 and app.finals==1 and ledger.get(tmp_path,spec['token'])['status']=='ready'
+
+
+def test_rejected_edof_account_can_be_reexamined_after_qonto_accepts_it(tmp_path, monkeypatch):
+    app, portal = Qonto(), Portal()
+    store, spec = init(tmp_path)
+    run(tmp_path, spec, portal)
+    refused = RuntimeError('validation refused')
+    refused.status_code = 422
+    refused.body = '{"errors":[{"source":{"pointer":"/payment_methods/iban"}}]}'
+
+    def reject(method, url, body, **kwargs):
+        assert body['payment_methods']['iban'] == IBAN
+        raise refused
+
+    with monkeypatch.context() as patch:
+        patch.setattr(app, '_qonto_request', reject)
+        with pytest.raises(ledger.Review, match='compte de règlement EDOF'):
+            qonto.prepare(app, tmp_path, ledger.get(tmp_path, spec['token']))
+    record = ledger.get(tmp_path, spec['token'])
+    assert record['status'] == 'review' and not record['create_started']
+    assert not app.invoices and not portal.sent
+    assert ledger.request_review(tmp_path, 'admin', FOLDER)
+    assert run(tmp_path, spec, portal)['code'] == 'invoice_prepared'
+    qonto.prepare(app, tmp_path, ledger.get(tmp_path, spec['token']))
+    assert app.creates == app.finals == 1
+    assert app.invoices['invoice-test']['payment_methods']['iban'] == IBAN
 
 
 def test_lost_qonto_creation_without_visible_invoice_never_posts_again_even_after_review(tmp_path):
@@ -157,13 +185,31 @@ def test_hold_and_provider_switch_prevent_writes(tmp_path,monkeypatch):
 
 def test_existing_qonto_invoice_is_reused_and_incomplete_search_never_creates(tmp_path):
     app,portal=Qonto(),Portal();store,spec=init(tmp_path);run(tmp_path,spec,portal)
-    r=ledger.get(tmp_path,spec['token']);existing=qonto.invoice_body(r['terms'],'cdc-test',IBAN)
+    r=ledger.get(tmp_path,spec['token']);existing=qonto.invoice_body(r['terms'],'cdc-test')
+    existing['payment_methods']=[{'type':'transfer','iban':IBAN.lower()}]
     app.invoices['existing']={**existing,'id':'existing','total_amount':{'value':'1260.00','currency':'EUR'},'status':'unpaid','number':'FL-EXISTING'}
     qonto.prepare(app,tmp_path,r)
     assert app.creates==0 and app.finals==0
     assert ledger.get(tmp_path,r['token'])['invoice_number']=='FL-EXISTING'
     with pytest.raises(ledger.Review,match='incomplète'):
         qonto.find_existing(NS(list_qonto_invoices=lambda _: {'client_invoices':[]}),r['terms'],'cdc-test')
+
+
+@pytest.mark.parametrize('methods', [[], [{'type': 'transfer', 'iban': 'DE89370400440532013000'}]])
+def test_existing_draft_needs_the_edof_transfer_account(tmp_path, methods):
+    app, portal = Qonto(), Portal()
+    store, spec = init(tmp_path)
+    run(tmp_path, spec, portal)
+    record = ledger.get(tmp_path, spec['token'])
+    existing = qonto.invoice_body(record['terms'], 'cdc-test')
+    app.invoices['existing'] = {
+        **existing, 'id': 'existing', 'payment_methods': methods,
+        'total_amount': {'value': '1260.00', 'currency': 'EUR'},
+    }
+    with pytest.raises(ledger.Review, match='compte de virement'):
+        qonto.prepare(app, tmp_path, record)
+    assert app.creates == app.finals == 0
+    assert ledger.get(tmp_path, spec['token'])['qonto_id'] == 'existing'
 
 
 def test_existing_edof_bill_creates_no_qonto_invoice(tmp_path):
