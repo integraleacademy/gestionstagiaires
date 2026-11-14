@@ -1,0 +1,66 @@
+{% extends "emails/_base.html" %}
+{% set email_signature = 'cassandre' %}
+{% set cassandre_signature_name = 'Cassandre Ménard' %}
+{% macro passage(key, value=none) -%}
+<span{% if preview %} data-copy="{{ key }}"{% endif %} style="white-space:pre-line">{{ words[key] if value is none else value }}</span>
+{%- endmacro %}
+{% block email_title %}{{ words.subject }}{% endblock %}
+{% block preheader %}{{ words.preheader }}{% endblock %}
+{% block email_styles %}
+<style>
+  @media(max-width:480px){.academy-content{padding-left:17px!important;padding-right:17px!important}.course-pad{padding-left:14px!important;padding-right:14px!important}}
+  {% if preview %}
+  .afc-editing [data-copy]{outline:1px dashed #7799bb;outline-offset:2px;cursor:text;min-width:8px;min-height:1em}
+  .afc-editing [data-copy]:empty{display:inline-block}
+  .afc-editing [data-copy]:focus{outline:2px solid #399ae7;background:#edf7ff;color:#172d4a}
+  {% endif %}
+</style>
+{% endblock %}
+{% block email_header %}
+<tr><td align="center" bgcolor="#193e7f" style="padding:21px 24px;background:#193e7f;background-image:linear-gradient(115deg,#142e59,#275ab1);border-radius:20px 20px 0 0;text-align:center">
+  <img src="https://gestionstagiaires-r5no.onrender.com/static/parcours-alternance/logo.png" width="172" alt="Intégrale Academy" style="display:block;width:172px;max-width:100%;height:auto;margin:0 auto;border:0">
+</td></tr>
+{% endblock %}
+{% block email_content %}
+<p style="margin:0 0 12px;color:#172d4a">{{ passage('greeting', greeting) }}</p>
+<p style="margin:0 0 16px">{{ passage('intro') }}</p>
+<p style="margin:0 0 16px"><strong style="color:#172d4a">{{ passage('collective') }}</strong></p>
+<p style="margin:0 0 22px"><strong style="color:#183a69">{{ passage('transition') }}</strong> {{ passage('choices') }}</p>
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;background:#f3f6fc;border-top:4px solid #305ab0;border-radius:8px"><tr><td class="course-pad" style="padding:18px 20px 20px">
+  <p style="margin:0 0 5px;font:italic 15px/1.4 Georgia,serif;color:#385786">{{ passage('aps_kicker') }}</p>
+  <h2 style="margin:0 0 12px;font:700 23px/1.2 Arial,sans-serif;color:#142f55">{{ passage('aps_title') }}</h2>
+  <p style="margin:0 0 12px;font:15px/1.55 Arial,sans-serif">{{ passage('aps_description') }}</p>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;font:15px/1.45 Arial,sans-serif;color:#233d60">
+    {% for label, value in [('remote_label','remote_dates'), ('onsite_label','onsite_dates'), ('exam_label','exam_date')] %}
+    <tr><td valign="top" style="padding:6px 9px 6px 0;border-top:1px solid #d8e2f2">{{ passage(label) }}</td><td valign="top" style="padding:6px 0;border-top:1px solid #d8e2f2"><strong>{{ passage(value) }}</strong></td></tr>
+    {% endfor %}
+  </table>
+  <h3 style="margin:17px 0 11px;font:700 18px/1.35 Arial,sans-serif;color:#142f55">{{ passage('funding_title') }}</h3>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%">
+    {% for prefix in ['cpf', 'employer', 'personal'] %}
+    <tr><td valign="top" width="35" style="width:35px;padding:3px 8px 12px 0">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="24" height="24" align="center" bgcolor="#dce7f9" style="width:24px;height:24px;line-height:24px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#183e74;border-radius:12px">{{ loop.index }}</td></tr></table>
+    </td><td valign="top" style="padding:0 0 12px;font:15px/1.5 Arial,sans-serif;color:#33445e"><strong style="color:#16345c">{{ passage(prefix ~ '_title') }}</strong><br>{{ passage(prefix ~ '_text') }}</td></tr>
+    {% endfor %}
+  </table>
+</td></tr></table>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td height="16" aria-hidden="true" style="height:16px;font:1px/16px Arial,sans-serif">&nbsp;</td></tr></table>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;background:#eef6f2;border-top:4px solid #427764;border-radius:8px"><tr><td class="course-pad" style="padding:18px 20px 20px">
+  <p style="margin:0 0 5px;font:italic 15px/1.4 Georgia,serif;color:#376452">{{ passage('apprentice_kicker') }}</p>
+  <h2 style="margin:0 0 12px;font:700 23px/1.2 Arial,sans-serif;color:#173f34">{{ passage('apprentice_title') }}</h2>
+  <p style="margin:0 0 10px;font:15px/1.55 Arial,sans-serif"><strong style="color:#234c40">{{ passage('apprentice_age') }}</strong> {{ passage('apprentice_description') }}</p>
+  <ul style="margin:0 0 12px;padding-left:20px;font:15px/1.5 Arial,sans-serif;color:#2c473c">
+    {% for key in ['qualification_aps', 'qualification_a3p', 'qualification_ssiap'] %}
+    <li style="margin:0 0 4px">{{ passage(key) }}</li>
+    {% endfor %}
+  </ul>
+  <p style="margin:0;font:15px/1.55 Arial,sans-serif">{{ passage('contract') }}</p>
+</td></tr></table>
+
+<p style="margin:22px 0 14px">{{ passage('booking_intro') }}</p>
+<table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:0 auto;max-width:100%"><tr>
+  <td align="center" bgcolor="#193e7f" style="padding:12px 17px;background:#193e7f;border-radius:7px"><a href="{{ booking_url }}" style="display:block;color:#fff;font:700 15px/1.45 Arial,sans-serif;text-align:center;text-decoration:none">{{ passage('booking_label') }}</a></td>
+</tr></table>
+<p style="margin:18px 0 0">{{ passage('closing') }}</p>
+{% endblock %}

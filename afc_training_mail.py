@@ -14,42 +14,45 @@ from afc_import import normalize_ft_id
 from partner_campaigns import valid_email
 
 
-SUBJECT = "Votre candidature AFC · Deux parcours en sécurité pour janvier 2027"
+# Deliveries from before the editor retain the subject approved at the time.
+LEGACY_SUBJECT = "Votre candidature AFC · Deux parcours en sécurité pour janvier 2027"
+SUBJECT = "Suite à votre candidature pour devenir agent de sécurité privé"
 CONTACT = {"email": "cassandre@integraleacademy.com", "name": "Cassandre Ménard"}
 DEFAULT_COPY = {
     "subject": SUBJECT,
-    "preheader": "Votre dossier AFC à Puget-sur-Argens, les dates de l’APS et la rentrée en apprentissage.",
-    "eyebrow": "Côte d’Azur · Janvier 2027",
-    "heading": "Se former à la sécurité",
-    "subtitle": "Deux parcours à Puget-sur-Argens",
-    "greeting": "Bonjour {prenom},",
-    "intro": "Vous nous avez contactés pour la formation d’agent de sécurité privée et d’agent de sécurité incendie. Nous revenons vers vous pour vous permettre d’organiser la suite de votre projet.",
-    "collective": "En raison des restrictions budgétaires, France Travail ne financera pas de nouvelle session collective APS + SSIAP 1 chez Intégrale Academy en 2027.",
-    "transition": "Deux parcours s’offrent à vous en janvier, selon le métier que vous visez et votre situation.",
-    "aps_kicker": "La formation courte · 175 heures",
-    "aps_title": "Agent de prévention et de sécurité",
-    "aps_description": "Vous préparez le titre à finalité professionnelle d’agent de prévention et de sécurité (TFP APS). Vous apprenez à contrôler les accès, à surveiller un site et à intervenir en cas d’incident.",
-    "remote_label": "À distance", "remote_dates": "4 au 14 janvier 2027",
-    "onsite_label": "À Puget-sur-Argens", "onsite_dates": "15 janvier au 8 février",
-    "exam_label": "Examen", "exam_date": "9 février 2027",
+    "preheader": "Le point sur le financement de la formation par France Travail en 2027.",
+    "greeting": "Bonjour,",
+    "intro": "Je me permets de revenir vers vous concernant la formation agent de sécurité privée (APS) et agent de sécurité incendie (SSIAP 1). Malheureusement, par manque de places disponibles, vous n'avez pas pu intégrer la formation financée par France Travail du mois de novembre 2026.",
+    "collective": "En raison des restrictions budgétaires, France Travail ne financera pas de nouvelle session collective de cette formation chez Intégrale Academy en 2027.",
+    "transition": "Nous avons deux solutions à vous proposer pour poursuivre votre projet à Puget-sur-Argens dès janvier 2027.",
+    "choices": "Vous pouvez suivre notre formation APS de 175 heures ou, si vous avez moins de 29 ans, choisir le parcours sécurité en alternance pendant un an.",
+    "aps_kicker": "Option 1",
+    "aps_title": "La formation APS de 175 heures",
+    "aps_description": "Vous préparez le titre d’agent de prévention et de sécurité. Vous apprenez à contrôler les accès, à effectuer des rondes et à intervenir en cas d’incident.",
+    "remote_label": "À distance",
+    "remote_dates": "Du 4 au 14 janvier 2027",
+    "onsite_label": "À Puget-sur-Argens",
+    "onsite_dates": "Du 15 janvier au 8 février 2027",
+    "exam_label": "Examen",
+    "exam_date": "Le 9 février 2027",
     "funding_title": "Comment financer l’APS ?",
     "cpf_title": "Votre compte personnel de formation (CPF)",
-    "cpf_text": "Vos droits peuvent couvrir tout ou partie des frais. Vous pouvez consulter vos droits et le reste à payer dans votre espace personnel sur Mon Compte Formation.",
-    "employer_title": "Une entreprise prête à vous embaucher",
-    "employer_text": "Si un employeur vous propose un poste après la formation, une promesse d’embauche peut servir de point de départ. Avec l’entreprise et votre conseiller France Travail, nous pouvons étudier une préparation opérationnelle à l’emploi individuelle (POEI). La prise en charge dépend de l’accord de France Travail avant l’entrée en formation.",
+    "cpf_text": "Vous pouvez utiliser vos droits CPF pour couvrir tout ou partie du coût de la formation.",
+    "employer_title": "Une promesse d’embauche",
+    "employer_text": "Si une entreprise souhaite vous embaucher à l’issue de la formation, nous pouvons étudier avec elle et votre conseiller France Travail un financement individuel avant l’embauche (POEI). L’accord de France Travail est nécessaire avant le début des cours.",
     "personal_title": "Un financement personnel",
-    "personal_text": "Le tarif de la session est de 1 700 € TTC. Si vous envisagez de la financer vous-même, vous pouvez nous demander un devis et les modalités de règlement avant de vous décider.",
-    "booking_intro": "Vous avez des questions sur l’APS ou son financement ? Choisissez un créneau dans mon agenda. Je vous appellerai au numéro indiqué lors de la réservation pour faire le point sur votre projet.",
+    "personal_text": "Le tarif est de 1 700 € TTC. Si vous souhaitez financer vous-même la formation, je peux vous envoyer un devis et vous préciser les modalités de règlement.",
+    "apprentice_kicker": "Option 2",
+    "apprentice_title": "Le parcours sécurité en alternance",
+    "apprentice_age": "Ce parcours d’un an est réservé aux moins de 29 ans.",
+    "apprentice_description": "De janvier à décembre 2027, vous alternez les cours à Puget-sur-Argens et le travail en entreprise. Vous préparez trois qualifications au cours de l’année.",
+    "qualification_aps": "Agent de prévention et de sécurité (APS)",
+    "qualification_a3p": "Agent de protection physique des personnes (A3P, protection rapprochée)",
+    "qualification_ssiap": "Agent de sécurité incendie et d’assistance à personnes (SSIAP 1)",
+    "contract": "Avec un contrat d’apprentissage, vous percevez un salaire et vos frais de formation sont pris en charge.",
+    "booking_intro": "Pour échanger sur la formation APS, son financement ou le parcours en alternance, je vous propose un rendez-vous téléphonique. Choisissez le créneau qui vous convient et je vous appellerai au numéro indiqué lors de la réservation.",
     "booking_label": "Réserver un rendez-vous téléphonique APS avec Cassandre",
-    "apprentice_kicker": "L’alternance · Rentrée de janvier 2027",
-    "apprentice_title": "Un an pour préparer trois qualifications",
-    "apprentice_age": "Ce parcours est ouvert aux moins de 29 ans.",
-    "apprentice_description": "De janvier à décembre 2027, vous alternez les cours à Puget-sur-Argens et les missions chez votre employeur.",
-    "qualification_aps": "APS · Agent de prévention et de sécurité",
-    "qualification_a3p": "A3P · Agent de protection physique des personnes (protection rapprochée)",
-    "qualification_ssiap": "SSIAP 1 · Agent de sécurité incendie et d’assistance à personnes",
-    "contract": "Avec un contrat d’apprentissage, les frais de formation sont pris en charge et vous percevez un salaire, en centre comme en entreprise.",
-    "closing": "Si vous hésitez entre les deux parcours, vous pouvez aussi répondre directement à ce mail. Je serai heureuse d’échanger avec vous.",
+    "closing": "Bien cordialement,"
 }
 LABELS = {
     "accepted": "Acceptés par Brevo", "pending": "En attente d’envoi",
@@ -72,12 +75,26 @@ def ledger(host):
             version INTEGER PRIMARY KEY, fields TEXT NOT NULL)""")
         db.execute("""CREATE TABLE IF NOT EXISTS delivery_versions (
             email TEXT PRIMARY KEY, version INTEGER NOT NULL REFERENCES mail_versions(version))""")
+        publish_reviewed_copy(db)
         yield db
+
+
+def publish_reviewed_copy(db):
+    # Append one revision so previously queued deliveries retain their original fields.
+    # user_version belongs to this campaign's dedicated SQLite file.
+    if db.execute("PRAGMA user_version").fetchone()[0] >= 1:
+        return
+    db.execute("BEGIN IMMEDIATE")
+    if db.execute("PRAGMA user_version").fetchone()[0] == 0:
+        db.execute("INSERT INTO mail_versions(fields) VALUES (?)",
+                   (json.dumps(DEFAULT_COPY, ensure_ascii=False),))
+        db.execute("PRAGMA user_version = 1")
+    db.commit()
 
 
 def draft(db):
     row = db.execute("SELECT version, fields FROM mail_versions ORDER BY version DESC LIMIT 1").fetchone()
-    return (row["version"], json.loads(row["fields"])) if row else (0, DEFAULT_COPY.copy())
+    return row["version"], json.loads(row["fields"])
 
 
 def render_message(host, fields, first_name="", *, preview=False):
@@ -87,8 +104,10 @@ def render_message(host, fields, first_name="", *, preview=False):
     context = dict(words=fields, greeting=greeting, preview=preview,
                    booking_url=host.EDOF_TRAININGS["APS"]["calendly"])
     templates = host.app.jinja_env
-    return (templates.get_template("emails/afc_training_message.html").render(**context),
-            templates.get_template("emails/afc_training_message.txt").render(**context))
+    # Only pre-publication snapshots carry the editable hero heading.
+    name = "afc_training_message" if "heading" in fields else "afc_training_reviewed"
+    return (templates.get_template(f"emails/{name}.html").render(**context),
+            templates.get_template(f"emails/{name}.txt").render(**context))
 
 
 def edited_fields(raw):
@@ -155,10 +174,7 @@ def queue(db, contacts, preview):
     remaining, digest = selection(db, contacts)
     if not remaining or preview != digest:
         abort(409, "Le texte du mail ou la liste des destinataires a changé. Rouvrez l’aperçu avant de confirmer.")
-    version, fields = draft(db)
-    if version == 0:
-        db.execute("INSERT OR IGNORE INTO mail_versions(version, fields) VALUES (0, ?)",
-                   (json.dumps(fields, ensure_ascii=False),))
+    version, _ = draft(db)
     db.executemany("""INSERT INTO deliveries(email, candidate, status) VALUES (?, ?, 'pending')
         ON CONFLICT(email) DO UPDATE SET candidate=excluded.candidate, status='pending',
             error='', updated=unixepoch() WHERE deliveries.status IN ('failed','skipped')""",
@@ -191,7 +207,7 @@ def deliver_one(host, db, contacts):
             body, plain = render_message(host, fields, first_name)
         else:
             # Only pre-editor deliveries can be unversioned. Honour their approved message.
-            subject = SUBJECT
+            subject = LEGACY_SUBJECT
             kwargs = {"first_name": first_name, "subject": subject}
             body = host.app.jinja_env.get_template("emails/afc_formations_2027.html").render(**kwargs)
             plain = host.app.jinja_env.get_template("emails/afc_formations_2027.txt").render(**kwargs)
