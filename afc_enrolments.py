@@ -1,4 +1,6 @@
 """Import existing AFC candidates into an AFC session without duplicate enrolments."""
+import hmac
+import os
 import re
 import unicodedata
 
@@ -28,6 +30,16 @@ def supported(services, training):
                 and training.get('partner_id') in (None, '', services.INTEGRALE_PARTNER_ID))
 
 
+def same_legacy_contact(trainee, candidate):
+    if (normalized(trainee.get('last_name')) != normalized(candidate.get('nom'))
+            or normalized(trainee.get('first_name')) != normalized(candidate.get('prenom'))):
+        return False
+    email = normalized(candidate.get('email'))
+    phone = re.sub(r'\D', '', str(candidate.get('telephone') or ''))
+    return bool((email and email == normalized(trainee.get('email')))
+                or (phone and phone == re.sub(r'\D', '', str(trainee.get('phone') or ''))))
+
+
 def duplicate(services, training, candidate):
     for trainee in services._session_trainees_list(training):
         if str(trainee.get('afc_candidate_id') or '') == str(candidate['id']):
@@ -37,13 +49,8 @@ def duplicate(services, training, candidate):
             return trainee
         # Legacy imports did not retain the AFC identifier. Match a name AND
         # contact, never just a shared family email or a namesake.
-        if (normalized(trainee.get('last_name')) == normalized(candidate.get('nom'))
-                and normalized(trainee.get('first_name')) == normalized(candidate.get('prenom'))):
-            email = normalized(candidate.get('email'))
-            phone = re.sub(r'\D', '', str(candidate.get('telephone') or ''))
-            if ((email and email == normalized(trainee.get('email')))
-                    or (phone and phone == re.sub(r'\D', '', str(trainee.get('phone') or '')))):
-                return trainee
+        if same_legacy_contact(trainee, candidate):
+            return trainee
     return None
 
 
@@ -81,6 +88,49 @@ def insert(services, data, session_id, candidate_id, trainee):
 
 
 def register(app, services):
+    @app.get('/api/integrations/plateformegestion/afc-attendance')
+    def afc_attendance_roster():
+        secret = os.environ.get('AFC_ATTENDANCE_SYNC_TOKEN', '').strip()
+        if not secret or not hmac.compare_digest(
+                request.headers.get('Authorization', '').encode(), ('Bearer ' + secret).encode()):
+            abort(403)
+        source_id = request.args.get('session_id', '').strip()
+        start, end = request.args.get('date_start', ''), request.args.get('date_end', '')
+        if not source_id and not (start and end):
+            return jsonify(ok=False, error='Une session ou ses deux dates sont nécessaires.'), 400
+        data = services.load_data(run_background_tasks=False)
+        sessions = [s for s in data.get('sessions', []) if supported(services, s)]
+        if source_id:
+            matches = [s for s in sessions if s.get('id') == source_id]
+        else:
+            matches = [s for s in sessions if services._session_get(s, 'date_start') == start
+                       and services._session_get(s, 'date_end') == end]
+        if not matches:
+            return jsonify(ok=False, error='Session AFC introuvable.'), 404
+        if len(matches) != 1:
+            return jsonify(ok=False, error='Plusieurs sessions AFC correspondent aux dates.'), 409
+        training = matches[0]
+        # Archived candidates can still be enrolled in a session.
+        pool = [c for c in (data.get('afc') or {}).get('candidates', []) if isinstance(c, dict)]
+        by_id = {c['id']: c for c in pool if c.get('id')}
+        rows = []
+        trainees = sorted(services._registered_trainees(training), key=services._trainee_alpha_sort_key)
+        for trainee in trainees:
+            candidate = by_id.get(trainee.get('afc_candidate_id')) or {}
+            identifier = candidate.get('identifiant_ft') or trainee.get('identifiant_ft')
+            if not identifier and not trainee.get('afc_candidate_id'):
+                legacy = [c for c in pool if same_legacy_contact(trainee, c)]
+                if len(legacy) == 1 and sum(same_legacy_contact(t, legacy[0]) for t in trainees) == 1:
+                    identifier = legacy[0].get('identifiant_ft')
+            period = afc_schedule.effective_session(training, trainee)
+            rows.append({'id': trainee['id'], 'lastName': trainee.get('last_name') or '',
+                         'firstName': trainee.get('first_name') or '',
+                         'france_travail_id': str(identifier or '').strip(),
+                         'entryDate': period['date_start'], 'exitDate': period['date_end'],
+                         'ranHours': trainee.get('afc_ran_hours')})
+        return jsonify(ok=True, session={'id': training['id'], 'name': services._session_get(training, 'name')},
+                       students=rows)
+
     @app.get('/api/admin/sessions/<session_id>/afc-candidates')
     @services.admin_login_required
     def api_afc_session_candidates(session_id):
