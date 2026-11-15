@@ -54393,11 +54393,11 @@ def _admin_navigation_counts(*, data=None, fresh=False):
     scope = (automations, cnaps, sales, _current_partner_id(), session.get("assist_partner_id"), _current_session_role(),
              _is_super_admin_session(), session.get("admin_username"), session.get("admin_email"))
     stamp = time.monotonic()
-    with _navigation_counts_lock:
-        cached = _navigation_counts_cache.get(scope)
-    if cached and stamp - cached[0] < 10 and not fresh:
-        return cached[1]
     if data is None:
+        with _navigation_counts_lock:
+            cached = _navigation_counts_cache.get(scope)
+        if cached and stamp - cached[0] < 10 and not fresh:
+            return cached[1]
         data = load_data()
     counts = {
         "documents": sum(row["pending_count"] for row in _docs_to_control_items(data)),
