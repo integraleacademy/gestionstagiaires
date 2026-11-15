@@ -21,6 +21,10 @@
       el.setAttribute("aria-label", value == null ? "Compteur indisponible" : value + " " + labels[type]);
     }
   }
+  function paintCounts(data) {
+    const counts = {...data, tools: data.sales + data.conventions};
+    for (const type of Object.keys(nodes)) paint(type, counts[type]);
+  }
   let generation = 0;
   async function refresh(fresh = false) {
     if (document.hidden) return;
@@ -30,8 +34,7 @@
       if (!reply.ok) throw new Error();
       const data = await reply.json();
       if (!data.ok || current !== generation) return;
-      data.tools = data.sales + data.conventions;
-      for (const type of Object.keys(nodes)) paint(type, data[type]);
+      paintCounts(data);
     } catch {
       if (current === generation) Object.keys(nodes).forEach(type => paint(type, null));
     }
@@ -40,5 +43,7 @@
   window.refreshSidebarConventionsSignedBadge = () => refresh(true);
   document.addEventListener("visibilitychange", () => refresh());
   window.addEventListener("focus", () => refresh());
-  refresh();
+  const initial = document.currentScript?.dataset.counts;
+  if (initial) paintCounts(JSON.parse(initial));
+  else refresh();
 })();

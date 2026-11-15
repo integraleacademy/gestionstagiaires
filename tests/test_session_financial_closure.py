@@ -1,4 +1,5 @@
 import datetime
+import json
 import re
 from collections import OrderedDict
 from copy import deepcopy
@@ -56,9 +57,22 @@ def test_only_ended_cards_have_financial_border_and_link_to_same_report(monkeypa
     with client.session_transaction() as auth:
         auth['admin_logged_in'] = True
         auth['admin_role'] = 'admin'
+    reader = Mock(wraps=gestion_app._session_card_overview_reader)
+    monkeypatch.setattr(gestion_app, '_session_card_overview_reader', reader)
     response = client.get('/admin/sessions')
     assert response.status_code == 200
     html = response.get_data(as_text=True)
+    assert 'data-ended-session="CLOSED"' in html and 'data-ended-session="OPEN"' in html
+    assert 'data-edit-session="CLOSED"' not in html
+    choices = json.loads(re.search(r'const availableSessionsForCreate = (.*);', html).group(1))
+    assert {item["id"] for item in choices} == {"CLOSED", "OPEN", "ONGOING", "FUTURE"}
+    assert all("financial_overview" not in item for item in choices)
+    reader.assert_not_called()
+    history = client.get('/admin/sessions/ended-cards')
+    assert history.status_code == 200 and 'no-store' in history.headers['Cache-Control']
+    assert 'data-edit-session="ONGOING"' not in history.text and '<html' not in history.text
+    reader.assert_called_once()
+    html += history.text
     cards = {}
     for classes, body in re.findall(r'<article class="([^"]*session-card[^"]*)"[^>]*>(.*?)</article>', html, re.S):
         name = re.search(r'<h2[^>]*>(.*?)</h2>', body, re.S).group(1).strip()
@@ -126,3 +140,21 @@ def test_card_cache_tracks_the_affected_session_and_matches_the_report(monkeypat
 
     data['billing_lines'].clear()
     assert open_cards()[0]['remaining'] == 100
+
+def test_historical_cards_keep_admin_access_and_partner_scope(monkeypatch):
+    day = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+    def past(identifier, partner):
+        return {"id": identifier, "name": identifier, "partner_id": partner, "training_type": "VTC",
+                "date_debut": day, "date_fin": day, "stagiaires": []}
+    data = {"sessions": [past("Own", "p1"), past("Foreign", "p2"),
+                         {**past("Archived", "p1"), "archived": True}]}
+    monkeypatch.setattr(gestion_app, "load_data", lambda **kwargs: data)
+    client = gestion_app.app.test_client()
+    path = "/admin/sessions/ended-cards"
+    assert client.get(path).status_code == 302
+    with client.session_transaction() as auth:
+        auth.update(admin_logged_in=True, admin_role="viewer", partner_id="p1")
+    history = client.get(path)
+    assert history.status_code == 200
+    assert 'data-session-id="Own"' in history.text and 'data-edit-session=' not in history.text
+    assert "Foreign" not in history.text and "Archived" not in history.text
